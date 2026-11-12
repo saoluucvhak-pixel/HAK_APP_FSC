@@ -19,7 +19,7 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026');
   await w.click('#forestForm button[type=submit]');
   await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.click('#vcForm button[type=submit]');
-  await w.click('[data-ftab=nc]'); await w.fill('#luongForm [name=ttTan]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(150);
+  await w.click('[data-ftab=nc]'); await w.fill('#luongForm [name=dt_0]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(150);
   await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(400);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400);
   await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400);
@@ -57,10 +57,12 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
       t.replace(/BM-(\d\d)/g, (m, d) => codes.add('BM-' + d));
     }
   }
-  const want = Array.from({length: 19}, (_, i) => 'BM-' + String(i + 1).padStart(2, '0'));
+  // Hồ sơ này là hình thức GIAO KHOÁN: không có BM-03 (hợp đồng lao động từng người, chỉ dùng khi chủ rừng ký trực tiếp) mà có BM-20 (Giấy ủy quyền).
+  // BM-03 ở hình thức trực tiếp được kiểm tra riêng trong scripts/e2e-hopdong.js.
+  const want = [...Array.from({length: 19}, (_, i) => 'BM-' + String(i + 1).padStart(2, '0')).filter(c => c !== 'BM-03'), 'BM-20'];
   const miss = want.filter(c => !codes.has(c));
   ok('mọi file .docx mở được, có nội dung tiếng Việt', bad === 0 && docx.length > 0);
-  ok('xuất đủ BM-01 đến BM-19' + (miss.length ? ' (thiếu ' + miss.join(', ') + ')' : ''), miss.length === 0);
+  ok('xuất đủ BM-01 đến BM-20 (giao khoán: có BM-20 Giấy ủy quyền, không có BM-03)' + (miss.length ? ' (thiếu ' + miss.join(', ') + ')' : ''), miss.length === 0);
   if (allZip) { const z = await JSZip.loadAsync(fs.readFileSync(path.join(out, allZip))); ok('gói ZIP toàn bộ hồ sơ mở được (' + Object.keys(z.files).filter(n => n.endsWith('.docx')).length + ' file .docx)', Object.keys(z.files).some(n => n.endsWith('.docx'))); }
   else ok('có gói ZIP toàn bộ hồ sơ', false);
   ok('không có lỗi JavaScript', errs.length === 0); if (errs.length) console.log(errs);

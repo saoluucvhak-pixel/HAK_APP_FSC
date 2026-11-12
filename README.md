@@ -8,7 +8,7 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 - Kết quả kiểm thử, mục chờ xác nhận: [docs/KET_QUA_KIEM_THU.md](docs/KET_QUA_KIEM_THU.md)
 
 ## Chức năng
-- Hồ sơ theo chủ rừng → rừng (nhân công, xe, phiếu cân, hợp đồng, đơn giá, giấy tờ), checklist FSC, xuất BM-01…BM-19 và ZIP — giữ nguyên nghiệp vụ bản HTML.
+- Hồ sơ theo chủ rừng → rừng (nhân công, xe, phiếu cân, hợp đồng, đơn giá, giấy tờ), checklist FSC, xuất BM-01…BM-20 và ZIP (BM-20 Giấy ủy quyền cho hình thức giao khoán) — giữ nghiệp vụ bản HTML, cập nhật quy tắc hợp đồng và đơn giá theo từng hình thức.
 - Lưu SQLite theo từng rừng, mỗi lần lưu là một giao dịch; quản lý phiên bản cấu trúc (`PRAGMA user_version`), tự sao lưu trước khi nâng cấp/khôi phục.
 - Nhập bản sao lưu HTML cũ (.json) có xem trước số liệu và bản trùng; sao lưu ra thư mục tự chọn (.json + .sqlite).
 - Nạp Excel nhân công/xe/phiếu cân: báo dòng hợp lệ/lỗi và thêm/cập nhật/giữ nguyên/bỏ trước khi ghi.
