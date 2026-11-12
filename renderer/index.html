@@ -238,6 +238,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
   <button class="hbtn" data-act="theme" id="themeBtn">🌙 Chế độ tối</button>
   <details class="menu" id="moreMenu"><summary class="hbtn">⋯ Thêm</summary><div class="pop">
     <button class="mi" data-act="guide">❓ Hướng dẫn sử dụng</button>
+    <button class="mi deskOnly" data-act="openSettings" id="openSettingsBtn">⚙ Cài đặt hệ thống</button>
     <hr>
     <div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu"></div>
     <hr>
@@ -328,6 +329,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <ul>
 <li>Phần mềm tự sao lưu cơ sở dữ liệu vào thư mục <code>backups</code> trước mỗi lần nâng cấp và khôi phục; ghi trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.</li>
 <li><b>⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json)</b>. <b>⋯ Thêm → Khôi phục toàn bộ dữ liệu (.json)</b> (cũng dùng để nhập bản sao lưu từ bản HTML cũ): xem trước từng chủ/lô là <b>THÊM</b>, <b>TRÙNG</b> hay <b>GIỮ</b>; chọn <i>giữ bản trên máy</i>, <i>ghi đè lô trùng</i> (chỉ thay đúng lô trùng, lô khác của chủ được giữ), <i>giữ cả hai</i> (xác nhận <b>mã mới</b> cho từng lô nhân bản) hoặc <i>thay toàn bộ</i> (có xác nhận nêu rõ phạm vi). ID, mã lô, chủ rừng mâu thuẫn thì dừng và liệt kê hồ sơ cần đối chiếu.</li>
+<li><b>⋯ Thêm → ⚙ Cài đặt hệ thống</b>: chọn <b>thư mục dữ liệu</b> (nơi lưu cơ sở dữ liệu; khi đổi, dữ liệu được sao chép sang thư mục mới, bản cũ giữ nguyên) và <b>thư mục sao lưu</b> (sao lưu toàn bộ lưu thẳng vào đó; bản tự động trước khi nâng cấp cũng ở đó). Nên chọn ổ cứng của máy, không chọn ổ mạng hay thư mục đồng bộ đám mây.</li>
 <li><b>⬇ Sao lưu lô rừng</b> (đầu hồ sơ lô): file <code>HAKQN_LoRung_&lt;MaLo&gt;_&lt;Ngày&gt;.json</code> chứa đúng một lô, kèm địa chỉ giao đã chốt; không chứa lô khác, tra cứu hay thông tin đăng nhập.</li>
 <li><b>⋯ Thêm → ⬆ Khôi phục lô rừng…</b>: xem trước chủ, mã lô, thời điểm sao lưu, số nhân công/xe/phiếu cân/tổng tấn. Thêm vào đúng chủ đã có hoặc tạo chủ mới. Lô đã có: mặc định giữ bản hiện có; thay thì chỉ thay đúng lô đó và có bảng trước/sau. Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: máy đích giữ thiết lập của mình, màn hình nêu phần hồ sơ có thể khác. File hỏng, sai loại/phiên bản hoặc không xác định được lô đích thì báo lỗi và không ghi.</li>
 </ul>
@@ -3245,6 +3247,7 @@ function renderMsgs() {
 function renderMain() {
   if (view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
   if (view === 'cty') { $('#main').innerHTML = renderMsgs() + panelCty(); return; }
+  if (view === 'settings') { $('#main').innerHTML = renderMsgs() + panelSettings(); settingsLoad(); return; }
   const own = curOwner();
   if (!own) {
     $('#main').innerHTML = renderMsgs() + panelHome();
@@ -4046,6 +4049,47 @@ async function importGo() {
   note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân. Bản sao lưu trước khi nhập: ' + r.backup);
 }
 
+
+/* ===== Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu (bản cài trên máy; xử lý ở src/main.js, src/settings.js) ===== */
+const setg = {s: null, msg: null};
+function panelSettings() {
+  if (!HB) return '<div class="card"><h2>Cài đặt hệ thống</h2><div class="msg warn">Cài đặt thư mục dữ liệu và sao lưu chỉ có ở bản cài trên Windows.</div></div>';
+  return '<div class="card"><h2 style="margin-top:0">⚙ Cài đặt hệ thống</h2>' + (setg.msg ? '<div class="msg ' + setg.msg[1] + '" id="setMsg">' + esc(setg.msg[0]) + '</div>' : '') +
+    '<div id="setBox" class="mut">Đang đọc cài đặt…</div></div>';
+}
+function settingsPaint() {
+  const s = setg.s, box = document.getElementById('setBox'); if (!s || !box) return;
+  const row = (title, desc, path, custom, def, act, actDef, extra) => '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">' + title + '</h3><p class="mut" style="margin:0 0 8px">' + desc + '</p>' +
+    '<div style="word-break:break-all"><b>Đang dùng:</b> <code data-set-path>' + esc(path) + '</code> <span class="pill ' + (custom ? 'ok' : '') + '">' + (custom ? 'thư mục riêng' : 'mặc định') + '</span></div>' +
+    '<div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn" data-act="' + act + '"' + (s.lockedByEnv && act === 'setData' ? ' disabled' : '') + '>Chọn thư mục…</button>' +
+    (custom ? '<button class="btn ghost" data-act="' + actDef + '">Về mặc định</button>' : '') + (extra || '') + '</div>' +
+    '<div class="mut" style="margin-top:6px;font-size:12px">Mặc định: ' + esc(def) + '</div></div>';
+  box.className = ''; box.innerHTML =
+    (s.missing.length ? '<div class="msg warn">Thư mục đã chọn trước đây không còn: ' + s.missing.map(esc).join('; ') + '. Ứng dụng đang dùng vị trí mặc định.</div>' : '') +
+    (s.lockedByEnv ? '<div class="msg warn">Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB nên không đổi được ở đây.</div>' : '') +
+    row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).', s.dbFile, s.customData, s.defaultDataDir, 'setData', 'setDataDefault', '<button class="btn ghost" data-act="setOpenData">Mở thư mục chứa dữ liệu</button>') +
+    row('Thư mục sao lưu', 'Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản sao lưu toàn bộ (⋯ Thêm → Sao lưu toàn bộ dữ liệu: lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc ổ USB để phòng hỏng máy.', s.backupDir, s.customBackup, s.defaultBackupDir, 'setBackup', 'setBackupDefault', '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button>');
+}
+async function settingsLoad() {
+  if (!HB) return;
+  const r = await HB.settings.get();
+  if (r.ok) { setg.s = r.settings; settingsPaint(); } else { const b = document.getElementById('setBox'); if (b) b.innerHTML = '<div class="msg err">Không đọc được cài đặt: ' + esc(r.error) + '</div>'; }
+}
+async function settingsData(reset) {
+  const r = await HB.settings.setData(reset);
+  if (r.canceled) return;
+  if (!r.ok) { setg.msg = ['Không đổi được thư mục dữ liệu: ' + r.error, 'err']; return render(); }
+  if (r.same) { setg.msg = ['Đó đang là thư mục dữ liệu hiện tại.', 'warn']; return render(); }
+  setg.msg = null;   // cửa sổ được tải lại từ vị trí mới; thông báo kết quả lưu để hiện sau khi tải
+  try { sessionStorage.setItem('hakqn.setmsg', 'Đã chuyển dữ liệu sang ' + r.settings.dbFile + (r.choice === 'use' ? ' (dùng dữ liệu có sẵn ở đó)' : ' (đã sao chép)') + '. Bản cũ vẫn còn ở ' + r.from + ', xóa tay khi chắc chắn không cần.'); } catch (e) { /* không có sessionStorage */ }
+}
+async function settingsBackup(reset) {
+  const r = await HB.settings.setBackup(reset);
+  if (r.canceled) return;
+  setg.msg = r.ok ? ['Đã ' + (reset ? 'về thư mục sao lưu mặc định' : 'đổi thư mục sao lưu') + ': ' + r.settings.backupDir, 'ok'] : ['Không đổi được thư mục sao lưu: ' + r.error, 'err'];
+  setg.s = r.ok ? r.settings : setg.s; render();
+}
+
 /* ===== Sao lưu / khôi phục MỘT lô rừng (chạy trên máy, không cần mạng) ===== */
 async function lotBackup() {
   const f = curForest(), o = curOwner(); if (!f || !o) return note('Hãy mở một lô rừng trước khi sao lưu.', 'err');
@@ -4649,6 +4693,11 @@ document.addEventListener('click', async e => {
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
   if (act === 'addGiay') return addGiayRow();
+  if (act === 'openSettings') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'settings'; setg.msg = null; return render(); }
+  if (act === 'setData' || act === 'setDataDefault') return settingsData(act === 'setDataDefault');
+  if (act === 'setBackup' || act === 'setBackupDefault') return settingsBackup(act === 'setBackupDefault');
+  if (act === 'setOpenBackup') return HB.settings.openBackup();
+  if (act === 'setOpenData') return HB.openDataFolder();
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'pcFixDate') {   // sửa ngày phiếu cũ bị sai: chỉ nhận ngày có thật; giữ nguyên mọi dữ liệu khác của phiếu
@@ -4783,6 +4832,7 @@ document.addEventListener('change', e => {
   if (t.id === 'mhAddr') { mh.addrId = t.value === '@main' ? '' : t.value; return render(); }
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
+try { const m = sessionStorage.getItem('hakqn.setmsg'); if (m) { sessionStorage.removeItem('hakqn.setmsg'); view = 'settings'; setg.msg = [m, 'ok']; } } catch (e) { /* không có sessionStorage */ }
 render();
 })();
 </script>

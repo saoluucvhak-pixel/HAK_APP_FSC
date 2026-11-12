@@ -5,6 +5,7 @@ const fs = require('fs');
 const {Store, SCHEMA_VERSION} = require('./store');
 const {Lookup} = require('./lookup');
 const LoRung = require('./lorung');
+const Settings = require('./settings');
 const {GoogleAuth, fileIdOf} = require('./google-auth');
 
 // Kiểm thử/ chạy thử có thể đặt thư mục dữ liệu riêng, không đụng dữ liệu thật
@@ -49,7 +50,7 @@ async function syncSheets() {
 }
 
 const TITLE = 'HAKQN – Hồ sơ khai thác và vận chuyển gỗ keo';
-let store = null, win = null;
+let store = null, win = null, loc = null;
 
 /* Nhật ký lỗi: không ghi dữ liệu cá nhân (che dãy từ 6 chữ số liên tiếp: CCCD, số điện thoại...) và không ghi nội dung hồ sơ */
 function log(level, msg) {
@@ -62,7 +63,10 @@ function log(level, msg) {
 
 function openStore() {
   const dir = app.getPath('userData'); fs.mkdirSync(dir, {recursive: true});
-  store = new Store(process.env.HAKQN_DB || path.join(dir, 'hakqn.sqlite'), {log});
+  loc = Settings.resolve(dir, process.env);
+  fs.mkdirSync(path.dirname(loc.dbFile), {recursive: true});
+  store = new Store(loc.dbFile, {log, backupDir: loc.backupDir});
+  loc.missing.forEach(m => log('WARN', 'Thư mục cài đặt không còn: ' + m + ', dùng mặc định'));
   lookup = new Lookup(store);
   gauth = new GoogleAuth({dir: app.getPath('userData'), fetch: (u, o) => net.fetch(u, o), openExternal: u => shell.openExternal(u), safeStorage});
 }
@@ -79,8 +83,14 @@ function registerIpc() {
   ipcMain.handle('import:apply', (e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))());
   ipcMain.handle('backup:to', async () => {
     try {
-      const r = await dialog.showOpenDialog(win, {title: 'Chọn thư mục lưu bản sao lưu', properties: ['openDirectory', 'createDirectory']});
-      if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
+      let outDir;
+      if (loc.customBackup) outDir = Settings.checkFolder(loc.backupDir);   // đã chọn thư mục sao lưu ở Cài đặt hệ thống: lưu thẳng vào đó
+      else {
+        const r = await dialog.showOpenDialog(win, {title: 'Chọn thư mục lưu bản sao lưu', defaultPath: loc.backupDir, properties: ['openDirectory', 'createDirectory']});
+        if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
+        outDir = r.filePaths[0];
+      }
+      const r = {filePaths: [outDir]};
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       const jsonFile = path.join(r.filePaths[0], 'HoSoKhaiThac_SaoLuu_' + stamp + '.json');
       const sqlFile = path.join(r.filePaths[0], 'HoSoKhaiThac_SaoLuu_' + stamp + '.sqlite');
@@ -96,7 +106,7 @@ function registerIpc() {
       const sealed = LoRung.seal(LoRung.parsePackage(pkg).pkg || (() => { throw new Error('Dữ liệu lô không hợp lệ.'); })(), sha), name = LoRung.fileName(sealed);
       let file = process.env.HAKQN_LOT_DIR ? path.join(process.env.HAKQN_LOT_DIR, name) : null;
       if (!file) {
-        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});
+        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackup ? loc.backupDir : app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});
         if (r.canceled || !r.filePath) return {ok: true, canceled: true};
         file = r.filePath;
       }
@@ -142,6 +152,56 @@ function registerIpc() {
   ipcMain.handle('lookup:search', (e, q, tab, opts) => wrap(() => lookup.search(q || '', tab || '', opts || {}))());
   ipcMain.handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
+  /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
+  const setView = () => ({dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
+  const pickFolder = async title => {
+    if (process.env.HAKQN_PICK_DIR) return process.env.HAKQN_PICK_DIR;
+    const r = await dialog.showOpenDialog(win, {title, properties: ['openDirectory', 'createDirectory']});
+    return r.canceled || !r.filePaths[0] ? '' : r.filePaths[0];
+  };
+  ipcMain.handle('settings:get', () => wrap(() => ({settings: setView()}))());
+  ipcMain.handle('settings:openBackup', () => { try { fs.mkdirSync(loc.backupDir, {recursive: true}); shell.openPath(loc.backupDir); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
+  ipcMain.handle('settings:setBackup', async (e, reset) => {
+    try {
+      let dir = '';
+      if (!reset) { dir = await pickFolder('Chọn thư mục lưu bản sao lưu'); if (!dir) return {ok: true, canceled: true}; dir = Settings.checkFolder(dir); }
+      const cur = Settings.load(app.getPath('userData')); Settings.save(app.getPath('userData'), {...cur, backupDir: dir});
+      loc = Settings.resolve(app.getPath('userData'), process.env); store.backupDir = loc.backupDir;
+      log('INFO', 'Đổi thư mục sao lưu: ' + (reset ? 'mặc định' : 'thư mục riêng'));
+      return {ok: true, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  /* Đổi thư mục dữ liệu: sao chép trọn vẹn cơ sở dữ liệu sang thư mục mới (không xóa bản cũ), rồi mở lại từ vị trí mới.
+   * Thư mục mới đã có dữ liệu: người dùng chọn dùng dữ liệu có sẵn đó hoặc ghi đè (bản đang có ở đó được lưu lại trước). */
+  ipcMain.handle('settings:setData', async (e, reset) => {
+    try {
+      if (loc.lockedByEnv) throw new Error('Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB; không đổi được trong ứng dụng.');
+      const userDir = app.getPath('userData');
+      let dir = loc.defaultDataDir;
+      if (!reset) { dir = await pickFolder('Chọn thư mục lưu dữ liệu'); if (!dir) return {ok: true, canceled: true}; }
+      dir = Settings.checkFolder(dir);
+      const target = path.join(dir, Settings.DB_NAME);
+      if (path.resolve(target) === path.resolve(loc.dbFile)) return {ok: true, same: true, settings: setView()};
+      let choice = 'copy';
+      if (fs.existsSync(target)) {
+        choice = process.env.HAKQN_PICK_CHOICE;
+        if (!choice) {
+          const m = await dialog.showMessageBox(win, {type: 'question', title: TITLE, message: 'Thư mục này đã có dữ liệu HAKQN.', detail: target + '\n\nDùng dữ liệu có sẵn trong thư mục đó, hay ghi đè bằng dữ liệu đang dùng? (Khi ghi đè, bản có sẵn được lưu lại trong thư mục sao lưu.)', buttons: ['Dùng dữ liệu có sẵn', 'Ghi đè bằng dữ liệu đang dùng', 'Hủy'], defaultId: 2, cancelId: 2});
+          choice = ['use', 'overwrite'][m.response];
+        }
+        if (!choice) return {ok: true, canceled: true};
+      }
+      if (choice === 'overwrite') { fs.mkdirSync(loc.backupDir, {recursive: true}); fs.copyFileSync(target, path.join(loc.backupDir, 'truoc-ghi-de-' + new Date().toISOString().replace(/[:.]/g, '-') + '.sqlite')); for (const x of ['-wal', '-shm']) try { fs.unlinkSync(target + x); } catch (er) { /* không có */ } fs.unlinkSync(target); }
+      if (choice === 'copy' || choice === 'overwrite') await store.db.backup(target);   // sao chép nhất quán, kể cả khi đang mở
+      const from = loc.dbFile;
+      Settings.save(userDir, {...Settings.load(userDir), dataDir: reset ? '' : dir});
+      try { store.db.close(); } catch (er) { /* đã đóng */ }
+      openStore();
+      if (win && !win.isDestroyed()) win.webContents.reload();
+      log('INFO', 'Đổi thư mục dữ liệu (' + choice + ')');
+      return {ok: true, choice, from, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
   ipcMain.handle('app:openData', () => { shell.showItemInFolder(store.file); return {ok: true}; });
 }
 

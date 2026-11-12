@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('hak', {
   lotSave: pkg => ipcRenderer.invoke('lot:save', pkg),
   lotOpen: p => ipcRenderer.invoke('lot:open', p),
   lotApply: (pkg, action) => ipcRenderer.invoke('lot:apply', pkg, action),
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get'),
+    setData: reset => ipcRenderer.invoke('settings:setData', !!reset),
+    setBackup: reset => ipcRenderer.invoke('settings:setBackup', !!reset),
+    openBackup: () => ipcRenderer.invoke('settings:openBackup')
+  },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
   google: {
     status: () => ipcRenderer.invoke('google:status'),

@@ -230,3 +230,11 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 - Nội dung biểu mẫu FSC (BM-11 đến BM-19) do phần mềm soạn, cần đối chiếu với yêu cầu của tổ chức chứng nhận.
 - Định mức BHLĐ là giá trị tạm; viện dẫn “Thông tư 84/2025/TT-BNNMT” giữ từ mẫu đã duyệt, chưa xác minh. BM-10 chưa tính khấu trừ thuế.
 - Cách tính tiền khoán theo từng chức danh (chia đều) cần người phụ trách xác nhận.
+
+
+## Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu
+Mở **⋯ Thêm → ⚙ Cài đặt hệ thống**.
+- **Thư mục dữ liệu**: nơi lưu cơ sở dữ liệu (`hakqn.sqlite`). Bấm *Chọn thư mục…* để đổi: phần mềm sao chép toàn bộ dữ liệu sang thư mục mới rồi dùng từ đó; **bản cũ không bị xóa** (xóa tay khi chắc chắn không cần). Nếu thư mục mới đã có dữ liệu HAKQN, phần mềm hỏi: dùng dữ liệu có sẵn đó, ghi đè bằng dữ liệu đang dùng (bản có sẵn được lưu lại trước), hoặc hủy. *Về mặc định* đưa dữ liệu về thư mục của ứng dụng.
+- **Thư mục sao lưu**: bản sao lưu tự động trước khi nâng cấp dữ liệu, **Sao lưu toàn bộ dữ liệu** (lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc USB.
+- Thư mục phải có sẵn và ghi được, nếu không phần mềm báo lỗi và giữ cài đặt cũ. Nếu thư mục đã chọn bị xóa hoặc ổ không còn, phần mềm dùng vị trí mặc định và nêu rõ trong màn Cài đặt.
+- Không nên đặt dữ liệu trên ổ mạng hoặc thư mục đang đồng bộ đám mây (OneDrive, Google Drive): cơ sở dữ liệu có thể hỏng.
