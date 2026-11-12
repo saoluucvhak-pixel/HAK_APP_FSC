@@ -82,7 +82,8 @@ Nguồn đã đọc và áp dụng (bản sao nguyên văn trong `ui/vendor/`, g
 
 Tràn ngang: đã đo ở 1366×768 và 1920×1080, sáng và tối, 5 màn hình (tổng quan, mở rừng, tra cứu bảng phẳng, tra cứu cha–con, báo cáo cha–con): 20 tổ hợp đều không tràn trang và không tràn khung hộp thoại; ảnh chụp mới xem bằng mắt một số tổ hợp, chưa chụp từ Electron cho đủ 8 kết hợp màu/chế độ của design system (ứng dụng mới dùng chủ đề luxe). Chưa kiểm tra / giới hạn: Excel chưa cố định hàng tiêu đề và vùng in (thư viện Excel hiện dùng không hỗ trợ); chưa có PDF; chưa thử trên Microsoft Word và máy Windows thật. Khối lượng tấn hiển thị 3 chữ số thập phân (cấu hình theo cột, nằm trong khoảng 0–6 của chuẩn) vì phiếu cân ghi kg.
 
-### Bảng màu (đợt sau, chưa có lượt CI Windows)
+### Bảng màu (commit `fb7e455`, [run 14](https://github.com/saoluucvhak-pixel/HAK_APP_FSC/actions/runs/43155177790): Windows CI đạt)
+- Windows CI: `npm ci`, build, unit, trọn bộ e2e Electron (gồm e2e bảng màu), đóng gói, cài thật `.exe`, kiểm tra khói 2 pha và quét chất lượng mã đều đạt. Artifact `HAKQN-Setup-fb7e45501816fc97bb883c3af0cfbf8b149e3095` (86.746.930 byte, digest zip `sha256:37a0dd5f…25248c220`).
 - `tests/skins.test.js`: 4 bảng màu × sáng/tối, chữ đạt AA ≥ 4,5:1 (mô phỏng đúng thứ tự chồng lớp CSS; test này đã bắt được lỗi chữ phụ chế độ tối của neutral và champagne, đã sửa).
 - `scripts/e2e-skins.js` (Electron thật): 72 kiểm tra đạt: áp dụng đúng 4 bảng màu × sáng/tối × 1366×768 và 1920×1080; 4 màu thanh trên cùng, 4 màu nền, 4 màu nút chính khác nhau; không tràn ngang ở tổng quan, hồ sơ rừng, báo cáo cha–con; nhớ lựa chọn sau khi mở lại; không đổi dữ liệu hồ sơ. Đã xem ảnh chụp tổng quan của cả 8 tổ hợp.
 - Giới hạn: **neutral và champagne là giá trị tự định nghĩa**, chưa được design system xác nhận. “Classic” được hiểu là chủ đề xanh ngọc (teal) theo tài liệu design system; nếu cần một bảng màu xanh ngọc/ngọc lục bảo khác thì cần thêm giá trị màu.
