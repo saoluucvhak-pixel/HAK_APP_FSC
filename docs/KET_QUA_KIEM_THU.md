@@ -106,3 +106,14 @@ Quy tắc nghiệp vụ do người phụ trách nêu: (1) **Giao khoán**: ký 
 ## 8. Bản 1.1.0: công ty mua hàng, điểm đến vận chuyển, sửa lỗi ngày (nhánh `claude/magical-dijkstra-xhn2k9`)
 Đã chạy trong môi trường Linux (Electron thật dưới xvfb): `npm test` 78 bài đạt; `scripts/e2e-congty.js` đạt (2 rừng/2 công ty, đóng–mở lại, BM-04/09/10, đổi công ty, sửa danh mục giữ bản chụp, nơi giao khác, hồ sơ cũ nhập tay); các e2e cũ chạy lại. Nâng cấp SQLite v2→v3 có sao lưu, kiểm bằng CSDL v1.0.0 thật (`tests/fixtures/hakqn_v1_0_0.sqlite`): hồ sơ cũ (điểm đến nhập tay, cước “theo bậc”, phiếu 31/02/2026) giữ nguyên dữ liệu; rừng R-CU2 (cước theo bậc) phải chọn lại cước.
 **Chưa kiểm:** mở BM-04/BM-20 bằng Microsoft Word thật; cài đè lên bản 1.0.0 đã cài trên máy Windows thật; đồng bộ Google Sheets thật (cần tài khoản được cấp quyền). Kết quả CI Windows xem ở PR.
+
+## 9. Bản 1.2.0: sửa ghi đè khi khôi phục, sao lưu/khôi phục theo lô rừng
+Lỗi gốc (đối chiếu với `acf1490`): `applyImport` + `overwrite` gán `next.rs[hit] = {...o}` nên thay CẢ hồ sơ chủ; file chỉ có lô A thì lô B của chủ bị xóa khi lưu. Đã tái hiện bằng `tests/lorung.test.js` (ghi đè chỉ giữ lô A) rồi sửa: nhận diện trùng dùng chung `src/lorung.js` (`planImport`) cho xem trước và ghi.
+Đã chạy trên Linux (Electron thật dưới xvfb, proxy trỏ cổng chết nên mọi thao tác chạy khi không có mạng): `npm test` 91/91; toàn bộ `npm run test:e2e` đạt, gồm `scripts/e2e-lorung.js`:
+- xuất riêng A, sửa A và B, khôi phục A (mặc định giữ; thay đúng A): A về đúng bản sao lưu, B và chủ khác giữ nguyên, có sao lưu SQLite tự động;
+- cùng ca qua nhập bản sao lưu toàn bộ cũ với “Ghi đè”; “Thay toàn bộ” hỏi xác nhận nêu rõ phạm vi;
+- chuyển A sang cơ sở dữ liệu mới: số bản ghi, tổng tấn 21,75, số tiền BM-10 và điểm đến BM-04 giống bản gốc; nhập lại cùng file không đổi gì;
+- mã lô trùng dưới chủ khác, chủ lạ mà mã lô đã có, file không phải JSON/bị sửa/sai phiên bản/thiếu mã lô, bản sao lưu toàn bộ đưa nhầm vào luồng lô (và ngược lại): báo lỗi, dữ liệu không đổi;
+- lỗi giữa giao dịch (trigger SQLite giả lập lỗi): hoàn tác toàn bộ (unit test);
+- ngày: nhập Excel 31/02/2026 bị chặn kèm số phiếu và lý do, 29/02/2028 được nhận; phiếu cũ sai ngày có ô sửa (29/02/2026 bị từ chối, 29/02/2028 nhận). Sửa kèm: thông báo “Chưa sửa phiếu…” trước đây bị mất do render hai lần.
+**Chưa kiểm:** hộp thoại lưu/mở file thật của Windows (e2e dùng biến môi trường thay hộp thoại); chuyển lô sang một tài khoản Windows/máy thật khác; mở BM-04/BM-20 bằng Microsoft Word; Google Sheets thật. Kết quả CI Windows của commit này xem ở PR.

@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('hak', {
   importPreview: db => ipcRenderer.invoke('import:preview', db),
   importApply: (db, strategy) => ipcRenderer.invoke('import:apply', db, strategy),
   backupTo: () => ipcRenderer.invoke('backup:to'),
+  lotSave: pkg => ipcRenderer.invoke('lot:save', pkg),
+  lotOpen: p => ipcRenderer.invoke('lot:open', p),
+  lotApply: (pkg, action) => ipcRenderer.invoke('lot:apply', pkg, action),
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
   google: {
     status: () => ipcRenderer.invoke('google:status'),

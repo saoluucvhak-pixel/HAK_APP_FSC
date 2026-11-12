@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const {Store, SCHEMA_VERSION} = require('./store');
 const {Lookup} = require('./lookup');
+const LoRung = require('./lorung');
 const {GoogleAuth, fileIdOf} = require('./google-auth');
 
 // Kiểm thử/ chạy thử có thể đặt thư mục dữ liệu riêng, không đụng dữ liệu thật
@@ -88,6 +89,39 @@ function registerIpc() {
       return {ok: true, jsonFile, sqlFile};
     } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
   });
+  /* Sao lưu / khôi phục MỘT lô rừng: chạy hoàn toàn trên máy, không cần mạng. Khi kiểm thử tự động: HAKQN_LOT_DIR (thư mục lưu) và HAKQN_LOT_FILE (file mở) thay cho hộp thoại. */
+  const sha = txt => require('crypto').createHash('sha256').update(txt).digest('hex');
+  ipcMain.handle('lot:save', async (e, pkg) => {
+    try {
+      const sealed = LoRung.seal(LoRung.parsePackage(pkg).pkg || (() => { throw new Error('Dữ liệu lô không hợp lệ.'); })(), sha), name = LoRung.fileName(sealed);
+      let file = process.env.HAKQN_LOT_DIR ? path.join(process.env.HAKQN_LOT_DIR, name) : null;
+      if (!file) {
+        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});
+        if (r.canceled || !r.filePath) return {ok: true, canceled: true};
+        file = r.filePath;
+      }
+      fs.mkdirSync(path.dirname(file), {recursive: true});
+      fs.writeFileSync(file, JSON.stringify(sealed, null, 2));
+      return {ok: true, file};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  ipcMain.handle('lot:open', async (e, filePath) => {
+    try {
+      let p = filePath || process.env.HAKQN_LOT_FILE;
+      if (!p) {
+        const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu lô rừng', filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}], properties: ['openFile']});
+        if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
+        p = r.filePaths[0];
+      }
+      const parsed = LoRung.parsePackage(fs.readFileSync(p, 'utf8'), sha);
+      if (!parsed.ok) return {ok: false, error: parsed.error, file: p};
+      return {ok: true, file: p, pkg: parsed.pkg, plan: store.previewLot(parsed.pkg)};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  ipcMain.handle('lot:apply', (e, pkg, action) => wrap(() => {
+    const parsed = LoRung.parsePackage(pkg, sha); if (!parsed.ok) throw new Error(parsed.error);
+    return {...store.applyLot(parsed.pkg, action), db: store.load()};
+  })());
   ipcMain.handle('lookup:status', () => wrap(() => ({...lookup.status(), sheetUrl: lookup.getMeta('sheetUrl') || DEFAULT_SHEET}))());
   ipcMain.handle('lookup:setSheet', (e, link) => wrap(() => { if (!exportUrl(link)) throw new Error('Liên kết không phải Google Sheets'); lookup.setMeta('sheetUrl', link); return {}; })());
   ipcMain.handle('lookup:sync', async () => { try { return await syncSheets(); } catch (e) { log('ERROR', e.message); return {ok: false, errors: [e.message]}; } });

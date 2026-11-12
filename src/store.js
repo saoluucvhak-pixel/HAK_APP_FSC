@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+const LoRung = require('./lorung');
 
 // Mỗi phần tử nâng cấp từ version (i) lên (i+1). Không sửa phần tử đã phát hành, chỉ thêm phần tử mới.
 const MIGRATIONS = [
@@ -141,51 +142,49 @@ class Store {
     return c;
   }
 
-  /* Xem trước nhập bản sao lưu: số liệu + bản ghi trùng với dữ liệu hiện có (trùng id, hoặc cùng CCCD / cùng mã rừng) */
+  /* Xem trước nhập bản sao lưu toàn bộ: số liệu + từng chủ/lô sẽ được THÊM, THAY hay GIỮ. Dùng cùng planImport với bước ghi (src/lorung.js). */
   previewImport(incoming) {
     const cur = this.load();
+    if (!incoming || typeof incoming.rs !== 'object') throw new Error('File không đúng định dạng sao lưu.');
+    const plan = LoRung.planImport(cur, incoming);
     const dup = [];
-    const curByCccd = {}; Object.entries(cur.rs).forEach(([id, o]) => { if (o.info && o.info.cccd) curByCccd[o.info.cccd] = id; });
-    const curMa = {}; Object.entries(cur.rs).forEach(([id, o]) => Object.values(o.forests || {}).forEach(f => { if (f.info && f.info.maRung) curMa[f.info.maRung] = {owner: id, forest: f.id}; }));
-    Object.entries(incoming.rs || {}).forEach(([id, o]) => {
-      const info = o.info || {};
-      const hit = cur.rs[id] ? id : (info.cccd && curByCccd[info.cccd]);
-      if (hit) dup.push({kind: 'owner', incoming: id, existing: hit, ten: info.ten || '', forests: Object.keys(o.forests || {}).length});
-      Object.values(o.forests || {}).forEach(f => {
-        const ma = f.info && f.info.maRung;
-        if (ma && curMa[ma]) dup.push({kind: 'forest', incoming: f.id, existing: curMa[ma].forest, ma, ten: (f.info && f.info.tenRung) || ''});
-      });
+    plan.owners.forEach(o => {
+      if (o.state === 'trung') dup.push({kind: 'owner', incoming: o.id, existing: o.existingId, ten: o.ten, forests: o.forests.length});
+      o.forests.forEach(f => { if (f.state === 'trung') dup.push({kind: 'forest', incoming: f.id, existing: f.existing, ma: f.ma, ten: f.ten}); });
     });
-    return {incoming: Store.counts(incoming), existing: Store.counts(cur), duplicates: dup};
+    return {incoming: Store.counts(incoming), existing: Store.counts(cur), duplicates: dup, plan};
   }
 
-  /* Nhập bản sao lưu. strategy: 'replace' thay toàn bộ | 'skip' giữ bản hiện có | 'overwrite' ghi đè bản trùng | 'both' giữ cả hai (tạo id mới cho bản nhập).
-   * Luôn sao lưu file SQLite trước; ghi trong một giao dịch nên lỗi thì dữ liệu cũ còn nguyên. */
+  /* Nhập bản sao lưu toàn bộ. strategy: 'replace' thay toàn bộ dữ liệu | 'skip' giữ bản hiện có, chỉ thêm mới | 'overwrite' thay ĐÚNG các lô trùng, giữ lô khác của chủ | 'both' giữ cả hai.
+   * Hồ sơ mâu thuẫn (ID, mã lô, chủ rừng chỉ về các bản ghi khác nhau) → dừng, không ghi. Luôn sao lưu file SQLite trước; ghi trong một giao dịch nên lỗi thì dữ liệu cũ còn nguyên. */
   applyImport(incoming, strategy) {
-    const backup = this.snapshotFile('truoc-khoi-phuc');
+    if (!incoming || typeof incoming.rs !== 'object') throw new Error('File không đúng định dạng sao lưu.');
     const cur = this.load();
     let next;
-    if (strategy === 'replace') next = incoming;
-    else {
-      next = JSON.parse(JSON.stringify(cur));
-      const curByCccd = {}; Object.entries(cur.rs).forEach(([id, o]) => { if (o.info && o.info.cccd) curByCccd[o.info.cccd] = id; });
-      const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      Object.entries(incoming.rs || {}).forEach(([id, o]) => {
-        const hit = cur.rs[id] ? id : ((o.info && o.info.cccd) && curByCccd[o.info.cccd]);
-        if (!hit) { next.rs[id] = o; return; }
-        if (strategy === 'skip') return;
-        if (strategy === 'overwrite') { next.rs[hit] = {...o, id: hit}; return; }
-        const nid = newId('r'); const copy = JSON.parse(JSON.stringify(o)); copy.id = nid; const fo = {};
-        Object.values(copy.forests || {}).forEach(f => { const fid = newId('f'); f.id = fid; fo[fid] = f; });
-        copy.forests = fo; next.rs[nid] = copy;
-      });
+    if (strategy === 'replace') {
+      next = incoming;
+      if (!('congTy' in incoming)) next = Object.assign({}, incoming, {congTy: cur.congTy || {}});   // bản sao lưu cũ chưa có danh mục công ty: không xóa danh mục của máy
+    } else {
+      if (!['skip', 'overwrite', 'both'].includes(strategy)) throw new Error('Cách xử lý không hợp lệ: ' + strategy);
+      next = LoRung.mergeImport(cur, incoming, strategy).next;     // ném lỗi nếu có hồ sơ mâu thuẫn, trước khi sao lưu hay ghi
       // Danh mục công ty mua hàng: gộp theo id (skip: giữ bản trên máy; overwrite/both: bản trong file thay bản trùng id; công ty mới luôn được thêm)
       next.congTy = {...(cur.congTy || {})};
       Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || strategy === 'overwrite') next.congTy[id] = c; });
       Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
     }
+    const backup = this.snapshotFile('truoc-khoi-phuc');
     this.save(next);
     return {backup, counts: Store.counts(this.load())};
+  }
+
+  /* Khôi phục MỘT lô rừng từ gói đã kiểm tra (LoRung.parsePackage). Xem trước dùng planLot, ghi dùng applyLot: cùng quy tắc. */
+  previewLot(pkg) { return LoRung.planLot(this.load(), pkg); }
+  applyLot(pkg, action) {
+    const cur = this.load(), r = LoRung.applyLot(cur, pkg, action);
+    if (!r.doi) return {backup: '', plan: r.plan, doi: false};                  // lô đã có và giữ bản hiện có: không ghi gì
+    const backup = this.snapshotFile('truoc-khoi-phuc-lo');
+    this.save(r.next);
+    return {backup, plan: r.plan, doi: true, ownerId: r.ownerId, forestId: r.forestId};
   }
 
   close() { this.db.close(); }

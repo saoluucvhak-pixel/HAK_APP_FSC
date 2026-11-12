@@ -53,8 +53,10 @@ test('nhập: skip / overwrite / both / replace, luôn có bản sao lưu trư�
   const s = new Store(f); s.save(sample());
   const inc = sample(); inc.rs.r1.info.ten = 'MỚI'; inc.rs.r2 = {id: 'r2', info: {ma: 'CR-2', ten: 'B', cccd: '049000000002'}, forests: {}};
   let r = s.applyImport(inc, 'skip'); assert.strictEqual(s.load().rs.r1.info.ten, 'NGUYỄN A'); assert.ok(s.load().rs.r2); assert.ok(fs.existsSync(r.backup));
-  s.applyImport(inc, 'overwrite'); assert.strictEqual(s.load().rs.r1.info.ten, 'MỚI');
-  const before = Object.keys(s.load().rs).length; s.applyImport(inc, 'both'); assert.strictEqual(Object.keys(s.load().rs).length, before + 2);
+  inc.rs.r1.forests.f1.info.tenRung = 'Rừng 1 (file)';
+  s.applyImport(inc, 'overwrite'); assert.strictEqual(s.load().rs.r1.forests.f1.info.tenRung, 'Rừng 1 (file)');   // thay đúng lô trùng
+  assert.strictEqual(s.load().rs.r1.info.ten, 'NGUYỄN A', 'hồ sơ chủ rừng trên máy được giữ');
+  const before = Object.keys(s.load().rs.r1.forests).length; s.applyImport(inc, 'both'); assert.strictEqual(Object.keys(s.load().rs.r1.forests).length, before + 2, 'giữ cả hai: lô trong file thêm bằng ID mới vào đúng chủ');
   r = s.applyImport({v: 2, rs: {}}, 'replace'); assert.strictEqual(r.counts.owners, 0);
 });
 

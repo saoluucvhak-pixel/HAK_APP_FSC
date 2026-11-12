@@ -243,6 +243,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <hr>
     <button class="mi" data-act="backup">⬇ Sao lưu dữ liệu (.json)</button>
     <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">⬆ Khôi phục (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
+    <button class="mi" data-act="lotRestore" id="lotRestoreBtn">⬆ Khôi phục lô rừng…</button>
   </div></details>
 </header>
 <div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><span class="pill" id="saveSt"></span></div>
@@ -776,6 +777,190 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   const api = {MAIN, trim, fold, normMst, mstValid, mstShow, newCompany, clean, validate, mstDuplicates, addressesOf, addressOf, snapshot, diemDen, drift, noiGiaoKhop, mismatches};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKMuaHang = api;
+})(typeof self !== 'undefined' ? self : this);
+</script>
+<script>'use strict';
+/* Nhận diện bản ghi trùng khi khôi phục, và gói sao lưu MỘT LÔ RỪNG. Thuần dữ liệu (không DOM/Electron/SQLite): dùng ở giao diện (nhúng khi build), tiến trình chính và kiểm thử Node.
+ *
+ * MỘT quy tắc xác định trùng dùng chung cho bước xem trước và bước ghi (plan*):
+ *   - Chủ rừng trùng khi cùng ID nội bộ, cùng CCCD hoặc cùng mã chủ rừng. Nếu ba tiêu chí chỉ về các hồ sơ KHÁC NHAU trên máy → mâu thuẫn.
+ *   - Lô trùng khi cùng ID nội bộ hoặc cùng mã lô (info.maRung). Hai tiêu chí chỉ về hai lô khác nhau → mâu thuẫn.
+ *   - Lô trùng nhưng nằm dưới chủ khác chủ mà file ghi, hoặc chủ không khớp hồ sơ nào mà mã lô đã có trên máy → mâu thuẫn.
+ *   Có mâu thuẫn thì DỪNG, không ghi gì, và liệt kê hồ sơ cần đối chiếu.
+ *
+ * Gói lô (JSON): {loai:'HAKQN_LO_RUNG', dinhDang:1, xuatLuc, phanMem, maLo, tenLo, chuRung:{...hồ sơ chủ rừng, không có lô nào khác},
+ *   lo:{...đủ dữ liệu một lô, kèm info.muaHang (công ty và địa chỉ giao đã chốt)}, dungChung:{dinhMuc, bienAlias (chỉ phần lô cần)}, kiemTra:{nc,dx,pc,tongTan}, maKiemTra}
+ * Không chứa: lô của chủ khác hoặc lô khác, bản tra cứu Google Sheets, thông tin đăng nhập, danh mục công ty. */
+(function (root) {
+  const KIND = 'HAKQN_LO_RUNG', FORMAT = 1;
+  const t = v => (v == null ? '' : String(v)).trim();
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const defNewId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const ownerName = o => (o && o.info && (o.info.ten || o.info.ma)) || '(chưa đặt tên)';
+  const forestsOf = o => Object.entries((o && o.forests) || {}).map(([k, f]) => Object.assign({}, f, {id: f.id || k}));
+  const forestLabel = f => ((f.info && f.info.maRung) || '(chưa có mã lô)') + (f.info && f.info.tenRung ? ' – ' + f.info.tenRung : '');
+
+  /* ---------- nhận diện ---------- */
+  function matchOwner(cur, id, info) {
+    info = info || {};
+    const rs = (cur && cur.rs) || {}, found = {};
+    if (id && rs[id]) found.id = id;
+    const cccd = t(info.cccd), ma = t(info.ma);
+    Object.entries(rs).forEach(([k, o]) => {
+      const oi = (o && o.info) || {};
+      if (cccd && t(oi.cccd) === cccd && !found.cccd) found.cccd = k;
+      if (ma && t(oi.ma) === ma && !found.ma) found.ma = k;
+    });
+    const ids = [...new Set(Object.values(found))];
+    if (ids.length > 1) return {hit: null, conflict: 'Chủ rừng “' + (info.ten || info.ma || id) + '” khớp nhiều hồ sơ khác nhau trên máy: ' +
+      Object.entries(found).map(([k, v]) => ({id: 'theo ID', cccd: 'theo CCCD', ma: 'theo mã chủ rừng'}[k]) + ' → ' + ownerName(rs[v])).join('; ')};
+    return {hit: ids[0] || null, conflict: ''};
+  }
+  function matchForest(cur, fid, ma) {
+    const rs = (cur && cur.rs) || {}; let byId = null, byMa = null; ma = t(ma);
+    Object.entries(rs).forEach(([ok, o]) => forestsOf(o).forEach(f => {
+      if (fid && f.id === fid && !byId) byId = {owner: ok, forest: f.id};
+      if (ma && t(f.info && f.info.maRung) === ma && !byMa) byMa = {owner: ok, forest: f.id};
+    }));
+    if (byId && byMa && (byId.forest !== byMa.forest || byId.owner !== byMa.owner)) return {hit: null, conflict: 'ID nội bộ và mã lô “' + ma + '” chỉ về hai lô khác nhau trên máy (' + forestLabel(rs[byId.owner].forests[byId.forest] || {}) + ' và ' + forestLabel(rs[byMa.owner].forests[byMa.forest] || {}) + ')'};
+    return {hit: byId || byMa, conflict: ''};
+  }
+  const sameLoc = (a, b) => a && b && a.owner === b.owner && a.forest === b.forest;
+
+  /* ---------- khôi phục bản sao lưu toàn bộ: xem trước và ghi dùng chung planImport ---------- */
+  function planImport(cur, incoming) {
+    const conflicts = [], owners = [], seenMa = {};
+    Object.entries((incoming && incoming.rs) || {}).forEach(([key, o]) => {
+      const oid = (o && o.id) || key, mo = matchOwner(cur, oid, o && o.info);
+      if (mo.conflict) conflicts.push({loai: 'chu', ten: ownerName(o), moTa: mo.conflict});
+      const entry = {id: key, ten: ownerName(o), ma: t(o && o.info && o.info.ma), state: mo.hit ? 'trung' : 'moi', existingId: mo.hit, forests: [], giu: []};
+      const matchedForests = new Set();
+      forestsOf(o).forEach(f => {
+        const ma = t(f.info && f.info.maRung);
+        if (ma) { if (seenMa[ma]) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: 'Mã lô “' + ma + '” xuất hiện hơn một lần trong file'}); seenMa[ma] = true; }
+        const mf = matchForest(cur, f.id, ma);
+        let moTa = mf.conflict;
+        if (!moTa && mf.hit) {
+          if (!mo.hit) moTa = 'Lô “' + forestLabel(f) + '” đã có trên máy dưới chủ “' + ownerName(cur.rs[mf.hit.owner]) + '”, nhưng chủ “' + ownerName(o) + '” trong file không khớp hồ sơ nào';
+          else if (mf.hit.owner !== mo.hit) moTa = 'Lô “' + forestLabel(f) + '” đã có trên máy dưới chủ “' + ownerName(cur.rs[mf.hit.owner]) + '”, trong file thuộc chủ “' + ownerName(o) + '” (khớp chủ “' + ownerName(cur.rs[mo.hit]) + '”)';
+        }
+        if (moTa) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa});
+        const ex = !moTa && mf.hit ? cur.rs[mf.hit.owner].forests[mf.hit.forest] : null;
+        if (ex) matchedForests.add(ex.id || mf.hit.forest);
+        entry.forests.push({id: f.id, ma, ten: t(f.info && f.info.tenRung), state: ex ? 'trung' : 'moi', existing: mf.hit ? mf.hit.forest : null, loi: moTa || '',
+          nc: (f.nc || []).length, dx: (f.dx || []).length, pc: (f.pc || []).length, kl: sumKl(f.pc)});
+      });
+      if (mo.hit) forestsOf(cur.rs[mo.hit]).forEach(f => { if (!matchedForests.has(f.id)) entry.giu.push({id: f.id, ma: t(f.info && f.info.maRung), ten: t(f.info && f.info.tenRung)}); });
+      owners.push(entry);
+    });
+    return {ok: !conflicts.length, conflicts, owners};
+  }
+  function sumKl(pc) { return Math.round((pc || []).reduce((s, p) => s + (typeof p.kl === 'number' && isFinite(p.kl) ? p.kl : 0), 0) * 1000) / 1000; }
+
+  /* Gộp theo chiến lược skip | overwrite | both (không dùng cho 'replace'). Mâu thuẫn → ném lỗi, không đổi gì. */
+  function mergeImport(cur, incoming, strategy, newId) {
+    newId = newId || defNewId;
+    const plan = planImport(cur, incoming);
+    if (!plan.ok) { const e = new Error('Có ' + plan.conflicts.length + ' hồ sơ mâu thuẫn, cần đối chiếu trước khi khôi phục: ' + plan.conflicts.slice(0, 5).map(c => c.moTa).join(' | ')); e.conflicts = plan.conflicts; throw e; }
+    const next = clone(cur); next.rs = next.rs || {};
+    plan.owners.forEach(en => {
+      const o = incoming.rs[en.id];
+      if (!en.existingId) { next.rs[en.id] = Object.assign(clone(o), {id: (o && o.id) || en.id}); return; }       // chủ mới (kèm các lô của chủ đó)
+      const tgt = next.rs[en.existingId]; tgt.forests = tgt.forests || {};
+      forestsOf(o).forEach(f => {
+        const pf = en.forests.find(x => x.id === f.id);
+        if (pf.state === 'moi') { tgt.forests[f.id] = clone(f); return; }
+        if (strategy === 'skip') return;
+        if (strategy === 'overwrite') { tgt.forests[pf.existing] = Object.assign(clone(f), {id: pf.existing}); return; }
+        const nid = newId('f'); tgt.forests[nid] = Object.assign(clone(f), {id: nid});                              // both: giữ cả hai, bản trong file lấy ID mới
+      });
+    });
+    return {next, plan};
+  }
+
+  /* ---------- gói sao lưu một lô ---------- */
+  function sharedFor(db, forest) {
+    const dm = (db && db.dinhMuc) || {}, out = {dinhMuc: {}, bienAlias: {}};
+    new Set((forest.nc || []).map(r => t(r.chucDanh)).filter(Boolean)).forEach(cd => { if (dm[cd]) out.dinhMuc[cd] = clone(dm[cd]); });
+    const plates = new Set([...(forest.dx || []), ...(forest.pc || [])].map(r => t(r.bienSo)).filter(Boolean));
+    Object.entries((db && db.bienAlias) || {}).forEach(([k, v]) => { if (plates.has(t(v))) out.bienAlias[k] = v; });
+    return out;
+  }
+  function exportLot(db, ownerId, forestId, opts) {
+    opts = opts || {};
+    const o = db && db.rs && db.rs[ownerId], f = o && o.forests && o.forests[forestId];
+    if (!o || !f) throw new Error('Không tìm thấy lô rừng cần sao lưu.');
+    const lo = clone(f); lo.id = lo.id || forestId;
+    const chu = clone(o); delete chu.forests; chu.id = chu.id || ownerId;
+    return {loai: KIND, dinhDang: FORMAT, xuatLuc: opts.now || new Date().toISOString(), phanMem: opts.version || '', maLo: t(lo.info && lo.info.maRung), tenLo: t(lo.info && lo.info.tenRung),
+      chuRung: chu, lo, dungChung: sharedFor(db, lo), kiemTra: {nc: (lo.nc || []).length, dx: (lo.dx || []).length, pc: (lo.pc || []).length, tongTan: sumKl(lo.pc)}};
+  }
+  const body = pkg => JSON.stringify({loai: pkg.loai, dinhDang: pkg.dinhDang, xuatLuc: pkg.xuatLuc, maLo: pkg.maLo, chuRung: pkg.chuRung, lo: pkg.lo, dungChung: pkg.dungChung, kiemTra: pkg.kiemTra});
+  /* hash: (chuỗi) → chuỗi hex (SHA-256 do tiến trình chính cung cấp) */
+  const seal = (pkg, hash) => Object.assign({}, pkg, {maKiemTra: hash(body(pkg))});
+  const fileName = (pkg, day) => 'HAKQN_LoRung_' + (t(pkg.maLo).replace(/[\\/:*?"<>|\s]+/g, '_') || 'KhongMa') + '_' + (day || new Date().toISOString().slice(0, 10)) + '.json';
+
+  /* Đọc và kiểm tra gói. Trả {ok, pkg} hoặc {ok:false, error}. Không ghi gì. */
+  function parsePackage(input, hash) {
+    let o = input;
+    if (typeof input === 'string') { try { o = JSON.parse(input); } catch (e) { return {ok: false, error: 'File không phải JSON hợp lệ (có thể bị hỏng hoặc cắt dở).'}; } }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return {ok: false, error: 'File không đúng định dạng gói sao lưu lô rừng.'};
+    if (o.loai !== KIND) return {ok: false, error: o.rs && typeof o.rs === 'object' ? 'Đây là bản sao lưu TOÀN BỘ dữ liệu, không phải gói lô rừng. Dùng “Khôi phục (.json)” trong menu Dữ liệu.' : 'File không phải gói sao lưu lô rừng của HAKQN.'};
+    if (typeof o.dinhDang !== 'number' || o.dinhDang !== FORMAT) return {ok: false, error: o.dinhDang > FORMAT ? 'Gói lô rừng do phiên bản phần mềm mới hơn tạo (định dạng ' + o.dinhDang + '). Hãy cập nhật HAKQN rồi thử lại.' : 'Sai phiên bản định dạng gói lô rừng (' + o.dinhDang + ').'};
+    if (!o.lo || typeof o.lo !== 'object' || Array.isArray(o.lo) || o.lo.forests || !o.lo.info) return {ok: false, error: 'Gói không chứa đúng một lô rừng.'};
+    if (!o.chuRung || typeof o.chuRung !== 'object' || !o.chuRung.info) return {ok: false, error: 'Gói thiếu thông tin nhận diện chủ rừng, không xác định được chủ để khôi phục.'};
+    if (!t(o.lo.info.maRung)) return {ok: false, error: 'Gói không có mã lô, không xác định được lô đích.'};
+    if (hash) { if (!o.maKiemTra || o.maKiemTra !== hash(body(o))) return {ok: false, error: 'Gói lô rừng bị hỏng hoặc đã bị sửa (mã kiểm tra không khớp).'}; }
+    ['nc', 'dx', 'pc'].forEach(k => { if (o.lo[k] != null && !Array.isArray(o.lo[k])) o.lo[k] = null; });
+    if (['nc', 'dx', 'pc'].some(k => o.lo[k] === null)) return {ok: false, error: 'Dữ liệu nhân công, xe hoặc phiếu cân trong gói bị hỏng.'};
+    return {ok: true, pkg: o};
+  }
+
+  /* Xem trước khôi phục lô: cùng quy tắc nhận diện với planImport */
+  function planLot(cur, pkg) {
+    const o = pkg.chuRung, f = pkg.lo, conflicts = [];
+    const mo = matchOwner(cur, o.id, o.info); if (mo.conflict) conflicts.push({loai: 'chu', ten: ownerName(o), moTa: mo.conflict});
+    const mf = matchForest(cur, f.id, f.info.maRung); if (mf.conflict) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: mf.conflict});
+    if (!mf.conflict && mf.hit) {
+      if (!mo.hit) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: 'Lô “' + forestLabel(f) + '” đã có trên máy dưới chủ “' + ownerName(cur.rs[mf.hit.owner]) + '”, nhưng chủ “' + ownerName(o) + '” trong gói không khớp hồ sơ nào'});
+      else if (mf.hit.owner !== mo.hit) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: 'Lô “' + forestLabel(f) + '” đã có trên máy dưới chủ “' + ownerName(cur.rs[mf.hit.owner]) + '”, trong gói thuộc chủ “' + ownerName(o) + '” (khớp chủ “' + ownerName(cur.rs[mo.hit]) + '”)'});
+    }
+    const exists = !conflicts.length && !!mf.hit, ex = exists ? cur.rs[mf.hit.owner].forests[mf.hit.forest] : null;
+    const dm = (cur && cur.dinhMuc) || {}, al = (cur && cur.bienAlias) || {}, sh = pkg.dungChung || {}, khac = [], them = [];
+    Object.entries(sh.dinhMuc || {}).forEach(([k, v]) => { if (!(k in dm)) them.push('Định mức BHLĐ “' + k + '” (máy chưa có, sẽ thêm)'); else if (JSON.stringify(dm[k]) !== JSON.stringify(v)) khac.push('Định mức BHLĐ “' + k + '” khác bản của máy (giữ bản của máy)'); });
+    Object.entries(sh.bienAlias || {}).forEach(([k, v]) => { if (!(k in al)) them.push('Biển số quy đổi “' + k + '” → ' + v + ' (máy chưa có, sẽ thêm)'); else if (al[k] !== v) khac.push('Biển số quy đổi “' + k + '” khác bản của máy (giữ bản của máy)'); });
+    const cty = f.info && f.info.muaHang;
+    const ghiChu = []; if (cty && cty.congTyId && !((cur.congTy || {})[cty.congTyId])) ghiChu.push('Công ty mua hàng “' + cty.ten + '” chưa có trong danh mục của máy: tên và địa chỉ giao đã chốt vẫn được mang theo, BM-04 xuất đúng.');
+    return {ok: !conflicts.length, conflicts, maLo: t(f.info.maRung), tenLo: t(f.info.tenRung), xuatLuc: pkg.xuatLuc,
+      chu: {state: mo.hit ? 'co' : 'moi', existingId: mo.hit, ten: ownerName(o), ma: t(o.info.ma)},
+      lo: {state: exists ? 'trung' : 'moi', existingId: exists ? mf.hit.forest : null, existingOwner: exists ? mf.hit.owner : null},
+      incoming: {nc: (f.nc || []).length, dx: (f.dx || []).length, pc: (f.pc || []).length, kl: sumKl(f.pc)},
+      existing: ex ? {nc: (ex.nc || []).length, dx: (ex.dx || []).length, pc: (ex.pc || []).length, kl: sumKl(ex.pc)} : null,
+      giuTrongChu: mo.hit ? forestsOf(cur.rs[mo.hit]).filter(x => !ex || x.id !== ex.id).map(x => ({id: x.id, ma: t(x.info && x.info.maRung), ten: t(x.info && x.info.tenRung)})) : [],
+      dungChung: {khac, them}, ghiChu};
+  }
+
+  /* Ghi gói vào bản sao dữ liệu: action 'giu' (mặc định, không đổi lô đã có) hoặc 'thay' (chỉ thay đúng lô đó). Mâu thuẫn → ném lỗi. */
+  function applyLot(cur, pkg, action, newId) {
+    newId = newId || defNewId;
+    const plan = planLot(cur, pkg);
+    if (!plan.ok) { const e = new Error('Không xác định được lô đích, cần đối chiếu: ' + plan.conflicts.map(c => c.moTa).join(' | ')); e.conflicts = plan.conflicts; throw e; }
+    if (plan.lo.state === 'trung' && action !== 'thay') return {next: cur, plan, doi: false};
+    const next = clone(cur); next.rs = next.rs || {};
+    let oid = plan.chu.existingId;
+    if (!oid) { oid = pkg.chuRung.id && !next.rs[pkg.chuRung.id] ? pkg.chuRung.id : newId('r'); next.rs[oid] = Object.assign(clone(pkg.chuRung), {id: oid, forests: {}}); }
+    const owner = next.rs[oid]; owner.forests = owner.forests || {};
+    const fid = plan.lo.existingId || pkg.lo.id;
+    owner.forests[fid] = Object.assign(clone(pkg.lo), {id: fid});
+    const sh = pkg.dungChung || {};
+    // Thiết lập dùng chung: giữ của máy đích, chỉ BỔ SUNG mục máy chưa có. Không tạo khóa rỗng (khóa dinhMuc có mặt sẽ chặn định mức mặc định của máy).
+    Object.entries(sh.dinhMuc || {}).forEach(([k, v]) => { if (!next.dinhMuc || !(k in next.dinhMuc)) { next.dinhMuc = next.dinhMuc || {}; next.dinhMuc[k] = clone(v); } });
+    Object.entries(sh.bienAlias || {}).forEach(([k, v]) => { if (!next.bienAlias || !(k in next.bienAlias)) { next.bienAlias = next.bienAlias || {}; next.bienAlias[k] = v; } });
+    return {next, plan, doi: true, ownerId: oid, forestId: fid};
+  }
+
+  const api = {KIND, FORMAT, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKLoRung = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
 <script>/* Mẫu báo cáo (dữ liệu thuần, không phụ thuộc giao diện) — dùng chung cho Word, Excel và kiểm thử.
@@ -2559,7 +2744,7 @@ function panelRung(own) {
   const job = curRec();
   const ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['xuat', 'Xuất hồ sơ']];
   return list +
-    '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><button class="btn danger sm" data-act="delForest">Xóa rừng</button></div>' +
+    '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">⬇ Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
     panelTienDo(job) + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
     (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(job) : ftab === 'dx' ? panelDX(job) + panelPhieuCan(job) : panelXuat(job));
 }
@@ -3178,35 +3363,90 @@ async function backupAll() {
   const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});
   download(blob, 'HoSoKhaiThac_SaoLuu_' + new Date().toISOString().slice(0, 10) + '.json');
 }
+const LO_ST = {moi: ['ok', 'THÊM'], trung: ['warn', 'TRÙNG']};
+function impPlanHtml(plan) {
+  if (!plan) return '';
+  const conf = plan.conflicts.length ? '<div class="msg err"><b>Dừng: có ' + plan.conflicts.length + ' hồ sơ mâu thuẫn, cần đối chiếu trước khi khôi phục</b> (không có gì bị ghi):<br>' + plan.conflicts.slice(0, 10).map(c => '• ' + esc(c.moTa)).join('<br>') + (plan.conflicts.length > 10 ? '<br>• …' : '') + '</div>' : '';
+  const rows = plan.owners.map(o => '<tr><td><b>' + esc(o.ten) + '</b><br><small class="mut">' + (o.state === 'trung' ? 'chủ đã có trên máy: giữ hồ sơ chủ rừng của máy' : 'chủ mới: sẽ thêm cùng các lô') + '</small></td><td>' +
+    o.forests.map(f => '<div><span class="pill ' + (o.state === 'moi' ? 'ok' : LO_ST[f.state][0]) + '">' + (o.state === 'moi' ? 'THÊM' : LO_ST[f.state][1]) + '</span> ' + esc(f.ma || '(không mã)') + ' ' + esc(f.ten) + ' <small class="mut">· ' + f.nc + ' nhân công, ' + f.dx + ' xe, ' + f.pc + ' phiếu cân</small>' + (f.loi ? ' <span class="pill err">mâu thuẫn</span>' : '') + '</div>').join('') +
+    o.giu.map(g => '<div><span class="pill">GIỮ</span> ' + esc(g.ma) + ' ' + esc(g.ten) + ' <small class="mut">· lô trên máy không có trong file, không bị đụng tới</small></div>').join('') + '</td></tr>').join('');
+  return conf + '<div class="wrap" style="max-height:230px;overflow:auto"><table><tr><th>Chủ rừng</th><th>Lô: sẽ làm gì với lựa chọn “Giữ bản trên máy / Ghi đè / Giữ cả hai”</th></tr>' + rows + '</table></div>' +
+    '<p class="mut" style="margin:6px 0">Lô TRÙNG: giữ bản trên máy (mặc định), hoặc ghi đè <b>đúng lô đó</b> bằng bản trong file. Lô THÊM luôn được thêm. Lô GIỮ không bao giờ bị xóa.</p>';
+}
 async function importWithPreview(inc) {
   const p = await HB.importPreview(inc);
   if (!p.ok) return note('Không đọc được bản sao lưu: ' + p.error, 'err');
   const row = (l, a, b) => '<tr><td>' + l + '</td><td style="text-align:right">' + fmt(a) + '</td><td style="text-align:right">' + fmt(b) + '</td></tr>';
-  const I = p.incoming, E = p.existing, dups = p.duplicates;
-  $('#impBody').innerHTML = '<h2>Nhập / khôi phục bản sao lưu</h2><table><tr><th></th><th style="text-align:right">Trong file</th><th style="text-align:right">Đang có trên máy</th></tr>' +
-    row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' +
-    (dups.length ? '<div class="msg warn">Có ' + dups.length + ' bản ghi trùng với dữ liệu hiện có (trùng mã, CCCD hoặc mã rừng):<br>' + dups.slice(0, 8).map(d => '• ' + (d.kind === 'owner' ? 'Chủ rừng ' : 'Rừng ') + esc(d.ten || d.ma || d.incoming) + (d.ma ? ' (' + esc(d.ma) + ')' : '')).join('<br>') + (dups.length > 8 ? '<br>… và ' + (dups.length - 8) + ' bản ghi khác' : '') + '</div>' : '<div class="msg ok">Không có bản ghi trùng.</div>') +
+  const I = p.incoming, E = p.existing, blocked = !p.plan.ok;
+  $('#impBody').innerHTML = '<h2>Khôi phục bản sao lưu toàn bộ</h2><table><tr><th></th><th style="text-align:right">Trong file</th><th style="text-align:right">Đang có trên máy</th></tr>' +
+    row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' + impPlanHtml(p.plan) +
     '<p><b>Cách xử lý:</b></p>' +
-    '<label><input type="radio" name="impStrat" value="skip" checked> Giữ bản trên máy, chỉ thêm bản ghi mới</label>' +
-    '<label><input type="radio" name="impStrat" value="overwrite"> Ghi đè bản ghi trùng bằng dữ liệu trong file</label>' +
-    '<label><input type="radio" name="impStrat" value="both"> Giữ cả hai (bản trùng trong file được thêm thành hồ sơ mới)</label>' +
-    '<label><input type="radio" name="impStrat" value="replace"> Thay toàn bộ dữ liệu trên máy bằng file này</label>' +
-    '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi. Lỗi giữa chừng thì không đổi gì.</p>' +
+    '<label><input type="radio" name="impStrat" value="skip"' + (blocked ? ' disabled' : ' checked') + '> Giữ bản trên máy, chỉ thêm lô/chủ mới</label>' +
+    '<label><input type="radio" name="impStrat" value="overwrite"' + (blocked ? ' disabled' : '') + '> Ghi đè các lô TRÙNG bằng dữ liệu trong file (lô khác của chủ được giữ)</label>' +
+    '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> Giữ cả hai (lô trùng trong file được thêm bằng ID mới; mã lô sẽ trùng, cần đổi mã)</label>' +
+    '<hr><label><input type="radio" name="impStrat" value="replace"' + (blocked ? ' checked' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
+    '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi và ghi trong một giao dịch: lỗi giữa chừng thì không đổi gì. Bản tra cứu Google Sheets không bị đổi.</p>' +
     '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button><button class="btn" data-act="impGo">Thực hiện</button></div>';
-  window.__imp = inc; $('#impBox').classList.add('on');
+  window.__imp = inc; window.__plan = p.plan; $('#impBox').classList.add('on');
 }
 async function importGo() {
-  const strat = (document.querySelector('input[name=impStrat]:checked') || {}).value || 'skip';
-  if (strat === 'replace' && !confirm('Thay toàn bộ dữ liệu trên máy bằng file này?')) return;
+  const strat = (document.querySelector('input[name=impStrat]:checked') || {}).value;
+  if (!strat) return;
+  const E = window.__plan ? window.__plan.owners : [];
+  if (strat === 'replace' && !confirm('THAY TOÀN BỘ dữ liệu hồ sơ trên máy bằng file này?\n\nTất cả chủ rừng và lô hiện có trên máy sẽ bị thay bằng nội dung file (' + E.length + ' chủ rừng, ' + E.reduce((n, o) => n + o.forests.length, 0) + ' lô trong file). Lô nào có trên máy mà không có trong file sẽ MẤT khỏi ứng dụng (vẫn còn trong bản sao lưu tự động trước khi ghi).\n\nTiếp tục?')) return;
   const r = await HB.importApply(window.__imp, strat);
-  $('#impBox').classList.remove('on'); window.__imp = null;
+  $('#impBox').classList.remove('on'); window.__imp = null; window.__plan = null;
   if (!r.ok) return note('Không nhập được, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
   db = withDefaults(r.db); cur = null; curF = null;
   note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân. Bản sao lưu trước khi nhập: ' + r.backup);
 }
+
+/* ===== Sao lưu / khôi phục MỘT lô rừng (chạy trên máy, không cần mạng) ===== */
+async function lotBackup() {
+  const f = curForest(), o = curOwner(); if (!f || !o) return note('Hãy mở một lô rừng trước khi sao lưu.', 'err');
+  if (!HB) return note('Sao lưu lô rừng cần bản cài trên Windows.', 'err');
+  let pkg; try { pkg = HAKLoRung.exportLot(db, o.id, f.id, {version: (dbInfo && dbInfo.version) || ''}); } catch (e) { return note('Không sao lưu được lô: ' + e.message, 'err'); }
+  const r = await HB.lotSave(pkg);
+  if (r.canceled) return;
+  note(r.ok ? 'Đã sao lưu lô ' + pkg.maLo + ' (' + pkg.kiemTra.nc + ' nhân công, ' + pkg.kiemTra.dx + ' xe, ' + pkg.kiemTra.pc + ' phiếu cân) vào: ' + r.file : 'Không sao lưu được lô: ' + r.error, r.ok ? 'ok' : 'err');
+}
+const lotCnt = c => c ? c.nc + ' nhân công, ' + c.dx + ' xe, ' + c.pc + ' phiếu cân, ' + fmtTan(c.kl) + ' tấn' : '';
+async function lotRestoreOpen(filePath) {
+  if (!HB) return note('Khôi phục lô rừng cần bản cài trên Windows.', 'err');
+  const r = await HB.lotOpen(filePath);
+  if (r.canceled) return;
+  if (!r.ok) return note('Không khôi phục được: ' + r.error + ' Dữ liệu trên máy chưa bị thay đổi.', 'err');
+  const P = r.plan, pk = r.pkg, exists = P.lo.state === 'trung';
+  window.__lot = pk;
+  $('#impBody').innerHTML = '<h2>Khôi phục lô rừng</h2>' +
+    '<table><tr><th>Chủ rừng</th><td><b>' + esc(P.chu.ten) + '</b> · mã ' + esc(P.chu.ma) + '</td></tr><tr><th>Mã lô</th><td><b>' + esc(P.maLo) + '</b> ' + esc(P.tenLo) + '</td></tr>' +
+    '<tr><th>Thời điểm sao lưu</th><td>' + esc(fmtDT(P.xuatLuc)) + '</td></tr><tr><th>Trong file</th><td>' + esc(lotCnt(P.incoming)) + '</td></tr>' +
+    (P.existing ? '<tr><th>Lô đang có trên máy</th><td>' + esc(lotCnt(P.existing)) + '</td></tr>' : '') + '</table>' +
+    (P.ok ? '<div class="msg ' + (exists ? 'warn' : 'ok') + '">' + (P.chu.state === 'co' ? 'Chủ rừng <b>đã có</b> trên máy: lô sẽ được ' + (exists ? 'xử lý theo lựa chọn bên dưới' : 'thêm vào đúng chủ này') + '.' : 'Chủ rừng <b>chưa có</b> trên máy: sẽ tạo chủ mới từ thông tin trong file rồi thêm lô.') +
+      (exists ? ' Lô này <b>đã tồn tại</b> trên máy.' : ' Lô <b>chưa có</b> trên máy.') + '</div>' : '<div class="msg err"><b>Dừng: không xác định được lô đích, cần đối chiếu.</b> Chưa ghi gì.<br>' + P.conflicts.map(c => '• ' + esc(c.moTa)).join('<br>') + '</div>') +
+    (P.giuTrongChu.length ? '<p class="mut">Các lô khác của chủ này trên máy giữ nguyên: ' + P.giuTrongChu.map(x => esc(x.ma)).join(', ') + '.</p>' : '') +
+    (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn">Thiết lập dùng chung (giữ của máy đích):<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x)).join('<br>') + '</div>' : '') +
+    P.ghiChu.map(x => '<p class="mut">' + esc(x) + '</p>').join('') +
+    (P.ok && exists ? '<p><b>Lô đã có trên máy:</b></p><label><input type="radio" name="lotAct" value="giu" checked> Giữ bản hiện có (không đổi gì)</label><label><input type="radio" name="lotAct" value="thay"> Thay đúng lô này bằng bản trong file (các lô khác không bị đụng tới)</label>' : '') +
+    '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu trước khi ghi và ghi trong một giao dịch.</p>' +
+    '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="lotCancel">Hủy</button>' + (P.ok ? '<button class="btn" data-act="lotGo">' + (exists ? 'Thực hiện' : 'Khôi phục lô') + '</button>' : '') + '</div>';
+  $('#impBox').classList.add('on');
+}
+async function lotGo() {
+  const act = (document.querySelector('input[name=lotAct]:checked') || {}).value || 'giu';
+  if (act === 'thay' && !confirm('Thay lô này trên máy bằng bản trong file? Chỉ lô này bị thay; phần đang có trên máy vẫn còn trong bản sao lưu tự động.')) return;
+  const r = await HB.lotApply(window.__lot, act);
+  $('#impBox').classList.remove('on'); window.__lot = null;
+  if (!r.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
+  db = withDefaults(r.db);
+  if (!r.doi) return note('Giữ bản hiện có của lô ' + r.plan.maLo + ': không có gì thay đổi.');
+  cur = r.ownerId; curF = r.forestId; view = 'owner'; tab = 'rung'; ftab = 'finfo'; render();
+  note('Đã khôi phục lô ' + r.plan.maLo + ' (' + lotCnt(r.plan.incoming) + '). Bản sao lưu trước khi ghi: ' + r.backup, 'ok');
+}
 async function restoreAll(file) {
   try {
     const o = JSON.parse(await file.text());
+    if (o && o.loai === HAKLoRung.KIND) throw new Error('Đây là gói sao lưu MỘT lô rừng. Dùng “Khôi phục lô rừng…” trong menu Thêm.');
     if (!o || typeof o !== 'object' || !o.rs) throw new Error('File không đúng định dạng sao lưu.');
     if (HB) return importWithPreview(withDefaults(o.v === 2 ? o : migrateV1(o)));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
@@ -3763,7 +4003,7 @@ document.addEventListener('click', async e => {
     const f = curForest(), row = el.dataset.row, r = f && (f.pc || []).find(x => String(x._row) === String(row)), inp = document.querySelector('[data-pcfix="' + row + '"]');
     if (!r || !inp) return;
     const v = trim(inp.value);
-    if (!HAKDates.isValid(v)) { note('Chưa sửa phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(v) + '.', 'err'); return render(); }
+    if (!HAKDates.isValid(v)) { note('Chưa sửa phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(v) + '.', 'err'); return; }
     const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persist(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
   }
   if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
@@ -3802,6 +4042,10 @@ document.addEventListener('click', async e => {
     setTheme(dark ? 'light' : 'dark'); return;
   }
   if (act === 'backup') return backupAll();
+  if (act === 'lotBackup') return lotBackup();
+  if (act === 'lotRestore') { const m = document.getElementById('moreMenu'); if (m) m.open = false; return lotRestoreOpen(); }
+  if (act === 'lotCancel') { window.__lot = null; return $('#impBox').classList.remove('on'); }
+  if (act === 'lotGo') return lotGo();
   if (act === 'impCancel') { window.__imp = null; return $('#impBox').classList.remove('on'); }
   if (act === 'impGo') return importGo();
   if (act === 'tpl') return downloadTemplate(el.dataset.kind);

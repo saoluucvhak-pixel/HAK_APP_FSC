@@ -164,6 +164,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <hr>
     <button class="mi" data-act="backup">⬇ Sao lưu dữ liệu (.json)</button>
     <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">⬆ Khôi phục (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
+    <button class="mi" data-act="lotRestore" id="lotRestoreBtn">⬆ Khôi phục lô rừng…</button>
   </div></details>
 </header>
 <div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><span class="pill" id="saveSt"></span></div>
@@ -245,6 +246,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@SF@@*/</script>
 <script>/*@@DATES@@*/</script>
 <script>/*@@MUAHANG@@*/</script>
+<script>/*@@LORUNG@@*/</script>
 <script>/*@@REPORTS@@*/</script>
 <script>
 (() => {
@@ -1777,7 +1779,7 @@ function panelRung(own) {
   const job = curRec();
   const ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['xuat', 'Xuất hồ sơ']];
   return list +
-    '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><button class="btn danger sm" data-act="delForest">Xóa rừng</button></div>' +
+    '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">⬇ Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
     panelTienDo(job) + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
     (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(job) : ftab === 'dx' ? panelDX(job) + panelPhieuCan(job) : panelXuat(job));
 }
@@ -2396,35 +2398,90 @@ async function backupAll() {
   const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});
   download(blob, 'HoSoKhaiThac_SaoLuu_' + new Date().toISOString().slice(0, 10) + '.json');
 }
+const LO_ST = {moi: ['ok', 'THÊM'], trung: ['warn', 'TRÙNG']};
+function impPlanHtml(plan) {
+  if (!plan) return '';
+  const conf = plan.conflicts.length ? '<div class="msg err"><b>Dừng: có ' + plan.conflicts.length + ' hồ sơ mâu thuẫn, cần đối chiếu trước khi khôi phục</b> (không có gì bị ghi):<br>' + plan.conflicts.slice(0, 10).map(c => '• ' + esc(c.moTa)).join('<br>') + (plan.conflicts.length > 10 ? '<br>• …' : '') + '</div>' : '';
+  const rows = plan.owners.map(o => '<tr><td><b>' + esc(o.ten) + '</b><br><small class="mut">' + (o.state === 'trung' ? 'chủ đã có trên máy: giữ hồ sơ chủ rừng của máy' : 'chủ mới: sẽ thêm cùng các lô') + '</small></td><td>' +
+    o.forests.map(f => '<div><span class="pill ' + (o.state === 'moi' ? 'ok' : LO_ST[f.state][0]) + '">' + (o.state === 'moi' ? 'THÊM' : LO_ST[f.state][1]) + '</span> ' + esc(f.ma || '(không mã)') + ' ' + esc(f.ten) + ' <small class="mut">· ' + f.nc + ' nhân công, ' + f.dx + ' xe, ' + f.pc + ' phiếu cân</small>' + (f.loi ? ' <span class="pill err">mâu thuẫn</span>' : '') + '</div>').join('') +
+    o.giu.map(g => '<div><span class="pill">GIỮ</span> ' + esc(g.ma) + ' ' + esc(g.ten) + ' <small class="mut">· lô trên máy không có trong file, không bị đụng tới</small></div>').join('') + '</td></tr>').join('');
+  return conf + '<div class="wrap" style="max-height:230px;overflow:auto"><table><tr><th>Chủ rừng</th><th>Lô: sẽ làm gì với lựa chọn “Giữ bản trên máy / Ghi đè / Giữ cả hai”</th></tr>' + rows + '</table></div>' +
+    '<p class="mut" style="margin:6px 0">Lô TRÙNG: giữ bản trên máy (mặc định), hoặc ghi đè <b>đúng lô đó</b> bằng bản trong file. Lô THÊM luôn được thêm. Lô GIỮ không bao giờ bị xóa.</p>';
+}
 async function importWithPreview(inc) {
   const p = await HB.importPreview(inc);
   if (!p.ok) return note('Không đọc được bản sao lưu: ' + p.error, 'err');
   const row = (l, a, b) => '<tr><td>' + l + '</td><td style="text-align:right">' + fmt(a) + '</td><td style="text-align:right">' + fmt(b) + '</td></tr>';
-  const I = p.incoming, E = p.existing, dups = p.duplicates;
-  $('#impBody').innerHTML = '<h2>Nhập / khôi phục bản sao lưu</h2><table><tr><th></th><th style="text-align:right">Trong file</th><th style="text-align:right">Đang có trên máy</th></tr>' +
-    row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' +
-    (dups.length ? '<div class="msg warn">Có ' + dups.length + ' bản ghi trùng với dữ liệu hiện có (trùng mã, CCCD hoặc mã rừng):<br>' + dups.slice(0, 8).map(d => '• ' + (d.kind === 'owner' ? 'Chủ rừng ' : 'Rừng ') + esc(d.ten || d.ma || d.incoming) + (d.ma ? ' (' + esc(d.ma) + ')' : '')).join('<br>') + (dups.length > 8 ? '<br>… và ' + (dups.length - 8) + ' bản ghi khác' : '') + '</div>' : '<div class="msg ok">Không có bản ghi trùng.</div>') +
+  const I = p.incoming, E = p.existing, blocked = !p.plan.ok;
+  $('#impBody').innerHTML = '<h2>Khôi phục bản sao lưu toàn bộ</h2><table><tr><th></th><th style="text-align:right">Trong file</th><th style="text-align:right">Đang có trên máy</th></tr>' +
+    row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' + impPlanHtml(p.plan) +
     '<p><b>Cách xử lý:</b></p>' +
-    '<label><input type="radio" name="impStrat" value="skip" checked> Giữ bản trên máy, chỉ thêm bản ghi mới</label>' +
-    '<label><input type="radio" name="impStrat" value="overwrite"> Ghi đè bản ghi trùng bằng dữ liệu trong file</label>' +
-    '<label><input type="radio" name="impStrat" value="both"> Giữ cả hai (bản trùng trong file được thêm thành hồ sơ mới)</label>' +
-    '<label><input type="radio" name="impStrat" value="replace"> Thay toàn bộ dữ liệu trên máy bằng file này</label>' +
-    '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi. Lỗi giữa chừng thì không đổi gì.</p>' +
+    '<label><input type="radio" name="impStrat" value="skip"' + (blocked ? ' disabled' : ' checked') + '> Giữ bản trên máy, chỉ thêm lô/chủ mới</label>' +
+    '<label><input type="radio" name="impStrat" value="overwrite"' + (blocked ? ' disabled' : '') + '> Ghi đè các lô TRÙNG bằng dữ liệu trong file (lô khác của chủ được giữ)</label>' +
+    '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> Giữ cả hai (lô trùng trong file được thêm bằng ID mới; mã lô sẽ trùng, cần đổi mã)</label>' +
+    '<hr><label><input type="radio" name="impStrat" value="replace"' + (blocked ? ' checked' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
+    '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi và ghi trong một giao dịch: lỗi giữa chừng thì không đổi gì. Bản tra cứu Google Sheets không bị đổi.</p>' +
     '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button><button class="btn" data-act="impGo">Thực hiện</button></div>';
-  window.__imp = inc; $('#impBox').classList.add('on');
+  window.__imp = inc; window.__plan = p.plan; $('#impBox').classList.add('on');
 }
 async function importGo() {
-  const strat = (document.querySelector('input[name=impStrat]:checked') || {}).value || 'skip';
-  if (strat === 'replace' && !confirm('Thay toàn bộ dữ liệu trên máy bằng file này?')) return;
+  const strat = (document.querySelector('input[name=impStrat]:checked') || {}).value;
+  if (!strat) return;
+  const E = window.__plan ? window.__plan.owners : [];
+  if (strat === 'replace' && !confirm('THAY TOÀN BỘ dữ liệu hồ sơ trên máy bằng file này?\n\nTất cả chủ rừng và lô hiện có trên máy sẽ bị thay bằng nội dung file (' + E.length + ' chủ rừng, ' + E.reduce((n, o) => n + o.forests.length, 0) + ' lô trong file). Lô nào có trên máy mà không có trong file sẽ MẤT khỏi ứng dụng (vẫn còn trong bản sao lưu tự động trước khi ghi).\n\nTiếp tục?')) return;
   const r = await HB.importApply(window.__imp, strat);
-  $('#impBox').classList.remove('on'); window.__imp = null;
+  $('#impBox').classList.remove('on'); window.__imp = null; window.__plan = null;
   if (!r.ok) return note('Không nhập được, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
   db = withDefaults(r.db); cur = null; curF = null;
   note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân. Bản sao lưu trước khi nhập: ' + r.backup);
 }
+
+/* ===== Sao lưu / khôi phục MỘT lô rừng (chạy trên máy, không cần mạng) ===== */
+async function lotBackup() {
+  const f = curForest(), o = curOwner(); if (!f || !o) return note('Hãy mở một lô rừng trước khi sao lưu.', 'err');
+  if (!HB) return note('Sao lưu lô rừng cần bản cài trên Windows.', 'err');
+  let pkg; try { pkg = HAKLoRung.exportLot(db, o.id, f.id, {version: (dbInfo && dbInfo.version) || ''}); } catch (e) { return note('Không sao lưu được lô: ' + e.message, 'err'); }
+  const r = await HB.lotSave(pkg);
+  if (r.canceled) return;
+  note(r.ok ? 'Đã sao lưu lô ' + pkg.maLo + ' (' + pkg.kiemTra.nc + ' nhân công, ' + pkg.kiemTra.dx + ' xe, ' + pkg.kiemTra.pc + ' phiếu cân) vào: ' + r.file : 'Không sao lưu được lô: ' + r.error, r.ok ? 'ok' : 'err');
+}
+const lotCnt = c => c ? c.nc + ' nhân công, ' + c.dx + ' xe, ' + c.pc + ' phiếu cân, ' + fmtTan(c.kl) + ' tấn' : '';
+async function lotRestoreOpen(filePath) {
+  if (!HB) return note('Khôi phục lô rừng cần bản cài trên Windows.', 'err');
+  const r = await HB.lotOpen(filePath);
+  if (r.canceled) return;
+  if (!r.ok) return note('Không khôi phục được: ' + r.error + ' Dữ liệu trên máy chưa bị thay đổi.', 'err');
+  const P = r.plan, pk = r.pkg, exists = P.lo.state === 'trung';
+  window.__lot = pk;
+  $('#impBody').innerHTML = '<h2>Khôi phục lô rừng</h2>' +
+    '<table><tr><th>Chủ rừng</th><td><b>' + esc(P.chu.ten) + '</b> · mã ' + esc(P.chu.ma) + '</td></tr><tr><th>Mã lô</th><td><b>' + esc(P.maLo) + '</b> ' + esc(P.tenLo) + '</td></tr>' +
+    '<tr><th>Thời điểm sao lưu</th><td>' + esc(fmtDT(P.xuatLuc)) + '</td></tr><tr><th>Trong file</th><td>' + esc(lotCnt(P.incoming)) + '</td></tr>' +
+    (P.existing ? '<tr><th>Lô đang có trên máy</th><td>' + esc(lotCnt(P.existing)) + '</td></tr>' : '') + '</table>' +
+    (P.ok ? '<div class="msg ' + (exists ? 'warn' : 'ok') + '">' + (P.chu.state === 'co' ? 'Chủ rừng <b>đã có</b> trên máy: lô sẽ được ' + (exists ? 'xử lý theo lựa chọn bên dưới' : 'thêm vào đúng chủ này') + '.' : 'Chủ rừng <b>chưa có</b> trên máy: sẽ tạo chủ mới từ thông tin trong file rồi thêm lô.') +
+      (exists ? ' Lô này <b>đã tồn tại</b> trên máy.' : ' Lô <b>chưa có</b> trên máy.') + '</div>' : '<div class="msg err"><b>Dừng: không xác định được lô đích, cần đối chiếu.</b> Chưa ghi gì.<br>' + P.conflicts.map(c => '• ' + esc(c.moTa)).join('<br>') + '</div>') +
+    (P.giuTrongChu.length ? '<p class="mut">Các lô khác của chủ này trên máy giữ nguyên: ' + P.giuTrongChu.map(x => esc(x.ma)).join(', ') + '.</p>' : '') +
+    (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn">Thiết lập dùng chung (giữ của máy đích):<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x)).join('<br>') + '</div>' : '') +
+    P.ghiChu.map(x => '<p class="mut">' + esc(x) + '</p>').join('') +
+    (P.ok && exists ? '<p><b>Lô đã có trên máy:</b></p><label><input type="radio" name="lotAct" value="giu" checked> Giữ bản hiện có (không đổi gì)</label><label><input type="radio" name="lotAct" value="thay"> Thay đúng lô này bằng bản trong file (các lô khác không bị đụng tới)</label>' : '') +
+    '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu trước khi ghi và ghi trong một giao dịch.</p>' +
+    '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="lotCancel">Hủy</button>' + (P.ok ? '<button class="btn" data-act="lotGo">' + (exists ? 'Thực hiện' : 'Khôi phục lô') + '</button>' : '') + '</div>';
+  $('#impBox').classList.add('on');
+}
+async function lotGo() {
+  const act = (document.querySelector('input[name=lotAct]:checked') || {}).value || 'giu';
+  if (act === 'thay' && !confirm('Thay lô này trên máy bằng bản trong file? Chỉ lô này bị thay; phần đang có trên máy vẫn còn trong bản sao lưu tự động.')) return;
+  const r = await HB.lotApply(window.__lot, act);
+  $('#impBox').classList.remove('on'); window.__lot = null;
+  if (!r.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
+  db = withDefaults(r.db);
+  if (!r.doi) return note('Giữ bản hiện có của lô ' + r.plan.maLo + ': không có gì thay đổi.');
+  cur = r.ownerId; curF = r.forestId; view = 'owner'; tab = 'rung'; ftab = 'finfo'; render();
+  note('Đã khôi phục lô ' + r.plan.maLo + ' (' + lotCnt(r.plan.incoming) + '). Bản sao lưu trước khi ghi: ' + r.backup, 'ok');
+}
 async function restoreAll(file) {
   try {
     const o = JSON.parse(await file.text());
+    if (o && o.loai === HAKLoRung.KIND) throw new Error('Đây là gói sao lưu MỘT lô rừng. Dùng “Khôi phục lô rừng…” trong menu Thêm.');
     if (!o || typeof o !== 'object' || !o.rs) throw new Error('File không đúng định dạng sao lưu.');
     if (HB) return importWithPreview(withDefaults(o.v === 2 ? o : migrateV1(o)));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
@@ -2981,7 +3038,7 @@ document.addEventListener('click', async e => {
     const f = curForest(), row = el.dataset.row, r = f && (f.pc || []).find(x => String(x._row) === String(row)), inp = document.querySelector('[data-pcfix="' + row + '"]');
     if (!r || !inp) return;
     const v = trim(inp.value);
-    if (!HAKDates.isValid(v)) { note('Chưa sửa phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(v) + '.', 'err'); return render(); }
+    if (!HAKDates.isValid(v)) { note('Chưa sửa phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(v) + '.', 'err'); return; }
     const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persist(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
   }
   if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
@@ -3020,6 +3077,10 @@ document.addEventListener('click', async e => {
     setTheme(dark ? 'light' : 'dark'); return;
   }
   if (act === 'backup') return backupAll();
+  if (act === 'lotBackup') return lotBackup();
+  if (act === 'lotRestore') { const m = document.getElementById('moreMenu'); if (m) m.open = false; return lotRestoreOpen(); }
+  if (act === 'lotCancel') { window.__lot = null; return $('#impBox').classList.remove('on'); }
+  if (act === 'lotGo') return lotGo();
   if (act === 'impCancel') { window.__imp = null; return $('#impBox').classList.remove('on'); }
   if (act === 'impGo') return importGo();
   if (act === 'tpl') return downloadTemplate(el.dataset.kind);
