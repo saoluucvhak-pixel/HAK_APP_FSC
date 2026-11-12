@@ -2896,107 +2896,82 @@ function panelNC(rec) {
       '</td><td>' + esc(r.chucDanh) + '</td><td>' + fmt(rateOf(rec.info, r)) + '</td></tr>').join('') + '</tbody></table></div>';
 }
 
-/* ========== Công ty mua hàng: danh mục và chọn theo từng rừng (src/muahang.js) ========== */
+/* ========== Công ty mua hàng: MỘT hồ sơ công ty (phần mềm dùng cho một công ty) + địa chỉ giao theo từng rừng (src/muahang.js) ========== */
 const MH = HAKMuaHang;
-const cty = {q: '', edit: null, isNew: false, tried: false, msg: null};                       // màn hình danh mục
-const mh = {fid: '', open: false, ctyId: '', addrId: '', quick: false, qf: {}, msg: null};     // chọn công ty ở tab Vận chuyển (theo rừng đang mở)
-const congTyList = () => Object.values(db.congTy || {}).sort((a, b) => (a.ten || '').localeCompare(b.ten || '', 'vi'));
-function ctyUsage(id) { const out = []; Object.values(db.rs).forEach(o => forestList(o).forEach(f => { if (f.info.muaHang && f.info.muaHang.congTyId === id) out.push({o, f}); })); return out; }
+const cty = {edit: null, tried: false, msg: null};                           // màn hình hồ sơ công ty
+const mh = {fid: '', open: false, addrId: '', msg: null};                    // chọn địa chỉ giao ở tab Vận chuyển (theo rừng đang mở)
+/* Hồ sơ công ty duy nhất lưu ở db.congTy (bảng companies); nếu dữ liệu cũ có nhiều bản thì dùng bản đầu theo tên. Mọi lô dùng chung hồ sơ này. */
+const theCompany = () => Object.values(db.congTy || {}).sort((a, b) => (a.ten || '').localeCompare(b.ten || '', 'vi'))[0] || null;
 const addrRowHtml = a => '<div class="ctyAddr row" style="margin-top:6px" data-aid="' + esc(a.id) + '"><input name="a_nhan" placeholder="Nhãn (vd: Kho cảng)" value="' + esc(a.nhan) + '" style="flex:1 1 160px"><input name="a_dia" placeholder="Địa chỉ giao hàng" value="' + esc(a.diaChi) + '" style="flex:3 1 280px"><button type="button" class="btn danger sm" data-act="ctyDelAddr">Xóa</button></div>';
-
-function ctyRowsHtml() {
-  const q = foldVi(cty.q), list = congTyList().filter(c => !q || foldVi([c.ten, c.mst, c.diaChi, c.nguoiDaiDien, c.sdt, c.email, ...(c.diaChiGiao || []).map(a => a.nhan + ' ' + a.diaChi)].join(' ')).includes(q));
-  if (!list.length) return '<p class="mut">' + (q ? 'Không có công ty khớp “' + esc(cty.q) + '”.' : 'Chưa có công ty mua hàng. Bấm “+ Thêm công ty”.') + '</p>';
-  return '<div class="wrap"><table><tr><th>Tên pháp lý</th><th>Mã số thuế</th><th>Địa chỉ công ty</th><th>Người đại diện</th><th>SĐT</th><th>Email</th><th style="text-align:right">Rừng đang dùng</th><th></th></tr>' +
-    list.map(c => '<tr><td><b>' + esc(c.ten) + '</b>' + ((c.diaChiGiao || []).length ? '<br><small class="mut">+ ' + c.diaChiGiao.length + ' địa chỉ giao hàng khác</small>' : '') + '</td><td>' + esc(c.mst) +
-      (MH.mstDuplicates(c.mst, db.congTy, c.id).length ? ' <span class="pill err" title="Trùng mã số thuế với công ty khác">trùng MST</span>' : '') + '</td><td>' + esc(c.diaChi) + '</td><td>' + esc(c.nguoiDaiDien) + (c.chucVu ? '<br><small class="mut">' + esc(c.chucVu) + '</small>' : '') +
-      '</td><td>' + esc(c.sdt) + '</td><td>' + esc(c.email) + '</td><td style="text-align:right">' + ctyUsage(c.id).length + '</td><td style="white-space:nowrap"><button class="btn ghost sm" data-act="ctyEdit" data-id="' + esc(c.id) + '">Sửa</button> <button class="btn danger sm" data-act="ctyDel" data-id="' + esc(c.id) + '">Xóa</button></td></tr>').join('') + '</table></div>';
-}
-function ctyFormHtml() {
-  const c = cty.edit; if (!c) return '';
+function ctyForestsUsing() { const c = theCompany(); return c ? Object.values(db.rs).reduce((n, o) => n + forestList(o).filter(f => f.info.muaHang && f.info.muaHang.congTyId === c.id).length, 0) : 0; }
+function panelCty() {
+  const c = cty.edit || theCompany() || MH.newCompany(), m = cty.msg; cty.msg = null; cty.edit = c;
   const f = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span><input name="' + k + '" value="' + esc(c[k] ?? '') + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '></label>';
-  return '<div class="card" id="ctyCard"><h3 style="margin-top:0">' + (cty.isNew ? 'Thêm công ty mua hàng' : 'Sửa công ty mua hàng') + '</h3><form id="ctyForm" class="grid">' +
+  return '<div class="hero"><div><h2>Công ty mua hàng</h2><p class="mut">Khai một lần cho cả phần mềm. Mỗi rừng chỉ chọn <b>địa chỉ giao hàng</b> của công ty này ở <b>tab Vận chuyển</b>; địa chỉ đó là địa điểm vận chuyển đến trong BM-04, BM-09, BM-10 và Sổ phiếu cân.' +
+    (theCompany() ? ' ' + ctyForestsUsing() + ' rừng đã chọn địa chỉ giao.' : '') + '</p></div></div>' + (m ? '<div class="msg ' + m.kind + '">' + esc(m.text) + '</div>' : '') +
+    '<div class="card" id="ctyCard"><form id="ctyForm" class="grid">' +
     f('ten', 'Tên pháp lý', {req: true, wide: true}) + f('mst', 'Mã số thuế', {ph: '10 hoặc 13 chữ số'}) + f('diaChi', 'Địa chỉ công ty', {req: true, wide: true}) +
     f('nguoiDaiDien', 'Người đại diện') + f('chucVu', 'Chức vụ') + f('sdt', 'Số điện thoại') + f('email', 'Email') +
     '<div style="grid-column:1/-1"><div class="mut">Địa chỉ giao hàng khác (kho, nhà máy…). Khi chọn điểm đến cho rừng, địa chỉ công ty luôn là lựa chọn đầu tiên, sau đó là các địa chỉ này.</div><div id="ctyAddrs">' + (c.diaChiGiao || []).map(addrRowHtml).join('') + '</div>' +
       '<button type="button" class="btn ghost sm" style="margin-top:6px" data-act="ctyAddAddr">+ Thêm địa chỉ giao hàng</button></div>' +
-    '<div id="ctyMsg" style="grid-column:1/-1"></div><div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu công ty</button><button type="button" class="btn ghost" data-act="ctyCancel">Hủy</button></div></form></div>';
-}
-function panelCty() {
-  const used = Object.values(db.rs).reduce((n, o) => n + forestList(o).filter(f => f.info.muaHang).length, 0);
-  const m = cty.msg; cty.msg = null;
-  return '<div class="hero"><div><h2>Công ty mua hàng</h2><p class="mut">Danh mục công ty nhận gỗ. Mỗi rừng chọn một công ty và một địa chỉ giao hàng ở <b>tab Vận chuyển</b>; địa chỉ đó là địa điểm vận chuyển đến trong hồ sơ. ' + congTyList().length + ' công ty · ' + used + ' rừng đã chọn.</p></div>' +
-    '<div class="row"><button class="btn" data-act="ctyNew">+ Thêm công ty</button></div></div>' + (m ? '<div class="msg ' + m.kind + '">' + esc(m.text) + '</div>' : '') + ctyFormHtml() +
-    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Danh sách công ty</h3><input id="ctySearch" type="search" placeholder="🔍 Tìm theo tên, mã số thuế, địa chỉ, người đại diện…" value="' + esc(cty.q) + '" style="min-width:300px"></div><div id="ctyList" style="margin-top:10px">' + ctyRowsHtml() + '</div></div>';
+    '<div id="ctyMsg" style="grid-column:1/-1"></div><div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin công ty</button></div></form></div>';
 }
 function ctyReadForm() {
-  const form = $('#ctyForm'), fd = new FormData(form), c = {...cty.edit};
+  const form = $('#ctyForm'), fd = new FormData(form), c = {...(cty.edit || MH.newCompany())};
   ['ten', 'mst', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'email'].forEach(k => { c[k] = fd.get(k) ?? ''; });
   c.diaChiGiao = [...form.querySelectorAll('.ctyAddr')].map(r => ({id: r.dataset.aid || '', nhan: r.querySelector('[name=a_nhan]').value, diaChi: r.querySelector('[name=a_dia]').value}));
   return MH.clean(c, newId);
 }
 function ctyShowMsg() {
   const box = $('#ctyMsg'); if (!box || !$('#ctyForm')) return;
-  const c = ctyReadForm(), v = MH.validate(c, db.congTy, cty.edit && cty.edit.id);
+  const c = ctyReadForm(), v = MH.validate(c, {}, c.id);
   box.innerHTML = (cty.tried && v.errors.length ? '<div class="msg err">Chưa lưu: ' + v.errors.map(esc).join('; ') + '</div>' : '') + (v.warnings.length ? '<div class="msg warn">' + v.warnings.map(esc).join('<br>') + '</div>' : '');
   return v;
 }
 function ctySave() {
-  const c = ctyReadForm(); if (!c.id) c.id = newId('c');
-  const v = MH.validate(c, db.congTy, c.id);
+  const c = ctyReadForm(); c.id = c.id || (theCompany() || {}).id || newId('c');
+  const v = MH.validate(c, {}, c.id);
   if (v.errors.length) { cty.tried = true; ctyShowMsg(); return; }
-  db.congTy = db.congTy || {}; db.congTy[c.id] = c; persist();
-  cty.edit = null; cty.msg = {kind: v.warnings.length ? 'warn' : 'ok', text: 'Đã lưu công ty “' + c.ten + '”.' + (v.warnings.length ? ' Lưu ý: ' + v.warnings.join('; ') : '') + (ctyUsage(c.id).length ? ' Các rừng đang dùng công ty này GIỮ địa chỉ đã lưu cho đến khi bạn xác nhận cập nhật ở tab Vận chuyển của từng rừng.' : '')};
+  db.congTy = {[c.id]: c}; persist();                       // một hồ sơ duy nhất
+  cty.edit = null;
+  cty.msg = {kind: v.warnings.length ? 'warn' : 'ok', text: 'Đã lưu thông tin công ty “' + c.ten + '”.' + (v.warnings.length ? ' Lưu ý: ' + v.warnings.join('; ') : '') + (ctyForestsUsing() ? ' Các rừng đã chọn địa chỉ GIỮ địa chỉ đã lưu cho đến khi bạn xác nhận cập nhật ở tab Vận chuyển của từng rừng.' : '')};
   render();
 }
 
-/* ----- Chọn công ty mua hàng và địa chỉ giao cho TỪNG rừng (tab Vận chuyển) ----- */
-function mhSnapshotNow() { const c = (db.congTy || {})[mh.ctyId]; return c ? MH.snapshot(c, mh.addrId) : null; }
-function mhQuickRead() {
-  const g = n => { const el = document.getElementById('mhq_' + n); return el ? el.value : (mh.qf[n] || ''); };
-  mh.qf = {ten: g('ten'), diaChi: g('diaChi'), mst: g('mst'), nguoiDaiDien: g('nguoiDaiDien'), chucVu: g('chucVu'), sdt: g('sdt'), email: g('email')};
-}
+/* ----- Chọn địa chỉ giao hàng cho TỪNG rừng (tab Vận chuyển) ----- */
+function mhSnapshotNow() { const c = theCompany(); return c ? MH.snapshot(c, mh.addrId) : null; }
 function panelMua(rec) {
   const f = curForest(); if (!f) return '';
-  if (mh.fid !== f.id) Object.assign(mh, {fid: f.id, open: false, ctyId: '', addrId: '', quick: false, qf: {}, msg: null});
-  const i = rec.info, m = i.muaHang, dd = MH.diemDen(i, rec.exp), dr = MH.drift(i, db.congTy), vcMode = (i.vanChuyen || {}).mode || 'tanKm';
+  if (mh.fid !== f.id) Object.assign(mh, {fid: f.id, open: false, addrId: '', msg: null});
+  const i = rec.info, m = i.muaHang, co = theCompany(), dd = MH.diemDen(i, rec.exp), dr = MH.drift(i, db.congTy), vcMode = (i.vanChuyen || {}).mode || 'tanKm';
   const mis = MH.mismatches(rec.pc || [], dd.src === 'congty' ? dd : null);
   const msg = mh.msg; mh.msg = null;
   let cur;
-  if (m) cur = '<div class="hint" style="display:block"><b>' + esc(m.ten) + '</b>' + (m.mst ? ' · MST ' + esc(m.mst) : '') + '<br>Địa chỉ giao hàng: <b>' + esc(m.diaChiNhan || 'Địa chỉ công ty') + '</b> — ' + esc(m.diaChi) + '<br><span class="mut">Đã xác nhận ' + esc(fmtDT(m.xacNhan)) + ' · lưu cùng hồ sơ rừng này</span></div>';
-  else if (dd.src === 'thucong') cur = '<div class="msg warn">Rừng này chưa chọn công ty mua hàng. Đang dùng điểm đến nhập tay trước đây: <b>' + esc(dd.text) + '</b>. Chọn công ty để dùng địa chỉ trong danh mục.</div>';
-  else cur = '<div class="msg warn">Chưa chọn công ty mua hàng cho rừng này: địa điểm vận chuyển đến đang trống, các biểu mẫu cần điểm đến (BM-04, BM-09, BM-10) sẽ in dòng chấm.</div>';
+  if (!co && !m) cur = '<div class="msg warn">Chưa khai thông tin công ty mua hàng. <button class="btn sm" data-act="openCty">Khai thông tin công ty</button></div>' + (dd.src === 'thucong' ? '<div class="msg warn">Đang dùng điểm đến nhập tay trước đây: <b>' + esc(dd.text) + '</b>.</div>' : '');
+  else if (m) cur = '<div class="hint" style="display:block"><b>' + esc(m.ten) + '</b>' + (m.mst ? ' · MST ' + esc(m.mst) : '') + '<br>Địa chỉ giao hàng: <b>' + esc(m.diaChiNhan || 'Địa chỉ công ty') + '</b> — ' + esc(m.diaChi) + '<br><span class="mut">Đã xác nhận ' + esc(fmtDT(m.xacNhan)) + ' · lưu cùng hồ sơ rừng này</span></div>';
+  else if (dd.src === 'thucong') cur = '<div class="msg warn">Rừng này chưa chọn địa chỉ giao của công ty. Đang dùng điểm đến nhập tay trước đây: <b>' + esc(dd.text) + '</b>. Chọn địa chỉ giao để dùng địa chỉ trong hồ sơ công ty.</div>';
+  else cur = '<div class="msg warn">Chưa chọn địa chỉ giao hàng cho rừng này: địa điểm vận chuyển đến đang trống, các biểu mẫu cần điểm đến (BM-04, BM-09, BM-10) sẽ in dòng chấm.</div>';
   let drift = '';
-  if (dr.state === 'thaydoi') drift = '<div class="msg warn">Danh mục công ty đã thay đổi (' + esc(dr.why) + '). Hồ sơ rừng vẫn GIỮ: <b>' + esc(dr.saved.ten) + ' – ' + esc(dr.saved.diaChi) + '</b>. Danh mục hiện là: <b>' + esc(dr.current.ten) + (dr.current.diaChi ? ' – ' + esc(dr.current.diaChi) : '') + '</b>. <button class="btn sm" data-act="mhOpen">Xem và cập nhật</button></div>';
-  else if (dr.state === 'xoa') drift = '<div class="msg warn">Công ty “' + esc(dr.saved.ten) + '” không còn trong danh mục. Hồ sơ rừng vẫn giữ tên và địa chỉ đã lưu.</div>';
-  const misBox = mis.length ? '<div class="msg warn">Nơi giao trên <b>' + mis.length + ' phiếu cân</b> khác địa chỉ công ty mua hàng đã chọn (' + esc([...new Set(mis.map(p => p.noiGiao))].slice(0, 4).join('; ')) + '). Nội dung gốc của phiếu được giữ nguyên; hãy đối chiếu phiếu hoặc điểm đến.</div>' : '';
+  if (dr.state === 'thaydoi') drift = '<div class="msg warn">Thông tin công ty đã thay đổi (' + esc(dr.why) + '). Hồ sơ rừng vẫn GIỮ: <b>' + esc(dr.saved.ten) + ' – ' + esc(dr.saved.diaChi) + '</b>. Hồ sơ công ty hiện là: <b>' + esc(dr.current.ten) + (dr.current.diaChi ? ' – ' + esc(dr.current.diaChi) : '') + '</b>. <button class="btn sm" data-act="mhOpen">Xem và cập nhật</button></div>';
+  else if (dr.state === 'xoa') drift = '<div class="msg warn">Hồ sơ công ty “' + esc(dr.saved.ten) + '” không còn trong phần mềm. Hồ sơ rừng vẫn giữ tên và địa chỉ đã lưu.</div>';
+  const misBox = mis.length ? '<div class="msg warn">Nơi giao trên <b>' + mis.length + ' phiếu cân</b> khác địa chỉ giao đã chọn (' + esc([...new Set(mis.map(p => p.noiGiao))].slice(0, 4).join('; ')) + '). Nội dung gốc của phiếu được giữ nguyên; hãy đối chiếu phiếu hoặc điểm đến.</div>' : '';
   let pick = '';
-  if (mh.open) {
-    const sel = (db.congTy || {})[mh.ctyId] || null, addrs = MH.addressesOf(sel), a = sel ? MH.addressOf(sel, mh.addrId) : null, snap = mhSnapshotNow();
-    const q = mh.qf || {}, qf = (k, label, req) => '<label><span class="' + (req ? 'req' : '') + '">' + label + '</span><input id="mhq_' + k + '" value="' + esc(q[k] || '') + '"></label>';
-    pick = '<div class="card" style="border-color:var(--brand)"><h4 style="margin:0 0 8px">Chọn công ty mua hàng và địa chỉ giao hàng</h4>' +
-      '<div class="grid"><label><span>Công ty mua hàng</span><select id="mhCty"><option value="">— Chọn công ty —</option>' + congTyList().map(c => '<option value="' + esc(c.id) + '"' + (!mh.quick && c.id === mh.ctyId ? ' selected' : '') + '>' + esc(c.ten) + (c.mst ? ' · ' + esc(c.mst) : '') + '</option>').join('') +
-        '<option value="__new__"' + (mh.quick ? ' selected' : '') + '>＋ Tạo nhanh công ty mới…</option></select></label>' +
-      (sel && !mh.quick ? '<label><span>Địa chỉ giao hàng</span><select id="mhAddr">' + addrs.map(x => '<option value="' + esc(x.id || '@main') + '"' + (x.id === (mh.addrId || '') ? ' selected' : '') + '>' + esc(x.nhan) + ' — ' + esc(x.diaChi) + '</option>').join('') + '</select></label>' : '') + '</div>';
-    if (mh.quick) pick += '<div class="card" style="margin-top:8px"><b>Tạo nhanh công ty</b> <span class="mut">(lưu vào danh mục và chọn luôn; bổ sung thông tin khác ở màn hình Công ty mua hàng)</span><div class="grid" style="margin-top:6px">' +
-      qf('ten', 'Tên pháp lý', true) + qf('diaChi', 'Địa chỉ công ty', true) + qf('mst', 'Mã số thuế') + qf('nguoiDaiDien', 'Người đại diện') + qf('chucVu', 'Chức vụ') + qf('sdt', 'Số điện thoại') + qf('email', 'Email') +
-      '</div><div id="mhqMsg"></div><div class="row" style="margin-top:8px"><button class="btn" data-act="mhQuickSave">Lưu công ty và chọn</button></div></div>';
-    if (sel && !mh.quick && a) {
-      const oldT = dd.text, newT = snap ? snap.ten + ' – ' + snap.diaChi : '';
-      pick += '<div class="hint" style="display:block;margin-top:8px"><b>' + esc(sel.ten) + '</b>' + (sel.mst ? ' · MST ' + esc(sel.mst) : '') + '<br>Địa chỉ giao hàng đã chọn: <b>' + esc(a.nhan) + '</b> — ' + esc(a.diaChi) + '</div>' +
-        '<div class="wrap" style="margin-top:8px"><table><tr><th></th><th>Địa điểm vận chuyển đến</th></tr>' +
+  if (mh.open && co) {
+    const addrs = MH.addressesOf(co), a = MH.addressOf(co, mh.addrId), snap = mhSnapshotNow(), oldT = dd.text, newT = snap ? snap.ten + ' – ' + snap.diaChi : '';
+    pick = '<div class="card" style="border-color:var(--brand)"><h4 style="margin:0 0 8px">Chọn địa chỉ giao hàng của ' + esc(co.ten) + '</h4>' +
+      '<label><span>Địa chỉ giao hàng</span><select id="mhAddr">' + addrs.map(x => '<option value="' + esc(x.id || '@main') + '"' + (x.id === (mh.addrId || '') ? ' selected' : '') + '>' + esc(x.nhan) + ' — ' + esc(x.diaChi) + '</option>').join('') + '</select></label>';
+    if (a) {
+      pick += '<div class="wrap" style="margin-top:8px"><table><tr><th></th><th>Địa điểm vận chuyển đến</th></tr>' +
         '<tr><td>' + (dd.src === 'thucong' ? 'Giá trị nhập tay cũ' : dd.src === 'congty' ? 'Hiện đang lưu trong hồ sơ' : 'Hiện tại') + '</td><td>' + (oldT ? esc(oldT) : '<span class="mut">(trống)</span>') + '</td></tr>' +
         '<tr><td><b>' + (dd.src ? 'Địa chỉ đề xuất / mới' : 'Địa chỉ mới') + '</b></td><td><b>' + esc(newT) + '</b>' + (oldT === newT ? ' <span class="pill ok">không thay đổi</span>' : '') + '</td></tr></table></div>';
       if (oldT !== newT && vcMode === 'tanKm') pick += '<div class="msg warn">Đơn giá vận chuyển đang tính <b>theo tấn/km</b> (cự ly ' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '). Đổi điểm đến <b>không tự sửa cự ly hay đơn giá</b>: hãy kiểm tra lại cự ly vận chuyển ở tab Thông tin rừng trước khi xuất hồ sơ.</div>';
-      if (dd.src === 'thucong') pick += '<p class="mut" style="margin:6px 0 0">Xác nhận sẽ dùng địa chỉ công ty thay cho điểm đến nhập tay (giá trị nhập tay cũ vẫn được giữ trong hồ sơ nhưng không còn được dùng).</p>';
-      pick += '<div class="row" style="margin-top:8px"><button class="btn" data-act="mhConfirm">Xác nhận và lưu vào hồ sơ rừng</button><button class="btn ghost" data-act="mhCancel">Hủy</button></div>';
-    } else if (!mh.quick) pick += '<div class="row" style="margin-top:8px"><button class="btn ghost" data-act="mhCancel">Hủy</button></div>';
-    else pick += '<div class="row" style="margin-top:8px"><button class="btn ghost" data-act="mhCancel">Hủy</button></div>';
-    pick += '</div>';
+      if (dd.src === 'thucong') pick += '<p class="mut" style="margin:6px 0 0">Xác nhận sẽ dùng địa chỉ trong hồ sơ công ty thay cho điểm đến nhập tay (giá trị nhập tay cũ vẫn được giữ trong hồ sơ nhưng không còn được dùng).</p>';
+    }
+    pick += '<div class="row" style="margin-top:8px"><button class="btn" data-act="mhConfirm">Xác nhận và lưu vào hồ sơ rừng</button><button class="btn ghost" data-act="mhCancel">Hủy</button></div></div>';
   }
-  const ddBox = '<label style="margin-top:8px"><span>Địa điểm vận chuyển đến (tự điền từ công ty mua hàng)</span><input id="mhDiemDen" readonly value="' + esc(dd.diaChi) + '" placeholder="Chưa có: chọn công ty mua hàng"></label>';
-  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Công ty mua hàng và điểm đến vận chuyển</h3><button class="btn' + (m ? ' ghost' : '') + '" data-act="mhOpen">' + (m ? 'Đổi công ty hoặc địa chỉ' : 'Chọn công ty mua hàng') + '</button></div>' +
-    '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng là vai trò riêng, chọn theo từng rừng. Địa chỉ giao hàng đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân. Danh mục công ty: nút <b>🏢 Công ty mua hàng</b> ở thanh trên.</p>' +
+  const ddBox = '<label style="margin-top:8px"><span>Địa điểm vận chuyển đến (tự điền từ địa chỉ giao đã chọn)</span><input id="mhDiemDen" readonly value="' + esc(dd.diaChi) + '" placeholder="Chưa có: chọn địa chỉ giao hàng"></label>';
+  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Địa chỉ giao hàng và điểm đến vận chuyển</h3>' + (co ? '<button class="btn' + (m ? ' ghost' : '') + '" data-act="mhOpen">' + (m ? 'Đổi địa chỉ giao' : 'Chọn địa chỉ giao hàng') + '</button>' : '') + '</div>' +
+    '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở nút <b>🏢 Công ty mua hàng</b> trên thanh trên; mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
     (msg ? '<div class="msg ' + msg.kind + '">' + esc(msg.text) + '</div>' : '') + cur + ddBox + drift + misBox + pick + '</div>';
 }
 function panelDX(rec) {
@@ -4007,27 +3982,10 @@ document.addEventListener('click', async e => {
     const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persist(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
   }
   if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
-  if (act === 'ctyNew') { cty.edit = MH.newCompany(); cty.isNew = true; cty.tried = false; cty.msg = null; render(); const el0 = $('#ctyForm [name=ten]'); if (el0) el0.focus(); return; }
-  if (act === 'ctyEdit') { cty.edit = JSON.parse(JSON.stringify((db.congTy || {})[el.dataset.id] || null)); cty.isNew = false; cty.tried = false; cty.msg = null; render(); const card = $('#ctyCard'); if (card) card.scrollIntoView({block: 'start'}); return; }
-  if (act === 'ctyCancel') { cty.edit = null; return render(); }
   if (act === 'ctyAddAddr') { const c = ctyReadForm(); c.diaChiGiao.push({id: newId('a'), nhan: '', diaChi: ''}); cty.edit = c; render(); const rows = document.querySelectorAll('.ctyAddr [name=a_nhan]'); if (rows.length) rows[rows.length - 1].focus(); return; }
   if (act === 'ctyDelAddr') { el.closest('.ctyAddr').remove(); ctyShowMsg(); return; }
-  if (act === 'ctyDel') {
-    const id = el.dataset.id, c = (db.congTy || {})[id]; if (!c) return;
-    const use = ctyUsage(id);
-    if (use.length) { cty.msg = {kind: 'err', text: 'Không xóa được “' + c.ten + '”: đang được chọn ở ' + use.length + ' rừng (' + use.slice(0, 5).map(x => x.f.info.maRung || x.f.info.tenRung).join(', ') + '). Đổi công ty ở các rừng đó trước.'}; return render(); }
-    if (!confirm('Xóa công ty “' + c.ten + '” khỏi danh mục?')) return;
-    delete db.congTy[id]; persist(); cty.msg = {kind: 'ok', text: 'Đã xóa công ty “' + c.ten + '”.'}; return render();
-  }
-  if (act === 'mhOpen') { const f = curForest(), m = f && f.info.muaHang; mh.open = true; mh.quick = false; mh.qf = {}; mh.ctyId = m && (db.congTy || {})[m.congTyId] ? m.congTyId : ''; mh.addrId = m ? m.diaChiId : ''; return render(); }
-  if (act === 'mhCancel') { mh.open = false; mh.quick = false; return render(); }
-  if (act === 'mhQuickSave') {
-    mhQuickRead(); const c = MH.clean({...mh.qf, id: newId('c')}, newId), v = MH.validate(c, db.congTy, c.id), box = document.getElementById('mhqMsg');
-    if (v.errors.length) { if (box) box.innerHTML = '<div class="msg err">Chưa lưu: ' + v.errors.map(esc).join('; ') + '</div>'; return; }
-    db.congTy = db.congTy || {}; db.congTy[c.id] = c; mh.ctyId = c.id; mh.addrId = ''; mh.quick = false; persist();
-    mh.msg = v.warnings.length ? {kind: 'warn', text: 'Đã lưu công ty “' + c.ten + '” vào danh mục. Lưu ý: ' + v.warnings.join('; ')} : {kind: 'ok', text: 'Đã lưu công ty “' + c.ten + '” vào danh mục. Kiểm tra điểm đến bên dưới rồi xác nhận.'};
-    return render();
-  }
+  if (act === 'mhOpen') { const f = curForest(), m = f && f.info.muaHang; mh.open = true; mh.addrId = m ? m.diaChiId : ''; return render(); }
+  if (act === 'mhCancel') { mh.open = false; return render(); }
   if (act === 'mhConfirm') {
     const f = curForest(), snap = mhSnapshotNow(); if (!f || !snap) return;
     f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false; persist();
@@ -4128,13 +4086,11 @@ if (savedTheme === 'dark' || savedTheme === 'light') setTheme(savedTheme);
 else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
 document.addEventListener('input', e => {
   const t = e.target;
-  if (t.id === 'ctySearch') { cty.q = t.value; const l = $('#ctyList'); if (l) l.innerHTML = ctyRowsHtml(); return; }
   if (t.closest && t.closest('#ctyForm')) ctyShowMsg();
 });
 document.addEventListener('submit', e => { if (e.target.id === 'ctyForm') { e.preventDefault(); ctySave(); } });
 document.addEventListener('change', e => {
   const t = e.target;
-  if (t.id === 'mhCty') { mhQuickRead(); if (t.value === '__new__') { mh.quick = true; mh.ctyId = ''; } else { mh.quick = false; mh.ctyId = t.value; mh.addrId = ''; } return render(); }
   if (t.id === 'mhAddr') { mh.addrId = t.value === '@main' ? '' : t.value; return render(); }
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });

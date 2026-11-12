@@ -117,3 +117,6 @@ Lỗi gốc (đối chiếu với `acf1490`): `applyImport` + `overwrite` gán `
 - lỗi giữa giao dịch (trigger SQLite giả lập lỗi): hoàn tác toàn bộ (unit test);
 - ngày: nhập Excel 31/02/2026 bị chặn kèm số phiếu và lý do, 29/02/2028 được nhận; phiếu cũ sai ngày có ô sửa (29/02/2026 bị từ chối, 29/02/2028 nhận). Sửa kèm: thông báo “Chưa sửa phiếu…” trước đây bị mất do render hai lần.
 **Chưa kiểm:** hộp thoại lưu/mở file thật của Windows (e2e dùng biến môi trường thay hộp thoại); chuyển lô sang một tài khoản Windows/máy thật khác; mở BM-04/BM-20 bằng Microsoft Word; Google Sheets thật. Kết quả CI Windows của commit này xem ở PR.
+
+## 10. Chỉnh theo yêu cầu: phần mềm dùng cho MỘT công ty
+Bỏ danh mục nhiều công ty (danh sách, tìm kiếm, thêm/xóa, tạo nhanh, chọn công ty theo rừng). Còn **một hồ sơ Công ty mua hàng** và mỗi rừng chỉ chọn **địa chỉ giao** của công ty đó; bản chụp địa chỉ theo rừng, kiểm tra thay đổi, BM-04/09/10 và Sổ phiếu cân giữ nguyên cách hoạt động. Lưu trữ vẫn dùng bảng `companies` (một dòng), nên không cần đổi cấu trúc SQLite và dữ liệu ở bản 1.1/1.2 vẫn mở được (nếu có nhiều dòng thì dùng dòng đầu theo tên). `scripts/e2e-congty.js` viết lại cho mô hình này (đạt).
