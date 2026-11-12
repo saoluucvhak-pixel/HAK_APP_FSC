@@ -1,6 +1,6 @@
 'use strict';
 /* Kiểm thử đầu-cuối bằng Electron thật (cần màn hình ảo trên Linux: xvfb-run node scripts/e2e.js) */
-const {_electron: electron} = require('playwright');
+const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os');
 const root = path.join(__dirname, '..');
 const FIX = process.env.FIXTURES || path.join(root, 'tests', 'fixtures');

@@ -2422,7 +2422,7 @@ function lkSearchHtml() {
     '<div class="row"><input id="lkQ" style="flex:1" placeholder="Mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã/số hợp đồng, địa chỉ rừng, số phiếu cân, biển số" value="' + esc(lk.q) + '"><button class="btn" data-act="lkFind">Tìm</button></div>' +
     '<p class="mut" style="margin:4px 0">' + esc(LK_HINT) + '</p>' + adv +
     (statuses.length && lk.tab !== 'HoSoKeo_QC' && lk.tab !== 'ToaDoRung_QC' ? '<div class="row" style="margin:4px 0">' + statuses.map(([k, c]) => '<button class="btn ' + (lk.f.status === k ? '' : 'ghost') + ' sm" data-lkstatus="' + esc(k) + '">' + esc(k) + ' · ' + c + '</button>').join('') + '</div>' : '') +
-    relax + '<p class="mut">' + sum + tot + '</p>' +
+    (r.warns || []).map(w => '<div class="msg warn">' + esc(w) + '</div>').join('') + relax + '<p class="mut">' + sum + tot + '</p>' +
     '<div class="wrap" style="max-height:48vh"><table><tr><th>Tab</th><th>Dòng</th><th>Chủ rừng</th><th>CCCD</th><th>Hợp đồng</th><th>Mã rừng</th><th>Địa chỉ rừng</th><th>Chi tiết</th><th>Kiểm tra</th><th></th></tr>' +
     r.rows.map(x => '<tr><td>' + esc(x.tab) + '</td><td>' + x.row + '</td><td>' + esc(x.ten) + '</td><td>' + esc(x.cccd) + '</td><td>' + esc(x.hd) + '</td><td>' + esc(x.maRung) + '</td><td>' + esc(x.diaChi) + '</td><td>' + cell(x) + '</td>' +
       '<td>' + (x.flags || []).map(f => '<span class="pill err" style="margin:1px">' + esc(f) + '</span>').join('') + '</td>' +

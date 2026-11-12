@@ -84,3 +84,22 @@ test('nâng cấp cơ sở dữ liệu bản P1 (v1) lên bản hiện tại: th
   assert.ok(s.db.prepare("SELECT name FROM sqlite_master WHERE name='lookup_rows'").get());
   assert.ok(fs.readdirSync(path.join(d, 'backups')).some(n => n.startsWith('truoc-nang-cap-v1-len-v' + MIGRATIONS.length)));
 });
+
+test('hồi quy: nhập thất bại giữa chừng (replace/overwrite) giữ nguyên hồ sơ từng rừng và có bản sao lưu', () => {
+  const d = tmp(), f = path.join(d, 'a.sqlite'); const s = new Store(f); s.save(sample());
+  const before = JSON.stringify(s.load());
+  for (const strategy of ['replace', 'overwrite']) {
+    const bad = sample(); bad.rs.r1.forests.f1.pc.push({so: 3n});          // BigInt không ghi được: lỗi xảy ra khi đang lưu
+    assert.throws(() => s.applyImport(bad, strategy), /BigInt|serialize/i);
+    assert.strictEqual(JSON.stringify(s.load()), before, 'dữ liệu cũ phải còn nguyên sau lần nhập lỗi: ' + strategy);
+  }
+  assert.ok(fs.readdirSync(path.join(d, 'backups')).some(n => /truoc-khoi-phuc/.test(n)));
+  assert.strictEqual(Object.keys(s.load().rs.r1.forests).length, 2); assert.strictEqual(s.load().rs.r1.forests.f1.pc.length, 2);
+});
+
+test('hồi quy: nhập JSON cũ (v1) rồi sao lưu .sqlite mở lại được, hồ sơ từng rừng còn nguyên', async () => {
+  const d = tmp(), f = path.join(d, 'a.sqlite'); const s = new Store(f); s.save(sample());
+  const bak = path.join(d, 'sao-luu.sqlite'); await s.db.backup(bak); s.close();
+  const r = new Store(bak); const o = r.load();
+  assert.strictEqual(o.rs.r1.forests.f1.pc.length, 2); assert.strictEqual(o.rs.r1.info.cccd, '049000000001'); r.close();
+});

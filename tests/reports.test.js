@@ -29,9 +29,11 @@ test('sản lượng: lọc theo kỳ, tổng, % so với dự kiến, cảnh b�
 test('sổ phiếu cân: sắp theo ngày, tổng hợp theo rừng/biển/ngày, phát hiện trùng số phiếu', () => {
   const m = R.soPhieuCan(recs, {}), [ds, byForest, byPlate, byDay] = m.sections;
   assert.deepStrictEqual(ds.rows.map(r => r[1]), ['05/01/2026', '20/02/2026', '10/03/2026']);
-  assert.strictEqual(ds.foot[7], 22.75);
+  assert.strictEqual(ds.foot[7], 22.75);               // tổng vẫn gồm phiếu trùng (quy tắc hiển thị rõ, không tự xóa)
   assert.strictEqual(byForest.rows[0][1], 'R1'); assert.strictEqual(byPlate.rows.length, 3); assert.strictEqual(byDay.foot[3], 22.75);
-  assert.ok(m.notes.some(n => /nhiều lần/.test(n) && /P2/.test(n))); assert.ok(m.notes.some(n => /chưa có biển/.test(n)));
+  assert.ok(m.notes.some(n => /nhiều lần/.test(n) && /P2/.test(n) && /vẫn được cộng vào tổng/.test(n) && /1 phiếu trùng/.test(n)));
+  assert.deepStrictEqual(ds.rows.filter(r => r[8]).map(r => r[2]), ['P2', 'P2']);   // cả hai dòng trùng đều được đánh dấu, không dòng nào bị xóa
+  assert.strictEqual(m.kpis.find(k => /Phiếu trùng/.test(k.label)).value, 1); assert.ok(m.notes.some(n => /chưa có biển/.test(n)));
   assert.strictEqual(R.soPhieuCan(recs, {from: '01/03/2026', to: '31/03/2026'}).sections[0].rows.length, 1);
 });
 

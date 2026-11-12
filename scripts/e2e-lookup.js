@@ -1,6 +1,6 @@
 'use strict';
 /* Kiểm thử đầu-cuối phần Tra cứu Google Sheets bằng Electron thật, dữ liệu giả lập (xvfb-run node scripts/e2e-lookup.js) */
-const {_electron: electron} = require('playwright');
+const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os'), http = require('http');
 const {build} = require('../tests/fixtures/make-lookup');
 const root = path.join(__dirname, '..');

@@ -132,16 +132,20 @@ const MIGRATION = db => db.exec(`
 const FIELD_ALIAS = {cccd: 'cccd', cmnd: 'cccd', hd: 'hd', hopdong: 'hd', rung: 'rung', marung: 'rung', phieu: 'phieu', sophieu: 'phieu', bien: 'bien', xe: 'bien', ten: 'ten', chu: 'ten', churung: 'ten', dc: 'dc', diachi: 'dc', tinhtrang: 'tinhtrang', tt: 'tinhtrang'};
 function parseQuery(q) {
   const out = {terms: [], fields: [], not: []};
-  const re = /(^|\s)(-)?(?:([a-z]+):)?(?:"([^"]+)"|(\S+))/g; let m;
-  const text = fold(q);
+  const re = /(^|\s)(-)?(?:([a-z]+):(?=\S))?(?:"([^"]+)"|(\S+))/g; let m;
+  let text = fold(q);
+  if ((text.match(/"/g) || []).length % 2) { const i = text.lastIndexOf('"'); text = text.slice(0, i) + text.slice(i + 1); } // dấu ngoặc kép lẻ: bỏ dấu cuối
+  text = text.replace(/(^|\s)([a-z]+):\s+(?=\S)/g, '$1$2:');                                                         // "hd: 101" = "hd:101"
+  text = text.replace(/(^|\s)(\d{3,4})[ .-](\d{3,4})[ .-](\d{3,4})(?=\s|$)/g, (all, sp, a, b, c) => (a + b + c).length === 12 ? sp + a + b + c : all); // CCCD gõ có dấu cách/chấm
   while ((m = re.exec(text))) {
     const neg = !!m[2], field = m[3] && FIELD_ALIAS[m[3]], val = (m[4] || m[5] || '').trim();
     let value = val, fname = field;
     if (m[3] && !field) { value = (m[3] + ':' + val); fname = null; } // "abc:xyz" không phải trường đã biết: coi như từ thường
-    if (!value) continue;
+    if (!value || /^-+$/.test(value)) continue;
     if (neg) { out.not.push(value); continue; }
     if (fname) { out.fields.push({f: fname, v: value, raw: m[3] + ':' + (m[4] ? '"' + value + '"' : value)}); continue; }
     if (/^\d{12}$/.test(value)) out.fields.push({f: 'cccd', v: value, raw: value, auto: true});
+    else if (/^\d{10,11}$/.test(value)) out.fields.push({f: 'cccd', v: value.padStart(12, '0'), raw: value, auto: true}); // CCCD bị mất số 0 đầu
     else if (isPlate(value)) out.fields.push({f: 'bien', v: value, raw: value, auto: true});
     else out.terms.push({v: value, raw: m[4] ? '"' + value + '"' : value});
   }
@@ -153,8 +157,14 @@ function viDate(v) { // dd/mm/yyyy hoặc yyyy-mm-dd -> yyyymmdd
   m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m ? +m[1] * 10000 + +m[2] * 100 + +m[3] : 0;
 }
 function normAdv(o) {
-  const num = v => { if (v === '' || v == null) return null; const n = Number(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
-  return {from: viDate(o.from), to: viDate(o.to), minTan: num(o.minTan), maxTan: num(o.maxTan), status: fold(o.status || ''), onlyIssues: !!o.onlyIssues};
+  const warns = [];
+  const num = (v, label) => { if (v === '' || v == null) return null; const n = Number(String(v).replace(',', '.')); if (isFinite(n)) return n; warns.push(label + ' “' + v + '” không phải số nên bị bỏ qua.'); return null; };
+  const date = (v, label) => { if (v === '' || v == null) return 0; const d = viDate(v); if (!d) warns.push(label + ' “' + v + '” không đúng định dạng ngày (dd/mm/yyyy) nên bị bỏ qua.'); return d; };
+  const a = {from: date(o.from, 'Ngày bắt đầu'), to: date(o.to, 'Ngày kết thúc'), minTan: num(o.minTan, 'Khối lượng tối thiểu'), maxTan: num(o.maxTan, 'Khối lượng tối đa'), status: fold(o.status || ''), onlyIssues: !!o.onlyIssues};
+  if (a.from && a.to && a.from > a.to) warns.push('Ngày bắt đầu sau ngày kết thúc: không có phiếu cân nào thỏa.');
+  if (a.minTan != null && a.maxTan != null && a.minTan > a.maxTan) warns.push('Khối lượng tối thiểu lớn hơn tối đa: không có phiếu cân nào thỏa.');
+  Object.defineProperty(a, 'warns', {value: warns, enumerable: false});
+  return a;
 }
 const hasAdv = a => !!(a.from || a.to || a.minTan != null || a.maxTan != null || a.status || a.onlyIssues);
 
@@ -326,6 +336,7 @@ class Lookup {
     const pq = parseQuery(q);
     const adv = normAdv(opts);
     const res = runSearch(this.db, a.id, pq, tab, adv, opts.sort || 'relevance', +opts.limit > 0 ? +opts.limit | 0 : 300);
+    res.warns = adv.warns.slice();
     if (!res.total && !opts._noRelax) {
       const parts = [...pq.terms, ...pq.fields.map(f => ({raw: f.raw}))];
       if (parts.length >= 2 || (parts.length === 1 && (pq.not.length || hasAdv(adv) || tab))) {

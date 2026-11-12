@@ -1,6 +1,6 @@
 'use strict';
 /* Kiểm thử xuất biểu mẫu Word BM-01..BM-19 và ZIP trong Electron thật (xvfb-run node scripts/e2e-export.js) */
-const {_electron: electron} = require('playwright');
+const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip');
 const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixtures');

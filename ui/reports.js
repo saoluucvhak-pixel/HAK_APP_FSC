@@ -37,6 +37,16 @@ const HAKReports = (function () {
   const byName = (a, b) => String(a).localeCompare(String(b), 'vi');
   const nameOf = r => r.tenRung || r.maRung || '(chưa đặt tên)';
 
+  /* Phiếu trùng số (giữa các rừng hoặc trong một rừng): KHÔNG tự loại khỏi tổng, chỉ đánh dấu và báo rõ cách tính. */
+  function dupInfo(recs, o) {
+    const seen = {}, dupKeys = {};
+    recs.forEach(r => pcOf(r, o).forEach(p => { const k = String(p.soPhieu || '').trim().toUpperCase(); if (!k) return; seen[k] = (seen[k] || 0) + 1; if (seen[k] > 1) dupKeys[k] = true; }));
+    let extra = 0, tons = 0; const first = {};
+    recs.forEach(r => pcOf(r, o).forEach(p => { const k = String(p.soPhieu || '').trim().toUpperCase(); if (!dupKeys[k]) return; if (first[k]) { extra++; tons += num(p.kl); } else first[k] = true; }));
+    return {keys: Object.keys(dupKeys), extra, tons: round(tons, 3)};
+  }
+  const dupNote = d => 'Cách tính: phiếu trùng số vẫn được cộng vào tổng (hệ thống không tự xóa phiếu). Có ' + d.extra + ' phiếu trùng, tương ứng ' + fmtNum(d.tons, 3) + ' tấn; nếu xác minh là nhập trùng thì tổng thực tế giảm tương ứng.';
+
   /* ---- 1. Sản lượng khai thác theo rừng ---- */
   function sanLuong(recs, o) {
     const rows = [], tot = {dt: 0, dk: 0, tt: 0, trips: 0};
@@ -56,6 +66,7 @@ const HAKReports = (function () {
     const notes = [];
     if (vuot.length) notes.push('Rừng có sản lượng thực tế vượt định mức trên 5%: ' + vuot.map(r => nameOf(r) + ' (' + r.maRung + ')').join('; ') + '. Cần đối chiếu diện tích, định mức và phiếu cân.');
     if (chua.length) notes.push('Rừng chưa có phiếu cân trong kỳ: ' + chua.map(r => r.maRung || nameOf(r)).join(', ') + '.');
+    const dp = dupInfo(sorted, o); if (dp.extra) notes.push('Phiếu cân trùng số trong kỳ: ' + dp.keys.join(', ') + '. ' + dupNote(dp));
     notes.push('Sản lượng thực tế = tổng khối lượng các phiếu cân của rừng trong kỳ; sản lượng dự kiến = diện tích × định mức (tấn/ha).');
     return {id: 'sanluong', title: 'BÁO CÁO SẢN LƯỢNG KHAI THÁC THEO RỪNG', orient: 'landscape', period: periodText(o.from, o.to), kpis,
       sections: [{heading: 'Chi tiết theo rừng', cols: [
@@ -71,7 +82,8 @@ const HAKReports = (function () {
     const all = [];
     recs.forEach(r => pcOf(r, o).forEach(p => all.push(Object.assign({}, p, {rung: r.maRung, chu: r.chuRung}))));
     all.sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay) || String(a.soPhieu).localeCompare(String(b.soPhieu)));
-    const rows = all.map((p, i) => [i + 1, p.ngay, p.soPhieu, p.bienSo, p.chu, p.rung, p.noiGiao || '', num(p.kl)]);
+    const dpi = dupInfo(recs, o), isDup = {}; dpi.keys.forEach(k => { isDup[k] = true; });
+    const rows = all.map((p, i) => [i + 1, p.ngay, p.soPhieu, p.bienSo, p.chu, p.rung, p.noiGiao || '', num(p.kl), isDup[String(p.soPhieu || '').trim().toUpperCase()] ? 'Trùng số phiếu' : '']);
     const total = sumKl(all);
     const byPlate = {}, byDay = {}, byForest = {};
     all.forEach(p => {
@@ -85,17 +97,15 @@ const HAKReports = (function () {
       return {cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: label, w: 40}, {h: 'Số chuyến', w: 16, al: 'center', f: 'n0'}, {h: 'Khối lượng (tấn)', w: 20, al: 'right', f: 'n3'}],
         rows: ks.map((k, i) => [i + 1, k, obj[k].n, round(obj[k].t, 3)]), foot: ['', 'Cộng', tn, tt]};
     };
-    const dup = {}; all.forEach(p => { const k = String(p.soPhieu || '').toUpperCase(); if (k) dup[k] = (dup[k] || 0) + 1; });
-    const dupKeys = Object.keys(dup).filter(k => dup[k] > 1);
     const notes = [];
-    if (dupKeys.length) notes.push('Số phiếu cân xuất hiện nhiều lần (cần kiểm tra trùng): ' + dupKeys.join(', ') + '.');
+    if (dpi.extra) notes.push('Số phiếu cân xuất hiện nhiều lần (cần kiểm tra trùng): ' + dpi.keys.join(', ') + '. ' + dupNote(dpi));
     const noPlate = all.filter(p => !p.bienSo).length; if (noPlate) notes.push(noPlate + ' phiếu cân chưa có biển kiểm soát.');
     return {id: 'phieucan', title: 'SỔ THEO DÕI PHIẾU CÂN – VẬN CHUYỂN GỖ KEO', orient: 'landscape', period: periodText(o.from, o.to),
       kpis: [{label: 'Số phiếu cân', value: all.length, f: 'n0'}, {label: 'Tổng khối lượng (tấn)', value: total, f: 'n3'}, {label: 'Số xe', value: Object.keys(byPlate).length, f: 'n0'},
-        {label: 'Bình quân (tấn/chuyến)', value: all.length ? round(total / all.length, 3) : 0, f: 'n3'}],
+        {label: 'Bình quân (tấn/chuyến)', value: all.length ? round(total / all.length, 3) : 0, f: 'n3'}, {label: 'Phiếu trùng số (đã tính vào tổng)', value: dpi.extra, f: 'n0'}],
       sections: [
         {heading: 'I. Danh sách phiếu cân', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Ngày cân', w: 10, al: 'center'}, {h: 'Số phiếu cân', w: 14}, {h: 'Biển kiểm soát', w: 12, al: 'center'},
-          {h: 'Chủ rừng', w: 18}, {h: 'Mã rừng', w: 12}, {h: 'Nơi giao', w: 17}, {h: 'Khối lượng (tấn)', w: 12, al: 'right', f: 'n3'}], rows, foot: ['', 'TỔNG CỘNG', '', '', '', '', '', total]},
+          {h: 'Chủ rừng', w: 17}, {h: 'Mã rừng', w: 11}, {h: 'Nơi giao', w: 15}, {h: 'Khối lượng (tấn)', w: 11, al: 'right', f: 'n3'}, {h: 'Ghi chú', w: 10}], rows, foot: ['', 'TỔNG CỘNG', '', '', '', '', '', total, '']},
         Object.assign({heading: 'II. Tổng hợp theo rừng'}, tbl(byForest, 'Mã rừng', byName)),
         Object.assign({heading: 'III. Tổng hợp theo biển kiểm soát'}, tbl(byPlate, 'Biển kiểm soát', byName)),
         Object.assign({heading: 'IV. Tổng hợp theo ngày cân'}, tbl(byDay, 'Ngày cân', (a, b) => dateKey(a) - dateKey(b) || byName(a, b)))],
@@ -138,6 +148,7 @@ const HAKReports = (function () {
       if (r.pct < 50) risks.push([r.chuRung, r.maRung, 'Hồ sơ FSC dưới 50%', 'Tiến độ ' + fmtNum(r.pct, 1) + '%']);
       (r.thieu || []).filter(t => !t.warn && /Tọa độ|Giấy tờ pháp lý/.test(t.label)).forEach(t => risks.push([r.chuRung, r.maRung, 'Thiếu ' + t.label.toLowerCase(), t.hint || '']));
     });
+    const dpd = dupInfo(recs, o); if (dpd.extra) risks.push(['(nhiều rừng)', dpd.keys.join(', '), 'Trùng số phiếu cân', dpd.extra + ' phiếu, ' + fmtNum(dpd.tons, 3) + ' tấn đang tính trong tổng']);
     return {id: 'dieuhanh', title: 'BÁO CÁO TỔNG HỢP ĐIỀU HÀNH KHAI THÁC VÀ VẬN CHUYỂN GỖ KEO', orient: 'portrait', period: periodText(o.from, o.to),
       kpis: [{label: 'Chủ rừng', value: list.length, f: 'n0'}, {label: 'Số rừng', value: recs.length, f: 'n0'}, {label: 'Diện tích (ha)', value: totHa, f: 'n2'}, {label: 'Khối lượng vận chuyển (tấn)', value: totT, f: 'n3'},
         {label: 'Số chuyến', value: trips, f: 'n0'}, {label: 'Tiến độ hồ sơ TB', value: avg, f: 'pct'}],
