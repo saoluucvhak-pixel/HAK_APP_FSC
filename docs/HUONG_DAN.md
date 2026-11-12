@@ -98,3 +98,11 @@ Bộ lọc dùng lõi HAK Smart Filter (`ui/vendor/hak-smart-filter`), giao di�
 - Báo cáo thứ 5 **Bảng cha–con: chủ rừng – rừng – phiếu cân**: chủ rừng là tổng các rừng, rừng là tổng các phiếu cân trong kỳ; hộp **Kèm từng phiếu cân** thêm cấp phiếu; màn hình xem trước có nút thu gọn/mở rộng; Excel có nhóm dòng theo cấp.
 - Theo chuẩn HAK Accounting & Reporting Standard: số căn phải, ngày căn giữa, văn bản căn trái; có **đơn vị tính** và **thời điểm lập**; Excel dùng ô số và ô ngày thật, có bộ lọc tự động ở bảng chính, chuỗi bắt đầu bằng `=`, `+`, `-`, `@` được vô hiệu để không thành công thức. Khối lượng tính theo tấn với 3 chữ số thập phân (phiếu cân ghi kg); các cột còn lại theo chuẩn.
 - Chưa có: cố định hàng tiêu đề, vùng in và tiêu đề lặp trong Excel (thư viện Excel đang dùng không hỗ trợ); xuất PDF. Word đã lặp tiêu đề bảng và có số trang.
+
+## Bảng màu (mới)
+Menu **⋯ Thêm → Bảng màu** có 4 bảng màu, mỗi bảng có chế độ sáng và tối (nút 🌙/☀ ở thanh trên). Lựa chọn được ghi nhớ trên máy và không ảnh hưởng dữ liệu hồ sơ:
+- **Luxe** — navy, champagne, nền ngà (mặc định).
+- **Classic** — xanh ngọc (teal).
+- **Neutral** — xám xanh doanh nghiệp.
+- **Champagne** — vàng ấm.
+Luxe và Classic lấy nguyên từ HAK Enterprise Design System. Neutral và Champagne do HAKQN tự định nghĩa vì design system chỉ mô tả bằng chữ, chưa có giá trị màu (`ui/skins.css`); cả bốn đều được kiểm tra độ tương phản chữ WCAG AA.

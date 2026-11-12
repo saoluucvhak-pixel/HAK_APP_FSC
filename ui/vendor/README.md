@@ -11,3 +11,5 @@ Kiểm thử của thư viện nguồn được chạy lại ở `tests/vendor-s
 | `hak-accounting-report-standard/` (`index.js`, `exact-format.js`) | saoluucvhak-pixel/HAK_ACCOUNTING_REPORT_STANDARD V1.0.0 | a5833a9 |
 
 Chuẩn báo cáo chỉ dùng trong kiểm thử (`tests/report-standard.test.js`) để chứng minh định dạng số, căn lề và cấu trúc báo cáo HAKQN khớp chuẩn; không ghép vào giao diện.
+
+Ghi chú: `ui/skins.css` (neutral, champagne) KHÔNG phải bản sao từ repository nguồn mà do HAKQN tự định nghĩa; classic là `:root` của `luxe.css` khi không đặt `data-skin`.

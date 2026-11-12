@@ -58,6 +58,35 @@ color-scheme:light}
 .hak-ui :focus-visible {outline:2px solid var(--brand);outline-offset:2px}
 @media(max-width:1100px){.hak-ui .hak-master-detail{grid-template-columns:1fr}}
 
+/* Hai bảng màu bổ sung cho HAK Enterprise Design System: neutral (xám xanh doanh nghiệp) và champagne (vàng ấm).
+   LƯU Ý: tài liệu design system chỉ mô tả hai chủ đề này bằng chữ, repository không có giá trị màu. Bộ giá trị dưới đây do HAKQN tự định nghĩa,
+   dùng cùng tên token với luxe.css và được kiểm tra tương phản WCAG AA (tests/skins.test.js). Khi design system công bố giá trị chính thức, thay bằng giá trị đó.
+   classic (xanh ngọc/teal) và luxe (navy + champagne + ngà) lấy nguyên từ thư viện: classic = :root của luxe.css khi không đặt data-skin. */
+[data-skin="neutral"]{--mut-aa:#5f6c7a;--brand:#35475a;--brand2:#4b6078;--brandH:#283644;--brandA:#1e2833;--brandSoft:rgba(53,71,90,.10);--onBrand:#fff;
+--bg:#f3f5f7;--card:#fff;--ink:#1b232c;--mut:#5f6c7a;--line:#dde2e8;--line2:#e8ecf0;--ctl:#cbd2da;--th:#edf0f3;--hover:#f0f3f6;--field:#fff;
+--sb:linear-gradient(180deg,#1f2a36 0%,#151d26 100%);--sbText:#c4ceda;--sbMut:#8793a1;--sbLine:rgba(255,255,255,.08);
+--warnBg:#f7f1e3;--warnBd:#e3d3a8;--warnFg:#664712;--okBg:#e9eef3;--okFg:#35475a;--infoBg:#edf1f6;--infoBd:#cbd5e1;--infoFg:#25364d;--edit:#a8812f;--editBg:#faf6ea;--focus:rgba(75,96,120,.32);
+--shadow:0 1px 2px rgba(27,35,44,.05),0 8px 22px rgba(27,35,44,.07);--shadowH:0 12px 28px rgba(53,71,90,.16);--r:12px;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(255,255,255,.14),transparent 60%),linear-gradient(120deg,#1f2a36,#35475a);
+--c1:#e9eef3;--c1f:#35475a;--deep:#1f2a36;--champ:#a8812f;--champL:#dcc48a;--gold:#c2a15a}
+[data-skin="neutral"][data-theme="dark"]{--mut-aa:#9aa5b1;--brand:#a9bdd1;--brand2:#c0d0e0;--brandH:#c0d0e0;--brandA:#d6e1ec;--brandSoft:rgba(169,189,209,.16);--onBrand:#111820;
+--bg:#0e1216;--card:#161b21;--ink:#e6eaee;--mut:#9aa5b1;--line:#252d36;--line2:#1d242c;--ctl:#36414d;--th:#1b2128;--hover:#1c232b;--field:#10151a;
+--sb:linear-gradient(180deg,#0b0f13 0%,#07090c 100%);--okBg:rgba(169,189,209,.14);--okFg:#c0d0e0;--focus:rgba(169,189,209,.34);--edit:#d3ae5e;--editBg:#221d10;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(255,255,255,.08),transparent 60%),linear-gradient(120deg,#0b0f13,#26323f);
+--c1:rgba(169,189,209,.16);--c1f:#c0d0e0;--deep:#0b0f13}
+[data-skin="champagne"]{--mut-aa:#6a5f49;--brand:#85601a;--brand2:#a47a28;--brandH:#6d4e13;--brandA:#583f0e;--brandSoft:rgba(133,96,26,.12);--onBrand:#fff;
+--bg:#faf6ec;--card:#fffdf8;--ink:#2a2417;--mut:#6a5f49;--line:#eadfc4;--line2:#f1e8d3;--ctl:#dccfaf;--th:#f4ecd8;--hover:#f8f0dd;--field:#fff;
+--sb:linear-gradient(180deg,#2b2411 0%,#1d180a 100%);--sbText:#d8cfb6;--sbMut:#a09676;--sbLine:rgba(214,178,106,.2);
+--warnBg:#fbf1d9;--warnBd:#e8d296;--warnFg:#6b4a10;--okBg:#f3ead2;--okFg:#6d4e13;--infoBg:#f4efe0;--infoBd:#e0d4b2;--infoFg:#4a3d1c;--edit:#a47a28;--editBg:#fdf6e2;--focus:rgba(164,122,40,.32);
+--shadow:0 1px 2px rgba(42,36,23,.05),0 8px 22px rgba(42,36,23,.07);--shadowH:0 12px 28px rgba(133,96,26,.18);--r:12px;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(240,207,143,.28),transparent 60%),linear-gradient(120deg,#2b2411,#85601a);
+--c1:#f3ead2;--c1f:#6d4e13;--deep:#2b2411;--champ:#a47a28;--champL:#ecd49a;--gold:#c9a45c}
+[data-skin="champagne"][data-theme="dark"]{--mut-aa:#a69d88;--brand:#dcb862;--brand2:#e8c97c;--brandH:#e8c97c;--brandA:#f1d9a0;--brandSoft:rgba(220,184,98,.16);--onBrand:#1d1503;
+--bg:#14110a;--card:#1d1910;--ink:#efe9da;--mut:#a69d88;--line:#2e2819;--line2:#251f13;--ctl:#403823;--th:#231e12;--hover:#241f13;--field:#171309;
+--sb:linear-gradient(180deg,#0f0c06 0%,#0a0804 100%);--okBg:rgba(220,184,98,.14);--okFg:#e8c97c;--focus:rgba(220,184,98,.34);--edit:#dcb862;--editBg:#262010;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(220,184,98,.14),transparent 60%),linear-gradient(120deg,#0f0c06,#3a2d12);
+--c1:rgba(220,184,98,.16);--c1f:#e8c97c;--deep:#0f0c06}
+
 /* ===== Ánh xạ token của ứng dụng sang HAK Enterprise Design System (chủ đề luxe: navy + champagne; sáng/tối theo data-theme) =====
    Tên token dùng chung (--brand, --bg, --card, --ink, --mut, --line, --th, --r…) lấy nguyên từ thư viện; phần dưới chỉ đặt tên phụ của ứng dụng. */
 :root{--acc:var(--brand);--accHi:var(--brandH);--accSoft:var(--brandSoft);--accInk:var(--onBrand);--inbd:var(--ctl);--bar:var(--deep);--barInk:#f1ede2;
@@ -82,9 +111,10 @@ header.top h1 small{display:block;font-size:11.5px;font-weight:400;opacity:.72;m
 .menu{position:relative}.menu>summary{list-style:none}.menu>summary::-webkit-details-marker{display:none}
 .menu .pop{position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 12px 32px rgba(0,0,0,.28);padding:6px;z-index:40}
 .menu .pop .mi{display:flex;width:100%;align-items:center;gap:8px;text-align:left;border:0;background:none;color:var(--ink);padding:9px 12px;border-radius:var(--rs);font:inherit;cursor:pointer}
-.menu .pop .mi:hover{background:var(--accSoft)}.menu .pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
+.menu .pop .mi:hover{background:var(--accSoft)}.mi-sec{padding:4px 8px 6px;font-size:12px;color:var(--mut-aa)}.mi-sec b{display:block;margin:2px 4px 4px;color:var(--ink)}.skinbtn{display:flex;align-items:center;gap:8px;width:100%;border:1px solid transparent;background:none;color:var(--ink);padding:6px 8px;border-radius:var(--rs);font:inherit;cursor:pointer;text-align:left}.skinbtn:hover{background:var(--accSoft)}.skinbtn.on{border-color:var(--brand);background:var(--accSoft);font-weight:600}.sw{display:inline-flex;width:34px;height:16px;border-radius:5px;overflow:hidden;border:1px solid var(--ctl);flex:0 0 auto}.sw i{flex:1}
+.menu .pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
 /* Thanh ngữ cảnh */
-#ctxBar{position:sticky;top:50px;z-index:29;display:flex;gap:6px 18px;flex-wrap:wrap;align-items:center;padding:7px 18px;background:var(--card);border-bottom:1px solid var(--line);font-size:13px;color:var(--mut)}
+#ctxBar{position:sticky;top:50px;z-index:29;display:flex;gap:6px 18px;flex-wrap:wrap;align-items:center;padding:7px 18px;background:var(--card);border-bottom:1px solid var(--line);font-size:13px;color:var(--mut-aa)}
 #ctxBar b{color:var(--ink);font-weight:600}#ctxBar .sp{flex:1}
 #saveSt.err{background:var(--errBg);color:var(--err)}
 /* Bố cục */
@@ -94,7 +124,7 @@ main{padding:22px 26px;min-width:0;max-width:1400px}
 h2{font-size:20px;margin:0 0 2px;font-weight:650;letter-spacing:-.1px}
 h3{font-size:14.5px;margin:20px 0 10px;color:var(--ink);font-weight:650}
 h4{font-size:13.5px}
-.mut{color:var(--mut)}
+.mut{color:var(--mut-aa)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
 .card>h3:first-child{margin-top:0}
 /* Nút */
@@ -109,13 +139,13 @@ h4{font-size:13.5px}
 .item{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--rs);padding:9px 11px;margin-bottom:6px;cursor:pointer;font:inherit;color:inherit;transition:border-color .12s,background .12s}
 .item:hover{border-color:var(--acc)}
 .item.on{border-color:var(--acc);background:var(--accSoft);box-shadow:inset 3px 0 0 var(--acc)}
-.item small{display:block;color:var(--mut);font-size:12px;margin-top:1px}
+.item small{display:block;color:var(--mut-aa);font-size:12px;margin-top:1px}
 .subs{margin:-2px 0 10px 12px;padding-left:9px;border-left:2px solid var(--line)}
 .item.sub{padding:6px 9px;margin-bottom:5px;font-size:13px}
 .sideq{width:100%;margin:0 0 10px}
 /* Thẻ chỉ số */
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0 18px}
-.kpi>div{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);color:var(--mut);font-size:12.5px}
+.kpi>div{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);color:var(--mut-aa);font-size:12.5px}
 .kpi b{display:block;font-size:24px;line-height:1.15;color:var(--ink);font-weight:700;letter-spacing:-.3px;margin-bottom:2px}
 .kpi>div.acc{border-color:var(--acc);background:var(--accSoft)}.kpi>div.acc b{color:var(--acc)}
 .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:4px}
@@ -123,7 +153,7 @@ h4{font-size:13.5px}
 .grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
 .dlist{display:flex;flex-direction:column;gap:2px}
 .drow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-radius:var(--rs);padding:9px 10px;cursor:pointer;font:inherit;color:inherit}
-.drow:hover{background:var(--accSoft)}.drow small{display:block;color:var(--mut)}
+.drow:hover{background:var(--accSoft)}.drow small{display:block;color:var(--mut-aa)}
 .drow+.drow{border-top:1px solid var(--line)}
 .ring{--p:0;width:42px;height:42px;border-radius:50%;background:conic-gradient(var(--c,var(--acc)) calc(var(--p)*1%),var(--line) 0);display:grid;place-items:center;flex:0 0 auto}
 .ring i{font-style:normal;width:32px;height:32px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:11px;font-weight:650}
@@ -131,12 +161,12 @@ h4{font-size:13.5px}
 .hint{display:flex;gap:10px;align-items:flex-start;background:var(--accSoft);border-radius:var(--r);padding:12px 14px;color:var(--ink)}
 /* Tab */
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:14px 0 16px;overflow:auto;flex-wrap:nowrap}
-.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:9px 14px;font:inherit;cursor:pointer;color:var(--mut);white-space:nowrap;border-radius:var(--rs) var(--rs) 0 0}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:9px 14px;font:inherit;cursor:pointer;color:var(--mut-aa);white-space:nowrap;border-radius:var(--rs) var(--rs) 0 0}
 .tabs button:hover{color:var(--ink);background:var(--accSoft)}
 .tabs button.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:650}
 /* Biểu mẫu */
 form.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px 16px}
-label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mut);font-weight:550}
+label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mut-aa);font-weight:550}
 input,select,textarea{font:inherit;color:var(--ink);padding:8px 10px;border:1px solid var(--inbd);border-radius:var(--rs);background:var(--card);min-width:0;min-height:36px}
 input:hover,select:hover{border-color:var(--acc)}
 input:focus,select:focus,textarea:focus{outline:0;border-color:var(--acc);box-shadow:var(--ring)}
@@ -146,7 +176,7 @@ input[type=checkbox],input[type=radio]{min-height:0;accent-color:var(--acc)}
 /* Bảng */
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 th,td{border-bottom:1px solid var(--line);padding:8px 9px;text-align:left;vertical-align:top}
-th{background:var(--th);font-weight:650;position:sticky;top:0;color:var(--mut);font-size:12px;text-transform:none;z-index:1}
+th{background:var(--th);font-weight:650;position:sticky;top:0;color:var(--mut-aa);font-size:12px;text-transform:none;z-index:1}
 tbody tr:hover td,table tr:hover td{background:color-mix(in srgb,var(--accSoft) 55%,transparent)}
 tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 .wrap{overflow:auto;max-height:440px;border:1px solid var(--line);border-radius:var(--r)}
@@ -157,14 +187,14 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:550;background:var(--accSoft);color:var(--acc)}
 .pill.err{background:var(--errBg);color:var(--err)}.pill.ok{background:var(--okBg);color:var(--ok)}
 .docrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
-.empty{padding:48px 14px;text-align:center;color:var(--mut)}
+.empty{padding:48px 14px;text-align:center;color:var(--mut-aa)}
 .prog{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 12px}
 .prog>i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--ok));border-radius:99px;transition:width .3s}
 .chk{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:6px 16px;font-size:13px}
 .chk div{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
 .chk b{flex:0 0 auto;width:20px;height:20px;border-radius:50%;text-align:center;font-size:11px;line-height:20px;color:#fff;background:var(--ok)}
 .chk .no b{background:var(--err)}.chk .wn b{background:#d99a00}
-.chk small{display:block;color:var(--mut)}
+.chk small{display:block;color:var(--mut-aa)}
 .item .pill{float:right;margin-left:6px}
 /* Hộp thoại dùng chung */
 #guideBox,#lkBox,#rpBox,#impBox{position:fixed;inset:0;z-index:50;background:rgba(8,20,14,.55);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:22px 12px}
@@ -182,7 +212,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 #rpBox .rpl{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:10px 0}
 #rpBox .rpc{text-align:left;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--card);color:var(--ink);cursor:pointer;font:inherit;transition:border-color .12s,background .12s}
 #rpBox .rpc:hover{border-color:var(--acc)}
-#rpBox .rpc.on{border-color:var(--acc);background:var(--accSoft);box-shadow:inset 0 0 0 1px var(--acc)}#rpBox .rpc small{display:block;color:var(--mut);margin-top:4px;font-size:12px}
+#rpBox .rpc.on{border-color:var(--acc);background:var(--accSoft);box-shadow:inset 0 0 0 1px var(--acc)}#rpBox .rpc small{display:block;color:var(--mut-aa);margin-top:4px;font-size:12px}
 #rpBox tr[hidden]{display:none}
 tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
 .chipx{border:0;background:none;color:inherit;cursor:pointer;font:inherit;padding:0 2px}.chipx:hover{color:var(--err)}
@@ -196,7 +226,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <body>
 <header class="top">
   <button class="brand" data-act="goHome" title="Trang chủ">
-    <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#1d3a63"/><path d="M20 7 11 19h5l-6 8h8v6h4v-6h8l-6-8h5z" fill="#e6cf9b"/></svg>
+    <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" style="fill:var(--brand)"/><path d="M20 7 11 19h5l-6 8h8v6h4v-6h8l-6-8h5z" style="fill:var(--onBrand)"/></svg>
     <h1>Hồ sơ khai thác & vận chuyển gỗ keo<small>HAK Group · Bộ hồ sơ theo rừng, chuẩn truy xuất nguồn gốc FSC</small></h1>
   </button>
   <nav class="nav">
@@ -207,6 +237,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
   <button class="hbtn" data-act="theme" id="themeBtn">🌙 Chế độ tối</button>
   <details class="menu" id="moreMenu"><summary class="hbtn">⋯ Thêm</summary><div class="pop">
     <button class="mi" data-act="guide">❓ Hướng dẫn sử dụng</button>
+    <hr>
+    <div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu"></div>
     <hr>
     <button class="mi" data-act="backup">⬇ Sao lưu dữ liệu (.json)</button>
     <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">⬆ Khôi phục (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
@@ -3343,6 +3375,7 @@ window.addEventListener('offline', () => { if ($('#lkBox').classList.contains('o
 document.addEventListener('click', async e => {
   const t = e.target;
   const mm = document.getElementById('moreMenu'); if (mm && mm.open && (!t.closest('#moreMenu') || t.closest('.pop button.mi'))) mm.open = false;
+  const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick); return; }
   const dsh = t.closest('[data-dash]'); if (dsh) { const [oid, fid] = dsh.dataset.dash.split('|'); openRs(oid); return openForest(fid); }
   const open = t.closest('[data-open]'); if (open) return openRs(open.dataset.open);
   const of = t.closest('[data-forest]'); if (of) return openForest(of.dataset.forest);
@@ -3419,6 +3452,21 @@ document.addEventListener('change', e => {
   }
 });
 
+const SKINS = [
+  ['luxe', 'Luxe — navy, champagne, ngà (mặc định)', ['#1d3a63', '#b8903f', '#f5f2ec']],
+  ['classic', 'Classic — xanh ngọc (teal)', ['#0e7c86', '#0f2740', '#f3f6fa']],
+  ['neutral', 'Neutral — xám xanh doanh nghiệp', ['#35475a', '#a8812f', '#f3f5f7']],
+  ['champagne', 'Champagne — vàng ấm', ['#85601a', '#2b2411', '#faf6ec']]];
+function setSkin(k) {
+  if (!SKINS.some(x => x[0] === k)) k = 'luxe';
+  document.documentElement.dataset.skin = k;
+  try { localStorage.setItem('hskt.skin', k); } catch (e) {}
+  const box = document.getElementById('skinPick');
+  if (box) box.innerHTML = '<b>Bảng màu</b>' + SKINS.map(([id, label, c]) => '<button class="skinbtn' + (id === k ? ' on' : '') + '" data-skinpick="' + id + '" aria-pressed="' + (id === k) + '"><span class="sw">' + c.map(x => '<i style="background:' + x + '"></i>').join('') + '</span>' + esc(label) + '</button>').join('');
+}
+let savedSkin = null;
+try { savedSkin = localStorage.getItem('hskt.skin'); } catch (e) {}
+setSkin(savedSkin);
 function setTheme(t) {
   document.documentElement.dataset.theme = t;
   try { localStorage.setItem('hskt.theme', t); } catch (e) {}

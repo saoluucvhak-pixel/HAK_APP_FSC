@@ -7,7 +7,7 @@ const rd = p => fs.readFileSync(path.join(root, p), 'utf8');
 const lib = p => fs.readFileSync(path.join(root, 'node_modules', p), 'utf8');
 fs.mkdirSync(path.join(root, 'renderer'), {recursive: true});
 fs.writeFileSync(path.join(root, 'renderer', 'index.html'),
-  src.replace('/*@@LUXE@@*/', () => rd('ui/vendor/hak-design-system/luxe.css')).replace('/*@@COMPONENTS@@*/', () => rd('ui/vendor/hak-design-system/components.css'))
+  src.replace('/*@@LUXE@@*/', () => rd('ui/vendor/hak-design-system/luxe.css')).replace('/*@@COMPONENTS@@*/', () => rd('ui/vendor/hak-design-system/components.css')).replace('/*@@SKINS@@*/', () => rd('ui/skins.css'))
     .replace('/*@@SF@@*/', () => rd('ui/vendor/hak-smart-filter/core/smart-filter.js') + '\n' + rd('ui/vendor/hak-smart-filter/browser.js'))
     .replace('/*@@XLSX@@*/', () => lib('xlsx/dist/xlsx.full.min.js')).replace('/*@@JSZIP@@*/', () => lib('jszip/dist/jszip.min.js')).replace('/*@@REPORTS@@*/', () => fs.readFileSync(path.join(root, 'ui', 'reports.js'), 'utf8')));
 console.log('Đã tạo renderer/index.html');
