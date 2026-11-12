@@ -58,10 +58,10 @@ jobs:
             $out = Join-Path $env:RUNNER_TEMP "smoke-$ph.json"
             $env:HAKQN_USERDATA = $ud; $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = $ph
             $pr = Start-Process -FilePath $app.FullName -PassThru
-            if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw "Pha $ph: ứng dụng không tự thoát sau 120 giây" }
-            if (-not (Test-Path $out)) { throw "Pha $ph: không có file kết quả (mã thoát $($pr.ExitCode))" }
+            if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw "Pha ${ph}: ứng dụng không tự thoát sau 120 giây" }
+            if (-not (Test-Path $out)) { throw "Pha ${ph}: không có file kết quả (mã thoát $($pr.ExitCode))" }
             Get-Content $out -Raw
-            if ($pr.ExitCode -ne 0) { throw "Pha $ph: kiểm tra khói thất bại (mã thoát $($pr.ExitCode))" }
+            if ($pr.ExitCode -ne 0) { throw "Pha ${ph}: kiểm tra khói thất bại (mã thoát $($pr.ExitCode))" }
           }
           Copy-Item (Join-Path $env:RUNNER_TEMP 'smoke-*.json') dist/
       - uses: actions/upload-artifact@v4
