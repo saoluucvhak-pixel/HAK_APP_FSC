@@ -898,7 +898,23 @@ function footerXml(text, width) {
     (docMode === 'de' ? '' : '<w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="7F7F7F"/></w:pBdr>') + '<w:tabs><w:tab w:val="right" w:pos="' + width + '"/></w:tabs>' +
     '<w:spacing w:before="0" w:after="0"/></w:pPr>' + run(text) + '<w:r><w:tab/></w:r>' + run('Trang ') + fld('PAGE') + run('/') + fld('NUMPAGES') + '</w:p></w:ftr>';
 }
+/* Khối ký tên cân đối: dòng “Đà Nẵng, ngày … tháng … năm …” canh phải đứng ngay trước bảng ký tên được chuyển vào ô CỘT CUỐI của bảng (canh giữa, chữ nghiêng),
+ * nên ngày, chức danh, “(Ký, họ tên)” và họ tên cùng một trục dọc, không còn lệch phải so với các dòng trên dưới. Áp dụng cho mọi biểu mẫu. */
+function tidySign(blocks) {
+  const out = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i], nx = blocks[i + 1];
+    if (b && b.t === 'p' && b.al === 'right' && /Đà Nẵng,|\uE000/.test(b.text) && nx && nx.t === 'tbl' && nx.borders === false && nx.widths.length >= 2) {
+      const n = nx.widths.length, row = n >= 3 ? [...Array(n - 2).fill(''), {v: b.text, i: true, span: 2}] : ['', {v: b.text, i: true}];   // 3 cột: ngày canh giữa trên hai cột bên phải để không xuống dòng
+      out.push(Object.assign({}, nx, {rows: [row, ...nx.rows]})); i++;
+      continue;
+    }
+    out.push(b);
+  }
+  return out;
+}
 async function makeDocx(blocks, o = {}) {
+  blocks = tidySign(blocks);
   const body = blocks.map(b => b.t === 'p' ? paraXml(b) : b.t === 'tbl' ? tblXml(b) :
     b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '').join('') + '<w:p/>';
   const pg = o.landscape
@@ -1530,13 +1546,10 @@ function docHDVC(rec, ex, g) {
 
 /* ========== Mẫu in bổ sung ========== */
 const SIGN_DATE = '<br>';
-function footerSign(title, name) {
+function footerSign(title, name) {   // khối ký một người ở nửa phải trang: ngày, chức danh, ghi chú, họ tên cùng canh giữa trên một trục
   return [
     P('', {after: 60}),
-    P('Đà Nẵng, ' + HAKHopDong.ngayTrong(), {al: 'right', before: 120, after: 0}),
-    P('**' + title + '**', {al: 'right', after: 0}),
-    P('(Ký, họ tên)', {al: 'right', i: true, after: 0}),
-    P('**' + upper(name) + '**', {al: 'right', before: 500})
+    T([7568, 7569], [['', {v: 'Đà Nẵng, ' + HAKHopDong.ngayTrong(), i: true}], ['', '**' + title + '**'], ['', {v: '(Ký, họ tên)', i: true}], ['', ''], ['', ''], ['', '**' + upper(name) + '**']], {borders: false, al: 'center', keep: true})
   ];
 }
 function docChamCong(rec, ex) {

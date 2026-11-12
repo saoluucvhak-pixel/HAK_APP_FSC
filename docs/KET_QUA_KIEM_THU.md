@@ -159,3 +159,8 @@ CI Windows có thêm bước **nâng cấp từ bộ cài thật v1.0.0**: tải
 
 ## 17. Bản 1.4.9: cảnh báo sau khi tải theo từng trường hợp
 - Trước đây “Tải toàn bộ hồ sơ” âm thầm bỏ BM-09 và BM-10 khi chưa đủ phiếu cân và in BM-08, BM-14 theo sản lượng dự kiến mà không báo. Nay sau khi tải (toàn bộ, đợt 1, đợt 2) phần mềm nêu từng mục chưa đủ; hồ sơ đủ thì báo “dữ liệu đủ, không có lưu ý”. `scripts/e2e-haidot.js` kiểm cả hai trường hợp (thiếu và đủ) và xác nhận hồ sơ đủ tải được trọn bộ một lần.
+
+## 18. Bản 1.4.10: cân chỉnh khối ký tên
+- **Lỗi:** dòng “Đà Nẵng, ngày … tháng … năm …” và (ở các mẫu một người ký) cả chức danh, “(Ký, họ tên)”, họ tên đều canh sát lề phải, trong khi các dòng trên dưới canh giữa theo từng cột nên khối ký lệch, mất cân đối.
+- **Sửa:** ngày được đưa vào bảng ký tên ở cột cuối (bảng ba cột: trải trên hai cột bên phải để không bị ngắt dòng), canh giữa, chữ nghiêng; khối ký một người (BM-05, BM-06, BM-08…) là bảng hai cột với nửa phải canh giữa trên một trục. Áp dụng chung cho mọi biểu mẫu qua một hàm xử lý khối ký; cả chế độ in mẫu trống và in đè.
+- **Kiểm thử:** `scripts/e2e-chuky.js` (không còn dòng ngày canh phải đứng riêng trước bảng ký; ngày nằm trong bảng ký ở các biểu mẫu có khối ký; cấu trúc khối ký BM-08 và BM-10); đã xem ảnh PDF dựng bằng LibreOffice của BM-02, BM-10, BM-13, BM-15, BM-17, BM-08.
