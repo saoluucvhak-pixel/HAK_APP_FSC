@@ -827,8 +827,13 @@ const bl = text => P('- ' + text, {ind: 360});
  *    nên các chữ phía sau không bị lệch dòng. Hai bản phải in cùng khổ giấy, tỉ lệ 100%, cùng lề. */
 let docMode = 'day';
 const VS = '', VW = '', VB = '', VE = '';
-/* Mẫu trống: ngày in dạng “ngày …/…/……” (cùng dạng với phần in đè “ngày 20/12/2026”); số biên bản để trắng thật (chừa trắng đúng bề rộng để số in đè rơi đúng chỗ) */
-const NGAY_O = 'ngày …/…/……', SO_TRANG = '\uE005' + '…'.repeat(18);   // \uE005 = chỗ chừa trắng: chiếm bề rộng như chấm nhưng in màu trắng (khoảng trắng cuối dòng bị bỏ qua khi canh giữa nên không dùng được)
+/* Số biên bản để trắng thật (chừa trắng đúng bề rộng để số in đè rơi đúng chỗ) */
+/* Cụm ngày ở mẫu trống để TRẮNG (chừa bề rộng bằng ký tự trắng); bản in đè in nguyên cụm “ngày dd/mm/yyyy”, “từ ngày … đến ngày …” bằng mực đen, nên không còn chấm chồng lên số */
+const VP = (text, sample) => V(text, 0, '\uE005' + '…'.repeat(Math.round(emw(sample))));
+const ngayV = (d, ex) => d ? 'ngày ' + d : ex._mode === 'day' ? HAKHopDong.ngayTrong() : '';
+const tuDen = (a, b, ex) => ex._mode === 'day' ? 'từ ngày ' + (a || '…/…/……') + ' đến ngày ' + (b || '…/…/……') : a && b ? 'từ ngày ' + a + ' đến ngày ' + b : '';
+const S_NGAY = 'ngày 00/00/0000', S_TUDEN = 'từ ngày 00/00/0000 đến ngày 00/00/0000';
+const SO_TRANG = '\uE005' + '…'.repeat(18);   // \uE005 = chỗ chừa trắng: chiếm bề rộng như chấm nhưng in màu trắng (khoảng trắng cuối dòng bị bỏ qua khi canh giữa nên không dùng được)
 const V = (text, w, blank) => VS + (w || 0) + VW + (blank || '') + VB + (text == null ? '' : text) + VE;
 const emw = str => [...String(str)].reduce((a, c) => a + (c === '…' ? 1 : /\d/.test(c) ? 0.5 : /[.,:;\/ \u00A0\-()]/.test(c) ? 0.27 : /[A-ZĐ]/.test(c) ? 0.7 : 0.5), 0);
 function runsXml(text, base) {
@@ -857,14 +862,15 @@ function runsXml(text, base) {
 }
 function paraXml(p) {
   const ind = p.ind || p.hang || p.indR ? '<w:ind w:left="' + (p.ind || 0) + '"' + (p.indR ? ' w:right="' + p.indR + '"' : '') + (p.hang ? ' w:hanging="' + p.hang + '"' : '') + '/>' : '';
-  return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + '<w:widowControl/>' + (p.bdb && docMode !== 'de' ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : '') +
+  return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + '<w:widowControl/>' + (p.bdb ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="' + (docMode === 'de' ? 'FFFFFF' : '000000') + '"/></w:pBdr>' : '') +
     '<w:spacing w:before="' + p.before + '" w:after="' + p.after + '" w:line="276" w:lineRule="auto"/>' + ind +
-    '<w:jc w:val="' + (docMode !== 'day' && p.al === 'both' ? 'left' : p.al) + '"/></w:pPr>' + runsXml(p.text, p) + '</w:p>';   // mẫu trống và in đè: canh trái để chữ không bị giãn khác nhau giữa hai bản
+    '<w:jc w:val="' + (docMode !== 'day' && p.al === 'both' ? 'left' : p.al) + '"/>' +
+    (docMode !== 'day' ? '<w:rPr><w:sz w:val="' + p.sz + '"/><w:szCs w:val="' + p.sz + '"/></w:rPr>' : '') + '</w:pPr>' + runsXml(p.text, p) + '</w:p>';   // mẫu trống và in đè: dấu hết đoạn cùng cỡ chữ với nội dung, để ô trống và ô có số cao bằng nhau (hàng không lệch dần)   // mẫu trống và in đè: canh trái để chữ không bị giãn khác nhau giữa hai bản
 }
 function tblXml(t) {
   const total = t.widths.reduce((a, b) => a + b, 0);
   const sides = ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'];
-  const bd = sides.map(k => t.borders && docMode !== 'de' ? '<w:' + k + ' w:val="single" w:sz="' + (/^inside/.test(k) ? 4 : 8) + '" w:space="0" w:color="000000"/>' : '<w:' + k + ' w:val="nil"/>').join('');
+  const bd = sides.map(k => t.borders ? '<w:' + k + ' w:val="single" w:sz="' + (/^inside/.test(k) ? 4 : 8) + '" w:space="0" w:color="' + (docMode === 'de' ? 'FFFFFF' : '000000') + '"/>' : '<w:' + k + ' w:val="nil"/>')   // in đè: đường kẻ vẫn chiếm chỗ như mẫu trống nhưng màu trắng, để hàng không lệch dần.join('');
   const grid = t.widths.map(w => '<w:gridCol w:w="' + w + '"/>').join('');
   const nHead = t.headRows || (t.head ? 1 : 0);
   const sz = t.sz || 22;
@@ -1294,13 +1300,13 @@ function docNghiemThu(rec, ex) {
     P(LAW_BLDS),
     P('- Căn cứ ' + hd + ';'),
     P('- Căn cứ kết quả khai thác thực tế tại rừng.'),
-    P('Hôm nay, ' + V(ngayLine({ngayKy: ex.ntNgay}), 0, NGAY_O) + ' tại ' + (rs.diaDiem || '…………') + ', chúng tôi gồm có:', {after: 140}),
+    P('Hôm nay, ' + VP(ngayV(ex.ntNgay, ex), S_NGAY) + ' tại ' + (rs.diaDiem || '…………') + ', chúng tôi gồm có:', {after: 140}),
     ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName, {noSinh: true}),
     ...partyBlock(direct ? 'ĐẠI DIỆN TỔ KHAI THÁC (BÊN B)' : 'BÊN KHAI THÁC (BÊN B)', tt, ttName),
     P('Hai bên cùng tiến hành nghiệm thu và thanh lý với các nội dung sau:', {keep: true}),
     P('**Điều 1: Thông tin rừng đã khai thác**', {keep: true}),
     P('Mã rừng: ' + dot(rs.maRung, 4) + '. Địa điểm: ' + dot(rs.diaDiem, 8) + rungText(rs) + '.', {ind: 360}),
-    P('Thời gian khai thác: từ ngày ' + (rs.tuNgay || '…/…/……') + ' đến ngày ' + (rs.denNgay || '…/…/……') + '.', {ind: 360}),
+    P('Thời gian khai thác: ' + VP(tuDen(rs.tuNgay, rs.denNgay, ex), S_TUDEN) + '.', {ind: 360}),
     P('**Điều 2: Nghiệm thu khối lượng**', {keep: true}),
     P('2.1. Khối lượng khai thác được nghiệm thu: **' + V(vol ? fmtT(kg) : '………', 14) + ' tấn**' + (ex._mode === 'day' ? V(vol ? ' (' + vol.src + ')' : '', 0, '') : '') + '.', {ind: 360}),
     ...((pcKg || ex._mode !== 'day') ? [P('2.2. Khối lượng đã vận chuyển về nhà máy theo phiếu cân: ' + V(pcKg ? fmtT(pcKg) : '', 14) + ' tấn (' + V(pcKg ? String((rec.pc || []).length) : '', 4) + ' chuyến).', {ind: 360})] : []),
@@ -1421,8 +1427,7 @@ function docXNKLVC(rec, ex, g) {
   const hdNo = ex._so.vc.so;
   /* Ô “Nơi giao”: ở mẫu trống/in đè mỗi hàng chỉ một dòng, nên địa chỉ dài không in lại từng hàng (đã nêu ở đoạn “về …” phía trên): giống nhau thì “Như trên”, khác nhau thì cắt gọn */
   const ngSame = new Set(tr.map(r => r.noiGiao || '')).size <= 1;
-  const ngCell = t => t.length <= 30 ? t : ngSame ? 'Như trên' : t.slice(0, 29) + '…';
-  const d0 = V(tr.length ? tr[0].ngay : '……', 0, '…/…/……'), d1 = V(tr.length ? tr[tr.length - 1].ngay : '……', 0, '…/…/……');
+  const ngCell = t => t.length <= 16 ? t : ngSame ? 'Như trên' : t.slice(0, 15) + '…';
   const noiGiao = ex.vcDiemDen || (ex._mode === 'day' ? tr.map(r => r.noiGiao).find(Boolean) : '') || '………………';   // mẫu trống và in đè: chữ cố định phải giống nhau, không lấy từ phiếu cân   // điểm đến theo hồ sơ rừng; cột “Nơi giao” từng phiếu giữ nguyên dữ liệu nguồn
   return [
     ...TITLE_HEAD(),
@@ -1432,11 +1437,11 @@ function docXNKLVC(rec, ex, g) {
     P(LAW_BLDS),
     P('- Căn cứ Hợp đồng vận chuyển gỗ keo số ' + hdNo + ' giữa hai bên;'),
     P('- Căn cứ các phiếu cân do nhà máy tiếp nhận cấp cho từng chuyến hàng.'),
-    P('Hôm nay, ' + V(ngayLine({ngayKy: ex.pcNgay}), 0, NGAY_O) + ', chúng tôi gồm có:', {after: 160}),
+    P('Hôm nay, ' + VP(ngayV(ex.pcNgay, ex), S_NGAY) + ', chúng tôi gồm có:', {after: 160}),
     P('**BÊN CHỦ RỪNG (BÊN A): ' + upper(rsName) + '** — CCCD số ' + (rs.cccd || '…………') + ', địa chỉ thường trú: ' + (rs.diaChi || '…………') + '.', {after: 80}),
     P('**BÊN VẬN CHUYỂN (BÊN B): ' + upper(g.ten) + '** — CCCD số ' + (g.cccd || '…………') + ', địa chỉ thường trú: ' + (g.diaChi || '…………') + '.', {after: 120}),
     P('Hai bên cùng xác nhận khối lượng gỗ keo rừng trồng đã vận chuyển từ rừng tại ' + rs.diaDiem + (rungRef(rs) ? ' (' + rungRef(rs) + ')' : '') + ' về ' + noiGiao +
-      ', từ ngày ' + d0 + ' đến ngày ' + d1 + ', căn cứ phiếu cân nhà máy (khối lượng giao tại nhà máy), cụ thể như sau:', {after: 120}),
+      ', ' + VP(tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', ex), S_TUDEN) + ', căn cứ phiếu cân nhà máy (khối lượng giao tại nhà máy), cụ thể như sau:', {after: 120}),
     T([650, 1450, 1650, 2000, 2000, 1605],
       [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Nơi giao (nhà máy)', 'Khối lượng (tấn)'],
         ...(ex._mode === 'day' ? tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))])
@@ -1453,7 +1458,7 @@ function docXNKLVC(rec, ex, g) {
 function docTTVC(rec, ex, g) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), py = payVC(rec, g), tp = transportPrice(rs);
   const hdNo = ex._so.vc.so;
-  const tr = tripsOf(rec, g), d0 = V(tr.length ? tr[0].ngay : '……', 0, '…/…/……'), d1 = V(tr.length ? tr[tr.length - 1].ngay : '……', 0, '…/…/……');
+  const tr = tripsOf(rec, g);
   return [
     ...TITLE_HEAD(),
     P('**BẢNG THANH TOÁN TIỀN VẬN CHUYỂN**', {al: 'center', sz: 28, before: 120, after: 60}),
@@ -1463,7 +1468,7 @@ function docTTVC(rec, ex, g) {
     P('**Bên nhận tiền (Bên B): ' + upper(g.ten) + '**', {after: 40}),
     P('Địa chỉ: ' + (g.diaChi || '…………') + ' · CCCD số: ' + (g.cccd || '…………'), {ind: 360, after: 100}),
     P('Địa điểm giao hàng (theo hồ sơ rừng): ' + dot(ex.vcDiemDen, 10) + '.', {after: 100}),
-    P('Mã rừng: ' + (rs.maRung || '…') + ' · Kỳ thanh toán: từ ngày ' + d0 + ' đến ngày ' + d1 + '.', {after: 40}),
+    P('Mã rừng: ' + (rs.maRung || '…') + ' · Kỳ thanh toán: ' + VP(tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', ex), S_TUDEN) + '.', {after: 40}),
     P('Đơn giá: **' + fmt(g.donGia) + ' đồng/tấn** (' + tp.text + '), tính theo khối lượng giao tại nhà máy theo phiếu cân.', {after: 140}),
     T([650, 2100, 1300, 1700, 1700, 1905],
       [['STT', 'Biển kiểm soát', 'Số chuyến', 'Khối lượng (tấn)', 'Đơn giá (đồng/tấn)', 'Thành tiền (đồng)'],
@@ -1475,7 +1480,7 @@ function docTTVC(rec, ex, g) {
     P('Tổng số tiền thanh toán: **' + V(py.n ? fmt(py.tien) : '………', 16) + ' đồng**.', {before: 80, after: 40}),
     P('Bằng chữ: ' + V(moneyWords(py.tien), 0, '…'.repeat(64)), {i: true}),
     P('Các khoản thuế, phí (nếu có) được thực hiện theo quy định của pháp luật hiện hành.'),
-    P(V(ngayLine({ngayKy: ex.pcNgay}).replace(/^ngày/, 'Đà Nẵng, ngày'), 0, 'Đà Nẵng, ' + NGAY_O), {al: 'right', before: 160, after: 120}),
+    P('Đà Nẵng, ' + VP(ngayV(ex.pcNgay, ex), S_NGAY), {al: 'right', before: 160, after: 120}),
     T([3118, 3118, 3119], [
       ['**NGƯỜI LẬP BẢNG**', '**ĐẠI DIỆN BÊN A**', '**ĐẠI DIỆN BÊN B**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],

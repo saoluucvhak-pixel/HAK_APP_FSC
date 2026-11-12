@@ -36,7 +36,7 @@ const exp = {ngayKy: '02/10/2026', soKT: '015', soVC: '07'};
   const tbls = xml08.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) || [], last = tbls[tbls.length - 1] || '';
   ok('BM-08: khối ký một người là bảng hai cột, chữ canh giữa, ô trái trống (ngày, chức danh, “(Ký, họ tên)”, họ tên cùng trục)', /<w:gridCol w:w="7568"\/><w:gridCol w:w="7569"\/>/.test(last) && (last.match(/<w:jc w:val="center"\/>/g) || []).length >= 6 && /TRẦN TỔ TRƯỞNG/.test(last), last.slice(0, 200));
   const xml10 = await (await JSZip.loadAsync(await z.file(names.find(n => n.startsWith('10_'))).async('nodebuffer'))).file('word/document.xml').async('string');
-  ok('BM-10 (3 cột ký): ngày trải trên hai cột bên phải để không bị ngắt dòng', /<w:gridSpan w:val="2"\/>[\s\S]{0,400}Đà Nẵng, ngày/.test(xml10));
+  ok('BM-10 (3 cột ký): ngày trải trên hai cột bên phải để không bị ngắt dòng', /<w:gridSpan w:val="2"\/>[\s\S]{0,400}Đà Nẵng, [\s\S]{0,250}ngày/.test(xml10));
   // BM-10: dòng “Đà Nẵng, ngày … tháng … năm …” phải nằm trên MỘT dòng (kiểm tra bằng PDF dựng từ LibreOffice nếu có)
   const cp = require('child_process'), soffice = ['soffice', 'libreoffice'].find(c => { try { cp.execSync('command -v ' + c, {stdio: 'ignore'}); return true; } catch (e) { return false; } });
   if (soffice) {

@@ -185,3 +185,8 @@ CI Windows có thêm bước **nâng cấp từ bộ cài thật v1.0.0**: tải
 ## 23. Bản 1.4.15: mẫu trống BM-09/BM-14 khớp dạng với phần in đè
 - Dòng ngày của mẫu trống in “ngày …/…/……” (trước là “ngày ….. tháng ….. năm …….”) để cùng dạng với phần in đè “ngày 20/12/2026”; “Đà Nẵng, ngày …/…/……” ở BM-09 tương tự.
 - Số biên bản (BM-09, BM-14) ở mẫu trống để trắng thật: chừa đúng bề rộng bằng ký tự màu trắng (không in ra giấy), thay cho dãy chấm dài. Đo bằng PDF: chữ “ngày” của bản in đè và mẫu trống trùng vị trí; chữ “Số:” lệch khoảng 4 pt (khoảng 1,4 mm) vì bề rộng số in đè được ước lượng. Chưa thử bằng máy in thật.
+
+## 24. Bản 1.4.16: in đè nguyên cụm ngày; hàng bản in đè khớp mẫu trống theo từng điểm
+- BM-09, BM-10, BM-14: các cụm “Hôm nay, ngày …”, “từ ngày … đến ngày …”, “Kỳ thanh toán: từ ngày … đến ngày …”, “Đà Nẵng, ngày …” ở **mẫu trống để trắng** (chừa bề rộng bằng ký tự trắng, không in chấm); **bản in đè in nguyên cụm** bằng mực đen, nên không còn chấm hay chữ “ngày” in sẵn chồng lên số.
+- Lỗi hình học tìm thấy khi đo bằng PDF (tọa độ chữ): bản in đè lệch lên trên 1,75 pt (đường gạch chân dưới “Độc lập – Tự do – Hạnh phúc”) và 1,5 pt (viền bảng) so với mẫu trống, nên hàng số lệch dần (khoảng 3 pt ở hàng đầu); ngoài ra ô trống cao hơn ô có số vì dấu hết đoạn cỡ 13 pt so với chữ 11 pt, và địa chỉ “Nơi giao” dài làm hàng của bản in đè cao hơn. Đã sửa: đường kẻ ở bản in đè vẫn chiếm chỗ nhưng màu trắng, dấu hết đoạn cùng cỡ chữ, ô “Nơi giao” một dòng (≤ 16 ký tự, giống nhau thì “Như trên”). Sau sửa, mọi chữ cố định của bản in đè nằm đúng cao độ mẫu trống (sai lệch ≤ 1 pt); thêm kiểm tra này vào `e2e-inde` cho mọi biểu mẫu hai đợt.
+- Chưa thử bằng máy in thật; sai lệch ngang của số in đè còn khoảng 1–2 mm do bề rộng số được ước lượng.
