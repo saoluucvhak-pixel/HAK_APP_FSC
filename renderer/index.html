@@ -2248,7 +2248,7 @@ function runsXml(text, base) {
       if (m.index > last) out.push(run(seg.slice(last, m.index), bold, de));        // chữ cố định: in đè thì trắng
       let blank = m[2] || '…'.repeat(+m[1]); const val = m[3], inv = blank[0] === '\uE005'; if (inv) blank = blank.slice(1);
       if (docMode === 'day') { if (val !== '') out.push(run(val, bold, false)); }
-      else if (docMode === 'trong') { if (blank) out.push(run(blank, bold, inv)); }
+      else if (docMode === 'trong') { if (blank) out.push(run(blank, bold, true)); }   // mẫu trống: mọi chỗ chờ số đều để TRẮNG (chừa bề rộng bằng ký tự trắng), không in chấm
       else {
         if (val !== '') out.push(run(val, bold, false));
         const diff = emw(blank) - emw(val);
@@ -2878,14 +2878,9 @@ function docTTVC(rec, ex, g) {
     P('Địa điểm giao hàng (theo hồ sơ rừng): ' + dot(ex.vcDiemDen, 10) + '.', {after: 100}),
     P('Mã rừng: ' + (rs.maRung || '…') + ' · Kỳ thanh toán: ' + VP(tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', ex), S_TUDEN) + '.', {after: 40}),
     P('Đơn giá: **' + fmt(g.donGia) + ' đồng/tấn** (' + tp.text + '), tính theo khối lượng giao tại nhà máy theo phiếu cân.', {after: 140}),
-    T([650, 2100, 1300, 1700, 1700, 1905],
-      [['STT', 'Biển kiểm soát', 'Số chuyến', 'Khối lượng (tấn)', 'Đơn giá (đồng/tấn)', 'Thành tiền (đồng)'],
-        ...(ex._mode === 'day' ? py.rows.map((r, i) => [String(i + 1), r.bienSo, String(r.n), fmtT(r.kg), fmt(g.donGia), fmt(r.tien)])
-          : g.xe.map((x, i) => { const r = py.rows.find(y => y.bienSo === x.bienSo); return [String(i + 1), x.bienSo, V(r ? String(r.n) : ''), V(r ? fmtT(r.kg) : ''), fmt(g.donGia), V(r ? fmt(r.tien) : '')]; })),   // in đè: một dòng cho mỗi xe trong đội xe, giống mẫu trống
-        [{v: '**Tổng cộng**', span: 2}, '**' + V(py.n ? String(py.n) : '') + '**', '**' + V(py.n ? fmtT(py.kg) : '') + '**', '', '**' + V(py.n ? fmt(py.tien) : '') + '**']],
-      {head: true, borders: true, sz: 20, alignCols: ['center', 'center', 'center', 'right', 'right', 'right']}),
-    P('', {after: 80}),
-    P('Tổng số tiền thanh toán: **' + V(py.n ? fmt(py.tien) : '………', 16) + ' đồng**.', {before: 80, after: 40}),
+    P('Chi tiết từng xe: xem **Bảng kê chi tiết thanh toán đính kèm**.', {after: 80}),
+    P('Tổng khối lượng: **' + V(py.n ? fmtT(py.kg) : '………', 14) + ' tấn** (' + V(py.n ? String(py.n) : '…', 4) + ' chuyến).', {before: 40, after: 40}),
+    P('Tổng số tiền thanh toán: **' + V(py.n ? fmt(py.tien) : '………', 16) + ' đồng**.', {before: 40, after: 40}),
     P('Bằng chữ: ' + V(moneyWords(py.tien), 0, '…'.repeat(64)), {i: true}),
     P('Các khoản thuế, phí (nếu có) được thực hiện theo quy định của pháp luật hiện hành.'),
     P('Đà Nẵng, ' + VP(ngayV(ex.pcNgay, ex), S_NGAY), {al: 'right', before: 160, after: 120}),
@@ -2894,7 +2889,17 @@ function docTTVC(rec, ex, g) {
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
       ['', '', ''], ['', '', ''],
       ['**' + (ex.pcNguoiLap || '') + '**', '**' + rsName + '**', '**' + g.ten + '**']
-    ], {borders: false, al: 'center', keep: true})
+    ], {borders: false, al: 'center', keep: true}),
+    ...(ex._mode === 'trong' || !py.n ? [] : [   // Bảng kê chi tiết thanh toán đính kèm: trang riêng, in đầy đủ khi đã có phiếu cân
+      {t: 'br'},
+      P('**BẢNG KÊ CHI TIẾT THANH TOÁN ĐÍNH KÈM**', {al: 'center', sz: 28, before: 0, after: 60, full: true}),
+      P('(Kèm theo Bảng thanh toán tiền vận chuyển, Hợp đồng vận chuyển số ' + hdNo + ' và Biên bản xác nhận khối lượng vận chuyển số ' + ex._so.xn.so + ')', {al: 'center', i: true, after: 160, full: true}),
+      P('Bên nhận tiền (Bên B): **' + upper(g.ten) + '** · Mã rừng: ' + (rs.maRung || '…') + ' · Đơn giá: ' + fmt(g.donGia) + ' đồng/tấn.', {al: 'left', after: 120, full: true}),
+      T([650, 2100, 1300, 1700, 1700, 1905],
+        [['STT', 'Biển kiểm soát', 'Số chuyến', 'Khối lượng (tấn)', 'Đơn giá (đồng/tấn)', 'Thành tiền (đồng)'],
+          ...py.rows.map((r, i) => [String(i + 1), r.bienSo, String(r.n), fmtT(r.kg), fmt(g.donGia), fmt(r.tien)]),
+          [{v: '**Tổng cộng**', span: 2}, '**' + py.n + '**', '**' + fmtT(py.kg) + '**', '', '**' + fmt(py.tien) + '**']],
+        {head: true, borders: true, sz: 20, full: true, alignCols: ['center', 'center', 'center', 'right', 'right', 'right']})])
   ];
 }
 function docHDVC(rec, ex, g) {

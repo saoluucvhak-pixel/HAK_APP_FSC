@@ -200,3 +200,7 @@ Khi mọi phiếu cùng một nơi giao, Bảng kê khối lượng đính kèm 
 
 ## 27. Bản 1.4.19: BM-08 và BM-10 theo cùng quy tắc “mẫu trống để trắng, in đè in nguyên cụm”
 BM-08 “Từ ngày … đến ngày …” và BM-10 “… Biên bản xác nhận khối lượng vận chuyển số …” ở mẫu trống để trắng (chừa chỗ màu trắng), bản in đè in nguyên cụm bằng mực đen, không còn số in chồng lên dãy chấm. Kiểm tra so ảnh của `e2e-inde` cho phép tối đa 2 dòng mỗi biểu mẫu mà mẫu trống không có mực (cụm ngày để trắng); vị trí các chữ cố định vẫn được kiểm bằng tọa độ.
+
+## 28. Bản 1.4.20: mẫu trống để trắng hoàn toàn; BM-10 tách bảng chi tiết
+- Ở chế độ mẫu trống, mọi chỗ chờ số (kể cả tổng tiền, “Bằng chữ”, khối lượng và số chuyến ở BM-14) đều là ký tự màu trắng chiếm đúng bề rộng, không in chấm; bản in đè vẫn khớp vị trí (`e2e-inde`, kể cả so tọa độ chữ).
+- BM-10: trang 1 không còn bảng chi tiết (có dòng “Chi tiết từng xe: xem Bảng kê chi tiết thanh toán đính kèm” và tổng khối lượng, số chuyến); trang 2 là Bảng kê chi tiết thanh toán đính kèm in đầy đủ (bản chỉ-phần-số và bản đầy đủ). Mẫu trống chỉ có trang 1.

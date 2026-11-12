@@ -240,3 +240,5 @@ Mở **⋯ Thêm → ⚙ Cài đặt hệ thống**.
 - Không nên đặt dữ liệu trên ổ mạng hoặc thư mục đang đồng bộ đám mây (OneDrive, Google Drive): cơ sở dữ liệu có thể hỏng.
 
 **BM-09 và Bảng kê khối lượng đính kèm**: trang 1 chỉ có nội dung biên bản (số biên bản, ngày, tổng khối lượng, chữ ký) và nhắc “cụ thể trong Bảng kê khối lượng đính kèm”; mẫu trống (in nháp) chỉ có trang 1. Bản “chỉ phần số” và bản đầy đủ có thêm trang 2 là Bảng kê khối lượng (STT, ngày cân, biển kiểm soát, số phiếu cân, nơi giao, khối lượng từng chuyến), in đầy đủ bằng mực đen trên giấy mới, không cần in khung rồi in đè. Nhờ vậy không còn giới hạn số dòng chuyến.
+
+**Mẫu trống để trắng hoàn toàn**: ở bản “Mẫu trống” mọi chỗ chờ số (số biên bản, ngày, khối lượng, số tiền, bằng chữ) đều để **trắng**, không in dãy chấm; bản “chỉ phần số” in số đúng chỗ đó. **BM-10 (Bảng thanh toán tiền vận chuyển)** giống BM-09: bảng chi tiết từng xe tách thành trang riêng “Bảng kê chi tiết thanh toán đính kèm”, in đầy đủ khi đã có phiếu cân; mẫu trống chỉ có trang 1.
