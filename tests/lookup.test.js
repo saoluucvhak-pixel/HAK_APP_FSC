@@ -162,15 +162,24 @@ test('hồi quy bộ lọc: kết hợp nhiều bộ lọc, báo cảnh báo khi
   assert.strictEqual(L.search('', 'HoSoKeo_QC', {from: '2026-01-23', to: '2026-01-23'}).rows[0].phieu, '1002/2026/NK'); // ngày dạng ô chọn ngày
 });
 
-test('hồi quy: phiếu thiếu ngày cân hoặc hai đơn vị chênh nhau được đánh dấu cần kiểm tra, không chọn được', () => {
-  const XLSX = require('xlsx'); const wb = XLSX.read(build(), {type: 'buffer', cellDates: false});
+test('hồi quy: phiếu thiếu ngày, ngày không có thật (31/02/2026), hoặc hai đơn vị chênh nhau được đánh dấu cần kiểm tra, không chọn được', () => {
+  const XLSX = require('xlsx'); const wb = XLSX.read(build(), {type: 'buffer', cellDates: true, cellNF: true});
   const ws = wb.Sheets['HoSoKeo_QC']; const head = XLSX.utils.sheet_to_json(ws, {header: 1})[0]; const col = XLSX.utils.encode_col(head.indexOf('Ngày nhập'));
-  delete ws[col + '3'];                                                       // dòng 3 (phiếu 1001) mất ngày cân
-  const {L} = fresh(); assert.ok(L.load(XLSX.write(wb, {type: 'buffer', bookType: 'xlsx'}), 'excel', 'x').ok);
+  delete ws[col + '2'];                                                       // dòng 2 (phiếu 1001) mất ngày cân
+  ws[col + '3'] = {t: 's', v: '31/02/2026'};                                  // dòng 3 (phiếu 1002) ngày không có thật
+  ws[col + '4'] = {t: 's', v: '29/02/2028'};                                  // dòng 4 (phiếu 1003) ngày có thật (năm nhuận) dạng chữ
+  const {L} = fresh(); assert.ok(L.load(XLSX.write(wb, {type: 'buffer', bookType: 'xlsx', cellDates: true}), 'excel', 'x').ok);
   const hit = L.search('1001/2026', 'HoSoKeo_QC'); assert.ok(hit.rows[0].flags.includes('Thiếu ngày cân'));
   const c = L.candidates('HoSoKeo_QC', hit.rows[0].row); const p = c.forests[0].phieu.find(x => x.soPhieu === '1001/2026/NK');
   assert.strictEqual(p.ngay, ''); assert.match(p.issue, /ngày cân/);
-  assert.strictEqual(L.search('', 'HoSoKeo_QC', {from: '01/01/2026'}).rows.some(r => r.phieu === '1001/2026/NK'), false); // không lọt vào khoảng ngày
+  const bad = L.search('1002/2026', 'HoSoKeo_QC').rows[0]; assert.ok(bad.flags.includes('Ngày cân không có thật'));
+  const pb = L.candidates('HoSoKeo_QC', bad.row).forests[0].phieu.find(x => x.soPhieu === '1002/2026/NK');
+  assert.strictEqual(pb.ngay, ''); assert.match(pb.issue, /Ngày cân sai: .*tháng 2\/2026 chỉ có 28 ngày/);      // không chọn được, nêu lý do
+  const ok29 = L.candidates('HoSoKeo_QC', L.search('1003/2026', 'HoSoKeo_QC').rows[0].row).forests[0].phieu.find(x => x.soPhieu === '1003/2026/NK');
+  assert.strictEqual(ok29.ngay, '29/02/2028'); assert.doesNotMatch(String(ok29.issue), /Ngày cân sai/);          // 29/02/2028 hợp lệ
+  const inFeb = L.search('', 'HoSoKeo_QC', {from: '01/02/2026', to: '31/03/2026'}).rows.map(r => r.phieu);
+  assert.ok(!inFeb.includes('1002/2026/NK') && !inFeb.includes('1001/2026/NK'));                                   // phiếu ngày sai/thiếu không lọt vào kỳ
+  assert.ok(L.search('', 'HoSoKeo_QC', {from: '31/02/2026'}).warns.some(w => /Ngày bắt đầu.*không đúng định dạng/.test(w)));   // ngày lọc không có thật bị báo
   const kg = L.candidates('HoSoKeo_QC', L.search('4001', 'HoSoKeo_QC').rows[0].row).forests[0].phieu[0];
   assert.strictEqual(kg.kl, 2);                                              // 2.000 kg ÷ 1.000 khi cột tấn trống
   const diff = L.candidates('HoSoKeo_QC', L.search('1003/2026', 'HoSoKeo_QC').rows[0].row).forests[0].phieu.find(x => x.soPhieu === '1003/2026/NK');

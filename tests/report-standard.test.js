@@ -49,7 +49,7 @@ test('Excel: ô ngày thật, chuỗi dạng công thức được vô hiệu, C
   assert.ok(typeof row[7] === 'number');                                                          // khối lượng là ô số thật
   assert.strictEqual(row[2], "'-P"); assert.strictEqual(row[3], "'=cmd"); assert.strictEqual(row[4], "'=HYPERLINK(\"x\")");
   assert.strictEqual(R.safeText('-5'), '-5'); assert.strictEqual(R.safeText('049000000001'), '049000000001');   // số thật và chuỗi số không bị đổi
-  assert.ok(t.last >= t.first && t.cols === 9);
+  assert.ok(t.last >= t.first && t.cols === 11);
 });
 
 test('cha–con: chủ rừng = tổng rừng = tổng phiếu cân; tổng cộng khớp chỉ tiêu; kèm phiếu thì có cấp 2', () => {

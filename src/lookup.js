@@ -2,6 +2,7 @@
 /* Bản tra cứu: đọc 3 tab HoSoKeo_QC, HoSoRung_QC, ToaDoRung_QC (từ Google Sheets xuất .xlsx hoặc file Excel cùng cấu trúc),
  * kiểm tra tên tab + tiêu đề cột, lưu vào SQLite, tìm kiếm có dấu/không dấu và dựng "kết quả" để điền vào hồ sơ rừng. */
 const XLSX = require('xlsx');
+const D = require('./dates');   // quy tắc ngày lịch dùng chung (31/02/2026 không có thật)
 
 const TABS = {
   HoSoKeo_QC: {
@@ -151,10 +152,9 @@ function parseQuery(q) {
   }
   return out;
 }
-function viDate(v) { // dd/mm/yyyy hoặc yyyy-mm-dd -> yyyymmdd
-  const s = String(v || '').trim(); let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
-  if (m) return +m[3] * 10000 + +m[2] * 100 + +m[1];
-  m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m ? +m[1] * 10000 + +m[2] * 100 + +m[3] : 0;
+function viDate(v) { // dd/mm/yyyy hoặc yyyy-mm-dd -> yyyymmdd; 0 nếu không có thật
+  const s = String(v || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? D.key(D.fromIso(s)) : D.key(s);
 }
 function normAdv(o) {
   const warns = [];
@@ -177,7 +177,7 @@ function describe(tab, o) {
     base.tanNum = tan > 0 ? tan : kg > 0 ? Math.round(kg) / 1000 : null;
     if (!(base.tanNum > 0)) flags.push('Thiếu khối lượng');
     else if (tan > 0 && kg > 0 && Math.abs(kg / 1000 - tan) > 0.0005) flags.push('Lệch tấn–kg');
-    if (!base.dk) flags.push('Thiếu ngày cân');
+    if (!base.dk) flags.push(clean(o['Ngày nhập']) ? 'Ngày cân không có thật' : 'Thiếu ngày cân');
     if (base.bien && !isPlate(base.bien)) flags.push('Biển số là tên xe');
     if (!base.bien) flags.push('Thiếu biển số');
     if (!base.cccd) flags.push('Thiếu CCCD');
@@ -492,8 +492,8 @@ function forestOf(code, T, R, keo, nRung, hd) {
     if (tan > 0) kl = tan; else if (kg > 0) kl = Math.round(kg) / 1000;
     if (tan > 0 && kg > 0 && Math.abs(kg / 1000 - tan) > 0.0005) issue = 'Khối lượng lệch: ' + tan + ' tấn và ' + kg + ' kg';
     if (!(kl > 0)) issue = issue || 'Không có khối lượng hợp lệ';
-    const ngay = /^\d{2}\/\d{2}\/\d{4}$/.test(r['Ngày nhập']) ? r['Ngày nhập'] : '';
-    if (!ngay && !issue) issue = 'Không có ngày cân (Ngày nhập)';
+    const ngay = D.isValid(r['Ngày nhập']) ? r['Ngày nhập'] : '';
+    if (!ngay && !issue) issue = clean(r['Ngày nhập']) ? 'Ngày cân sai: ' + D.why(r['Ngày nhập']) : 'Không có ngày cân (Ngày nhập)';
     const bienRaw = clean(r['Biển số 1'] || r['SỐ XE']);
     return {soPhieu: clean(r['SỐ PHIẾU CÂN']), ngay, bienRaw, isPlate: isPlate(bienRaw), kl, donGia: r['Đơn giá'], thanhToan: r['Thanh toán'], issue, row: r._row, assignable};
   });

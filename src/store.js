@@ -2,6 +2,7 @@
 /* Lớp lưu trữ SQLite cho HAKQN. Không phụ thuộc Electron để kiểm thử được bằng Node.
  * Mô hình dữ liệu của giao diện: db = { v:2, rs:{ [idChuRung]: { id, info, forests:{ [idRung]: {...} } } }, ...khác }
  * Mỗi chủ rừng là 1 dòng bảng owners, mỗi rừng là 1 dòng bảng forests (nhân công, xe, phiếu cân, thông số nằm trong cột data của rừng đó).
+ * Danh mục công ty mua hàng (db.congTy) là bảng companies (mỗi công ty một dòng, từ cấu trúc v3).
  * Các khóa cấp cao khác (ví dụ định mức BHLĐ) lưu ở bảng meta. */
 const crypto = require('crypto');
 const fs = require('fs');
@@ -24,7 +25,15 @@ const MIGRATIONS = [
       CREATE INDEX idx_forests_ma ON forests(ma_rung);
       CREATE INDEX idx_owners_cccd ON owners(cccd);`);
   },
-  function v2(db) { require('./lookup').MIGRATION(db); }
+  function v2(db) { require('./lookup').MIGRATION(db); },
+  /* v3: danh mục công ty mua hàng. Chỉ THÊM bảng; không đổi, không xóa dữ liệu hồ sơ nào (owners, forests, meta, bản tra cứu giữ nguyên). */
+  function v3(db) {
+    db.exec(`
+      CREATE TABLE companies (
+        id TEXT PRIMARY KEY, ten TEXT NOT NULL DEFAULT '', mst TEXT NOT NULL DEFAULT '',
+        data TEXT NOT NULL, hash TEXT NOT NULL, updated_at TEXT NOT NULL);
+      CREATE INDEX idx_companies_mst ON companies(mst);`);
+  }
 ];
 
 const sha = s => crypto.createHash('sha1').update(s).digest('hex');
@@ -69,6 +78,8 @@ class Store {
   load() {
     const out = {v: 2, rs: {}};
     this.db.prepare('SELECT key, value FROM meta').all().forEach(r => { if (!r.key.startsWith('lk:')) out[r.key] = JSON.parse(r.value); }); // 'lk:' = dữ liệu của bản tra cứu, không thuộc hồ sơ
+    out.congTy = {};
+    this.db.prepare('SELECT id, data FROM companies').all().forEach(r => { out.congTy[r.id] = JSON.parse(r.data); });
     this.db.prepare('SELECT id, data FROM owners').all().forEach(r => { const o = JSON.parse(r.data); o.forests = {}; out.rs[r.id] = o; });
     this.db.prepare('SELECT id, owner_id, data FROM forests').all().forEach(r => { if (out.rs[r.owner_id]) out.rs[r.owner_id].forests[r.id] = JSON.parse(r.data); });
     return out;
@@ -85,14 +96,21 @@ class Store {
       ON CONFLICT(id) DO UPDATE SET ma=@ma,ten=@ten,cccd=@cccd,data=@data,hash=@hash,updated_at=@t`);
     const upF = this.db.prepare(`INSERT INTO forests(id,owner_id,ma_rung,ten_rung,data,hash,updated_at) VALUES(@id,@owner_id,@ma_rung,@ten_rung,@data,@hash,@t)
       ON CONFLICT(id) DO UPDATE SET owner_id=@owner_id,ma_rung=@ma_rung,ten_rung=@ten_rung,data=@data,hash=@hash,updated_at=@t`);
+    const comps = Object.entries(db.congTy || {}).map(([id, c]) => { const o = {...c, id: c.id || id}, data = JSON.stringify(o); return {id: o.id, ten: String(o.ten || ''), mst: String(o.mst || ''), data, hash: sha(data)}; });
+    const haveC = new Map(this.db.prepare('SELECT id, hash FROM companies').all().map(r => [r.id, r.hash]));
+    const upC = this.db.prepare(`INSERT INTO companies(id,ten,mst,data,hash,updated_at) VALUES(@id,@ten,@mst,@data,@hash,@t)
+      ON CONFLICT(id) DO UPDATE SET ten=@ten,mst=@mst,data=@data,hash=@hash,updated_at=@t`);
     const t = now(); let changed = 0;
     this.db.transaction(() => {
+      comps.forEach(c => { if (haveC.get(c.id) !== c.hash) { upC.run({...c, t}); changed++; } });
+      const keepC = new Set(comps.map(c => c.id));
+      haveC.forEach((h, id) => { if (!keepC.has(id)) { this.db.prepare('DELETE FROM companies WHERE id=?').run(id); changed++; } });
       rows.owners.forEach(o => { if (have.get(o.id) !== o.hash) { upO.run({...o, t}); changed++; } });
       rows.forests.forEach(f => { if (haveF.get(f.id) !== f.hash) { upF.run({...f, t}); changed++; } });
       const keepO = new Set(rows.owners.map(o => o.id)), keepF = new Set(rows.forests.map(f => f.id));
       have.forEach((h, id) => { if (!keepO.has(id)) { this.db.prepare('DELETE FROM owners WHERE id=?').run(id); changed++; } });
       haveF.forEach((h, id) => { if (!keepF.has(id)) { this.db.prepare('DELETE FROM forests WHERE id=?').run(id); changed++; } });
-      const metaKeys = Object.keys(db).filter(k => k !== 'rs' && k !== 'v');
+      const metaKeys = Object.keys(db).filter(k => k !== 'rs' && k !== 'v' && k !== 'congTy');
       this.db.prepare("DELETE FROM meta WHERE key NOT LIKE 'lk:%' AND key NOT IN (" + (metaKeys.map(() => '?').join(',') || "''") + ')').run(...metaKeys);
       metaKeys.forEach(k => this.db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(k, JSON.stringify(db[k])));
     })();
@@ -115,7 +133,7 @@ class Store {
 
   /* Đếm số liệu để hiển thị trước khi nhập/khôi phục */
   static counts(db) {
-    const c = {owners: 0, forests: 0, nc: 0, dx: 0, pc: 0};
+    const c = {owners: 0, forests: 0, nc: 0, dx: 0, pc: 0, companies: Object.keys((db && db.congTy) || {}).length};
     Object.values((db && db.rs) || {}).forEach(o => {
       c.owners++;
       Object.values(o.forests || {}).forEach(f => { c.forests++; c.nc += (f.nc || []).length; c.dx += (f.dx || []).length; c.pc += (f.pc || []).length; });
@@ -161,7 +179,10 @@ class Store {
         Object.values(copy.forests || {}).forEach(f => { const fid = newId('f'); f.id = fid; fo[fid] = f; });
         copy.forests = fo; next.rs[nid] = copy;
       });
-      Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && !(k in next)) next[k] = incoming[k]; });
+      // Danh mục công ty mua hàng: gộp theo id (skip: giữ bản trên máy; overwrite/both: bản trong file thay bản trùng id; công ty mới luôn được thêm)
+      next.congTy = {...(cur.congTy || {})};
+      Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || strategy === 'overwrite') next.congTy[id] = c; });
+      Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
     }
     this.save(next);
     return {backup, counts: Store.counts(this.load())};

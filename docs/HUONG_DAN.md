@@ -122,3 +122,15 @@ Luxe và Classic lấy nguyên từ HAK Enterprise Design System. Neutral và Ch
 1. **Đơn giá cố định** (đồng/tấn): một giá, không phụ thuộc cự ly.
 2. **Đơn giá tấn/km** (đồng/tấn/km): đơn giá × cự ly của rừng (nhập ở tab Thông tin rừng); thiếu cự ly thì báo thiếu.
 Chỉ hiện ô đơn giá của cách đang chọn. Tiền vận chuyển tính theo tấn giao tại nhà máy (theo phiếu cân) cho từng xe. **Cách “theo bậc cự ly” của bản cũ đã bỏ**: hồ sơ cũ còn chọn cách đó bị báo cần chọn lại ở checklist và chưa xuất được hợp đồng vận chuyển cho đến khi chọn lại; dữ liệu các bậc cũ được giữ nguyên trong hồ sơ, không bị xóa.
+
+
+## Công ty mua hàng và điểm đến vận chuyển (bản 1.1.0)
+- Nút **🏢 Công ty mua hàng** ở thanh trên: danh mục công ty nhận gỗ (tên pháp lý, MST, địa chỉ, người đại diện, chức vụ, SĐT, email). **Tên pháp lý và địa chỉ bắt buộc**; trùng mã số thuế chỉ cảnh báo. Mỗi công ty có thể có nhiều địa chỉ giao hàng (kho, nhà máy…).
+- Ở **tab Vận chuyển** của từng rừng: bấm **Chọn công ty mua hàng**, chọn công ty trong danh mục (hoặc **Tạo nhanh**) và địa chỉ giao hàng, xem bảng so sánh “hiện tại / mới” rồi **Xác nhận**. Địa chỉ được lưu cùng hồ sơ rừng và tự điền vào “Địa điểm vận chuyển đến”; dùng ở BM-04, BM-09, BM-10 và Sổ phiếu cân.
+- Sửa địa chỉ trong danh mục **không tự đổi** hồ sơ rừng: rừng giữ địa chỉ đã lưu và hiện thông báo; bạn bấm **Xem và cập nhật** để áp dụng.
+- Hồ sơ cũ nhập tay điểm đến vẫn giữ nguyên; lần đầu chọn công ty sẽ thấy giá trị cũ cạnh địa chỉ đề xuất. Đổi điểm đến **không tự sửa cự ly hay đơn giá**; với cước tấn/km phần mềm nhắc kiểm tra lại cự ly.
+- “Nơi giao” ghi trên từng phiếu cân là dữ liệu nguồn, được giữ nguyên; khác điểm đến theo hồ sơ thì có cảnh báo (và cột “Đối chiếu nơi giao” trong Sổ phiếu cân).
+- Rừng chưa chọn công ty: checklist báo thiếu và biểu mẫu cần điểm đến in dòng chấm.
+
+## Ngày cân không có thật (bản 1.1.0)
+Ngày được kiểm theo lịch thật (31/02/2026 và 29/02/2026 không có thật; 29/02/2028 có thật). Nhập phiếu sai ngày bị chặn kèm số phiếu và lý do; phiếu cũ sai ngày được giữ, hiện lý do, có ô sửa ngay, và **không tính vào tổng của kỳ báo cáo** (nêu trong mục riêng của báo cáo, giống nhau ở xem trước, Word và Excel).
