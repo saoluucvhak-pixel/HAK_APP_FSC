@@ -209,13 +209,33 @@ function termScore(d, t) { // điểm cho 1 từ khóa: khớp chính xác trư�
   return best;
 }
 
-function runSearch(db, setId, pq, tab, adv, sort, limit) {
+/* Gom các dòng tìm được theo hợp đồng (CCCD + mã hợp đồng) thành "cha"; dòng của 3 tab là các "con" của cha đó. Dòng không đủ khóa tự thành một cha riêng. */
+function groupContracts(rows) {
+  const m = new Map(), rank = {HoSoRung_QC: 0, ToaDoRung_QC: 1, HoSoKeo_QC: 2};
+  rows.forEach(r => {
+    const key = r.cccd && r.hd ? r.cccd + '|' + r.hd : r.tab + '#' + r.row;
+    let g = m.get(key);
+    if (!g) { g = {key, cccd: r.cccd || '', hd: r.hd || '', ten: '', diaChi: '', tinhTrang: '', hecta: null, rungs: [], phieu: 0, tan: 0, flags: 0, matched: {HoSoKeo_QC: 0, HoSoRung_QC: 0, ToaDoRung_QC: 0}, pick: null, score: 0}; m.set(key, g); }
+    g.matched[r.tab]++;
+    if (!g.ten && r.ten) g.ten = r.ten;
+    if (r.tab === 'HoSoRung_QC') { g.tinhTrang = g.tinhTrang || r.tinhTrang || ''; if (g.hecta == null && typeof r.hecta === 'number') g.hecta = r.hecta; if (r.diaChi) g.diaChi = r.diaChi; }
+    else if (!g.diaChi && r.diaChi) g.diaChi = r.diaChi;
+    if (r.tab === 'ToaDoRung_QC' && r.maRung && !g.rungs.includes(r.maRung)) g.rungs.push(r.maRung);
+    if (r.tab === 'HoSoKeo_QC') { g.phieu++; g.tan = Math.round((g.tan + (r.tanNum || 0)) * 1000) / 1000; }
+    if (r.flags && r.flags.length) g.flags++;
+    if (!g.pick || rank[r.tab] < rank[g.pick.tab]) g.pick = {tab: r.tab, row: r.row};
+    if ((r.score || 0) > g.score) g.score = r.score;
+  });
+  return Array.from(m.values());
+}
+
+function runSearch(db, setId, pq, tab, adv, sort, limit, group) {
   const conds = [], args = [setId];
   const esc = t => '%' + t.replace(/[\\%_]/g, m => '\\' + m) + '%';
   pq.terms.forEach(t => { conds.push("search LIKE ? ESCAPE '\\'"); args.push(esc(t.v)); });
   pq.fields.forEach(f => { if (f.f !== 'bien' && f.f !== 'tinhtrang') { conds.push("search LIKE ? ESCAPE '\\'"); args.push(esc(f.v)); } });
   pq.not.forEach(t => { conds.push("search NOT LIKE ? ESCAPE '\\'"); args.push(esc(t)); });
-  const needJs = pq.fields.length || hasAdv(adv) || (sort && sort !== 'relevance') || pq.terms.length || pq.not.length;
+  const needJs = !!group || pq.fields.length || hasAdv(adv) || (sort && sort !== 'relevance') || pq.terms.length || pq.not.length;
   const where = 'set_id=?' + (conds.length ? ' AND ' + conds.join(' AND ') : '');
   const empty = {tab: {}, status: {}, issues: 0};
   // Đường nhanh: không từ khóa, không bộ lọc -> đếm bằng SQL, chỉ đọc số dòng cần hiển thị
@@ -273,7 +293,9 @@ function runSearch(db, setId, pq, tab, adv, sort, limit) {
   const keo = out.filter(h => h.tab === 'HoSoKeo_QC');
   const stats = {phieu: keo.length, tan: Math.round(keo.reduce((s, h) => s + (h.tanNum || 0), 0) * 1000) / 1000};
   const rows = (limit ? out.slice(0, limit) : []).map(h => { const {score, dk, tanNum, ...rest} = h; return {...rest, tanNum, dk, score}; });
-  return {rows, total: out.length, facets: facets.tab && facets, stats, relax: []};
+  const res = {rows, total: out.length, facets: facets.tab && facets, stats, relax: []};
+  if (group === 'contract') { const gs = groupContracts(out); res.groupTotal = gs.length; res.groups = limit ? gs.slice(0, limit) : []; res.rows = []; }
+  return res;
 }
 
 class Lookup {
@@ -335,7 +357,7 @@ class Lookup {
     const a = this.activeSet(); if (!a) return {rows: [], total: 0, facets: {tab: {}, status: {}, issues: 0}, stats: {phieu: 0, tan: 0}, relax: []};
     const pq = parseQuery(q);
     const adv = normAdv(opts);
-    const res = runSearch(this.db, a.id, pq, tab, adv, opts.sort || 'relevance', +opts.limit > 0 ? +opts.limit | 0 : 300);
+    const res = runSearch(this.db, a.id, pq, tab, adv, opts.sort || 'relevance', +opts.limit > 0 ? +opts.limit | 0 : 300, opts.group);
     res.warns = adv.warns.slice();
     if (!res.total && !opts._noRelax) {
       const parts = [...pq.terms, ...pq.fields.map(f => ({raw: f.raw}))];

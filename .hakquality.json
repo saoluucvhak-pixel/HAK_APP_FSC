@@ -1,0 +1,1 @@
+{"exclude": ["node_modules", "dist", "renderer", "legacy-html", "reports"], "maxLines": 1000, "failOn": "never"}

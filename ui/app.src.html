@@ -1,16 +1,19 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-skin="luxe">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hồ sơ khai thác & vận chuyển gỗ keo</title>
 <style>
-/* ===== Thiết kế mới: màu, chữ, khoảng cách khai báo một chỗ (đổi thương hiệu chỉ cần sửa :root) ===== */
-:root{--ink:#17231d;--mut:#5d6d64;--line:#dde5df;--bg:#f3f6f4;--card:#fff;--acc:#1b6b47;--accHi:#14553a;--accSoft:#e4f2ea;--accInk:#fff;
---ok:#1e7a3c;--okBg:#e4f4e8;--warn:#8a5a00;--warnBg:#fff3d1;--err:#b3261e;--errBg:#fde8e6;--th:#eef3ef;--inbd:#c6d2ca;
---bar:#10372a;--barInk:#f2f8f4;--shadow:0 1px 2px rgba(16,40,28,.06),0 4px 14px rgba(16,40,28,.05);--r:12px;--rs:8px;--ring:0 0 0 3px rgba(27,107,71,.28)}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--ink:#e7efe9;--mut:#9fb0a5;--line:#2c3a32;--bg:#0f1512;--card:#17201b;--acc:#4fb381;--accHi:#6cc79a;--accSoft:#1d3328;--accInk:#08140d;--ok:#7fd69b;--okBg:#1c3a27;--warn:#f0c36b;--warnBg:#3b3116;--err:#ff8f86;--errBg:#432320;--th:#1e2a23;--inbd:#3a4a40;--bar:#0a211a;--barInk:#e7efe9;--shadow:none;--ring:0 0 0 3px rgba(79,179,129,.35);color-scheme:dark}}
-:root[data-theme=dark]{--ink:#e7efe9;--mut:#9fb0a5;--line:#2c3a32;--bg:#0f1512;--card:#17201b;--acc:#4fb381;--accHi:#6cc79a;--accSoft:#1d3328;--accInk:#08140d;--ok:#7fd69b;--okBg:#1c3a27;--warn:#f0c36b;--warnBg:#3b3116;--err:#ff8f86;--errBg:#432320;--th:#1e2a23;--inbd:#3a4a40;--bar:#0a211a;--barInk:#e7efe9;--shadow:none;--ring:0 0 0 3px rgba(79,179,129,.35);color-scheme:dark}
+/*@@LUXE@@*/
+/*@@COMPONENTS@@*/
+/* ===== Ánh xạ token của ứng dụng sang HAK Enterprise Design System (chủ đề luxe: navy + champagne; sáng/tối theo data-theme) =====
+   Tên token dùng chung (--brand, --bg, --card, --ink, --mut, --line, --th, --r…) lấy nguyên từ thư viện; phần dưới chỉ đặt tên phụ của ứng dụng. */
+:root{--acc:var(--brand);--accHi:var(--brandH);--accSoft:var(--brandSoft);--accInk:var(--onBrand);--inbd:var(--ctl);--bar:var(--deep);--barInk:#f1ede2;
+--err:var(--red);--errBg:var(--redBg);--rs:8px;--ring:0 0 0 3px var(--focus)}
+/* Màu trạng thái (xanh = đạt) giữ riêng, độ ưu tiên cao hơn token chủ đề */
+:root[data-skin]{--ok:#1e7a3c;--okBg:#e4f4e8}
+:root[data-skin][data-theme=dark]{--ok:#7fd69b;--okBg:#1c3a27}
 [hidden]{display:none!important}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -138,7 +141,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 <body>
 <header class="top">
   <button class="brand" data-act="goHome" title="Trang chủ">
-    <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#1b6b47"/><path d="M20 7 11 19h5l-6 8h8v6h4v-6h8l-6-8h5z" fill="#e4f2ea"/></svg>
+    <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#1d3a63"/><path d="M20 7 11 19h5l-6 8h8v6h4v-6h8l-6-8h5z" fill="#e6cf9b"/></svg>
     <h1>Hồ sơ khai thác & vận chuyển gỗ keo<small>HAK Group · Bộ hồ sơ theo rừng, chuẩn truy xuất nguồn gốc FSC</small></h1>
   </button>
   <nav class="nav">
@@ -229,6 +232,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 </div></div>
 <script>/*@@XLSX@@*/</script>
 <script>/*@@JSZIP@@*/</script>
+<script>/*@@SF@@*/</script>
 <script>/*@@REPORTS@@*/</script>
 <script>
 (() => {

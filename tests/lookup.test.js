@@ -178,3 +178,21 @@ test('hồi quy: phiếu thiếu ngày cân hoặc hai đơn vị chênh nhau đ
   const area = L.candidates('HoSoRung_QC', L.search('loc thuong', 'HoSoRung_QC').rows[0].row).forests[0];
   assert.ok(area.areaConflict && area.area.length === 2 && area.area[1].value === 6); // 60.000 m² ÷ 10.000 = 6 ha, khác 3 ha của HECTA
 });
+
+test('cha–con: gom kết quả theo hợp đồng (CCCD + mã hợp đồng), dòng của 3 tab là con', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  const r = L.search('nguyen van an', '', {group: 'contract'});
+  assert.ok(Array.isArray(r.groups) && r.rows.length === 0 && r.groupTotal === r.groups.length);
+  const g101 = r.groups.find(g => g.cccd === '049000000001' && g.hd === '101');
+  assert.ok(g101); assert.strictEqual(g101.ten, 'NGUYỄN VĂN AN'); assert.strictEqual(g101.tinhTrang, 'Đang thực hiện'); assert.strictEqual(g101.hecta, null === g101.hecta ? null : g101.hecta);
+  assert.strictEqual(g101.phieu, 3); assert.strictEqual(g101.tan, 12.18);               // 2,84 + 4,44 + 4,9 tấn (tấn có giá trị ưu tiên)
+  assert.deepStrictEqual(g101.rungs, ['20260110_001']); assert.strictEqual(g101.flags, 2);  // phiếu tên xe + phiếu lệch + (điểm GPS lỗi nếu có)
+  assert.strictEqual(g101.pick.tab, 'HoSoRung_QC');                                        // ưu tiên dòng hợp đồng để mở màn hình ghi
+  // trùng số hợp đồng 101 nhưng khác CCCD -> cha riêng, không lẫn
+  assert.ok(r.groups.find(g => g.cccd === '049000000003' && g.hd === '101') && r.groups.filter(g => g.hd === '101').length === 2);
+  // dòng thiếu CCCD tự thành cha riêng
+  const lone = L.search('9001/2026', '', {group: 'contract'}); assert.strictEqual(lone.groups.length, 1); assert.strictEqual(lone.groups[0].cccd, '');
+  // kết hợp với bộ lọc: chỉ phiếu trong kỳ
+  const kỳ = L.search('', 'HoSoKeo_QC', {group: 'contract', from: '01/03/2026'}); assert.ok(kỳ.groups.every(g => g.phieu >= 1) && kỳ.groups.every(g => g.matched.HoSoKeo_QC === g.phieu));
+  assert.strictEqual(L.search('', '', {group: 'contract', limit: 2}).groups.length, 2);
+});
