@@ -80,6 +80,13 @@ tr.rwarn td{background:var(--warnBg)}
 #lkBox{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:16px 10px}
 #lkBox.on{display:flex}#lkBox .gd{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:1280px;width:100%;padding:16px 20px}
 #lkBox .gh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}#lkBox label{font-size:13px}
+#rpBox{position:fixed;inset:0;z-index:56;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:16px 10px}
+#rpBox.on{display:flex}#rpBox .gd{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:1180px;width:100%;padding:16px 20px}
+#rpBox .gh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}#rpBox label{font-size:13px}
+#rpBox .rpl{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin:8px 0}
+#rpBox .rpc{text-align:left;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--card);color:var(--ink);cursor:pointer}
+#rpBox .rpc.on{border-color:var(--ok,#2e7d32);box-shadow:0 0 0 2px var(--ok,#2e7d32) inset}#rpBox .rpc small{display:block;opacity:.75;margin-top:4px}
+#rpBox .kpi{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#rpBox .kpi div{border:1px solid var(--line);border-radius:10px;padding:6px 12px;min-width:120px}#rpBox .kpi b{font-size:18px;display:block}
 #impBox{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
 #impBox.on{display:flex}#impBox .gd{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:640px;width:100%;padding:18px 22px}
 #impBox label{flex-direction:row;align-items:flex-start;gap:8px;color:var(--ink);margin:6px 0}
@@ -90,6 +97,7 @@ tr.rwarn td{background:var(--warnBg)}
 <header class="top">
   <h1>Hồ sơ khai thác & vận chuyển gỗ keo<small>HAK Group · Bộ hồ sơ theo rừng, chuẩn truy xuất nguồn gốc FSC</small></h1>
   <button class="btn ghost sm deskOnly" data-act="lkOpen" hidden>🔎 Tra cứu Google Sheets</button>
+  <button class="btn ghost sm" data-act="rpOpen">📊 Báo cáo</button>
   <button class="btn ghost sm" data-act="guide">❓ Hướng dẫn</button>
   <button class="btn ghost sm" data-act="theme" id="themeBtn">🌙 Chế độ tối</button>
   <button class="btn ghost sm" data-act="backup">⬇ Sao lưu dữ liệu (.json)</button>
@@ -102,6 +110,7 @@ tr.rwarn td{background:var(--warnBg)}
 </div>
 
 <div id="lkBox"><div class="gd" id="lkBody"></div></div>
+<div id="rpBox"><div class="gd" id="rpBody"></div></div>
 <div id="impBox"><div class="gd" id="impBody"></div></div>
 <div id="guideBox" data-act="guideBg"><div class="gd">
 <div class="gh"><h2>Hướng dẫn sử dụng</h2><button class="btn ghost sm" data-act="guideClose">✕ Đóng</button></div>
@@ -169,6 +178,7 @@ tr.rwarn td{background:var(--warnBg)}
 </div></div>
 <script>/*@@XLSX@@*/</script>
 <script>/*@@JSZIP@@*/</script>
+<script>/*@@REPORTS@@*/</script>
 <script>
 (() => {
 'use strict';
@@ -2153,9 +2163,104 @@ async function restoreAll(file) {
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
 }
 
+/* ========== Báo cáo (Word + Excel) ========== */
+const rp = {id: 'dieuhanh', from: '', to: '', owner: '', msg: null};
+const isoToVi = v => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
+const viToIso = v => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v || ''); return m ? m[3] + '-' + m[2] + '-' + m[1] : ''; };
+function rpRecords() {
+  const out = [];
+  Object.values(db.rs).forEach(o => {
+    if (rp.owner && o.id !== rp.owner && !(o.info && o.info.ma === rp.owner)) return;
+    forestList(o).forEach(f => {
+      let pct = 0, thieu = [];
+      try { const pr = progressOf(jobView(o, f)); pct = pr.pct; thieu = pr.L.filter(x => !x.ok).map(x => ({label: x.label, hint: x.hint, warn: x.warn})); }
+      catch (e) { thieu = [{label: 'Không tính được tiến độ', hint: e.message}]; }
+      const i = f.info || {};
+      out.push({chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
+        dienTich: i.dienTich, dinhMuc: i.dinhMucTanHa, khoiLuongTT: i.khoiLuong, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
+        pc: (f.pc || []).map(p => ({ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao})),
+        nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu});
+    });
+  });
+  return out;
+}
+const rpModel = () => HAKReports.REPORTS.find(r => r.id === rp.id).build(rpRecords(), {from: rp.from, to: rp.to, today: todayStr()});
+const rpScope = () => rp.owner ? 'Chủ rừng: ' + ((Object.values(db.rs).find(o => o.id === rp.owner || (o.info && o.info.ma === rp.owner)) || {info: {}}).info.ten || '') : 'Tất cả chủ rừng';
+function rpDocx(m) {
+  const land = m.orient === 'landscape', W = land ? 15137 : 9355, F = HAKReports.fmtCell;
+  const widths = cols => { const t = cols.reduce((a, c) => a + c.w, 0); const w = cols.map(c => Math.floor(c.w / t * W)); w[w.length - 1] += W - w.reduce((a, b) => a + b, 0); return w; };
+  const B = [P('**HAK GROUP**', {al: 'left', sz: 24, after: 0}), P('Hồ sơ khai thác và vận chuyển gỗ keo · Chuẩn truy xuất nguồn gốc FSC', {al: 'left', i: true, sz: 20, after: 60, bdb: true}),
+    P('**' + m.title + '**', {al: 'center', sz: 30, before: 160, after: 40}), P(m.period + ' · ' + rpScope(), {al: 'center', i: true, sz: 22, after: 160})];
+  if (m.kpis.length) {
+    const per = land ? 5 : 3, cells = m.kpis.map(k => ['**' + F(k.value, k.f) + '**', k.label]);
+    for (let i = 0; i < cells.length; i += per) {
+      const row = cells.slice(i, i + per); while (row.length < per) row.push(['', '']);
+      B.push(T(Array(per).fill(Math.floor(W / per)), [row.map(c => ({v: [c[0], c[1]]}))], {sz: land ? 20 : 20, al: 'center', pad: 80}), P('', {after: 60}));
+    }
+  }
+  m.sections.forEach(s => {
+    B.push(P('**' + s.heading + '**', {al: 'left', before: 140, after: 80, keep: true}));
+    const rows = [s.cols.map(c => c.h), ...s.rows.map(r => r.map((v, i) => F(v, s.cols[i].f))) ];
+    if (!s.rows.length) rows.push([{v: 'Không có dữ liệu', span: s.cols.length}]);
+    if (s.foot) rows.push(s.foot.map((v, i) => ({v: '**' + F(v, s.cols[i].f) + '**'})));
+    B.push(T(widths(s.cols), rows, {head: true, sz: land ? 18 : 20, alignCols: s.cols.map(c => c.al || 'left')}));
+  });
+  if (m.notes.length) { B.push(P('**Ghi chú**', {al: 'left', before: 140, after: 60, keep: true})); m.notes.forEach(n => B.push(bl(n))); }
+  B.push(P('Lập ngày ' + todayStr(), {al: 'right', i: true, before: 160, after: 80}),
+    T([Math.floor(W / 2), W - Math.floor(W / 2)], [['**NGƯỜI LẬP BIỂU**', '**GIÁM ĐỐC**'], [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, đóng dấu)', i: true}], ['', ''], ['', '']], {borders: false, al: 'center', keep: true}));
+  return makeDocx(B, {landscape: land, footer: m.title.slice(0, 1) + m.title.slice(1).toLowerCase() + ' · HAK Group · Phiên bản 1.0'});
+}
+async function rpExport(kind) {
+  const m = rpModel(), name = 'BaoCao_' + m.id + '_' + todayStr().replace(/\//g, '-');
+  if (kind === 'docx') { download(await rpDocx(m), name + '.docx'); return; }
+  const aoa = HAKReports.toAoa(m, {org: 'HAK GROUP', today: todayStr(), scope: rpScope()});
+  const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new();
+  const widest = Math.max(...m.sections.map(s => s.cols.length));
+  ws['!cols'] = Array.from({length: widest}, (_, i) => ({wch: i === 0 ? 34 : 18}));
+  ws['!merges'] = [0, 1, 2].map(r => ({s: {r, c: 0}, e: {r, c: Math.max(widest - 1, 1)}}));
+  XLSX.utils.book_append_sheet(wb, ws, 'Bao cao'); XLSX.writeFile(wb, name + '.xlsx');
+}
+function rpRender() {
+  const m = rpModel(), F = HAKReports.fmtCell;
+  const owners = Object.values(db.rs).sort((a, b) => (a.info.ten || '').localeCompare(b.info.ten || '', 'vi'));
+  const prev = m.sections.map(s => '<h4 style="margin:12px 0 4px">' + esc(s.heading) + ' <span class="mut">(' + s.rows.length + ' dòng)</span></h4><div class="wrap" style="max-height:34vh"><table><tr>' + s.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr>' +
+    s.rows.slice(0, 200).map(r => '<tr>' + r.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '">' + esc(F(v, s.cols[i].f)) + '</td>').join('') + '</tr>').join('') +
+    (s.foot ? '<tr>' + s.foot.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '"><b>' + esc(F(v, s.cols[i].f)) + '</b></td>').join('') + '</tr>' : '') + '</table></div>' +
+    (s.rows.length > 200 ? '<p class="mut">Xem trước 200 dòng đầu; file xuất có đủ ' + s.rows.length + ' dòng.</p>' : '')).join('');
+  $('#rpBody').innerHTML = '<div class="gh"><h2>Báo cáo</h2><button class="btn ghost sm" data-act="rpClose">✕ Đóng</button></div>' +
+    '<div class="rpl">' + HAKReports.REPORTS.map(r => '<button class="rpc ' + (rp.id === r.id ? 'on' : '') + '" data-rpsel="' + r.id + '"><b>' + esc(r.name) + '</b><small>' + esc(r.desc) + '</small></button>').join('') + '</div>' +
+    '<div class="row" style="align-items:flex-end;flex-wrap:wrap"><label>Từ ngày<br><input type="date" id="rpFrom" value="' + esc(viToIso(rp.from)) + '"></label><label>Đến ngày<br><input type="date" id="rpTo" value="' + esc(viToIso(rp.to)) + '"></label>' +
+    '<label>Chủ rừng<br><select id="rpOwner"><option value="">Tất cả chủ rừng</option>' + owners.map(o => '<option value="' + esc(o.id) + '"' + (rp.owner === o.id ? ' selected' : '') + '>' + esc(o.info.ten || '(chưa đặt tên)') + '</option>').join('') + '</select></label>' +
+    '<button class="btn" data-act="rpWord">⬇ Xuất Word (.docx)</button><button class="btn ghost" data-act="rpExcel">⬇ Xuất Excel (.xlsx)</button></div>' +
+    '<p class="mut">Khoảng ngày áp dụng cho ngày cân của phiếu cân. Báo cáo tiến độ luôn tính tại thời điểm hiện tại.</p>' +
+    (rp.msg ? '<div class="msg ' + rp.msg.kind + '">' + esc(rp.msg.text) + '</div>' : '') +
+    '<h3 style="margin:10px 0 0">' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + ' · ' + rpScope()) + '</p>' +
+    '<div class="kpi">' + m.kpis.map(k => '<div><b>' + esc(F(k.value, k.f)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' + prev +
+    (m.notes.length ? '<div class="msg warn">' + m.notes.map(esc).join('<br>') + '</div>' : '');
+}
+function rpOpen() { if (!Object.keys(db.rs).length) { note('Chưa có dữ liệu để lập báo cáo. Hãy tạo chủ rừng và nạp phiếu cân trước.', 'err'); render(); return; } rp.msg = null; $('#rpBox').classList.add('on'); rpRender(); }
+const rpClose = () => $('#rpBox').classList.remove('on');
+function rpReadParams() { const g = id => { const el = document.getElementById(id); return el ? el.value : null; }; const f = g('rpFrom'), t = g('rpTo'), o = g('rpOwner'); if (f !== null) rp.from = isoToVi(f); if (t !== null) rp.to = isoToVi(t); if (o !== null) rp.owner = o; }
+document.addEventListener('click', async e => {
+  const t = e.target; if (!t.closest) return;
+  if (t.closest('[data-act=rpOpen]')) return rpOpen();
+  if (!t.closest('#rpBox')) return;
+  const sel = t.closest('[data-rpsel]'); if (sel) { rpReadParams(); rp.id = sel.dataset.rpsel; return rpRender(); }
+  const el = t.closest('[data-act]'); if (!el) return; const a = el.dataset.act;
+  if (a === 'rpClose') return rpClose();
+  rpReadParams();
+  if (a === 'rpWord' || a === 'rpExcel') {
+    const a1 = HAKReports.dateKey(rp.from), a2 = HAKReports.dateKey(rp.to);
+    if (a1 && a2 && a1 > a2) { rp.msg = {kind: 'err', text: 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.'}; return rpRender(); }
+    try { await rpExport(a === 'rpWord' ? 'docx' : 'xlsx'); rp.msg = {kind: 'ok', text: 'Đã xuất báo cáo.'}; } catch (err) { rp.msg = {kind: 'err', text: 'Không xuất được: ' + err.message}; }
+    return rpRender();
+  }
+});
+document.addEventListener('change', e => { const t = e.target; if (t && t.closest && t.closest('#rpBox') && /^rp(From|To|Owner)$/.test(t.id)) { rpReadParams(); rpRender(); } });
+
 /* ========== Tra cứu Google Sheets (chỉ bản desktop) ========== */
 const LK_TABS = [['', 'Tất cả'], ['HoSoKeo_QC', 'HoSoKeo_QC (phiếu cân)'], ['HoSoRung_QC', 'HoSoRung_QC (chủ rừng, hợp đồng)'], ['ToaDoRung_QC', 'ToaDoRung_QC (tọa độ, giấy tờ)']];
-const lk = {view: 'search', tab: '', q: '', res: null, st: null, busy: '', msg: null, cand: null, fi: 0, mode: '', owner: '', sel: null};
+const lk = {view: 'search', tab: '', q: '', f: {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}, adv: false, res: null, st: null, busy: '', msg: null, cand: null, fi: 0, mode: '', owner: '', sel: null};
 const foldVi = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
 const srcTxt = s => s ? esc(s.tab) + ' · dòng ' + s.row + ' · cột “' + esc(s.col) + '”' : '';
 const fmtDT = iso => { if (!iso) return ''; const d = new Date(iso); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' ' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear(); };
@@ -2170,8 +2275,8 @@ async function lkOpen() {
 }
 const lkClose = () => $('#lkBox').classList.remove('on');
 async function lkSearch() {
-  const r = await HB.lookup.search(lk.q, lk.tab);
-  lk.res = r.ok ? r : {rows: [], total: 0}; if (!r.ok) lk.msg = {kind: 'err', text: r.error};
+  const r = await HB.lookup.search(lk.q, lk.tab, Object.assign({}, lk.f));
+  lk.res = r.ok ? r : {rows: [], total: 0, facets: {tab: {}, status: {}, issues: 0}, stats: {}, relax: []}; if (!r.ok) lk.msg = {kind: 'err', text: r.error};
 }
 async function lkLoad(kind) {
   lk.busy = kind === 'sync' ? 'Đang đồng bộ Google Sheets…' : 'Đang đọc file Excel…'; lk.msg = null; lkRender();
@@ -2196,18 +2301,48 @@ function lkStatusHtml() {
     (lk.busy ? '<div class="msg warn">' + esc(lk.busy) + '</div>' : '') + (lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + '</div>';
 }
 
+const LK_SORTS = [['relevance', 'Độ khớp'], ['ngay', 'Ngày cân mới nhất'], ['tan', 'Khối lượng lớn nhất'], ['ten', 'Tên chủ rừng A→Z']];
+const LK_HINT = 'Cú pháp: nhiều từ = phải có đủ · "cụm từ" · -từ loại trừ · cccd: hd: rung: phieu: bien: ten: dc: · số 12 chữ số tự nhận là CCCD, biển số tự nhận là biển số.';
+const lkAdvCount = () => ['from', 'to', 'minTan', 'maxTan', 'status'].filter(k => lk.f[k]).length + (lk.f.onlyIssues ? 1 : 0);
+function lkReadFilters() {
+  const g = id => { const el = document.getElementById(id); return el ? el.value : null; };
+  const f = lk.f, v = {from: g('lkFrom'), to: g('lkTo'), minTan: g('lkMin'), maxTan: g('lkMax'), status: g('lkStatus'), sort: g('lkSort')};
+  Object.keys(v).forEach(k => { if (v[k] !== null) f[k] = v[k]; });
+  const c = document.getElementById('lkIssues'); if (c) f.onlyIssues = c.checked;
+}
 function lkSearchHtml() {
-  const r = lk.res || {rows: [], total: 0};
+  const r = lk.res || {rows: [], total: 0}, fc = r.facets || {tab: {}, status: {}, issues: 0}, st = r.stats || {};
   const cell = x => {
     if (x.tab === 'HoSoKeo_QC') return 'Phiếu <b>' + esc(x.phieu) + '</b> · ' + esc(x.ngay) + ' · ' + esc(x.bien) + ' · ' + numTxt(x.tan) + ' tấn';
-    if (x.tab === 'HoSoRung_QC') return 'Diện tích ' + numTxt(x.hecta) + ' ha';
+    if (x.tab === 'HoSoRung_QC') return 'Diện tích ' + numTxt(x.hecta) + ' ha' + (x.tinhTrang ? ' · ' + esc(x.tinhTrang) : '');
     return 'Điểm GPS ' + esc(x.gps);
   };
-  return '<div class="tabs" style="margin-top:0">' + LK_TABS.map(([k, l]) => '<button class="' + (lk.tab === k ? 'on' : '') + '" data-lktab="' + k + '">' + l + '</button>').join('') + '</div>' +
+  const cnt = k => k === '' ? Object.values(fc.tab || {}).reduce((a, b) => a + b, 0) : (fc.tab || {})[k] || 0;
+  const statuses = Object.entries(fc.status || {}).sort((a, b) => b[1] - a[1]);
+  const n = lkAdvCount();
+  const tabs = '<div class="tabs" style="margin-top:0">' + LK_TABS.map(([k, l]) => '<button class="' + (lk.tab === k ? 'on' : '') + '" data-lktab="' + k + '">' + l + ' <span class="pill">' + fmt(cnt(k)) + '</span></button>').join('') + '</div>';
+  const adv = '<details id="lkAdv" ' + (lk.adv || n ? 'open' : '') + ' style="margin:6px 0"><summary class="mut">Bộ lọc nâng cao' + (n ? ' (đang dùng ' + n + ')' : '') + ' · sắp xếp</summary>' +
+    '<div class="row" style="margin-top:6px;align-items:flex-end;flex-wrap:wrap">' +
+    '<label>Ngày cân từ<br><input type="date" id="lkFrom" value="' + esc(lk.f.from) + '"></label>' +
+    '<label>đến<br><input type="date" id="lkTo" value="' + esc(lk.f.to) + '"></label>' +
+    '<label>Khối lượng từ (tấn)<br><input id="lkMin" size="6" inputmode="decimal" value="' + esc(lk.f.minTan) + '"></label>' +
+    '<label>đến (tấn)<br><input id="lkMax" size="6" inputmode="decimal" value="' + esc(lk.f.maxTan) + '"></label>' +
+    '<label>Tình trạng hợp đồng<br><select id="lkStatus"><option value="">Tất cả</option>' + (lk.f.status && !statuses.some(([k]) => k === lk.f.status) ? '<option selected>' + esc(lk.f.status) + '</option>' : '') + statuses.map(([k, c]) => '<option value="' + esc(k) + '"' + (lk.f.status === k ? ' selected' : '') + '>' + esc(k) + ' (' + c + ')</option>').join('') + '</select></label>' +
+    '<label>Sắp xếp<br><select id="lkSort">' + LK_SORTS.map(([k, l]) => '<option value="' + k + '"' + (lk.f.sort === k ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
+    '<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="lkIssues"' + (lk.f.onlyIssues ? ' checked' : '') + '> Chỉ dòng cần kiểm tra' + (fc.issues ? ' <span class="pill err">' + fmt(fc.issues) + '</span>' : '') + '</label>' +
+    '<button class="btn sm" data-act="lkFind">Áp dụng</button><button class="btn ghost sm" data-act="lkClear">Xóa bộ lọc</button></div>' +
+    '<p class="mut" style="margin:4px 0 0">Khoảng ngày và khối lượng chỉ áp dụng cho phiếu cân (HoSoKeo_QC).</p></details>';
+  const relax = r.total === 0 && r.relax && r.relax.length ? '<div class="msg warn">Không có kết quả. Thử: ' + r.relax.map((x, i) => x.clearFilters ? '<button class="btn ghost sm" data-act="lkClear">bỏ bộ lọc (' + fmt(x.total) + ' dòng)</button>' : '<button class="btn ghost sm" data-lkrelax="' + i + '">bỏ “' + esc(x.drop) + '” (' + fmt(x.total) + ' dòng)</button>').join(' ') + '</div>' : '';
+  const sum = r.total > r.rows.length ? 'Hiển thị ' + fmt(r.rows.length) + ' / ' + fmt(r.total) + ' dòng — gõ thêm từ khóa hoặc dùng bộ lọc để thu hẹp.' : fmt(r.total) + ' dòng.';
+  const tot = st.phieu ? ' · <b>' + fmt(st.phieu) + '</b> phiếu cân, tổng <b>' + numTxt(st.tan) + '</b> tấn' : '';
+  return tabs +
     '<div class="row"><input id="lkQ" style="flex:1" placeholder="Mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã/số hợp đồng, địa chỉ rừng, số phiếu cân, biển số" value="' + esc(lk.q) + '"><button class="btn" data-act="lkFind">Tìm</button></div>' +
-    '<p class="mut">' + (r.total > r.rows.length ? 'Hiển thị ' + fmt(r.rows.length) + ' / ' + fmt(r.total) + ' dòng — gõ thêm từ khóa để thu hẹp.' : fmt(r.total) + ' dòng.') + '</p>' +
-    '<div class="wrap" style="max-height:52vh"><table><tr><th>Tab</th><th>Dòng</th><th>Chủ rừng</th><th>CCCD</th><th>Hợp đồng</th><th>Mã rừng</th><th>Địa chỉ rừng</th><th>Chi tiết</th><th></th></tr>' +
+    '<p class="mut" style="margin:4px 0">' + esc(LK_HINT) + '</p>' + adv +
+    (statuses.length && lk.tab !== 'HoSoKeo_QC' && lk.tab !== 'ToaDoRung_QC' ? '<div class="row" style="margin:4px 0">' + statuses.map(([k, c]) => '<button class="btn ' + (lk.f.status === k ? '' : 'ghost') + ' sm" data-lkstatus="' + esc(k) + '">' + esc(k) + ' · ' + c + '</button>').join('') + '</div>' : '') +
+    relax + '<p class="mut">' + sum + tot + '</p>' +
+    '<div class="wrap" style="max-height:48vh"><table><tr><th>Tab</th><th>Dòng</th><th>Chủ rừng</th><th>CCCD</th><th>Hợp đồng</th><th>Mã rừng</th><th>Địa chỉ rừng</th><th>Chi tiết</th><th>Kiểm tra</th><th></th></tr>' +
     r.rows.map(x => '<tr><td>' + esc(x.tab) + '</td><td>' + x.row + '</td><td>' + esc(x.ten) + '</td><td>' + esc(x.cccd) + '</td><td>' + esc(x.hd) + '</td><td>' + esc(x.maRung) + '</td><td>' + esc(x.diaChi) + '</td><td>' + cell(x) + '</td>' +
+      '<td>' + (x.flags || []).map(f => '<span class="pill err" style="margin:1px">' + esc(f) + '</span>').join('') + '</td>' +
       '<td><button class="btn sm" data-lkpick="' + esc(x.tab) + '|' + x.row + '">Chọn</button></td></tr>').join('') + '</table></div>';
 }
 
@@ -2415,14 +2550,17 @@ async function persistNow() {
 
 document.addEventListener('click', async e => {
   const t = e.target; if (!t.closest || !t.closest('#lkBox,[data-act=lkOpen]')) return;
-  const tb = t.closest('[data-lktab]'); if (tb) { lk.tab = tb.dataset.lktab; lk.q = ($('#lkQ') || {}).value || lk.q; await lkSearch(); return lkRender(); }
+  const tb = t.closest('[data-lktab]'); if (tb) { lk.tab = tb.dataset.lktab; lk.q = ($('#lkQ') || {}).value ?? lk.q; lkReadFilters(); await lkSearch(); return lkRender(); }
+  const rl = t.closest('[data-lkrelax]'); if (rl) { lk.q = lk.res.relax[+rl.dataset.lkrelax].q; await lkSearch(); return lkRender(); }
+  const stb = t.closest('[data-lkstatus]'); if (stb) { lkReadFilters(); lk.f.status = lk.f.status === stb.dataset.lkstatus ? '' : stb.dataset.lkstatus; await lkSearch(); return lkRender(); }
   const pk = t.closest('[data-lkpick]'); if (pk) { const [tabN, row] = pk.dataset.lkpick.split('|'); return lkPick(tabN, row); }
   const hd = t.closest('[data-lkhd]'); if (hd) return lkContract(hd.dataset.lkhd);
   const el = t.closest('[data-act]'); if (!el) return;
   const a = el.dataset.act;
   if (a === 'lkOpen') return lkOpen();
   if (a === 'lkClose') return lkClose();
-  if (a === 'lkFind') { lk.q = $('#lkQ').value; await lkSearch(); return lkRender(); }
+  if (a === 'lkFind') { lk.q = $('#lkQ').value; lkReadFilters(); lk.adv = !!($('#lkAdv') || {}).open; await lkSearch(); return lkRender(); }
+  if (a === 'lkClear') { lk.f = {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}; lk.q = ($('#lkQ') || {}).value ?? lk.q; await lkSearch(); return lkRender(); }
   if (a === 'lkSync') return lkLoad('sync');
   if (a === 'lkExcel') return lkLoad('excel');
   if (a === 'lkSetLink') { const r = await HB.lookup.setSheet($('#lkLink').value.trim()); lk.msg = r.ok ? {kind: 'ok', text: 'Đã lưu liên kết.'} : {kind: 'err', text: r.error}; lk.st = await HB.lookup.status(); return lkRender(); }
@@ -2451,7 +2589,7 @@ document.addEventListener('change', e => {
   if (sel.lkalias != null) { lk.alias = lk.alias || {}; const v = t.value.trim().toUpperCase(); if (v) lk.alias[sel.lkalias] = v; else delete lk.alias[sel.lkalias]; lkPhieuDefaultsKeep(); return lkRender(); }
 });
 function lkPhieuDefaultsKeep() { lkPhieuRows().forEach(p => { if (!(p.soPhieu in lk.sel.phieu) || (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn) && lk.sel.phieu[p.soPhieu] === false && p.bien)) lk.sel.phieu[p.soPhieu] = p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn); }); }
-document.addEventListener('keydown', async e => { if (e.key === 'Enter' && e.target.id === 'lkQ') { lk.q = e.target.value; await lkSearch(); lkRender(); } });
+document.addEventListener('keydown', async e => { if (e.key === 'Enter' && /^lk(Q|From|To|Min|Max)$/.test(e.target.id)) { lk.q = ($('#lkQ') || e.target).value; lkReadFilters(); await lkSearch(); lkRender(); } });
 window.addEventListener('online', () => { if ($('#lkBox').classList.contains('on') && lk.view !== 'preview') lkRender(); });
 window.addEventListener('offline', () => { if ($('#lkBox').classList.contains('on') && lk.view !== 'preview') lkRender(); });
 

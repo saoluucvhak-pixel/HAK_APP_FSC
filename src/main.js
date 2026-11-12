@@ -83,7 +83,7 @@ function registerIpc() {
       return lookup.load(fs.readFileSync(p), 'excel', path.basename(p));
     } catch (err) { log('ERROR', err.message); return {ok: false, errors: [err.message]}; }
   });
-  ipcMain.handle('lookup:search', (e, q, tab) => wrap(() => lookup.search(q || '', tab || ''))());
+  ipcMain.handle('lookup:search', (e, q, tab, opts) => wrap(() => lookup.search(q || '', tab || '', opts || {}))());
   ipcMain.handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
   ipcMain.handle('app:openData', () => { shell.showItemInFolder(store.file); return {ok: true}; });

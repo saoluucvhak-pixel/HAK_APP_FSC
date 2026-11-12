@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('hak', {
     setSheet: link => ipcRenderer.invoke('lookup:setSheet', link),
     sync: () => ipcRenderer.invoke('lookup:sync'),
     importExcel: p => ipcRenderer.invoke('lookup:importExcel', p),
-    search: (q, tab) => ipcRenderer.invoke('lookup:search', q, tab),
+    search: (q, tab, opts) => ipcRenderer.invoke('lookup:search', q, tab, opts),
     candidates: (tab, row) => ipcRenderer.invoke('lookup:candidates', tab, row),
     build: (cccd, hd) => ipcRenderer.invoke('lookup:build', cccd, hd)
   }
