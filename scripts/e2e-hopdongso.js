@@ -36,6 +36,10 @@ async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(f
   ok('BM-01: ghi “Căn cứ Hợp đồng số HD-2026/015 ký ngày 02/10/2026”', t.includes('Căn cứ Hợp đồng số HD-2026/015 ký ngày 02/10/2026'), t.slice(0, 600));
   ok('BM-01: ngày ký mặc định lấy từ ngày ký hợp đồng của chủ rừng', t.includes('ngày 02/10/2026'));
   ok('BM-01: bên A (chủ rừng) không còn dòng “Sinh năm”', !/BÊN CHỦ RỪNG \(BÊN A\)[^\n]{0,80}Sinh năm/.test(t) && !t.includes('06/10/1967'));
+  // sản lượng dự kiến tự nhảy ngay khi gõ diện tích và định mức (chưa cần bấm Lưu)
+  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=dienTich]', '13.0076'); await w.fill('#forestForm [name=dinhMucTanHa]', '120');
+  ok('sản lượng dự kiến tự tính ngay khi gõ: 13.0076 ha × 120 = 1.561 tấn', (await w.inputValue('#slDuKien')) === '1.561 tấn', await w.inputValue('#slDuKien'));
+  await w.fill('#forestForm [name=dienTich]', '2'); await w.fill('#forestForm [name=dinhMucTanHa]', '80'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
   // cự ly ngay ở tab Vận chuyển
   await w.click('[data-ftab=dx]');
   ok('tab Vận chuyển (tấn/km): có ô Cự ly vận chuyển, hiện số km đang có', (await w.isVisible('#vcForm [name=vcCuLy]')) && (await w.inputValue('#vcForm [name=vcCuLy]')) === '45');

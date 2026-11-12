@@ -42,7 +42,9 @@ Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa c
 
 ## 3. Chủ rừng và lô rừng
 - **Chủ rừng**: mã, họ tên, danh xưng (Ông/Bà), CCCD (12 số), ngày và nơi cấp, địa chỉ thường trú, **số hợp đồng** và **ngày ký hợp đồng** (hai ô này tùy chọn; ngày ký phải là ngày có thật). Phần mềm **không còn hỏi ngày sinh chủ rừng** (hồ sơ cũ đã có ngày sinh vẫn giữ trong dữ liệu nhưng không in). Số hợp đồng và ngày ký in ở dòng “Căn cứ Hợp đồng số … ký ngày …” của BM-01 và BM-04 và ở BM-17; **ngày ký hợp đồng là ngày ký mặc định** của các biểu mẫu nếu ô “Ngày ký hợp đồng” ở tab Xuất hồ sơ để trống. Khi lấy chủ rừng từ **Tra cứu Google Sheets**, số hợp đồng và ngày ký lấy từ cột “Mã hợp đồng” và “Ngày ký hợp đồng” của tab HoSoRung_QC.
-- **Lô rừng** (tab Thông tin rừng): mã lô, tên, địa điểm khai thác, tọa độ WGS84 (vĩ độ và kinh độ nhập cùng nhau), diện tích, định mức tấn/ha, cự ly vận chuyển, khối lượng thực tế, thời gian khai thác, **giấy tờ pháp lý đất/rừng**.
+- **Lô rừng** (tab Thông tin rừng): mã lô, tên, địa điểm khai thác, tọa độ WGS84 (vĩ độ và kinh độ nhập cùng nhau), diện tích, định mức tấn/ha, khối lượng thực tế, cự ly vận chuyển, thời gian khai thác, **giấy tờ pháp lý đất/rừng**.
+  - **Sản lượng dự kiến** là ô tự tính = diện tích × định mức, **tự nhảy ngay khi bạn gõ** diện tích và định mức (không cần bấm Lưu). Khối lượng khai thác thực tế để trống thì phần mềm dùng sản lượng dự kiến.
+  - **Cự ly vận chuyển (km)** là quãng đường từ rừng đến nơi giao gỗ (nhà máy). Ô này chỉ cần khi tính cước **tấn/km** (tiền cước = đơn giá × cự ly); cước cố định thì bỏ trống được. Cũng nhập được ngay ở tab Vận chuyển.
 - **Mã lô là duy nhất trên toàn máy**, so sánh không phân biệt hoa thường và bỏ khoảng trắng đầu/cuối. Mã trùng bị từ chối và phần mềm nêu lô đang dùng mã đó.
 - **Đổi mã lô**: các dòng nhân công, xe, phiếu cân mang mã cũ được **đổi theo mã mới** để dữ liệu vẫn thuộc đúng lô; dòng mang một mã khác được báo, không tự đổi.
 - Thanh **Tiến độ hồ sơ · checklist FSC** ở đầu lô cho biết % hoàn thành và từng mục còn thiếu.

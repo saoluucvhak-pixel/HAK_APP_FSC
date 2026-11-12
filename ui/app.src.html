@@ -1881,9 +1881,9 @@ function panelForest(f) {
     inp('maRung', 'Mã rừng', {req: true}) + inp('tenRung', 'Tên rừng / lô') + inp('diaDiem', 'Địa điểm khai thác (rừng)', {req: true, wide: true}) +
     inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +
     inp('dienTich', 'Diện tích (ha)') + inp('dinhMucTanHa', 'Định mức (tấn/ha)') +
-    '<label><span>Sản lượng dự kiến (tự tính)</span><input value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
+    '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến'}) +
-    inp('cuLy', 'Cự ly vận chuyển (km)') + inp('tuNgay', 'Thời gian khai thác — từ ngày') + inp('denNgay', 'Thời gian khai thác — đến ngày') +
+    inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: 'VD: 45. Chỉ cần khi tính cước tấn/km'}) + inp('tuNgay', 'Thời gian khai thác — từ ngày') + inp('denNgay', 'Thời gian khai thác — đến ngày') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">🔎 Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
 
@@ -3254,6 +3254,11 @@ else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset && t.dataset.mamoi !== undefined) { impMaCheck(); return; }
+  if (t.form && t.form.id === 'forestForm' && (t.name === 'dienTich' || t.name === 'dinhMucTanHa')) {   // sản lượng dự kiến tự nhảy ngay khi gõ, không cần bấm Lưu
+    const dt = toDec(t.form.elements.dienTich.value), dm = toDec(t.form.elements.dinhMucTanHa.value), out = document.getElementById('slDuKien');
+    if (out) out.value = (typeof dt === 'number' && typeof dm === 'number') ? fmt(Math.round(dt * dm)) + ' tấn' : (dt === 'x' || dm === 'x') ? 'Diện tích hoặc định mức không phải là số' : '';
+    return;
+  }
   if (t.closest && t.closest('#ctyForm')) ctyShowMsg();
 });
 document.addEventListener('submit', e => { if (e.target.id === 'ctyForm') { e.preventDefault(); ctySave(); } });
