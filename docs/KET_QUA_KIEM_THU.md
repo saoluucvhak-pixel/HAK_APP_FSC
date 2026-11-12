@@ -181,3 +181,7 @@ CI Windows có thêm bước **nâng cấp từ bộ cài thật v1.0.0**: tải
 - Nhắc sao lưu: ghi ngày sao lưu toàn bộ cuối; khi mở phần mềm quá số ngày đã chọn (mặc định 7, có thể tắt) thì nhắc; chọn mức nhắc ở Cài đặt hệ thống (`backupDue`, `e2e-caidat`).
 - BM-09, mẫu trống và in đè: địa chỉ nơi giao dài làm hàng của bản in đè cao hơn mẫu trống nên số lệch hàng. Nay mỗi hàng chỉ một dòng (giống nhau thì “Như trên”, khác nhau thì cắt gọn); địa chỉ đầy đủ vẫn ở đoạn “về …” phía trên. Thử nới cột “Nơi giao” cho bản đầy đủ nhưng làm lệch bản in đè nên giữ nguyên độ rộng cột; `e2e-inde` đạt.
 - Chưa xử lý được: tiêu đề “Điều 3” của BM-14 cuối trang 1 trong LibreOffice (thử keepNext, keepLines, widowControl, compat mode 15 đều không đổi).
+
+## 23. Bản 1.4.15: mẫu trống BM-09/BM-14 khớp dạng với phần in đè
+- Dòng ngày của mẫu trống in “ngày …/…/……” (trước là “ngày ….. tháng ….. năm …….”) để cùng dạng với phần in đè “ngày 20/12/2026”; “Đà Nẵng, ngày …/…/……” ở BM-09 tương tự.
+- Số biên bản (BM-09, BM-14) ở mẫu trống để trắng thật: chừa đúng bề rộng bằng ký tự màu trắng (không in ra giấy), thay cho dãy chấm dài. Đo bằng PDF: chữ “ngày” của bản in đè và mẫu trống trùng vị trí; chữ “Số:” lệch khoảng 4 pt (khoảng 1,4 mm) vì bề rộng số in đè được ước lượng. Chưa thử bằng máy in thật.
