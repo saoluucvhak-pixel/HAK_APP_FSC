@@ -2817,6 +2817,9 @@ function docKiemTraHienTruong(rec, ex) {
 function docXNKLVC(rec, ex, g) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tr = tripsOf(rec, g), kg = totalKg(tr);
   const hdNo = ex._so.vc.so;
+  /* Ô “Nơi giao”: ở mẫu trống/in đè mỗi hàng chỉ một dòng, nên địa chỉ dài không in lại từng hàng (đã nêu ở đoạn “về …” phía trên): giống nhau thì “Như trên”, khác nhau thì cắt gọn */
+  const ngSame = new Set(tr.map(r => r.noiGiao || '')).size <= 1;
+  const ngCell = t => t.length <= 30 ? t : ngSame ? 'Như trên' : t.slice(0, 29) + '…';
   const d0 = V(tr.length ? tr[0].ngay : '……', 0, '…/…/……'), d1 = V(tr.length ? tr[tr.length - 1].ngay : '……', 0, '…/…/……');
   const noiGiao = ex.vcDiemDen || (ex._mode === 'day' ? tr.map(r => r.noiGiao).find(Boolean) : '') || '………………';   // mẫu trống và in đè: chữ cố định phải giống nhau, không lấy từ phiếu cân   // điểm đến theo hồ sơ rừng; cột “Nơi giao” từng phiếu giữ nguyên dữ liệu nguồn
   return [
@@ -2835,7 +2838,7 @@ function docXNKLVC(rec, ex, g) {
     T([650, 1450, 1650, 2000, 2000, 1605],
       [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Nơi giao (nhà máy)', 'Khối lượng (tấn)'],
         ...(ex._mode === 'day' ? tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))])
-          : Array.from({length: Math.max(ex._dong, tr.length)}, (_, i) => { const r = tr[i]; return [String(i + 1), V(r ? r.ngay : ''), V(r ? r.bienSo : ''), V(r ? r.soPhieu : ''), V(r ? (r.noiGiao || '') : ''), V(r ? fmtT(Math.round(r.kl * 1000)) : '')]; })),   // in đè: số dòng cố định để dòng tổng cộng nằm đúng chỗ của mẫu trống
+          : Array.from({length: Math.max(ex._dong, tr.length)}, (_, i) => { const r = tr[i]; return [String(i + 1), V(r ? r.ngay : ''), V(r ? r.bienSo : ''), V(r ? r.soPhieu : ''), V(r ? ngCell(r.noiGiao || '') : ''), V(r ? fmtT(Math.round(r.kl * 1000)) : '')]; })),   // in đè: số dòng cố định để dòng tổng cộng nằm đúng chỗ của mẫu trống
         [{v: '**Tổng cộng (' + V(tr.length ? String(tr.length) : '', 4) + ' chuyến)**', span: 5}, '**' + V(tr.length ? fmtT(kg) : '') + '**']],
       {head: true, borders: true, sz: 20, alignCols: ['center', 'center', 'center', 'center', 'left', 'right']}),
     P('', {after: 80}),
@@ -4068,7 +4071,12 @@ function settingsPaint() {
     (s.missing.length ? '<div class="msg warn">Thư mục đã chọn trước đây không còn: ' + s.missing.map(esc).join('; ') + '. Ứng dụng đang dùng vị trí mặc định.</div>' : '') +
     (s.lockedByEnv ? '<div class="msg warn">Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB nên không đổi được ở đây.</div>' : '') +
     row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).', s.dbFile, s.customData, s.defaultDataDir, 'setData', 'setDataDefault', '<button class="btn ghost" data-act="setOpenData">Mở thư mục chứa dữ liệu</button>') +
-    row('Thư mục sao lưu', 'Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản sao lưu toàn bộ (⋯ Thêm → Sao lưu toàn bộ dữ liệu: lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc ổ USB để phòng hỏng máy.', s.backupDir, s.customBackup, s.defaultBackupDir, 'setBackup', 'setBackupDefault', '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button>');
+    row('Thư mục sao lưu', 'Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản sao lưu toàn bộ (⋯ Thêm → Sao lưu toàn bộ dữ liệu: lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc ổ USB để phòng hỏng máy.', s.backupDir, s.customBackup, s.defaultBackupDir, 'setBackup', 'setBackupDefault', '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button>') +
+    '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">Nhắc sao lưu</h3><p class="mut" style="margin:0 0 8px">Khi mở phần mềm, nhắc sao lưu toàn bộ dữ liệu nếu đã quá số ngày dưới đây kể từ lần sao lưu cuối (⋯ Thêm → Sao lưu toàn bộ dữ liệu).</p>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Nhắc sau <select id="setRemind">' + [[0, 'Không nhắc'], [3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày']].map(o => '<option value="' + o[0] + '"' + (o[0] === s.remind.remindDays ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
+    '<span class="mut">Sao lưu toàn bộ lần cuối: ' + (s.remind.lastBackup ? esc(new Date(s.remind.lastBackup).toLocaleString('vi-VN')) : 'chưa có') + '</span></div></div>';
+  const sel = document.getElementById('setRemind');
+  if (sel) sel.addEventListener('change', async () => { const r = await HB.settings.setRemind(sel.value); if (r.ok) { setg.s = r.settings; setg.msg = ['Đã lưu mức nhắc sao lưu.', 'ok']; render(); } });
 }
 async function settingsLoad() {
   if (!HB) return;
@@ -4833,6 +4841,7 @@ document.addEventListener('change', e => {
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
 try { const m = sessionStorage.getItem('hakqn.setmsg'); if (m) { sessionStorage.removeItem('hakqn.setmsg'); view = 'settings'; setg.msg = [m, 'ok']; } } catch (e) { /* không có sessionStorage */ }
+if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind; if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở ⚙ Cài đặt hệ thống).', 'warn'); }).catch(() => {});
 render();
 })();
 </script>

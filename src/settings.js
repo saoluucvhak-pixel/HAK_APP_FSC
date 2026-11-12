@@ -9,14 +9,24 @@ const file = userDir => path.join(userDir, 'settings.json');
 function load(userDir) {
   try {
     const j = JSON.parse(fs.readFileSync(file(userDir), 'utf8'));
-    return {dataDir: typeof j.dataDir === 'string' ? j.dataDir : '', backupDir: typeof j.backupDir === 'string' ? j.backupDir : ''};
-  } catch (e) { return {dataDir: '', backupDir: ''}; }
+    return {dataDir: typeof j.dataDir === 'string' ? j.dataDir : '', backupDir: typeof j.backupDir === 'string' ? j.backupDir : '',
+      lastBackup: typeof j.lastBackup === 'string' ? j.lastBackup : '', remindDays: Number.isInteger(j.remindDays) && j.remindDays >= 0 && j.remindDays <= 365 ? j.remindDays : 7};
+  } catch (e) { return {dataDir: '', backupDir: '', lastBackup: '', remindDays: 7}; }
 }
 function save(userDir, s) {
   fs.mkdirSync(userDir, {recursive: true});
   const tmp = file(userDir) + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify({dataDir: s.dataDir || '', backupDir: s.backupDir || ''}, null, 2));
+  fs.writeFileSync(tmp, JSON.stringify({dataDir: s.dataDir || '', backupDir: s.backupDir || '', lastBackup: s.lastBackup || '', remindDays: s.remindDays == null ? 7 : s.remindDays}, null, 2));
   fs.renameSync(tmp, file(userDir));   // ghi trọn vẹn rồi mới thay, tránh file cài đặt dở dang
+}
+/* Đã đến lúc nhắc sao lưu toàn bộ chưa. remindDays 0 = tắt. Chưa từng sao lưu: tính từ lần đầu cài (firstSeen) để không nhắc ngay ngày đầu. Trả {due, days} (days = số ngày từ lần sao lưu cuối, null nếu chưa từng). */
+function backupDue(s, nowMs, firstSeenMs) {
+  if (!s.remindDays) return {due: false, days: null};
+  const last = s.lastBackup ? Date.parse(s.lastBackup) : NaN;
+  const base = Number.isFinite(last) ? last : firstSeenMs;
+  if (!Number.isFinite(base)) return {due: false, days: null};
+  const days = Math.floor((nowMs - base) / 86400000);
+  return {due: days >= s.remindDays, days: Number.isFinite(last) ? days : null, since: Number.isFinite(last) ? 'last' : 'first'};
 }
 /* Thư mục phải có thật, là thư mục và ghi được; báo lỗi tiếng Việt cụ thể. Trả đường dẫn tuyệt đối đã chuẩn hóa. */
 function checkFolder(dir) {
@@ -30,6 +40,13 @@ function checkFolder(dir) {
   try { fs.writeFileSync(probe, 'x'); fs.unlinkSync(probe); } catch (e) { throw new Error('Không ghi được vào thư mục “' + abs + '” (' + (e.code || e.message) + '). Chọn thư mục khác hoặc kiểm tra quyền.'); }
   return abs;
 }
+/* Ổ đích phải đủ chỗ cho bản sao (kích thước dữ liệu x 2 + 10 MB dự phòng). Không đọc được dung lượng trống thì cho qua (không chặn oan). */
+function checkSpace(dir, bytes, free) {
+  let f = free; if (f == null) { try { const st = fs.statfsSync(dir); f = st.bavail * st.bsize; } catch (e) { return true; } }
+  const need = bytes * 2 + 10 * 1024 * 1024;
+  if (f < need) throw new Error('Ổ đích không đủ chỗ trống: còn ' + Math.floor(f / 1048576) + ' MB, cần khoảng ' + Math.ceil(need / 1048576) + ' MB. Giải phóng dung lượng hoặc chọn ổ khác.');
+  return true;
+}
 /* Vị trí đang dùng. env.HAKQN_DB (kiểm thử/triển khai đặc biệt) được ưu tiên và khóa thư mục dữ liệu. */
 function resolve(userDir, env = {}) {
   const s = load(userDir);
@@ -42,4 +59,4 @@ function resolve(userDir, env = {}) {
     customData: !env.HAKQN_DB && dataDir !== defData, customBackup: backupDir !== defBackup, lockedByEnv: !!env.HAKQN_DB,
     missing: [s.dataDir && !fs.existsSync(s.dataDir) ? s.dataDir : '', s.backupDir && !fs.existsSync(s.backupDir) ? s.backupDir : ''].filter(Boolean)};
 }
-module.exports = {DB_NAME, load, save, checkFolder, resolve, file};
+module.exports = {DB_NAME, load, save, backupDue, checkFolder, checkSpace, resolve, file};

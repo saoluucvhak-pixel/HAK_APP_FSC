@@ -96,6 +96,7 @@ function registerIpc() {
       const sqlFile = path.join(r.filePaths[0], 'HoSoKhaiThac_SaoLuu_' + stamp + '.sqlite');
       fs.writeFileSync(jsonFile, JSON.stringify(store.load(), null, 2));
       await store.db.backup(sqlFile);
+      try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); }
       return {ok: true, jsonFile, sqlFile};
     } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
   });
@@ -153,13 +154,15 @@ function registerIpc() {
   ipcMain.handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
   /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
-  const setView = () => ({dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
+  const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
+  const setView = () => ({remind: remind(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
   const pickFolder = async title => {
     if (process.env.HAKQN_PICK_DIR) return process.env.HAKQN_PICK_DIR;
     const r = await dialog.showOpenDialog(win, {title, properties: ['openDirectory', 'createDirectory']});
     return r.canceled || !r.filePaths[0] ? '' : r.filePaths[0];
   };
   ipcMain.handle('settings:get', () => wrap(() => ({settings: setView()}))());
+  ipcMain.handle('settings:setRemind', (e, days) => wrap(() => { const ud = app.getPath('userData'); const d = Math.max(0, Math.min(365, parseInt(days, 10) || 0)); Settings.save(ud, {...Settings.load(ud), remindDays: d}); return {settings: setView()}; })());
   ipcMain.handle('settings:openBackup', () => { try { fs.mkdirSync(loc.backupDir, {recursive: true}); shell.openPath(loc.backupDir); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
   ipcMain.handle('settings:setBackup', async (e, reset) => {
     try {
@@ -181,6 +184,8 @@ function registerIpc() {
       if (!reset) { dir = await pickFolder('Chọn thư mục lưu dữ liệu'); if (!dir) return {ok: true, canceled: true}; }
       dir = Settings.checkFolder(dir);
       const target = path.join(dir, Settings.DB_NAME);
+      let used = 0; for (const x of ['', '-wal']) try { used += fs.statSync(loc.dbFile + x).size; } catch (er) { /* không có */ }
+      Settings.checkSpace(dir, used);
       if (path.resolve(target) === path.resolve(loc.dbFile)) return {ok: true, same: true, settings: setView()};
       let choice = 'copy';
       if (fs.existsSync(target)) {

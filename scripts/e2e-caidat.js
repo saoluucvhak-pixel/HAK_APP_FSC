@@ -19,6 +19,10 @@ const launch = env => electron.launch({executablePath: require('electron'), args
   await w.click('#moreMenu summary'); await w.click('[data-act=backup]'); await w.waitForTimeout(800);
   const bfiles = fs.readdirSync(bk);
   ok('sao lưu toàn bộ lưu thẳng vào thư mục đã chọn (.json và .sqlite), không hỏi lại', bfiles.some(f => f.endsWith('.json')) && bfiles.some(f => f.endsWith('.sqlite')), bfiles.join(','));
+  const sr = await w.evaluate(() => window.hak.settings.get());
+  ok('sao lưu toàn bộ ghi nhận ngày sao lưu cuối; chưa đến hạn nhắc', !!sr.settings.remind.lastBackup && sr.settings.remind.due === false, JSON.stringify(sr.settings.remind));
+  const r0 = await w.evaluate(() => window.hak.settings.setRemind(30));
+  ok('đổi mức nhắc sao lưu được lưu', r0.ok && r0.settings.remind.remindDays === 30);
   // đổi thư mục dữ liệu
   await app.close(); app = await launch({HAKQN_PICK_DIR: dd}); w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   ok('mở lại: dữ liệu và thư mục sao lưu được nhớ', /CÀI ĐẶT/i.test(await w.innerText('#sideList')));

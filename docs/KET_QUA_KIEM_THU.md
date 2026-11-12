@@ -175,3 +175,9 @@ CI Windows có thêm bước **nâng cấp từ bộ cài thật v1.0.0**: tải
 
 ## 21. Bản 1.4.13: Cài đặt hệ thống (thư mục dữ liệu, thư mục sao lưu)
 `src/settings.js` (6 kiểm thử đơn vị) và `scripts/e2e-caidat.js` (Electron thật, hộp thoại thay bằng HAKQN_PICK_DIR/HAKQN_PICK_CHOICE): đổi thư mục sao lưu và sao lưu toàn bộ lưu thẳng vào đó; đổi thư mục dữ liệu (sao chép, bản cũ còn nguyên, dữ liệu còn đủ sau khi mở lại); về mặc định, ghi đè có lưu bản có sẵn. Chưa thử: hộp thoại chọn thư mục thật của Windows, ổ USB/ổ mạng, ổ bị rút khi đang chạy.
+
+## 22. Bản 1.4.14: kiểm tra dung lượng ổ đích, nhắc sao lưu, ô “Nơi giao” BM-09
+- Đổi thư mục dữ liệu: kiểm tra ổ đích đủ chỗ (dữ liệu x 2 + 10 MB) trước khi chép, thiếu thì báo số MB và không đổi gì (`checkSpace`, kiểm thử đơn vị).
+- Nhắc sao lưu: ghi ngày sao lưu toàn bộ cuối; khi mở phần mềm quá số ngày đã chọn (mặc định 7, có thể tắt) thì nhắc; chọn mức nhắc ở Cài đặt hệ thống (`backupDue`, `e2e-caidat`).
+- BM-09, mẫu trống và in đè: địa chỉ nơi giao dài làm hàng của bản in đè cao hơn mẫu trống nên số lệch hàng. Nay mỗi hàng chỉ một dòng (giống nhau thì “Như trên”, khác nhau thì cắt gọn); địa chỉ đầy đủ vẫn ở đoạn “về …” phía trên. Thử nới cột “Nơi giao” cho bản đầy đủ nhưng làm lệch bản in đè nên giữ nguyên độ rộng cột; `e2e-inde` đạt.
+- Chưa xử lý được: tiêu đề “Điều 3” của BM-14 cuối trang 1 trong LibreOffice (thử keepNext, keepLines, widowControl, compat mode 15 đều không đổi).
