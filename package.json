@@ -1,0 +1,66 @@
+{
+  "name": "hakqn-ho-so-khai-thac",
+  "productName": "HAKQN - Hồ sơ khai thác và vận chuyển gỗ keo",
+  "version": "1.0.0",
+  "description": "Phần mềm desktop quản lý hồ sơ khai thác và vận chuyển gỗ keo theo từng rừng (HAK Group)",
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "build:html": "node scripts/build-html.js",
+    "start": "electron .",
+    "test": "node scripts/test.js",
+    "test:e2e": "node scripts/e2e.js && node scripts/e2e-lookup.js && node scripts/e2e-export.js",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "electron-builder --win nsis --x64",
+    "fixtures": "node tests/fixtures/make-lookup.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "jszip": "^3.10.2"
+  },
+  "author": "HAK Group",
+  "build": {
+    "appId": "vn.hakgroup.hakqn.hosokhaithac",
+    "productName": "HAKQN - Ho so khai thac va van chuyen go keo",
+    "copyright": "HAK Group",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**",
+      "renderer/**",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createStartMenuShortcut": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "HAKQN - Hồ sơ khai thác",
+      "language": "1066",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "HAKQN-HoSoKhaiThac-Setup-${version}.exe"
+    }
+  }
+}

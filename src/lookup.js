@@ -1,0 +1,320 @@
+'use strict';
+/* Bản tra cứu: đọc 3 tab HoSoKeo_QC, HoSoRung_QC, ToaDoRung_QC (từ Google Sheets xuất .xlsx hoặc file Excel cùng cấu trúc),
+ * kiểm tra tên tab + tiêu đề cột, lưu vào SQLite, tìm kiếm có dấu/không dấu và dựng "kết quả" để điền vào hồ sơ rừng. */
+const XLSX = require('xlsx');
+
+const TABS = {
+  HoSoKeo_QC: {
+    req: ['Mã khách hàng', 'Mã hợp đồng', 'SỐ PHIẾU CÂN', 'Ngày nhập', 'SỐ XE', 'Biển số 1', 'KL hàng (KG)', 'Khối lượng (Tấn)', 'Đơn giá', 'Thanh toán', 'Họ và tên chủ rừng', 'ĐỊA CHỈ RỪNG'],
+    text: ['Mã khách hàng', 'Mã hợp đồng', 'SỐ PHIẾU CÂN', 'SỐ PHIẾU CHI', 'SỐ XE', 'Biển số 1', 'Số BKLS'],
+    cccd: ['Mã khách hàng'],
+    search: ['Mã khách hàng', 'Mã hợp đồng', 'SỐ PHIẾU CÂN', 'SỐ XE', 'Biển số 1', 'Họ và tên chủ rừng', 'ĐỊA CHỈ RỪNG']
+  },
+  HoSoRung_QC: {
+    req: ['Mã KH_CCCD', 'Họ và tên chủ rừng', 'Mã hợp đồng', 'Ngày ký hợp đồng', 'Địa chỉ thường trú', 'Địa chỉ hiện tại', 'Ngày cấp', 'Nơi cấp', 'SĐT', 'ĐỊA CHỈ RỪNG', 'HECTA', 'Định mức tấn/Ha', 'Pháp lý rừng'],
+    text: ['Mã KH_CCCD', 'Mã hợp đồng', 'Mã thanh lý hợp đồng', 'SĐT'],
+    cccd: ['Mã KH_CCCD'],
+    search: ['Mã KH_CCCD', 'Họ và tên chủ rừng', 'Mã hợp đồng', 'ĐỊA CHỈ RỪNG', 'Địa chỉ thường trú']
+  },
+  ToaDoRung_QC: {
+    req: ['Mã rừng', 'Số hợp đồng', 'HoVaTenChuRung', 'SoCCCD', 'ThuongTru', 'DiaChiRungTrong', 'DienTich_m2', 'HoSoNguonGoc', 'SoGiayTo', 'NgayGiayTo', 'Latitude_Vĩ độ', 'Longtitude_Kinh độ'],
+    text: ['ID_RUNG', 'ID_GPS', 'Mã rừng', 'Số hợp đồng', 'SoCCCD', 'SoGiayTo'],
+    cccd: ['SoCCCD'],
+    search: ['Mã rừng', 'Số hợp đồng', 'HoVaTenChuRung', 'SoCCCD', 'DiaChiRungTrong', 'SoGiayTo']
+  }
+};
+const TAB_NAMES = Object.keys(TABS);
+
+const fold = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().replace(/\s+/g, ' ').trim();
+const clean = v => (v == null ? '' : String(v)).replace(/\s+/g, ' ').trim();
+const pad2 = n => String(n).padStart(2, '0');
+const baseCccd = v => clean(v).replace(/_\d+$/, '');
+const stripSuffix = v => clean(v).replace(/_\d+$/, '');
+
+/* Đọc 1 ô: ngày -> dd/mm/yyyy; cột văn bản -> chuỗi (giữ số 0 đầu; CCCD dạng số thì bù đủ 12 chữ số) */
+function cellValue(cell, isText, isCccd) {
+  if (!cell || cell.v == null || cell.v === '') return '';
+  if (cell.t === 'd' || (cell.t === 'n' && cell.z && XLSX.SSF.is_date(cell.z))) {
+    if (cell.t === 'd') { const d = cell.v; return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear(); }
+    const p = XLSX.SSF.parse_date_code(cell.v); if (!p) return '';
+    const time = (p.H || p.M || p.S) && !p.y ? pad2(p.H) + ':' + pad2(p.M) + ':' + pad2(p.S) : '';
+    return time || (pad2(p.d) + '/' + pad2(p.m) + '/' + p.y);
+  }
+  if (cell.t === 'n') {
+    if (isCccd && Number.isInteger(cell.v) && String(cell.v).length <= 12) return String(cell.v).padStart(12, '0');
+    if (isText) return Number.isInteger(cell.v) ? String(cell.v) : String(cell.v);
+    return cell.v;
+  }
+  if (cell.t === 'b') return cell.v ? 'TRUE' : 'FALSE';
+  return clean(cell.v);
+}
+
+/* Đọc workbook (Buffer) -> {tabs:{ten:[rows]}, errors:[]} — chỉ hợp lệ khi đủ 3 tab và đủ cột bắt buộc */
+function parseWorkbook(buf) {
+  const wb = XLSX.read(buf, {type: 'buffer', cellDates: false, cellNF: true, dense: false});
+  const errors = [], tabs = {};
+  TAB_NAMES.forEach(name => {
+    const ws = wb.Sheets[name];
+    if (!ws) { errors.push('Thiếu tab "' + name + '"'); return; }
+    if (!ws['!ref']) { errors.push('Tab "' + name + '" trống'); return; }
+    const rg = XLSX.utils.decode_range(ws['!ref']);
+    const head = [];
+    for (let c = rg.s.c; c <= rg.e.c; c++) { const h = ws[XLSX.utils.encode_cell({r: rg.s.r, c})]; head.push(h ? clean(h.v) : ''); }
+    const miss = TABS[name].req.filter(h => !head.includes(h));
+    if (miss.length) { errors.push('Tab "' + name + '" thiếu hoặc đổi tên cột: ' + miss.map(m => '"' + m + '"').join(', ')); return; }
+    const T = new Set(TABS[name].text), C = new Set(TABS[name].cccd), rows = [];
+    for (let r = rg.s.r + 1; r <= rg.e.r; r++) {
+      const o = {}; let any = false;
+      head.forEach((h, i) => {
+        if (!h) return;
+        const v = cellValue(ws[XLSX.utils.encode_cell({r, c: rg.s.c + i})], T.has(h), C.has(h));
+        if (v !== '') any = true;
+        o[h] = v;
+      });
+      if (any) { o._row = r + 1; rows.push(o); }
+    }
+    tabs[name] = rows;
+  });
+  return {tabs, errors};
+}
+
+function keysOf(tab, o) {
+  if (tab === 'HoSoKeo_QC') return {cccd: baseCccd(o['Mã khách hàng']), hd: clean(o['Mã hợp đồng']), rung: '', phieu: clean(o['SỐ PHIẾU CÂN'])};
+  if (tab === 'HoSoRung_QC') return {cccd: baseCccd(o['Mã KH_CCCD']), hd: clean(o['Mã hợp đồng']), rung: '', phieu: ''};
+  return {cccd: baseCccd(o['SoCCCD']), hd: clean(o['Số hợp đồng']), rung: clean(o['Mã rừng']), phieu: ''};
+}
+
+/* ===== Tọa độ ===== */
+const VN = {lat: [8, 24], lng: [102, 110]};
+function parseCoord(v, kind) {
+  if (v === '' || v == null) return {ok: false, reason: 'trống'};
+  if (typeof v === 'number') return checkRange(v, kind, false, v);
+  const s = clean(v).toUpperCase();
+  const dec = s.replace(',', '.');
+  if (/^-?\d+(\.\d+)?$/.test(dec)) return checkRange(Number(dec), kind, false, v);
+  // Độ thập phân kèm chữ bán cầu: 15.605254N, 108.104989E
+  const h = /^(\d+(?:\.\d+)?)\s*([NSEW])$/.exec(dec);
+  if (h) return checkRange((h[2] === 'S' || h[2] === 'W' ? -1 : 1) * Number(h[1]), kind, true, v);
+  // Độ-phút-giây: 15.48.56.109N | 15°48'56.109"N | 15 48 56.109 N
+  const m = /^(\d{1,3})[°.\s]+(\d{1,2})['′.\s]+(\d{1,2}(?:[.,]\d+)?)["″]?\s*([NSEW])?$/.exec(s);
+  if (m && +m[2] < 60 && parseFloat(m[3].replace(',', '.')) < 60) {
+    let d = +m[1] + +m[2] / 60 + parseFloat(m[3].replace(',', '.')) / 3600;
+    if (m[4] === 'S' || m[4] === 'W') d = -d;
+    return checkRange(Math.round(d * 1e6) / 1e6, kind, true, v);
+  }
+  return {ok: false, reason: 'không đọc được "' + s + '"'};
+}
+function checkRange(n, kind, converted, raw) {
+  const [lo, hi] = VN[kind];
+  if (!(n >= lo && n <= hi)) {
+    const other = kind === 'lat' ? VN.lng : VN.lat;
+    return {ok: false, value: n, reason: (n >= other[0] && n <= other[1] ? 'có thể nhầm cột vĩ độ/kinh độ' : 'ngoài phạm vi Việt Nam') + ' (' + raw + ')'};
+  }
+  return {ok: true, value: n, converted, raw: String(raw)};
+}
+
+/* ===== Biển số ===== */
+const plateKey = v => clean(v).toUpperCase().replace(/[\s.\-]/g, '');
+const isPlate = v => /^\d{2}[A-Z]{1,2}\d?\d{3,5}$/.test(plateKey(v));
+
+/* ===== Lưu trữ trong SQLite ===== */
+const MIGRATION = db => db.exec(`
+  CREATE TABLE lookup_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL, detail TEXT NOT NULL, loaded_at TEXT NOT NULL, counts TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE lookup_rows (set_id INTEGER NOT NULL REFERENCES lookup_sets(id) ON DELETE CASCADE, tab TEXT NOT NULL, row_no INTEGER NOT NULL,
+    data TEXT NOT NULL, search TEXT NOT NULL, k_cccd TEXT NOT NULL, k_hd TEXT NOT NULL, k_rung TEXT NOT NULL, k_phieu TEXT NOT NULL);
+  CREATE INDEX idx_lr_tab ON lookup_rows(set_id, tab);
+  CREATE INDEX idx_lr_cccd ON lookup_rows(set_id, k_cccd);
+  CREATE INDEX idx_lr_hd ON lookup_rows(set_id, k_hd);
+  CREATE INDEX idx_lr_rung ON lookup_rows(set_id, k_rung);
+  CREATE INDEX idx_lr_phieu ON lookup_rows(set_id, k_phieu);`);
+
+class Lookup {
+  constructor(store) { this.db = store.db; }
+
+  setMeta(k, v) { this.db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('lk:' + k, JSON.stringify(v)); }
+  getMeta(k) { const r = this.db.prepare('SELECT value FROM meta WHERE key=?').get('lk:' + k); return r ? JSON.parse(r.value) : null; }
+  activeSet() { return this.db.prepare('SELECT * FROM lookup_sets WHERE active=1 ORDER BY id DESC LIMIT 1').get() || null; }
+
+  status() {
+    const a = this.activeSet();
+    return {active: a ? {source: a.source, detail: a.detail, loadedAt: a.loaded_at, counts: JSON.parse(a.counts)} : null, last: this.getMeta('lastAttempt')};
+  }
+
+  /* Nạp workbook: chỉ thay bản đang dùng khi đọc + kiểm tra thành công cả 3 tab. Lỗi thì giữ bản cũ. */
+  load(buf, source, detail) {
+    const at = new Date().toISOString();
+    let parsed;
+    try { parsed = parseWorkbook(buf); } catch (e) { parsed = {errors: ['Không đọc được file: ' + e.message]}; }
+    if (parsed.errors.length) {
+      this.setMeta('lastAttempt', {at, source, detail, ok: false, error: parsed.errors.join('; ')});
+      return {ok: false, errors: parsed.errors, status: this.status()};
+    }
+    const counts = {}; TAB_NAMES.forEach(t => { counts[t] = parsed.tabs[t].length; });
+    const ins = this.db.prepare('INSERT INTO lookup_rows(set_id,tab,row_no,data,search,k_cccd,k_hd,k_rung,k_phieu) VALUES(?,?,?,?,?,?,?,?,?)');
+    this.db.transaction(() => {
+      const id = this.db.prepare('INSERT INTO lookup_sets(source,detail,loaded_at,counts,active) VALUES(?,?,?,?,0)').run(source, detail, at, JSON.stringify(counts)).lastInsertRowid;
+      TAB_NAMES.forEach(t => parsed.tabs[t].forEach(o => {
+        const k = keysOf(t, o);
+        const search = fold(TABS[t].search.map(h => o[h]).join(' | ') + ' | ' + k.cccd);
+        ins.run(id, t, o._row, JSON.stringify(o), search, k.cccd, k.hd, k.rung, k.phieu);
+      }));
+      this.db.prepare('DELETE FROM lookup_sets WHERE id<>?').run(id);
+      this.db.prepare('UPDATE lookup_sets SET active=1 WHERE id=?').run(id);
+    })();
+    this.setMeta('lastAttempt', {at, source, detail, ok: true});
+    return {ok: true, counts, status: this.status()};
+  }
+
+  failAttempt(source, detail, error) {
+    this.setMeta('lastAttempt', {at: new Date().toISOString(), source, detail, ok: false, error});
+    return {ok: false, errors: [error], status: this.status()};
+  }
+
+  rows(where, args) {
+    const a = this.activeSet(); if (!a) return [];
+    return this.db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE set_id=? AND ' + where + ' ORDER BY tab, row_no').all(a.id, ...args)
+      .map(r => Object.assign(JSON.parse(r.data), {_tab: r.tab, _row: r.row_no}));
+  }
+
+  /* Tìm: mỗi từ khóa (không phân biệt dấu) phải có trong các cột tìm kiếm của tab */
+  search(q, tab, limit = 300) {
+    const a = this.activeSet(); if (!a) return {rows: [], total: 0};
+    const terms = fold(q).split(' ').filter(Boolean);
+    const conds = [], args = [a.id];
+    if (tab && TABS[tab]) { conds.push('tab=?'); args.push(tab); }
+    terms.forEach(t => { conds.push("search LIKE ? ESCAPE '\\'"); args.push('%' + t.replace(/[\\%_]/g, m => '\\' + m) + '%'); });
+    const where = 'set_id=?' + (conds.length ? ' AND ' + conds.join(' AND ') : '');
+    const total = this.db.prepare('SELECT COUNT(*) c FROM lookup_rows WHERE ' + where).get(...args).c;
+    const rows = this.db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE ' + where + ' ORDER BY tab, row_no LIMIT ' + (+limit | 0)).all(...args)
+      .map(r => { const o = JSON.parse(r.data); return {tab: r.tab, row: r.row_no, ...summary(r.tab, o)}; });
+    return {rows, total};
+  }
+
+  /* Dựng các kết quả (mỗi kết quả = 1 rừng đề xuất) từ 1 dòng tìm được */
+  candidates(tab, row) {
+    const hit = this.rows('tab=? AND row_no=?', [tab, row])[0];
+    if (!hit) return {ok: false, error: 'Không tìm thấy dòng ' + row + ' của tab ' + tab + ' trong bản tra cứu.'};
+    const k = keysOf(tab, hit);
+    if (!k.cccd) return {ok: false, error: 'Dòng ' + row + ' (' + tab + ') không có CCCD / mã khách hàng nên không xác định được chủ rừng.'};
+    if (!k.hd && tab !== 'ToaDoRung_QC') return {ok: false, error: 'Dòng ' + row + ' (' + tab + ') không có mã hợp đồng.'};
+    return {ok: true, hit: {tab, row}, ...this.build(k.cccd, k.hd, tab === 'ToaDoRung_QC' ? k.rung : '')};
+  }
+
+  build(cccd, hd, rungHint) {
+    const rung = this.rows('tab=? AND k_cccd=? AND k_hd=?', ['HoSoRung_QC', cccd, hd]);
+    const toado = this.rows('tab=? AND k_cccd=? AND k_hd=?', ['ToaDoRung_QC', cccd, hd]);
+    const keo = this.rows('tab=? AND k_cccd=? AND k_hd=?', ['HoSoKeo_QC', cccd, hd]);
+    const sameHdOther = this.db.prepare("SELECT DISTINCT k_cccd FROM lookup_rows WHERE set_id=? AND k_hd=? AND k_cccd<>'' AND k_cccd<>?").all(this.activeSet().id, hd, cccd).map(r => r.k_cccd);
+    const others = this.rows('tab=? AND k_cccd=? AND k_hd<>?', ['HoSoRung_QC', cccd, hd]).map(r => ({hd: clean(r['Mã hợp đồng']), diaChi: dedupe(r['ĐỊA CHỈ RỪNG']), hecta: r['HECTA'], tinhTrang: r['Tình trạng Hợp đồng'] || ''}));
+    const byRung = {};
+    toado.forEach(r => { const m = clean(r['Mã rừng']); (byRung[m] = byRung[m] || []).push(r); });
+    const rungCodes = Object.keys(byRung);
+    const R = rung[0] || null;
+    const warns = [];
+    if (rung.length > 1) warns.push('HoSoRung_QC có ' + rung.length + ' dòng cùng CCCD và hợp đồng ' + hd + ': dùng dòng ' + R._row + '.');
+    if (sameHdOther.length) warns.push('Số hợp đồng ' + hd + ' cũng được dùng cho ' + sameHdOther.length + ' CCCD khác: chỉ lấy dữ liệu đúng CCCD ' + cccd + '.');
+    const owner = ownerOf(cccd, R, toado[0], keo[0]);
+    const list = (rungCodes.length ? rungCodes : ['']).map(code => forestOf(code, byRung[code] || [], R, keo, rungCodes.length, hd));
+    if (rungHint) list.sort((a, b) => (b.maRung === rungHint) - (a.maRung === rungHint));
+    return {cccd, hd, owner, forests: list, others, warns};
+  }
+}
+
+function dedupe(v) {
+  const s = clean(v); if (!s) return '';
+  const parts = s.split(/\s*,\s*/); const half = parts.length / 2;
+  if (parts.length % 2 === 0 && parts.slice(0, half).join(', ') === parts.slice(half).join(', ')) return parts.slice(0, half).join(', ');
+  return [...new Set(parts)].join(', ') === s ? s : (parts.length === 2 && parts[0] === parts[1] ? parts[0] : s);
+}
+const src = (tab, row, col) => ({tab, row, col});
+function summary(tab, o) {
+  if (tab === 'HoSoKeo_QC') return {cccd: baseCccd(o['Mã khách hàng']), ten: stripSuffix(o['Họ và tên chủ rừng']), hd: clean(o['Mã hợp đồng']), maRung: '', diaChi: clean(o['ĐỊA CHỈ RỪNG']), phieu: clean(o['SỐ PHIẾU CÂN']), bien: clean(o['Biển số 1']), ngay: o['Ngày nhập'] || '', tan: o['Khối lượng (Tấn)']};
+  if (tab === 'HoSoRung_QC') return {cccd: baseCccd(o['Mã KH_CCCD']), ten: stripSuffix(o['Họ và tên chủ rừng']), hd: clean(o['Mã hợp đồng']), maRung: '', diaChi: dedupe(o['ĐỊA CHỈ RỪNG']), hecta: o['HECTA']};
+  return {cccd: baseCccd(o['SoCCCD']), ten: stripSuffix(o['HoVaTenChuRung']), hd: clean(o['Số hợp đồng']), maRung: clean(o['Mã rừng']), diaChi: clean(o['DiaChiRungTrong']), gps: clean(o['ID_GPS'])};
+}
+const field = (key, label, value, s, note) => ({key, label, value, src: s, note: note || ''});
+
+function ownerOf(cccd, R, T, K) {
+  const f = [];
+  const name = R ? stripSuffix(R['Họ và tên chủ rừng']) : T ? stripSuffix(T['HoVaTenChuRung']) : K ? stripSuffix(K['Họ và tên chủ rừng']) : '';
+  const nameSrc = R ? src('HoSoRung_QC', R._row, 'Họ và tên chủ rừng') : T ? src('ToaDoRung_QC', T._row, 'HoVaTenChuRung') : src('HoSoKeo_QC', K._row, 'Họ và tên chủ rừng');
+  if (name) f.push(field('ten', 'Họ và tên', name, nameSrc));
+  const rawId = R ? baseCccd(R['Mã KH_CCCD']) : T ? baseCccd(T['SoCCCD']) : cccd;
+  if (/^\d{12}$/.test(rawId)) f.push(field('cccd', 'CCCD', rawId, R ? src('HoSoRung_QC', R._row, 'Mã KH_CCCD') : src('ToaDoRung_QC', T._row, 'SoCCCD')));
+  if (R) {
+    if (R['Ngày cấp']) f.push(field('ngayCap', 'Ngày cấp CCCD', R['Ngày cấp'], src('HoSoRung_QC', R._row, 'Ngày cấp')));
+    if (R['Nơi cấp']) f.push(field('noiCap', 'Nơi cấp CCCD', clean(R['Nơi cấp']), src('HoSoRung_QC', R._row, 'Nơi cấp')));
+    if (R['Địa chỉ thường trú']) f.push(field('diaChi', 'Địa chỉ thường trú', clean(R['Địa chỉ thường trú']), src('HoSoRung_QC', R._row, 'Địa chỉ thường trú')));
+  } else if (T && T['ThuongTru']) f.push(field('diaChi', 'Địa chỉ thường trú', clean(T['ThuongTru']), src('ToaDoRung_QC', T._row, 'ThuongTru')));
+  const ref = [];
+  if (R && R['Địa chỉ hiện tại']) ref.push(field('diaChiHienTai', 'Địa chỉ hiện tại', clean(R['Địa chỉ hiện tại']), src('HoSoRung_QC', R._row, 'Địa chỉ hiện tại')));
+  if (R && clean(R['SĐT']) && clean(R['SĐT']) !== '0') ref.push(field('sdt', 'SĐT', clean(R['SĐT']), src('HoSoRung_QC', R._row, 'SĐT')));
+  return {code: cccd, fields: f, ref};
+}
+
+function forestOf(code, T, R, keo, nRung, hd) {
+  const f = [], ref = [], warns = [], T0 = T[0];
+  if (code) f.push(field('maRung', 'Mã rừng', code, src('ToaDoRung_QC', T0._row, 'Mã rừng')));
+  const diaR = R ? dedupe(R['ĐỊA CHỈ RỪNG']) : '';
+  if (diaR) f.push(field('diaDiem', 'Địa điểm khai thác (rừng)', diaR, src('HoSoRung_QC', R._row, 'ĐỊA CHỈ RỪNG')));
+  else if (T0 && clean(T0['DiaChiRungTrong'])) f.push(field('diaDiem', 'Địa điểm khai thác (rừng)', clean(T0['DiaChiRungTrong']), src('ToaDoRung_QC', T0._row, 'DiaChiRungTrong')));
+  // Diện tích: hai nguồn
+  const area = [];
+  if (R && typeof R['HECTA'] === 'number') area.push({value: R['HECTA'], label: R['HECTA'] + ' ha (HECTA)', src: src('HoSoRung_QC', R._row, 'HECTA')});
+  if (T0 && typeof T0['DienTich_m2'] === 'number') {
+    const ha = Math.round(T0['DienTich_m2'] / 10000 * 1e6) / 1e6;
+    area.push({value: ha, label: ha + ' ha (= ' + T0['DienTich_m2'] + ' m² ÷ 10.000)', src: src('ToaDoRung_QC', T0._row, 'DienTich_m2')});
+  }
+  const areaConflict = area.length === 2 && Math.abs(area[0].value - area[1].value) > 0.0001;
+  if (areaConflict) warns.push('Diện tích khác nhau giữa hai nguồn: ' + area.map(a => a.label).join(' và ') + '. Hãy chọn giá trị đúng.');
+  if (nRung > 1 && R && area[0] && area[0].src.tab === 'HoSoRung_QC') warns.push('HECTA trong HoSoRung_QC là của cả hợp đồng ' + hd + ' (' + nRung + ' rừng).');
+  if (R && typeof R['Định mức tấn/Ha'] === 'number') f.push(field('dinhMucTanHa', 'Định mức (tấn/ha)', R['Định mức tấn/Ha'], src('HoSoRung_QC', R._row, 'Định mức tấn/Ha')));
+  // Điểm GPS
+  const gps = T.map(r => {
+    const la = parseCoord(r['Latitude_Vĩ độ'], 'lat'), lo = parseCoord(r['Longtitude_Kinh độ'], 'lng');
+    const ok = la.ok && lo.ok;
+    return {id: clean(r['ID_GPS']) || String(r._row), row: r._row, lat: la.value, lng: lo.value, ok, converted: ok && (la.converted || lo.converted),
+      reason: ok ? '' : [la.ok ? '' : 'vĩ độ ' + la.reason, lo.ok ? '' : 'kinh độ ' + lo.reason].filter(Boolean).join('; '),
+      raw: clean(r['Latitude_Vĩ độ']) + ', ' + clean(r['Longtitude_Kinh độ']), noi: clean(r['Địa điểm tra GPS'] || '')};
+  });
+  // Giấy tờ nguồn gốc
+  const docs = [], seen = new Set();
+  T.forEach(r => {
+    const loaiSrc = clean(r['HoSoNguonGoc']), so = clean(r['SoGiayTo']), ngay = r['NgayGiayTo'] || '';
+    if (!loaiSrc && !so) return;
+    const key = fold(loaiSrc) + '|' + so; if (seen.has(key)) return; seen.add(key);
+    docs.push({...mapDoc(loaiSrc), so, ngayCap: ngay, src: src('ToaDoRung_QC', r._row, 'HoSoNguonGoc / SoGiayTo / NgayGiayTo')});
+  });
+  if (!docs.length && R && clean(R['Pháp lý rừng'])) [...new Set(clean(R['Pháp lý rừng']).split(/\s*,\s*/))].forEach(l => docs.push({...mapDoc(l), so: '', ngayCap: '', src: src('HoSoRung_QC', R._row, 'Pháp lý rừng')}));
+  // Thông tin hợp đồng: giữ để đối chiếu
+  if (R) {
+    [['Mã hợp đồng', 'Mã hợp đồng'], ['Ngày ký hợp đồng', 'Ngày ký hợp đồng'], ['Ngày thanh lý', 'Ngày thanh lý'], ['Mã thanh lý hợp đồng', 'Mã thanh lý hợp đồng'], ['Tình trạng Hợp đồng', 'Tình trạng hợp đồng'],
+      ['Định mức quy đổi Tấn/M3', 'Định mức quy đổi tấn/m³'], ['Quy cách đường kính', 'Quy cách đường kính'], ['Quy cách chiều dài', 'Quy cách chiều dài'], ['Phương án khai thác', 'Phương án khai thác'], ['Năm trồng', 'Năm trồng'], ['Tọa độ', 'Tọa độ (HoSoRung_QC)']]
+      .forEach(([c, l]) => { const v = R[c]; if (v !== '' && v != null) ref.push(field('hd:' + c, l, v, src('HoSoRung_QC', R._row, c))); });
+  } else if (T0) ref.push(field('hd:Số hợp đồng', 'Số hợp đồng', clean(T0['Số hợp đồng']), src('ToaDoRung_QC', T0._row, 'Số hợp đồng')));
+  if (T0 && T0['ID_RUNG'] && clean(T0['ID_RUNG']) !== code) ref.push(field('ID_RUNG', 'ID_RUNG (không dùng làm mã rừng)', clean(T0['ID_RUNG']), src('ToaDoRung_QC', T0._row, 'ID_RUNG')));
+  // Phiếu cân
+  const assignable = nRung <= 1;
+  if (!assignable && keo.length) warns.push('Hợp đồng ' + hd + ' có ' + nRung + ' rừng nhưng phiếu cân không ghi mã rừng: phiếu cân không được chọn sẵn, hãy chọn đúng phiếu của rừng này.');
+  const phieu = keo.map(r => {
+    const tan = typeof r['Khối lượng (Tấn)'] === 'number' ? r['Khối lượng (Tấn)'] : null;
+    const kg = typeof r['KL hàng (KG)'] === 'number' ? r['KL hàng (KG)'] : null;
+    let kl = null, issue = '';
+    if (tan > 0) kl = tan; else if (kg > 0) kl = Math.round(kg) / 1000;
+    if (tan > 0 && kg > 0 && Math.abs(kg / 1000 - tan) > 0.0005) issue = 'Khối lượng lệch: ' + tan + ' tấn và ' + kg + ' kg';
+    if (!(kl > 0)) issue = issue || 'Không có khối lượng hợp lệ';
+    const ngay = /^\d{2}\/\d{2}\/\d{4}$/.test(r['Ngày nhập']) ? r['Ngày nhập'] : '';
+    if (!ngay && !issue) issue = 'Không có ngày cân (Ngày nhập)';
+    const bienRaw = clean(r['Biển số 1'] || r['SỐ XE']);
+    return {soPhieu: clean(r['SỐ PHIẾU CÂN']), ngay, bienRaw, isPlate: isPlate(bienRaw), kl, donGia: r['Đơn giá'], thanhToan: r['Thanh toán'], issue, row: r._row, assignable};
+  });
+  return {maRung: code, fields: f, area, areaConflict, gps, docs, ref, phieu, warns};
+}
+function mapDoc(l) {
+  const f = fold(l);
+  if (/quyen su dung dat|qsdd|giay chung nhan/.test(f)) return {loai: 'Giấy chứng nhận QSDĐ', ten: ''};
+  if (/xac nhan/.test(f)) return {loai: 'Giấy xác nhận', ten: clean(l)};
+  return {loai: 'Khác', ten: clean(l) || 'Khác'};
+}
+
+module.exports = {Lookup, MIGRATION, TABS, TAB_NAMES, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};
