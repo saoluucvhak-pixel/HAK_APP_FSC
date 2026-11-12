@@ -204,3 +204,6 @@ BM-08 “Từ ngày … đến ngày …” và BM-10 “… Biên bản xác nh
 ## 28. Bản 1.4.20: mẫu trống để trắng hoàn toàn; BM-10 tách bảng chi tiết
 - Ở chế độ mẫu trống, mọi chỗ chờ số (kể cả tổng tiền, “Bằng chữ”, khối lượng và số chuyến ở BM-14) đều là ký tự màu trắng chiếm đúng bề rộng, không in chấm; bản in đè vẫn khớp vị trí (`e2e-inde`, kể cả so tọa độ chữ).
 - BM-10: trang 1 không còn bảng chi tiết (có dòng “Chi tiết từng xe: xem Bảng kê chi tiết thanh toán đính kèm” và tổng khối lượng, số chuyến); trang 2 là Bảng kê chi tiết thanh toán đính kèm in đầy đủ (bản chỉ-phần-số và bản đầy đủ). Mẫu trống chỉ có trang 1.
+
+## 29. Bản 1.4.21: thêm chỗ ký dưới các khối chữ ký
+Mọi khối chữ ký (hai bên, ba cột, một người ở nửa phải) thêm một dòng trống giữa “(Ký, ghi rõ họ tên)” và họ tên, để có chỗ ký rộng hơn. Đo trên bộ hồ sơ dày (8 người, 34 phiếu cân, tên dài): BM-02, BM-08 và BM-15 vốn vừa khít một trang nên khối ký rơi xuống trang 2; với số người ít hơn thì vẫn một trang. Thử thêm hai dòng thì còn rơi nhiều biểu mẫu hơn nên giữ một dòng.

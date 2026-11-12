@@ -978,7 +978,7 @@ function signTable(l, r) {
   return T([4677, 4678], [
     ['**' + l[0] + '**', '**' + r[0] + '**'],
     [{v: l[1], i: true}, {v: r[1], i: true}],
-    ['', ''], ['', ''],
+    ['', ''], ['', ''], ['', ''],
     ['**' + l[2] + '**', '**' + r[2] + '**']
   ], {borders: false, al: 'center', keep: true});
 }
@@ -1188,7 +1188,7 @@ function docNhatKy(rec, ex) {
     T([5045, 5046, 5046], [
       ['**ĐẠI DIỆN TỔ KHAI THÁC**', '**CHỦ RỪNG**', '**NGƯỜI GIÁM SÁT**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
-      ['', '', ''], ['', '', ''],
+      ['', '', ''], ['', '', ''], ['', '', ''],
       ['**' + ttName + '**', '**' + rsName + '**', '']
     ], {borders: false, al: 'center', keep: true})
   ];
@@ -1250,7 +1250,7 @@ function docSoTaiNan(rec, ex) {
     T([7568, 7569], [
       ['**ĐẠI DIỆN TỔ KHAI THÁC**', '**CHỦ RỪNG**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
-      ['', ''], ['', ''],
+      ['', ''], ['', ''], ['', ''],
       ['**' + ttName + '**', '**' + rsName + '**']
     ], {borders: false, al: 'center', keep: true})
   ];
@@ -1416,7 +1416,7 @@ function docKiemTraHienTruong(rec, ex) {
     T([5045, 5046, 5046], [
       ['**NGƯỜI KIỂM TRA**', '**ĐẠI DIỆN TỔ KHAI THÁC**', '**CHỦ RỪNG**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
-      ['', '', ''], ['', '', ''],
+      ['', '', ''], ['', '', ''], ['', '', ''],
       ['**' + (ex.ktNguoi || '') + '**', '**' + ttName + '**', '**' + rsName + '**']
     ], {borders: false, al: 'center', keep: true})
   ];
@@ -1487,7 +1487,7 @@ function docTTVC(rec, ex, g) {
     T([3118, 3118, 3119], [
       ['**NGƯỜI LẬP BẢNG**', '**ĐẠI DIỆN BÊN A**', '**ĐẠI DIỆN BÊN B**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
-      ['', '', ''], ['', '', ''],
+      ['', '', ''], ['', '', ''], ['', '', ''],
       ['**' + (ex.pcNguoiLap || '') + '**', '**' + rsName + '**', '**' + g.ten + '**']
     ], {borders: false, al: 'center', keep: true}),
     ...(ex._mode === 'trong' || !py.n ? [] : [   // Bảng kê chi tiết thanh toán đính kèm: trang riêng, in đầy đủ khi đã có phiếu cân
@@ -1578,7 +1578,7 @@ const SIGN_DATE = '<br>';
 function footerSign(title, name) {   // khối ký một người ở nửa phải trang: ngày, chức danh, ghi chú, họ tên cùng canh giữa trên một trục
   return [
     P('', {after: 60}),
-    T([7568, 7569], [['', {v: 'Đà Nẵng, ' + HAKHopDong.ngayTrong(), i: true}], ['', '**' + title + '**'], ['', {v: '(Ký, họ tên)', i: true}], ['', ''], ['', ''], ['', '**' + upper(name) + '**']], {borders: false, al: 'center', keep: true})
+    T([7568, 7569], [['', {v: 'Đà Nẵng, ' + HAKHopDong.ngayTrong(), i: true}], ['', '**' + title + '**'], ['', {v: '(Ký, họ tên)', i: true}], ['', ''], ['', ''], ['', ''], ['', '**' + upper(name) + '**']], {borders: false, al: 'center', keep: true})
   ];
 }
 function docChamCong(rec, ex) {
@@ -1635,7 +1635,7 @@ function docXNDaoTao(rec, ex) {
     T([7500, 7500], [
       ['**NGƯỜI ĐÀO TẠO**', '**ĐẠI DIỆN TỔ KHAI THÁC**'],
       ['(Ký, họ tên)', '(Ký, họ tên)'],
-      ['', ''], ['', ''],
+      ['', ''], ['', ''], ['', ''],
       ['**' + upper(ex.dtNguoi || rs.ten) + '**', '**' + upper(tt.ten) + '**']
     ], {borders: false, al: 'center', keep: true})
   ];
