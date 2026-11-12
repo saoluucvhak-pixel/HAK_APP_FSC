@@ -320,6 +320,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <tr><td>2. Lao động, an toàn</td><td>BM-02 BHLĐ, BM-05 chấm công, BM-06 DS tổ, BM-07 ATLĐ, BM-08 tiền công, BM-15 sổ tai nạn, BM-16 kiểm tra thiết bị</td></tr>
 <tr><td>3. Vận chuyển</td><td>BM-04 HĐVC, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển</td></tr>
 <tr><td>4. FSC, giám sát</td><td>BM-11 cam kết nguồn gốc, BM-12 cam kết lao động, BM-13 kiểm tra hiện trường, BM-17 thẩm định, BM-18 nhật ký khai thác, BM-19 phổ biến chính sách FSC</td></tr></table>
+<p><b>In hai đợt khi chưa xong rừng</b>: ở tab Xuất hồ sơ → Tất cả, <i>Đợt 1</i> gồm hồ sơ làm ngay (trừ BM-08, BM-09, BM-10, BM-14); khi rừng xong, nạp phiếu cân, nhập khối lượng thực tế rồi tải <i>Đợt 2</i> chỉ gồm BM-08, BM-09, BM-10, BM-14 để bổ sung vào bộ đã in.</p>
 <p><b>Số hợp đồng trên biểu mẫu</b>: nhập số đầy đủ (ví dụ <code>015/2025-KT</code>) thì được giữ nguyên; chỉ nhập phần số (<code>015</code>) thì phần mềm ghép năm lấy từ <b>ngày ký của chính hợp đồng đó</b>; thiếu ngày ký thì năm để trống và khung <i>Số hợp đồng đầy đủ sẽ in</i> ở tab Xuất hồ sơ nêu cần bổ sung ngày nào. BM-01, BM-14, BM-20 luôn cùng một số hợp đồng khai thác.</p>
 <p><b>📊 Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (5 mẫu: điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
 <h3>9. Sao lưu và khôi phục</h3>
@@ -2931,19 +2932,21 @@ function buildFiles(rec, kind) {
   ex._so = HAKHopDong.numbers(ex);                                                // MỘT quy tắc số hợp đồng cho BM-01, BM-04, BM-09, BM-10, BM-14, BM-20 (src/hopdong.js)
   const s = slug(rec.info.ten);
   const files = [];
-  if ((kind === 'gk' || kind === 'all') && !isDirect(rec.info)) files.push({path: '01_HD_Giao_khoan_' + s + '.docx', blocks: docGiaoKhoan(rec, ex)});
-  if ((kind === 'uq' || (kind === 'all' && gate(rec).canUQ)) && !isDirect(rec.info)) files.push({path: '20_Giay_uy_quyen_' + s + '.docx', blocks: docUyQuyen(rec, ex)});
-  if (kind === 'bhld' || kind === 'all') files.push({path: '02_BHLD_' + s + '.docx', blocks: docBHLD(rec, ex)});
-  if (kind === 'hdld' || kind === 'all') {
+  /* In làm HAI ĐỢT khi chưa xong khai thác: 'dau' = hồ sơ làm được ngay (hợp đồng, lao động, vận chuyển, FSC...), 'cuoi' = phần chỉ làm được khi xong rừng (tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10, nghiệm thu BM-14); 'all' = tất cả một lần */
+  const PHAN_CUOI = ['tc', 'nttl', 'xnvc', 'ttvc'], dau = kind === 'all' || kind === 'dau';
+  if ((kind === 'gk' || dau) && !isDirect(rec.info)) files.push({path: '01_HD_Giao_khoan_' + s + '.docx', blocks: docGiaoKhoan(rec, ex)});
+  if ((kind === 'uq' || (dau && gate(rec).canUQ)) && !isDirect(rec.info)) files.push({path: '20_Giay_uy_quyen_' + s + '.docx', blocks: docUyQuyen(rec, ex)});
+  if (kind === 'bhld' || dau) files.push({path: '02_BHLD_' + s + '.docx', blocks: docBHLD(rec, ex)});
+  if (kind === 'hdld' || dau) {
     hdldList(rec).forEach((cn, i) => {
       files.push({path: '03_HDLD/' + String(i + 1).padStart(2, '0') + '_' + slug(cn.ten) + '.docx', blocks: docHDLD(rec, ex, cn)});
     });
   }
-  if (kind === 'hdvc' || kind === 'all') {
+  if (kind === 'hdvc' || dau) {
     groupsDX(rec).forEach(g => files.push({path: '04_HDVC/' + slug(g.ten) + '.docx', blocks: docHDVC(rec, ex, g)}));
   }
-  const want = k => kind === k || kind === 'all';
-  const wantPC = k => kind === k || (kind === 'all' && gate(rec).canPC);
+  const want = k => kind === k || kind === 'all' || (kind === 'dau' && !PHAN_CUOI.includes(k)) || (kind === 'cuoi' && PHAN_CUOI.includes(k));
+  const wantPC = k => kind === k || ((kind === 'all' || kind === 'cuoi') && gate(rec).canPC);
   if (want('tdcr')) files.push({path: '17_Phieu_tham_dinh_chu_rung_' + s + '.docx', blocks: docThamDinh(rec, ex)});
   if (want('nkkt')) files.push({path: '18_Nhat_ky_khai_thac_' + s + '.docx', blocks: docNhatKy(rec, ex), land: true});
   if (want('fsc')) files.push({path: '19_BB_pho_bien_chinh_sach_FSC_' + s + '.docx', blocks: docPhoBienFSC(rec, ex)});
@@ -3037,7 +3040,7 @@ async function exportKind(kind, idx) {
   const rec = curRec();
   if (!rec) return;
   const g = gate(rec);
-  const ok = {gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length}[kind];
+  const ok = {gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD}[kind];
   if (!ok) { note('Hồ sơ còn lỗi hoặc thiếu dữ liệu, chưa xuất. Xem tab Xuất hồ sơ.', 'err'); return; }
   const files = buildFiles(rec, kind);
   const pick = idx != null ? files.filter((f, i) => i === idx) : files;
@@ -3049,7 +3052,8 @@ async function exportKind(kind, idx) {
   const z = new JSZip();
   for (const f of pick) z.file(f.path, await makeDocx(f.blocks, docOpts(f, rec)));
   const blob = await z.generateAsync({type: 'blob'});
-  download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + kind + '.zip');
+  download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung'}[kind] || kind) + '.zip');
+  if (kind === 'cuoi' && !g.canPC) note('Đợt 2 đã tải, nhưng CHƯA có BM-09 (xác nhận khối lượng) và BM-10 (thanh toán vận chuyển) vì chưa đủ phiếu cân hợp lệ. Nạp phiếu cân ở tab Vận chuyển rồi tải đợt 2 lần nữa.', 'warn');
 }
 
 /* ========== Trang tổng quan ========== */
@@ -3568,6 +3572,9 @@ function panelXuat(rec) {
     '<div class="tabs" style="margin-top:6px">' + TABS.map(([k, l]) => '<button class="' + (cur === k ? 'on' : '') + '" data-xtab="' + k + '">' + l + '</button>').join('') + '</div>' +
     '<p class="mut" style="margin:0 0 10px">' + INTRO[cur] + '</p>' +
     (cur === 'all' ? S.hd + S.ld + S.vc + S.fsc : S[cur]) +
+    '<div class="card"><h3 style="margin-top:0">In làm hai đợt khi chưa xong khai thác</h3><p class="mut" style="margin:0 0 8px">Chưa có phiếu cân hoặc chưa nghiệm thu thì in <b>đợt 1</b> trước; khi rừng xong, cập nhật phiếu cân và khối lượng thực tế rồi in <b>đợt 2</b> để bổ sung đúng các biểu mẫu còn thiếu (mỗi biểu mẫu là một file Word riêng nên thay hoặc chèn vào bộ hồ sơ đã in rất dễ).</p>' +
+      '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('⬇ Tải đợt 1', 'dau', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>' +
+      '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') + '</div></div>' + btn('⬇ Tải đợt 2', 'cuoi', null, g.canBHLD) + '</div></div>' +
     '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung.</div></div>' + btn('⬇ Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>';
 }
 
