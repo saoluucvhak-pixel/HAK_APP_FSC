@@ -108,7 +108,7 @@ test('chuyển sang máy mới: tạo chủ mới, đủ dữ liệu, tổng t�
   const pkg = L.parsePackage(JSON.stringify(L.seal(L.exportLot(src.load(), 'o1', 'fa'), sha)), sha).pkg;
   const dst = open(tmp(), 'd.sqlite'); dst.save({v: 2, dinhMuc: {'Tổ trưởng': {qa: '2 bộ (máy đích)'}}, rs: {}, congTy: {}});
   const pv = dst.previewLot(pkg); assert.strictEqual(pv.chu.state, 'moi'); assert.strictEqual(pv.lo.state, 'moi');
-  assert.ok(pv.dungChung.khac.some(x => /Tổ trưởng/.test(x))); assert.ok(pv.dungChung.them.some(x => /92c12345/.test(x))); assert.ok(pv.ghiChu.some(x => /CÔNG TY MUA/.test(x)));
+  assert.ok(pv.dungChung.khac.some(x => /Tổ trưởng/.test(x.text) && /DÙNG BẢN CỦA MÁY ĐÍCH/.test(x.text))); assert.ok(pv.dungChung.them.some(x => /92c12345/.test(x.text))); assert.ok(pv.ghiChu.some(x => /CÔNG TY MUA/.test(x)));
   const r = dst.applyLot(pkg); assert.ok(r.doi); const db = dst.load();
   const oid = Object.keys(db.rs)[0]; assert.strictEqual(db.rs[oid].info.cccd, '049000000001');
   const f = Object.values(db.rs[oid].forests)[0]; assert.deepStrictEqual(f, base().rs.o1.forests.fa);
@@ -151,4 +151,61 @@ test('file hỏng, sai loại, sai phiên bản, thiếu mã lô hoặc chủ, b
   const badNc = clone(good); badNc.lo.nc = 'x'; assert.match(L.parsePackage(badNc).error, /bị hỏng/);
   // bản sao lưu toàn bộ không đi qua luồng lô và ngược lại
   assert.ok(!P({v: 2, rs: {}}).ok);
+});
+
+test('giữ cả hai: bắt buộc xác nhận mã mới, kiểm tra cùng quy tắc ở xem trước và lúc ghi (lô đã có, lô khác trong file, mã mới trùng nhau)', () => {
+  const d = tmp(), s = open(d); s.save(base());
+  const file = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'CR-1', ten: 'CHỦ MỘT', cccd: '049000000001'}, forests: {fa: lot('fa', 'LO-A', 99), fz: lot('fz', 'LO-Z', 5)}}}};
+  let pv = s.previewImport(file, {strategy: 'both'}); assert.strictEqual(pv.plan.nhanBan, 1); assert.ok(!pv.plan.ok); assert.match(pv.plan.maLoi[0].moTa, /Cần xác nhận mã mới/);
+  assert.strictEqual(pv.plan.owners[0].forests[0].maGoiY, 'LO-A-2', 'có gợi ý mã');
+  const before = JSON.stringify(s.load());
+  const bad = {'chưa nhập': undefined, 'trùng mã cũ của chính lô': 'lo-a', 'trùng lô khác trên máy': ' LO-B ', 'trùng lô khác của chủ khác': 'LO-C', 'trùng lô mới trong file': 'LO-Z'};
+  for (const [name, ma] of Object.entries(bad)) {
+    const opts = {strategy: 'both', maMoi: ma === undefined ? {} : {fa: ma}};
+    assert.ok(!s.previewImport(file, opts).plan.ok, 'xem trước phải từ chối: ' + name);
+    assert.throws(() => s.applyImport(file, 'both', opts), /mã mới/, 'lúc ghi phải từ chối: ' + name);
+  }
+  assert.strictEqual(JSON.stringify(s.load()), before, 'từ chối thì không ghi, không đổi gì');
+  const ok = {strategy: 'both', maMoi: {fa: 'LO-A-BAN-SAO'}}; assert.ok(s.previewImport(file, ok).plan.ok);
+  s.applyImport(file, 'both', ok);
+  const db = s.load(), lots = Object.values(db.rs.o1.forests), clone2 = lots.find(f => f.info.maRung === 'LO-A-BAN-SAO');
+  assert.ok(clone2 && clone2.id !== 'fa' && clone2.pc[0].kl === 99); assert.ok(db.rs.o1.forests.fz, 'lô mới trong file được thêm');
+  assert.strictEqual(L.duplicateGroups(db).length, 0, 'không còn mã trùng');
+  assert.deepStrictEqual(db.rs.o1.forests.fa, base().rs.o1.forests.fa, 'lô gốc giữ nguyên');
+});
+
+test('đổi mã lô: dòng nhân công, xe, phiếu cân mang mã cũ đổi theo; dòng mang mã khác được báo, không tự đổi', () => {
+  const f = lot('fa', 'LO-A', 10); f.nc[0].maRung = 'LO-A'; f.dx[0].maRung = 'lo-a'; f.pc[0].maRung = 'LO-A'; f.pc[1].maRung = 'LO-KHAC';
+  const r = L.renameLot(f, 'LO-A-2');
+  assert.strictEqual(r.forest.info.maRung, 'LO-A-2'); assert.deepStrictEqual(r.doi, {nc: 1, dx: 1, pc: 1});
+  assert.strictEqual(r.forest.nc[0].maRung, 'LO-A-2'); assert.strictEqual(r.forest.dx[0].maRung, 'LO-A-2'); assert.strictEqual(r.forest.pc[0].maRung, 'LO-A-2'); assert.strictEqual(r.forest.pc[1].maRung, 'LO-KHAC');
+  assert.strictEqual(r.khac.length, 1); assert.strictEqual(f.info.maRung, 'LO-A', 'không đổi bản gốc');
+  assert.strictEqual(r.forest.pc.length, 2); assert.deepStrictEqual(r.forest.pc.map(p => p.soPhieu), f.pc.map(p => p.soPhieu), 'phiếu vẫn thuộc đúng lô, không mất');
+});
+
+test('giữ cả hai → xác nhận mã mới → sao lưu lô mới → khôi phục đúng lô mới: lô gốc và lô khác giữ nguyên', () => {
+  const s = open(tmp()); const b = base(); b.rs.o1.forests.fa.nc[0].maRung = 'LO-A'; b.rs.o1.forests.fa.pc[0].maRung = 'LO-A'; s.save(b);
+  const file = {v: 2, rs: {o1: {id: 'o1', info: b.rs.o1.info, forests: {fa: b.rs.o1.forests.fa}}}};
+  s.applyImport(file, 'both', {maMoi: {fa: 'LO-A2'}});
+  let db = s.load(); const nid = Object.keys(db.rs.o1.forests).find(k => db.rs.o1.forests[k].info.maRung === 'LO-A2'); assert.ok(nid && nid !== 'fa');
+  assert.strictEqual(db.rs.o1.forests[nid].nc[0].maRung, 'LO-A2', 'dòng nhân công đổi theo mã mới');
+  const pkg = L.parsePackage(JSON.stringify(L.seal(L.exportLot(db, 'o1', nid), sha)), sha).pkg, pv = s.previewLot(pkg);
+  assert.ok(pv.ok, 'không còn mâu thuẫn ID/mã: ' + JSON.stringify(pv.conflicts)); assert.strictEqual(pv.lo.existingId, nid, 'chỉ về đúng lô mới');
+  db.rs.o1.forests[nid].pc.push(pc('SUA', 1)); s.save(db); const before = s.load();
+  assert.ok(s.applyLot(pkg, 'thay').doi); const after = s.load();
+  assert.deepStrictEqual(after.rs.o1.forests[nid], pkg.lo, 'lô mới về đúng bản sao lưu');
+  assert.deepStrictEqual(after.rs.o1.forests.fa, before.rs.o1.forests.fa, 'lô gốc giữ nguyên'); assert.deepStrictEqual(after.rs.o1.forests.fb, before.rs.o1.forests.fb); assert.deepStrictEqual(after.rs.o2, before.rs.o2);
+});
+
+test('dữ liệu cũ đã có mã trùng: liệt kê đầy đủ các lô khớp; khôi phục dừng đến khi đối chiếu (đổi mã); không tự sửa dữ liệu', () => {
+  const s = open(tmp()), b = base(); b.rs.o2.forests.fd = lot('fd', 'lo-a', 7); b.rs.o1.forests.fe = lot('fe', ' LO-A', 3); s.save(b);
+  const groups = L.duplicateGroups(s.load()); assert.strictEqual(groups.length, 1); assert.strictEqual(groups[0].lots.length, 3, 'đủ ba lô khớp');
+  assert.deepStrictEqual(groups[0].lots.map(x => x.forest).sort(), ['fa', 'fd', 'fe'], 'liệt kê đủ ID các lô khớp');
+  const pkg = L.parsePackage(L.exportLot(base(), 'o1', 'fa')).pkg, pv = s.previewLot(pkg);
+  assert.ok(!pv.ok); assert.match(pv.conflicts[0].moTa, /trùng ở 3 lô/); assert.strictEqual(pv.conflicts[0].cacLo.length, 3);
+  const snap = JSON.stringify(s.load()); assert.throws(() => s.applyLot(pkg, 'thay'), /đối chiếu/); assert.strictEqual(JSON.stringify(s.load()), snap, 'không đổi');
+  assert.throws(() => s.applyImport({v: 2, rs: {o1: {id: 'o1', info: b.rs.o1.info, forests: {fa: b.rs.o1.forests.fa}}}}, 'overwrite'), /mâu thuẫn/);
+  // đối chiếu: đổi mã hai lô thừa rồi khôi phục được
+  const db = s.load(); ['fd', 'fe'].forEach((id, i) => { const o = id === 'fd' ? 'o2' : 'o1'; db.rs[o].forests[id] = L.renameLot(db.rs[o].forests[id], 'LO-DOI-' + i).forest; }); s.save(db);
+  assert.strictEqual(L.duplicateGroups(s.load()).length, 0); assert.ok(s.previewLot(pkg).ok);
 });

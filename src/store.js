@@ -143,10 +143,10 @@ class Store {
   }
 
   /* Xem trước nhập bản sao lưu toàn bộ: số liệu + từng chủ/lô sẽ được THÊM, THAY hay GIỮ. Dùng cùng planImport với bước ghi (src/lorung.js). */
-  previewImport(incoming) {
+  previewImport(incoming, opts) {
     const cur = this.load();
     if (!incoming || typeof incoming.rs !== 'object') throw new Error('File không đúng định dạng sao lưu.');
-    const plan = LoRung.planImport(cur, incoming);
+    const plan = LoRung.planImport(cur, incoming, opts);
     const dup = [];
     plan.owners.forEach(o => {
       if (o.state === 'trung') dup.push({kind: 'owner', incoming: o.id, existing: o.existingId, ten: o.ten, forests: o.forests.length});
@@ -157,7 +157,7 @@ class Store {
 
   /* Nhập bản sao lưu toàn bộ. strategy: 'replace' thay toàn bộ dữ liệu | 'skip' giữ bản hiện có, chỉ thêm mới | 'overwrite' thay ĐÚNG các lô trùng, giữ lô khác của chủ | 'both' giữ cả hai.
    * Hồ sơ mâu thuẫn (ID, mã lô, chủ rừng chỉ về các bản ghi khác nhau) → dừng, không ghi. Luôn sao lưu file SQLite trước; ghi trong một giao dịch nên lỗi thì dữ liệu cũ còn nguyên. */
-  applyImport(incoming, strategy) {
+  applyImport(incoming, strategy, opts) {
     if (!incoming || typeof incoming.rs !== 'object') throw new Error('File không đúng định dạng sao lưu.');
     const cur = this.load();
     let next;
@@ -166,7 +166,7 @@ class Store {
       if (!('congTy' in incoming)) next = Object.assign({}, incoming, {congTy: cur.congTy || {}});   // bản sao lưu cũ chưa có danh mục công ty: không xóa danh mục của máy
     } else {
       if (!['skip', 'overwrite', 'both'].includes(strategy)) throw new Error('Cách xử lý không hợp lệ: ' + strategy);
-      next = LoRung.mergeImport(cur, incoming, strategy).next;     // ném lỗi nếu có hồ sơ mâu thuẫn, trước khi sao lưu hay ghi
+      next = LoRung.mergeImport(cur, incoming, strategy, null, opts || {}).next;     // ném lỗi nếu có hồ sơ mâu thuẫn, trước khi sao lưu hay ghi
       // Danh mục công ty mua hàng: gộp theo id (skip: giữ bản trên máy; overwrite/both: bản trong file thay bản trùng id; công ty mới luôn được thêm)
       next.congTy = {...(cur.congTy || {})};
       Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || strategy === 'overwrite') next.congTy[id] = c; });

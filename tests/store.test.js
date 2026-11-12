@@ -56,7 +56,7 @@ test('nhập: skip / overwrite / both / replace, luôn có bản sao lưu trư�
   inc.rs.r1.forests.f1.info.tenRung = 'Rừng 1 (file)';
   s.applyImport(inc, 'overwrite'); assert.strictEqual(s.load().rs.r1.forests.f1.info.tenRung, 'Rừng 1 (file)');   // thay đúng lô trùng
   assert.strictEqual(s.load().rs.r1.info.ten, 'NGUYỄN A', 'hồ sơ chủ rừng trên máy được giữ');
-  const before = Object.keys(s.load().rs.r1.forests).length; s.applyImport(inc, 'both'); assert.strictEqual(Object.keys(s.load().rs.r1.forests).length, before + 2, 'giữ cả hai: lô trong file thêm bằng ID mới vào đúng chủ');
+  const before = Object.keys(s.load().rs.r1.forests).length; assert.throws(() => s.applyImport(inc, 'both'), /mã mới/); s.applyImport(inc, 'both', {maMoi: {f1: 'R-1-B', f2: 'R-2-B'}}); assert.strictEqual(Object.keys(s.load().rs.r1.forests).length, before + 2, 'giữ cả hai: lô trong file thêm bằng ID mới vào đúng chủ');
   r = s.applyImport({v: 2, rs: {}}, 'replace'); assert.strictEqual(r.counts.owners, 0);
 });
 

@@ -565,7 +565,7 @@ function infoErrors(info, selfId) {
 function forestErrors(info, fid) {
   const e = [];
   if (!info.maRung) e.push('Thiếu Mã rừng');
-  else if (Object.values(db.rs).some(o => Object.entries(o.forests || {}).some(([id, f]) => id !== fid && f.info.maRung === info.maRung))) e.push('Mã rừng đã tồn tại');
+  else { const why = HAKLoRung.maTrung(db, info.maRung, fid); if (why) e.push(why); }   // quy tắc mã lô duy nhất dùng chung (src/lorung.js): không phân biệt hoa thường, liệt kê đủ các lô đang dùng mã
   if (!info.diaDiem) e.push('Thiếu Địa điểm khai thác');
   if (info.lat === 'x') e.push('Vĩ độ không phải là số');
   if (info.lng === 'x') e.push('Kinh độ không phải là số');
@@ -1767,6 +1767,62 @@ function panelTienDo(job) {
     L.map(x => '<div class="' + (x.ok ? '' : x.warn ? 'wn' : 'no') + '"><b>' + (x.ok ? '✓' : x.warn ? '!' : '✕') + '</b><span>' + esc(x.label) + (x.hint ? '<small>' + esc(x.hint) + '</small>' : '') + '</span></div>').join('') + '</div></div>';
 }
 
+/* ========== Kiểm tra hồ sơ trước khi xuất: dùng lại gate/checklist FSC, nhóm thành “chặn xuất” và “cần đối chiếu”, kèm số phiếu/trường và liên kết đến đúng tab ========== */
+function exportCheck(job) {
+  const g = gate(job), ex = job.exp || {}, i = job.info, items = [];
+  const add = (kind, nhom, text, ref, go) => items.push({kind, nhom, text, ref: ref || '', go: go || {ftab: 'finfo'}});
+  const pcRow = n => (job.pc || []).find(r => String(r._row) === String(n));
+  // thông tin chủ rừng, rừng, đơn giá
+  infoErrors(i, job.id).forEach(e => add('chan', 'Thông tin chủ rừng', e, '', {tab: 'info'}));
+  forestErrors(i, job.fid).forEach(e => add('chan', 'Thông tin rừng', e, '', {ftab: 'finfo'}));
+  giaErrors(i).forEach(e => add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}));
+  // mã lô trùng ở dữ liệu cũ: liệt kê đủ các lô khớp để đối chiếu, không tự sửa
+  HAKLoRung.duplicateGroups(db).filter(x => x.lots.some(l => l.forest === job.fid)).forEach(x => add('chan', 'Mã lô trùng (dữ liệu cũ)', 'Mã “' + x.ma + '” đang dùng cho ' + x.lots.length + ' lô: ' + x.lots.map(l => l.lo + ' (chủ ' + l.chu + '; ' + l.nc + ' nhân công, ' + l.dx + ' xe, ' + l.pc + ' phiếu cân)').join('; ') + '. Đổi mã các lô thừa ở tab Thông tin rừng, dữ liệu không bị đổi trước khi bạn xác nhận.', x.ma, {ftab: 'finfo'}));
+  // nhân công, định mức, tuổi
+  g.nc.errs.forEach(e => add('chan', 'Nhân công', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'nc'}));
+  g.normErrs.forEach(e => add('chan', 'Định mức BHLĐ', e, '', {view: 'norm'}));
+  if (job.nc.length && minorsOf(job).length) add('chan', 'Nhân công', 'Có người dưới 18 tuổi: ' + minorsOf(job).map(r => r.ten).join(', '), '', {ftab: 'nc'});
+  // vận chuyển
+  g.dx.errs.forEach(e => add('chan', 'Đội xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
+  g.dx.warns.forEach(e => add('doi', 'Giấy tờ xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
+  const vcm = (i.vanChuyen || {}).mode;
+  if (vcm === 'tanDoan') add('chan', 'Cước theo bậc cự ly (hồ sơ cũ)', 'Hồ sơ cũ còn dùng cước “theo bậc cự ly” (cách tính đã bỏ). Dữ liệu các bậc vẫn được giữ; hãy chọn lại cước cố định hoặc tấn/km.', 'Cách tính cước', {ftab: 'dx'});
+  else g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'dx'}));
+  // phiếu cân: thiếu/sai ngày, trùng, biển số chưa ghép, khối lượng…
+  g.pc.errs.forEach(e => {
+    const m = /^Dòng (\d+): (.*)$/.exec(e), r = m && pcRow(m[1]), so = r ? (r.soPhieu || '(không số)') : '', msg = m ? m[2] : e;
+    const nhom = /ngày|dd\/mm|không có thật/i.test(msg) ? 'Phiếu cân: ngày thiếu hoặc sai' : /trùng/i.test(msg) ? 'Phiếu cân trùng số' : /Biển|biển/.test(msg) ? 'Phiếu cân: biển số chưa ghép với xe' : 'Phiếu cân';
+    add('chan', nhom, m ? 'Dòng ' + m[1] + ': ' + msg : msg, so ? 'Phiếu ' + so : '', {ftab: 'dx', focus: 'pc'});
+  });
+  g.pc.warns.forEach(e => add('doi', /lệch/.test(e) ? 'Chênh lệch sản lượng' : 'Phiếu cân', e, '', {ftab: 'dx', focus: 'pc'}));
+  // điểm đến theo địa chỉ giao đã chốt
+  const dd = destOf(job), dr = HAKMuaHang.drift(i, db.congTy), mis = HAKMuaHang.mismatches(job.pc || [], dd.src === 'congty' ? dd : null);
+  if (!dd.text) add('doi', 'Địa chỉ giao hàng', 'Chưa chọn địa chỉ giao hàng đã chốt: BM-04, BM-09, BM-10 sẽ in dòng chấm.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
+  else if (dd.src === 'thucong') add('doi', 'Địa chỉ giao hàng', 'Đang dùng điểm đến nhập tay cũ “' + dd.text + '”. Chọn địa chỉ giao của công ty để thay (chỉ đổi sau khi bạn xác nhận).', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
+  if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
+  if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
+  if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || typeof i.cuLy !== 'number')) add('doi', 'Cự ly vận chuyển', typeof i.cuLy !== 'number' ? 'Cước tấn/km cần cự ly nhưng chưa nhập.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + i.cuLy + ' km). Phần mềm không tự sửa cự ly hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  // các mục checklist FSC còn lại chưa được xét ở trên
+  const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo chức danh', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
+  const goOf = lb => /Tọa độ|Giấy tờ pháp lý|Thời gian/.test(lb) ? {ftab: 'finfo'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo'};
+  checklistRung(job).filter(x => !x.ok && !covered.includes(x.label)).forEach(x => add(x.warn ? 'doi' : 'doi', 'Checklist FSC', x.label + (x.hint ? ': ' + x.hint : ''), x.label, goOf(x.label)));
+  // thiếu dữ liệu cơ bản (chưa nạp)
+  if (!job.nc.length) add('doi', 'Nhân công', 'Chưa nạp nhân công của lô.', '', {ftab: 'nc'});
+  if (!job.dx.length) add('doi', 'Đội xe', 'Chưa nạp đội xe của lô.', '', {ftab: 'dx'});
+  if (!(job.pc || []).length) add('doi', 'Phiếu cân', 'Chưa nạp phiếu cân của lô.', '', {ftab: 'dx', focus: 'pc'});
+  return {items, chan: items.filter(x => x.kind === 'chan'), doi: items.filter(x => x.kind === 'doi'), g};
+}
+function panelKiemTra(job) {
+  const c = exportCheck(job), nhom = list => [...new Set(list.map(x => x.nhom))];
+  const block = (title, cls, list) => !list.length ? '' : '<div class="card"><h3 style="margin:0 0 8px">' + title + ' (' + list.length + ')</h3>' + nhom(list).map(n => '<div style="margin-bottom:10px"><b>' + esc(n) + '</b>' +
+    list.filter(x => x.nhom === n).map(x => '<div class="row" style="align-items:flex-start;gap:8px;margin-top:4px"><span class="pill ' + cls + '">' + (x.ref ? esc(x.ref) : '•') + '</span><span style="flex:1">' + esc(x.text) + '</span><button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(x.go)) + '">Mở để sửa</button></div>').join('') + '</div>').join('') + '</div>';
+  const ok = !c.chan.length;
+  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Kiểm tra hồ sơ trước khi xuất</h3><span class="pill ' + (ok ? 'ok' : 'err') + '">' + (ok ? 'Không có mục chặn xuất' : c.chan.length + ' mục chặn xuất') + '</span></div>' +
+    '<p class="mut" style="margin:6px 0 0">Dùng lại checklist FSC và quy tắc kiểm tra của phần mềm. <b>Chặn xuất</b>: làm nút xuất hồ sơ bị khóa hoặc hồ sơ sai. <b>Cần đối chiếu</b>: vẫn xuất được nhưng nên kiểm tra. Bấm “Mở để sửa” để đến đúng tab.</p>' +
+    (c.items.length ? '' : '<div class="msg ok">Hồ sơ lô này đạt mọi kiểm tra.</div>') + '</div>' +
+    block('Chặn xuất', 'err', c.chan) + block('Cần đối chiếu', 'warn', c.doi);
+}
+
 function panelRung(own) {
   const fl = forestList(own);
   const list = '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Các rừng của chủ rừng</h3><button class="btn sm" data-act="newForest">+ Rừng mới</button></div>' +
@@ -1777,11 +1833,11 @@ function panelRung(own) {
   const f = curForest();
   if (!f) return list;
   const job = curRec();
-  const ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['xuat', 'Xuất hồ sơ']];
+  const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'], ['xuat', 'Xuất hồ sơ']];
   return list +
     '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">⬇ Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
     panelTienDo(job) + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
-    (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(job) : ftab === 'dx' ? panelDX(job) + panelPhieuCan(job) : panelXuat(job));
+    (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(job) : ftab === 'dx' ? panelDX(job) + panelPhieuCan(job) : ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu</b>.' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + panelXuat(job));
 }
 
 function panelForest(f) {
@@ -2154,7 +2210,7 @@ function newForest() {
   const o = curOwner(); if (!o) return;
   const n = forestList(o).length + 1, base = (o.info.ma || 'CR') + '-R';
   let k = n, code = base + k;
-  while (Object.values(db.rs).some(x => Object.values(x.forests || {}).some(f => f.info.maRung === code))) code = base + (++k);
+  while (HAKLoRung.lotsByMa(db, code).length) code = base + (++k);
   const fid = newId('f');
   o.forests[fid] = {id: fid, info: {maRung: code, tenRung: 'Rừng ' + k, diaDiem: '', lat: null, lng: null, dienTich: null,
     dinhMucTanHa: null, cuLy: null, tuNgay: '', denNgay: '', donGia: null, giayTo: []},
@@ -2209,9 +2265,16 @@ function saveForest(form) {
   const info = Object.assign({}, f.info, readForest(form));
   const errs = forestErrors(info, f.id);
   if (errs.length) { formMsg(form, 'Chưa lưu: ' + errs.join('; ')); return; }
-  f.info = info;
+  const maCu = trim(f.info.maRung);
+  let msg = 'Đã lưu thông tin rừng.', kind = 'ok';
+  if (maCu && maCu !== info.maRung) {   // đổi mã lô: nhân công, xe, phiếu cân mang mã cũ đổi theo để dữ liệu vẫn thuộc đúng lô
+    const rn = HAKLoRung.renameLot(f, info.maRung);   // f còn mã cũ: các dòng mang mã cũ đổi theo mã mới
+    f.info = info; f.nc = rn.forest.nc; f.dx = rn.forest.dx; f.pc = rn.forest.pc;
+    msg = 'Đã đổi mã lô ' + maCu + ' → ' + info.maRung + ' và đổi theo ' + rn.doi.nc + ' dòng nhân công, ' + rn.doi.dx + ' xe, ' + rn.doi.pc + ' phiếu cân.' + (rn.khac.length ? ' Còn ' + rn.khac.length + ' dòng mang mã khác (' + [...new Set(rn.khac.map(x => x.ma))].join(', ') + '), không tự đổi: kiểm tra ở tab Nhân công / Vận chuyển.' : '');
+    if (rn.khac.length) kind = 'warn';
+  } else f.info = info;
   persist();
-  note('Đã lưu thông tin rừng.');
+  note(msg, kind);
 }
 
 function saveLuong(form) {
@@ -2374,6 +2437,25 @@ async function backupAll() {
   download(blob, 'HoSoKhaiThac_SaoLuu_' + new Date().toISOString().slice(0, 10) + '.json');
 }
 const LO_ST = {moi: ['ok', 'THÊM'], trung: ['warn', 'TRÙNG']};
+/* Giữ cả hai: mỗi lô trùng phải có mã mới; gợi ý sẵn, kiểm tra cùng quy tắc với lúc ghi (src/lorung.js: maTrung) */
+function impMaHtml(plan) {
+  const dup = plan.owners.flatMap(o => o.forests.filter(f => f.state === 'trung').map(f => Object.assign({chu: o.ten}, f)));
+  if (!dup.length || plan.conflicts.length) return '';
+  return '<div id="impMa" class="card" style="margin:6px 0 6px 22px"><div class="mut">Nhập mã mới cho từng lô được nhân bản. Mã phải chưa có ở lô nào trên máy và khác các lô khác trong file. Nhân công, xe, phiếu cân của lô được đổi theo mã mới.</div>' +
+    dup.map(f => '<div class="row" style="margin-top:6px"><span style="min-width:200px">' + esc(f.chu) + ' · <b>' + esc(f.ma) + '</b> ' + esc(f.ten) + '</span> → <input data-mamoi="' + esc(f.id) + '" value="' + esc(f.maMoi || f.maGoiY) + '" size="16" aria-label="Mã mới cho lô ' + esc(f.ma) + '"> <span class="pill ' + (f.maLoi && f.maMoi ? 'err' : 'ok') + '" data-maloi="' + esc(f.id) + '">' + (f.maLoi && f.maMoi ? esc(f.maLoi) : 'hợp lệ') + '</span></div>').join('') + '</div>';
+}
+const impMaMoi = () => Object.fromEntries([...document.querySelectorAll('#impMa [data-mamoi]')].map(i => [i.dataset.mamoi, trim(i.value)]));
+let impMaTimer = null;
+function impMaCheck() {   // kiểm tra lại mã mới ngay khi gõ, bằng đúng quy tắc của bước ghi
+  clearTimeout(impMaTimer);
+  impMaTimer = setTimeout(async () => {
+    if (!window.__imp || !HB) return;
+    const r = await HB.importPreview(window.__imp, {strategy: 'both', maMoi: impMaMoi()});
+    if (!r.ok) return;
+    window.__plan = r.plan;
+    r.plan.owners.forEach(o => o.forests.forEach(f => { const el = document.querySelector('#impMa [data-maloi="' + f.id + '"]'); if (el) { const bad = f.state === 'trung' && f.maLoi; el.className = 'pill ' + (bad ? 'err' : 'ok'); el.textContent = bad ? f.maLoi : 'hợp lệ'; } }));
+  }, 200);
+}
 function impPlanHtml(plan) {
   if (!plan) return '';
   const conf = plan.conflicts.length ? '<div class="msg err"><b>Dừng: có ' + plan.conflicts.length + ' hồ sơ mâu thuẫn, cần đối chiếu trước khi khôi phục</b> (không có gì bị ghi):<br>' + plan.conflicts.slice(0, 10).map(c => '• ' + esc(c.moTa)).join('<br>') + (plan.conflicts.length > 10 ? '<br>• …' : '') + '</div>' : '';
@@ -2384,16 +2466,16 @@ function impPlanHtml(plan) {
     '<p class="mut" style="margin:6px 0">Lô TRÙNG: giữ bản trên máy (mặc định), hoặc ghi đè <b>đúng lô đó</b> bằng bản trong file. Lô THÊM luôn được thêm. Lô GIỮ không bao giờ bị xóa.</p>';
 }
 async function importWithPreview(inc) {
-  const p = await HB.importPreview(inc);
+  const p = await HB.importPreview(inc, {strategy: 'both', maMoi: {}});
   if (!p.ok) return note('Không đọc được bản sao lưu: ' + p.error, 'err');
   const row = (l, a, b) => '<tr><td>' + l + '</td><td style="text-align:right">' + fmt(a) + '</td><td style="text-align:right">' + fmt(b) + '</td></tr>';
-  const I = p.incoming, E = p.existing, blocked = !p.plan.ok;
+  const I = p.incoming, E = p.existing, blocked = p.plan.conflicts.length > 0;
   $('#impBody').innerHTML = '<h2>Khôi phục bản sao lưu toàn bộ</h2><table><tr><th></th><th style="text-align:right">Trong file</th><th style="text-align:right">Đang có trên máy</th></tr>' +
     row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' + impPlanHtml(p.plan) +
     '<p><b>Cách xử lý:</b></p>' +
     '<label><input type="radio" name="impStrat" value="skip"' + (blocked ? ' disabled' : ' checked') + '> Giữ bản trên máy, chỉ thêm lô/chủ mới</label>' +
     '<label><input type="radio" name="impStrat" value="overwrite"' + (blocked ? ' disabled' : '') + '> Ghi đè các lô TRÙNG bằng dữ liệu trong file (lô khác của chủ được giữ)</label>' +
-    '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> Giữ cả hai (lô trùng trong file được thêm bằng ID mới; mã lô sẽ trùng, cần đổi mã)</label>' +
+    '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> Giữ cả hai (lô trùng trong file được thêm thành lô MỚI với <b>mã lô mới do bạn xác nhận</b>)</label>' + impMaHtml(p.plan) +
     '<hr><label><input type="radio" name="impStrat" value="replace"' + (blocked ? ' checked' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi và ghi trong một giao dịch: lỗi giữa chừng thì không đổi gì. Bản tra cứu Google Sheets không bị đổi.</p>' +
     '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button><button class="btn" data-act="impGo">Thực hiện</button></div>';
@@ -2404,7 +2486,15 @@ async function importGo() {
   if (!strat) return;
   const E = window.__plan ? window.__plan.owners : [];
   if (strat === 'replace' && !confirm('THAY TOÀN BỘ dữ liệu hồ sơ trên máy bằng file này?\n\nTất cả chủ rừng và lô hiện có trên máy sẽ bị thay bằng nội dung file (' + E.length + ' chủ rừng, ' + E.reduce((n, o) => n + o.forests.length, 0) + ' lô trong file). Lô nào có trên máy mà không có trong file sẽ MẤT khỏi ứng dụng (vẫn còn trong bản sao lưu tự động trước khi ghi).\n\nTiếp tục?')) return;
-  const r = await HB.importApply(window.__imp, strat);
+  let opts;
+  if (strat === 'both') {   // giữ cả hai: xác nhận mã mới, kiểm tra trước khi ghi
+    opts = {strategy: 'both', maMoi: impMaMoi()};
+    const chk = await HB.importPreview(window.__imp, opts);
+    if (chk.ok && chk.plan.maLoi.length) return note('Chưa ghi: ' + chk.plan.maLoi.slice(0, 4).map(m => 'lô ' + m.ma + ': ' + m.moTa).join(' | '), 'err');
+    const nb = Object.entries(opts.maMoi);
+    if (nb.length && !confirm('Giữ cả hai: ' + nb.length + ' lô trong file sẽ được thêm thành lô MỚI với mã đã xác nhận:\n' + chk.plan.owners.flatMap(o => o.forests.filter(f => f.state === 'trung').map(f => '• ' + f.ma + ' → ' + (opts.maMoi[f.id] || '?'))).join('\n') + '\n\nLô hiện có trên máy giữ nguyên. Tiếp tục?')) return;
+  }
+  const r = await HB.importApply(window.__imp, strat, opts);
   $('#impBox').classList.remove('on'); window.__imp = null; window.__plan = null;
   if (!r.ok) return note('Không nhập được, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
   db = withDefaults(r.db); cur = null; curF = null;
@@ -2421,6 +2511,14 @@ async function lotBackup() {
   note(r.ok ? 'Đã sao lưu lô ' + pkg.maLo + ' (' + pkg.kiemTra.nc + ' nhân công, ' + pkg.kiemTra.dx + ' xe, ' + pkg.kiemTra.pc + ' phiếu cân) vào: ' + r.file : 'Không sao lưu được lô: ' + r.error, r.ok ? 'ok' : 'err');
 }
 const lotCnt = c => c ? c.nc + ' nhân công, ' + c.dx + ' xe, ' + c.pc + ' phiếu cân, ' + fmtTan(c.kl) + ' tấn' : '';
+/* So sánh số liệu một lô: trước (đang có trên máy) và sau (trong file). Một cột khi lô chưa có trên máy. */
+function lotFigTable(P) {
+  const I = P.incoming, E = P.existing, row = (l, f) => '<tr><td>' + l + '</td>' + (E ? '<td>' + f(E) + '</td>' : '') + '<td>' + f(I) + '</td></tr>';
+  const chg = (a, b) => E && a !== b ? ' <span class="pill warn">thay đổi</span>' : '';
+  return '<div class="wrap"><table><tr><th></th>' + (E ? '<th>Trước: đang có trên máy</th><th>Sau: bản trong file</th>' : '<th>Trong file</th>') + '</tr>' +
+    [['Nhân công', x => fmt(x.nc), 'nc'], ['Xe', x => fmt(x.dx), 'dx'], ['Phiếu cân', x => fmt(x.pc), 'pc'], ['Tổng khối lượng (tấn)', x => fmtTan(x.kl), 'kl'], ['Giấy tờ', x => fmt(x.giayTo), 'giayTo'], ['Cách tính cước', x => esc(x.cuoc), 'cuoc'], ['Địa chỉ giao hàng đã chốt', x => esc(x.diemDen || '(chưa có)'), 'diemDen']]
+      .map(([l, f, k]) => '<tr><td>' + l + '</td>' + (E ? '<td>' + f(E) + '</td>' : '') + '<td>' + f(I) + (E && E[k] !== I[k] ? ' <span class="pill warn">thay đổi</span>' : '') + '</td></tr>').join('') + '</table></div>';
+}
 async function lotRestoreOpen(filePath) {
   if (!HB) return note('Khôi phục lô rừng cần bản cài trên Windows.', 'err');
   const r = await HB.lotOpen(filePath);
@@ -2430,12 +2528,11 @@ async function lotRestoreOpen(filePath) {
   window.__lot = pk;
   $('#impBody').innerHTML = '<h2>Khôi phục lô rừng</h2>' +
     '<table><tr><th>Chủ rừng</th><td><b>' + esc(P.chu.ten) + '</b> · mã ' + esc(P.chu.ma) + '</td></tr><tr><th>Mã lô</th><td><b>' + esc(P.maLo) + '</b> ' + esc(P.tenLo) + '</td></tr>' +
-    '<tr><th>Thời điểm sao lưu</th><td>' + esc(fmtDT(P.xuatLuc)) + '</td></tr><tr><th>Trong file</th><td>' + esc(lotCnt(P.incoming)) + '</td></tr>' +
-    (P.existing ? '<tr><th>Lô đang có trên máy</th><td>' + esc(lotCnt(P.existing)) + '</td></tr>' : '') + '</table>' +
+    '<tr><th>Thời điểm sao lưu</th><td>' + esc(fmtDT(P.xuatLuc)) + '</td></tr></table>' + lotFigTable(P) +
     (P.ok ? '<div class="msg ' + (exists ? 'warn' : 'ok') + '">' + (P.chu.state === 'co' ? 'Chủ rừng <b>đã có</b> trên máy: lô sẽ được ' + (exists ? 'xử lý theo lựa chọn bên dưới' : 'thêm vào đúng chủ này') + '.' : 'Chủ rừng <b>chưa có</b> trên máy: sẽ tạo chủ mới từ thông tin trong file rồi thêm lô.') +
       (exists ? ' Lô này <b>đã tồn tại</b> trên máy.' : ' Lô <b>chưa có</b> trên máy.') + '</div>' : '<div class="msg err"><b>Dừng: không xác định được lô đích, cần đối chiếu.</b> Chưa ghi gì.<br>' + P.conflicts.map(c => '• ' + esc(c.moTa)).join('<br>') + '</div>') +
     (P.giuTrongChu.length ? '<p class="mut">Các lô khác của chủ này trên máy giữ nguyên: ' + P.giuTrongChu.map(x => esc(x.ma)).join(', ') + '.</p>' : '') +
-    (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn">Thiết lập dùng chung (giữ của máy đích):<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x)).join('<br>') + '</div>' : '') +
+    (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn"><b>Thiết lập dùng chung: máy đích giữ nguyên thiết lập của mình</b>, chỉ bổ sung mục máy chưa có.<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x.text) + '<br><small class="mut">Phần hồ sơ có thể khác: ' + esc(x.anhHuong) + '</small>').join('<br>') + '</div>' : '<p class="mut">Thiết lập dùng chung (định mức BHLĐ, ánh xạ biển số) của lô trùng với máy đích.</p>') +
     P.ghiChu.map(x => '<p class="mut">' + esc(x) + '</p>').join('') +
     (P.ok && exists ? '<p><b>Lô đã có trên máy:</b></p><label><input type="radio" name="lotAct" value="giu" checked> Giữ bản hiện có (không đổi gì)</label><label><input type="radio" name="lotAct" value="thay"> Thay đúng lô này bằng bản trong file (các lô khác không bị đụng tới)</label>' : '') +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu trước khi ghi và ghi trong một giao dịch.</p>' +
@@ -2748,7 +2845,7 @@ function lkSetCand(c) {
   lk.owner = same.length ? same[0].id : 'new';   // không trùng CCCD thì mặc định tạo chủ rừng mới, tránh ghi nhầm chủ
   lkRender();
 }
-const findForestByMa = ma => { for (const o of Object.values(db.rs)) for (const f of Object.values(o.forests || {})) if (ma && f.info.maRung === ma) return {o, f}; return null; };
+const findForestByMa = ma => { const h = HAKLoRung.lotsByMa(db, ma)[0]; return h ? {o: db.rs[h.owner], f: db.rs[h.owner].forests[h.forest]} : null; };
 
 function lkCandHtml() {
   const c = lk.cand, own = Object.fromEntries(c.owner.fields.map(x => [x.key, x.value])), F = c.forests[lk.fi];
@@ -3035,6 +3132,7 @@ document.addEventListener('click', async e => {
     setTheme(dark ? 'light' : 'dark'); return;
   }
   if (act === 'backup') return backupAll();
+  if (act === 'ktGo') { const go = JSON.parse(el.dataset.go || '{}'); if (go.view) { view = go.view; return render(); } if (go.tab) { tab = go.tab; return render(); } ftab = go.ftab || 'finfo'; render(); const tgt = go.focus === 'pc' ? document.querySelector('[data-pcfix], #pcTable, .wrap table') : go.focus === 'mua' ? document.getElementById('mhDiemDen') : null; if (tgt && tgt.scrollIntoView) tgt.scrollIntoView({block: 'center'}); return; }
   if (act === 'lotBackup') return lotBackup();
   if (act === 'lotRestore') { const m = document.getElementById('moreMenu'); if (m) m.open = false; return lotRestoreOpen(); }
   if (act === 'lotCancel') { window.__lot = null; return $('#impBox').classList.remove('on'); }
@@ -3121,6 +3219,7 @@ if (savedTheme === 'dark' || savedTheme === 'light') setTheme(savedTheme);
 else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
 document.addEventListener('input', e => {
   const t = e.target;
+  if (t.dataset && t.dataset.mamoi !== undefined) { impMaCheck(); return; }
   if (t.closest && t.closest('#ctyForm')) ctyShowMsg();
 });
 document.addEventListener('submit', e => { if (e.target.id === 'ctyForm') { e.preventDefault(); ctySave(); } });

@@ -75,8 +75,8 @@ function registerIpc() {
     catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, error: err.message}; }
   });
   ipcMain.handle('db:save', (e, db) => wrap(() => store.save(db))());
-  ipcMain.handle('import:preview', (e, db) => wrap(() => store.previewImport(db))());
-  ipcMain.handle('import:apply', (e, db, strategy) => wrap(() => ({...store.applyImport(db, strategy), db: store.load()}))());
+  ipcMain.handle('import:preview', (e, db, opts) => wrap(() => store.previewImport(db, opts))());
+  ipcMain.handle('import:apply', (e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))());
   ipcMain.handle('backup:to', async () => {
     try {
       const r = await dialog.showOpenDialog(win, {title: 'Chọn thư mục lưu bản sao lưu', properties: ['openDirectory', 'createDirectory']});
@@ -145,7 +145,7 @@ function registerIpc() {
   ipcMain.handle('app:openData', () => { shell.showItemInFolder(store.file); return {ok: true}; });
 }
 
-/* Kiểm tra khói cho bản đã cài (dùng trong CI và khi nghiệm thu): HAKQN_SMOKE=<file kết quả>, HAKQN_SMOKE_PHASE=create|verify.
+/* Kiểm tra khói cho bản đã cài (dùng trong CI và khi nghiệm thu): HAKQN_SMOKE=<file kết quả>, HAKQN_SMOKE_PHASE=create|verify|upgrade (upgrade: mở dữ liệu do bản 1.0.0 tạo).
  * create: ghi 1 chủ rừng có 2 rừng; verify: đọc lại sau khi đóng/mở app. Cả hai kiểm tra giao diện có bộ lọc mới và menu Báo cáo. */
 async function smoke() {
   const out = process.env.HAKQN_SMOKE, phase = process.env.HAKQN_SMOKE_PHASE || 'create', r = {phase, version: app.getVersion(), online: net.isOnline(), file: store.file, checks: {}};
@@ -157,14 +157,28 @@ async function smoke() {
       store.save(db);
     }
     const db2 = store.load(), o = (db2.rs || {}).smoke1;
-    r.checks.owner = !!o && o.info.ten === 'CHỦ RỪNG THỬ NGHIỆM';
-    r.checks.twoForests = !!o && Object.keys(o.forests || {}).length === 2;
-    r.checks.forestData = !!o && o.forests.f2.info.diaDiem === 'Thôn B' && o.forests.f1.pc.length === 1;
+    if (phase === 'upgrade') {
+      // Nâng cấp từ v1.0.0: dữ liệu do bản 1.0.0 tạo (tests/fixtures/hakqn_v1_0_0.sqlite) phải còn đủ sau khi cài đè bản mới
+      const own = (db2.rs || {}).own1, F = (own && own.forests) || {}, bk = fs.existsSync(store.backupDir) ? fs.readdirSync(store.backupDir) : [];
+      r.checks.upOwner = !!own && own.info.ten === 'CHỦ RỪNG CŨ';
+      r.checks.upThreeForests = Object.keys(F).length === 3;
+      r.checks.upRecords = ['f1', 'f2', 'f3'].map(k => F[k] ? F[k].dx.length + '/' + F[k].pc.length : '').join() === '2/2,2/1,2/3';
+      r.checks.upTypedDestination = !!F.f1 && F.f1.exp.vcDiemDen === 'Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc' && !F.f1.info.muaHang;   // địa chỉ cũ còn nguyên, chưa tự đổi
+      r.checks.upBacSauCu = !!F.f2 && F.f2.info.vanChuyen.mode === 'tanDoan' && F.f2.info.vanChuyen.bac.length === 2;
+      r.checks.upBackup = bk.some(f => /^truoc-nang-cap-v2-len-v\d+-/.test(f));
+      r.checks.upSchema = store.db.pragma('user_version', {simple: true}) === SCHEMA_VERSION;
+      const lk = lookup.status(); r.checks.upLookup = !!lk && JSON.stringify(lk).length > 20;
+    } else {
+      r.checks.owner = !!o && o.info.ten === 'CHỦ RỪNG THỬ NGHIỆM';
+      r.checks.twoForests = !!o && Object.keys(o.forests || {}).length === 2;
+      r.checks.forestData = !!o && o.forests.f2.info.diaDiem === 'Thôn B' && o.forests.f1.pc.length === 1;
+    }
     await new Promise(res => { if (win.webContents.isLoading()) win.webContents.once('did-finish-load', res); else res(); });
     r.dom = await win.webContents.executeJavaScript(`(async()=>({title: document.title, reportMenu: !!document.querySelector('[data-act=rpOpen]'), lookupMenu: !!document.querySelector('[data-act=lkOpen]'), sideFilter: !!document.getElementById('sideQ'),
       reports: typeof HAKReports === 'object' && HAKReports.REPORTS.length, ownerShown: document.getElementById('side').innerText.includes('CHỦ RỪNG THỬ NGHIỆM'),
       filter: await window.hak.lookup.search('', '', {onlyIssues: true, from: '2026-01-01', sort: 'tan'}).then(x => x.ok && !!x.facets).catch(() => false)}))()`);
     r.checks.reportMenu = r.dom.reportMenu && r.dom.reports >= 5; r.checks.smartFilter = r.dom.sideFilter && r.dom.filter === true; r.checks.lookupMenu = r.dom.lookupMenu === true;
+    if (phase === 'upgrade') r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('CHỦ RỪNG CŨ')"); // giao diện hiện lại chủ rừng cũ
     if (phase === 'verify') r.checks.ownerInUi = r.dom.ownerShown; // sau khi đóng và mở lại, giao diện phải hiện lại chủ rừng đã lưu
   } catch (e) { r.error = e.message; }
   r.ok = !r.error && Object.values(r.checks).every(Boolean);

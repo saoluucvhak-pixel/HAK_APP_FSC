@@ -3,7 +3,8 @@
  *
  * MỘT quy tắc xác định trùng dùng chung cho bước xem trước và bước ghi (plan*):
  *   - Chủ rừng trùng khi cùng ID nội bộ, cùng CCCD hoặc cùng mã chủ rừng. Nếu ba tiêu chí chỉ về các hồ sơ KHÁC NHAU trên máy → mâu thuẫn.
- *   - Lô trùng khi cùng ID nội bộ hoặc cùng mã lô (info.maRung). Hai tiêu chí chỉ về hai lô khác nhau → mâu thuẫn.
+ *   - Lô trùng khi cùng ID nội bộ hoặc cùng mã lô (info.maRung). Mã lô so sánh sau khi bỏ khoảng trắng đầu/cuối và không phân biệt hoa thường (maKey). Hai tiêu chí chỉ về hai lô khác nhau, hoặc một mã lô khớp NHIỀU lô trên máy (dữ liệu cũ trùng mã) → mâu thuẫn, liệt kê đủ các lô khớp.
+ *   - Mã lô là khóa duy nhất của một lô: tạo lô, đổi mã, nhập lô và “Giữ cả hai” đều kiểm tra bằng maTrung. Đổi mã lô thì các dòng nhân công/xe/phiếu cân mang mã cũ được đổi theo (renameLot).
  *   - Lô trùng nhưng nằm dưới chủ khác chủ mà file ghi, hoặc chủ không khớp hồ sơ nào mà mã lô đã có trên máy → mâu thuẫn.
  *   Có mâu thuẫn thì DỪNG, không ghi gì, và liệt kê hồ sơ cần đối chiếu.
  *
@@ -35,19 +36,59 @@
       Object.entries(found).map(([k, v]) => ({id: 'theo ID', cccd: 'theo CCCD', ma: 'theo mã chủ rừng'}[k]) + ' → ' + ownerName(rs[v])).join('; ')};
     return {hit: ids[0] || null, conflict: ''};
   }
-  function matchForest(cur, fid, ma) {
-    const rs = (cur && cur.rs) || {}; let byId = null, byMa = null; ma = t(ma);
-    Object.entries(rs).forEach(([ok, o]) => forestsOf(o).forEach(f => {
-      if (fid && f.id === fid && !byId) byId = {owner: ok, forest: f.id};
-      if (ma && t(f.info && f.info.maRung) === ma && !byMa) byMa = {owner: ok, forest: f.id};
+  const maKey = v => t(v).toUpperCase();
+  const where = (cur, ok, fid) => { const o = cur.rs[ok], f = o && o.forests && o.forests[fid]; return {owner: ok, forest: fid, chu: ownerName(o), lo: f ? forestLabel(f) : fid}; };
+  /* Các lô đang dùng mã này (trừ lô exceptId): [{owner, forest, chu, lo}] */
+  function lotsByMa(cur, ma, exceptId) {
+    const key = maKey(ma), out = [];
+    if (!key) return out;
+    Object.entries((cur && cur.rs) || {}).forEach(([ok, o]) => forestsOf(o).forEach(f => { if (f.id !== exceptId && maKey(f.info && f.info.maRung) === key) out.push(where(cur, ok, f.id)); }));
+    return out;
+  }
+  /* QUY TẮC DUY NHẤT kiểm tra mã lô: trả lý do nếu mã không dùng được, '' nếu dùng được. taken: tập mã (đã chuẩn hóa maKey) sẽ bị chiếm bởi lô khác sắp ghi. */
+  function maTrung(cur, ma, exceptId, taken) {
+    if (!maKey(ma)) return 'Chưa có mã lô';
+    const hit = lotsByMa(cur, ma, exceptId);
+    if (hit.length) return 'Mã lô “' + t(ma) + '” đã có ở: ' + hit.map(h => h.lo + ' (chủ ' + h.chu + ')').join('; ');
+    if (taken && taken.has(maKey(ma))) return 'Mã lô “' + t(ma) + '” bị trùng với lô khác sẽ được ghi cùng lúc';
+    return '';
+  }
+  function goiYMa(cur, ma, taken) {
+    const base = t(ma) || 'LO'; let k = 2, c = base + '-' + k;
+    while (maTrung(cur, c, null, taken)) c = base + '-' + (++k);
+    return c;
+  }
+  /* Dữ liệu cũ có mã lô trùng: [{ma, lots:[{owner, forest, chu, lo, nc, dx, pc, kl}]}] đầy đủ các lô khớp */
+  function duplicateGroups(db) {
+    const g = {};
+    Object.entries((db && db.rs) || {}).forEach(([ok, o]) => forestsOf(o).forEach(f => { const k = maKey(f.info && f.info.maRung); if (k) (g[k] = g[k] || {ma: t(f.info.maRung), lots: []}).lots.push(Object.assign(where(db, ok, f.id), {ten: t(f.info.tenRung), nc: (f.nc || []).length, dx: (f.dx || []).length, pc: (f.pc || []).length, kl: sumKl(f.pc)})); }));
+    return Object.values(g).filter(x => x.lots.length > 1);
+  }
+  /* Đổi mã lô: các dòng nhân công/xe/phiếu cân mang mã cũ đổi theo, để dữ liệu vẫn thuộc đúng lô. khac: dòng mang một mã KHÁC (không tự đổi). */
+  function renameLot(forest, newMa) {
+    const f = clone(forest), old = t(f.info && f.info.maRung), doi = {nc: 0, dx: 0, pc: 0}, khac = [];
+    f.info = Object.assign({}, f.info, {maRung: t(newMa)});
+    ['nc', 'dx', 'pc'].forEach(k => (f[k] || []).forEach(r => {
+      if (!r || !t(r.maRung)) return;
+      if (old && maKey(r.maRung) === maKey(old)) { r.maRung = t(newMa); doi[k]++; } else if (maKey(r.maRung) !== maKey(newMa)) khac.push({loai: k, dong: r._row, ma: t(r.maRung)});
     }));
-    if (byId && byMa && (byId.forest !== byMa.forest || byId.owner !== byMa.owner)) return {hit: null, conflict: 'ID nội bộ và mã lô “' + ma + '” chỉ về hai lô khác nhau trên máy (' + forestLabel(rs[byId.owner].forests[byId.forest] || {}) + ' và ' + forestLabel(rs[byMa.owner].forests[byMa.forest] || {}) + ')'};
-    return {hit: byId || byMa, conflict: ''};
+    return {forest: f, doi, khac};
+  }
+  function matchForest(cur, fid, ma) {
+    const rs = (cur && cur.rs) || {}; let byId = null;
+    Object.entries(rs).forEach(([ok, o]) => forestsOf(o).forEach(f => { if (fid && f.id === fid && !byId) byId = {owner: ok, forest: f.id}; }));
+    const hits = lotsByMa(cur, ma);
+    if (hits.length > 1) return {hit: null, cacLo: hits, conflict: 'Mã lô “' + t(ma) + '” đang trùng ở ' + hits.length + ' lô trên máy (dữ liệu cũ), cần đối chiếu và đổi mã trước: ' + hits.map(h => h.lo + ' (chủ ' + h.chu + ')').join('; ')};
+    const byMa = hits[0] || null;
+    if (byId && byMa && (byId.forest !== byMa.forest || byId.owner !== byMa.owner)) return {hit: null, cacLo: [where(cur, byId.owner, byId.forest), byMa], conflict: 'ID nội bộ và mã lô “' + t(ma) + '” chỉ về hai lô khác nhau trên máy (' + where(cur, byId.owner, byId.forest).lo + ' và ' + byMa.lo + ')'};
+    return {hit: byId || (byMa && {owner: byMa.owner, forest: byMa.forest}), conflict: ''};
   }
   const sameLoc = (a, b) => a && b && a.owner === b.owner && a.forest === b.forest;
 
   /* ---------- khôi phục bản sao lưu toàn bộ: xem trước và ghi dùng chung planImport ---------- */
-  function planImport(cur, incoming) {
+  /* opts: {strategy, maMoi:{<ID lô trong file>: mã mới}}. Với strategy 'both', mỗi lô trùng được nhân bản PHẢI có mã mới đã xác nhận, kiểm tra bằng maTrung (cả lô đã có lẫn các lô khác trong file). */
+  function planImport(cur, incoming, opts) {
+    opts = opts || {};
     const conflicts = [], owners = [], seenMa = {};
     Object.entries((incoming && incoming.rs) || {}).forEach(([key, o]) => {
       const oid = (o && o.id) || key, mo = matchOwner(cur, oid, o && o.info);
@@ -63,7 +104,7 @@
           if (!mo.hit) moTa = 'Lô “' + forestLabel(f) + '” đã có trên máy dưới chủ “' + ownerName(cur.rs[mf.hit.owner]) + '”, nhưng chủ “' + ownerName(o) + '” trong file không khớp hồ sơ nào';
           else if (mf.hit.owner !== mo.hit) moTa = 'Lô “' + forestLabel(f) + '” đã có trên máy dưới chủ “' + ownerName(cur.rs[mf.hit.owner]) + '”, trong file thuộc chủ “' + ownerName(o) + '” (khớp chủ “' + ownerName(cur.rs[mo.hit]) + '”)';
         }
-        if (moTa) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa});
+        if (moTa) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa, cacLo: mf.cacLo || null});
         const ex = !moTa && mf.hit ? cur.rs[mf.hit.owner].forests[mf.hit.forest] : null;
         if (ex) matchedForests.add(ex.id || mf.hit.forest);
         entry.forests.push({id: f.id, ma, ten: t(f.info && f.info.tenRung), state: ex ? 'trung' : 'moi', existing: mf.hit ? mf.hit.forest : null, loi: moTa || '',
@@ -72,15 +113,31 @@
       if (mo.hit) forestsOf(cur.rs[mo.hit]).forEach(f => { if (!matchedForests.has(f.id)) entry.giu.push({id: f.id, ma: t(f.info && f.info.maRung), ten: t(f.info && f.info.tenRung)}); });
       owners.push(entry);
     });
-    return {ok: !conflicts.length, conflicts, owners};
+    // Giữ cả hai: mỗi lô trùng cần mã mới đã xác nhận; kiểm tra cùng quy tắc ở xem trước và lúc ghi
+    const nhanBan = [];
+    if (opts.strategy === 'both' && !conflicts.length) {
+      const taken = new Set();
+      owners.forEach(o => o.forests.forEach(f => { if (f.state === 'moi' && f.ma) taken.add(maKey(f.ma)); }));
+      owners.forEach(o => o.forests.forEach(f => {
+        if (f.state !== 'trung') return;
+        const chon = t((opts.maMoi || {})[f.id]);
+        f.maGoiY = goiYMa(cur, f.ma, taken); f.maMoi = chon;
+        f.maLoi = chon ? (maKey(chon) === maKey(f.ma) ? 'Mã mới phải khác mã cũ “' + f.ma + '”' : maTrung(cur, chon, null, taken)) : 'Cần xác nhận mã mới cho lô nhân bản (gợi ý: ' + f.maGoiY + ')';
+        if (!f.maLoi) taken.add(maKey(chon));
+        nhanBan.push(f);
+      }));
+    }
+    const maLoi = nhanBan.filter(f => f.maLoi);
+    return {ok: !conflicts.length && !maLoi.length, conflicts, owners, nhanBan: nhanBan.length, maLoi: maLoi.map(f => ({id: f.id, ma: f.ma, moTa: f.maLoi}))};
   }
   function sumKl(pc) { return Math.round((pc || []).reduce((s, p) => s + (typeof p.kl === 'number' && isFinite(p.kl) ? p.kl : 0), 0) * 1000) / 1000; }
 
   /* Gộp theo chiến lược skip | overwrite | both (không dùng cho 'replace'). Mâu thuẫn → ném lỗi, không đổi gì. */
-  function mergeImport(cur, incoming, strategy, newId) {
+  function mergeImport(cur, incoming, strategy, newId, opts) {
     newId = newId || defNewId;
-    const plan = planImport(cur, incoming);
-    if (!plan.ok) { const e = new Error('Có ' + plan.conflicts.length + ' hồ sơ mâu thuẫn, cần đối chiếu trước khi khôi phục: ' + plan.conflicts.slice(0, 5).map(c => c.moTa).join(' | ')); e.conflicts = plan.conflicts; throw e; }
+    const plan = planImport(cur, incoming, {strategy, maMoi: opts && opts.maMoi});
+    if (plan.conflicts.length) { const e = new Error('Có ' + plan.conflicts.length + ' hồ sơ mâu thuẫn, cần đối chiếu trước khi khôi phục: ' + plan.conflicts.slice(0, 5).map(c => c.moTa).join(' | ')); e.conflicts = plan.conflicts; throw e; }
+    if (plan.maLoi.length) { const e = new Error('Giữ cả hai cần mã mới hợp lệ cho lô nhân bản: ' + plan.maLoi.slice(0, 5).map(m => m.ma + ' → ' + m.moTa).join(' | ')); e.maLoi = plan.maLoi; throw e; }
     const next = clone(cur); next.rs = next.rs || {};
     plan.owners.forEach(en => {
       const o = incoming.rs[en.id];
@@ -91,7 +148,8 @@
         if (pf.state === 'moi') { tgt.forests[f.id] = clone(f); return; }
         if (strategy === 'skip') return;
         if (strategy === 'overwrite') { tgt.forests[pf.existing] = Object.assign(clone(f), {id: pf.existing}); return; }
-        const nid = newId('f'); tgt.forests[nid] = Object.assign(clone(f), {id: nid});                              // both: giữ cả hai, bản trong file lấy ID mới
+        const nid = newId('f'), rn = renameLot(f, (opts.maMoi || {})[f.id]);                                       // both: giữ cả hai, bản trong file lấy ID mới VÀ mã mới đã xác nhận (dòng nhân công/xe/phiếu đổi theo)
+        tgt.forests[nid] = Object.assign(rn.forest, {id: nid});
       });
     });
     return {next, plan};
@@ -130,31 +188,49 @@
     if (!o.chuRung || typeof o.chuRung !== 'object' || !o.chuRung.info) return {ok: false, error: 'Gói thiếu thông tin nhận diện chủ rừng, không xác định được chủ để khôi phục.'};
     if (!t(o.lo.info.maRung)) return {ok: false, error: 'Gói không có mã lô, không xác định được lô đích.'};
     if (hash) { if (!o.maKiemTra || o.maKiemTra !== hash(body(o))) return {ok: false, error: 'Gói lô rừng bị hỏng hoặc đã bị sửa (mã kiểm tra không khớp).'}; }
-    ['nc', 'dx', 'pc'].forEach(k => { if (o.lo[k] != null && !Array.isArray(o.lo[k])) o.lo[k] = null; });
-    if (['nc', 'dx', 'pc'].some(k => o.lo[k] === null)) return {ok: false, error: 'Dữ liệu nhân công, xe hoặc phiếu cân trong gói bị hỏng.'};
+    for (const k of ['nc', 'dx', 'pc']) {
+      const rows = o.lo[k] == null ? [] : o.lo[k];
+      if (!Array.isArray(rows) || rows.some(r => !r || typeof r !== 'object' || Array.isArray(r))) return {ok: false, error: 'Dữ liệu ' + ({nc: 'nhân công', dx: 'xe', pc: 'phiếu cân'}[k]) + ' trong gói bị hỏng (không đúng cấu trúc).'};
+    }
+    if ((o.lo.pc || []).some(p => p.kl != null && p.kl !== '' && (typeof p.kl !== 'number' || !isFinite(p.kl)))) return {ok: false, error: 'Khối lượng phiếu cân trong gói không phải số, dữ liệu bị hỏng.'};
+    if (typeof o.lo.info !== 'object' || Array.isArray(o.lo.info) || (o.lo.exp != null && (typeof o.lo.exp !== 'object' || Array.isArray(o.lo.exp)))) return {ok: false, error: 'Thông tin lô trong gói bị hỏng.'};
+    if (o.kiemTra && (o.kiemTra.nc !== (o.lo.nc || []).length || o.kiemTra.dx !== (o.lo.dx || []).length || o.kiemTra.pc !== (o.lo.pc || []).length || o.kiemTra.tongTan !== sumKl(o.lo.pc))) return {ok: false, error: 'Số bản ghi hoặc tổng tấn trong gói không khớp phần kiểm tra: gói bị hỏng hoặc bị sửa.'};
     return {ok: true, pkg: o};
   }
 
+  const vcText = i => { const v = (i && i.vanChuyen) || {}; return v.mode === 'coDinh' ? 'Cước cố định ' + (v.coDinh != null ? v.coDinh : '?') + ' đ/tấn' : v.mode === 'tanKm' ? 'Cước tấn/km ' + (v.donGiaKm != null ? v.donGiaKm : '?') + ' đ/tấn/km, cự ly ' + (i.cuLy != null ? i.cuLy : '?') + ' km' : v.mode === 'tanDoan' ? 'Cước theo bậc cự ly (cách cũ, cần chọn lại)' : 'Chưa chọn cách tính cước'; };
+  /* Số liệu một lô để xem trước/đối chiếu trước–sau */
+  function lotFigures(f) {
+    const i = (f && f.info) || {}, dd = i.muaHang && t(i.muaHang.diaChi) ? t(i.muaHang.ten) + ' – ' + t(i.muaHang.diaChi) : (t(f && f.exp && f.exp.vcDiemDen) ? t(f.exp.vcDiemDen) + ' (nhập tay)' : '');
+    return {nc: ((f && f.nc) || []).length, dx: ((f && f.dx) || []).length, pc: ((f && f.pc) || []).length, kl: sumKl(f && f.pc), diemDen: dd, cuoc: vcText(i), donGia: i.donGia != null ? i.donGia : null, giayTo: ((i.giayTo) || []).length};
+  }
   /* Xem trước khôi phục lô: cùng quy tắc nhận diện với planImport */
   function planLot(cur, pkg) {
     const o = pkg.chuRung, f = pkg.lo, conflicts = [];
     const mo = matchOwner(cur, o.id, o.info); if (mo.conflict) conflicts.push({loai: 'chu', ten: ownerName(o), moTa: mo.conflict});
-    const mf = matchForest(cur, f.id, f.info.maRung); if (mf.conflict) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: mf.conflict});
+    const mf = matchForest(cur, f.id, f.info.maRung); if (mf.conflict) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: mf.conflict, cacLo: mf.cacLo || null});
     if (!mf.conflict && mf.hit) {
       if (!mo.hit) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: 'Lô “' + forestLabel(f) + '” đã có trên máy dưới chủ “' + ownerName(cur.rs[mf.hit.owner]) + '”, nhưng chủ “' + ownerName(o) + '” trong gói không khớp hồ sơ nào'});
       else if (mf.hit.owner !== mo.hit) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: 'Lô “' + forestLabel(f) + '” đã có trên máy dưới chủ “' + ownerName(cur.rs[mf.hit.owner]) + '”, trong gói thuộc chủ “' + ownerName(o) + '” (khớp chủ “' + ownerName(cur.rs[mo.hit]) + '”)'});
     }
     const exists = !conflicts.length && !!mf.hit, ex = exists ? cur.rs[mf.hit.owner].forests[mf.hit.forest] : null;
     const dm = (cur && cur.dinhMuc) || {}, al = (cur && cur.bienAlias) || {}, sh = pkg.dungChung || {}, khac = [], them = [];
-    Object.entries(sh.dinhMuc || {}).forEach(([k, v]) => { if (!(k in dm)) them.push('Định mức BHLĐ “' + k + '” (máy chưa có, sẽ thêm)'); else if (JSON.stringify(dm[k]) !== JSON.stringify(v)) khac.push('Định mức BHLĐ “' + k + '” khác bản của máy (giữ bản của máy)'); });
-    Object.entries(sh.bienAlias || {}).forEach(([k, v]) => { if (!(k in al)) them.push('Biển số quy đổi “' + k + '” → ' + v + ' (máy chưa có, sẽ thêm)'); else if (al[k] !== v) khac.push('Biển số quy đổi “' + k + '” khác bản của máy (giữ bản của máy)'); });
+    const js = v => JSON.stringify(v);
+    Object.entries(sh.dinhMuc || {}).forEach(([k, v]) => {
+      if (!(k in dm)) them.push({loai: 'dinhMuc', khoa: k, goi: v, may: null, text: 'Định mức BHLĐ “' + k + '”: máy đích chưa có, sẽ thêm từ gói', anhHuong: 'Bảng cấp phát BHLĐ và hợp đồng lao động của chức danh này'});
+      else if (js(dm[k]) !== js(v)) khac.push({loai: 'dinhMuc', khoa: k, goi: v, may: dm[k], text: 'Định mức BHLĐ “' + k + '” khác bản của máy đích: DÙNG BẢN CỦA MÁY ĐÍCH (' + js(dm[k]) + '), gói ghi ' + js(v), anhHuong: 'Bảng cấp phát BHLĐ và hợp đồng lao động của chức danh “' + k + '” có thể khác bản gốc'});
+    });
+    Object.entries(sh.bienAlias || {}).forEach(([k, v]) => {
+      if (!(k in al)) them.push({loai: 'bienAlias', khoa: k, goi: v, may: null, text: 'Ánh xạ biển số “' + k + '” → ' + v + ': máy đích chưa có, sẽ thêm từ gói', anhHuong: 'Ghép biển số khi nhận phiếu cân từ tra cứu'});
+      else if (al[k] !== v) khac.push({loai: 'bienAlias', khoa: k, goi: v, may: al[k], text: 'Ánh xạ biển số “' + k + '” khác máy đích: DÙNG BẢN CỦA MÁY ĐÍCH (→ ' + al[k] + '), gói ghi → ' + v, anhHuong: 'Ghép biển số khi nhận phiếu cân từ tra cứu có thể ra biển khác bản gốc; phiếu cân đã lưu trong lô không đổi'});
+    });
     const cty = f.info && f.info.muaHang;
     const ghiChu = []; if (cty && cty.congTyId && !((cur.congTy || {})[cty.congTyId])) ghiChu.push('Công ty mua hàng “' + cty.ten + '” chưa có trong danh mục của máy: tên và địa chỉ giao đã chốt vẫn được mang theo, BM-04 xuất đúng.');
     return {ok: !conflicts.length, conflicts, maLo: t(f.info.maRung), tenLo: t(f.info.tenRung), xuatLuc: pkg.xuatLuc,
       chu: {state: mo.hit ? 'co' : 'moi', existingId: mo.hit, ten: ownerName(o), ma: t(o.info.ma)},
       lo: {state: exists ? 'trung' : 'moi', existingId: exists ? mf.hit.forest : null, existingOwner: exists ? mf.hit.owner : null},
-      incoming: {nc: (f.nc || []).length, dx: (f.dx || []).length, pc: (f.pc || []).length, kl: sumKl(f.pc)},
-      existing: ex ? {nc: (ex.nc || []).length, dx: (ex.dx || []).length, pc: (ex.pc || []).length, kl: sumKl(ex.pc)} : null,
+      incoming: lotFigures(f),
+      existing: ex ? lotFigures(ex) : null,
       giuTrongChu: mo.hit ? forestsOf(cur.rs[mo.hit]).filter(x => !ex || x.id !== ex.id).map(x => ({id: x.id, ma: t(x.info && x.info.maRung), ten: t(x.info && x.info.tenRung)})) : [],
       dungChung: {khac, them}, ghiChu};
   }
@@ -178,6 +254,6 @@
     return {next, plan, doi: true, ownerId: oid, forestId: fid};
   }
 
-  const api = {KIND, FORMAT, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl};
+  const api = {KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKLoRung = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -93,6 +93,46 @@ jobs:
             if ($pr.ExitCode -ne 0) { throw "Pha ${ph}: kiểm tra khói thất bại (mã thoát $($pr.ExitCode))" }
           }
           Copy-Item (Join-Path $env:RUNNER_TEMP 'smoke-*.json') dist/
+      - name: Nâng cấp từ bộ cài THẬT v1.0.0 (cài v1.0.0, mở, đặt dữ liệu cũ, cài đè bản mới, kiểm tra dữ liệu)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $old = Join-Path $env:RUNNER_TEMP 'old-release'; New-Item -ItemType Directory $old | Out-Null
+          gh release download v1.0.0 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-1.0.0.exe' -D $old
+          $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-1.0.0.exe'
+          $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
+          if ($h -ne '8AAE5F969F7A19A3591A0E91DC23D247846B4B329F23B6D791659758AB62C68D') { throw "Bộ cài v1.0.0 tải về không khớp mã băm công bố: $h" }
+          $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade-userdata'
+          $p = Start-Process -FilePath $oldSetup -ArgumentList '/S', "/D=$dir" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Cài v1.0.0 lỗi, mã thoát $($p.ExitCode)" }
+          $oldApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          if (-not $oldApp) { throw 'Không thấy file chạy của v1.0.0 sau khi cài' }
+          # chạy bản v1.0.0 thật để nó tự tạo cơ sở dữ liệu trong hồ sơ người dùng, rồi tắt
+          $env:HAKQN_USERDATA = $ud
+          $pr = Start-Process -FilePath $oldApp.FullName -PassThru
+          Start-Sleep -Seconds 15
+          if ($pr.HasExited) { throw "v1.0.0 thoát sớm, mã $($pr.ExitCode)" }
+          taskkill /PID $pr.Id /T /F | Out-Null
+          Start-Sleep -Seconds 3
+          $dbf = Join-Path $ud 'hakqn.sqlite'
+          if (-not (Test-Path $dbf)) { throw "v1.0.0 không tạo cơ sở dữ liệu tại $dbf" }
+          # thay bằng cơ sở dữ liệu giả lập do chính mã v1.0.0 tạo: một chủ ba lô, điểm đến nhập tay, cước theo bậc, phiếu 31/02/2026, bản tra cứu
+          Remove-Item "$dbf-wal", "$dbf-shm" -Force -ErrorAction SilentlyContinue
+          Copy-Item tests/fixtures/hakqn_v1_0_0.sqlite $dbf -Force
+          # cài đè bản mới lên đúng thư mục đã cài v1.0.0
+          $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
+          $p = Start-Process -FilePath $setup -ArgumentList '/S', "/D=$dir" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Cài đè bản mới lỗi, mã thoát $($p.ExitCode)" }
+          $newApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          $out = Join-Path $env:RUNNER_TEMP 'smoke-upgrade.json'
+          $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = 'upgrade'
+          $pr = Start-Process -FilePath $newApp.FullName -PassThru
+          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'Nâng cấp: ứng dụng không tự thoát sau 120 giây' }
+          if (-not (Test-Path $out)) { throw "Nâng cấp: không có file kết quả (mã thoát $($pr.ExitCode))" }
+          Get-Content $out -Raw
+          if ($pr.ExitCode -ne 0) { throw "Nâng cấp: kiểm tra dữ liệu thất bại (mã thoát $($pr.ExitCode))" }
+          Copy-Item $out dist/smoke-upgrade.json
       - uses: actions/upload-artifact@v4
         with:
           name: HAKQN-Setup-${{ github.event.pull_request.head.sha || github.sha }}
