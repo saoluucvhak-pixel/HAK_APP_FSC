@@ -26,7 +26,8 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   for (const [k, v] of [['soKT', '07'], ['soVC', '09'], ['ngayKy', '01/10/2026']]) { if (await w.$(`[data-exp=${k}]`)) { await w.fill(`[data-exp=${k}]`, v); await w.dispatchEvent(`[data-exp=${k}]`, 'change'); } }
   const btns = await w.$$('button[data-act=dl]'); let done = 0; const disabled = [];
-  for (const b of btns) {
+  for (let bi = 0; bi < btns.length; bi++) {
+    const b = (await w.$$('button[data-act=dl]'))[bi];   // lấy lại nút mỗi lần: sau khi tải, thông báo cảnh báo làm giao diện vẽ lại
     const kind = await b.getAttribute('data-kind');
     if (await b.isDisabled()) { disabled.push(kind); continue; }
     const before = fs.existsSync(out) ? fs.readdirSync(out).length : 0;

@@ -1735,6 +1735,21 @@ function docUyQuyen(rec, ex) {
       {head: true, borders: true, sz: 17, rowH: 760, alignCols: ['center', 'left', 'center', 'center', 'center', 'left', 'left', 'center']})
   ];
 }
+/* Cảnh báo theo từng trường hợp sau khi tải: mục nào CHƯA đủ dữ liệu thì biểu mẫu tương ứng thiếu hoặc còn chấm; hồ sơ đủ thì không có cảnh báo */
+function exportNotes(rec, g, kind) {
+  const n = [], i = rec.info, ex = Object.assign({}, rec.exp || {}); if (!ex.ngayKy && i.ngayKyHopDong) ex.ngayKy = i.ngayKyHopDong;
+  const tail = kind === 'all' || kind === 'cuoi', head = kind === 'all' || kind === 'dau', vol = volumeOf(i);
+  if (tail) {
+    if (!g.canPC) n.push('BM-09 (xác nhận khối lượng) và BM-10 (thanh toán vận chuyển) KHÔNG có trong file vì chưa đủ phiếu cân hợp lệ (nạp phiếu cân ở tab Vận chuyển, xem mục “Phiếu cân” ở tab Kiểm tra trước khi xuất).');
+    if (!vol) n.push('BM-08 và BM-14 chưa có khối lượng khai thác: nhập diện tích, định mức hoặc khối lượng thực tế ở Thông tin rừng.');
+    else if (vol.src === 'dự kiến') n.push('BM-08 và BM-14 đang tính theo SẢN LƯỢNG DỰ KIẾN (' + fmtTan(vol.v) + ' tấn) vì chưa nhập khối lượng khai thác thực tế; nếu khai thác xong thì nhập khối lượng thực tế rồi tải lại.');
+    if (!ex.ntNgay) n.push('BM-14: chưa nhập ngày lập biên bản nghiệm thu (ô “Nghiệm thu, thanh lý: ngày lập”), ngày và năm trong số biên bản để trống.');
+    if (g.canPC && !ex.pcNgay) n.push('BM-09, BM-10: chưa nhập ngày lập biên bản xác nhận khối lượng, ngày và năm trong số biên bản để trống.');
+  }
+  if (head && !destOf(rec).text) n.push('BM-04, BM-09, BM-10: chưa chọn địa chỉ giao hàng nên dòng điểm đến để chấm (tab Vận chuyển → Chọn địa chỉ giao hàng).');
+  if (head) { const cb = HAKHopDong.canBoSung(ex).filter(c => /BM-01|BM-04/.test(c.label)); if (cb.length) n.push('Số hợp đồng chưa có năm (' + cb.map(c => c.label.replace(/ \(.*\)/, '')).join('; ') + '): nhập “Ngày ký hợp đồng”.'); }
+  return n;
+}
 async function exportKind(kind, idx) {
   const rec = curRec();
   if (!rec) return;
@@ -1754,7 +1769,7 @@ async function exportKind(kind, idx) {
     for (const f of pick) z.file(f.path, await makeDocx(f.blocks, docOpts(f, rec)));
     const blob = await z.generateAsync({type: 'blob'});
     download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung', trong2: 'dot2_MAU_TRONG_in_truoc', de2: 'dot2_CHI_PHAN_SO_in_de'}[kind] || kind) + '.zip');
-    if (kind === 'cuoi' && !g.canPC) note('Đợt 2 đã tải, nhưng CHƯA có BM-09 (xác nhận khối lượng) và BM-10 (thanh toán vận chuyển) vì chưa đủ phiếu cân hợp lệ. Nạp phiếu cân ở tab Vận chuyển rồi tải đợt 2 lần nữa.', 'warn');
+    if (['all', 'dau', 'cuoi'].includes(kind)) { const nt = exportNotes(rec, g, kind); if (nt.length) note('Đã tải file nhưng còn ' + nt.length + ' lưu ý:\n• ' + nt.join('\n• '), 'warn'); else note('Đã tải file: dữ liệu đủ, không có lưu ý.', 'ok'); }
     if (kind === 'de2') {
       const nTrip = groupsDX(rec).map(x => tripsOf(rec, x).length), nDong = Math.min(40, Math.max(1, parseInt((rec.exp || {}).pcDong, 10) || 12));
       if (!g.canPC) note('Đã tải bản CHỈ PHẦN SỐ, nhưng chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có số để in đè. Nạp phiếu cân rồi tải lại.', 'warn');
@@ -2286,7 +2301,7 @@ function panelXuat(rec) {
       '<label style="display:inline-flex;gap:8px;align-items:center;margin-bottom:8px">Số dòng chuyến của BM-09 (mẫu trống và in đè phải dùng cùng một số) <input data-exp="pcDong" value="' + esc(ex.pcDong || '') + '" placeholder="12" style="width:70px"></label>' +
       '<div class="docrow"><div><b>Bước 1 – Mẫu trống (.zip)</b><div class="mut">BM-08, BM-09, BM-10, BM-14 với phần số để chấm hoặc để trống. Làm được ngay khi đã có nhân công và đội xe.</div></div>' + btn('⬇ Tải mẫu trống', 'trong2', null, g.canBHLD && g.canHDVC) + '</div>' +
       '<div class="docrow"><div><b>Bước 2 – Chỉ phần số để in đè (.zip)</b><div class="mut">Cùng bốn biểu mẫu nhưng chỉ in các con số, đúng vị trí trên mẫu đã in.' + (g.canPC ? '' : ' <b>Cần phiếu cân hợp lệ để có số cho BM-09 và BM-10.</b>') + '</div></div>' + btn('⬇ Tải phần số để in đè', 'de2', null, g.canBHLD && g.canHDVC) + '</div></div>' +
-    '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung.</div></div>' + btn('⬇ Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>';
+    '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung. <b>Hồ sơ đã đủ dữ liệu thì in một lần bằng nút này</b>; mục nào chưa đủ (phiếu cân, khối lượng thực tế, ngày lập, địa chỉ giao…) sẽ được nêu ngay sau khi tải.</div></div>' + btn('⬇ Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>';
 }
 
 function renderCtx() {

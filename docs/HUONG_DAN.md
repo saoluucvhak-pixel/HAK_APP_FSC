@@ -147,6 +147,8 @@ Mỗi mục kèm **số phiếu hoặc tên trường** liên quan và nút **M�
 
 Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 
+**Hồ sơ đã đủ dữ liệu thì in một lần**: nút **Tải toàn bộ hồ sơ** (hoặc tải từng biểu mẫu) vẫn dùng bình thường, không bắt buộc làm hai đợt. Hai đợt chỉ dành cho lúc chưa xong khai thác. **Cảnh báo theo từng trường hợp**: nút tải bị khóa kèm lý do khi còn mục chặn (xem tab Kiểm tra trước khi xuất); sau khi tải, phần mềm nêu các mục chưa đủ: chưa có phiếu cân hợp lệ (BM-09 và BM-10 không có trong file), chưa nhập khối lượng thực tế (BM-08 và BM-14 tính theo sản lượng dự kiến), chưa nhập ngày lập nghiệm thu hay xác nhận khối lượng (ngày và năm trong số biên bản để trống), chưa chọn địa chỉ giao hàng (dòng điểm đến để chấm), chưa có ngày ký hợp đồng (số hợp đồng thiếu năm). Hồ sơ đủ thì báo “dữ liệu đủ, không có lưu ý”.
+
 **In hồ sơ làm hai đợt khi chưa xong khai thác** (đã có nhân công, vận chuyển nhưng chưa có phiếu cân, chưa nghiệm thu): ở tab **Xuất hồ sơ → Tất cả** có hai nút.
 - **Đợt 1 – hồ sơ làm ngay (.zip)**: tất cả biểu mẫu **trừ** BM-08 bảng thanh toán tiền công, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển và BM-14 nghiệm thu, thanh lý. In và ký đợt này trước.
 - **Đợt 2 – sau khi xong rừng (.zip)**: **chỉ** BM-08, BM-09, BM-10 và BM-14. Khi rừng xong: nạp phiếu cân ở tab Vận chuyển, nhập khối lượng khai thác thực tế ở Thông tin rừng, nhập thông số nghiệm thu rồi tải đợt 2. Chưa đủ phiếu cân hợp lệ thì đợt 2 chỉ có BM-08 và BM-14, phần mềm báo rõ thiếu BM-09, BM-10; nạp phiếu cân xong tải lại.
