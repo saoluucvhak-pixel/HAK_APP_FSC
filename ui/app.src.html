@@ -241,6 +241,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <tr><td>2. Lao động, an toàn</td><td>BM-02 BHLĐ, BM-05 chấm công, BM-06 DS tổ, BM-07 ATLĐ, BM-08 tiền công, BM-15 sổ tai nạn, BM-16 kiểm tra thiết bị</td></tr>
 <tr><td>3. Vận chuyển</td><td>BM-04 HĐVC, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển</td></tr>
 <tr><td>4. FSC, giám sát</td><td>BM-11 cam kết nguồn gốc, BM-12 cam kết lao động, BM-13 kiểm tra hiện trường, BM-17 thẩm định, BM-18 nhật ký khai thác, BM-19 phổ biến chính sách FSC</td></tr></table>
+<p><b>Số hợp đồng trên biểu mẫu</b>: nhập số đầy đủ (ví dụ <code>015/2025-KT</code>) thì được giữ nguyên; chỉ nhập phần số (<code>015</code>) thì phần mềm ghép năm lấy từ <b>ngày ký của chính hợp đồng đó</b>; thiếu ngày ký thì năm để trống và khung <i>Số hợp đồng đầy đủ sẽ in</i> ở tab Xuất hồ sơ nêu cần bổ sung ngày nào. BM-01, BM-14, BM-20 luôn cùng một số hợp đồng khai thác.</p>
 <p><b>📊 Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (5 mẫu: điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
 <h3>9. Sao lưu và khôi phục</h3>
 <ul>
@@ -273,6 +274,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@MUAHANG@@*/</script>
 <script>/*@@LORUNG@@*/</script>
 <script>/*@@XLSXMAU@@*/</script>
+<script>/*@@HOPDONG@@*/</script>
 <script>/*@@REPORTS@@*/</script>
 <script>
 (() => {
@@ -905,7 +907,7 @@ const rungRef = i => {
 const LAW_LD = ['Căn cứ Bộ luật Lao động số 45/2019/QH14 ngày 20/11/2019;', 'Căn cứ Luật An toàn, vệ sinh lao động số 84/2015/QH13 ngày 25/06/2015;', 'Căn cứ Nghị định số 145/2020/NĐ-CP ngày 14/12/2020 của Chính phủ hướng dẫn thi hành Bộ luật Lao động.'];
 const DT_NOIDUNG = ['Quy định chung về an toàn, vệ sinh lao động; quyền và nghĩa vụ của người lao động.', 'Kỹ thuật an toàn khi đốn hạ, cắt khúc, bóc tách; sử dụng cưa xăng, dao, rựa.', 'Sử dụng, bảo quản phương tiện bảo vệ cá nhân (bảo hộ lao động).', 'An toàn khi bốc xếp, vận chuyển gỗ; làm việc trên địa hình dốc, thời tiết xấu.', 'Phòng chống cháy rừng; xử lý tình huống khẩn cấp và sơ cứu tai nạn lao động.'];
 const hdRef = rs => (rs.soHopDong || rs.ngayKyHopDong) ? 'Căn cứ Hợp đồng số ' + (rs.soHopDong || '…………') + (rs.ngayKyHopDong ? ' ký ngày ' + rs.ngayKyHopDong : '') + '.' : '';
-const ngayLine = ex => ex.ngayKy ? 'ngày ' + ex.ngayKy : 'ngày ….. tháng ….. năm 2026';
+const ngayLine = ex => ex.ngayKy ? 'ngày ' + ex.ngayKy : HAKHopDong.ngayTrong();
 
 function partyBlock(label, p, fullName, o = {}) {   // o.noSinh: không in năm sinh (chủ rừng không còn khai ngày sinh)
   return [
@@ -931,7 +933,7 @@ function docGiaoKhoan(rec, ex) {
   return [
     ...TITLE_HEAD(),
     P('**HỢP ĐỒNG KHAI THÁC GỖ KEO**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Số: ' + (ex.soKT || '…………') + '/2026-KT', {al: 'center', after: 0}),
+    P('Số: ' + ex._so.kt.so, {al: 'center', after: 0}),
     P('“V/v: Khai thác gỗ rừng trồng”', {al: 'center', i: true, after: 200}),
     P(LAW_BLDS),
     ...(hdRef(rs) ? [P('- ' + hdRef(rs))] : []),
@@ -946,7 +948,7 @@ function docGiaoKhoan(rec, ex) {
     P('2.1. Đơn giá khoán theo vai trò (' + bs.unit + '): ' + roleRates(rec).join('; ') + '.', {ind: 360}),
     P('2.2. ' + (bs.qty === 'ha' ? 'Diện tích khai thác' : 'Sản lượng khai thác') + ' được chia đều cho ' + pr.N + ' người trong tổ; tiền của mỗi người bằng phần được chia nhân với đơn giá khoán theo vai trò của người đó.' + (pr.sum ? ' Tổng tiền khoán dự tính: ' + fmt(pr.sum) + ' đồng.' : ''), {ind: 360}),
     P('2.3. Hình thức thanh toán: Căn cứ theo số lượng bán cho nhà máy, hai bên tiến hành thanh toán bằng tiền mặt.', {ind: 360}),
-    P('2.4. Thời gian khai thác: từ ngày ' + (rs.tuNgay || '…/…/2026') + ' ' +
+    P('2.4. Thời gian khai thác: từ ngày ' + (rs.tuNgay || '…/…/……') + ' ' +
       (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến hết khi khai thác hết rừng keo tại địa điểm trên') + '.', {ind: 360}),
     P('**Điều 3: Trách nhiệm của mỗi bên**', {keep: true}),
     P('3.1. Trách nhiệm của bên A', {keep: true}),
@@ -992,7 +994,7 @@ function docBHLD(rec, ex) {
       [['STT', 'HỌ TÊN', 'CHỨC DANH CÔNG VIỆC', 'Quần áo', 'Giày/ủng', 'Mũ', 'Găng tay', 'Nút chống ồn', 'Kính bảo hộ', 'Ký nhận'], ...rows],
       {head: true, borders: true, alignCols: ['center', 'left', 'left', 'center', 'center', 'center', 'center', 'center', 'center', 'center']}),
     P('Người lao động đã nhận đủ phương tiện bảo vệ cá nhân theo danh sách trên, cam kết sử dụng đúng mục đích, giữ gìn và báo ngay khi hư hỏng để được thay thế.', {before: 160, after: 120}),
-    P('Đà Nẵng, ' + (ex.capNgay ? 'ngày ' + ex.capNgay : 'ngày ….. tháng ….. năm 2026'), {al: 'right', after: 120}),
+    P('Đà Nẵng, ' + (ex.capNgay ? 'ngày ' + ex.capNgay : HAKHopDong.ngayTrong()), {al: 'right', after: 120}),
     signTable(['NGƯỜI CẤP PHÁT', '(Ký, ghi rõ họ tên)', ex.capNguoi || personName(rs.danhXung, rs.ten)], ['ĐẠI DIỆN TỔ KHAI THÁC', '(Ký, ghi rõ họ tên)', personName(tt.danhXung, tt.ten)])
   ];
 }
@@ -1005,7 +1007,7 @@ function docHDLD(rec, ex, cn) {
   return [
     ...TITLE_HEAD(),
     P('**HỢP ĐỒNG LAO ĐỘNG**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Số: ……/HĐLĐ/2026', {al: 'center', after: 200}),
+    P('Số: ……/HĐLĐ/' + HAKHopDong.NAM_TRONG, {al: 'center', after: 200}),
     ...LAW_LD.map(t => P('- ' + t, {after: 60})),
     P('Đà Nẵng, ' + ngayLine(ex).replace('ngày ', 'ngày ') , {al: 'right', after: 200}),
     P('Chúng tôi, một bên là ' + (A.danhXung === 'Bà' ? 'Bà' : 'Ông') + ': **' + upper(A.ten) + '**. Quốc tịch: Việt Nam. Dân tộc: Kinh.', {after: 60}),
@@ -1107,7 +1109,7 @@ function docThamDinh(rec, ex) {
       {head: true, borders: true, sz: 17, rowH: 300, pad: 10, alignCols: ['center', 'left', 'center', 'left']}),
     P('**D. Kết luận:**  ☐ Đạt   ☐ Đạt có điều kiện   ☐ Không đạt (kiến nghị tạm dừng thu mua, khai thác)', {al: 'left', before: 60, after: 30, keep: true}),
     P('Điều kiện, yêu cầu khắc phục, thời hạn: …………………………………………………………………………………………', {al: 'left', after: 40, keep: true}),
-    P('Đà Nẵng, ' + (ex.tdNgay ? 'ngày ' + ex.tdNgay : 'ngày ….. tháng ….. năm 2026'), {al: 'right', after: 60, keep: true}),
+    P('Đà Nẵng, ' + (ex.tdNgay ? 'ngày ' + ex.tdNgay : HAKHopDong.ngayTrong()), {al: 'right', after: 60, keep: true}),
     signTable(['NGƯỜI THẨM ĐỊNH', '(Ký, ghi rõ họ tên)', ex.tdNguoi || ''], ['CHỦ RỪNG', '(Ký, ghi rõ họ tên)', rsName])
   ];
 }
@@ -1161,7 +1163,7 @@ function docPhoBienFSC(rec, ex) {
     T([650, 3000, 3200, 2505],
       [['STT', 'HỌ TÊN', 'VAI TRÒ', 'KÝ XÁC NHẬN'], ...people.map((x, i) => [String(i + 1), upper(x[0]), x[1], ''])],
       {head: true, borders: true, sz: 17, rowH: 300, pad: 10, alignCols: ['center', 'left', 'left', 'left']}),
-    P('Đà Nẵng, ' + (ex.fscNgay ? 'ngày ' + ex.fscNgay : 'ngày ….. tháng ….. năm 2026'), {al: 'right', before: 140, after: 80, keep: true}),
+    P('Đà Nẵng, ' + (ex.fscNgay ? 'ngày ' + ex.fscNgay : HAKHopDong.ngayTrong()), {al: 'right', before: 140, after: 80, keep: true}),
     signTable(['NGƯỜI PHỔ BIẾN', '(Ký, ghi rõ họ tên)', ex.fscNguoi || ''], ['CHỦ RỪNG', '(Ký, ghi rõ họ tên)', rsName])
   ];
 }
@@ -1188,7 +1190,7 @@ function docSoTaiNan(rec, ex) {
       {head: true, borders: true, sz: 18, rowH: 500, pad: 20, alignCols: ['center', 'center', 'left', 'center', 'left', 'left', 'left', 'center']}),
     P('Cột LOẠI ghi: TNLĐ nhẹ / TNLĐ nặng / Sự cố môi trường / Sự cố thiết bị / Sự cố cháy.', {al: 'left', i: true, sz: 20, before: 60, after: 100}),
     P('**Xác nhận kết thúc đợt khai thác:** ☐ Không phát sinh tai nạn lao động, sự cố   ☐ Có ……… vụ (đã ghi ở bảng trên)', {al: 'left', after: 80, keep: true}),
-    P('Đà Nẵng, ngày ….. tháng ….. năm 2026', {al: 'right', after: 60, keep: true}),
+    P('Đà Nẵng, ' + HAKHopDong.ngayTrong(), {al: 'right', after: 60, keep: true}),
     T([7568, 7569], [
       ['**ĐẠI DIỆN TỔ KHAI THÁC**', '**CHỦ RỪNG**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
@@ -1223,7 +1225,7 @@ function docKiemTraThietBi(rec, ex) {
       [['STT', 'THIẾT BỊ / BIỂN KIỂM SOÁT', 'SỐ HIỆU / MÃ', 'HẠN KIỂM ĐỊNH, BẢO HIỂM, SỬ DỤNG', 'TÌNH TRẠNG', 'NỘI DUNG KIỂM TRA, BẢO DƯỠNG', 'GHI CHÚ'], ...rows],
       {head: true, borders: true, sz: 17, rowH: 320, pad: 10, alignCols: ['center', 'left', 'center', 'left', 'center', 'left', 'left']}),
     P('**Kết luận, kiến nghị xử lý thiết bị chưa đạt:** …………………………………………………………………………………………………………', {al: 'left', before: 60, after: 20}),
-    P('Đà Nẵng, ngày ….. tháng ….. năm 2026', {al: 'right', before: 0, after: 40}),
+    P('Đà Nẵng, ' + HAKHopDong.ngayTrong(), {al: 'right', before: 0, after: 40}),
     sign3(rsName, ttName, ex.tbNguoi)
   ];
 }
@@ -1233,12 +1235,12 @@ function docNghiemThu(rec, ex) {
   const direct = isDirect(rs), vol = volumeOf(rs), kg = vol ? Math.round(vol.v * 1000) : 0;
   const pr = payRows(rec, ex), bs = basisOf(rs), tien = direct ? 0 : (pr.sum || 0);
   const daTT = toNum(ex.ntDaTT) || 0;
-  const hd = direct ? 'các hợp đồng lao động đã ký giữa chủ rừng và người lao động' : 'Hợp đồng khai thác gỗ keo số ' + (ex.soKT || '…………') + '/2026-KT';
+  const hd = direct ? 'các hợp đồng lao động đã ký giữa chủ rừng và người lao động' : 'Hợp đồng khai thác gỗ keo số ' + ex._so.kt.so;
   const pcKg = totalKg(rec.pc || []);
   return [
     ...TITLE_HEAD(),
     P('**BIÊN BẢN NGHIỆM THU VÀ THANH LÝ KHAI THÁC**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Số: ' + (ex.ntSo || '…………') + '/2026-NTTL', {al: 'center', after: 200}),
+    P('Số: ' + ex._so.nt.so, {al: 'center', after: 200}),
     P(LAW_BLDS),
     P('- Căn cứ ' + hd + ';'),
     P('- Căn cứ kết quả khai thác thực tế tại rừng.'),
@@ -1293,7 +1295,7 @@ function docCamKetNguonGoc(rec, ex) {
     P('6. Cung cấp đầy đủ, trung thực hồ sơ, tài liệu và đồng ý để bên nhận cam kết kiểm tra, truy xuất nguồn gốc gỗ tại hiện trường.'),
     P('7. Chịu hoàn toàn trách nhiệm trước pháp luật về nội dung cam kết. Nếu sai sự thật, tôi chấp nhận bị chấm dứt thu mua và bồi thường thiệt hại phát sinh (nếu có).'),
     P('Bản cam kết được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị như nhau.', {before: 60}),
-    P('Đà Nẵng, ' + (ex.ckNgay ? 'ngày ' + ex.ckNgay : 'ngày ….. tháng ….. năm 2026'), {al: 'right', before: 120, after: 100}),
+    P('Đà Nẵng, ' + (ex.ckNgay ? 'ngày ' + ex.ckNgay : HAKHopDong.ngayTrong()), {al: 'right', before: 120, after: 100}),
     signTable(['NGƯỜI CAM KẾT', '(Ký, ghi rõ họ tên)', rsName], ['XÁC NHẬN CỦA THÔN / UBND XÃ (nếu có)', '(Ký, ghi rõ họ tên, đóng dấu)', ''])
   ];
 }
@@ -1319,7 +1321,7 @@ function docCamKetLaoDong(rec, ex) {
       [['STT', 'HỌ TÊN', 'CHỨC DANH', 'NGÀY SINH', 'KÝ XÁC NHẬN'],
         ...list.map((r, i) => [String(i + 1), upper(r.ten), r.chucDanh, r.ngaySinh || '', ''])],
       {head: true, borders: true, sz: 20, rowH: 420, alignCols: ['center', 'left', 'left', 'center', 'left']}),
-    P('Đà Nẵng, ' + (ex.ckNgay ? 'ngày ' + ex.ckNgay : 'ngày ….. tháng ….. năm 2026'), {al: 'right', before: 160, after: 100}),
+    P('Đà Nẵng, ' + (ex.ckNgay ? 'ngày ' + ex.ckNgay : HAKHopDong.ngayTrong()), {al: 'right', before: 160, after: 100}),
     signTable(['CHỦ RỪNG', '(Ký, ghi rõ họ tên)', rsName], ['ĐẠI DIỆN TỔ KHAI THÁC', '(Ký, ghi rõ họ tên)', ttName])
   ];
 }
@@ -1352,7 +1354,7 @@ function docKiemTraHienTruong(rec, ex) {
         ...items.map((x, i) => [String(i + 1), x, box, box, ''])],
       {head: true, borders: true, sz: 18, rowH: 330, pad: 20, alignCols: ['center', 'left', 'center', 'center', 'left']}),
     P('**Kết luận:** ………………………………………………………………………………………………………………………………………', {al: 'left', before: 80, after: 40}),
-    P('Đà Nẵng, ngày ….. tháng ….. năm 2026', {al: 'right', before: 60, after: 60}),
+    P('Đà Nẵng, ' + HAKHopDong.ngayTrong(), {al: 'right', before: 60, after: 60}),
     T([5045, 5046, 5046], [
       ['**NGƯỜI KIỂM TRA**', '**ĐẠI DIỆN TỔ KHAI THÁC**', '**CHỦ RỪNG**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
@@ -1364,13 +1366,13 @@ function docKiemTraHienTruong(rec, ex) {
 
 function docXNKLVC(rec, ex, g) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tr = tripsOf(rec, g), kg = totalKg(tr);
-  const hdNo = (ex.soVC || '…………') + '/2026-HĐVC';
+  const hdNo = ex._so.vc.so;
   const d0 = tr.length ? tr[0].ngay : '……', d1 = tr.length ? tr[tr.length - 1].ngay : '……';
   const noiGiao = ex.vcDiemDen || tr.map(r => r.noiGiao).find(Boolean) || '………………';   // điểm đến theo hồ sơ rừng; cột “Nơi giao” từng phiếu giữ nguyên dữ liệu nguồn
   return [
     ...TITLE_HEAD(),
     P('**BIÊN BẢN XÁC NHẬN KHỐI LƯỢNG VẬN CHUYỂN**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Số: ' + (ex.pcSo || '…………') + '/2026-XNKL', {al: 'center', after: 0}),
+    P('Số: ' + ex._so.xn.so, {al: 'center', after: 0}),
     P('(Kèm theo Hợp đồng vận chuyển số ' + hdNo + ')', {al: 'center', i: true, after: 200}),
     P(LAW_BLDS),
     P('- Căn cứ Hợp đồng vận chuyển gỗ keo số ' + hdNo + ' giữa hai bên;'),
@@ -1394,12 +1396,12 @@ function docXNKLVC(rec, ex, g) {
 }
 function docTTVC(rec, ex, g) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), py = payVC(rec, g), tp = transportPrice(rs);
-  const hdNo = (ex.soVC || '…………') + '/2026-HĐVC';
+  const hdNo = ex._so.vc.so;
   const tr = tripsOf(rec, g), d0 = tr.length ? tr[0].ngay : '……', d1 = tr.length ? tr[tr.length - 1].ngay : '……';
   return [
     ...TITLE_HEAD(),
     P('**BẢNG THANH TOÁN TIỀN VẬN CHUYỂN**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('(Kèm theo Hợp đồng vận chuyển số ' + hdNo + ' và Biên bản xác nhận khối lượng vận chuyển số ' + (ex.pcSo || '……') + '/2026-XNKL)', {al: 'center', i: true, after: 200}),
+    P('(Kèm theo Hợp đồng vận chuyển số ' + hdNo + ' và Biên bản xác nhận khối lượng vận chuyển số ' + ex._so.xn.so + ')', {al: 'center', i: true, after: 200}),
     P('**Bên trả tiền (Bên A): ' + upper(rsName) + '**', {after: 40}),
     P('Địa chỉ: ' + (rs.diaChi || '…………') + ' · CCCD số: ' + (rs.cccd || '…………'), {ind: 360, after: 100}),
     P('**Bên nhận tiền (Bên B): ' + upper(g.ten) + '**', {after: 40}),
@@ -1431,7 +1433,7 @@ function docHDVC(rec, ex, g) {
   return [
     ...TITLE_HEAD(),
     P('**HỢP ĐỒNG VẬN CHUYỂN GỖ KEO**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Số: ' + (ex.soVC || '…………') + '/2026-HĐVC', {al: 'center', after: 0}),
+    P('Số: ' + ex._so.vc.so, {al: 'center', after: 0}),
     P('“V/v: Vận chuyển gỗ rừng trồng”', {al: 'center', i: true, after: 200}),
     P(LAW_BLDS),
     ...(hdRef(rs) ? [P('- ' + hdRef(rs))] : []),
@@ -1479,7 +1481,7 @@ function docHDVC(rec, ex, g) {
     {t: 'br'},
     P('**PHỤ LỤC**', {al: 'center', after: 0}),
     P('**DANH SÁCH XE VẬN CHUYỂN GỖ KEO**', {al: 'center', after: 60}),
-    P('Kèm theo Hợp đồng vận chuyển số ' + (ex.soVC || '……') + '/2026-HĐVC — Bên vận chuyển: ' + upper(g.ten), {al: 'center', after: 200}),
+    P('Kèm theo Hợp đồng vận chuyển số ' + ex._so.vc.so + ' — Bên vận chuyển: ' + upper(g.ten), {al: 'center', after: 200}),
     T([650, 1250, 950, 1500, 1000, 1000, 1900, 1105],
       [['STT', 'Biển kiểm soát', 'Loại xe', 'Chủ xe', 'Ngày cấp đăng ký xe', 'Bảo hiểm đến hạn', 'Kiểm định (từ ngày – đến ngày)', 'SĐT'],
         ...g.xe.map((x, i) => [String(i + 1), x.bienSo, x.loaiXe || '', x.chuXe || '', x.cavet || '', x.hanBH || '',
@@ -1501,7 +1503,7 @@ const SIGN_DATE = '<br>';
 function footerSign(title, name) {
   return [
     P('', {after: 60}),
-    P('Đà Nẵng, ngày ….. tháng ….. năm 2026', {al: 'right', before: 120, after: 0}),
+    P('Đà Nẵng, ' + HAKHopDong.ngayTrong(), {al: 'right', before: 120, after: 0}),
     P('**' + title + '**', {al: 'right', after: 0}),
     P('(Ký, họ tên)', {al: 'right', i: true, after: 0}),
     P('**' + upper(name) + '**', {al: 'right', before: 500})
@@ -1516,7 +1518,7 @@ function docChamCong(rec, ex) {
   return [
     P('**BẢNG CHẤM CÔNG LAO ĐỘNG KHAI THÁC RỪNG ' + upper(personName(rs.danhXung, rs.ten)) + '**', {al: 'center', sz: 26, before: 60, after: 40}),
     P('(Địa chỉ: ' + rs.diaDiem + ')', {al: 'center', after: 40}),
-    P('**Tháng ' + (ex.thang || '……') + '/2026**', {al: 'center', after: 160}),
+    P('**Tháng ' + (ex.thang ? (/\//.test(ex.thang) ? ex.thang : ex.thang + '/' + HAKHopDong.NAM_TRONG) : '……/' + HAKHopDong.NAM_TRONG) + '**', {al: 'center', after: 160}),
     T(widths, [['TT', 'Họ và tên', ...dayHead, 'Tổng số công'], ...rows],
       {head: true, borders: true, sz: 16, rowH: 420,
        alignCols: ['center', 'left', ...Array(31).fill('center'), 'center']}),
@@ -1557,7 +1559,7 @@ function docXNDaoTao(rec, ex) {
       {head: true, borders: true, sz: 18, rowH: 480,
        alignCols: ['center', 'left', 'left', 'center', 'center', 'left', 'left']}),
     P('', {after: 120}),
-    P('Đà Nẵng, ' + (ex.dtNgay ? 'ngày ' + ex.dtNgay : 'ngày ….. tháng ….. năm 2026'), {al: 'right', after: 160}),
+    P('Đà Nẵng, ' + (ex.dtNgay ? 'ngày ' + ex.dtNgay : HAKHopDong.ngayTrong()), {al: 'right', after: 160}),
     T([7500, 7500], [
       ['**NGƯỜI ĐÀO TẠO**', '**ĐẠI DIỆN TỔ KHAI THÁC**'],
       ['(Ký, họ tên)', '(Ký, họ tên)'],
@@ -1585,6 +1587,7 @@ function groupsDX(rec) {
 function buildFiles(rec, kind) {
   const ex = Object.assign({}, rec.exp || {}, {vcDiemDen: destOf(rec).text});
   if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
+  ex._so = HAKHopDong.numbers(ex);                                                // MỘT quy tắc số hợp đồng cho BM-01, BM-04, BM-09, BM-10, BM-14, BM-20 (src/hopdong.js)
   const s = slug(rec.info.ten);
   const files = [];
   if ((kind === 'gk' || kind === 'all') && !isDirect(rec.info)) files.push({path: '01_HD_Giao_khoan_' + s + '.docx', blocks: docGiaoKhoan(rec, ex)});
@@ -1628,7 +1631,7 @@ function docTienCong(rec, ex) {
   const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, (!ngc && each != null) ? fmtTan(each) : '', x.rate ? fmt(x.rate) : '',
     ngc && plan.cong != null ? String(plan.cong) : '', x.tien != null ? fmt(x.tien) : '', x.tien != null ? fmt(x.tien) : '', '']);
   if (sum > 0) rows.push(['', '**TỔNG CỘNG**', '', '', '', '', fmt(sum), fmt(sum), '']);
-  const from = plan.tu || '……/……/2026', to = plan.den || '……/……/2026';
+  const from = plan.tu || '……/……/……', to = plan.den || '……/……/……';
   const info = ngc
     ? (plan.cong != null ? 'Số ngày công: ' + plan.cong + ' công (không tính Chủ nhật).' : '')
     : (plan.vol ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + fmtTan(plan.vol.v) + ' ' + bs.qty + ' (' + plan.vol.src + '), chia đều ' + N + ' người: ' + fmtTan(each) + ' ' + bs.qty + '/người.' : '');
@@ -1655,11 +1658,11 @@ function docUyQuyen(rec, ex) {
   return [
     ...TITLE_HEAD(),
     P('**GIẤY ỦY QUYỀN**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Số: ' + (ex.uqSo || '…………') + '/2026-UQ', {al: 'center', after: 0}),
+    P('Số: ' + ex._so.uq.so, {al: 'center', after: 0}),
     P('(V/v: Ủy quyền giao kết và thực hiện hợp đồng khai thác gỗ keo rừng trồng)', {al: 'center', i: true, after: 200}),
     P(LAW_BLDS),
     P('- Căn cứ Bộ luật Lao động số 45/2019/QH14 ngày 20/11/2019 của Quốc hội, quy định về người giao kết hợp đồng lao động (Điều 18);'),
-    P('- Căn cứ Hợp đồng khai thác gỗ keo số ' + (ex.soKT || '…………') + '/2026-KT giữa ' + upper(rsName) + ' (chủ rừng) và ' + upper(ttName) + ' (tổ trưởng).'),
+    P('- Căn cứ Hợp đồng khai thác gỗ keo số ' + ex._so.kt.so + ' giữa ' + upper(rsName) + ' (chủ rừng) và ' + upper(ttName) + ' (tổ trưởng).'),
     P('Hôm nay, ' + ngayLine({ngayKy: ex.uqNgay || ex.ngayKy}) + ' tại ' + (rs.diaDiem || '…………') + ', chúng tôi gồm có:', {after: 160}),
     P('**BÊN ỦY QUYỀN (BÊN A):** các người lao động có tên, ngày tháng năm sinh, giới tính, nơi cư trú và chữ ký trong **Danh sách người ủy quyền** kèm theo Giấy này (' + cn.length + ' người), là nhóm người lao động từ đủ 18 tuổi trở lên cùng làm việc khai thác gỗ keo tại ' + (rs.diaDiem || '…………') + rungText(rs) + '.', {after: 120}),
     ...partyBlock('BÊN ĐƯỢC ỦY QUYỀN (BÊN B) — TỔ TRƯỞNG', tt, ttName),
@@ -1671,7 +1674,7 @@ function docUyQuyen(rec, ex) {
     bl('Làm việc với chủ rừng về tiến độ, khối lượng và nghiệm thu.'),
     P('Bên B không được ủy quyền lại cho người khác; không được thay đổi đơn giá, thu nhập hay quyền lợi của người lao động khi chưa có thỏa thuận bằng văn bản của người lao động đó.'),
     P('**Điều 2: Thời hạn ủy quyền**', {keep: true}),
-    P('Từ ngày ' + (rs.tuNgay || '…/…/2026') + ' ' + (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến khi nghiệm thu, thanh lý và thanh toán xong hợp đồng khai thác') + ', hoặc đến khi chấm dứt ủy quyền theo thỏa thuận hoặc theo quy định của pháp luật.'),
+    P('Từ ngày ' + (rs.tuNgay || '…/…/……') + ' ' + (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến khi nghiệm thu, thanh lý và thanh toán xong hợp đồng khai thác') + ', hoặc đến khi chấm dứt ủy quyền theo thỏa thuận hoặc theo quy định của pháp luật.'),
     P('**Điều 3: Thù lao và trách nhiệm**', {keep: true}),
     bl('Thù lao ủy quyền: ' + (ex.uqThuLao || 'Không có thù lao riêng; Bên B hưởng tiền theo vai trò của mình trong Bảng thanh toán tiền công.')),
     bl('Bên B chịu trách nhiệm thực hiện đúng phạm vi ủy quyền, thanh toán đầy đủ, đúng hạn cho từng người lao động và báo cáo khi Bên A yêu cầu.'),
@@ -1683,7 +1686,7 @@ function docUyQuyen(rec, ex) {
     signTable(['BÊN ĐƯỢC ỦY QUYỀN (TỔ TRƯỞNG)', '(Ký, ghi rõ họ tên)', ttName], ['CHỦ RỪNG (xác nhận đã nhận Giấy ủy quyền)', '(Ký, ghi rõ họ tên)', rsName]),
     {t: 'br'},
     P('**DANH SÁCH NGƯỜI LAO ĐỘNG ỦY QUYỀN**', {al: 'center', sz: 26, before: 60, after: 40}),
-    P('(Kèm theo Giấy ủy quyền số ' + (ex.uqSo || '…………') + '/2026-UQ · Mỗi người tự ký tên)', {al: 'center', i: true, after: 120}),
+    P('(Kèm theo Giấy ủy quyền số ' + ex._so.uq.so + ' · Mỗi người tự ký tên)', {al: 'center', i: true, after: 120}),
     T([480, 1700, 1000, 620, 1300, 1850, 1055, 1350],
       [['STT', 'Họ và tên', 'Ngày sinh', 'Giới tính', 'Số CCCD', 'Nơi cư trú', 'Chức danh', 'Chữ ký'], ...rows],
       {head: true, borders: true, sz: 17, rowH: 760, alignCols: ['center', 'left', 'center', 'center', 'center', 'left', 'left', 'center']})
@@ -2131,6 +2134,17 @@ function issuesBox(errs, warns) {
   return h;
 }
 
+/* Xem trước SỐ ĐẦY ĐỦ sẽ in trên biểu mẫu (cùng quy tắc với lúc xuất: src/hopdong.js) và nhắc việc cần bổ sung để có năm */
+function soPreviewHtml(rec, exo, which) {
+  const ex = Object.assign({}, exo || rec.exp || {}); if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;
+  const n = HAKHopDong.numbers(ex), direct = isDirect(rec.info), cbs = HAKHopDong.canBoSung(ex);
+  const line = (label, x, forms) => '<tr><td>' + label + '</td><td><b>' + esc(x.so) + '</b></td><td class="mut">' + forms + (x.giuNguyen ? ' · số đã đầy đủ, giữ nguyên' : x.nam ? ' · năm ' + x.nam + ' lấy từ ngày ' + esc(x.ngay) : ' · <span style="color:var(--err)">chưa có năm</span>') + '</td></tr>';
+  const rows = which === 'vc' ? [line('Hợp đồng vận chuyển', n.vc, 'BM-04, BM-09, BM-10'), line('Biên bản xác nhận khối lượng', n.xn, 'BM-09, BM-10')]
+    : [...(direct ? [] : [line('Hợp đồng khai thác (giao khoán)', n.kt, 'BM-01, BM-14, BM-20'), line('Giấy ủy quyền', n.uq, 'BM-20')]), line('Biên bản nghiệm thu, thanh lý', n.nt, 'BM-14')];
+  const need = cbs.filter(c => which === 'vc' ? /BM-04|BM-09/.test(c.label) : /BM-01|BM-14|BM-20/.test(c.label));
+  return '<table><tr><th>Văn bản</th><th>Số đầy đủ sẽ in</th><th>Ghi chú</th></tr>' + rows.join('') + '</table>' +
+    (need.length ? '<div class="msg warn" style="margin-top:6px">Chưa có năm trong số: ' + need.map(c => esc(c.label) + ' — bổ sung <b>' + esc(c.truong) + '</b> (dd/mm/yyyy, ngày có thật)').join('; ') + '. Năm được lấy từ ngày ký của chính hợp đồng, không ghi sẵn năm cố định.</div>' : '');
+}
 function panelXuat(rec) {
   const g = gate(rec);
   const ex = rec.exp || {};
@@ -2151,10 +2165,11 @@ function panelXuat(rec) {
   const row = (t, sub, b) => '<div class="docrow"><div><b>' + t + '</b><div class="mut">' + sub + '</div></div>' + b + '</div>';
   const S = {};
   S.hd = params('Thông số hợp đồng và nghiệm thu', [
-      ['ngayKy', 'Ngày ký hợp đồng (dùng chung cho cả hợp đồng vận chuyển)', rec.info.ngayKyHopDong ? 'mặc định: ' + rec.info.ngayKyHopDong + ' (ngày ký ở Thông tin chủ rừng)' : 'dd/mm/yyyy'], ['soKT', 'Số HĐ giao khoán (phần trước /2026-KT)', ''],
+      ['ngayKy', 'Ngày ký hợp đồng (dùng chung cho cả hợp đồng vận chuyển)', rec.info.ngayKyHopDong ? 'mặc định: ' + rec.info.ngayKyHopDong + ' (ngày ký ở Thông tin chủ rừng)' : 'dd/mm/yyyy'], ['soKT', 'Số HĐ giao khoán (nhập phần số, VD 015; hoặc số đầy đủ VD 015/2026-KT)', 'năm lấy từ Ngày ký hợp đồng'],
       ['hdPhuCap', 'HĐLĐ: phụ cấp, khoản bổ sung', 'mặc định: Không'], ['hdNangLuong', 'HĐLĐ: nâng bậc, nâng lương', 'mặc định: Không áp dụng'],
-      ['uqSo', 'Giấy ủy quyền (giao khoán): số', 'phần trước /2026-UQ'], ['ntSo', 'Nghiệm thu, thanh lý: số biên bản', 'phần trước /2026-NTTL'], ['ntNgay', 'Nghiệm thu, thanh lý: ngày lập', 'dd/mm/yyyy'],
+      ['uqSo', 'Giấy ủy quyền (giao khoán): số (phần số hoặc số đầy đủ)', 'năm lấy từ ngày ký hợp đồng'], ['uqNgay', 'Giấy ủy quyền (giao khoán): ngày lập', 'trống = ngày ký hợp đồng'], ['ntSo', 'Nghiệm thu, thanh lý: số biên bản (phần số hoặc số đầy đủ)', 'năm lấy từ ngày lập biên bản'], ['ntNgay', 'Nghiệm thu, thanh lý: ngày lập', 'dd/mm/yyyy'],
       ['ntDaTT', 'Nghiệm thu, thanh lý: số tiền đã thanh toán trước (đ)', 'VD: 50000000']]) +
+    '<div class="card"><h3 style="margin-top:0">Số hợp đồng đầy đủ sẽ in (xem trước)</h3><div id="soPreviewHd">' + soPreviewHtml(rec, null, 'hd') + '</div></div>' +
     '<div class="card"><h3 style="margin-top:0">Hợp đồng khai thác và nghiệm thu</h3>' +
     (g.direct ? row('Hợp đồng khai thác (giao khoán)', 'Không dùng: chủ rừng ký hợp đồng lao động trực tiếp với từng người', '')
       : row('Hợp đồng khai thác gỗ keo (giao khoán tổ trưởng)', 'Bên A: chủ rừng · Bên B: tổ trưởng', btn('⬇ Tải .docx', 'gk', null, g.canGK))) +
@@ -2173,16 +2188,17 @@ function panelXuat(rec) {
     row('Danh sách cấp phát BHLĐ', rec.nc.length ? rec.nc.length + ' người' : 'Cần nạp nhân công', btn('⬇ Tải .docx', 'bhld', null, g.canPhat)) +
     row('Biên bản xác nhận đào tạo ATLĐ', 'Người đào tạo: chủ rừng (theo mẫu)', btn('⬇ Tải .docx', 'xn', null, g.canBHLD)) +
     row('Danh sách đội khai thác', 'Lấy từ file nhân công', btn('⬇ Tải .docx', 'dsd', null, g.canBHLD)) +
-    row('Bảng chấm công', 'Tháng <input data-exp="thang" value="' + esc(ex.thang || '') + '" style="width:70px"> /2026 · bảng trống để chấm tay', btn('⬇ Tải .docx', 'cc', null, g.canBHLD)) +
+    row('Bảng chấm công', 'Tháng <input data-exp="thang" value="' + esc(ex.thang || '') + '" style="width:70px" placeholder="MM hoặc MM/yyyy"> · nhập tháng (hoặc MM/yyyy để có năm) · bảng trống để chấm tay', btn('⬇ Tải .docx', 'cc', null, g.canBHLD)) +
     '<div class="docrow"><div><b>Bảng thanh toán tiền công</b><div class="mut">Từ <input data-exp="tuNgayTT" value="' + esc(ex.tuNgayTT || '') + '" placeholder="' + esc(rec.info.tuNgay || 'dd/mm/yyyy') + '" style="width:110px"> đến <input data-exp="denNgayTT" value="' + esc(ex.denNgayTT || '') + '" placeholder="' + esc(rec.info.denNgay || 'dd/mm/yyyy') + '" style="width:110px"> · để trống thì lấy thời gian khai thác của rừng</div>' +
       '<div class="' + (pay.issues.length ? 'msg warn' : 'mut') + '" style="margin-top:4px">' + (pay.issues.length ? 'Chưa tính được tiền: ' + esc(pay.issues.join('; ')) + '. Cột tiền sẽ để trống.'
         : pay.ngc ? 'Tự tính: ' + pay.cong + ' công (từ ' + esc(pay.tu) + ' đến ' + esc(pay.den) + ', trừ Chủ nhật)' : 'Tự tính: ' + fmtTan(pay.vol.v) + (pay.basis === 'ha' ? ' ha (' : ' tấn (') + pay.vol.src + ') chia đều ' + (rec.nc.length || 0) + ' người') + '</div></div>' + btn('⬇ Tải .docx', 'tc', null, g.canBHLD) + '</div>' +
     row('Sổ theo dõi tai nạn lao động, sự cố', 'Sổ trống để ghi tại hiện trường, có xác nhận cuối đợt (in ngang)', btn('⬇ Tải .docx', 'stai', null, g.canBHLD)) +
     row('Biên bản kiểm tra, bảo dưỡng thiết bị', 'Cưa xăng, phương tiện (lấy từ tab Vận chuyển), bình chữa cháy (in ngang)', btn('⬇ Tải .docx', 'tbi', null, g.canBHLD)) + '</div>';
   S.vc = params('Thông số hợp đồng vận chuyển, khối lượng và thanh toán', [
-      ['soVC', 'Số HĐ vận chuyển (phần trước /2026-HĐVC)', ''], ['vcChiPhi', 'HĐVC: chi phí khác (cầu đường, bốc xếp, thuế)', 'trống = dòng chấm'],
-      ['pcSo', 'Xác nhận KL vận chuyển: số biên bản', 'phần trước /2026-XNKL'], ['pcNgay', 'Xác nhận KL, thanh toán: ngày lập', 'dd/mm/yyyy'],
+      ['soVC', 'Số HĐ vận chuyển (nhập phần số hoặc số đầy đủ)', 'năm lấy từ Ngày ký hợp đồng'], ['vcChiPhi', 'HĐVC: chi phí khác (cầu đường, bốc xếp, thuế)', 'trống = dòng chấm'],
+      ['pcSo', 'Xác nhận KL vận chuyển: số biên bản (phần số hoặc số đầy đủ)', 'năm lấy từ ngày lập biên bản'], ['pcNgay', 'Xác nhận KL, thanh toán: ngày lập', 'dd/mm/yyyy'],
       ['pcNguoiLap', 'Thanh toán vận chuyển: người lập bảng', 'trống = để ký tay'], ['pcNguong', 'Cảnh báo lệch khối lượng (%)', 'VD: 5 · trống = không kiểm tra']]) +
+    '<div class="card"><h3 style="margin-top:0">Số hợp đồng đầy đủ sẽ in (xem trước)</h3><div id="soPreviewVc">' + soPreviewHtml(rec, null, 'vc') + '</div></div>' +
     (g.dx.warns.length ? '<div class="msg warn">Vận chuyển có ' + g.dx.warns.length + ' dòng cần lưu ý (giấy tờ thiếu hoặc sắp hết hạn). Xem tab Vận chuyển, không chặn xuất hồ sơ.</div>' : '') +
     '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng vận chuyển (theo người ký)</h3>' + btn('⬇ Tải tất cả (.zip)', 'hdvc', null, g.canHDVC) + '</div>' +
     (groups.length ? groups.map((x, i) => row(esc(x.ten), x.vaiTro + ' ký · ' + x.xe.length + ' xe · ' + fmt(x.donGia) + ' đ/tấn', btn('⬇ .docx', 'hdvc', i, g.canHDVC))).join('') : '<p class="mut">Chưa có vận chuyển.</p>') + '</div>' +
@@ -3255,6 +3271,11 @@ else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset && t.dataset.mamoi !== undefined) { impMaCheck(); return; }
+  if (t.dataset && t.dataset.exp && curForest()) {   // xem trước số hợp đồng cập nhật ngay khi gõ
+    const rec = curRec(), exo = Object.assign({}, rec.exp, {[t.dataset.exp]: trim(t.value)});
+    const a = document.getElementById('soPreviewHd'), b = document.getElementById('soPreviewVc');
+    if (a) a.innerHTML = soPreviewHtml(rec, exo, 'hd'); if (b) b.innerHTML = soPreviewHtml(rec, exo, 'vc');
+  }
   if (t.form && t.form.id === 'forestForm' && (t.name === 'dienTich' || t.name === 'dinhMucTanHa')) {   // sản lượng dự kiến tự nhảy ngay khi gõ, không cần bấm Lưu
     const dt = toDec(t.form.elements.dienTich.value), dm = toDec(t.form.elements.dinhMucTanHa.value), out = document.getElementById('slDuKien');
     if (out) out.value = (typeof dt === 'number' && typeof dm === 'number') ? fmt(Math.round(dt * dm)) + ' tấn' : (dt === 'x' || dm === 'x') ? 'Diện tích hoặc định mức không phải là số' : '';

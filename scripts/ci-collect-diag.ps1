@@ -1,0 +1,14 @@
+# Thu thập chẩn đoán khi bước cài đặt/kiểm tra khói thất bại: nhật ký sự cố Windows (Application Error, WER, .NET Runtime…), thông tin máy chạy, tiến trình, thư mục tạm của bộ cài, bản ghi sự cố (dump).
+# Chỉ ĐỌC và ghi vào diag/; không đổi hệ thống.
+$diag = Join-Path (Get-Location) 'diag'; New-Item -ItemType Directory $diag -Force | Out-Null
+function Safe($name, [scriptblock]$sb) { try { & $sb | Out-String -Width 220 | Set-Content (Join-Path $diag $name) -Encoding utf8 } catch { "lỗi khi thu thập: $($_.Exception.Message)" | Set-Content (Join-Path $diag $name) -Encoding utf8 } }
+Safe 'machine.txt' { [Environment]::OSVersion | Format-List; Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber, FreePhysicalMemory, TotalVisibleMemorySize | Format-List; Get-PSDrive -PSProvider FileSystem | Select-Object Name, Used, Free | Format-Table; "runner image: $env:ImageOS $env:ImageVersion" }
+Safe 'defender.txt' { Get-MpComputerStatus | Select-Object AMServiceEnabled, RealTimeProtectionEnabled, AntivirusSignatureVersion, QuickScanAge | Format-List; Get-MpThreatDetection | Select-Object -First 10 | Format-List }
+Safe 'event-log.txt' { Get-WinEvent -FilterHashtable @{LogName = 'Application'; StartTime = (Get-Date).AddMinutes(-60)} -ErrorAction SilentlyContinue | Where-Object { $_.ProviderName -match 'Application Error|Windows Error Reporting|\.NET Runtime|Application Hang|MsiInstaller|SideBySide|Windows Defender|Microsoft-Windows-Windows Defender' } | Select-Object -First 40 TimeCreated, ProviderName, Id, Message | Format-List }
+Safe 'event-log-system.txt' { Get-WinEvent -FilterHashtable @{LogName = 'System'; Level = 1, 2; StartTime = (Get-Date).AddMinutes(-60)} -ErrorAction SilentlyContinue | Select-Object -First 20 TimeCreated, ProviderName, Id, Message | Format-List }
+Safe 'processes.txt' { Get-Process | Sort-Object WS -Descending | Select-Object -First 25 Name, Id, WS | Format-Table }
+Safe 'temp-installer-files.txt' { Get-ChildItem $env:TEMP -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^(ns|nsis|nsx)' -or $_.Extension -in '.log', '.tmp' } | Select-Object -First 60 FullName, Length, LastWriteTime | Format-Table -AutoSize }
+Safe 'crashdumps.txt' { foreach ($d in "$env:LOCALAPPDATA\CrashDumps", "$env:ProgramData\Microsoft\Windows\WER\ReportArchive") { "== $d"; Get-ChildItem $d -Recurse -ErrorAction SilentlyContinue | Select-Object -First 30 FullName, Length, LastWriteTime | Format-Table -AutoSize } }
+Safe 'start-menu.txt' { Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter '*HAKQN*' -ErrorAction SilentlyContinue | Format-List FullName }
+Get-ChildItem $env:RUNNER_TEMP -Filter 'smoke-*.json' -ErrorAction SilentlyContinue | ForEach-Object { Copy-Item $_.FullName $diag }
+Write-Host "Đã thu thập chẩn đoán vào $diag"; Get-ChildItem $diag | ForEach-Object { Write-Host ('  {0} ({1} byte)' -f $_.Name, $_.Length) }

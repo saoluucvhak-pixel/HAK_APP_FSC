@@ -145,7 +145,7 @@ function registerIpc() {
   ipcMain.handle('app:openData', () => { shell.showItemInFolder(store.file); return {ok: true}; });
 }
 
-/* Kiểm tra khói cho bản đã cài (dùng trong CI và khi nghiệm thu): HAKQN_SMOKE=<file kết quả>, HAKQN_SMOKE_PHASE=create|verify|upgrade (upgrade: mở dữ liệu do bản 1.0.0 tạo).
+/* Kiểm tra khói cho bản đã cài (dùng trong CI và khi nghiệm thu): HAKQN_SMOKE=<file kết quả>, HAKQN_SMOKE_PHASE=create|verify|upgrade|upgrade14 (upgrade: mở dữ liệu do bản 1.0.0 tạo; upgrade14: một chủ hai lô của bản 1.4.x).
  * create: ghi 1 chủ rừng có 2 rừng; verify: đọc lại sau khi đóng/mở app. Cả hai kiểm tra giao diện có bộ lọc mới và menu Báo cáo. */
 async function smoke() {
   const out = process.env.HAKQN_SMOKE, phase = process.env.HAKQN_SMOKE_PHASE || 'create', r = {phase, version: app.getVersion(), online: net.isOnline(), file: store.file, checks: {}};
@@ -168,6 +168,20 @@ async function smoke() {
       r.checks.upBackup = bk.some(f => /^truoc-nang-cap-v2-len-v\d+-/.test(f));
       r.checks.upSchema = store.db.pragma('user_version', {simple: true}) === SCHEMA_VERSION;
       const lk = lookup.status(); r.checks.upLookup = !!lk && JSON.stringify(lk).length > 20;
+    } else if (phase === 'upgrade14') {
+      // Cài đè từ bản 1.4.0: một chủ hai lô A và B (tests/fixtures/hakqn_v1_4.sqlite) còn đủ dữ liệu sau khi cài bản mới
+      const own = (db2.rs || {}).own1, F = (own && own.forests) || {}, A = F.fa || {info: {}, exp: {}}, B = F.fb || {info: {}, exp: {}};
+      r.checks.u14Owner = !!own && own.info.ten === 'NGUYỄN VĂN MỘT';
+      r.checks.u14Phone = !!own && own.info.sdt === '0905 123 456';
+      r.checks.u14Contract = !!own && own.info.soHopDong === 'HD-2026/015' && own.info.ngayKyHopDong === '02/10/2026';
+      r.checks.u14TwoLots = Object.keys(F).length === 2;
+      r.checks.u14Records = ['fa', 'fb'].map(k => F[k] ? F[k].nc.length + '/' + F[k].dx.length + '/' + F[k].pc.length : '').join() === '3/2/2,3/2/1';
+      r.checks.u14Delivery = !!A.info.muaHang && A.info.muaHang.diaChi === 'Cảng dăm Kỳ Hà, Núi Thành, Quảng Nam' && !!B.info.muaHang && B.info.muaHang.diaChi.startsWith('KCN Điện Nam');
+      r.checks.u14Freight = A.info.vanChuyen.mode === 'tanKm' && A.info.vanChuyen.donGiaKm === 1000 && A.info.cuLy === 45 && B.info.vanChuyen.mode === 'coDinh' && B.info.vanChuyen.coDinh === 52000;
+      r.checks.u14Company = Object.keys(db2.congTy || {}).length === 1;
+      r.checks.u14Schema = store.db.pragma('user_version', {simple: true}) === SCHEMA_VERSION;
+      const lk = lookup.status(); r.checks.u14Lookup = !!lk && JSON.stringify(lk).length > 20;
+      r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('NGUYỄN VĂN MỘT')");
     } else {
       r.checks.owner = !!o && o.info.ten === 'CHỦ RỪNG THỬ NGHIỆM';
       r.checks.twoForests = !!o && Object.keys(o.forests || {}).length === 2;

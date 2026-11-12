@@ -73,10 +73,11 @@ jobs:
       - name: Cài bộ .exe và kiểm tra khói (cài, mở, ghi, đóng, mở lại)
         shell: pwsh
         run: |
+          . ./scripts/ci-install.ps1
           $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
           $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-installed'
-          $p = Start-Process -FilePath $setup -ArgumentList '/S', "/D=$dir" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "Cài đặt lỗi, mã thoát $($p.ExitCode)" }
+          $ec = Install-Setup -Setup $setup -Dir $dir -Tag 'smoke'
+          if ($ec -ne 0) { throw ("Cài đặt lỗi, mã thoát {0} (0x{1:X8}); chẩn đoán nằm ở artifact install-diagnostics" -f $ec, ([uint32]([int64]$ec -band 4294967295))) }
           $app = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
           if (-not $app) { throw 'Không thấy file chạy sau khi cài' }
           $lnk = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter '*HAKQN*.lnk' -ErrorAction SilentlyContinue
@@ -104,8 +105,9 @@ jobs:
           $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
           if ($h -ne '8AAE5F969F7A19A3591A0E91DC23D247846B4B329F23B6D791659758AB62C68D') { throw "Bộ cài v1.0.0 tải về không khớp mã băm công bố: $h" }
           $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade-userdata'
-          $p = Start-Process -FilePath $oldSetup -ArgumentList '/S', "/D=$dir" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "Cài v1.0.0 lỗi, mã thoát $($p.ExitCode)" }
+          . ./scripts/ci-install.ps1
+          $ec = Install-Setup -Setup $oldSetup -Dir $dir -Tag 'upgrade-v100-old'
+          if ($ec -ne 0) { throw "Cài v1.0.0 lỗi, mã thoát $ec" }
           $oldApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
           if (-not $oldApp) { throw 'Không thấy file chạy của v1.0.0 sau khi cài' }
           # chạy bản v1.0.0 thật để nó tự tạo cơ sở dữ liệu trong hồ sơ người dùng, rồi tắt
@@ -122,8 +124,8 @@ jobs:
           Copy-Item tests/fixtures/hakqn_v1_0_0.sqlite $dbf -Force
           # cài đè bản mới lên đúng thư mục đã cài v1.0.0
           $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
-          $p = Start-Process -FilePath $setup -ArgumentList '/S', "/D=$dir" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "Cài đè bản mới lỗi, mã thoát $($p.ExitCode)" }
+          $ec = Install-Setup -Setup $setup -Dir $dir -Tag 'upgrade-v100-new'
+          if ($ec -ne 0) { throw "Cài đè bản mới lỗi, mã thoát $ec" }
           $newApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
           $out = Join-Path $env:RUNNER_TEMP 'smoke-upgrade.json'
           $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = 'upgrade'
@@ -133,6 +135,55 @@ jobs:
           Get-Content $out -Raw
           if ($pr.ExitCode -ne 0) { throw "Nâng cấp: kiểm tra dữ liệu thất bại (mã thoát $($pr.ExitCode))" }
           Copy-Item $out dist/smoke-upgrade.json
+      - name: Nâng cấp từ bộ cài THẬT v1.4.0 (một chủ hai lô A và B, điện thoại, số và ngày ký hợp đồng, địa chỉ giao, cước)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          . ./scripts/ci-install.ps1
+          $old = Join-Path $env:RUNNER_TEMP 'old-release-140'; New-Item -ItemType Directory $old | Out-Null
+          gh release download v1.4.0 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-1.4.0.exe' -D $old
+          $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-1.4.0.exe'
+          $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
+          if ($h -ne 'FA0B8FE1745FC46DF59EFF6B638BB2CE0DBF87D0D1FE32CC59C36E63E4160AC5') { throw "Bộ cài v1.4.0 tải về không khớp mã băm công bố: $h" }
+          $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade140'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade140-userdata'
+          $ec = Install-Setup -Setup $oldSetup -Dir $dir -Tag 'upgrade-v140-old'
+          if ($ec -ne 0) { throw "Cài v1.4.0 lỗi, mã thoát $ec" }
+          $oldApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          if (-not $oldApp) { throw 'Không thấy file chạy của v1.4.0 sau khi cài' }
+          $env:HAKQN_USERDATA = $ud
+          $pr = Start-Process -FilePath $oldApp.FullName -PassThru
+          Start-Sleep -Seconds 15
+          if ($pr.HasExited) { throw "v1.4.0 thoát sớm, mã $($pr.ExitCode)" }
+          taskkill /PID $pr.Id /T /F | Out-Null
+          Start-Sleep -Seconds 3
+          $dbf = Join-Path $ud 'hakqn.sqlite'
+          if (-not (Test-Path $dbf)) { throw "v1.4.0 không tạo cơ sở dữ liệu tại $dbf" }
+          Remove-Item "$dbf-wal", "$dbf-shm" -Force -ErrorAction SilentlyContinue
+          Copy-Item tests/fixtures/hakqn_v1_4.sqlite $dbf -Force
+          $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
+          $ec = Install-Setup -Setup $setup -Dir $dir -Tag 'upgrade-v140-new'
+          if ($ec -ne 0) { throw "Cài đè bản mới lên v1.4.0 lỗi, mã thoát $ec" }
+          $newApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          $out = Join-Path $env:RUNNER_TEMP 'smoke-upgrade14.json'
+          $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = 'upgrade14'
+          $pr = Start-Process -FilePath $newApp.FullName -PassThru
+          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'Nâng cấp 1.4.0: ứng dụng không tự thoát sau 120 giây' }
+          if (-not (Test-Path $out)) { throw "Nâng cấp 1.4.0: không có file kết quả (mã thoát $($pr.ExitCode))" }
+          Get-Content $out -Raw
+          if ($pr.ExitCode -ne 0) { throw "Nâng cấp 1.4.0: kiểm tra dữ liệu thất bại (mã thoát $($pr.ExitCode))" }
+          Copy-Item $out dist/smoke-upgrade14.json
+      - name: Thu thập chẩn đoán cài đặt (chỉ khi một bước ở trên thất bại)
+        if: failure()
+        shell: pwsh
+        run: ./scripts/ci-collect-diag.ps1
+      - name: Tải chẩn đoán cài đặt lên artifact (mã thoát, phiên bản, commit, nhật ký sự cố Windows)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}-run${{ github.run_id }}
+          path: diag/
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: HAKQN-Setup-${{ github.event.pull_request.head.sha || github.sha }}
