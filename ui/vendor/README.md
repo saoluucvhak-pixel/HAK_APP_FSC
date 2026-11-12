@@ -7,3 +7,7 @@
 
 Các file này được ghép vào giao diện khi chạy `npm run build:html`. Cập nhật bằng cách chép lại từ repository nguồn, không sửa trực tiếp ở đây.
 Kiểm thử của thư viện nguồn được chạy lại ở `tests/vendor-smart-filter.test.js`.
+
+| `hak-accounting-report-standard/` (`index.js`, `exact-format.js`) | saoluucvhak-pixel/HAK_ACCOUNTING_REPORT_STANDARD V1.0.0 | a5833a9 |
+
+Chuẩn báo cáo chỉ dùng trong kiểm thử (`tests/report-standard.test.js`) để chứng minh định dạng số, căn lề và cấu trúc báo cáo HAKQN khớp chuẩn; không ghép vào giao diện.

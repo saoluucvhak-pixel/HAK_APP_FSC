@@ -57,6 +57,32 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   if (await w.isVisible('#lkBox.on')) await w.click('[data-act=lkClose]');
   await w.click('[data-ftab=dx]'); main = await w.innerText('#main');
   ok('nhập lại không tạo phiếu trùng (đúng 1 dòng 1002)', (main.match(/1002\/2026\/NK/g) || []).length === 1);
+  // 5b. Chế độ cha–con (master–detail), chip điều kiện (Smart Filter), bộ lọc đã lưu
+  if (await w.isVisible('#lkBox.on')) await w.click('[data-act=lkClose]');
+  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ');
+  if (await w.$('[data-act=lkClearAll]')) await w.click('[data-act=lkClearAll]');
+  await w.fill('#lkQ', 'nguyen van an'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200);
+  await w.click('[data-lklayout=tree]'); await w.waitForSelector('tr.lkg'); await w.waitForTimeout(300);
+  ok('cha–con: 3 hợp đồng của “nguyen van an” (khóa CCCD + hợp đồng, không lẫn hợp đồng 101 của CCCD khác)', (await w.$$('tr.lkg')).length === 3);
+  ok('cha–con: khung chi tiết hiện đủ phiếu của hợp đồng 101 (3 phiếu, 12,18 tấn)', /3\s*Phiếu cân/.test(await w.innerText('#lkDetail')) && /12,18/.test(await w.innerText('#lkDetail')));
+  await w.click('[data-lkdt=phieu]');
+  const det = await w.innerText('#lkDetail');
+  ok('cha–con: tab phiếu cân liệt kê 1001, 1002, 1003 và cờ kiểm tra', /1001\/2026\/NK/.test(det) && /1003\/2026\/NK/.test(det) && /Biển số là tên xe|lệch/.test(det));
+  await w.click('tr.lkg >> nth=1'); await w.waitForTimeout(300);
+  ok('cha–con: chọn dòng khác thì khung chi tiết đổi theo (hợp đồng 102)', /Hợp đồng 102/.test(await w.innerText('#lkDetail')));
+  await w.click('#lkAdv summary'); await w.fill('#lkFrom', '2026-01-01'); await w.fill('#lkTo', '2026-01-31'); await w.check('#lkIssues'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250);
+  ok('Smart Filter: chip điều kiện và dòng phạm vi lọc dùng chung một chuỗi', (await w.$$('[data-lkrm]')).length === 3 && /Phạm vi lọc: Tìm: nguyen van an · Ngày: 01\/01\/2026 → 31\/01\/2026 · Chỉ dòng cần kiểm tra/.test(await w.innerText('#lkScope')));
+  ok('cha–con kết hợp bộ lọc: chỉ còn hợp đồng có phiếu lỗi trong kỳ', (await w.$$('tr.lkg')).length === 1);
+  await w.fill('#lkPresetName', 'Phiếu lỗi tháng 1'); await w.click('[data-act=lkPresetSave]');
+  await w.click('[data-lkrm="2"]'); await w.waitForTimeout(250);
+  ok('gỡ một chip: điều kiện đó bị bỏ và kết quả cập nhật', (await w.$$('[data-lkrm]')).length === 2);
+  await w.click('[data-act=lkClearAll]'); await w.waitForTimeout(250);
+  ok('xóa hết: không còn chip, trở về đủ hợp đồng', (await w.$$('[data-lkrm]')).length === 0 && (await w.$$('tr.lkg')).length > 3);
+  await w.selectOption('#lkPreset', 'Phiếu lỗi tháng 1'); await w.waitForTimeout(350);
+  ok('mở bộ lọc đã lưu: khôi phục đủ 3 điều kiện và kết quả', (await w.$$('[data-lkrm]')).length === 3 && (await w.$$('tr.lkg')).length === 1);
+  await w.click('#lkDetail [data-lkpick]'); await w.waitForFunction(() => /Chủ rừng: .*CCCD/.test(document.getElementById('lkBody').innerText));
+  ok('nút “Chọn để ghi vào hồ sơ” từ khung chi tiết mở đúng màn hình ghi (chủ rừng, CCCD, hợp đồng 101, cảnh báo trùng số hợp đồng)', /Hợp đồng 101/.test(await w.innerText('#lkBody')) && /cũng được dùng cho 1 CCCD khác/.test(await w.innerText('#lkBody')));
+  if (await w.isVisible('#lkBox.on')) await w.click('[data-act=lkClose]');
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('; '));
   await app.close();
 
