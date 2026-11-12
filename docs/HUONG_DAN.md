@@ -158,9 +158,9 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 ## 10. Sao lưu và khôi phục
 Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.
 
-**Sao lưu toàn bộ**: **⋯ Thêm → Sao lưu dữ liệu (.json)** → chọn thư mục → tạo 2 file cùng tên `.json` và `.sqlite`.
+**Sao lưu toàn bộ**: **⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json)** → chọn thư mục → tạo 2 file cùng tên `.json` và `.sqlite`.
 
-**Khôi phục toàn bộ**: **⋯ Thêm → Khôi phục (.json)** (cũng dùng để nhập bản sao lưu từ bản HTML cũ). Màn hình xem trước cho biết số liệu trong file và trên máy, và với từng chủ/lô: **THÊM** (chưa có), **TRÙNG** (đã có), **GIỮ** (có trên máy, không có trong file). Chọn cách xử lý:
+**Khôi phục toàn bộ**: **⋯ Thêm → Khôi phục toàn bộ dữ liệu (.json)** (cũng dùng để nhập bản sao lưu từ bản HTML cũ). Màn hình xem trước cho biết số liệu trong file và trên máy, và với từng chủ/lô: **THÊM** (chưa có), **TRÙNG** (đã có), **GIỮ** (có trên máy, không có trong file). Chọn cách xử lý:
 - **Giữ bản trên máy, chỉ thêm mới**.
 - **Ghi đè lô trùng**: chỉ thay **đúng các lô trùng**, giữ lô khác của chủ và chủ khác; hồ sơ chủ rừng của máy được giữ.
 - **Giữ cả hai**: lô trùng được thêm thành lô **mới** và bạn **xác nhận mã mới** cho từng lô (gợi ý sẵn, ví dụ `R1-2`; mã bị từ chối nếu trùng lô đã có, lô khác trong file hoặc mã cũ).
@@ -174,7 +174,7 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 - Chủ đã có thì lô được **thêm vào đúng chủ đó**; chưa có thì **tạo chủ mới**.
 - Lô đã tồn tại: mặc định **giữ bản hiện có**; chọn **thay** thì chỉ thay đúng lô đó, kèm bảng **trước / sau** (nhân công, xe, phiếu cân, tổng tấn, giấy tờ, cách tính cước, địa chỉ giao).
 - Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: **máy đích giữ thiết lập của mình**; màn hình nêu giá trị hai bên và phần hồ sơ có thể khác. Mục máy chưa có sẽ được bổ sung.
-- File hỏng, bị cắt, sai loại hay phiên bản, số bản ghi hoặc tổng tấn không khớp phần kiểm tra, hoặc không xác định được lô đích: **báo lỗi, không ghi gì**. Gói lô chỉ đi qua “Khôi phục lô rừng”; bản sao lưu toàn bộ chỉ đi qua “Khôi phục (.json)”.
+- File hỏng, bị cắt, sai loại hay phiên bản, số bản ghi hoặc tổng tấn không khớp phần kiểm tra, hoặc không xác định được lô đích: **báo lỗi, không ghi gì**. Gói lô chỉ đi qua “Khôi phục lô rừng”; bản sao lưu toàn bộ chỉ đi qua “Khôi phục toàn bộ dữ liệu (.json)”.
 
 ## 11. Nâng cấp phần mềm
 - Cài bản mới **đè lên** bản cũ. Lần mở đầu phần mềm tự sao lưu file dữ liệu vào `backups` (tên `truoc-nang-cap-v…`) rồi nâng cấp cấu trúc; chủ rừng, lô, nhân công, xe, phiếu cân, bản tra cứu giữ nguyên.

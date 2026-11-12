@@ -10,7 +10,7 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 ## Chức năng
 - Hồ sơ theo chủ rừng → rừng (nhân công, xe, phiếu cân, hợp đồng, đơn giá, giấy tờ), checklist FSC, xuất BM-01…BM-20 và ZIP (BM-20 Giấy ủy quyền cho hình thức giao khoán) — giữ nghiệp vụ bản HTML, cập nhật quy tắc hợp đồng và đơn giá theo từng hình thức.
 - Lưu SQLite theo từng rừng, mỗi lần lưu là một giao dịch; quản lý phiên bản cấu trúc (`PRAGMA user_version`), tự sao lưu trước khi nâng cấp/khôi phục.
-- Nhập bản sao lưu HTML cũ (.json) có xem trước số liệu và bản trùng; sao lưu ra thư mục tự chọn (.json + .sqlite).
+- Khôi phục toàn bộ dữ liệu (.json) (cũng nhận bản sao lưu từ bản HTML cũ) có xem trước số liệu và bản trùng; sao lưu ra thư mục tự chọn (.json + .sqlite).
 - Nạp Excel nhân công/xe/phiếu cân: báo dòng hợp lệ/lỗi và thêm/cập nhật/giữ nguyên/bỏ trước khi ghi. **File Excel mẫu** có 3 trang (HUONG_DAN giải thích từng cột, trang dữ liệu có định dạng/danh sách chọn/gợi ý, VI_DU) do `src/xlsxmau.js` tạo.
 - **Mã lô duy nhất**, khôi phục toàn bộ chỉ thay đúng lô trùng (`src/lorung.js`), “Giữ cả hai” có mã mới xác nhận; **sao lưu / khôi phục một lô rừng** (gói JSON có mã kiểm tra, dùng được khi mất mạng); tab **Kiểm tra trước khi xuất**; hồ sơ **Công ty mua hàng** và địa chỉ giao theo lô.
 - Menu **Tra cứu Google Sheets**: đồng bộ chỉ đọc 3 tab hoặc nhập bản Excel, lưu bản tra cứu trên máy, tìm có dấu/không dấu, xem trước và ghi vào rừng đang mở hoặc rừng mới, dấu vết nguồn, chống trùng.

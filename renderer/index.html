@@ -241,8 +241,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <hr>
     <div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu"></div>
     <hr>
-    <button class="mi" data-act="backup">⬇ Sao lưu dữ liệu (.json)</button>
-    <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">⬆ Khôi phục (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
+    <button class="mi" data-act="backup">⬇ Sao lưu toàn bộ dữ liệu (.json)</button>
+    <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">⬆ Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
     <button class="mi" data-act="lotRestore" id="lotRestoreBtn">⬆ Khôi phục lô rừng…</button>
   </div></details>
 </header>
@@ -267,7 +267,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li>Tab <b>Vận chuyển</b>: chọn cách tính cước, nạp Excel xe, nạp Excel phiếu cân, chọn <b>địa chỉ giao hàng</b>.</li>
 <li>Tab <b>Kiểm tra trước khi xuất</b>: xử lý các mục chặn xuất và cần đối chiếu.</li>
 <li>Tab <b>Xuất hồ sơ</b>: nhập thông số biên bản, tải biểu mẫu (từng file hoặc ZIP).</li>
-<li><b>Sao lưu</b>: nút ⬇ Sao lưu lô rừng, hoặc ⋯ Thêm → Sao lưu dữ liệu.</li>
+<li><b>Sao lưu</b>: nút ⬇ Sao lưu lô rừng, hoặc ⋯ Thêm → Sao lưu toàn bộ dữ liệu.</li>
 </ol>
 <p>Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa chỉ giao riêng; chủ rừng chỉ giữ thông tin chung.</p>
 <h3>2. Mã lô</h3>
@@ -325,7 +325,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <h3>9. Sao lưu và khôi phục</h3>
 <ul>
 <li>Phần mềm tự sao lưu cơ sở dữ liệu vào thư mục <code>backups</code> trước mỗi lần nâng cấp và khôi phục; ghi trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.</li>
-<li><b>⋯ Thêm → Sao lưu dữ liệu (.json)</b>: sao lưu toàn bộ. <b>⋯ Thêm → Khôi phục (.json)</b>: xem trước từng chủ/lô là <b>THÊM</b>, <b>TRÙNG</b> hay <b>GIỮ</b>; chọn <i>giữ bản trên máy</i>, <i>ghi đè lô trùng</i> (chỉ thay đúng lô trùng, lô khác của chủ được giữ), <i>giữ cả hai</i> (xác nhận <b>mã mới</b> cho từng lô nhân bản) hoặc <i>thay toàn bộ</i> (có xác nhận nêu rõ phạm vi). ID, mã lô, chủ rừng mâu thuẫn thì dừng và liệt kê hồ sơ cần đối chiếu.</li>
+<li><b>⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json)</b>. <b>⋯ Thêm → Khôi phục toàn bộ dữ liệu (.json)</b> (cũng dùng để nhập bản sao lưu từ bản HTML cũ): xem trước từng chủ/lô là <b>THÊM</b>, <b>TRÙNG</b> hay <b>GIỮ</b>; chọn <i>giữ bản trên máy</i>, <i>ghi đè lô trùng</i> (chỉ thay đúng lô trùng, lô khác của chủ được giữ), <i>giữ cả hai</i> (xác nhận <b>mã mới</b> cho từng lô nhân bản) hoặc <i>thay toàn bộ</i> (có xác nhận nêu rõ phạm vi). ID, mã lô, chủ rừng mâu thuẫn thì dừng và liệt kê hồ sơ cần đối chiếu.</li>
 <li><b>⬇ Sao lưu lô rừng</b> (đầu hồ sơ lô): file <code>HAKQN_LoRung_&lt;MaLo&gt;_&lt;Ngày&gt;.json</code> chứa đúng một lô, kèm địa chỉ giao đã chốt; không chứa lô khác, tra cứu hay thông tin đăng nhập.</li>
 <li><b>⋯ Thêm → ⬆ Khôi phục lô rừng…</b>: xem trước chủ, mã lô, thời điểm sao lưu, số nhân công/xe/phiếu cân/tổng tấn. Thêm vào đúng chủ đã có hoặc tạo chủ mới. Lô đã có: mặc định giữ bản hiện có; thay thì chỉ thay đúng lô đó và có bảng trước/sau. Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: máy đích giữ thiết lập của mình, màn hình nêu phần hồ sơ có thể khác. File hỏng, sai loại/phiên bản hoặc không xác định được lô đích thì báo lỗi và không ghi.</li>
 </ul>
@@ -1744,7 +1744,7 @@ function loadDb() {
   return withDefaults({v: 2, rs: {}});
 }
 let db = loadDb();
-if (HB) { document.addEventListener('DOMContentLoaded', () => { const l = document.getElementById('restoreLbl'); if (l) l.firstChild.textContent = '⬆ Nhập bản sao lưu HTML cũ (.json)'; document.querySelectorAll('.deskOnly').forEach(x => { x.hidden = false; }); }); }
+if (HB) { document.addEventListener('DOMContentLoaded', () => { const l = document.getElementById('restoreLbl'); if (l) l.firstChild.textContent = '⬆ Khôi phục toàn bộ dữ liệu (.json)'; document.querySelectorAll('.deskOnly').forEach(x => { x.hidden = false; }); }); }
 let saveSt = {text: '', err: false}, saveTimer = null;
 function showSave(text, err) { saveSt = {text, err: !!err}; const el = document.getElementById('saveSt'); if (el) { el.textContent = text; el.classList.toggle('err', !!err); } }
 const hhmm = () => new Date().toLocaleTimeString('vi-VN');

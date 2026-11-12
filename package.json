@@ -1,7 +1,7 @@
 {
   "name": "hakqn-ho-so-khai-thac",
   "productName": "HAKQN - Hồ sơ khai thác và vận chuyển gỗ keo",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "Phần mềm desktop quản lý hồ sơ khai thác và vận chuyển gỗ keo theo từng rừng (HAK Group)",
   "main": "src/main.js",
   "private": true,

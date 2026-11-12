@@ -153,7 +153,7 @@ const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
   }
   // bản sao lưu LÔ đưa nhầm vào luồng khôi phục toàn bộ
   ({app, w} = await launch({}, 'may1')); await w.setInputFiles('input[data-file=restore]', fullA); await w.waitForTimeout(500);
-  ok('gói lô đưa nhầm vào “Khôi phục (.json)” bị từ chối và chỉ sang luồng lô', /MỘT lô rừng/.test(await w.innerText('body')) && !(await w.$('#impBox.on')));
+  ok('gói lô đưa nhầm vào “Khôi phục toàn bộ dữ liệu (.json)” bị từ chối và chỉ sang luồng lô', /MỘT lô rừng/.test(await w.innerText('body')) && !(await w.$('#impBox.on')));
 
   // ===== 5. Phiếu cũ sai ngày: giữ phiếu, nêu số phiếu và lý do, sửa được =====
   await openForest(w, 'own2', 'fc', 'dx'); const pt = await w.innerText('#main');
