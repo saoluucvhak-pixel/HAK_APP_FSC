@@ -86,3 +86,15 @@ Trong **🔎 Tra cứu Google Sheets** có nút **🔑 Đăng nhập Google (ch�
 Bộ lọc tra cứu: dấu ngoặc kép lẻ, `hd: 101` (có khoảng trắng), CCCD gõ có dấu cách hoặc mất số 0 đầu đều được nhận; ngày hoặc khối lượng sai định dạng được báo rõ thay vì bỏ qua âm thầm.
 
 Báo cáo: **phiếu cân trùng số vẫn được cộng vào tổng** (phần mềm không tự xóa phiếu), nhưng cả hai dòng trùng được đánh dấu “Trùng số phiếu”, có chỉ tiêu “Phiếu trùng số” và ghi chú nêu số phiếu, số tấn đang tính. Cần xác minh rồi sửa hoặc xóa phiếu nhập trùng ở tab Vận chuyển.
+
+## Tra cứu dạng cha–con, chip điều kiện, bộ lọc đã lưu (mới)
+Trong **🔎 Tra cứu Google Sheets**:
+- **Hiển thị**: chọn **☰ Bảng phẳng** (mỗi dòng một bản ghi) hoặc **⛓ Cha–con**. Ở dạng cha–con, bên trái là danh sách cha (một hợp đồng = CCCD + mã hợp đồng, kèm số rừng, số phiếu, tổng tấn, số dòng cần kiểm tra); bên phải là toàn bộ hợp đồng đang chọn với các tab **Rừng**, **Phiếu cân**, **Hợp đồng khác**, **Cảnh báo**. Nút **Chọn để ghi vào hồ sơ →** mở màn hình xem trước và ghi như cũ.
+- **Chip điều kiện**: mỗi điều kiện đang lọc hiện thành một chip, bấm × để gỡ; dòng “Phạm vi lọc” là một chuỗi duy nhất mô tả toàn bộ điều kiện. **Xóa hết** gỡ cả từ khóa.
+- **Bộ lọc đã lưu**: nhập tên rồi bấm **Lưu bộ lọc**; chọn trong danh sách để mở lại; **Xóa bộ lọc đã chọn** để bỏ. Bộ lọc lưu trên máy này, không chứa dữ liệu hồ sơ.
+Bộ lọc dùng lõi HAK Smart Filter (`ui/vendor/hak-smart-filter`), giao diện dùng token và bố cục master–detail của HAK Enterprise Design System (chủ đề luxe, sáng/tối).
+
+## Báo cáo cha–con và chuẩn báo cáo (mới)
+- Báo cáo thứ 5 **Bảng cha–con: chủ rừng – rừng – phiếu cân**: chủ rừng là tổng các rừng, rừng là tổng các phiếu cân trong kỳ; hộp **Kèm từng phiếu cân** thêm cấp phiếu; màn hình xem trước có nút thu gọn/mở rộng; Excel có nhóm dòng theo cấp.
+- Theo chuẩn HAK Accounting & Reporting Standard: số căn phải, ngày căn giữa, văn bản căn trái; có **đơn vị tính** và **thời điểm lập**; Excel dùng ô số và ô ngày thật, có bộ lọc tự động ở bảng chính, chuỗi bắt đầu bằng `=`, `+`, `-`, `@` được vô hiệu để không thành công thức. Khối lượng tính theo tấn với 3 chữ số thập phân (phiếu cân ghi kg); các cột còn lại theo chuẩn.
+- Chưa có: cố định hàng tiêu đề, vùng in và tiêu đề lặp trong Excel (thư viện Excel đang dùng không hỗ trợ); xuất PDF. Word đã lặp tiêu đề bảng và có số trang.

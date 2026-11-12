@@ -17,6 +17,9 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 - Bộ lọc tra cứu thông minh: cú pháp `trường:giá trị`, loại trừ, xếp theo độ khớp, lọc ngày/khối lượng/tình trạng, cờ cần kiểm tra, gợi ý nới lỏng.
 - Menu **Báo cáo**: 4 mẫu (điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC) xuất Word và Excel.
 
+- Tra cứu dạng **cha–con** (master–detail: hợp đồng → rừng → phiếu cân), chip điều kiện và bộ lọc đã lưu (HAK Smart Filter); giao diện theo HAK Enterprise Design System (luxe, sáng/tối); báo cáo cha–con và định dạng theo HAK Accounting & Reporting Standard.
+- CI: kiểm thử, đóng gói, cài thử bộ `.exe` và quét chất lượng mã bằng `hak_code_quality_test` (cấu hình `.hakquality.json`).
+
 ## Mã nguồn
 | Đường dẫn | Nội dung |
 | --- | --- |
@@ -26,6 +29,7 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 | `src/lookup.js` | Bản tra cứu: đọc/kiểm tra 3 tab, tìm kiếm, ghép CCCD + hợp đồng, tọa độ, biển số |
 | `ui/app.src.html` | Giao diện + nghiệp vụ (từ bản HTML) |
 | `src/google-auth.js` | Đăng nhập Google OAuth (PKCE, chỉ đọc), tải .xlsx qua Drive API |
+| `ui/vendor/` | Bản sao nguyên văn các thư viện HAK dùng chung (design system, smart filter, chuẩn báo cáo), ghi nguồn và commit trong `ui/vendor/README.md` |
 | `ui/reports.js` | Mô hình dữ liệu các mẫu báo cáo (dùng chung Word, Excel, kiểm thử) |
 | `tests/` | Kiểm thử đơn vị, dữ liệu giả lập (`fixtures/make-lookup.js`) |
 | `scripts/` | Ghép HTML, chạy kiểm thử, kiểm thử Electron đầu-cuối |

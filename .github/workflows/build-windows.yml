@@ -19,6 +19,30 @@ env:
   # Commit được kiểm thử và đóng gói. Với pull_request, github.sha là commit ghép tạm nên dùng đúng commit đầu nhánh.
   TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 jobs:
+  quality:
+    name: Kiểm tra chất lượng mã (hak_code_quality_test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAKQ_SHA: b78d9b2f30d63f29f59c5ade94e6d968ae4805d4   # ghim đúng commit của công cụ; đổi có chủ đích khi nâng cấp
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Tải công cụ kiểm tra (chỉ đọc, chạy offline)
+        run: |
+          mkdir ../hakq && cd ../hakq && git init -q && git remote add origin https://github.com/saoluucvhak-pixel/hak_code_quality_test
+          git fetch -q --depth 1 origin "$HAKQ_SHA" && git checkout -q FETCH_HEAD && npm ci --silent
+      - name: Quét mã (chặn khi có lỗi mức error theo .hakquality.json)
+        run: node ../hakq/bin/hak-quality.js . --out reports
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-report-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports
+          if-no-files-found: error
   build:
     runs-on: windows-latest
     timeout-minutes: 40

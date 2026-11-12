@@ -66,3 +66,18 @@ Chưa phát hiện lỗi trong luồng nhập JSON, sao lưu, khôi phục, nân
 | Tài liệu không có số bài e2e từng bộ trên Windows | Log đã đọc chỉ ghi các bước đạt | Mở log của [run 6](https://github.com/saoluucvhak-pixel/HAK_APP_FSC/actions/runs/43142043143) bước “Kiểm thử đầu-cuối (Electron)” |
 
 Dữ liệu dùng trong test và artifact là dữ liệu giả lập; không có dữ liệu thật hay thông tin xác thực trong repo, bộ cài hay log.
+
+## 7. Đợt bổ sung: dùng các repository HAK dùng chung (chưa phát hành, nhánh `claude/magical-dijkstra-xhn2k9`)
+
+Nguồn đã đọc và áp dụng (bản sao nguyên văn trong `ui/vendor/`, ghi commit nguồn): HAK-Enterprise-Design-System `69ac08a`, HAK_SMART_FILTER `5181681`, HAK_ACCOUNTING_REPORT_STANDARD `a5833a9`; công cụ quét `hak_code_quality_test` `b78d9b2` (chạy trong CI, không đưa vào ứng dụng); `hak_ai_skills` chỉ được sao chép, chưa dùng.
+
+| Hạng mục | Kết quả (Linux, máy làm việc) |
+| --- | --- |
+| `npm test` | **54/54 đạt** (thêm: kiểm thử gốc của Smart Filter và tương phản WCAG AA của token luxe chạy lại trên bản sao; cha–con ở backend; báo cáo theo chuẩn kế toán) |
+| `npm run test:e2e` (Electron thật) | **đạt cả 5 bộ**: lưu/nhập JSON; tra cứu 33; tra cứu offline, ghi vào hồ sơ, **cha–con và Smart Filter 26**; xuất BM và ZIP; **báo cáo 47** (thêm báo cáo cha–con, đơn vị tính, thời điểm lập, nhóm dòng, bộ lọc tự động) |
+| Quét `hak_code_quality_test` | 25 file, 0 lỗi, 2 cảnh báo file dài (`ui/app.src.html`, `package-lock.json`); mã JavaScript trong HTML đã được đọc cú pháp |
+| Windows CI, cài thật `.exe` | **chưa chạy cho đợt này** (sẽ chạy khi mở PR) |
+
+Đã kiểm tra: cha–con (chủ rừng = tổng rừng = tổng phiếu; hợp đồng trùng số khác CCCD không lẫn; chọn dòng đổi khung chi tiết; kết hợp bộ lọc; “Chọn để ghi vào hồ sơ” mở đúng màn hình ghi); chip điều kiện và dòng phạm vi lọc cùng một chuỗi; lưu, mở, xóa bộ lọc đã lưu; Excel ô số/ngày thật, chống chèn công thức, bộ lọc tự động, outlineLevel; định dạng số khớp `formatNumber` của chuẩn trên 11 giá trị × 3 mức chữ số thập phân.
+
+Chưa kiểm tra / giới hạn: giao diện luxe chưa chụp ảnh ở 1366×768 và 1920×1080 theo tiêu chí của design system (mới xem bằng mắt ở 1440×900 và 390×800); Excel chưa cố định hàng tiêu đề và vùng in (thư viện Excel hiện dùng không hỗ trợ); chưa có PDF; chưa thử trên Microsoft Word và máy Windows thật. Khối lượng tấn hiển thị 3 chữ số thập phân (cấu hình theo cột, nằm trong khoảng 0–6 của chuẩn) vì phiếu cân ghi kg.
