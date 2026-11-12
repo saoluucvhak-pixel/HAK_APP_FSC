@@ -87,3 +87,10 @@ Tràn ngang: đã đo ở 1366×768 và 1920×1080, sáng và tối, 5 màn hìn
 - `tests/skins.test.js`: 4 bảng màu × sáng/tối, chữ đạt AA ≥ 4,5:1 (mô phỏng đúng thứ tự chồng lớp CSS; test này đã bắt được lỗi chữ phụ chế độ tối của neutral và champagne, đã sửa).
 - `scripts/e2e-skins.js` (Electron thật): 72 kiểm tra đạt: áp dụng đúng 4 bảng màu × sáng/tối × 1366×768 và 1920×1080; 4 màu thanh trên cùng, 4 màu nền, 4 màu nút chính khác nhau; không tràn ngang ở tổng quan, hồ sơ rừng, báo cáo cha–con; nhớ lựa chọn sau khi mở lại; không đổi dữ liệu hồ sơ. Đã xem ảnh chụp tổng quan của cả 8 tổ hợp.
 - Giới hạn: **neutral và champagne là giá trị tự định nghĩa**, chưa được design system xác nhận. “Classic” được hiểu là chủ đề xanh ngọc (teal) theo tài liệu design system; nếu cần một bảng màu xanh ngọc/ngọc lục bảo khác thì cần thêm giá trị màu.
+
+### Đơn giá khoán chỉ nhập một chỗ (chưa có lượt CI Windows)
+- Lỗi người dùng báo: Thông tin rừng bắt nhập “Đơn giá khoán” (không nhập thì không lưu được rừng) trong khi cùng khái niệm đã có ở tab Nhân công (đơn giá Tổ trưởng). Hai ô dùng loại trừ nhau theo mô hình ký nên được gộp thành một ô ở tab Nhân công; giá được đọc qua `khoanPrice()` (ưu tiên tab Nhân công, hồ sơ cũ dùng giá cũ ở `info.donGia`) nên nội dung hợp đồng giao khoán, nghiệm thu và thành tiền không đổi. Đã so lại: các nơi đọc `rs.donGia` đều đổi sang `khoanPrice(rs)`.
+- `scripts/e2e-dongia.js` (Electron thật): 15 kiểm tra đạt: bỏ ô khỏi Thông tin rừng; lưu rừng không bị chặn; checklist nhắc đúng chỗ; ô Tổ trưởng ẩn/hiện đúng theo mô hình ký và hình thức lương; lưu vào SQLite và nhớ sau khi mở lại; hồ sơ cũ chỉ có đơn giá ở rừng không báo thiếu và tự điền giá cũ.
+- Sửa các e2e cũ (`e2e`, `e2e-lookup`, `e2e-export`) không điền đơn giá ở Thông tin rừng; `e2e-export` nhập giá ở tab Nhân công và vẫn xuất đủ BM-01…BM-19 và ZIP (29 nút, 25 file, 0 nút bị khóa). `e2e-skins` nay dùng thư mục dữ liệu riêng để không phụ thuộc lần chạy trước.
+- `npm test` 63/63 đạt; `npm run test:e2e` (6 bộ… nay 8 bộ) đạt trên Linux.
+- Chưa kiểm tra: so số liệu xuất ra với bản HTML gốc bằng dữ liệu thật; mở bằng Word.

@@ -64,7 +64,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   await w.click('[data-ftab=dx]');
   ok('nhập lại không tạo phiếu trùng', ((await w.innerText('#main')).match(/1001\/2026\/NK/g) || []).length === 1);
   // Ô đã có dữ liệu khác: bắt buộc chọn
-  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=diaDiem]', 'Địa điểm do người dùng nhập'); await w.fill('#forestForm [name=donGia]', '340000'); await w.click('#forestForm button[type=submit]');
+  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=diaDiem]', 'Địa điểm do người dùng nhập'); await w.click('#forestForm button[type=submit]');
   await w.click('#forestForm [data-act=lkOpen]'); await w.fill('#lkQ', '1001/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(150);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.click('[data-act=lkApply]'); await w.waitForTimeout(150);
   ok('ô đã có giá trị khác: chưa chọn thì không cho lưu', /Chưa lưu: Rừng: chọn giữ hay thay “Địa điểm khai thác/.test(await w.innerText('#lkBody')));

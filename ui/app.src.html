@@ -558,7 +558,6 @@ function forestErrors(info, fid) {
   if (!info.maRung) e.push('Thiếu Mã rừng');
   else if (Object.values(db.rs).some(o => Object.entries(o.forests || {}).some(([id, f]) => id !== fid && f.info.maRung === info.maRung))) e.push('Mã rừng đã tồn tại');
   if (!info.diaDiem) e.push('Thiếu Địa điểm khai thác');
-  if (!isDirect(info) && !(info.donGia > 0)) e.push('Đơn giá khoán phải lớn hơn 0 (khi giao khoán cho tổ trưởng)');
   if (info.lat === 'x') e.push('Vĩ độ không phải là số');
   if (info.lng === 'x') e.push('Kinh độ không phải là số');
   if (info.dienTich === 'x') e.push('Diện tích không phải là số');
@@ -609,7 +608,7 @@ function checkNC(rec) {
     if ((ngc || role === 'CN' || isDirect(rec.info)) && CHUCDANH.includes(r.chucDanh)) {
       const rate = rateOf(rec.info, r);
       if (!(rate > 0)) bad('chưa có đơn giá ' + (ngc ? 'ngày công (đ/công)' : 'khoán (đ/tấn)') + ' cho "' + r.chucDanh + '" trong mục Hình thức lương (tab Nhân công)');
-      else if (!ngc && rec.info.donGia && rate === rec.info.donGia) warn('đơn giá bằng giá khoán của chủ rừng — kiểm tra lại');
+      else if (!ngc && khoanPrice(rec.info) && rate === khoanPrice(rec.info)) warn('đơn giá bằng giá khoán của chủ rừng — kiểm tra lại');
     }
   });
   if (tt !== 1) errs.push('Cần đúng 1 tổ trưởng (hiện có ' + tt + ')');
@@ -685,7 +684,11 @@ function transportPrice(i) {
 function rateOf(i, r) {
   return ((i.hinhThucLuong === 'ngaycong' ? i.donGiaNgay : i.donGiaTan) || {})[r.chucDanh] || null;
 }
-const isDirect = i => i.moHinhKy === 'tructiep';  // chủ rừng ký HĐLĐ trực tiếp với mọi nhân công
+const isDirect = i => i.moHinhKy === 'tructiep';
+/* Đơn giá khoán chủ rừng → Tổ trưởng (đ/tấn): MỘT nơi nhập duy nhất, ở tab Nhân công (donGiaTan['Tổ trưởng']).
+   Hồ sơ cũ chỉ có info.donGia (nhập ở Thông tin rừng) vẫn đọc được: ưu tiên giá ở tab Nhân công, không có thì dùng giá cũ. */
+const khoanPrice = i => { const t = (i.donGiaTan || {})['Tổ trưởng']; return t > 0 ? t : (i.donGia > 0 ? i.donGia : null); };
+const khoanErrors = i => (!isDirect(i) && !(khoanPrice(i) > 0)) ? ['Chưa nhập Đơn giá khoán chủ rừng giao cho Tổ trưởng (đ/tấn): nhập ở tab Nhân công, mục Thông số hợp đồng lao động'] : [];  // chủ rừng ký HĐLĐ trực tiếp với mọi nhân công
 const hdldList = rec => isDirect(rec.info) ? rec.nc : rec.nc.filter(r => !isTT(r));
 // Khối lượng dùng cho bảng lương: thực tế nếu có, không thì dự kiến (diện tích × định mức)
 const volumeOf = i => {
@@ -723,7 +726,7 @@ function rungText(i) {
 }
 
 function gate(rec) {
-  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid)];
+  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...khoanErrors(rec.info)];
   const nc = checkNC(rec);
   const dx = checkDX(rec);
   const vc = transportPrice(rec.info);
@@ -876,7 +879,7 @@ function docGiaoKhoan(rec, ex) {
     P('**Điều 1: Nội dung**', {keep: true}),
     P('Bên B đồng ý nhận và bên A đồng ý giao khai thác gỗ Keo Lai rừng trồng có kiểm soát tại địa chỉ: ' + rs.diaDiem + rungText(rs) + '.'),
     P('**Điều 2: Giá cả và phương thức thanh toán**', {keep: true}),
-    P('2.1. Giá thanh toán: khoán ' + fmt(rs.donGia) + ' đồng/tấn.', {ind: 360}),
+    P('2.1. Giá thanh toán: khoán ' + fmt(khoanPrice(rs)) + ' đồng/tấn.', {ind: 360}),
     P('2.2. Hình thức thanh toán: Căn cứ theo số lượng bán cho nhà máy, hai bên tiến hành thanh toán bằng tiền mặt.', {ind: 360}),
     P('2.3. Thời gian khai thác: từ ngày ' + (rs.tuNgay || '…/…/2026') + ' ' +
       (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến hết khi khai thác hết rừng keo tại địa điểm trên') + '.', {ind: 360}),
@@ -1162,7 +1165,7 @@ function docKiemTraThietBi(rec, ex) {
 function docNghiemThu(rec, ex) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tt = rec.nc.find(isTT), ttName = personName(tt.danhXung, tt.ten);
   const direct = isDirect(rs), vol = volumeOf(rs), kg = vol ? Math.round(vol.v * 1000) : 0;
-  const tien = (!direct && kg && rs.donGia) ? Math.round(kg * rs.donGia / 1000) : 0;
+  const tien = (!direct && kg && khoanPrice(rs)) ? Math.round(kg * khoanPrice(rs) / 1000) : 0;
   const daTT = toNum(ex.ntDaTT) || 0;
   const hd = direct ? 'các hợp đồng lao động đã ký giữa chủ rừng và người lao động' : 'Hợp đồng khai thác gỗ keo số ' + (ex.soKT || '…………') + '/2026-KT';
   const pcKg = totalKg(rec.pc || []);
@@ -1187,7 +1190,7 @@ function docNghiemThu(rec, ex) {
     P('**Điều 3: Thanh toán và thanh lý**', {keep: true}),
     ...(direct
       ? [P('3.1. Tiền công của người lao động được thanh toán theo hợp đồng lao động và Bảng thanh toán tiền công kèm theo.', {ind: 360})]
-      : [P('3.1. Đơn giá khoán: ' + (rs.donGia ? fmt(rs.donGia) : '………') + ' đồng/tấn. Thành tiền: **' + (tien ? fmt(tien) : '………') + ' đồng**' + (tien ? ' (' + moneyWords(tien).replace(/\.$/, '') + ')' : '') + '.', {ind: 360}),
+      : [P('3.1. Đơn giá khoán: ' + (khoanPrice(rs) ? fmt(khoanPrice(rs)) : '………') + ' đồng/tấn. Thành tiền: **' + (tien ? fmt(tien) : '………') + ' đồng**' + (tien ? ' (' + moneyWords(tien).replace(/\.$/, '') + ')' : '') + '.', {ind: 360}),
          P('3.2. Bên A đã thanh toán trước: ' + (daTT ? fmt(daTT) + ' đồng' : '………………… đồng') + '. Số tiền còn lại bên A thanh toán cho bên B: **' + (tien && ex.ntDaTT ? fmt(Math.max(tien - daTT, 0)) : '…………………') + ' đồng**.', {ind: 360})]),
     P('**Điều 4: Cam kết**', {keep: true}),
     P('Sau khi hai bên hoàn tất nghĩa vụ nêu trên, ' + hd + ' được thanh lý. Hai bên xác nhận không còn tranh chấp, khiếu nại nào khác về việc khai thác tại rừng nêu trên.', {ind: 360}),
@@ -1720,14 +1723,15 @@ function panelForest(f) {
     '<label><span>Sản lượng dự kiến (tự tính)</span><input value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến'}) +
     inp('cuLy', 'Cự ly vận chuyển (km)') + inp('tuNgay', 'Thời gian khai thác — từ ngày') + inp('denNgay', 'Thời gian khai thác — đến ngày') +
-    inp('donGia', 'Đơn giá khoán chủ rừng – tổ trưởng (đ/tấn), chỉ cần khi giao khoán') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">🔎 Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
 
+const ttLabel = direct => direct ? 'Đơn giá Tổ trưởng (đ/tấn) — chủ rừng ký hợp đồng lao động trực tiếp' : 'Đơn giá khoán chủ rừng giao cho Tổ trưởng (đ/tấn) — dùng cho hợp đồng giao khoán và nghiệm thu';
 function panelLuong(rec) {
   const i = rec.info, dn = i.donGiaNgay || {}, dt = i.donGiaTan || {}, ngc = i.hinhThucLuong === 'ngaycong', direct = isDirect(i);
-  const rate = (pre, map, unit, ttHint) => CHUCDANH.map((cd, k) =>
-    '<label><span>Đơn giá ' + esc(cd) + ' (' + unit + ')' + (k === 0 && ttHint ? ' — chỉ cần khi chủ rừng ký trực tiếp' : '') + '</span><input name="' + pre + k + '" value="' + esc(map[cd] ?? '') + '"></label>').join('');
+  const rate = (pre, map, unit, skipTt) => CHUCDANH.map((cd, k) => (k === 0 && skipTt) ? '' :
+    '<label><span>Đơn giá ' + esc(cd) + ' (' + unit + ')</span><input name="' + pre + k + '" value="' + esc(map[cd] ?? '') + '"></label>').join('');
+  const ttShow = direct ? !ngc : true;
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng lao động</h3>' +
     '<p class="mut" style="margin-top:0">Danh sách người ký nạp từ file Excel. Mô hình ký, hình thức lương và đơn giá nhập tại đây, áp dụng cho mọi người theo chức danh.</p>' +
     '<form id="luongForm" class="grid">' +
@@ -1737,6 +1741,7 @@ function panelLuong(rec) {
     '<label style="grid-column:1/-1"><span>Hình thức trả lương</span><select name="hinhThucLuong">' +
       '<option value="sanluong"' + (!ngc ? ' selected' : '') + '>Khoán theo tấn (đ/tấn)</option>' +
       '<option value="ngaycong"' + (ngc ? ' selected' : '') + '>Theo ngày công (đ/công, một ngày công bao nhiêu tiền)</option></select></label>' +
+    '<label data-tt style="grid-column:1/-1;' + (ttShow ? '' : 'display:none') + '"><span class="req" data-ttlabel>' + esc(ttLabel(direct)) + '</span><input name="ttTan" value="' + esc(khoanPrice(i) ?? '') + '" placeholder="đồng/tấn"></label>' +
     '<div class="grid" data-grp="sanluong" style="grid-column:1/-1;' + (ngc ? 'display:none' : '') + '">' + rate('dt_', dt, 'đ/tấn', true) + '</div>' +
     '<div class="grid" data-grp="ngaycong" style="grid-column:1/-1;' + (ngc ? '' : 'display:none') + '">' + rate('dn_', dn, 'đ/công', false) + '</div>' +
     '<label><span>Hợp đồng lao động từ ngày (dd/mm/yyyy)</span><input name="ngayBDLD" value="' + esc(i.ngayBDLD ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
@@ -2015,7 +2020,7 @@ function readForest(form) {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
     lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: toDec(fd.get('dienTich')),
     dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), cuLy: toDec(fd.get('cuLy')),
-    tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay')), donGia: toNum(fd.get('donGia')), khoiLuong: toDec(fd.get('khoiLuong'))
+    tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay')), khoiLuong: toDec(fd.get('khoiLuong'))
   };
 }
 
@@ -2024,7 +2029,8 @@ function readLuong(form) {
   return {
     hinhThucLuong: fd.get('hinhThucLuong') === 'ngaycong' ? 'ngaycong' : 'sanluong',
     donGiaNgay: Object.fromEntries(CHUCDANH.map((cd, k) => [cd, toNum(fd.get('dn_' + k))])),
-    donGiaTan: Object.fromEntries(CHUCDANH.map((cd, k) => [cd, toNum(fd.get('dt_' + k))])),
+    donGiaTan: Object.fromEntries(CHUCDANH.map((cd, k) => [cd, k === 0 ? toNum(fd.get('ttTan')) : toNum(fd.get('dt_' + k))])),
+    donGia: toNum(fd.get('ttTan')),   // bản sao để hồ sơ/bản cũ đọc giá khoán từ info.donGia vẫn đúng; nguồn nhập duy nhất là ô Tổ trưởng ở tab Nhân công
     ngayBDLD: trim(fd.get('ngayBDLD')),
     moHinhKy: fd.get('moHinhKy') === 'tructiep' ? 'tructiep' : 'giaokhoan'
   };
@@ -2835,8 +2841,10 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
-  if (t.name === 'hinhThucLuong' && t.form && t.form.id === 'luongForm') {
-    t.form.querySelectorAll('[data-grp]').forEach(g => { g.style.display = g.dataset.grp === t.value ? '' : 'none'; });
+  if ((t.name === 'hinhThucLuong' || t.name === 'moHinhKy') && t.form && t.form.id === 'luongForm') {
+    const hv = t.form.elements.hinhThucLuong.value, direct = t.form.elements.moHinhKy.value === 'tructiep';
+    t.form.querySelectorAll('[data-grp]').forEach(g => { g.style.display = g.dataset.grp === hv ? '' : 'none'; });
+    const tt = t.form.querySelector('[data-tt]'); if (tt) { tt.style.display = (direct ? hv !== 'ngaycong' : true) ? '' : 'none'; tt.querySelector('[data-ttlabel]').textContent = ttLabel(direct); }
     return;
   }
   if (t.dataset.file === 'restore') { if (t.files[0]) restoreAll(t.files[0]); t.value = ''; return; }

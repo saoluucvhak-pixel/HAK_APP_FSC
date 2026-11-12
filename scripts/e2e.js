@@ -20,7 +20,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   await win.selectOption('#infoForm [name="danhXung"]', 'Ông'); await win.click('#infoForm button[type=submit]');
   for (const dia of ['Thôn Hòa Phú', 'Thôn Phước Xuân']) {
     await win.click('[data-tab=rung]'); await win.click('text=+ Rừng mới');
-    await win.fill('#forestForm [name=diaDiem]', dia); await win.fill('#forestForm [name=donGia]', '340000'); await win.click('#forestForm button[type=submit]');
+    await win.fill('#forestForm [name=diaDiem]', dia); await win.click('#forestForm button[type=submit]');
   }
   ok('thanh ngữ cảnh hiện chủ rừng', (await win.innerText('#ctxOwner')).includes('NGUYỄN PHƯỚC TÁM'));
   ok('thanh ngữ cảnh hiện mã rừng đang mở', /CR-001-R2/.test(await win.innerText('#ctxForest')));

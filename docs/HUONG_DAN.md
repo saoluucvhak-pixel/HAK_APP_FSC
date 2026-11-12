@@ -106,3 +106,9 @@ Menu **⋯ Thêm → Bảng màu** có 4 bảng màu, mỗi bảng có chế đ�
 - **Neutral** — xám xanh doanh nghiệp.
 - **Champagne** — vàng ấm.
 Luxe và Classic lấy nguyên từ HAK Enterprise Design System. Neutral và Champagne do HAKQN tự định nghĩa vì design system chỉ mô tả bằng chữ, chưa có giá trị màu (`ui/skins.css`); cả bốn đều được kiểm tra độ tương phản chữ WCAG AA.
+
+## Đơn giá khoán chỉ nhập một chỗ (đã sửa)
+**Đơn giá khoán chủ rừng giao cho Tổ trưởng (đ/tấn)** nay chỉ nhập ở **tab Nhân công → Thông số hợp đồng lao động**, không còn ô trùng ở Thông tin rừng.
+- Lưu Thông tin rừng không còn bị chặn vì thiếu đơn giá. Khi chủ rừng giao khoán mà chưa nhập, mục “Thông tin rừng đầy đủ” của checklist (và việc xuất hồ sơ) báo cần nhập ở tab Nhân công.
+- Ô hiện khi **giao khoán** (nhãn: đơn giá khoán chủ rừng giao cho Tổ trưởng) và khi **chủ rừng ký trực tiếp theo khoán tấn** (nhãn: đơn giá Tổ trưởng); ẩn khi chủ rừng ký trực tiếp theo **ngày công** (dùng đơn giá ngày công).
+- Hồ sơ cũ đã nhập đơn giá ở Thông tin rừng vẫn dùng được: ô Tổ trưởng tự điền giá cũ; bấm “Lưu thông số” để chuyển sang nơi nhập mới. Nội dung biểu mẫu (hợp đồng giao khoán, biên bản nghiệm thu, thành tiền) không đổi.

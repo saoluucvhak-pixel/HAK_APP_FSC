@@ -14,12 +14,12 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   for (const [k, v] of Object.entries({ma: 'CR-001', ten: 'NGUYỄN PHƯỚC TÁM', ngaySinh: '06/10/1967', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v);
   await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]');
   await w.click('[data-tab=rung]'); await w.click('text=+ Rừng mới');
-  await w.fill('#forestForm [name=diaDiem]', 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng'); await w.fill('#forestForm [name=donGia]', '340000'); await w.fill('#forestForm [name=cuLy]', '45');
+  await w.fill('#forestForm [name=diaDiem]', 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng'); await w.fill('#forestForm [name=cuLy]', '45');
   await w.fill('#forestForm [name=lat]', '15.9'); await w.fill('#forestForm [name=lng]', '108.1'); await w.fill('#forestForm [name=dienTich]', '2,5'); await w.fill('#forestForm [name=dinhMucTanHa]', '80');
   await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026');
   await w.click('#forestForm button[type=submit]');
   await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.click('#vcForm button[type=submit]');
-  await w.click('[data-ftab=nc]'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(150);
+  await w.click('[data-ftab=nc]'); await w.fill('#luongForm [name=ttTan]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(150);
   await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(400);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400);
   await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400);
