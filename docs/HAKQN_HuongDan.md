@@ -73,3 +73,9 @@ Nút **📊 Báo cáo** trên thanh đầu trang. Chọn kỳ (từ ngày – đ
 3. **Sổ theo dõi phiếu cân – vận chuyển**: danh sách theo ngày, tổng hợp theo rừng / biển số / ngày, phát hiện trùng số phiếu.
 4. **Tiến độ hồ sơ và checklist FSC**: tiến độ từng rừng, hạng mục còn thiếu.
 Báo cáo tính từ dữ liệu hồ sơ trong máy (không cần mạng). Mẫu báo cáo nằm ở `ui/reports.js`, có kiểm thử trong `tests/reports.test.js`.
+
+## Giao diện mới
+- **Trang Tổng quan**: số chủ rừng, rừng, diện tích, khối lượng đã cân, tiến độ hồ sơ trung bình; danh sách hồ sơ cần hoàn thiện (bấm để mở đúng rừng) và phiếu cân gần đây. Bấm logo hoặc **Tổng quan** để quay về. Chưa có dữ liệu thì hiện hướng dẫn 4 bước.
+- Thanh trên cùng: **Tổng quan · Tra cứu · Báo cáo** ở giữa; chế độ sáng/tối và menu **⋯ Thêm** (Hướng dẫn, Sao lưu, Khôi phục) bên phải.
+- Ô **Lọc chủ rừng** ở danh sách bên trái (theo tên, mã, CCCD, không phân biệt dấu).
+- Màu sắc, cỡ chữ, bo góc khai báo ở đầu phần `<style>` (`:root`), đổi màu thương hiệu chỉ cần sửa một chỗ. Có chế độ tối, bố cục điện thoại và định dạng khi in.
