@@ -865,7 +865,7 @@ function paraXml(p) {
   return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + '<w:widowControl/>' + (p.bdb ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="' + (docMode === 'de' ? 'FFFFFF' : '000000') + '"/></w:pBdr>' : '') +
     '<w:spacing w:before="' + p.before + '" w:after="' + p.after + '" w:line="276" w:lineRule="auto"/>' + ind +
     '<w:jc w:val="' + (docMode !== 'day' && p.al === 'both' ? 'left' : p.al) + '"/>' +
-    (docMode !== 'day' ? '<w:rPr><w:sz w:val="' + p.sz + '"/><w:szCs w:val="' + p.sz + '"/></w:rPr>' : '') + '</w:pPr>' + runsXml(p.text, p) + '</w:p>';   // mẫu trống và in đè: dấu hết đoạn cùng cỡ chữ với nội dung, để ô trống và ô có số cao bằng nhau (hàng không lệch dần)   // mẫu trống và in đè: canh trái để chữ không bị giãn khác nhau giữa hai bản
+    '<w:rPr><w:sz w:val="' + p.sz + '"/><w:szCs w:val="' + p.sz + '"/></w:rPr>' + '</w:pPr>' + runsXml(p.text, p) + '</w:p>';   // dấu hết đoạn cùng cỡ chữ với nội dung (mọi chế độ), để ô trống và ô có chữ cao bằng nhau (hàng không lệch dần, bảng đông người vẫn gọn một trang)   // mẫu trống và in đè: canh trái để chữ không bị giãn khác nhau giữa hai bản
 }
 function tblXml(t) {
   const total = t.widths.reduce((a, b) => a + b, 0);
@@ -930,7 +930,7 @@ async function makeDocx(blocks, o = {}) {
   const body = blocks.map(b => { if (!b.full || docMode === 'day') return ser(b); const m = docMode; docMode = 'day'; try { return ser(b); } finally { docMode = m; } }).join('') +   // khối “full”: luôn in đầy đủ, kể cả khi cả biên bản đang ở chế độ in đè (ví dụ Bảng kê khối lượng đính kèm) +
     (blocks.length && blocks[blocks.length - 1].t === 'tbl' ? '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>' : '');   // đoạn đệm bắt buộc sau bảng: thu nhỏ để không đẩy sang trang trắng
   const pg = o.landscape
-    ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="850" w:right="567" w:bottom="850" w:left="1134" w:header="425" w:footer="425" w:gutter="0"/>'
+    ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="' + (o.tight ? 567 : 850) + '" w:right="567" w:bottom="' + (o.tight ? 680 : 850) + '" w:left="1134" w:header="425" w:footer="425" w:gutter="0"/>'
     : '<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701" w:header="567" w:footer="567" w:gutter="0"/>';
   const doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="' + W + '" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' + body +
     '<w:sectPr><w:footerReference w:type="default" r:id="rId2"/>' + pg + '</w:sectPr></w:body></w:document>';
@@ -1575,10 +1575,10 @@ function docHDVC(rec, ex, g) {
 
 /* ========== Mẫu in bổ sung ========== */
 const SIGN_DATE = '<br>';
-function footerSign(title, name) {   // khối ký một người ở nửa phải trang: ngày, chức danh, ghi chú, họ tên cùng canh giữa trên một trục
+function footerSign(title, name, blanks = 3) {   // khối ký một người ở nửa phải trang: ngày, chức danh, ghi chú, họ tên cùng canh giữa trên một trục
   return [
     P('', {after: 60}),
-    T([7568, 7569], [['', {v: 'Đà Nẵng, ' + HAKHopDong.ngayTrong(), i: true}], ['', '**' + title + '**'], ['', {v: '(Ký, họ tên)', i: true}], ['', ''], ['', ''], ['', ''], ['', '**' + upper(name) + '**']], {borders: false, al: 'center', keep: true})
+    T([7568, 7569], [['', {v: 'Đà Nẵng, ' + HAKHopDong.ngayTrong(), i: true}], ['', '**' + title + '**'], ['', {v: '(Ký, họ tên)', i: true}], ...Array.from({length: blanks}, () => ['', '']), ['', '**' + upper(name) + '**']], {borders: false, al: 'center', keep: true})
   ];
 }
 function docChamCong(rec, ex) {
@@ -1707,7 +1707,7 @@ function buildFiles(rec, kind) {
 const DOC_CODES = {'17': 'BM-17 · Phiếu thẩm định chủ rừng và rừng', '18': 'BM-18 · Nhật ký khai thác hằng ngày', '19': 'BM-19 · Biên bản phổ biến chính sách FSC', '15': 'BM-15 · Sổ theo dõi tai nạn lao động, sự cố', '16': 'BM-16 · Biên bản kiểm tra, bảo dưỡng thiết bị', '14': 'BM-14 · Biên bản nghiệm thu, thanh lý khai thác', '11': 'BM-11 · Cam kết nguồn gốc gỗ rừng trồng', '12': 'BM-12 · Cam kết sử dụng lao động', '13': 'BM-13 · Biên bản kiểm tra hiện trường khai thác', '09': 'BM-09 · Biên bản xác nhận khối lượng vận chuyển', '10': 'BM-10 · Bảng thanh toán tiền vận chuyển', '01': 'BM-01 · Hợp đồng khai thác (giao khoán)', '02': 'BM-02 · Danh sách cấp phát BHLĐ', '03': 'BM-03 · Hợp đồng lao động',
   '04': 'BM-04 · Hợp đồng vận chuyển', '05': 'BM-05 · Bảng chấm công', '06': 'BM-06 · Danh sách đội khai thác',
   '07': 'BM-07 · Biên bản đào tạo ATLĐ', '08': 'BM-08 · Bảng thanh toán tiền công', '20': 'BM-20 · Giấy ủy quyền của người lao động cho tổ trưởng'};
-const docOpts = (f, rec) => ({landscape: f.land,
+const docOpts = (f, rec) => ({landscape: f.land, tight: !!(f.blocks && f.blocks.tight),
   footer: (DOC_CODES[(f.path.match(/^(\d\d)_/) || [])[1]] || '') + ' · Rừng ' + (rec.info.maRung || '') + ' · Phiên bản 1.0'});
 function docTienCong(rec, ex) {
   const rs = rec.info, tt = rec.nc.find(isTT);
@@ -1715,21 +1715,24 @@ function docTienCong(rec, ex) {
   const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, V((!ngc && each != null) ? fmtTan(each) : ''), x.rate ? fmt(x.rate) : '',
     V(ngc && plan.cong != null ? String(plan.cong) : ''), V(x.tien != null ? fmt(x.tien) : ''), V(x.tien != null ? fmt(x.tien) : ''), '']);
   if (sum > 0 || ex._mode !== 'day') rows.push(['', '**TỔNG CỘNG**', '', '', '', '', V(sum > 0 ? fmt(sum) : ''), V(sum > 0 ? fmt(sum) : ''), '']);
+  const nRow = rows.length, dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
   const info = ngc
     ? ((plan.cong != null || ex._mode !== 'day') ? 'Số ngày công: ' + V(plan.cong != null ? String(plan.cong) : '', 6) + ' công (không tính Chủ nhật).' : '')
     : ((plan.vol || ex._mode !== 'day') ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + V(plan.vol ? fmtTan(plan.vol.v) : '', 10) + ' ' + bs.qty + (ex._mode === 'day' ? V(plan.vol ? ' (' + plan.vol.src + ')' : '', 0, '') : '') + ', chia đều ' + N + ' người: ' + V(each != null ? fmtTan(each) : '', 10) + ' ' + bs.qty + '/người.' : '');
-  return [
+  const out = [
     P('**BẢNG THANH TOÁN TIỀN NHÂN CÔNG KHAI THÁC RỪNG ' + upper(personName(rs.danhXung, rs.ten)) + '**', {al: 'center', sz: 26, before: 60, after: 40}),
     P('(Địa chỉ: ' + rs.diaDiem + ')', {al: 'center', after: 60}),
     P(VP(tuDen(plan.tu, plan.den, ex).replace(/^từ/, 'Từ'), 'Từ ngày 00/00/0000 đến ngày 00/00/0000'), {al: 'center', after: info ? 40 : 160}),
     ...(info ? [P(info, {al: 'center', after: 160})] : []),
-    T([640, 2660, 2000, 1500, 1700, 1000, 1800, 1900, 1800],
+    T([640, 3360, 2000, 1400, 1600, 900, 1600, 1700, 1937],   // cột họ tên rộng để tên dài không xuống dòng
       [['STT', 'Họ và tên', 'Chức danh công việc', ngc ? 'Số lượng khai thác' : ha ? 'Diện tích chia đều (ha)' : 'Sản lượng chia đều (tấn)', 'Đơn giá (' + bs.unit + ')', {v: 'Tiền công', span: 2}, 'Thực nhận (đồng)', 'Ký nhận'],
        ['', '', '', '', '', 'Số công', 'Số tiền', '', ''], ...rows],
-      {headRows: 2, borders: true, sz: 20, rowH: 420,
+      {headRows: 2, borders: true, sz: dense.sz, rowH: dense.rowH, pad: dense.pad,   // nhiều người: thu nhỏ cỡ chữ và độ cao hàng để bảng và khối ký vẫn nằm trọn một trang
        alignCols: ['center', 'left', 'left', 'center', 'right', 'center', 'right', 'right', 'center']}),
-    ...footerSign('Đại diện Tổ khai thác', tt.ten)
+    ...footerSign('Đại diện Tổ khai thác', tt.ten, dense.sign)
   ];
+  if (dense.tight) out.tight = true;   // nhiều người: lề trên/dưới hẹp hơn để vẫn gọn một trang
+  return out;
 }
 /* BM-20 Giấy ủy quyền: MỘT giấy, toàn bộ công nhân cùng ký, ủy quyền cho Tổ trưởng (hình thức giao khoán).
    Căn cứ: Bộ luật Dân sự 2015 (đại diện theo ủy quyền, hợp đồng ủy quyền) và Điều 18 Bộ luật Lao động 2019 (nhóm người lao động ủy quyền cho một người trong nhóm;

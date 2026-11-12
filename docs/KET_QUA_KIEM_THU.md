@@ -207,3 +207,6 @@ BM-08 “Từ ngày … đến ngày …” và BM-10 “… Biên bản xác nh
 
 ## 29. Bản 1.4.21: thêm chỗ ký dưới các khối chữ ký
 Mọi khối chữ ký (hai bên, ba cột, một người ở nửa phải) thêm một dòng trống giữa “(Ký, ghi rõ họ tên)” và họ tên, để có chỗ ký rộng hơn. Đo trên bộ hồ sơ dày (8 người, 34 phiếu cân, tên dài): BM-02, BM-08 và BM-15 vốn vừa khít một trang nên khối ký rơi xuống trang 2; với số người ít hơn thì vẫn một trang. Thử thêm hai dòng thì còn rơi nhiều biểu mẫu hơn nên giữ một dòng.
+
+## 30. Bản 1.4.22: BM-08 luôn gọn một trang khi nhiều người
+BM-08 tự điều chỉnh theo số dòng: từ 10 dòng trở lên giảm cỡ chữ, độ cao hàng và khoảng trống ký; từ 13 dòng thu hẹp lề trên/dưới; cột họ tên rộng hơn để tên dài không xuống dòng. Dấu hết đoạn của mọi ô bảng nay cùng cỡ chữ với nội dung (trước đây ô trống dùng cỡ 13 pt nên hàng cao hơn cần thiết). Kiểm tra tự động `scripts/e2e-bm08.js` (LibreOffice): 3 đến 20 người đều một trang; thử riêng 8, 10, 12, 16, 20 người cho cả mẫu trống và chỉ phần số cũng một trang; từ khoảng 22 người trở lên bảng tự sang trang 2 (tiêu đề cột lặp lại).
