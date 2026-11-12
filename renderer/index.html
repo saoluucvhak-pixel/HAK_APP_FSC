@@ -2870,7 +2870,7 @@ function docTTVC(rec, ex, g) {
   return [
     ...TITLE_HEAD(),
     P('**BẢNG THANH TOÁN TIỀN VẬN CHUYỂN**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('(Kèm theo Hợp đồng vận chuyển số ' + hdNo + ' và Biên bản xác nhận khối lượng vận chuyển số ' + V(ex._so.xn.so, 16) + ')', {al: 'center', i: true, after: 200}),
+    P('(Kèm theo Hợp đồng vận chuyển số ' + hdNo + ' và Biên bản xác nhận khối lượng vận chuyển số ' + V(ex._so.xn.so, 16, SO_TRANG) + ')', {al: 'center', i: true, after: 200}),
     P('**Bên trả tiền (Bên A): ' + upper(rsName) + '**', {after: 40}),
     P('Địa chỉ: ' + (rs.diaChi || '…………') + ' · CCCD số: ' + (rs.cccd || '…………'), {ind: 360, after: 100}),
     P('**Bên nhận tiền (Bên B): ' + upper(g.ten) + '**', {after: 40}),
@@ -3110,14 +3110,13 @@ function docTienCong(rec, ex) {
   const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, V((!ngc && each != null) ? fmtTan(each) : ''), x.rate ? fmt(x.rate) : '',
     V(ngc && plan.cong != null ? String(plan.cong) : ''), V(x.tien != null ? fmt(x.tien) : ''), V(x.tien != null ? fmt(x.tien) : ''), '']);
   if (sum > 0 || ex._mode !== 'day') rows.push(['', '**TỔNG CỘNG**', '', '', '', '', V(sum > 0 ? fmt(sum) : ''), V(sum > 0 ? fmt(sum) : ''), '']);
-  const from = V(plan.tu || '……/……/……', 0, '……/……/……'), to = V(plan.den || '……/……/……', 0, '……/……/……');
   const info = ngc
     ? ((plan.cong != null || ex._mode !== 'day') ? 'Số ngày công: ' + V(plan.cong != null ? String(plan.cong) : '', 6) + ' công (không tính Chủ nhật).' : '')
     : ((plan.vol || ex._mode !== 'day') ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + V(plan.vol ? fmtTan(plan.vol.v) : '', 10) + ' ' + bs.qty + (ex._mode === 'day' ? V(plan.vol ? ' (' + plan.vol.src + ')' : '', 0, '') : '') + ', chia đều ' + N + ' người: ' + V(each != null ? fmtTan(each) : '', 10) + ' ' + bs.qty + '/người.' : '');
   return [
     P('**BẢNG THANH TOÁN TIỀN NHÂN CÔNG KHAI THÁC RỪNG ' + upper(personName(rs.danhXung, rs.ten)) + '**', {al: 'center', sz: 26, before: 60, after: 40}),
     P('(Địa chỉ: ' + rs.diaDiem + ')', {al: 'center', after: 60}),
-    P('Từ ngày ' + from + ' đến ngày ' + to, {al: 'center', after: info ? 40 : 160}),
+    P(VP(tuDen(plan.tu, plan.den, ex).replace(/^từ/, 'Từ'), 'Từ ngày 00/00/0000 đến ngày 00/00/0000'), {al: 'center', after: info ? 40 : 160}),
     ...(info ? [P(info, {al: 'center', after: 160})] : []),
     T([640, 2660, 2000, 1500, 1700, 1000, 1800, 1900, 1800],
       [['STT', 'Họ và tên', 'Chức danh công việc', ngc ? 'Số lượng khai thác' : ha ? 'Diện tích chia đều (ha)' : 'Sản lượng chia đều (tấn)', 'Đơn giá (' + bs.unit + ')', {v: 'Tiền công', span: 2}, 'Thực nhận (đồng)', 'Ký nhận'],

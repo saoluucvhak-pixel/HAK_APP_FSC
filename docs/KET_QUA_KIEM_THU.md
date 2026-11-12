@@ -197,3 +197,6 @@ CI Windows có thêm bước **nâng cấp từ bộ cài thật v1.0.0**: tải
 
 ## 26. Bản 1.4.18: Bảng kê khối lượng ghi nơi giao một dòng
 Khi mọi phiếu cùng một nơi giao, Bảng kê khối lượng đính kèm (BM-09, trang 2) ghi “Nơi giao (nhà máy): …” một dòng phía trên, không còn cột “Nơi giao” trong khung bảng (bảng còn STT, ngày cân, biển kiểm soát, số phiếu cân, khối lượng). Các phiếu khác nơi giao thì vẫn giữ cột nơi giao trong bảng để không mất thông tin.
+
+## 27. Bản 1.4.19: BM-08 và BM-10 theo cùng quy tắc “mẫu trống để trắng, in đè in nguyên cụm”
+BM-08 “Từ ngày … đến ngày …” và BM-10 “… Biên bản xác nhận khối lượng vận chuyển số …” ở mẫu trống để trắng (chừa chỗ màu trắng), bản in đè in nguyên cụm bằng mực đen, không còn số in chồng lên dãy chấm. Kiểm tra so ảnh của `e2e-inde` cho phép tối đa 2 dòng mỗi biểu mẫu mà mẫu trống không có mực (cụm ngày để trắng); vị trí các chữ cố định vẫn được kiểm bằng tọa độ.
