@@ -284,7 +284,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 </ul>
 <h3>4. Tab Vận chuyển</h3>
 <ul>
-<li><b>Cước</b>: chọn một trong hai cách: <b>đơn giá cố định</b> (đồng/tấn) hoặc <b>đơn giá tấn/km</b> (đồng/tấn/km × cự ly). Với tấn/km, <b>nhập số km ở ô “Cự ly vận chuyển (km)”</b> ngay cạnh ô đơn giá (cũng là ô cự ly ở tab Thông tin rừng). Tiền tính theo <b>tấn giao tại nhà máy</b>. Hồ sơ cũ còn “theo bậc cự ly” phải chọn lại cách tính (dữ liệu bậc vẫn được giữ).</li>
+<li><b>Cước</b>: chọn một trong hai cách: <b>đơn giá cố định</b> (đồng/tấn) hoặc <b>đơn giá tấn/km</b> (đồng/tấn/km × cự ly). Với tấn/km, <b>nhập số km ở tab Thông tin rừng, ô “Cự ly vận chuyển (km)”</b> (chỉ nhập ở một chỗ này; tab Vận chuyển chỉ hiện lại số đó). Tiền tính theo <b>tấn giao tại nhà máy</b>. Hồ sơ cũ còn “theo bậc cự ly” phải chọn lại cách tính (dữ liệu bậc vẫn được giữ).</li>
 <li><b>Đội xe</b>: chọn người ký là Chủ xe hoặc Tài xế; chỉ người ký phải có đủ CCCD, ngày cấp, thường trú, SĐT. Giấy tờ xe sắp hết hạn thì cảnh báo.</li>
 <li><b>Phiếu cân</b>: mỗi chuyến một dòng; <b>nạp đội xe trước</b> vì phiếu chỉ nhận biển số có trong danh sách xe. Phiếu trùng số vẫn tính vào tổng nhưng được đánh dấu.</li>
 <li><b>Địa chỉ giao hàng</b>: bấm <i>Chọn địa chỉ giao hàng</i>, chọn địa chỉ của công ty, xem bảng “hiện tại / mới”, rồi <i>Xác nhận</i>. Địa chỉ lưu theo từng lô và dùng ở BM-04, BM-09, BM-10, Sổ phiếu cân. Sửa hồ sơ công ty không tự đổi lô đã chọn; lô giữ địa chỉ đã lưu đến khi bạn bấm <i>Xem và cập nhật</i>.</li>
@@ -1897,7 +1897,6 @@ function forestErrors(info, fid) {
   const vc = info.vanChuyen || {};
   if (vc.donGiaKm === 'x') e.push('Đơn giá vận chuyển (đ/tấn/km) không phải là số');
   if (vc.coDinh === 'x') e.push('Đơn giá vận chuyển cố định không phải là số');
-  if (info.cuLy === 'x') e.push('Cự ly vận chuyển không phải là số');
   return e;
 }
 
@@ -3206,12 +3205,12 @@ function panelVc(rec) {
   const i = rec.info, vc = i.vanChuyen || {}, tp = transportPrice(i), cur = vc.mode || 'tanKm';
   const show = m => cur === m ? '' : 'display:none';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng vận chuyển (chủ rừng trả bên vận chuyển)</h3>' +
-    '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> (nhập ngay ô “Cự ly vận chuyển” bên dưới hoặc ở tab Thông tin rừng, chỉ cần khi tính theo tấn/km).</p>' +
+    '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> (nhập ở tab Thông tin rừng, chỉ cần khi tính theo tấn/km).</p>' +
     '<form id="vcForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Cách tính đơn giá vận chuyển</span><select name="vcMode">' + vcOptions(cur) + '</select></label>' +
     '<label data-vcgrp="coDinh" style="' + show('coDinh') + '"><span>Đơn giá cố định (đồng/tấn)</span><input name="vcCoDinh" value="' + esc(vc.coDinh ?? '') + '"></label>' +
     '<label data-vcgrp="tanKm" style="' + show('tanKm') + '"><span>Đơn giá tấn/km (đồng/tấn/km)</span><input name="vcKm" value="' + esc(vc.donGiaKm ?? '') + '"></label>' +
-    '<label data-vcgrp="tanKm" style="' + show('tanKm') + '"><span class="req">Cự ly vận chuyển (km)</span><input name="vcCuLy" inputmode="decimal" value="' + esc(i.cuLy ?? '') + '" placeholder="VD: 45"><small class="mut">Đây cũng là ô “Cự ly vận chuyển” ở tab Thông tin rừng (cùng một số liệu). Tiền cước tấn/km = đơn giá × cự ly.</small></label>' +
+    '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> · nhập ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;}">tab Thông tin rừng → Cự ly vận chuyển (km)</button></div>' +
     '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số vận chuyển</button></div></form></div>';
@@ -3570,8 +3569,7 @@ function readVc(form) {
       ...old,   // giữ dữ liệu bậc cũ (không dùng nữa) để không mất dữ liệu
       mode: ['tanKm', 'coDinh', 'tanDoan'].includes(fd.get('vcMode')) ? fd.get('vcMode') : 'tanKm',   // tanDoan chỉ còn khi hồ sơ cũ chưa chọn lại
       donGiaKm: toDec(fd.get('vcKm')), coDinh: toDec(fd.get('vcCoDinh')), tuNgay: trim(fd.get('vcTu'))
-    },
-    ...(fd.has('vcCuLy') ? {cuLy: toDec(fd.get('vcCuLy'))} : {})   // cự ly dùng chung với tab Thông tin rừng
+    }
   };
 }
 
