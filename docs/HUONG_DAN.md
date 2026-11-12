@@ -85,7 +85,7 @@ Trong **🔎 Tra cứu Google Sheets** có nút **🔑 Đăng nhập Google (ch�
 
 Bộ lọc tra cứu: dấu ngoặc kép lẻ, `hd: 101` (có khoảng trắng), CCCD gõ có dấu cách hoặc mất số 0 đầu đều được nhận; ngày hoặc khối lượng sai định dạng được báo rõ thay vì bỏ qua âm thầm.
 
-Báo cáo: **phiếu cân trùng số vẫn được cộng vào tổng** (phần mềm không tự xóa phiếu), nhưng cả hai dòng trùng được đánh dấu “Trùng số phiếu”, có chỉ tiêu “Phiếu trùng số” và ghi chú nêu số phiếu, số tấn đang tính. Cần xác minh rồi sửa hoặc xóa phiếu nhập trùng ở tab Vận chuyển.
+Báo cáo: **phiếu cân trùng số vẫn được cộng vào tổng** (phần mềm không tự xóa phiếu), nhưng cả hai dòng trùng được đánh dấu “Trùng số phiếu”, có chỉ tiêu “Phiếu trùng số” và ghi chú nêu số phiếu, số tấn đang tính. Đây là quy tắc đã được người phụ trách xác nhận: người dùng tự xác minh rồi sửa hoặc xóa phiếu nhập trùng ở tab Vận chuyển.
 
 ## Tra cứu dạng cha–con, chip điều kiện, bộ lọc đã lưu (mới)
 Trong **🔎 Tra cứu Google Sheets**:

@@ -31,7 +31,7 @@ Số bài e2e trên Windows và trên Linux dùng cùng mã; bản Linux có s�
 | 3 | Bộ lọc: dấu ngoặc kép lẻ làm tìm không ra; `hd: 101` (có khoảng trắng sau dấu hai chấm) không nhận; token chỉ gồm dấu `-` loại trừ nhầm hàng loạt dòng | Truy vấn `"abc`, `hd: 101`, `-` | Chuẩn hóa truy vấn trong `src/lookup.js` | `hồi quy bộ lọc: truy vấn sai định dạng…` |
 | 4 | CCCD gõ có dấu cách (`0490 0000 0002`) hoặc mất số 0 đầu (`49000000002`) không khớp | Tìm hai dạng trên | Ghép lại thành 12 số, bù số 0 | cùng bài trên |
 | 5 | Ngày/khối lượng sai định dạng bị bỏ qua âm thầm; khoảng ngày ngược (từ > đến) trả 0 dòng không giải thích | `from='abc'`, `from>to`, `minTan='x'` | Trả `warns` và hiển thị cảnh báo trên giao diện | `hồi quy bộ lọc: kết hợp nhiều bộ lọc, báo cảnh báo…` |
-| 6 | Báo cáo: phiếu trùng số bị cộng vào tổng nhưng không được nêu rõ | Hai rừng cùng số phiếu `P2` | **Giữ nguyên cách tính** (không tự xóa phiếu, chưa có quy tắc nghiệp vụ) nhưng đánh dấu cả hai dòng “Trùng số phiếu”, thêm chỉ tiêu “Phiếu trùng số” và ghi chú nêu số phiếu, số tấn đang tính | `sổ phiếu cân…` (đơn vị) và `e2e-reports` |
+| 6 | Báo cáo: phiếu trùng số bị cộng vào tổng nhưng không được nêu rõ | Hai rừng cùng số phiếu `P2` | **Giữ nguyên cách tính** (không tự xóa phiếu; quy tắc này đã được người phụ trách xác nhận giữ nguyên, 12/11/2026) nhưng đánh dấu cả hai dòng “Trùng số phiếu”, thêm chỉ tiêu “Phiếu trùng số” và ghi chú nêu số phiếu, số tấn đang tính | `sổ phiếu cân…` (đơn vị) và `e2e-reports` |
 | 7 | Tài liệu cũ ghi xuất biểu mẫu “5/5”, thực tế có 4 kiểm tra | Đếm lại | Cập nhật số liệu | — |
 
 Chưa phát hiện lỗi trong luồng nhập JSON, sao lưu, khôi phục, nâng cấp SQLite: các bài đã có (`nhập: skip/overwrite/both/replace`, `nâng cấp cấu trúc`, `bản P1 → hiện tại`) đạt; thêm 2 bài hồi quy: nhập thất bại giữa chừng (`replace`, `overwrite`) giữ nguyên hồ sơ từng rừng và có bản sao lưu trước; sao lưu `.sqlite` mở lại được.
@@ -48,7 +48,7 @@ Chưa phát hiện lỗi trong luồng nhập JSON, sao lưu, khôi phục, nân
 
 `scripts/e2e-reports.js` (Electron, dữ liệu giả lập: 2 rừng cùng chủ, phiếu trong và ngoài kỳ, phiếu trùng số, rừng thiếu hồ sơ), 31 kiểm tra đạt: số bảng, số dòng, nội dung từng ô và các chỉ tiêu khớp nhau giữa màn hình xem trước, Word và Excel; cột số trong Excel là số thật (tổng cột = 31,75 tấn); kỳ 01/01–28/02/2026 loại phiếu ngoài kỳ (4 chuyến, 31,75 tấn); kỳ sai (từ > đến) báo lỗi và không xuất file.
 
-**Quy tắc phiếu trùng số:** vẫn tính vào tổng (hệ thống không tự xóa phiếu; chưa xác định được nghiệp vụ), được đánh dấu và nêu rõ cách tính trong báo cáo. Cần người phụ trách xác nhận nên loại hay giữ.
+**Quy tắc phiếu trùng số (đã xác nhận giữ nguyên, 12/11/2026):** vẫn tính vào tổng, hệ thống không tự xóa hay gộp phiếu; cả hai dòng được đánh dấu “Trùng số phiếu” và báo cáo nêu rõ số phiếu, số tấn đang tính. Người dùng tự kiểm tra rồi sửa hoặc xóa phiếu nhập trùng ở tab Vận chuyển. Quy tắc này chưa dựa trên đặc điểm số phiếu của nhà máy (số có duy nhất không, có lặp theo năm không); nếu có thông tin đó thì có thể chặt hơn.
 
 ## 5. Biểu mẫu BM-01…BM-19, ZIP, tiền công, cước
 
