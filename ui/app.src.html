@@ -816,8 +816,8 @@ function gate(rec) {
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const xe = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const P = (text, o = {}) => ({t: 'p', text: text ?? '', al: o.al || 'both', b: !!o.b, i: !!o.i, sz: o.sz || 26,
-  after: o.after ?? 100, before: o.before ?? 0, ind: o.ind || 0, indR: o.indR || 0, hang: o.hang || 0, keep: !!o.keep, bdb: !!o.bdb});
-const T = (widths, rows, o = {}) => ({t: 'tbl', widths, rows, borders: o.borders !== false, head: !!o.head, headRows: o.headRows, sz: o.sz, rowH: o.rowH, al: o.al, alignCols: o.alignCols, keep: !!o.keep, pad: o.pad});
+  after: o.after ?? 100, before: o.before ?? 0, ind: o.ind || 0, indR: o.indR || 0, hang: o.hang || 0, keep: !!o.keep, bdb: !!o.bdb, full: !!o.full});
+const T = (widths, rows, o = {}) => ({t: 'tbl', widths, rows, borders: o.borders !== false, head: !!o.head, headRows: o.headRows, sz: o.sz, rowH: o.rowH, al: o.al, alignCols: o.alignCols, keep: !!o.keep, pad: o.pad, full: !!o.full});
 const bl = text => P('- ' + text, {ind: 360});
 
 /* ===== Chế độ in biểu mẫu: 'day' (đầy đủ) | 'trong' (mẫu trống số: các giá trị chưa có để chấm hoặc ô trống) | 'de' (CHỈ phần số, in đè lên mẫu 'trong' đã in).
@@ -926,8 +926,8 @@ function tidySign(blocks) {
 }
 async function makeDocx(blocks, o = {}) {
   blocks = tidySign(blocks);
-  const body = blocks.map(b => b.t === 'p' ? paraXml(b) : b.t === 'tbl' ? tblXml(b) :
-    b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '').join('') +
+  const ser = b => b.t === 'p' ? paraXml(b) : b.t === 'tbl' ? tblXml(b) : b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '';
+  const body = blocks.map(b => { if (!b.full || docMode === 'day') return ser(b); const m = docMode; docMode = 'day'; try { return ser(b); } finally { docMode = m; } }).join('') +   // khối “full”: luôn in đầy đủ, kể cả khi cả biên bản đang ở chế độ in đè (ví dụ Bảng kê khối lượng đính kèm) +
     (blocks.length && blocks[blocks.length - 1].t === 'tbl' ? '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>' : '');   // đoạn đệm bắt buộc sau bảng: thu nhỏ để không đẩy sang trang trắng
   const pg = o.landscape
     ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="850" w:right="567" w:bottom="850" w:left="1134" w:header="425" w:footer="425" w:gutter="0"/>'
@@ -1425,9 +1425,6 @@ function docKiemTraHienTruong(rec, ex) {
 function docXNKLVC(rec, ex, g) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tr = tripsOf(rec, g), kg = totalKg(tr);
   const hdNo = ex._so.vc.so;
-  /* Ô “Nơi giao”: ở mẫu trống/in đè mỗi hàng chỉ một dòng, nên địa chỉ dài không in lại từng hàng (đã nêu ở đoạn “về …” phía trên): giống nhau thì “Như trên”, khác nhau thì cắt gọn */
-  const ngSame = new Set(tr.map(r => r.noiGiao || '')).size <= 1;
-  const ngCell = t => t.length <= 16 ? t : ngSame ? 'Như trên' : t.slice(0, 15) + '…';
   const noiGiao = ex.vcDiemDen || (ex._mode === 'day' ? tr.map(r => r.noiGiao).find(Boolean) : '') || '………………';   // mẫu trống và in đè: chữ cố định phải giống nhau, không lấy từ phiếu cân   // điểm đến theo hồ sơ rừng; cột “Nơi giao” từng phiếu giữ nguyên dữ liệu nguồn
   return [
     ...TITLE_HEAD(),
@@ -1441,18 +1438,21 @@ function docXNKLVC(rec, ex, g) {
     P('**BÊN CHỦ RỪNG (BÊN A): ' + upper(rsName) + '** — CCCD số ' + (rs.cccd || '…………') + ', địa chỉ thường trú: ' + (rs.diaChi || '…………') + '.', {after: 80}),
     P('**BÊN VẬN CHUYỂN (BÊN B): ' + upper(g.ten) + '** — CCCD số ' + (g.cccd || '…………') + ', địa chỉ thường trú: ' + (g.diaChi || '…………') + '.', {after: 120}),
     P('Hai bên cùng xác nhận khối lượng gỗ keo rừng trồng đã vận chuyển từ rừng tại ' + rs.diaDiem + (rungRef(rs) ? ' (' + rungRef(rs) + ')' : '') + ' về ' + noiGiao +
-      ', ' + VP(tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', ex), S_TUDEN) + ', căn cứ phiếu cân nhà máy (khối lượng giao tại nhà máy), cụ thể như sau:', {after: 120}),
-    T([650, 1450, 1650, 2000, 2000, 1605],
-      [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Nơi giao (nhà máy)', 'Khối lượng (tấn)'],
-        ...(ex._mode === 'day' ? tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))])
-          : Array.from({length: Math.max(ex._dong, tr.length)}, (_, i) => { const r = tr[i]; return [String(i + 1), V(r ? r.ngay : ''), V(r ? r.bienSo : ''), V(r ? r.soPhieu : ''), V(r ? ngCell(r.noiGiao || '') : ''), V(r ? fmtT(Math.round(r.kl * 1000)) : '')]; })),   // in đè: số dòng cố định để dòng tổng cộng nằm đúng chỗ của mẫu trống
-        [{v: '**Tổng cộng (' + V(tr.length ? String(tr.length) : '', 4) + ' chuyến)**', span: 5}, '**' + V(tr.length ? fmtT(kg) : '') + '**']],
-      {head: true, borders: true, sz: 20, alignCols: ['center', 'center', 'center', 'center', 'left', 'right']}),
-    P('', {after: 80}),
+      ', ' + VP(tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', ex), S_TUDEN) + ', căn cứ phiếu cân nhà máy (khối lượng giao tại nhà máy), cụ thể trong **Bảng kê khối lượng đính kèm**:', {after: 120}),
     P('Tổng khối lượng xác nhận: **' + V(tr.length ? fmtT(kg) : '………', 14) + ' tấn** (' + V(tr.length ? String(tr.length) : '…', 4) + ' chuyến). Khối lượng này là căn cứ để thanh toán tiền vận chuyển theo Hợp đồng nêu trên.', {before: 80}),
     P('Biên bản được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị như nhau. Hai bên không có ý kiến khác về khối lượng đã xác nhận.'),
     P('', {after: 120}),
-    signTable(['ĐẠI DIỆN BÊN A', '(Ký, ghi rõ họ tên)', rsName], ['ĐẠI DIỆN BÊN B', '(Ký, ghi rõ họ tên)', g.ten])
+    signTable(['ĐẠI DIỆN BÊN A', '(Ký, ghi rõ họ tên)', rsName], ['ĐẠI DIỆN BÊN B', '(Ký, ghi rõ họ tên)', g.ten]),
+    ...(ex._mode === 'trong' || !tr.length ? [] : [   // Bảng kê khối lượng đính kèm: trang riêng, in đầy đủ khi đã có phiếu cân (không cần in khung rồi in đè)
+      {t: 'br'},
+      P('**BẢNG KÊ KHỐI LƯỢNG ĐÍNH KÈM**', {al: 'center', sz: 28, before: 0, after: 60, full: true}),
+      P('(Kèm theo Biên bản xác nhận khối lượng vận chuyển số ' + ex._so.xn.so + ' và Hợp đồng vận chuyển số ' + hdNo + ')', {al: 'center', i: true, after: 160, full: true}),
+      P('Bên vận chuyển (Bên B): **' + upper(g.ten) + '** · Mã rừng: ' + (rs.maRung || '…') + ' · ' + (tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', Object.assign({}, ex, {_mode: 'day'}))) + '.', {al: 'left', after: 120, full: true}),
+      T([650, 1450, 1650, 2000, 2000, 1605],
+        [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Nơi giao (nhà máy)', 'Khối lượng (tấn)'],
+          ...tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))]),
+          [{v: '**Tổng cộng (' + tr.length + ' chuyến)**', span: 5}, '**' + fmtT(kg) + '**']],
+        {head: true, borders: true, sz: 20, full: true, alignCols: ['center', 'center', 'center', 'center', 'left', 'right']})])
   ];
 }
 function docTTVC(rec, ex, g) {
@@ -1652,7 +1652,6 @@ function buildFiles(rec, kind) {
   /* Hai người ký trùng tên (khác CCCD) không được ghi đè file của nhau trong ZIP: thêm hậu tố _2, _3… */
   files.push = f => { let q = f.path, k = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + k++ + '.docx'); used.add(q); f.path = q; return Array.prototype.push.call(files, f); };
   ex._mode = kind === 'trong2' ? 'trong' : kind === 'de2' ? 'de' : 'day';          // chế độ in của đợt 2: mẫu trống số / chỉ phần số để in đè
-  ex._dong = Math.min(40, Math.max(1, parseInt(ex.pcDong, 10) || 12));             // số dòng chuyến cố định của BM-09 khi in mẫu trống / in đè
   if (ex._mode !== 'day') {   // đợt 2 dạng "mẫu trống" và "in đè": cùng tập file, cùng bố cục: BM-08, BM-09, BM-10, BM-14
     files.push({path: '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(rec, ex), land: true});
     files.push({path: '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(rec, ex)});
@@ -1801,9 +1800,7 @@ async function exportKind(kind, idx) {
     download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung', trong2: 'dot2_MAU_TRONG_in_truoc', de2: 'dot2_CHI_PHAN_SO_in_de'}[kind] || kind) + '.zip');
     if (['all', 'dau', 'cuoi'].includes(kind)) { const nt = exportNotes(rec, g, kind); if (nt.length) note('Đã tải file nhưng còn ' + nt.length + ' lưu ý:\n• ' + nt.join('\n• '), 'warn'); else note('Đã tải file: dữ liệu đủ, không có lưu ý.', 'ok'); }
     if (kind === 'de2') {
-      const nTrip = groupsDX(rec).map(x => tripsOf(rec, x).length), nDong = Math.min(40, Math.max(1, parseInt((rec.exp || {}).pcDong, 10) || 12));
       if (!g.canPC) note('Đã tải bản CHỈ PHẦN SỐ, nhưng chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có số để in đè. Nạp phiếu cân rồi tải lại.', 'warn');
-      else if (nTrip.some(n => n > nDong)) note('Có xe/nhóm xe nhiều chuyến hơn số dòng cố định của BM-09 (' + nDong + '). Dòng thừa sẽ làm lệch bố cục so với mẫu đã in: tăng “Số dòng chuyến” rồi in lại mẫu trống và bản in đè.', 'warn');
     }
   } finally { docMode = 'day'; }
 }
@@ -2331,9 +2328,8 @@ function panelXuat(rec) {
       '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('⬇ Tải đợt 1', 'dau', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>' +
       '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') + '</div></div>' + btn('⬇ Tải đợt 2', 'cuoi', null, g.canBHLD) + '</div></div>' +
     '<div class="card"><h3 style="margin-top:0">In mẫu đợt 2 để trống số, rồi in đè số sau</h3><p class="mut" style="margin:0 0 8px">Dùng khi cần in sẵn cả BM-08, BM-09, BM-10, BM-14 trước khi có số liệu. <b>Bước 1</b>: tải và in <b>mẫu trống</b> (số biên bản, ngày lập, khối lượng, tiền để chấm hoặc ô trống). <b>Bước 2</b>: khi có số liệu, tải <b>chỉ phần số</b> và in lên <b>đúng tờ mẫu đã in</b> (cùng khổ A4, tỉ lệ 100%, cùng máy in, cho tờ vào đúng chiều như lần in đầu): chữ cố định và đường kẻ được ẩn, chỉ các con số hiện ra đúng chỗ. In thử trước một tờ giấy nháp. BM-09 dùng số dòng cố định cho các chuyến để dòng tổng cộng nằm đúng chỗ.</p>' +
-      '<label style="display:inline-flex;gap:8px;align-items:center;margin-bottom:8px">Số dòng chuyến của BM-09 (mẫu trống và in đè phải dùng cùng một số) <input data-exp="pcDong" value="' + esc(ex.pcDong || '') + '" placeholder="12" style="width:70px"></label>' +
       '<div class="docrow"><div><b>Bước 1 – Mẫu trống (.zip)</b><div class="mut">BM-08, BM-09, BM-10, BM-14 với phần số để chấm hoặc để trống. Làm được ngay khi đã có nhân công và đội xe.</div></div>' + btn('⬇ Tải mẫu trống', 'trong2', null, g.canBHLD && g.canHDVC) + '</div>' +
-      '<div class="docrow"><div><b>Bước 2 – Chỉ phần số để in đè (.zip)</b><div class="mut">Cùng bốn biểu mẫu nhưng chỉ in các con số, đúng vị trí trên mẫu đã in.' + (g.canPC ? '' : ' <b>Cần phiếu cân hợp lệ để có số cho BM-09 và BM-10.</b>') + '</div></div>' + btn('⬇ Tải phần số để in đè', 'de2', null, g.canBHLD && g.canHDVC) + '</div></div>' +
+      '<div class="docrow"><div><b>Bước 2 – Chỉ phần số để in đè (.zip)</b><div class="mut">Cùng bốn biểu mẫu nhưng chỉ in các con số, đúng vị trí trên mẫu đã in. Riêng BM-09: khung bảng phiếu cân không in sẵn; <b>Bảng kê khối lượng đính kèm</b> là trang riêng (trang 2), in đầy đủ trên giấy mới khi đã có phiếu cân.' + (g.canPC ? '' : ' <b>Cần phiếu cân hợp lệ để có số cho BM-09 và BM-10.</b>') + '</div></div>' + btn('⬇ Tải phần số để in đè', 'de2', null, g.canBHLD && g.canHDVC) + '</div></div>' +
     '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung. <b>Hồ sơ đã đủ dữ liệu thì in một lần bằng nút này</b>; mục nào chưa đủ (phiếu cân, khối lượng thực tế, ngày lập, địa chỉ giao…) sẽ được nêu ngay sau khi tải.</div></div>' + btn('⬇ Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>';
 }
 
