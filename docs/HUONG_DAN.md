@@ -72,7 +72,7 @@ Tiền vận chuyển tính theo **tấn giao tại nhà máy** (theo phiếu c�
 
 **Phiếu cân**: nạp bằng Excel, **mỗi chuyến một dòng**. Nạp **đội xe trước**, vì phiếu cân chỉ nhận biển số có trong danh sách xe (so khớp bỏ dấu chấm, gạch, khoảng trắng). Phiếu **trùng số** vẫn được cộng vào tổng nhưng bị đánh dấu để kiểm tra.
 
-**Công ty mua hàng và địa chỉ giao**
+**Công ty mua hàng và địa chỉ giao** (tên công ty cũng tự điền vào dòng “Kính gửi” của BM-11 cam kết nguồn gốc: ưu tiên ô “Cam kết: đơn vị nhận” nếu có nhập, rồi công ty đã chốt cho lô, rồi hồ sơ Công ty mua hàng)
 - Phần mềm dùng cho **một công ty**: khai **một hồ sơ** ở nút **🏢 Công ty mua hàng** (tên pháp lý và địa chỉ bắt buộc; MST, người đại diện, chức vụ, SĐT, email; có thể thêm nhiều **địa chỉ giao hàng** như kho, nhà máy).
 - Ở tab Vận chuyển của từng lô: **Chọn địa chỉ giao hàng** → chọn một địa chỉ → xem bảng so sánh “hiện tại / mới” → **Xác nhận**. Địa chỉ được lưu cùng hồ sơ lô và tự điền vào “Địa điểm vận chuyển đến”; dùng ở **BM-04, BM-09, BM-10 và Sổ phiếu cân**.
 - Sửa tên hoặc địa chỉ trong hồ sơ công ty **không tự đổi** các lô đã chọn: lô giữ địa chỉ đã lưu và hiện thông báo, bấm **Xem và cập nhật** để áp dụng.

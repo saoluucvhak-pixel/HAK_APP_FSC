@@ -2290,6 +2290,8 @@ const rungRef = i => {
 const LAW_LD = ['Căn cứ Bộ luật Lao động số 45/2019/QH14 ngày 20/11/2019;', 'Căn cứ Luật An toàn, vệ sinh lao động số 84/2015/QH13 ngày 25/06/2015;', 'Căn cứ Nghị định số 145/2020/NĐ-CP ngày 14/12/2020 của Chính phủ hướng dẫn thi hành Bộ luật Lao động.'];
 const DT_NOIDUNG = ['Quy định chung về an toàn, vệ sinh lao động; quyền và nghĩa vụ của người lao động.', 'Kỹ thuật an toàn khi đốn hạ, cắt khúc, bóc tách; sử dụng cưa xăng, dao, rựa.', 'Sử dụng, bảo quản phương tiện bảo vệ cá nhân (bảo hộ lao động).', 'An toàn khi bốc xếp, vận chuyển gỗ; làm việc trên địa hình dốc, thời tiết xấu.', 'Phòng chống cháy rừng; xử lý tình huống khẩn cấp và sơ cứu tai nạn lao động.'];
 const hdRef = rs => (rs.soHopDong || rs.ngayKyHopDong) ? 'Căn cứ Hợp đồng số ' + (rs.soHopDong || '…………') + (rs.ngayKyHopDong ? ' ký ngày ' + rs.ngayKyHopDong : '') + '.' : '';
+/* Đơn vị mua gỗ (Công ty mua hàng) của lô: nhập tay ở tab Xuất hồ sơ nếu có, không thì địa chỉ giao đã chốt của lô, không thì hồ sơ công ty duy nhất */
+const buyerName = rec => ((rec.info.muaHang || {}).ten || (theCompany() || {}).ten || '').trim();
 const ngayLine = ex => ex.ngayKy ? 'ngày ' + ex.ngayKy : HAKHopDong.ngayTrong();
 
 function partyBlock(label, p, fullName, o = {}) {   // o.noSinh: không in năm sinh (chủ rừng không còn khai ngày sinh)
@@ -2658,7 +2660,7 @@ function docCamKetNguonGoc(rec, ex) {
   return [
     ...TITLE_HEAD(),
     P('**BẢN CAM KẾT NGUỒN GỐC GỖ RỪNG TRỒNG**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Kính gửi: ' + (ex.ckNhan ? upper(ex.ckNhan) : '…………………………………………'), {al: 'center', after: 200}),
+    P('Kính gửi: ' + (ex.ckNhan ? upper(ex.ckNhan) : buyerName(rec) ? upper(buyerName(rec)) : '…………………………………………'), {al: 'center', after: 200}),
     P('- Căn cứ Luật Lâm nghiệp số 16/2017/QH14 ngày 15/11/2017;'),
     P('- Căn cứ Luật Đất đai số 31/2024/QH15 ngày 18/01/2024;'),
     LAW_BLDS ? P(LAW_BLDS) : P(''),
@@ -3100,6 +3102,7 @@ function exportNotes(rec, g, kind) {
     if (!ex.ntNgay) n.push('BM-14: chưa nhập ngày lập biên bản nghiệm thu (ô “Nghiệm thu, thanh lý: ngày lập”), ngày và năm trong số biên bản để trống.');
     if (g.canPC && !ex.pcNgay) n.push('BM-09, BM-10: chưa nhập ngày lập biên bản xác nhận khối lượng, ngày và năm trong số biên bản để trống.');
   }
+  if (head && !ex.ckNhan && !buyerName(rec)) n.push('BM-11 (cam kết nguồn gốc): dòng “Kính gửi” để chấm vì chưa khai Công ty mua hàng (nút 🏢 Công ty mua hàng) và chưa nhập “đơn vị nhận”.');
   if (head && !destOf(rec).text) n.push('BM-04, BM-09, BM-10: chưa chọn địa chỉ giao hàng nên dòng điểm đến để chấm (tab Vận chuyển → Chọn địa chỉ giao hàng).');
   if (head) { const cb = HAKHopDong.canBoSung(ex).filter(c => /BM-01|BM-04/.test(c.label)); if (cb.length) n.push('Số hợp đồng chưa có năm (' + cb.map(c => c.label.replace(/ \(.*\)/, '')).join('; ') + '): nhập “Ngày ký hợp đồng”.'); }
   return n;
@@ -3630,7 +3633,7 @@ function panelXuat(rec) {
     gpc.map((x, i) => { const py = payVC(rec, x); return row(esc(x.ten), py.n + ' chuyến · ' + fmtT(py.kg) + ' tấn · ' + fmt(py.tien) + ' đồng', '<div class="row">' + btn('⬇ Biên bản', 'xnvc', i, g.canPC) + btn('⬇ Thanh toán', 'ttvc', i, g.canPC) + '</div>'); }).join('') + '</div>';
   S.fsc = params('Thông số hồ sơ FSC và giám sát', [
       ['tdNgay', 'Thẩm định: ngày thẩm định', 'dd/mm/yyyy'], ['tdNguoi', 'Thẩm định: người thẩm định', 'trống = ký tay'],
-      ['ckNhan', 'Cam kết: đơn vị nhận (Kính gửi)', 'VD: Công ty TNHH ...'], ['ckNgay', 'Cam kết: ngày lập', 'dd/mm/yyyy'],
+      ['ckNhan', 'Cam kết: đơn vị nhận (Kính gửi)', buyerName(rec) ? 'mặc định: ' + buyerName(rec) + ' (Công ty mua hàng)' : 'VD: Công ty TNHH ... (hoặc khai Công ty mua hàng để tự điền)'], ['ckNgay', 'Cam kết: ngày lập', 'dd/mm/yyyy'],
       ['ktNgayTruoc', 'Kiểm tra hiện trường: ngày trước KT', 'dd/mm/yyyy'], ['ktNgaySau', 'Kiểm tra hiện trường: ngày sau KT', 'dd/mm/yyyy'], ['ktNguoi', 'Kiểm tra hiện trường: người kiểm tra', 'trống = ký tay'],
       ['fscNgay', 'Phổ biến FSC: thời gian', 'dd/mm/yyyy'], ['fscDiaDiem', 'Phổ biến FSC: địa điểm', 'VD: tại rừng khai thác'], ['fscNguoi', 'Phổ biến FSC: người phổ biến', 'trống = ký tay'], ['fscDauMoi', 'Phổ biến FSC: đầu mối nhận khiếu nại', 'tên, số điện thoại']]) +
     '<div class="card"><h3 style="margin-top:0">Hồ sơ FSC tại rừng</h3>' +

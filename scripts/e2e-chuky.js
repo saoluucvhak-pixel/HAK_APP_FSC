@@ -37,6 +37,29 @@ const exp = {ngayKy: '02/10/2026', soKT: '015', soVC: '07'};
   ok('BM-08: khối ký một người là bảng hai cột, chữ canh giữa, ô trái trống (ngày, chức danh, “(Ký, họ tên)”, họ tên cùng trục)', /<w:gridCol w:w="7568"\/><w:gridCol w:w="7569"\/>/.test(last) && (last.match(/<w:jc w:val="center"\/>/g) || []).length >= 6 && /TRẦN TỔ TRƯỞNG/.test(last), last.slice(0, 200));
   const xml10 = await (await JSZip.loadAsync(await z.file(names.find(n => n.startsWith('10_'))).async('nodebuffer'))).file('word/document.xml').async('string');
   ok('BM-10 (3 cột ký): ngày trải trên hai cột bên phải để không bị ngắt dòng', /<w:gridSpan w:val="2"\/>[\s\S]{0,400}Đà Nẵng, ngày/.test(xml10));
+  // BM-10: dòng “Đà Nẵng, ngày … tháng … năm …” phải nằm trên MỘT dòng (kiểm tra bằng PDF dựng từ LibreOffice nếu có)
+  const cp = require('child_process'), soffice = ['soffice', 'libreoffice'].find(c => { try { cp.execSync('command -v ' + c, {stdio: 'ignore'}); return true; } catch (e) { return false; } });
+  if (soffice) {
+    const n10 = names.find(n => n.startsWith('10_')), dd = path.join(dir, 'pdf'); fs.mkdirSync(dd); const f10 = path.join(dd, 'bm10.docx'); fs.writeFileSync(f10, await z.file(n10).async('nodebuffer'));
+    cp.execFileSync(soffice, ['--headless', '--convert-to', 'pdf', '--outdir', dd, f10], {timeout: 120000, stdio: 'ignore'});
+    let txt = ''; try { txt = cp.execFileSync('pdftotext', ['-layout', path.join(dd, 'bm10.pdf'), '-'], {encoding: 'utf8'}); } catch (e) { txt = ''; }
+    ok('BM-10: “Đà Nẵng, ngày … tháng … năm …” nằm trên một dòng, không bị xuống dòng', !txt || /Đà Nẵng, ngày[^\n]*tháng[^\n]*năm/.test(txt), txt.slice(-600));
+  }
+  // BM-11: “Kính gửi” tự điền tên Công ty mua hàng
+  const COMP = {c1: {id: 'c1', ten: 'CÔNG TY TNHH DĂM AN PHÁT', mst: '', diaChi: 'KCN Điện Nam, Quảng Nam', nguoiDaiDien: '', chucVu: '', sdt: '', email: '', diaChiGiao: [], ghiChu: ''}};
+  const base = await w.evaluate(() => window.hak.loadSync().db);
+  const bm11 = async () => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=o]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f]'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=fsc]');
+    for (const x of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, x)); await w.click('button[data-act=dl][data-kind=ckng]'); let g = null; for (let i = 0; i < 100 && !g; i++) { g = fs.existsSync(out) && fs.readdirSync(out).find(x => x.endsWith('.docx')); if (!g) await w.waitForTimeout(100); } await w.waitForTimeout(300);
+    const xml = await (await JSZip.loadAsync(fs.readFileSync(path.join(out, g)))).file('word/document.xml').async('string'); return (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join(''); };
+  const variant = async mut => { const d = JSON.parse(JSON.stringify(base)); mut(d); await w.evaluate(x => window.hak.save(x), d); return bm11(); };
+  let t11 = await variant(d => { d.congTy = {}; delete d.rs.o.forests.f.info.muaHang; });
+  ok('BM-11 chưa khai Công ty mua hàng: “Kính gửi” để chấm', /Kính gửi: …/.test(t11), t11.slice(150, 300));
+  t11 = await variant(d => { d.congTy = COMP; delete d.rs.o.forests.f.info.muaHang; });
+  ok('BM-11 đã có hồ sơ Công ty mua hàng: “Kính gửi” tự điền tên công ty', /Kính gửi: CÔNG TY TNHH DĂM AN PHÁT/.test(t11), t11.slice(150, 300));
+  t11 = await variant(d => { d.congTy = {}; d.rs.o.forests.f.info.muaHang = {congTyId: 'z', ten: 'CÔNG TY CỔ PHẦN GỖ ĐÃ CHỐT', mst: '', diaChiId: '', diaChiNhan: '', diaChi: 'Huế', xacNhan: '2026-10-01T00:00:00.000Z'}; });
+  ok('BM-11 lô đã chốt công ty/địa chỉ giao: “Kính gửi” lấy công ty đã chốt của lô', /Kính gửi: CÔNG TY CỔ PHẦN GỖ ĐÃ CHỐT/.test(t11));
+  t11 = await variant(d => { d.congTy = COMP; d.rs.o.forests.f.exp = Object.assign({}, d.rs.o.forests.f.exp, {ckNhan: 'Công ty nhận khác'}); });
+  ok('BM-11 nhập tay “đơn vị nhận”: ưu tiên giá trị nhập tay', /Kính gửi: CÔNG TY NHẬN KHÁC/.test(t11) && !/DĂM AN PHÁT/.test(t11.slice(100, 400)));
   ok('không lỗi script giao diện', errs.length === 0, errs.join('|'));
   await app.close();
   console.log(fail ? '\n' + fail + ' LỖI' : '\nĐẠT HẾT'); process.exit(fail ? 1 : 0);
