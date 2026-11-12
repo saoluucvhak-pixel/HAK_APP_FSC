@@ -79,3 +79,10 @@ Báo cáo tính từ dữ liệu hồ sơ trong máy (không cần mạng). Mẫ
 - Thanh trên cùng: **Tổng quan · Tra cứu · Báo cáo** ở giữa; chế độ sáng/tối và menu **⋯ Thêm** (Hướng dẫn, Sao lưu, Khôi phục) bên phải.
 - Ô **Lọc chủ rừng** ở danh sách bên trái (theo tên, mã, CCCD, không phân biệt dấu).
 - Màu sắc, cỡ chữ, bo góc khai báo ở đầu phần `<style>` (`:root`), đổi màu thương hiệu chỉ cần sửa một chỗ. Có chế độ tối, bố cục điện thoại và định dạng khi in.
+
+## Đăng nhập Google cho bảng tính giới hạn quyền xem (mới)
+Trong **🔎 Tra cứu Google Sheets** có nút **🔑 Đăng nhập Google (chỉ đọc)**. Đăng nhập bằng tài khoản đã được chia sẻ bảng tính rồi bấm **Đồng bộ ngay**. Quyền chỉ đọc, không sửa bảng tính, không đổi quyền chia sẻ. Cần cấu hình OAuth một lần theo [docs/GOOGLE_OAUTH.md](GOOGLE_OAUTH.md); chưa cấu hình thì nút hiện thông báo và đồng bộ qua liên kết công khai vẫn dùng được. Mọi lỗi (mất mạng, hết phiên, thiếu quyền, sai tiêu đề cột) đều giữ bản tra cứu đã lưu và báo rõ nguyên nhân.
+
+Bộ lọc tra cứu: dấu ngoặc kép lẻ, `hd: 101` (có khoảng trắng), CCCD gõ có dấu cách hoặc mất số 0 đầu đều được nhận; ngày hoặc khối lượng sai định dạng được báo rõ thay vì bỏ qua âm thầm.
+
+Báo cáo: **phiếu cân trùng số vẫn được cộng vào tổng** (phần mềm không tự xóa phiếu), nhưng cả hai dòng trùng được đánh dấu “Trùng số phiếu”, có chỉ tiêu “Phiếu trùng số” và ghi chú nêu số phiếu, số tấn đang tính. Cần xác minh rồi sửa hoặc xóa phiếu nhập trùng ở tab Vận chuyển.
