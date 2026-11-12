@@ -8,6 +8,11 @@ contextBridge.exposeInMainWorld('hak', {
   importApply: (db, strategy) => ipcRenderer.invoke('import:apply', db, strategy),
   backupTo: () => ipcRenderer.invoke('backup:to'),
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
+  google: {
+    status: () => ipcRenderer.invoke('google:status'),
+    login: () => ipcRenderer.invoke('google:login'),
+    logout: () => ipcRenderer.invoke('google:logout')
+  },
   lookup: {
     status: () => ipcRenderer.invoke('lookup:status'),
     setSheet: link => ipcRenderer.invoke('lookup:setSheet', link),

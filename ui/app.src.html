@@ -2346,7 +2346,7 @@ const numTxt = v => typeof v === 'number' ? formatNumber(v, 6) : esc(v ?? '');
 async function lkOpen() {
   if (!HB) return;
   lk.view = 'search'; lk.msg = null; $('#lkBox').classList.add('on');
-  lk.st = await HB.lookup.status();
+  lk.st = await HB.lookup.status(); lk.g = await HB.google.status().catch(() => null);
   if (lk.st.active && lk.res == null) await lkSearch();
   lkRender();
 }
@@ -2366,6 +2366,12 @@ async function lkLoad(kind) {
   lkRender();
 }
 
+function lkGoogleHtml() {
+  const g = lk.g; if (!g) return '';
+  return '<div class="row" style="margin-top:8px"><span class="mut">Bảng tính giới hạn quyền xem:</span> ' + (g.signedIn
+    ? '<span class="pill ok">Đã đăng nhập Google' + (g.email ? ': ' + esc(g.email) : '') + (g.persistent ? '' : ' (chỉ trong phiên này)') + '</span><button class="btn ghost sm" data-act="lkGLogout">Đăng xuất</button>'
+    : (g.configured ? '<button class="btn ghost sm" data-act="lkGLogin"' + (lk.busy ? ' disabled' : '') + '>🔑 Đăng nhập Google (chỉ đọc)</button>' : '<span class="pill">Chưa cấu hình OAuth Google — xem docs/GOOGLE_OAUTH.md</span>')) + '</div>';
+}
 function lkStatusHtml() {
   const st = lk.st || {}, a = st.active, l = st.last;
   const online = navigator.onLine;
@@ -2374,7 +2380,7 @@ function lkStatusHtml() {
     '<br><span class="mut">Kết nối: ' + (online ? 'có mạng' : 'đang ngoại tuyến (vẫn tra cứu được bản đã lưu)') +
     (l ? ' · Lần cập nhật gần nhất (' + fmtDT(l.at) + '): ' + (l.ok ? 'thành công' : '<span style="color:var(--err)">lỗi — ' + esc(l.error) + '</span>') : '') + '</span></div>' +
     '<div class="row"><button class="btn sm" data-act="lkSync"' + (lk.busy ? ' disabled' : '') + '>⟳ Đồng bộ ngay</button><button class="btn ghost sm" data-act="lkExcel"' + (lk.busy ? ' disabled' : '') + '>⬆ Nhập bản Excel</button></div></div>' +
-    '<details style="margin-top:6px"><summary class="mut">Liên kết Google Sheets (chỉ đọc, bảng tính để “Ai có liên kết đều xem được”)</summary><div class="row" style="margin-top:6px"><input id="lkLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '"><button class="btn ghost sm" data-act="lkSetLink">Lưu liên kết</button></div></details>' +
+    lkGoogleHtml() + '<details style="margin-top:6px"><summary class="mut">Liên kết Google Sheets (chỉ đọc, bảng tính để “Ai có liên kết đều xem được”)</summary><div class="row" style="margin-top:6px"><input id="lkLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '"><button class="btn ghost sm" data-act="lkSetLink">Lưu liên kết</button></div></details>' +
     (lk.busy ? '<div class="msg warn">' + esc(lk.busy) + '</div>' : '') + (lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + '</div>';
 }
 
@@ -2636,6 +2642,8 @@ document.addEventListener('click', async e => {
   const a = el.dataset.act;
   if (a === 'lkOpen') return lkOpen();
   if (a === 'lkClose') return lkClose();
+  if (a === 'lkGLogin') { lk.busy = 'Đang chờ đăng nhập Google trong trình duyệt…'; lk.msg = null; lkRender(); const r = await HB.google.login(); lk.busy = ''; lk.g = r.status; lk.msg = r.ok ? {kind: 'ok', text: 'Đã đăng nhập Google (quyền chỉ đọc). Bấm “Đồng bộ ngay” để tải bảng tính.'} : {kind: 'err', text: r.error}; return lkRender(); }
+  if (a === 'lkGLogout') { const r = await HB.google.logout(); lk.g = r.status; lk.msg = {kind: 'ok', text: 'Đã đăng xuất Google.'}; return lkRender(); }
   if (a === 'lkFind') { lk.q = $('#lkQ').value; lkReadFilters(); lk.adv = !!($('#lkAdv') || {}).open; await lkSearch(); return lkRender(); }
   if (a === 'lkClear') { lk.f = {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}; lk.q = ($('#lkQ') || {}).value ?? lk.q; await lkSearch(); return lkRender(); }
   if (a === 'lkSync') return lkLoad('sync');
