@@ -2903,7 +2903,7 @@ function rpRender() {
     (rp.id === 'chacon' ? '<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="rpDetail"' + (rp.detail ? ' checked' : '') + '> Kèm từng phiếu cân</label>' : '') + '<button class="btn" data-act="rpWord">⬇ Xuất Word (.docx)</button><button class="btn ghost" data-act="rpExcel">⬇ Xuất Excel (.xlsx)</button></div>' +
     '<p class="mut">Khoảng ngày áp dụng cho ngày cân của phiếu cân. Báo cáo tiến độ luôn tính tại thời điểm hiện tại.</p>' +
     (rp.msg ? '<div class="msg ' + rp.msg.kind + '">' + esc(rp.msg.text) + '</div>' : '') +
-    '<h3 style="margin:10px 0 0">' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + ' · ' + rpScope()) + '</p>' +
+    '<h3 style="margin:10px 0 0">' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + ' · ' + rpScope()) + '<br>' + esc(m.unit || '') + '</p>' +
     '<div class="kpi">' + m.kpis.map(k => '<div><b>' + esc(F(k.value, k.f)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' + prev +
     (m.notes.length ? '<div class="msg warn">' + m.notes.map(esc).join('<br>') + '</div>' : '');
 }
