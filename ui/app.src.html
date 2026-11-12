@@ -178,67 +178,92 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <div id="impBox"><div class="gd" id="impBody"></div></div>
 <div id="guideBox" data-act="guideBg"><div class="gd">
 <div class="gh"><h2>Hướng dẫn sử dụng</h2><button class="btn ghost sm" data-act="guideClose">✕ Đóng</button></div>
-<p>Phần mềm chạy trong trình duyệt (một file HTML, không cần mạng): nạp Excel nhân công, vận chuyển, phiếu cân rồi xuất 19 biểu mẫu Word (BM-01 đến BM-19). Dữ liệu lưu trên máy bạn nên cần sao lưu định kỳ.</p>
-<h3>1. Quy trình 6 bước</h3>
+<p>HAKQN Desktop lập hồ sơ khai thác và vận chuyển gỗ keo theo chuẩn FSC. Dữ liệu lưu ngay trên máy (SQLite); nhập liệu, kiểm tra, xuất hồ sơ, sao lưu và khôi phục <b>không cần mạng</b>. Chỉ đồng bộ Google Sheets mới cần mạng. Bản đầy đủ có hình thức trình bày chi tiết hơn: tệp <code>docs/HUONG_DAN.md</code>.</p>
+<h3>1. Quy trình 8 bước</h3>
 <ol>
-<li>Tạo <b>Chủ rừng</b> (thông tin pháp lý, CCCD, địa chỉ).</li>
-<li>Tạo <b>Rừng</b> thuộc chủ rừng: mã rừng, địa điểm, tọa độ, diện tích, định mức, khối lượng thực tế, thời gian khai thác, giấy tờ pháp lý.</li>
-<li>Tab <b>Nhân công</b>: chọn cách ký, cách trả lương, đơn giá, rồi nạp Excel.</li>
-<li>Tab <b>Vận chuyển</b>: chọn cách tính giá, nạp Excel xe, rồi nạp Excel phiếu cân.</li>
-<li>Xem <b>Tiến độ</b> (checklist FSC, % hoàn thành) và sửa các lỗi báo đỏ.</li>
-<li>Tab <b>Xuất hồ sơ</b>: nhập thông số biên bản, tải từng biểu mẫu hoặc toàn bộ (.zip).</li>
+<li>Khai <b>🏢 Công ty mua hàng</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
+<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>🔎 Tra cứu Google Sheets</b>).</li>
+<li>Tạo <b>Lô rừng</b>: mã lô, địa điểm, tọa độ, diện tích, thời gian khai thác, giấy tờ pháp lý.</li>
+<li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo chức danh, rồi nạp Excel nhân công.</li>
+<li>Tab <b>Vận chuyển</b>: chọn cách tính cước, nạp Excel xe, nạp Excel phiếu cân, chọn <b>địa chỉ giao hàng</b>.</li>
+<li>Tab <b>Kiểm tra trước khi xuất</b>: xử lý các mục chặn xuất và cần đối chiếu.</li>
+<li>Tab <b>Xuất hồ sơ</b>: nhập thông số biên bản, tải biểu mẫu (từng file hoặc ZIP).</li>
+<li><b>Sao lưu</b>: nút ⬇ Sao lưu lô rừng, hoặc ⋯ Thêm → Sao lưu dữ liệu.</li>
 </ol>
-<p>Mỗi rừng có tổ khai thác, xe, hợp đồng, giá và giấy tờ riêng; chủ rừng chỉ giữ thông tin chung.</p>
-<h3>2. Tab Nhân công</h3>
+<p>Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa chỉ giao riêng; chủ rừng chỉ giữ thông tin chung.</p>
+<h3>2. Mã lô</h3>
 <ul>
-<li><b>Cách ký</b>: <i>giao khoán</i> (tổ trưởng ký hợp đồng khai thác, tổ viên ký HĐLĐ theo tổ) hoặc <i>trực tiếp</i> (mỗi người ký riêng; cần đơn giá cho tổ trưởng).</li>
-<li><b>Cách trả lương</b>: theo tấn hoặc theo ngày công; đơn giá nhập theo từng chức danh.</li>
-<li><b>Ngày bắt đầu</b> dùng cho hợp đồng, chấm công và kiểm tra đủ 18 tuổi (dưới 18 tuổi sẽ bị cảnh báo).</li>
-<li><b>Định mức BHLĐ</b> khai theo chức danh để in sổ cấp phát.</li>
-<li>Bấm <b>Tải mẫu Excel</b> (11 cột), điền xong bấm <b>Nạp Excel</b>. Dòng sai báo đỏ kèm số dòng.</li>
+<li><b>Mã lô là duy nhất trên máy</b> (không phân biệt hoa thường, bỏ khoảng trắng đầu/cuối). Mã trùng bị từ chối và phần mềm nêu lô đang dùng mã đó.</li>
+<li><b>Đổi mã lô</b> ở tab Thông tin rừng: nhân công, xe, phiếu cân mang mã cũ đổi theo mã mới; dòng mang mã khác được báo, không tự đổi.</li>
 </ul>
-<h3>3. Tab Vận chuyển</h3>
+<h3>3. Tab Nhân công</h3>
 <ul>
-<li><b>Giá</b>: hai cách tính: <b>đơn giá cố định</b> (đồng/tấn) hoặc <b>đơn giá tấn/km</b> (đồng/tấn/km × cự ly); tính tiền theo <b>tấn giao tại nhà máy</b>.</li>
-<li><b>Excel xe</b> (24 cột): biển số, chủ xe, tài xế, đăng kiểm, bảo hiểm, GPLX. Chọn người ký là chủ xe hay tài xế (tài xế ký thì hợp đồng có câu cam kết của chủ xe). Hạn sắp hết sẽ cảnh báo.</li>
-<li><b>Phiếu cân</b> (8 cột, <b>mỗi chuyến một dòng</b>): mã rừng, STT, ngày cân, biển kiểm soát, số phiếu cân, khối lượng (tấn), nơi giao, ghi chú.</li>
-<li><b>Lỗi chặn</b>: sai mã rừng, thiếu/sai ngày, biển không có trong danh sách xe, thiếu hoặc trùng số phiếu, khối lượng không hợp lệ. <b>Cảnh báo</b>: tổng phiếu cân lệch so với khối lượng rừng quá ngưỡng ở ô "Ngưỡng lệch".</li>
+<li><b>Giao khoán</b>: tổ trưởng ký hợp đồng khoán (BM-01), công nhân ký <b>một Giấy ủy quyền (BM-20)</b> cho tổ trưởng; tính theo <b>tấn hoặc ha</b>. <b>Trực tiếp</b>: mỗi người ký hợp đồng lao động (BM-03); tính theo <b>tấn hoặc ngày công</b>.</li>
+<li><b>Đơn giá theo từng chức danh</b> (Tổ trưởng, Công nhân khai thác, Công nhân cưa). Sản lượng chia đều cho mọi người trong tổ, kể cả tổ trưởng; tiền mỗi người = phần chia × đơn giá chức danh.</li>
+<li><b>Ngày bắt đầu</b> dùng cho hợp đồng, chấm công và kiểm tra đủ 18 tuổi (dưới 18 tuổi không xuất được Giấy ủy quyền). Mỗi lô cần <b>đúng một tổ trưởng</b>.</li>
+<li><b>⚙ Định mức BHLĐ</b> khai theo chức danh để in sổ cấp phát.</li>
 </ul>
-<h3>4. Tab Xuất hồ sơ</h3>
-<p>Chia 4 tab con và tab <b>Tất cả</b>. Ô thông số để trống thì Word in dòng chấm để điền tay. Thiếu dữ liệu bắt buộc thì nút tải bị khóa và hiện lý do.</p>
-<table><tr><th>Tab con</th><th>Biểu mẫu</th><th>Thông số</th></tr>
-<tr><td>1. Hợp đồng</td><td>BM-01 HĐ khai thác (giao khoán), BM-20 Giấy ủy quyền (giao khoán), BM-03 HĐLĐ (trực tiếp), BM-14 nghiệm thu - thanh lý</td><td>ngày ký, số HĐ, phụ cấp, nâng lương, số/ngày nghiệm thu, đã thanh toán</td></tr>
-<tr><td>2. Lao động, an toàn</td><td>BM-02 BHLĐ, BM-05 chấm công, BM-06 DS tổ, BM-07 ATLĐ, BM-08 tiền công, BM-15 sổ tai nạn, BM-16 kiểm tra thiết bị</td><td>ngày cấp, hạn dùng, huấn luyện, tháng chấm công, kỳ trả lương, số bình chữa cháy</td></tr>
-<tr><td>3. Vận chuyển</td><td>BM-04 HĐVC, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển</td><td>số HĐVC, điểm đến, chi phí khác, số/ngày biên bản, người lập, ngưỡng lệch</td></tr>
-<tr><td>4. FSC, giám sát</td><td>BM-11 cam kết nguồn gốc, BM-12 cam kết lao động, BM-13 kiểm tra hiện trường, BM-17 thẩm định, BM-18 nhật ký khai thác, BM-19 phổ biến chính sách FSC</td><td>ngày và người thẩm định, ngày cam kết, ngày kiểm tra trước/sau khai thác, ngày/địa điểm phổ biến, đầu mối</td></tr></table>
-<h3>5. Giao diện tối, sao lưu, khôi phục</h3>
+<h3>4. Tab Vận chuyển</h3>
 <ul>
-<li>Nút <b>Chế độ tối</b> chuyển sáng/tối, được nhớ trên máy.</li>
-<li>Dữ liệu nằm trong trình duyệt: xóa dữ liệu duyệt web hoặc đổi máy là mất. Hãy <b>Sao lưu (.json)</b> sau mỗi lần nhập liệu lớn và <b>Khôi phục</b> khi sang máy mới.</li>
+<li><b>Cước</b>: chọn một trong hai cách: <b>đơn giá cố định</b> (đồng/tấn) hoặc <b>đơn giá tấn/km</b> (đồng/tấn/km × cự ly). Tiền tính theo <b>tấn giao tại nhà máy</b>. Hồ sơ cũ còn “theo bậc cự ly” phải chọn lại cách tính (dữ liệu bậc vẫn được giữ).</li>
+<li><b>Đội xe</b>: chọn người ký là Chủ xe hoặc Tài xế; chỉ người ký phải có đủ CCCD, ngày cấp, thường trú, SĐT. Giấy tờ xe sắp hết hạn thì cảnh báo.</li>
+<li><b>Phiếu cân</b>: mỗi chuyến một dòng; <b>nạp đội xe trước</b> vì phiếu chỉ nhận biển số có trong danh sách xe. Phiếu trùng số vẫn tính vào tổng nhưng được đánh dấu.</li>
+<li><b>Địa chỉ giao hàng</b>: bấm <i>Chọn địa chỉ giao hàng</i>, chọn địa chỉ của công ty, xem bảng “hiện tại / mới”, rồi <i>Xác nhận</i>. Địa chỉ lưu theo từng lô và dùng ở BM-04, BM-09, BM-10, Sổ phiếu cân. Sửa hồ sơ công ty không tự đổi lô đã chọn; lô giữ địa chỉ đã lưu đến khi bạn bấm <i>Xem và cập nhật</i>.</li>
+<li>“Nơi giao” ghi trên phiếu cân là dữ liệu nguồn, giữ nguyên; khác địa chỉ đã chốt thì có cảnh báo. Đổi điểm đến không tự sửa cự ly hay đơn giá; cước tấn/km được nhắc kiểm tra lại cự ly.</li>
 </ul>
-<h3>6. Lỗi thường gặp</h3>
+<h3>5. File Excel mẫu (có hướng dẫn từng mẫu)</h3>
+<p>Nút <b>⬇ Tải file mẫu (có hướng dẫn)</b> ở ô nạp nhân công, xe, phiếu cân. Mỗi file có 3 trang tính:</p>
+<table><tr><th>Trang</th><th>Dùng để</th></tr>
+<tr><td><b>HUONG_DAN</b></td><td>Mục đích, các bước, <b>mô tả từng cột</b> (bắt buộc, định dạng, ví dụ, lưu ý), phần mềm kiểm tra gì, lỗi thường gặp và cách sửa.</td></tr>
+<tr><td><b>NHAN_CONG / DOI_XE / PHIEU_CAN</b></td><td><b>Trang cần điền</b>, dòng 1 là tiêu đề, điền từ dòng 2. Phần mềm chỉ đọc trang này.</td></tr>
+<tr><td><b>VI_DU</b></td><td>Dữ liệu giả để tham khảo; phần mềm không đọc.</td></tr></table>
+<ul>
+<li>Tiêu đề <b>màu đỏ sẫm = cột bắt buộc</b>, màu xanh = tùy chọn hoặc có điều kiện. Bấm vào một ô để xem gợi ý của cột; cột có mũi tên chỉ nhận giá trị trong danh sách. Cột là văn bản nên CCCD giữ số 0 đầu.</li>
+<li>Không sửa, xóa, đổi tên dòng tiêu đề hoặc tên trang tính dữ liệu; không thêm cột, không gộp ô, không để dòng trống giữa dữ liệu. Ngày dạng <b>dd/mm/yyyy</b>, phải là ngày có thật; mã rừng đúng lô đang mở; khối lượng tính bằng tấn.</li>
+<li>Nạp xong, phần mềm báo dòng hợp lệ, dòng lỗi (kèm số dòng) và hỏi trước khi ghi. Nạp lại file sẽ thay toàn bộ danh sách của lô.</li>
+</ul>
+<h3>6. Tra cứu Google Sheets</h3>
+<ul>
+<li><b>Đồng bộ ngay</b> tải 3 tab <code>HoSoKeo_QC</code>, <code>HoSoRung_QC</code>, <code>ToaDoRung_QC</code> (chỉ đọc). Bảng tính giới hạn quyền thì bấm <b>🔑 Đăng nhập Google (chỉ đọc)</b>. Khi không có mạng dùng <b>Nhập bản Excel</b>. Bản tra cứu chỉ được thay khi cả 3 tab hợp lệ; lỗi thì giữ bản cũ; bản đã lưu tra cứu được khi offline.</li>
+<li>Tìm theo mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã hợp đồng, địa chỉ, số phiếu cân, biển số → <b>Chọn</b> → <b>Điền vào rừng đang mở</b> hoặc <b>Tạo rừng mới</b> → xem trước, chọn từng trường và phiếu → <b>Lưu vào hồ sơ</b>.</li>
+<li>Ô đã có dữ liệu khác phải chọn giữ hay thay. Phiếu cân có ngày không có thật bị loại và nêu lý do.</li>
+</ul>
+<h3>7. Kiểm tra trước khi xuất</h3>
+<ul>
+<li><b>Chặn xuất</b>: thông tin thiếu/sai, nhân công hoặc xe lỗi, thiếu đơn giá, cước theo bậc của hồ sơ cũ, phiếu cân thiếu/sai ngày, phiếu trùng số, biển số chưa ghép với xe, mã lô trùng (dữ liệu cũ).</li>
+<li><b>Cần đối chiếu</b>: chênh lệch sản lượng, giấy tờ xe sắp hết hạn, chưa chọn địa chỉ giao, địa chỉ công ty đã đổi (hiện cũ và mới), “Nơi giao” khác địa chỉ đã chốt, nhắc kiểm tra cự ly, mục checklist FSC còn thiếu.</li>
+<li>Mỗi mục kèm số phiếu hoặc tên trường và nút <b>Mở để sửa</b> đến đúng tab.</li>
+</ul>
+<h3>8. Xuất hồ sơ và báo cáo</h3>
+<p>Tab <b>Xuất hồ sơ</b> chia 4 nhóm và “Tất cả”. Ô thông số để trống thì Word in dòng chấm. Thiếu dữ liệu bắt buộc thì nút tải bị khóa và hiện lý do.</p>
+<table><tr><th>Nhóm</th><th>Biểu mẫu</th></tr>
+<tr><td>1. Hợp đồng</td><td>BM-01 HĐ khai thác (giao khoán), BM-20 Giấy ủy quyền (giao khoán), BM-03 HĐLĐ (trực tiếp), BM-14 nghiệm thu - thanh lý</td></tr>
+<tr><td>2. Lao động, an toàn</td><td>BM-02 BHLĐ, BM-05 chấm công, BM-06 DS tổ, BM-07 ATLĐ, BM-08 tiền công, BM-15 sổ tai nạn, BM-16 kiểm tra thiết bị</td></tr>
+<tr><td>3. Vận chuyển</td><td>BM-04 HĐVC, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển</td></tr>
+<tr><td>4. FSC, giám sát</td><td>BM-11 cam kết nguồn gốc, BM-12 cam kết lao động, BM-13 kiểm tra hiện trường, BM-17 thẩm định, BM-18 nhật ký khai thác, BM-19 phổ biến chính sách FSC</td></tr></table>
+<p><b>📊 Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (5 mẫu: điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
+<h3>9. Sao lưu và khôi phục</h3>
+<ul>
+<li>Phần mềm tự sao lưu cơ sở dữ liệu vào thư mục <code>backups</code> trước mỗi lần nâng cấp và khôi phục; ghi trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.</li>
+<li><b>⋯ Thêm → Sao lưu dữ liệu (.json)</b>: sao lưu toàn bộ. <b>⋯ Thêm → Khôi phục (.json)</b>: xem trước từng chủ/lô là <b>THÊM</b>, <b>TRÙNG</b> hay <b>GIỮ</b>; chọn <i>giữ bản trên máy</i>, <i>ghi đè lô trùng</i> (chỉ thay đúng lô trùng, lô khác của chủ được giữ), <i>giữ cả hai</i> (xác nhận <b>mã mới</b> cho từng lô nhân bản) hoặc <i>thay toàn bộ</i> (có xác nhận nêu rõ phạm vi). ID, mã lô, chủ rừng mâu thuẫn thì dừng và liệt kê hồ sơ cần đối chiếu.</li>
+<li><b>⬇ Sao lưu lô rừng</b> (đầu hồ sơ lô): file <code>HAKQN_LoRung_&lt;MaLo&gt;_&lt;Ngày&gt;.json</code> chứa đúng một lô, kèm địa chỉ giao đã chốt; không chứa lô khác, tra cứu hay thông tin đăng nhập.</li>
+<li><b>⋯ Thêm → ⬆ Khôi phục lô rừng…</b>: xem trước chủ, mã lô, thời điểm sao lưu, số nhân công/xe/phiếu cân/tổng tấn. Thêm vào đúng chủ đã có hoặc tạo chủ mới. Lô đã có: mặc định giữ bản hiện có; thay thì chỉ thay đúng lô đó và có bảng trước/sau. Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: máy đích giữ thiết lập của mình, màn hình nêu phần hồ sơ có thể khác. File hỏng, sai loại/phiên bản hoặc không xác định được lô đích thì báo lỗi và không ghi.</li>
+</ul>
+<h3>10. Lỗi thường gặp</h3>
 <table><tr><th>Hiện tượng</th><th>Cách xử lý</th></tr>
-<tr><td>Nút tải bị khóa</td><td>Đọc dòng lý do; thường thiếu nhân công, xe hoặc phiếu cân.</td></tr>
+<tr><td>Nút tải bị khóa</td><td>Mở tab Kiểm tra trước khi xuất và xử lý mục chặn.</td></tr>
 <tr><td>Phiếu cân báo biển không có trong xe</td><td>Thêm xe vào Excel xe, nạp lại xe rồi nạp phiếu cân.</td></tr>
-<tr><td>Phiếu cân báo sai mã rừng</td><td>Sửa cột Mã rừng đúng với rừng đang chọn.</td></tr>
-<tr><td>Báo thiếu đơn giá</td><td>Nhập đơn giá cho cả tổ trưởng khi ký trực tiếp.</td></tr>
-<tr><td>Word hiện dòng chấm</td><td>Ô thông số đang trống; điền tay hoặc nhập lại trên màn hình.</td></tr>
-<tr><td>Mất dữ liệu</td><td>Khôi phục từ file sao lưu .json gần nhất.</td></tr></table>
-<h3>Bản desktop (HAKQN): Tra cứu Google Sheets</h3>
+<tr><td>Phiếu cân báo sai ngày</td><td>Sửa ở ô “Sửa ngày” trong bảng phiếu cân hoặc sửa file Excel (ngày phải có thật, ví dụ 28/02/2026).</td></tr>
+<tr><td>Báo thiếu đơn giá</td><td>Nhập đơn giá cho từng chức danh, kể cả tổ trưởng.</td></tr>
+<tr><td>Đổi mã lô bị từ chối</td><td>Mã đã có ở lô khác; thông báo nêu lô đang dùng mã đó.</td></tr>
+<tr><td>Word hiện dòng chấm</td><td>Ô thông số hoặc địa chỉ giao đang trống; điền ở màn hình hoặc điền tay.</td></tr>
+<tr><td>Nghi ngờ mất dữ liệu</td><td>Mở thư mục <code>backups</code> (menu Tệp → Mở thư mục dữ liệu) hoặc khôi phục từ file sao lưu gần nhất.</td></tr></table>
+<h3>11. Lưu ý trước khi dùng chính thức</h3>
 <ul>
-<li>Dữ liệu lưu trong SQLite trên máy; thanh trên cùng luôn hiện chủ rừng, mã rừng đang mở và trạng thái lưu.</li>
-<li>Menu <b>🔎 Tra cứu Google Sheets</b> (hoặc nút <b>Lấy dữ liệu từ Google Sheets</b> trong Thông tin rừng): <b>Đồng bộ ngay</b> tải 3 tab HoSoKeo_QC, HoSoRung_QC, ToaDoRung_QC; <b>Nhập bản Excel</b> khi không có mạng. Bản tra cứu chỉ được thay khi cả 3 tab hợp lệ.</li>
-<li>Tìm theo mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã hợp đồng, địa chỉ, số phiếu cân, biển số → <b>Chọn</b> → chọn rừng → <b>Điền vào rừng đang mở</b> hoặc <b>Tạo rừng mới từ kết quả</b> → xem trước, chọn từng trường và từng phiếu cân → <b>Lưu vào hồ sơ</b>.</li>
-<li>Ô đang trống được đề xuất điền sẵn; ô đã có dữ liệu khác phải chọn giữ hay thay. Diện tích hai nguồn khác nhau phải chọn một. Tọa độ độ-phút-giây được quy đổi sang thập phân và gắn nhãn.</li>
-<li>Phiếu cân ghi tên xe thay vì biển số: nhập biển số một lần ở mục “Ghép tên xe với biển số”, lần sau tự dùng. Phiếu đã có thì bỏ qua, không tạo bản trùng.</li>
-<li><b>Nhập bản sao lưu HTML cũ (.json)</b>: xem trước số chủ rừng, rừng, nhân công, xe, phiếu cân và bản trùng; phần mềm tự sao lưu trước khi ghi.</li>
-</ul>
-<h3>7. Lưu ý trước khi dùng chính thức</h3>
-<ul>
-<li>Giấy ủy quyền BM-20 do phần mềm soạn theo Bộ luật Dân sự 2015 và Điều 18 Bộ luật Lao động 2019 (căn cứ tra qua các trang tư vấn pháp luật, chưa đối chiếu văn bản gốc); <b>cần người có chuyên môn pháp lý duyệt</b> trước khi dùng chính thức.</li>
-<li>Biểu mẫu mới kiểm tra hiển thị bằng LibreOffice, <b>chưa thử trên Microsoft Word thật</b>; nên in thử một bộ.</li>
+<li>Giấy ủy quyền BM-20 soạn theo Bộ luật Dân sự 2015 và Điều 18 Bộ luật Lao động 2019 (căn cứ tra qua các trang tư vấn pháp luật, chưa đối chiếu văn bản gốc); <b>cần người có chuyên môn pháp lý duyệt</b> trước khi dùng chính thức.</li>
+<li>Biểu mẫu kiểm tra hiển thị bằng LibreOffice, <b>chưa thử trên Microsoft Word thật</b>; nên in thử một bộ.</li>
 <li>Nội dung biểu mẫu FSC (BM-11 đến BM-19) do phần mềm soạn, cần đối chiếu với yêu cầu của tổ chức chứng nhận.</li>
-<li>Định mức BHLĐ là giá trị tạm; viện dẫn "Thông tư 84/2025/TT-BNNMT" giữ từ mẫu đã duyệt, chưa xác minh. BM-10 chưa tính khấu trừ thuế.</li>
+<li>Định mức BHLĐ là giá trị tạm; viện dẫn “Thông tư 84/2025/TT-BNNMT” giữ từ mẫu đã duyệt, chưa xác minh. BM-10 chưa tính khấu trừ thuế.</li>
 </ul>
 </div></div>
 <script>/*@@XLSX@@*/</script>
@@ -247,6 +272,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@DATES@@*/</script>
 <script>/*@@MUAHANG@@*/</script>
 <script>/*@@LORUNG@@*/</script>
+<script>/*@@XLSXMAU@@*/</script>
 <script>/*@@REPORTS@@*/</script>
 <script>
 (() => {
@@ -1971,7 +1997,7 @@ function panelImport(kind, rec) {
   return '<div class="card"><div class="row" style="justify-content:space-between">' +
     '<div><h3 style="margin:0">' + M.title + '</h3>' +
     '<div class="mut">Sheet ' + name + '. ' + (count ? 'Đã nạp ' + count + ' dòng' + (file ? ' từ ' + esc(file) : '') + (at ? ' lúc ' + esc(at) : '') : 'Chưa có dữ liệu.') + '</div></div>' +
-    '<div class="row"><button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '">⬇ Tải file mẫu</button>' +
+    '<div class="row"><button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">⬇ Tải file mẫu (có hướng dẫn)</button>' +
     '<label class="btn sm" style="cursor:pointer">⬆ Chọn file Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label>' +
     (count ? '<button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu</button>' : '') + '</div></div></div>';
 }
@@ -2418,13 +2444,13 @@ async function importFile(kind, file) {
 }
 const stamp = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' ' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1); };
 
-function downloadTemplate(kind) {
-  const wb = XLSX.utils.book_new();
-  const T = {nc: [NC_HEAD, 'NHAN_CONG', 'HAK_Mau_NhanCong.xlsx'], dx: [DX_HEAD, 'DOI_XE', 'HAK_Mau_DoiXe.xlsx'], pc: [PC_HEAD, 'PHIEU_CAN', 'HAK_Mau_PhieuCan.xlsx']}[kind];
-  const ws = XLSX.utils.aoa_to_sheet([T[0]]);
-  ws['!cols'] = T[0].map(h => ({wch: Math.max(12, Math.min(34, h.length + 4))}));
-  XLSX.utils.book_append_sheet(wb, ws, T[1]);
-  XLSX.writeFile(wb, T[2]);
+/* File mẫu có định dạng, danh sách chọn và trang HUONG_DAN giải thích từng cột (src/xlsxmau.js); phần mềm chỉ đọc trang dữ liệu */
+async function downloadTemplate(kind) {
+  try {
+    const bytes = await HAKXlsxMau.build(kind, JSZip, {version: dbInfo && dbInfo.version});
+    download(new Blob([bytes], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), HAKXlsxMau.SPECS[kind].file);
+    note('Đã tạo file mẫu ' + HAKXlsxMau.SPECS[kind].file + '. Mở trang HUONG_DAN để xem cách điền từng cột, điền dữ liệu ở trang ' + HAKXlsxMau.SPECS[kind].sheet + '.', 'ok');
+  } catch (e) { note('Không tạo được file mẫu: ' + e.message, 'err'); }
 }
 
 async function backupAll() {
