@@ -10,7 +10,7 @@ const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixture
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-hd-')), out = path.join(dir, 'out');
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const fmt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-const OWNER = {ma: 'CR-001', ten: 'NGUYỄN PHƯỚC TÁM', ngaySinh: '06/10/1967', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'};
+const OWNER = {ma: 'CR-001', ten: 'NGUYỄN PHƯỚC TÁM', soHopDong: 'HD-001', ngayKyHopDong: '01/10/2026', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'};
 
 // Danh sách nhân công của file thử: lấy chức danh và họ tên để tính số tiền kỳ vọng
 const wsNC = XLSX.readFile(path.join(FIX, 'test_nhancong.xlsx')); const aoa = XLSX.utils.sheet_to_json(wsNC.Sheets[wsNC.SheetNames[0]], {header: 1});

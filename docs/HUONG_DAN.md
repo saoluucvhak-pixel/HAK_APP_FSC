@@ -41,7 +41,7 @@ Tài liệu dành cho người nhập liệu và người lập hồ sơ. Phần
 Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa chỉ giao riêng; chủ rừng chỉ giữ thông tin chung (họ tên, CCCD, địa chỉ).
 
 ## 3. Chủ rừng và lô rừng
-- **Chủ rừng**: mã, họ tên, danh xưng (Ông/Bà), ngày sinh, CCCD (12 số), ngày và nơi cấp, địa chỉ thường trú. Mã chủ rừng không được trùng.
+- **Chủ rừng**: mã, họ tên, danh xưng (Ông/Bà), CCCD (12 số), ngày và nơi cấp, địa chỉ thường trú, **số hợp đồng** và **ngày ký hợp đồng** (hai ô này tùy chọn; ngày ký phải là ngày có thật). Phần mềm **không còn hỏi ngày sinh chủ rừng** (hồ sơ cũ đã có ngày sinh vẫn giữ trong dữ liệu nhưng không in). Số hợp đồng và ngày ký in ở dòng “Căn cứ Hợp đồng số … ký ngày …” của BM-01 và BM-04 và ở BM-17; **ngày ký hợp đồng là ngày ký mặc định** của các biểu mẫu nếu ô “Ngày ký hợp đồng” ở tab Xuất hồ sơ để trống. Khi lấy chủ rừng từ **Tra cứu Google Sheets**, số hợp đồng và ngày ký lấy từ cột “Mã hợp đồng” và “Ngày ký hợp đồng” của tab HoSoRung_QC.
 - **Lô rừng** (tab Thông tin rừng): mã lô, tên, địa điểm khai thác, tọa độ WGS84 (vĩ độ và kinh độ nhập cùng nhau), diện tích, định mức tấn/ha, cự ly vận chuyển, khối lượng thực tế, thời gian khai thác, **giấy tờ pháp lý đất/rừng**.
 - **Mã lô là duy nhất trên toàn máy**, so sánh không phân biệt hoa thường và bỏ khoảng trắng đầu/cuối. Mã trùng bị từ chối và phần mềm nêu lô đang dùng mã đó.
 - **Đổi mã lô**: các dòng nhân công, xe, phiếu cân mang mã cũ được **đổi theo mã mới** để dữ liệu vẫn thuộc đúng lô; dòng mang một mã khác được báo, không tự đổi.
@@ -63,7 +63,7 @@ Vào lô → tab **Vận chuyển**. Thứ tự nên làm: chọn cách tính c�
 
 **Cước vận chuyển – chọn một trong hai cách**
 1. **Đơn giá cố định** (đồng/tấn): một giá, không phụ thuộc cự ly.
-2. **Đơn giá tấn/km** (đồng/tấn/km): đơn giá × cự ly của lô (nhập ở tab Thông tin rừng); thiếu cự ly thì báo thiếu.
+2. **Đơn giá tấn/km** (đồng/tấn/km): đơn giá × cự ly của lô. **Nhập số km ngay trong tab Vận chuyển**, ô **“Cự ly vận chuyển (km)”** nằm cạnh ô đơn giá tấn/km (xuất hiện khi chọn cách tấn/km). Đó cũng chính là ô “Cự ly vận chuyển” ở tab Thông tin rừng (một số liệu duy nhất, sửa ở đâu cũng được). Thiếu cự ly thì báo thiếu.
 Tiền vận chuyển tính theo **tấn giao tại nhà máy** (theo phiếu cân), cho từng xe. Hồ sơ cũ còn chọn “theo bậc cự ly” (cách đã bỏ) bị báo phải chọn lại; dữ liệu các bậc vẫn được giữ.
 
 **Đội xe**: nạp bằng Excel. Cột **Người ký HĐ vận chuyển** chọn “Chủ xe” hoặc “Tài xế”; chỉ người ký mới phải có đủ CCCD, ngày cấp, thường trú và SĐT. Giấy tờ (GPLX, bảo hiểm, kiểm định) quá hạn hoặc còn dưới 30 ngày thì **cảnh báo**, không chặn xuất.

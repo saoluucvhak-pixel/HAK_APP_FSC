@@ -432,6 +432,8 @@ function ownerOf(cccd, R, T, K) {
   if (/^\d{12}$/.test(rawId)) f.push(field('cccd', 'CCCD', rawId, R ? src('HoSoRung_QC', R._row, 'Mã KH_CCCD') : src('ToaDoRung_QC', T._row, 'SoCCCD')));
   if (R) {
     if (R['Ngày cấp']) f.push(field('ngayCap', 'Ngày cấp CCCD', R['Ngày cấp'], src('HoSoRung_QC', R._row, 'Ngày cấp')));
+    if (clean(R['Mã hợp đồng'])) f.push(field('soHopDong', 'Số hợp đồng', clean(R['Mã hợp đồng']), src('HoSoRung_QC', R._row, 'Mã hợp đồng')));
+    if (R['Ngày ký hợp đồng']) f.push(field('ngayKyHopDong', 'Ngày ký hợp đồng', R['Ngày ký hợp đồng'], src('HoSoRung_QC', R._row, 'Ngày ký hợp đồng')));
     if (R['Nơi cấp']) f.push(field('noiCap', 'Nơi cấp CCCD', clean(R['Nơi cấp']), src('HoSoRung_QC', R._row, 'Nơi cấp')));
     if (R['Địa chỉ thường trú']) f.push(field('diaChi', 'Địa chỉ thường trú', clean(R['Địa chỉ thường trú']), src('HoSoRung_QC', R._row, 'Địa chỉ thường trú')));
   } else if (T && T['ThuongTru']) f.push(field('diaChi', 'Địa chỉ thường trú', clean(T['ThuongTru']), src('ToaDoRung_QC', T._row, 'ThuongTru')));

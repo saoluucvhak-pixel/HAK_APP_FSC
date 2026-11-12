@@ -10,7 +10,7 @@ const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixture
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-vc-')), out = path.join(dir, 'out');
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const fmt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-const OWNER = {ma: 'CR-001', ten: 'NGUYỄN PHƯỚC TÁM', ngaySinh: '06/10/1967', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'};
+const OWNER = {ma: 'CR-001', ten: 'NGUYỄN PHƯỚC TÁM', soHopDong: 'HD-001', ngayKyHopDong: '01/10/2026', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'};
 
 // Khối lượng (kg) theo biển số từ file phiếu cân thử, để tính tiền vận chuyển kỳ vọng độc lập với ứng dụng
 const pcSheet = XLSX.readFile(path.join(FIX, 'test_phieucan.xlsx')); const pcRows = XLSX.utils.sheet_to_json(pcSheet.Sheets[pcSheet.SheetNames[0]], {header: 1});

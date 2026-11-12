@@ -261,7 +261,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <h3>1. Quy trình 8 bước</h3>
 <ol>
 <li>Khai <b>🏢 Công ty mua hàng</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
-<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>🔎 Tra cứu Google Sheets</b>).</li>
+<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>🔎 Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
 <li>Tạo <b>Lô rừng</b>: mã lô, địa điểm, tọa độ, diện tích, thời gian khai thác, giấy tờ pháp lý.</li>
 <li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo chức danh, rồi nạp Excel nhân công.</li>
 <li>Tab <b>Vận chuyển</b>: chọn cách tính cước, nạp Excel xe, nạp Excel phiếu cân, chọn <b>địa chỉ giao hàng</b>.</li>
@@ -284,7 +284,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 </ul>
 <h3>4. Tab Vận chuyển</h3>
 <ul>
-<li><b>Cước</b>: chọn một trong hai cách: <b>đơn giá cố định</b> (đồng/tấn) hoặc <b>đơn giá tấn/km</b> (đồng/tấn/km × cự ly). Tiền tính theo <b>tấn giao tại nhà máy</b>. Hồ sơ cũ còn “theo bậc cự ly” phải chọn lại cách tính (dữ liệu bậc vẫn được giữ).</li>
+<li><b>Cước</b>: chọn một trong hai cách: <b>đơn giá cố định</b> (đồng/tấn) hoặc <b>đơn giá tấn/km</b> (đồng/tấn/km × cự ly). Với tấn/km, <b>nhập số km ở ô “Cự ly vận chuyển (km)”</b> ngay cạnh ô đơn giá (cũng là ô cự ly ở tab Thông tin rừng). Tiền tính theo <b>tấn giao tại nhà máy</b>. Hồ sơ cũ còn “theo bậc cự ly” phải chọn lại cách tính (dữ liệu bậc vẫn được giữ).</li>
 <li><b>Đội xe</b>: chọn người ký là Chủ xe hoặc Tài xế; chỉ người ký phải có đủ CCCD, ngày cấp, thường trú, SĐT. Giấy tờ xe sắp hết hạn thì cảnh báo.</li>
 <li><b>Phiếu cân</b>: mỗi chuyến một dòng; <b>nạp đội xe trước</b> vì phiếu chỉ nhận biển số có trong danh sách xe. Phiếu trùng số vẫn tính vào tổng nhưng được đánh dấu.</li>
 <li><b>Địa chỉ giao hàng</b>: bấm <i>Chọn địa chỉ giao hàng</i>, chọn địa chỉ của công ty, xem bảng “hiện tại / mới”, rồi <i>Xác nhận</i>. Địa chỉ lưu theo từng lô và dùng ở BM-04, BM-09, BM-10, Sổ phiếu cân. Sửa hồ sơ công ty không tự đổi lô đã chọn; lô giữ địa chỉ đã lưu đến khi bạn bấm <i>Xem và cập nhật</i>.</li>
@@ -1868,7 +1868,7 @@ function infoErrors(info, selfId) {
   else if (Object.entries(db.rs).some(([id, r]) => id !== selfId && r.info.ma === info.ma)) e.push('Mã chủ rừng đã tồn tại');
   if (!info.ten) e.push('Thiếu Họ và tên chủ rừng');
   if (!['Ông', 'Bà'].includes(info.danhXung)) e.push('Chọn danh xưng Ông/Bà');
-  if (!info.ngaySinh) e.push('Thiếu Ngày sinh');
+  if (trim(info.ngayKyHopDong) && !HAKDates.isValid(info.ngayKyHopDong)) e.push('Ngày ký hợp đồng “' + info.ngayKyHopDong + '”: ' + HAKDates.why(info.ngayKyHopDong));
   if (!isCccd(info.cccd)) e.push('CCCD phải đủ 12 chữ số');
   if (!info.ngayCap) e.push('Thiếu Ngày cấp CCCD');
   if (!info.noiCap) e.push('Thiếu Nơi cấp CCCD');
@@ -1897,6 +1897,7 @@ function forestErrors(info, fid) {
   const vc = info.vanChuyen || {};
   if (vc.donGiaKm === 'x') e.push('Đơn giá vận chuyển (đ/tấn/km) không phải là số');
   if (vc.coDinh === 'x') e.push('Đơn giá vận chuyển cố định không phải là số');
+  if (info.cuLy === 'x') e.push('Cự ly vận chuyển không phải là số');
   return e;
 }
 
@@ -2191,12 +2192,13 @@ const rungRef = i => {
 };
 const LAW_LD = ['Căn cứ Bộ luật Lao động số 45/2019/QH14 ngày 20/11/2019;', 'Căn cứ Luật An toàn, vệ sinh lao động số 84/2015/QH13 ngày 25/06/2015;', 'Căn cứ Nghị định số 145/2020/NĐ-CP ngày 14/12/2020 của Chính phủ hướng dẫn thi hành Bộ luật Lao động.'];
 const DT_NOIDUNG = ['Quy định chung về an toàn, vệ sinh lao động; quyền và nghĩa vụ của người lao động.', 'Kỹ thuật an toàn khi đốn hạ, cắt khúc, bóc tách; sử dụng cưa xăng, dao, rựa.', 'Sử dụng, bảo quản phương tiện bảo vệ cá nhân (bảo hộ lao động).', 'An toàn khi bốc xếp, vận chuyển gỗ; làm việc trên địa hình dốc, thời tiết xấu.', 'Phòng chống cháy rừng; xử lý tình huống khẩn cấp và sơ cứu tai nạn lao động.'];
+const hdRef = rs => (rs.soHopDong || rs.ngayKyHopDong) ? 'Căn cứ Hợp đồng số ' + (rs.soHopDong || '…………') + (rs.ngayKyHopDong ? ' ký ngày ' + rs.ngayKyHopDong : '') + '.' : '';
 const ngayLine = ex => ex.ngayKy ? 'ngày ' + ex.ngayKy : 'ngày ….. tháng ….. năm 2026';
 
-function partyBlock(label, p, fullName) {
+function partyBlock(label, p, fullName, o = {}) {   // o.noSinh: không in năm sinh (chủ rừng không còn khai ngày sinh)
   return [
     P('**' + label + ': ' + upper(fullName) + '**', {after: 60}),
-    P('Sinh năm: ' + (p.ngaySinh || '…………'), {ind: 360, after: 40}),
+    ...(o.noSinh ? [] : [P('Sinh năm: ' + (p.ngaySinh || '…………'), {ind: 360, after: 40})]),
     P('Căn cước công dân số: ' + (p.cccd || '…………') + ', cấp ngày: ' + (p.ngayCap || '…………') + ', nơi cấp: ' + (p.noiCap || '…………'), {ind: 360, after: 40}),
     P('Địa chỉ thường trú: ' + (p.diaChi || '…………'), {ind: 360, after: 160})
   ];
@@ -2219,9 +2221,10 @@ function docGiaoKhoan(rec, ex) {
     P('Số: ' + (ex.soKT || '…………') + '/2026-KT', {al: 'center', after: 0}),
     P('“V/v: Khai thác gỗ rừng trồng”', {al: 'center', i: true, after: 200}),
     P(LAW_BLDS),
+    ...(hdRef(rs) ? [P('- ' + hdRef(rs))] : []),
     P('- Căn cứ khả năng và nhu cầu của hai bên.'),
     P('Hôm nay, ' + ngayLine(ex) + ' tại nhà ' + upper(rsName) + ' (địa chỉ: ' + rs.diaChi + '), chúng tôi gồm có:', {after: 160}),
-    ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName),
+    ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName, {noSinh: true}),
     ...partyBlock('BÊN KHAI THÁC (BÊN B)', tt, ttName),
     P('Sau khi bàn bạc cụ thể, hai bên thống nhất ký hợp đồng khai thác gỗ keo rừng trồng với các điều khoản như sau:'),
     P('**Điều 1: Nội dung**', {keep: true}),
@@ -2381,7 +2384,7 @@ function docThamDinh(rec, ex) {
     ...TITLE_HEAD(),
     P('**PHIẾU THẨM ĐỊNH CHỦ RỪNG VÀ RỪNG TRƯỚC KHI KHAI THÁC**', {al: 'center', sz: 28, before: 120, after: 40}),
     P('Mã rừng: ' + dot(rs.maRung, 4) + ' · Ngày thẩm định: ' + dot(ex.tdNgay, 6) + ' · Người thẩm định: ' + dot(ex.tdNguoi, 8), {al: 'center', after: 160}),
-    P('**A. Chủ rừng:** ' + upper(rsName) + ' · Sinh năm: ' + (rs.ngaySinh || '…………'), {al: 'left', after: 40}),
+    P('**A. Chủ rừng:** ' + upper(rsName) + ' · Hợp đồng số: ' + dot(rs.soHopDong, 6) + ' · ký ngày: ' + dot(rs.ngayKyHopDong, 6), {al: 'left', after: 40}),
     P('CCCD số: ' + (rs.cccd || '…………') + ', cấp ngày ' + (rs.ngayCap || '…………') + ', nơi cấp ' + (rs.noiCap || '…………') + '. Địa chỉ: ' + (rs.diaChi || '…………'), {al: 'left', ind: 360, after: 80}),
     P('**B. Rừng thẩm định:** ' + (rs.tenRung ? rs.tenRung + ' · ' : '') + 'tại ' + dot(rs.diaDiem, 8), {al: 'left', after: 40}),
     P('Thời gian dự kiến khai thác: ' + (rs.tuNgay || '…/…/……') + ' – ' + (rs.denNgay || '…/…/……') + '.', {al: 'left', ind: 360, after: 100}),
@@ -2527,7 +2530,7 @@ function docNghiemThu(rec, ex) {
     P('- Căn cứ ' + hd + ';'),
     P('- Căn cứ kết quả khai thác thực tế tại rừng.'),
     P('Hôm nay, ' + ngayLine({ngayKy: ex.ntNgay}) + ' tại ' + (rs.diaDiem || '…………') + ', chúng tôi gồm có:', {after: 140}),
-    ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName),
+    ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName, {noSinh: true}),
     ...partyBlock(direct ? 'ĐẠI DIỆN TỔ KHAI THÁC (BÊN B)' : 'BÊN KHAI THÁC (BÊN B)', tt, ttName),
     P('Hai bên cùng tiến hành nghiệm thu và thanh lý với các nội dung sau:', {keep: true}),
     P('**Điều 1: Thông tin rừng đã khai thác**', {keep: true}),
@@ -2560,7 +2563,7 @@ function docCamKetNguonGoc(rec, ex) {
     P('- Căn cứ Luật Đất đai số 31/2024/QH15 ngày 18/01/2024;'),
     LAW_BLDS ? P(LAW_BLDS) : P(''),
     P('Tôi tên là:', {after: 60, before: 80}),
-    ...partyBlock('CHỦ RỪNG (NGƯỜI CAM KẾT)', rs, rsName),
+    ...partyBlock('CHỦ RỪNG (NGƯỜI CAM KẾT)', rs, rsName, {noSinh: true}),
     P('Là chủ sử dụng diện tích rừng trồng có thông tin như sau:', {after: 60}),
     bl('Mã rừng: ' + dot(rs.maRung, 4) + (rs.tenRung ? ' (' + rs.tenRung + ')' : '')),
     bl('Địa điểm: ' + dot(rs.diaDiem, 8)),
@@ -2718,11 +2721,12 @@ function docHDVC(rec, ex, g) {
     P('Số: ' + (ex.soVC || '…………') + '/2026-HĐVC', {al: 'center', after: 0}),
     P('“V/v: Vận chuyển gỗ rừng trồng”', {al: 'center', i: true, after: 200}),
     P(LAW_BLDS),
+    ...(hdRef(rs) ? [P('- ' + hdRef(rs))] : []),
     P('- Căn cứ Luật Lâm nghiệp số 16/2017/QH14 ngày 15/11/2017;'),
     P('- Căn cứ Luật Trật tự, an toàn giao thông đường bộ số 36/2024/QH15 ngày 27/06/2024;'),
     P('- Căn cứ khả năng và nhu cầu của hai bên.'),
     P('Hôm nay, ' + ngayLine(ex) + ' tại nhà ' + upper(rsName) + ' (địa chỉ: ' + rs.diaChi + '), chúng tôi gồm có:', {after: 160}),
-    ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName),
+    ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName, {noSinh: true}),
     ...partyBlock('BÊN VẬN CHUYỂN (BÊN B)', g, g.ten),
     P('Sau khi bàn bạc cụ thể, hai bên thống nhất ký hợp đồng vận chuyển gỗ keo rừng trồng với các điều khoản như sau:'),
     P('**Điều 1: Nội dung**', {keep: true}),
@@ -2867,6 +2871,7 @@ function groupsDX(rec) {
 }
 function buildFiles(rec, kind) {
   const ex = Object.assign({}, rec.exp || {}, {vcDiemDen: destOf(rec).text});
+  if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
   const s = slug(rec.info.ten);
   const files = [];
   if ((kind === 'gk' || kind === 'all') && !isDirect(rec.info)) files.push({path: '01_HD_Giao_khoan_' + s + '.docx', blocks: docGiaoKhoan(rec, ex)});
@@ -3201,11 +3206,12 @@ function panelVc(rec) {
   const i = rec.info, vc = i.vanChuyen || {}, tp = transportPrice(i), cur = vc.mode || 'tanKm';
   const show = m => cur === m ? '' : 'display:none';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng vận chuyển (chủ rừng trả bên vận chuyển)</h3>' +
-    '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> (nhập ở tab Thông tin rừng, chỉ cần khi tính theo tấn/km).</p>' +
+    '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> (nhập ngay ô “Cự ly vận chuyển” bên dưới hoặc ở tab Thông tin rừng, chỉ cần khi tính theo tấn/km).</p>' +
     '<form id="vcForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Cách tính đơn giá vận chuyển</span><select name="vcMode">' + vcOptions(cur) + '</select></label>' +
     '<label data-vcgrp="coDinh" style="' + show('coDinh') + '"><span>Đơn giá cố định (đồng/tấn)</span><input name="vcCoDinh" value="' + esc(vc.coDinh ?? '') + '"></label>' +
     '<label data-vcgrp="tanKm" style="' + show('tanKm') + '"><span>Đơn giá tấn/km (đồng/tấn/km)</span><input name="vcKm" value="' + esc(vc.donGiaKm ?? '') + '"></label>' +
+    '<label data-vcgrp="tanKm" style="' + show('tanKm') + '"><span class="req">Cự ly vận chuyển (km)</span><input name="vcCuLy" inputmode="decimal" value="' + esc(i.cuLy ?? '') + '" placeholder="VD: 45"><small class="mut">Đây cũng là ô “Cự ly vận chuyển” ở tab Thông tin rừng (cùng một số liệu). Tiền cước tấn/km = đơn giá × cự ly.</small></label>' +
     '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số vận chuyển</button></div></form></div>';
@@ -3254,7 +3260,8 @@ const INFO_FIELDS = [
   ['ma', 'Mã chủ rừng', 'text', true],
   ['danhXung', 'Danh xưng', 'select', true],
   ['ten', 'Họ và tên', 'text', true],
-  ['ngaySinh', 'Ngày sinh (dd/mm/yyyy)', 'text', true],
+  ['soHopDong', 'Số hợp đồng', 'text', false],
+  ['ngayKyHopDong', 'Ngày ký hợp đồng (dd/mm/yyyy)', 'text', false],
   ['cccd', 'CCCD', 'text', true],
   ['ngayCap', 'Ngày cấp CCCD', 'text', true],
   ['noiCap', 'Nơi cấp CCCD', 'text', true],
@@ -3430,7 +3437,7 @@ function panelXuat(rec) {
   const row = (t, sub, b) => '<div class="docrow"><div><b>' + t + '</b><div class="mut">' + sub + '</div></div>' + b + '</div>';
   const S = {};
   S.hd = params('Thông số hợp đồng và nghiệm thu', [
-      ['ngayKy', 'Ngày ký hợp đồng (dùng chung cho cả hợp đồng vận chuyển)', 'dd/mm/yyyy'], ['soKT', 'Số HĐ giao khoán (phần trước /2026-KT)', ''],
+      ['ngayKy', 'Ngày ký hợp đồng (dùng chung cho cả hợp đồng vận chuyển)', rec.info.ngayKyHopDong ? 'mặc định: ' + rec.info.ngayKyHopDong + ' (ngày ký ở Thông tin chủ rừng)' : 'dd/mm/yyyy'], ['soKT', 'Số HĐ giao khoán (phần trước /2026-KT)', ''],
       ['hdPhuCap', 'HĐLĐ: phụ cấp, khoản bổ sung', 'mặc định: Không'], ['hdNangLuong', 'HĐLĐ: nâng bậc, nâng lương', 'mặc định: Không áp dụng'],
       ['uqSo', 'Giấy ủy quyền (giao khoán): số', 'phần trước /2026-UQ'], ['ntSo', 'Nghiệm thu, thanh lý: số biên bản', 'phần trước /2026-NTTL'], ['ntNgay', 'Nghiệm thu, thanh lý: ngày lập', 'dd/mm/yyyy'],
       ['ntDaTT', 'Nghiệm thu, thanh lý: số tiền đã thanh toán trước (đ)', 'VD: 50000000']]) +
@@ -3563,7 +3570,8 @@ function readVc(form) {
       ...old,   // giữ dữ liệu bậc cũ (không dùng nữa) để không mất dữ liệu
       mode: ['tanKm', 'coDinh', 'tanDoan'].includes(fd.get('vcMode')) ? fd.get('vcMode') : 'tanKm',   // tanDoan chỉ còn khi hồ sơ cũ chưa chọn lại
       donGiaKm: toDec(fd.get('vcKm')), coDinh: toDec(fd.get('vcCoDinh')), tuNgay: trim(fd.get('vcTu'))
-    }
+    },
+    ...(fd.has('vcCuLy') ? {cuLy: toDec(fd.get('vcCuLy'))} : {})   // cự ly dùng chung với tab Thông tin rừng
   };
 }
 
@@ -3649,12 +3657,12 @@ function saveInfo(form) {
   const fd = new FormData(form);
   const info = {
     ma: trim(fd.get('ma')), danhXung: trim(fd.get('danhXung')), ten: trim(fd.get('ten')),
-    ngaySinh: trim(fd.get('ngaySinh')), cccd: normCccd(fd.get('cccd')), ngayCap: trim(fd.get('ngayCap')),
+    soHopDong: trim(fd.get('soHopDong')), ngayKyHopDong: trim(fd.get('ngayKyHopDong')), cccd: normCccd(fd.get('cccd')), ngayCap: trim(fd.get('ngayCap')),
     noiCap: trim(fd.get('noiCap')), diaChi: trim(fd.get('diaChi'))
   };
   const errs = infoErrors(info, rec.id);
   if (errs.length) { formMsg(form, 'Chưa lưu: ' + errs.join('; ')); return; }
-  rec.info = info;
+  rec.info = Object.assign({}, rec.info, info);   // giữ các trường cũ không còn hiển thị (ví dụ ngày sinh đã lưu)
   persist();
   note('Đã lưu thông tin chủ rừng.');
 }
