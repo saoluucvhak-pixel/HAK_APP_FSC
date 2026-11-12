@@ -3,6 +3,7 @@
 Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.src.html` – cùng nguồn với bản HTML, chạy được ở cả hai chế độ). Dữ liệu lưu trong SQLite ở thư mục dữ liệu người dùng Windows (`%APPDATA%\hakqn-ho-so-khai-thac\hakqn.sqlite`).
 
 - Hướng dẫn: [docs/HUONG_DAN.md](docs/HUONG_DAN.md)
+- Đăng nhập Google (bảng tính giới hạn quyền): [docs/GOOGLE_OAUTH.md](docs/GOOGLE_OAUTH.md)
 - Bảng ánh xạ cột: [docs/BANG_ANH_XA.md](docs/BANG_ANH_XA.md)
 - Kết quả kiểm thử, mục chờ xác nhận: [docs/KET_QUA_KIEM_THU.md](docs/KET_QUA_KIEM_THU.md)
 
@@ -13,6 +14,9 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 - Nạp Excel nhân công/xe/phiếu cân: báo dòng hợp lệ/lỗi và thêm/cập nhật/giữ nguyên/bỏ trước khi ghi.
 - Menu **Tra cứu Google Sheets**: đồng bộ chỉ đọc 3 tab hoặc nhập bản Excel, lưu bản tra cứu trên máy, tìm có dấu/không dấu, xem trước và ghi vào rừng đang mở hoặc rừng mới, dấu vết nguồn, chống trùng.
 
+- Bộ lọc tra cứu thông minh: cú pháp `trường:giá trị`, loại trừ, xếp theo độ khớp, lọc ngày/khối lượng/tình trạng, cờ cần kiểm tra, gợi ý nới lỏng.
+- Menu **Báo cáo**: 4 mẫu (điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC) xuất Word và Excel.
+
 ## Mã nguồn
 | Đường dẫn | Nội dung |
 | --- | --- |
@@ -21,6 +25,8 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 | `src/store.js` | Lớp SQLite hồ sơ: lưu/đọc, nâng cấp cấu trúc, nhập/khôi phục, sao lưu |
 | `src/lookup.js` | Bản tra cứu: đọc/kiểm tra 3 tab, tìm kiếm, ghép CCCD + hợp đồng, tọa độ, biển số |
 | `ui/app.src.html` | Giao diện + nghiệp vụ (từ bản HTML) |
+| `src/google-auth.js` | Đăng nhập Google OAuth (PKCE, chỉ đọc), tải .xlsx qua Drive API |
+| `ui/reports.js` | Mô hình dữ liệu các mẫu báo cáo (dùng chung Word, Excel, kiểm thử) |
 | `tests/` | Kiểm thử đơn vị, dữ liệu giả lập (`fixtures/make-lookup.js`) |
 | `scripts/` | Ghép HTML, chạy kiểm thử, kiểm thử Electron đầu-cuối |
 

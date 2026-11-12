@@ -96,3 +96,85 @@ test('biển số và khử chuỗi lặp', () => {
   assert.ok(isPlate('92C-12345')); assert.ok(isPlate('76M-2052')); assert.ok(isPlate('43C-123.45')); assert.ok(!isPlate('XE CN NAM')); assert.ok(!isPlate('CN TÙNG'));
   assert.strictEqual(dedupe('A, B, A, B'), 'A, B'); assert.strictEqual(dedupe('Giấy chứng nhận QSDĐ, Giấy chứng nhận QSDĐ'), 'Giấy chứng nhận QSDĐ');
 });
+
+test('bộ lọc thông minh: trường:giá trị, loại trừ, tự nhận CCCD/biển số, cụm từ', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  const r = L.search('bien:92C-55555', ''); assert.strictEqual(r.total, 1); assert.strictEqual(r.rows[0].phieu, '2001/2026/NK');
+  assert.strictEqual(L.search('92c55555', '').total, 1);                      // gõ biển số không dấu gạch vẫn nhận
+  assert.strictEqual(L.search('049000000002', '').rows[0].tab, 'HoSoRung_QC'); // 12 số = CCCD, khớp chính xác xếp đầu
+  assert.strictEqual(L.search('cccd:049000000002', '').total, 4);
+  assert.strictEqual(L.search('rung:20260220_002', '').total, 1);
+  assert.strictEqual(L.search('phieu:1002', '').rows[0].phieu, '1002/2026/NK');
+  assert.strictEqual(L.search('ten:"tran thi binh"', '').total >= 3, true);
+  const all = L.search('nguyen van an', '').total, ex = L.search('nguyen van an -1002', '').total;
+  assert.ok(ex < all);                                                         // -từ loại trừ
+  assert.strictEqual(L.search('rung:101', 'HoSoKeo_QC').total, 0);             // tab không có trường rung
+});
+
+test('bộ lọc thông minh: khoảng ngày cân, khối lượng, tình trạng hợp đồng, dòng cần kiểm tra, sắp xếp', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  const d = L.search('', 'HoSoKeo_QC', {from: '01/03/2026', to: '31/03/2026'}); assert.ok(d.total > 0);
+  assert.ok(d.rows.every(x => x.ngay.endsWith('/03/2026')));
+  assert.strictEqual(L.search('', '', {from: '2026-04-01'}).total, 1);        // chỉ HoSoKeo_QC mới có ngày cân
+  const t = L.search('', 'HoSoKeo_QC', {minTan: 5, sort: 'tan'}); assert.ok(t.rows.length && t.rows.every(x => x.tanNum >= 5));
+  assert.ok(t.rows[0].tanNum >= t.rows[t.rows.length - 1].tanNum);
+  assert.deepStrictEqual(Object.keys(L.search('nguyen van an', '').facets.status).sort(), ['Đang thực hiện', 'Đã thanh lý']);
+  assert.strictEqual(L.search('nguyen van an', '', {status: 'Đã thanh lý'}).total, 1);
+  const bad = L.search('', '', {onlyIssues: true});
+  assert.ok(bad.total >= 3); assert.ok(bad.rows.every(x => x.flags.length));
+  assert.ok(bad.rows.some(x => x.flags.includes('Lệch tấn–kg')) && bad.rows.some(x => x.flags.includes('Biển số là tên xe')));
+  const s = L.search('nguyen van an', 'HoSoKeo_QC', {sort: 'ngay'}); assert.ok(s.rows[0].dk >= s.rows[s.rows.length - 1].dk);
+  assert.strictEqual(s.stats.phieu, s.total); assert.ok(s.stats.tan > 0);
+});
+
+test('bộ lọc thông minh: xếp theo độ khớp, gợi ý nới lỏng khi không có kết quả, đường nhanh', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  const r = L.search('2001/2026', ''); assert.strictEqual(r.rows[0].phieu, '2001/2026/NK');
+  const z = L.search('nguyen khongco', ''); assert.strictEqual(z.total, 0);
+  assert.ok(z.relax.length && z.relax[0].drop === 'khongco' && z.relax[0].total > 0);
+  const f = L.search('', 'HoSoRung_QC'); assert.strictEqual(f.total, 5); assert.strictEqual(f.facets.tab.HoSoKeo_QC, 8);
+  assert.strictEqual(L.search('', '', 5).rows.length, 5);                      // tương thích kiểu gọi cũ (limit là số)
+});
+
+test('hồi quy bộ lọc: truy vấn sai định dạng không gây lỗi và không đổi nghĩa', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  ['"abc', '"', ':::', 'cccd:', 'cccd:""', 'bien:', '%', "'; DROP TABLE lookup_rows;--", '(nguyen', '[a-z]+', 'a\\b', 'x'.repeat(3000), 'tinhtrang:', 'phieu:%'].forEach(q => assert.doesNotThrow(() => L.search(q, ''), q));
+  assert.strictEqual(L.search('%', '').total, 0);                                 // % không phải ký tự đại diện
+  assert.strictEqual(L.search('-', '').total, L.search('', '').total);            // token chỉ gồm dấu gạch bị bỏ qua, không loại trừ
+  assert.strictEqual(L.search('"nguyen van an', '').total, L.search('nguyen van an', '').total); // ngoặc kép lẻ
+  assert.strictEqual(L.search('hd: 101', '').total, L.search('hd:101', '').total); assert.ok(L.search('hd:101', '').total > 0);
+  assert.strictEqual(L.search('0490 0000 0002', '').total, 4);                    // CCCD gõ có dấu cách
+  assert.strictEqual(L.search('49000000002', '').total, 4);                       // CCCD mất số 0 đầu vẫn tìm được
+  assert.strictEqual(L.search('049000000002', 'HoSoKeo_QC').total, 1);
+  assert.ok(L.search('', 'KhongCoTab').total === 20);                             // tab lạ: bỏ qua, không lỗi
+});
+
+test('hồi quy bộ lọc: kết hợp nhiều bộ lọc, báo cảnh báo khi giá trị sai, xóa bộ lọc trở về đủ dòng', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  const all = L.search('', '').total;
+  const combo = L.search('nguyen', 'HoSoKeo_QC', {from: '01/01/2026', to: '31/01/2026', minTan: 3, maxTan: 5, onlyIssues: true, sort: 'ngay'});
+  assert.deepStrictEqual(combo.rows.map(r => r.phieu).sort(), ['1002/2026/NK', '1003/2026/NK']); assert.deepStrictEqual(combo.warns, []);
+  assert.strictEqual(L.search('', '', {}).total, all);                            // xóa bộ lọc = quay lại đủ dòng
+  assert.ok(L.search('', '', {from: 'abc'}).warns[0].includes('không đúng định dạng ngày'));
+  assert.ok(L.search('', 'HoSoKeo_QC', {minTan: 'x'}).warns[0].includes('không phải số'));
+  const inv = L.search('', '', {from: '31/12/2026', to: '01/01/2026'}); assert.strictEqual(inv.total, 0); assert.ok(inv.warns.some(w => /sau ngày kết thúc/.test(w)));
+  assert.strictEqual(L.search('', 'HoSoKeo_QC', {minTan: 10, maxTan: 1}).total, 0);
+  assert.strictEqual(L.search('', 'HoSoKeo_QC', {from: '2026-01-23', to: '2026-01-23'}).rows[0].phieu, '1002/2026/NK'); // ngày dạng ô chọn ngày
+});
+
+test('hồi quy: phiếu thiếu ngày cân hoặc hai đơn vị chênh nhau được đánh dấu cần kiểm tra, không chọn được', () => {
+  const XLSX = require('xlsx'); const wb = XLSX.read(build(), {type: 'buffer', cellDates: false});
+  const ws = wb.Sheets['HoSoKeo_QC']; const head = XLSX.utils.sheet_to_json(ws, {header: 1})[0]; const col = XLSX.utils.encode_col(head.indexOf('Ngày nhập'));
+  delete ws[col + '3'];                                                       // dòng 3 (phiếu 1001) mất ngày cân
+  const {L} = fresh(); assert.ok(L.load(XLSX.write(wb, {type: 'buffer', bookType: 'xlsx'}), 'excel', 'x').ok);
+  const hit = L.search('1001/2026', 'HoSoKeo_QC'); assert.ok(hit.rows[0].flags.includes('Thiếu ngày cân'));
+  const c = L.candidates('HoSoKeo_QC', hit.rows[0].row); const p = c.forests[0].phieu.find(x => x.soPhieu === '1001/2026/NK');
+  assert.strictEqual(p.ngay, ''); assert.match(p.issue, /ngày cân/);
+  assert.strictEqual(L.search('', 'HoSoKeo_QC', {from: '01/01/2026'}).rows.some(r => r.phieu === '1001/2026/NK'), false); // không lọt vào khoảng ngày
+  const kg = L.candidates('HoSoKeo_QC', L.search('4001', 'HoSoKeo_QC').rows[0].row).forests[0].phieu[0];
+  assert.strictEqual(kg.kl, 2);                                              // 2.000 kg ÷ 1.000 khi cột tấn trống
+  const diff = L.candidates('HoSoKeo_QC', L.search('1003/2026', 'HoSoKeo_QC').rows[0].row).forests[0].phieu.find(x => x.soPhieu === '1003/2026/NK');
+  assert.match(diff.issue, /lệch/);                                           // 4,9 tấn so với 5.000 kg
+  const area = L.candidates('HoSoRung_QC', L.search('loc thuong', 'HoSoRung_QC').rows[0].row).forests[0];
+  assert.ok(area.areaConflict && area.area.length === 2 && area.area[1].value === 6); // 60.000 m² ÷ 10.000 = 6 ha, khác 3 ha của HECTA
+});

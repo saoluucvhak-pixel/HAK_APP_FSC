@@ -1,20 +1,74 @@
 name: Build Windows installer
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   push:
     tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+env:
+  # Commit được kiểm thử và đóng gói. Với pull_request, github.sha là commit ghép tạm nên dùng đúng commit đầu nhánh.
+  TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run build:html
-      - run: npm test
-      - run: npm run dist
+      - name: Kiểm thử đơn vị
+        run: npm test
+      - name: Kiểm thử đầu-cuối (Electron)
+        run: npm run test:e2e
+      - name: Đóng gói bộ cài
+        run: npm run dist
+      - name: Kiểm tra có file .exe và ghi thông tin bản dựng
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem dist -Filter '*Setup*.exe' -ErrorAction SilentlyContinue
+          if (-not $exe) { throw 'Không có file bộ cài (*Setup*.exe) trong thư mục dist' }
+          if ($exe.Length -lt 50MB) { throw "Bộ cài nhỏ bất thường: $($exe.Length) byte" }
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash
+          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          "commit=$env:TESTED_SHA`nversion=$ver`nfile=$($exe.Name)`nsize=$($exe.Length)`nsha256=$hash" | Set-Content dist/BUILD_INFO.txt
+          Get-Content dist/BUILD_INFO.txt
+      - name: Cài bộ .exe và kiểm tra khói (cài, mở, ghi, đóng, mở lại)
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
+          $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-installed'
+          $p = Start-Process -FilePath $setup -ArgumentList '/S', "/D=$dir" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Cài đặt lỗi, mã thoát $($p.ExitCode)" }
+          $app = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          if (-not $app) { throw 'Không thấy file chạy sau khi cài' }
+          $lnk = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter '*HAKQN*.lnk' -ErrorAction SilentlyContinue
+          if (-not $lnk) { throw 'Không có lối tắt HAKQN trong Start Menu' }
+          Write-Host "Lối tắt Start Menu: $($lnk.FullName)"
+          $ud = Join-Path $env:RUNNER_TEMP 'hakqn-userdata'
+          foreach ($ph in 'create', 'verify') {
+            $out = Join-Path $env:RUNNER_TEMP "smoke-$ph.json"
+            $env:HAKQN_USERDATA = $ud; $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = $ph
+            $pr = Start-Process -FilePath $app.FullName -PassThru
+            if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw "Pha ${ph}: ứng dụng không tự thoát sau 120 giây" }
+            if (-not (Test-Path $out)) { throw "Pha ${ph}: không có file kết quả (mã thoát $($pr.ExitCode))" }
+            Get-Content $out -Raw
+            if ($pr.ExitCode -ne 0) { throw "Pha ${ph}: kiểm tra khói thất bại (mã thoát $($pr.ExitCode))" }
+          }
+          Copy-Item (Join-Path $env:RUNNER_TEMP 'smoke-*.json') dist/
       - uses: actions/upload-artifact@v4
         with:
-          name: HAKQN-Setup
-          path: dist/*.exe
+          name: HAKQN-Setup-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            dist/*Setup*.exe
+            dist/BUILD_INFO.txt
+            dist/smoke-*.json
+          if-no-files-found: error

@@ -128,6 +128,154 @@ const MIGRATION = db => db.exec(`
   CREATE INDEX idx_lr_rung ON lookup_rows(set_id, k_rung);
   CREATE INDEX idx_lr_phieu ON lookup_rows(set_id, k_phieu);`);
 
+/* ===== Tìm kiếm thông minh ===== */
+const FIELD_ALIAS = {cccd: 'cccd', cmnd: 'cccd', hd: 'hd', hopdong: 'hd', rung: 'rung', marung: 'rung', phieu: 'phieu', sophieu: 'phieu', bien: 'bien', xe: 'bien', ten: 'ten', chu: 'ten', churung: 'ten', dc: 'dc', diachi: 'dc', tinhtrang: 'tinhtrang', tt: 'tinhtrang'};
+function parseQuery(q) {
+  const out = {terms: [], fields: [], not: []};
+  const re = /(^|\s)(-)?(?:([a-z]+):(?=\S))?(?:"([^"]+)"|(\S+))/g; let m;
+  let text = fold(q);
+  if ((text.match(/"/g) || []).length % 2) { const i = text.lastIndexOf('"'); text = text.slice(0, i) + text.slice(i + 1); } // dấu ngoặc kép lẻ: bỏ dấu cuối
+  text = text.replace(/(^|\s)([a-z]+):\s+(?=\S)/g, '$1$2:');                                                         // "hd: 101" = "hd:101"
+  text = text.replace(/(^|\s)(\d{3,4})[ .-](\d{3,4})[ .-](\d{3,4})(?=\s|$)/g, (all, sp, a, b, c) => (a + b + c).length === 12 ? sp + a + b + c : all); // CCCD gõ có dấu cách/chấm
+  while ((m = re.exec(text))) {
+    const neg = !!m[2], field = m[3] && FIELD_ALIAS[m[3]], val = (m[4] || m[5] || '').trim();
+    let value = val, fname = field;
+    if (m[3] && !field) { value = (m[3] + ':' + val); fname = null; } // "abc:xyz" không phải trường đã biết: coi như từ thường
+    if (!value || /^-+$/.test(value)) continue;
+    if (neg) { out.not.push(value); continue; }
+    if (fname) { out.fields.push({f: fname, v: value, raw: m[3] + ':' + (m[4] ? '"' + value + '"' : value)}); continue; }
+    if (/^\d{12}$/.test(value)) out.fields.push({f: 'cccd', v: value, raw: value, auto: true});
+    else if (/^\d{10,11}$/.test(value)) out.fields.push({f: 'cccd', v: value.padStart(12, '0'), raw: value, auto: true}); // CCCD bị mất số 0 đầu
+    else if (isPlate(value)) out.fields.push({f: 'bien', v: value, raw: value, auto: true});
+    else out.terms.push({v: value, raw: m[4] ? '"' + value + '"' : value});
+  }
+  return out;
+}
+function viDate(v) { // dd/mm/yyyy hoặc yyyy-mm-dd -> yyyymmdd
+  const s = String(v || '').trim(); let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+  if (m) return +m[3] * 10000 + +m[2] * 100 + +m[1];
+  m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m ? +m[1] * 10000 + +m[2] * 100 + +m[3] : 0;
+}
+function normAdv(o) {
+  const warns = [];
+  const num = (v, label) => { if (v === '' || v == null) return null; const n = Number(String(v).replace(',', '.')); if (isFinite(n)) return n; warns.push(label + ' “' + v + '” không phải số nên bị bỏ qua.'); return null; };
+  const date = (v, label) => { if (v === '' || v == null) return 0; const d = viDate(v); if (!d) warns.push(label + ' “' + v + '” không đúng định dạng ngày (dd/mm/yyyy) nên bị bỏ qua.'); return d; };
+  const a = {from: date(o.from, 'Ngày bắt đầu'), to: date(o.to, 'Ngày kết thúc'), minTan: num(o.minTan, 'Khối lượng tối thiểu'), maxTan: num(o.maxTan, 'Khối lượng tối đa'), status: fold(o.status || ''), onlyIssues: !!o.onlyIssues};
+  if (a.from && a.to && a.from > a.to) warns.push('Ngày bắt đầu sau ngày kết thúc: không có phiếu cân nào thỏa.');
+  if (a.minTan != null && a.maxTan != null && a.minTan > a.maxTan) warns.push('Khối lượng tối thiểu lớn hơn tối đa: không có phiếu cân nào thỏa.');
+  Object.defineProperty(a, 'warns', {value: warns, enumerable: false});
+  return a;
+}
+const hasAdv = a => !!(a.from || a.to || a.minTan != null || a.maxTan != null || a.status || a.onlyIssues);
+
+/* Tóm tắt 1 dòng + cờ chất lượng dữ liệu */
+function describe(tab, o) {
+  const base = summary(tab, o), flags = [];
+  if (tab === 'HoSoKeo_QC') {
+    const tan = typeof o['Khối lượng (Tấn)'] === 'number' ? o['Khối lượng (Tấn)'] : null, kg = typeof o['KL hàng (KG)'] === 'number' ? o['KL hàng (KG)'] : null;
+    base.kg = kg; base.dk = viDate(o['Ngày nhập']);
+    base.tanNum = tan > 0 ? tan : kg > 0 ? Math.round(kg) / 1000 : null;
+    if (!(base.tanNum > 0)) flags.push('Thiếu khối lượng');
+    else if (tan > 0 && kg > 0 && Math.abs(kg / 1000 - tan) > 0.0005) flags.push('Lệch tấn–kg');
+    if (!base.dk) flags.push('Thiếu ngày cân');
+    if (base.bien && !isPlate(base.bien)) flags.push('Biển số là tên xe');
+    if (!base.bien) flags.push('Thiếu biển số');
+    if (!base.cccd) flags.push('Thiếu CCCD');
+  } else if (tab === 'HoSoRung_QC') {
+    base.tinhTrang = clean(o['Tình trạng Hợp đồng']);
+    if (!/^\d{12}$/.test(base.cccd)) flags.push('CCCD không đủ 12 số');
+    if (typeof o['HECTA'] !== 'number') flags.push('Thiếu diện tích');
+  } else {
+    const la = parseCoord(o['Latitude_Vĩ độ'], 'lat'), lo = parseCoord(o['Longtitude_Kinh độ'], 'lng');
+    if (!(la.ok && lo.ok)) flags.push('Tọa độ không dùng được');
+    if (!base.maRung) flags.push('Thiếu mã rừng');
+  }
+  base.flags = flags;
+  return base;
+}
+const wordStart = (h, t) => (' ' + h).includes(' ' + t);
+function fieldTexts(tab, d, f) {
+  const k = f === 'ten' ? d.ten : f === 'cccd' ? d.cccd : f === 'hd' ? d.hd : f === 'rung' ? d.maRung : f === 'phieu' ? d.phieu : f === 'bien' ? d.bien : f === 'dc' ? d.diaChi : f === 'tinhtrang' ? d.tinhTrang : '';
+  return k == null ? null : fold(k);
+}
+function termScore(d, t) { // điểm cho 1 từ khóa: khớp chính xác trường khóa > bắt đầu > đầu từ > chứa
+  let best = 0;
+  [['cccd', 5], ['hd', 4], ['maRung', 4], ['phieu', 4], ['bien', 4], ['ten', 3], ['diaChi', 1]].forEach(([k, w]) => {
+    const h = fold(d[k] || ''); if (!h) return;
+    const exactPlate = k === 'bien' && plateKey(h) === plateKey(t);
+    const sc = (h === t || exactPlate) ? 10 : h.startsWith(t) ? 6 : wordStart(h, t) ? 4 : h.includes(t) ? 2 : 0;
+    if (sc) best = Math.max(best, sc * w);
+  });
+  return best;
+}
+
+function runSearch(db, setId, pq, tab, adv, sort, limit) {
+  const conds = [], args = [setId];
+  const esc = t => '%' + t.replace(/[\\%_]/g, m => '\\' + m) + '%';
+  pq.terms.forEach(t => { conds.push("search LIKE ? ESCAPE '\\'"); args.push(esc(t.v)); });
+  pq.fields.forEach(f => { if (f.f !== 'bien' && f.f !== 'tinhtrang') { conds.push("search LIKE ? ESCAPE '\\'"); args.push(esc(f.v)); } });
+  pq.not.forEach(t => { conds.push("search NOT LIKE ? ESCAPE '\\'"); args.push(esc(t)); });
+  const needJs = pq.fields.length || hasAdv(adv) || (sort && sort !== 'relevance') || pq.terms.length || pq.not.length;
+  const where = 'set_id=?' + (conds.length ? ' AND ' + conds.join(' AND ') : '');
+  const empty = {tab: {}, status: {}, issues: 0};
+  // Đường nhanh: không từ khóa, không bộ lọc -> đếm bằng SQL, chỉ đọc số dòng cần hiển thị
+  if (!needJs) {
+    const facetTab = {}; db.prepare('SELECT tab, COUNT(*) c FROM lookup_rows WHERE set_id=? GROUP BY tab').all(setId).forEach(r => { facetTab[r.tab] = r.c; });
+    const total = tab && TABS[tab] ? (facetTab[tab] || 0) : Object.values(facetTab).reduce((x, y) => x + y, 0);
+    const rows = limit ? db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE set_id=?' + (tab && TABS[tab] ? ' AND tab=?' : '') + ' ORDER BY tab, row_no LIMIT ' + limit).all(...(tab && TABS[tab] ? [setId, tab] : [setId]))
+      .map(r => ({tab: r.tab, row: r.row_no, ...describe(r.tab, JSON.parse(r.data))})) : [];
+    return {rows, total, facets: {tab: facetTab, status: {}, issues: 0}, stats: {phieu: 0, tan: 0}, relax: [], fast: true};
+  }
+  const raw = db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE ' + where).all(...args);
+  const hits = [];
+  for (const r of raw) {
+    const d = describe(r.tab, JSON.parse(r.data));
+    let score = r.tab === 'HoSoRung_QC' ? 3 : r.tab === 'ToaDoRung_QC' ? 1 : 0, ok = true;
+    for (const t of pq.terms) { const sc = termScore(d, t.v); score += sc; }
+    for (const f of pq.fields) {
+      if (f.f === 'tinhtrang' && r.tab !== 'HoSoRung_QC') { ok = false; break; }
+      if ((f.f === 'bien' || f.f === 'phieu') && r.tab !== 'HoSoKeo_QC') { ok = false; break; }
+      if (f.f === 'rung' && r.tab === 'HoSoKeo_QC') { ok = false; break; }
+      const h = fieldTexts(r.tab, d, f.f);
+      if (!h) { ok = false; break; }
+      const match = f.f === 'bien' ? plateKey(h).includes(plateKey(f.v)) : h.includes(f.v);
+      if (!match) { ok = false; break; }
+      score += (h === f.v || (f.f === 'bien' && plateKey(h) === plateKey(f.v))) ? 60 : 30;
+    }
+    if (!ok) continue;
+    // Từ khóa trong SQL đã khớp cột tìm kiếm; từ không khớp trường nào vẫn hợp lệ (ví dụ cột phụ) nên không loại.
+    if ((adv.from || adv.to || adv.minTan != null || adv.maxTan != null) && r.tab !== 'HoSoKeo_QC') continue;
+    if (r.tab === 'HoSoKeo_QC') {
+      if (adv.from && !(d.dk >= adv.from)) continue;
+      if (adv.to && !(d.dk && d.dk <= adv.to)) continue;
+      if (adv.minTan != null && !(d.tanNum != null && d.tanNum >= adv.minTan)) continue;
+      if (adv.maxTan != null && !(d.tanNum != null && d.tanNum <= adv.maxTan)) continue;
+    }
+    hits.push({tab: r.tab, row: r.row_no, score, ...d});
+  }
+  const passStatus = h => !adv.status || (h.tab === 'HoSoRung_QC' && fold(h.tinhTrang) === adv.status);
+  const passIssue = h => !adv.onlyIssues || h.flags.length > 0;
+  const passTab = h => !tab || h.tab === tab;
+  const facets = {tab: {}, status: {}, issues: 0};
+  hits.forEach(h => {
+    if (passStatus(h) && passIssue(h)) facets.tab[h.tab] = (facets.tab[h.tab] || 0) + 1;
+    if (passTab(h) && passIssue(h) && h.tab === 'HoSoRung_QC' && h.tinhTrang) facets.status[h.tinhTrang] = (facets.status[h.tinhTrang] || 0) + 1;
+    if (passTab(h) && passStatus(h) && h.flags.length) facets.issues++;
+  });
+  const out = hits.filter(h => passTab(h) && passStatus(h) && passIssue(h));
+  const cmp = {
+    relevance: (x, y) => y.score - x.score || (x.tab < y.tab ? -1 : x.tab > y.tab ? 1 : 0) || x.row - y.row,
+    ngay: (x, y) => (y.dk || 0) - (x.dk || 0) || x.row - y.row,
+    tan: (x, y) => (y.tanNum || 0) - (x.tanNum || 0) || x.row - y.row,
+    ten: (x, y) => String(x.ten).localeCompare(String(y.ten), 'vi') || x.row - y.row
+  }[sort] || null;
+  if (cmp) out.sort(cmp);
+  const keo = out.filter(h => h.tab === 'HoSoKeo_QC');
+  const stats = {phieu: keo.length, tan: Math.round(keo.reduce((s, h) => s + (h.tanNum || 0), 0) * 1000) / 1000};
+  const rows = (limit ? out.slice(0, limit) : []).map(h => { const {score, dk, tanNum, ...rest} = h; return {...rest, tanNum, dk, score}; });
+  return {rows, total: out.length, facets: facets.tab && facets, stats, relax: []};
+}
+
 class Lookup {
   constructor(store) { this.db = store.db; }
 
@@ -176,18 +324,37 @@ class Lookup {
       .map(r => Object.assign(JSON.parse(r.data), {_tab: r.tab, _row: r.row_no}));
   }
 
-  /* Tìm: mỗi từ khóa (không phân biệt dấu) phải có trong các cột tìm kiếm của tab */
-  search(q, tab, limit = 300) {
-    const a = this.activeSet(); if (!a) return {rows: [], total: 0};
-    const terms = fold(q).split(' ').filter(Boolean);
-    const conds = [], args = [a.id];
-    if (tab && TABS[tab]) { conds.push('tab=?'); args.push(tab); }
-    terms.forEach(t => { conds.push("search LIKE ? ESCAPE '\\'"); args.push('%' + t.replace(/[\\%_]/g, m => '\\' + m) + '%'); });
-    const where = 'set_id=?' + (conds.length ? ' AND ' + conds.join(' AND ') : '');
-    const total = this.db.prepare('SELECT COUNT(*) c FROM lookup_rows WHERE ' + where).get(...args).c;
-    const rows = this.db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE ' + where + ' ORDER BY tab, row_no LIMIT ' + (+limit | 0)).all(...args)
-      .map(r => { const o = JSON.parse(r.data); return {tab: r.tab, row: r.row_no, ...summary(r.tab, o)}; });
-    return {rows, total};
+  /* Tìm kiếm thông minh.
+   * q: từ khóa (không phân biệt dấu). Cú pháp: nhiều từ = phải có đủ; "cụm từ"; -từ loại trừ; trường:giá trị
+   *    (cccd: hd: rung: phieu: bien: ten: dc: tinhtrang:); số 12 chữ số tự nhận là CCCD, biển số tự nhận là biển số.
+   * opts: {limit, from, to (ngày cân), minTan, maxTan, status (tình trạng hợp đồng), onlyIssues, sort: relevance|ngay|tan|ten}
+   * Trả về {rows, total, facets:{tab,status,issues}, stats:{phieu,tan}, relax:[...]}. */
+  search(q, tab, opts) {
+    if (typeof opts === 'number') opts = {limit: opts};
+    opts = opts || {};
+    const a = this.activeSet(); if (!a) return {rows: [], total: 0, facets: {tab: {}, status: {}, issues: 0}, stats: {phieu: 0, tan: 0}, relax: []};
+    const pq = parseQuery(q);
+    const adv = normAdv(opts);
+    const res = runSearch(this.db, a.id, pq, tab, adv, opts.sort || 'relevance', +opts.limit > 0 ? +opts.limit | 0 : 300);
+    res.warns = adv.warns.slice();
+    if (!res.total && !opts._noRelax) {
+      const parts = [...pq.terms, ...pq.fields.map(f => ({raw: f.raw}))];
+      if (parts.length >= 2 || (parts.length === 1 && (pq.not.length || hasAdv(adv) || tab))) {
+        const tries = [];
+        parts.forEach((p, i) => {
+          const rest = parts.filter((_, j) => j !== i).map(x => x.raw).concat(pq.not.map(n => '-' + n)).join(' ');
+          const r = runSearch(this.db, a.id, parseQuery(rest), tab, adv, 'relevance', 0);
+          if (r.total) tries.push({drop: p.raw, q: rest, total: r.total});
+        });
+        tries.sort((x, y) => x.total - y.total); // ít kết quả nhất = còn sát ý tìm nhất
+        res.relax = tries.slice(0, 3);
+        if (!tries.length && (tab || hasAdv(adv))) {
+          const r = runSearch(this.db, a.id, pq, '', {}, 'relevance', 0);
+          if (r.total) res.relax = [{drop: 'bộ lọc', q, total: r.total, clearFilters: true}];
+        }
+      }
+    }
+    return res;
   }
 
   /* Dựng các kết quả (mỗi kết quả = 1 rừng đề xuất) từ 1 dòng tìm được */
@@ -317,4 +484,4 @@ function mapDoc(l) {
   return {loai: 'Khác', ten: clean(l) || 'Khác'};
 }
 
-module.exports = {Lookup, MIGRATION, TABS, TAB_NAMES, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};
+module.exports = {parseQuery, Lookup, MIGRATION, TABS, TAB_NAMES, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};

@@ -56,3 +56,33 @@ Mới: khi nạp Excel nhân công/xe/phiếu cân, phần mềm báo số dòng
 - Phiếu cân của hợp đồng có nhiều rừng không có mã rừng trong nguồn: phần mềm không chọn sẵn, người dùng chọn đúng phiếu của rừng.
 - Biển số chưa có trong danh sách xe của rừng vẫn ghi được nhưng checklist sẽ báo lỗi như bản HTML: nạp file xe trước, hoặc bổ sung xe sau.
 - Nạp lại file Excel phiếu cân sẽ thay danh sách phiếu (kể cả phiếu lấy từ tra cứu); hộp xác nhận cho biết số phiếu bị bỏ.
+
+## Bộ lọc tra cứu thông minh (mới)
+Trong **🔎 Tra cứu Google Sheets**:
+- **Cú pháp tìm**: nhiều từ = phải có đủ (không phân biệt dấu) · `"cụm từ"` · `-từ` để loại trừ · `cccd:` `hd:` `rung:` `phieu:` `bien:` `ten:` `dc:` để tìm đúng trường. Số 12 chữ số tự nhận là CCCD; biển số gõ không dấu gạch (`92c55555`) vẫn nhận.
+- **Xếp theo độ khớp**: khớp chính xác CCCD, hợp đồng, mã rừng, số phiếu, biển số xếp trước; có thể đổi sang ngày cân mới nhất, khối lượng lớn nhất, tên A→Z.
+- **Bộ lọc nâng cao**: khoảng ngày cân, khoảng khối lượng (tấn), tình trạng hợp đồng, “chỉ dòng cần kiểm tra”. Số dòng theo từng tab và theo tình trạng hiển thị ngay trên nút lọc.
+- **Cờ cần kiểm tra** từng dòng: thiếu khối lượng, lệch tấn–kg, thiếu ngày cân, biển số là tên xe, thiếu CCCD, CCCD không đủ 12 số, tọa độ không dùng được…
+- Dòng tổng hợp: số phiếu cân và tổng tấn của kết quả đang lọc.
+- Không có kết quả: gợi ý bỏ bớt từ khóa hoặc bộ lọc để có kết quả gần nhất.
+
+## Báo cáo (mới)
+Nút **📊 Báo cáo** trên thanh đầu trang. Chọn kỳ (từ ngày – đến ngày, theo ngày cân) và chủ rừng, xem trước rồi xuất **Word (.docx)** hoặc **Excel (.xlsx)**:
+1. **Tổng hợp điều hành** (1 trang): số liệu theo chủ rừng và danh sách vấn đề cần xử lý.
+2. **Sản lượng khai thác theo rừng**: diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân, cảnh báo vượt định mức trên 5%.
+3. **Sổ theo dõi phiếu cân – vận chuyển**: danh sách theo ngày, tổng hợp theo rừng / biển số / ngày, phát hiện trùng số phiếu.
+4. **Tiến độ hồ sơ và checklist FSC**: tiến độ từng rừng, hạng mục còn thiếu.
+Báo cáo tính từ dữ liệu hồ sơ trong máy (không cần mạng). Mẫu báo cáo nằm ở `ui/reports.js`, có kiểm thử trong `tests/reports.test.js`.
+
+## Giao diện mới
+- **Trang Tổng quan**: số chủ rừng, rừng, diện tích, khối lượng đã cân, tiến độ hồ sơ trung bình; danh sách hồ sơ cần hoàn thiện (bấm để mở đúng rừng) và phiếu cân gần đây. Bấm logo hoặc **Tổng quan** để quay về. Chưa có dữ liệu thì hiện hướng dẫn 4 bước.
+- Thanh trên cùng: **Tổng quan · Tra cứu · Báo cáo** ở giữa; chế độ sáng/tối và menu **⋯ Thêm** (Hướng dẫn, Sao lưu, Khôi phục) bên phải.
+- Ô **Lọc chủ rừng** ở danh sách bên trái (theo tên, mã, CCCD, không phân biệt dấu).
+- Màu sắc, cỡ chữ, bo góc khai báo ở đầu phần `<style>` (`:root`), đổi màu thương hiệu chỉ cần sửa một chỗ. Có chế độ tối, bố cục điện thoại và định dạng khi in.
+
+## Đăng nhập Google cho bảng tính giới hạn quyền xem (mới)
+Trong **🔎 Tra cứu Google Sheets** có nút **🔑 Đăng nhập Google (chỉ đọc)**. Đăng nhập bằng tài khoản đã được chia sẻ bảng tính rồi bấm **Đồng bộ ngay**. Quyền chỉ đọc, không sửa bảng tính, không đổi quyền chia sẻ. Cần cấu hình OAuth một lần theo [docs/GOOGLE_OAUTH.md](GOOGLE_OAUTH.md); chưa cấu hình thì nút hiện thông báo và đồng bộ qua liên kết công khai vẫn dùng được. Mọi lỗi (mất mạng, hết phiên, thiếu quyền, sai tiêu đề cột) đều giữ bản tra cứu đã lưu và báo rõ nguyên nhân.
+
+Bộ lọc tra cứu: dấu ngoặc kép lẻ, `hd: 101` (có khoảng trắng), CCCD gõ có dấu cách hoặc mất số 0 đầu đều được nhận; ngày hoặc khối lượng sai định dạng được báo rõ thay vì bỏ qua âm thầm.
+
+Báo cáo: **phiếu cân trùng số vẫn được cộng vào tổng** (phần mềm không tự xóa phiếu), nhưng cả hai dòng trùng được đánh dấu “Trùng số phiếu”, có chỉ tiêu “Phiếu trùng số” và ghi chú nêu số phiếu, số tấn đang tính. Cần xác minh rồi sửa hoặc xóa phiếu nhập trùng ở tab Vận chuyển.
