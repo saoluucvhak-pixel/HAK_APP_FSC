@@ -2848,7 +2848,7 @@ function docXNKLVC(rec, ex, g) {
       P('**BẢNG KÊ KHỐI LƯỢNG ĐÍNH KÈM**', {al: 'center', sz: 28, before: 0, after: 60, full: true}),
       P('(Kèm theo Biên bản xác nhận khối lượng vận chuyển số ' + ex._so.xn.so + ' và Hợp đồng vận chuyển số ' + hdNo + ')', {al: 'center', i: true, after: 160, full: true}),
       P('Bên vận chuyển (Bên B): **' + upper(g.ten) + '** · Mã rừng: ' + (rs.maRung || '…') + ' · ' + (tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', Object.assign({}, ex, {_mode: 'day'}))) + '.', {al: 'left', after: 120, full: true}),
-      T([650, 1450, 1650, 2000, 2000, 1605],
+      T([550, 1250, 1500, 1600, 2850, 1605],
         [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Nơi giao (nhà máy)', 'Khối lượng (tấn)'],
           ...tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))]),
           [{v: '**Tổng cộng (' + tr.length + ' chuyến)**', span: 5}, '**' + fmtT(kg) + '**']],
