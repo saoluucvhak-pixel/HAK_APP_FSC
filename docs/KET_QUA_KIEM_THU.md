@@ -194,3 +194,6 @@ CI Windows có thêm bước **nâng cấp từ bộ cài thật v1.0.0**: tải
 ## 25. Bản 1.4.17: BM-09 tách Bảng kê khối lượng đính kèm sang trang riêng
 - Trang 1 của BM-09 không còn bảng phiếu cân; ghi “cụ thể trong Bảng kê khối lượng đính kèm”. Mẫu trống chỉ có trang 1. Bản chỉ-phần-số và bản đầy đủ có trang 2 là Bảng kê, in đầy đủ (khối “full” luôn in mực đen, có khung, kể cả khi cả biên bản ở chế độ in đè). Bỏ ô “Số dòng chuyến của BM-09” (không còn số dòng cố định).
 - `e2e-inde` cập nhật: mẫu trống không có khung bảng; bản in đè có trang bảng kê màu đen đầy đủ; bố cục trang 1 giống hệt mẫu trống; kiểm tra cao độ chữ cố định.
+
+## 26. Bản 1.4.18: Bảng kê khối lượng ghi nơi giao một dòng
+Khi mọi phiếu cùng một nơi giao, Bảng kê khối lượng đính kèm (BM-09, trang 2) ghi “Nơi giao (nhà máy): …” một dòng phía trên, không còn cột “Nơi giao” trong khung bảng (bảng còn STT, ngày cân, biển kiểm soát, số phiếu cân, khối lượng). Các phiếu khác nơi giao thì vẫn giữ cột nơi giao trong bảng để không mất thông tin.

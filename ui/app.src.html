@@ -1425,6 +1425,7 @@ function docKiemTraHienTruong(rec, ex) {
 function docXNKLVC(rec, ex, g) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tr = tripsOf(rec, g), kg = totalKg(tr);
   const hdNo = ex._so.vc.so;
+  const ngSame = new Set(tr.map(r => r.noiGiao || '')).size <= 1;   // cùng một nơi giao thì Bảng kê đính kèm ghi một dòng, không đặt trong khung bảng
   const noiGiao = ex.vcDiemDen || (ex._mode === 'day' ? tr.map(r => r.noiGiao).find(Boolean) : '') || '………………';   // mẫu trống và in đè: chữ cố định phải giống nhau, không lấy từ phiếu cân   // điểm đến theo hồ sơ rừng; cột “Nơi giao” từng phiếu giữ nguyên dữ liệu nguồn
   return [
     ...TITLE_HEAD(),
@@ -1448,11 +1449,18 @@ function docXNKLVC(rec, ex, g) {
       P('**BẢNG KÊ KHỐI LƯỢNG ĐÍNH KÈM**', {al: 'center', sz: 28, before: 0, after: 60, full: true}),
       P('(Kèm theo Biên bản xác nhận khối lượng vận chuyển số ' + ex._so.xn.so + ' và Hợp đồng vận chuyển số ' + hdNo + ')', {al: 'center', i: true, after: 160, full: true}),
       P('Bên vận chuyển (Bên B): **' + upper(g.ten) + '** · Mã rừng: ' + (rs.maRung || '…') + ' · ' + (tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', Object.assign({}, ex, {_mode: 'day'}))) + '.', {al: 'left', after: 120, full: true}),
-      T([550, 1250, 1500, 1600, 2850, 1605],
-        [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Nơi giao (nhà máy)', 'Khối lượng (tấn)'],
-          ...tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))]),
-          [{v: '**Tổng cộng (' + tr.length + ' chuyến)**', span: 5}, '**' + fmtT(kg) + '**']],
-        {head: true, borders: true, sz: 20, full: true, alignCols: ['center', 'center', 'center', 'center', 'left', 'right']})])
+      ...(ngSame ? [P('Nơi giao (nhà máy): **' + (ex.vcDiemDen || (tr[0] && tr[0].noiGiao) || '………………') + '**', {al: 'left', after: 120, full: true})] : []),
+      ngSame
+        ? T([650, 1700, 2100, 2400, 2505],   // cùng một nơi giao: ghi một dòng phía trên, không lặp trong khung bảng
+          [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Khối lượng (tấn)'],
+            ...tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, fmtT(Math.round(r.kl * 1000))]),
+            [{v: '**Tổng cộng (' + tr.length + ' chuyến)**', span: 4}, '**' + fmtT(kg) + '**']],
+          {head: true, borders: true, sz: 20, full: true, alignCols: ['center', 'center', 'center', 'center', 'right']})
+        : T([550, 1250, 1500, 1600, 2850, 1605],
+          [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Nơi giao (nhà máy)', 'Khối lượng (tấn)'],
+            ...tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))]),
+            [{v: '**Tổng cộng (' + tr.length + ' chuyến)**', span: 5}, '**' + fmtT(kg) + '**']],
+          {head: true, borders: true, sz: 20, full: true, alignCols: ['center', 'center', 'center', 'center', 'left', 'right']})])
   ];
 }
 function docTTVC(rec, ex, g) {
