@@ -9,7 +9,7 @@
     "build:html": "node scripts/build-html.js",
     "start": "electron .",
     "test": "node scripts/test.js",
-    "test:e2e": "node scripts/e2e.js && node scripts/e2e-lookup.js && node scripts/e2e-lookup2.js && node scripts/e2e-export.js && node scripts/e2e-reports.js && node scripts/e2e-skins.js && node scripts/e2e-hopdong.js",
+    "test:e2e": "node scripts/e2e.js && node scripts/e2e-lookup.js && node scripts/e2e-lookup2.js && node scripts/e2e-export.js && node scripts/e2e-reports.js && node scripts/e2e-skins.js && node scripts/e2e-hopdong.js && node scripts/e2e-vanchuyen.js",
     "postinstall": "electron-builder install-app-deps",
     "dist": "electron-builder --win nsis --x64 --publish never",
     "fixtures": "node tests/fixtures/make-lookup.js"

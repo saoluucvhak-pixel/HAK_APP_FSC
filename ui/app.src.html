@@ -197,7 +197,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 </ul>
 <h3>3. Tab Vận chuyển</h3>
 <ul>
-<li><b>Giá</b>: theo tấn/km, theo bậc cự ly hoặc giá cố định; tính tiền theo <b>tấn giao tại nhà máy</b>.</li>
+<li><b>Giá</b>: hai cách tính: <b>đơn giá cố định</b> (đồng/tấn) hoặc <b>đơn giá tấn/km</b> (đồng/tấn/km × cự ly); tính tiền theo <b>tấn giao tại nhà máy</b>.</li>
 <li><b>Excel xe</b> (24 cột): biển số, chủ xe, tài xế, đăng kiểm, bảo hiểm, GPLX. Chọn người ký là chủ xe hay tài xế (tài xế ký thì hợp đồng có câu cam kết của chủ xe). Hạn sắp hết sẽ cảnh báo.</li>
 <li><b>Phiếu cân</b> (8 cột, <b>mỗi chuyến một dòng</b>): mã rừng, STT, ngày cân, biển kiểm soát, số phiếu cân, khối lượng (tấn), nơi giao, ghi chú.</li>
 <li><b>Lỗi chặn</b>: sai mã rừng, thiếu/sai ngày, biển không có trong danh sách xe, thiếu hoặc trùng số phiếu, khối lượng không hợp lệ. <b>Cảnh báo</b>: tổng phiếu cân lệch so với khối lượng rừng quá ngưỡng ở ô "Ngưỡng lệch".</li>
@@ -575,7 +575,6 @@ function forestErrors(info, fid) {
   const vc = info.vanChuyen || {};
   if (vc.donGiaKm === 'x') e.push('Đơn giá vận chuyển (đ/tấn/km) không phải là số');
   if (vc.coDinh === 'x') e.push('Đơn giá vận chuyển cố định không phải là số');
-  if ((vc.bac || []).some(b => !(b.den > 0) || !(b.gia > 0))) e.push('Mỗi bậc cự ly cần có “đến km” và đơn giá lớn hơn 0');
   return e;
 }
 
@@ -668,17 +667,17 @@ function checkDX(rec) {
 }
 
 // Đơn giá vận chuyển (đ/tấn) của rừng. Trả về {gia, text} hoặc {loi}
+/* Đơn giá vận chuyển (chủ rừng trả bên vận chuyển): HAI cách tính.
+   1. Cố định: một đơn giá đồng/tấn, không phụ thuộc cự ly.
+   2. Tấn/km: đơn giá đồng/tấn/km × cự ly (km) của rừng.
+   Cách “theo bậc cự ly” của bản cũ không còn dùng; hồ sơ cũ còn chọn cách đó phải chọn lại một trong hai cách trên (dữ liệu bậc cũ được giữ nguyên, không xóa). */
 function transportPrice(i) {
   const v = i.vanChuyen || {}, mode = v.mode || 'tanKm';
   if (mode === 'coDinh') return v.coDinh > 0 ? {gia: v.coDinh, text: 'cố định ' + fmt(v.coDinh) + ' đồng/tấn'} : {loi: 'thiếu đơn giá cố định vận chuyển'};
+  if (mode !== 'tanKm') return {loi: 'cách tính vận chuyển “theo bậc cự ly” không còn áp dụng: chọn Cố định hoặc Tấn/km ở tab Vận chuyển'};
   if (!(i.cuLy > 0)) return {loi: 'thiếu cự ly vận chuyển (km)'};
-  if (mode === 'tanKm') {
-    if (!(v.donGiaKm > 0)) return {loi: 'thiếu đơn giá vận chuyển (đ/tấn/km)'};
-    return {gia: Math.round(v.donGiaKm * i.cuLy), text: fmt(v.donGiaKm) + ' đồng/tấn/km × ' + i.cuLy + ' km'};
-  }
-  const b = (v.bac || []).filter(x => x.den > 0 && x.gia > 0).sort((x, y) => x.den - y.den).find(x => i.cuLy <= x.den);
-  if (!b) return {loi: 'cự ly ' + i.cuLy + ' km chưa có đơn giá bậc phù hợp'};
-  return {gia: b.gia, text: 'bậc đến ' + b.den + ' km, ' + fmt(b.gia) + ' đồng/tấn'};
+  if (!(v.donGiaKm > 0)) return {loi: 'thiếu đơn giá vận chuyển (đ/tấn/km)'};
+  return {gia: Math.round(v.donGiaKm * i.cuLy), text: fmt(v.donGiaKm) + ' đồng/tấn/km × ' + i.cuLy + ' km'};
 }
 // Đơn giá lương của một người: đ/công nếu theo ngày công, đ/tấn nếu theo sản lượng
 function rateOf(i, r) {
@@ -1812,31 +1811,23 @@ function panelLuong(rec) {
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số</button></div></form></div>';
 }
 
+const vcOptions = cur => {
+  const opts = [['coDinh', 'Đơn giá cố định (đồng/tấn)'], ['tanKm', 'Đơn giá tấn/km (đồng/tấn/km × cự ly)']];
+  const all = opts.some(o => o[0] === cur) ? opts : [...opts, [cur, '⚠ Theo bậc cự ly — không còn áp dụng, hãy chọn lại']];
+  return all.map(([v, l]) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + l + '</option>').join('');
+};
 function panelVc(rec) {
-  const i = rec.info, vc = i.vanChuyen || {}, tp = transportPrice(i);
+  const i = rec.info, vc = i.vanChuyen || {}, tp = transportPrice(i), cur = vc.mode || 'tanKm';
+  const show = m => cur === m ? '' : 'display:none';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng vận chuyển (chủ rừng trả bên vận chuyển)</h3>' +
-    '<p class="mut" style="margin-top:0">Cự ly vận chuyển của rừng: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> (nhập ở tab Thông tin rừng).</p>' +
+    '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> (nhập ở tab Thông tin rừng, chỉ cần khi tính theo tấn/km).</p>' +
     '<form id="vcForm" class="grid">' +
-    '<label style="grid-column:1/-1"><span>Cách tính</span><select name="vcMode">' +
-      '<option value="tanKm"' + (vc.mode !== 'tanDoan' && vc.mode !== 'coDinh' ? ' selected' : '') + '>Tấn/km: đơn giá × cự ly</option>' +
-      '<option value="tanDoan"' + (vc.mode === 'tanDoan' ? ' selected' : '') + '>Tấn theo bậc cự ly</option>' +
-      '<option value="coDinh"' + (vc.mode === 'coDinh' ? ' selected' : '') + '>Cố định (đ/tấn)</option></select></label>' +
-    '<label><span>Đơn giá (đ/tấn/km), dùng cho tấn/km</span><input name="vcKm" value="' + esc(vc.donGiaKm ?? '') + '"></label>' +
-    '<label><span>Đơn giá cố định (đ/tấn), dùng cho cố định</span><input name="vcCoDinh" value="' + esc(vc.coDinh ?? '') + '"></label>' +
+    '<label style="grid-column:1/-1"><span>Cách tính đơn giá vận chuyển</span><select name="vcMode">' + vcOptions(cur) + '</select></label>' +
+    '<label data-vcgrp="coDinh" style="' + show('coDinh') + '"><span>Đơn giá cố định (đồng/tấn)</span><input name="vcCoDinh" value="' + esc(vc.coDinh ?? '') + '"></label>' +
+    '<label data-vcgrp="tanKm" style="' + show('tanKm') + '"><span>Đơn giá tấn/km (đồng/tấn/km)</span><input name="vcKm" value="' + esc(vc.donGiaKm ?? '') + '"></label>' +
     '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
-    '<div style="grid-column:1/-1"><div class="mut">Bậc cự ly, dùng cho tấn theo bậc: cự ly không vượt “đến km” thì áp dụng đơn giá của bậc đó cho cả khối lượng.</div>' +
-      '<div id="bacList">' + (vc.bac || []).map(bacRowHtml).join('') + '</div>' +
-      '<button type="button" class="btn ghost sm" data-act="addBac">+ Thêm bậc</button></div>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số vận chuyển</button></div></form></div>';
-}
-
-function bacRowHtml(b) {
-  b = b || {};
-  return '<div class="bacRow" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:6px">' +
-    '<label>Đến cự ly (km)<input name="bac_den" value="' + esc(b.den ?? '') + '"></label>' +
-    '<label>Đơn giá (đ/tấn)<input name="bac_gia" value="' + esc(b.gia ?? '') + '"></label>' +
-    '<button type="button" class="btn danger sm" data-act="delBac">Xóa</button></div>';
 }
 function giayRowHtml(g) {
   g = g || {};
@@ -2104,13 +2095,12 @@ function readLuong(form) {
 }
 
 function readVc(form) {
-  const fd = new FormData(form);
+  const fd = new FormData(form), old = ((curForest() || {}).info || {}).vanChuyen || {};
   return {
     vanChuyen: {
-      mode: ['tanKm', 'tanDoan', 'coDinh'].includes(fd.get('vcMode')) ? fd.get('vcMode') : 'tanKm',
-      donGiaKm: toDec(fd.get('vcKm')), coDinh: toDec(fd.get('vcCoDinh')), tuNgay: trim(fd.get('vcTu')),
-      bac: [...form.querySelectorAll('.bacRow')].map(row => ({den: toDec(row.querySelector('[name=bac_den]').value), gia: toNum(row.querySelector('[name=bac_gia]').value)}))
-        .filter(b => b.den !== null || b.gia !== null)
+      ...old,   // giữ dữ liệu bậc cũ (không dùng nữa) để không mất dữ liệu
+      mode: ['tanKm', 'coDinh', 'tanDoan'].includes(fd.get('vcMode')) ? fd.get('vcMode') : 'tanKm',   // tanDoan chỉ còn khi hồ sơ cũ chưa chọn lại
+      donGiaKm: toDec(fd.get('vcKm')), coDinh: toDec(fd.get('vcCoDinh')), tuNgay: trim(fd.get('vcTu'))
     }
   };
 }
@@ -2147,7 +2137,6 @@ function saveVc(form) {
   const vc = info.vanChuyen, e = [];
   if (vc.donGiaKm === 'x') e.push('Đơn giá vận chuyển (đ/tấn/km) không phải là số');
   if (vc.coDinh === 'x') e.push('Đơn giá vận chuyển cố định không phải là số');
-  if (vc.bac.some(b => !(b.den > 0) || !(b.gia > 0))) e.push('Mỗi bậc cự ly cần có “đến km” và đơn giá lớn hơn 0');
   if (vc.tuNgay && !parseVN(vc.tuNgay)) e.push('ngày vận chuyển phải đúng dd/mm/yyyy');
   if (e.length) { formMsg(form, 'Chưa lưu: ' + e.join('; ')); return; }
   f.info = info;
@@ -2866,8 +2855,6 @@ document.addEventListener('click', async e => {
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
   if (act === 'addGiay') return addGiayRow();
-  if (act === 'addBac') return $('#bacList').insertAdjacentHTML('beforeend', bacRowHtml({}));
-  if (act === 'delBac') return el.closest('.bacRow').remove();
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'guide') return document.getElementById('guideBox').classList.add('on');
@@ -2908,6 +2895,10 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.name === 'vcMode' && t.form && t.form.id === 'vcForm') {
+    t.form.querySelectorAll('[data-vcgrp]').forEach(g => { g.style.display = g.dataset.vcgrp === t.value ? '' : 'none'; });
+    return;
+  }
   if ((t.name === 'hinhThucLuong' || t.name === 'moHinhKy') && t.form && t.form.id === 'luongForm') {
     const f = t.form.elements, direct = f.moHinhKy.value === 'tructiep';
     if (t.name === 'moHinhKy') { let cur = f.hinhThucLuong.value; if (!basisAllowed(direct, cur)) cur = 'sanluong'; f.hinhThucLuong.innerHTML = luongOptions(direct, cur); }

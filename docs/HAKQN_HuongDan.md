@@ -116,3 +116,9 @@ Luxe và Classic lấy nguyên từ HAK Enterprise Design System. Neutral và Ch
 - Giao khoán không chọn được “ngày công”, trực tiếp không chọn được “ha”; đổi hình thức hợp đồng thì ô chọn tự đổi về “theo tấn” nếu lựa chọn cũ không hợp lệ. Hồ sơ cũ đang ở tổ hợp không hợp lệ (ví dụ giao khoán + ngày công) bị checklist báo cần chọn lại.
 - **Giấy ủy quyền chỉ xuất được khi mọi công nhân từ đủ 18 tuổi** (Điều 18 Bộ luật Lao động 2019: nhóm người lao động từ đủ 18 tuổi ủy quyền cho một người trong nhóm; người được ủy quyền không được ủy quyền lại). Mẫu do phần mềm soạn, **cần người có chuyên môn pháp lý duyệt**: căn cứ được tra qua các trang tư vấn pháp luật, chưa đối chiếu văn bản gốc; Điều 18 áp dụng cho công việc theo mùa vụ hoặc có thời hạn dưới 12 tháng, phần mềm không tự kiểm tra điều kiện này.
 - **Thay đổi so với trước**: tiền khoán giao cho cả tổ không còn là “một đơn giá chung × toàn bộ khối lượng” mà là tổng theo từng vai trò; ô “Đơn giá khoán” ở Thông tin rừng đã bỏ (xem mục trên). Hồ sơ cũ chỉ có đơn giá ở Thông tin rừng: ô Tổ trưởng (đ/tấn) tự điền giá cũ.
+
+## Đơn giá vận chuyển: hai cách tính (đã chốt)
+Ở **tab Vận chuyển → Thông số hợp đồng vận chuyển**, chủ rừng trả bên vận chuyển theo **một trong hai** cách:
+1. **Đơn giá cố định** (đồng/tấn): một giá, không phụ thuộc cự ly.
+2. **Đơn giá tấn/km** (đồng/tấn/km): đơn giá × cự ly của rừng (nhập ở tab Thông tin rừng); thiếu cự ly thì báo thiếu.
+Chỉ hiện ô đơn giá của cách đang chọn. Tiền vận chuyển tính theo tấn giao tại nhà máy (theo phiếu cân) cho từng xe. **Cách “theo bậc cự ly” của bản cũ đã bỏ**: hồ sơ cũ còn chọn cách đó bị báo cần chọn lại ở checklist và chưa xuất được hợp đồng vận chuyển cho đến khi chọn lại; dữ liệu các bậc cũ được giữ nguyên trong hồ sơ, không bị xóa.
