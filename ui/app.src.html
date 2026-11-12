@@ -273,6 +273,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@JSZIP@@*/</script>
 <script>/*@@SF@@*/</script>
 <script>/*@@DATES@@*/</script>
+<script>/*@@NHAPLIEU@@*/</script>
 <script>/*@@MUAHANG@@*/</script>
 <script>/*@@LORUNG@@*/</script>
 <script>/*@@XLSXMAU@@*/</script>
@@ -790,7 +791,7 @@ function rungText(i) {
 }
 
 function gate(rec) {
-  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrors(rec.info)];
+  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrors(rec.info), ...HAKNhapLieu.kiemTra(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
   const nc = checkNC(rec);
   const dx = checkDX(rec);
   const vc = transportPrice(rec.info);
@@ -852,7 +853,7 @@ function runsXml(text, base) {
 }
 function paraXml(p) {
   const ind = p.ind || p.hang || p.indR ? '<w:ind w:left="' + (p.ind || 0) + '"' + (p.indR ? ' w:right="' + p.indR + '"' : '') + (p.hang ? ' w:hanging="' + p.hang + '"' : '') + '/>' : '';
-  return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + (p.bdb && docMode !== 'de' ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : '') +
+  return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + '<w:widowControl/>' + (p.bdb && docMode !== 'de' ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : '') +
     '<w:spacing w:before="' + p.before + '" w:after="' + p.after + '" w:line="276" w:lineRule="auto"/>' + ind +
     '<w:jc w:val="' + (docMode !== 'day' && p.al === 'both' ? 'left' : p.al) + '"/></w:pPr>' + runsXml(p.text, p) + '</w:p>';   // mẫu trống và in đè: canh trái để chữ không bị giãn khác nhau giữa hai bản
 }
@@ -916,7 +917,8 @@ function tidySign(blocks) {
 async function makeDocx(blocks, o = {}) {
   blocks = tidySign(blocks);
   const body = blocks.map(b => b.t === 'p' ? paraXml(b) : b.t === 'tbl' ? tblXml(b) :
-    b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '').join('') + '<w:p/>';
+    b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '').join('') +
+    (blocks.length && blocks[blocks.length - 1].t === 'tbl' ? '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>' : '');   // đoạn đệm bắt buộc sau bảng: thu nhỏ để không đẩy sang trang trắng
   const pg = o.landscape
     ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="850" w:right="567" w:bottom="850" w:left="1134" w:header="425" w:footer="425" w:gutter="0"/>'
     : '<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701" w:header="567" w:footer="567" w:gutter="0"/>';
@@ -1920,6 +1922,8 @@ function exportCheck(job) {
   if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || typeof i.cuLy !== 'number')) add('doi', 'Cự ly vận chuyển', typeof i.cuLy !== 'number' ? 'Cước tấn/km cần cự ly nhưng chưa nhập.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + i.cuLy + ' km). Phần mềm không tự sửa cự ly hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
+  HAKNhapLieu.kiemTra(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));
   // các mục checklist FSC còn lại chưa được xét ở trên
   const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo chức danh', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
   const goOf = lb => /Tọa độ|Giấy tờ pháp lý|Thời gian/.test(lb) ? {ftab: 'finfo'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo'};

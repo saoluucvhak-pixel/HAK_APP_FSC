@@ -701,6 +701,66 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDates = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
+<script>/* Rà mâu thuẫn và chồng lấn khi nhập liệu của một lô: ngày ở nhiều ô khác nhau, khoảng ngày đảo, ngày phiếu cân ngoài thời gian khai thác…
+ * Hàm thuần (không đọc giao diện/CSDL) để dùng chung cho màn "Kiểm tra trước khi xuất" và kiểm thử. Không tự sửa, chỉ báo.
+ * kind 'chan' = nội dung in ra sẽ sai/vô nghĩa (ngày không có thật, khoảng bị đảo); kind 'doi' = có mâu thuẫn cần người dùng đối chiếu. */
+(function (root) {
+  const D = (typeof module !== 'undefined' && module.exports) ? require('./dates.js') : root.HAKDates;
+  const NGAY_EXP = [['ngayKy', 'Ngày ký hợp đồng (Xuất hồ sơ)'], ['uqNgay', 'Giấy ủy quyền: ngày lập'], ['tuNgayTT', 'Bảng thanh toán tiền công: từ ngày'], ['denNgayTT', 'Bảng thanh toán tiền công: đến ngày'], ['ntNgay', 'Nghiệm thu, thanh lý: ngày lập'], ['pcNgay', 'Xác nhận khối lượng, thanh toán vận chuyển: ngày lập']];
+  const NGAY_INFO = [['tuNgay', 'Thời gian khai thác: từ ngày'], ['denNgay', 'Thời gian khai thác: đến ngày'], ['ngayBDLD', 'Hợp đồng lao động từ ngày'], ['ngayKyHopDong', 'Ngày ký hợp đồng (Thông tin chủ rừng)']];
+  const SO_EXP = [['soKT', 'số hợp đồng khai thác'], ['soVC', 'số hợp đồng vận chuyển'], ['uqSo', 'số giấy ủy quyền'], ['ntSo', 'số biên bản nghiệm thu'], ['pcSo', 'số biên bản xác nhận khối lượng']];
+  const s = v => String(v == null ? '' : v).trim();
+
+  function kiemTra(job) {
+    const items = [], i = job.info || {}, ex = job.exp || {}, pc = job.pc || [];
+    const add = (kind, nhom, text, ref, go) => items.push({kind, nhom, text, ref: ref || '', go: go || {ftab: 'xuat'}});
+    const vc = i.vanChuyen || {};
+    const k = v => D.key(v), has = v => s(v) !== '';
+    // 1. Ngày không có thật (in thẳng ra biểu mẫu)
+    const bad = new Set();
+    NGAY_INFO.concat([['vcTuNgay', 'Vận chuyển: từ ngày']]).forEach(([f, lb]) => {
+      const v = f === 'vcTuNgay' ? vc.tuNgay : i[f];
+      if (has(v) && !D.isValid(v)) { bad.add(f); add('chan', 'Ngày nhập sai', lb + ': ' + D.why(v), lb, {ftab: 'finfo'}); }
+    });
+    NGAY_EXP.forEach(([f, lb]) => { if (has(ex[f]) && !D.isValid(ex[f])) { bad.add(f); add('chan', 'Ngày nhập sai', lb + ': ' + D.why(ex[f]), lb, {ftab: 'xuat'}); } });
+    const ok = v => has(v) && D.isValid(v);
+    // 2. Khoảng ngày bị đảo
+    if (ok(i.tuNgay) && ok(i.denNgay) && k(i.tuNgay) > k(i.denNgay)) add('chan', 'Khoảng ngày bị đảo', 'Thời gian khai thác: từ ngày ' + i.tuNgay + ' sau đến ngày ' + i.denNgay + '.', 'Thời gian khai thác', {ftab: 'finfo'});
+    if (ok(ex.tuNgayTT) && ok(ex.denNgayTT) && k(ex.tuNgayTT) > k(ex.denNgayTT)) add('chan', 'Khoảng ngày bị đảo', 'Bảng thanh toán tiền công: từ ngày ' + ex.tuNgayTT + ' sau đến ngày ' + ex.denNgayTT + '.', 'Bảng thanh toán tiền công', {ftab: 'xuat'});
+    // 3. Cùng một ngày nhập ở hai nơi khác nhau
+    if (ok(ex.ngayKy) && ok(i.ngayKyHopDong) && k(ex.ngayKy) !== k(i.ngayKyHopDong))
+      add('doi', 'Một ngày nhập ở hai nơi', 'Ngày ký hợp đồng: Thông tin chủ rừng ghi ' + i.ngayKyHopDong + ' nhưng ô ở tab Xuất hồ sơ ghi ' + ex.ngayKy + '. Biểu mẫu dùng ' + ex.ngayKy + ' (ô Xuất hồ sơ được ưu tiên). Xóa một trong hai ô để tránh nhầm.', 'Ngày ký hợp đồng', {ftab: 'xuat'});
+    if (ok(i.ngayBDLD) && ok(i.tuNgay) && k(i.ngayBDLD) !== k(i.tuNgay) && !(ok(i.denNgay) && k(i.ngayBDLD) >= k(i.tuNgay) && k(i.ngayBDLD) <= k(i.denNgay)))
+      add('doi', 'Một ngày nhập ở hai nơi', 'Hợp đồng lao động từ ngày ' + i.ngayBDLD + ' nằm ngoài thời gian khai thác (' + i.tuNgay + (i.denNgay ? ' – ' + i.denNgay : '') + ').', 'Hợp đồng lao động', {ftab: 'finfo'});
+    if (ok(vc.tuNgay) && ok(i.tuNgay) && k(vc.tuNgay) < k(i.tuNgay)) add('doi', 'Một ngày nhập ở hai nơi', 'Vận chuyển từ ngày ' + vc.tuNgay + ' sớm hơn ngày bắt đầu khai thác ' + i.tuNgay + '.', 'Vận chuyển', {ftab: 'dx'});
+    // 4. Thứ tự các văn bản
+    const ky = ok(ex.ngayKy) ? ex.ngayKy : ok(i.ngayKyHopDong) ? i.ngayKyHopDong : '';
+    if (ky && ok(i.tuNgay) && k(ky) > k(i.tuNgay)) add('doi', 'Thứ tự ngày', 'Ngày ký hợp đồng ' + ky + ' sau ngày bắt đầu khai thác ' + i.tuNgay + '.', 'Ngày ký hợp đồng', {ftab: 'xuat'});
+    if (ky && ok(ex.ntNgay) && k(ex.ntNgay) < k(ky)) add('doi', 'Thứ tự ngày', 'Ngày lập biên bản nghiệm thu ' + ex.ntNgay + ' trước ngày ký hợp đồng ' + ky + '.', 'Nghiệm thu', {ftab: 'xuat'});
+    if (ok(ex.ntNgay) && ok(i.denNgay) && k(ex.ntNgay) < k(i.denNgay)) add('doi', 'Thứ tự ngày', 'Ngày lập biên bản nghiệm thu ' + ex.ntNgay + ' trước ngày kết thúc khai thác ' + i.denNgay + '.', 'Nghiệm thu', {ftab: 'xuat'});
+    const dates = pc.map(r => D.key(r.ngay)).filter(Boolean), last = dates.length ? Math.max(...dates) : 0, first = dates.length ? Math.min(...dates) : 0;
+    const f2 = n => { const d = String(n); return d.slice(6) + '/' + d.slice(4, 6) + '/' + d.slice(0, 4); };
+    if (last && ok(ex.pcNgay) && k(ex.pcNgay) < last) add('doi', 'Thứ tự ngày', 'Ngày lập biên bản xác nhận khối lượng ' + ex.pcNgay + ' trước phiếu cân cuối cùng (' + f2(last) + ').', 'Xác nhận khối lượng', {ftab: 'xuat'});
+    if (ok(ex.tuNgayTT) && ok(i.tuNgay) && k(ex.tuNgayTT) < k(i.tuNgay) || ok(ex.denNgayTT) && ok(i.denNgay) && k(ex.denNgayTT) > k(i.denNgay))
+      add('doi', 'Thứ tự ngày', 'Kỳ thanh toán tiền công (' + (ex.tuNgayTT || '…') + ' – ' + (ex.denNgayTT || '…') + ') vượt ra ngoài thời gian khai thác (' + (i.tuNgay || '…') + ' – ' + (i.denNgay || '…') + ').', 'Bảng thanh toán tiền công', {ftab: 'xuat'});
+    // 5. Ngày phiếu cân ngoài thời gian: gộp một dòng, không lặp theo từng phiếu
+    const lo = ok(vc.tuNgay) ? k(vc.tuNgay) : ok(i.tuNgay) ? k(i.tuNgay) : 0;
+    if (lo && first && first < lo) {
+      const n = pc.filter(r => D.key(r.ngay) && D.key(r.ngay) < lo);
+      add('doi', 'Phiếu cân ngoài thời gian', n.length + ' phiếu cân có ngày trước ' + f2(lo) + ' (ngày bắt đầu ' + (ok(vc.tuNgay) ? 'vận chuyển' : 'khai thác') + '), ví dụ phiếu ' + (n[0].soPhieu || '(không số)') + ' ngày ' + n[0].ngay + '.', 'Phiếu cân', {ftab: 'dx', focus: 'pc'});
+    }
+    // 6. Số hợp đồng đầy đủ có năm lệch với ngày của chính văn bản
+    SO_EXP.forEach(([f, lb]) => {
+      const m = /\/(\d{4})(?!\d)/.exec(s(ex[f]));
+      const ngay = f === 'ntSo' ? ex.ntNgay : f === 'pcSo' ? ex.pcNgay : f === 'uqSo' ? (ex.uqNgay || ky) : ky;
+      if (m && ok(ngay) && D.parse(ngay).y !== +m[1]) add('doi', 'Năm trong số khác năm của ngày', 'Số “' + ex[f] + '” (' + lb + ') có năm ' + m[1] + ' nhưng ngày của văn bản là ' + ngay + '.', lb, {ftab: 'xuat'});
+    });
+    return items;
+  }
+  const api = {kiemTra, NGAY_EXP, NGAY_INFO};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNhapLieu = api;
+})(typeof self !== 'undefined' ? self : this);
+</script>
 <script>'use strict';
 /* Danh mục "Công ty mua hàng" và điểm đến vận chuyển. Thuần dữ liệu, không phụ thuộc DOM/Electron: dùng ở giao diện (nhúng khi build) và kiểm thử Node.
  *
@@ -2131,7 +2191,7 @@ function rungText(i) {
 }
 
 function gate(rec) {
-  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrors(rec.info)];
+  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrors(rec.info), ...HAKNhapLieu.kiemTra(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
   const nc = checkNC(rec);
   const dx = checkDX(rec);
   const vc = transportPrice(rec.info);
@@ -2193,7 +2253,7 @@ function runsXml(text, base) {
 }
 function paraXml(p) {
   const ind = p.ind || p.hang || p.indR ? '<w:ind w:left="' + (p.ind || 0) + '"' + (p.indR ? ' w:right="' + p.indR + '"' : '') + (p.hang ? ' w:hanging="' + p.hang + '"' : '') + '/>' : '';
-  return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + (p.bdb && docMode !== 'de' ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : '') +
+  return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + '<w:widowControl/>' + (p.bdb && docMode !== 'de' ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : '') +
     '<w:spacing w:before="' + p.before + '" w:after="' + p.after + '" w:line="276" w:lineRule="auto"/>' + ind +
     '<w:jc w:val="' + (docMode !== 'day' && p.al === 'both' ? 'left' : p.al) + '"/></w:pPr>' + runsXml(p.text, p) + '</w:p>';   // mẫu trống và in đè: canh trái để chữ không bị giãn khác nhau giữa hai bản
 }
@@ -2257,7 +2317,8 @@ function tidySign(blocks) {
 async function makeDocx(blocks, o = {}) {
   blocks = tidySign(blocks);
   const body = blocks.map(b => b.t === 'p' ? paraXml(b) : b.t === 'tbl' ? tblXml(b) :
-    b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '').join('') + '<w:p/>';
+    b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '').join('') +
+    (blocks.length && blocks[blocks.length - 1].t === 'tbl' ? '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>' : '');   // đoạn đệm bắt buộc sau bảng: thu nhỏ để không đẩy sang trang trắng
   const pg = o.landscape
     ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="850" w:right="567" w:bottom="850" w:left="1134" w:header="425" w:footer="425" w:gutter="0"/>'
     : '<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701" w:header="567" w:footer="567" w:gutter="0"/>';
@@ -3261,6 +3322,8 @@ function exportCheck(job) {
   if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || typeof i.cuLy !== 'number')) add('doi', 'Cự ly vận chuyển', typeof i.cuLy !== 'number' ? 'Cước tấn/km cần cự ly nhưng chưa nhập.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + i.cuLy + ' km). Phần mềm không tự sửa cự ly hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
+  HAKNhapLieu.kiemTra(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));
   // các mục checklist FSC còn lại chưa được xét ở trên
   const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo chức danh', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
   const goOf = lb => /Tọa độ|Giấy tờ pháp lý|Thời gian/.test(lb) ? {ftab: 'finfo'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo'};
