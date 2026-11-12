@@ -20,10 +20,14 @@ async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(f
   await w.click('[data-open=own1]');
   ok('thông tin chủ rừng: không còn ô Ngày sinh', !(await w.$('#infoForm [name=ngaySinh]')) && !/Ngày sinh/.test(await w.innerText('#infoForm')));
   ok('thông tin chủ rừng: có ô Số hợp đồng và Ngày ký hợp đồng', !!(await w.$('#infoForm [name=soHopDong]')) && !!(await w.$('#infoForm [name=ngayKyHopDong]')));
+  ok('thông tin chủ rừng: có ô Số điện thoại', !!(await w.$('#infoForm [name=sdt]')));
+  await w.fill('#infoForm [name=sdt]', 'abc'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(300);
+  ok('số điện thoại sai dạng bị từ chối, nêu lý do', /Số điện thoại/.test(await w.innerText('#infoForm')), await w.innerText('#infoForm'));
+  await w.fill('#infoForm [name=sdt]', '0905 123 456');
   await w.fill('#infoForm [name=soHopDong]', 'HD-2026/015'); await w.fill('#infoForm [name=ngayKyHopDong]', '31/02/2026'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(300);
   ok('ngày ký hợp đồng không có thật (31/02/2026) bị từ chối, nêu lý do', /Ngày ký hợp đồng/.test(await w.innerText('#infoForm')) && !(await dbOf()).info.soHopDong, await w.innerText('#infoForm'));
   await w.fill('#infoForm [name=ngayKyHopDong]', '02/10/2026'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(600);
-  const o = await dbOf(); ok('lưu số hợp đồng và ngày ký; chủ rừng không cần ngày sinh để hợp lệ', o.info.soHopDong === 'HD-2026/015' && o.info.ngayKyHopDong === '02/10/2026');
+  const o = await dbOf(); ok('lưu số hợp đồng và ngày ký; chủ rừng không cần ngày sinh để hợp lệ', o.info.soHopDong === 'HD-2026/015' && o.info.ngayKyHopDong === '02/10/2026' && o.info.sdt === '0905 123 456');
   ok('hồ sơ cũ: ngày sinh đã lưu không bị xóa khỏi dữ liệu', o.info.ngaySinh === '06/10/1967');
   // chủ rừng mới: lưu được mà không có ngày sinh
   await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name=ma]', 'CR-02'); await w.selectOption('#infoForm [name=danhXung]', 'Bà'); await w.fill('#infoForm [name=ten]', 'TRẦN THỊ HAI'); await w.fill('#infoForm [name=cccd]', '049067005460'); await w.fill('#infoForm [name=ngayCap]', '01/01/2021'); await w.fill('#infoForm [name=noiCap]', 'CA'); await w.fill('#infoForm [name=diaChi]', 'Đà Nẵng'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(500);
@@ -34,6 +38,7 @@ async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(f
   await w.click('button[data-act=dl][data-kind=gk]'); let file = null; for (let i = 0; i < 80 && !file; i++) { file = fs.existsSync(out) && fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); if (!file) await w.waitForTimeout(100); } await w.waitForTimeout(300);
   const t = await docText(path.join(out, file));
   ok('BM-01: ghi “Căn cứ Hợp đồng số HD-2026/015 ký ngày 02/10/2026”', t.includes('Căn cứ Hợp đồng số HD-2026/015 ký ngày 02/10/2026'), t.slice(0, 600));
+  ok('BM-01: khối bên chủ rừng in số điện thoại', t.includes('Điện thoại: 0905 123 456'));
   ok('BM-01: ngày ký mặc định lấy từ ngày ký hợp đồng của chủ rừng', t.includes('ngày 02/10/2026'));
   ok('BM-01: bên A (chủ rừng) không còn dòng “Sinh năm”', !/BÊN CHỦ RỪNG \(BÊN A\)[^\n]{0,80}Sinh năm/.test(t) && !t.includes('06/10/1967'));
   // sản lượng dự kiến tự nhảy ngay khi gõ diện tích và định mức (chưa cần bấm Lưu)

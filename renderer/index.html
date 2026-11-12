@@ -261,7 +261,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <h3>1. Quy trình 8 bước</h3>
 <ol>
 <li>Khai <b>🏢 Công ty mua hàng</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
-<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>🔎 Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
+<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>🔎 Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số điện thoại</b>, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
 <li>Tạo <b>Lô rừng</b>: mã lô, địa điểm, tọa độ, diện tích, thời gian khai thác, giấy tờ pháp lý.</li>
 <li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo chức danh, rồi nạp Excel nhân công.</li>
 <li>Tab <b>Vận chuyển</b>: chọn cách tính cước, nạp Excel xe, nạp Excel phiếu cân, chọn <b>địa chỉ giao hàng</b>.</li>
@@ -1868,6 +1868,7 @@ function infoErrors(info, selfId) {
   else if (Object.entries(db.rs).some(([id, r]) => id !== selfId && r.info.ma === info.ma)) e.push('Mã chủ rừng đã tồn tại');
   if (!info.ten) e.push('Thiếu Họ và tên chủ rừng');
   if (!['Ông', 'Bà'].includes(info.danhXung)) e.push('Chọn danh xưng Ông/Bà');
+  if (trim(info.sdt) && !/^[0-9 .()+\-]{8,20}$/.test(trim(info.sdt))) e.push('Số điện thoại “' + info.sdt + '” không đúng dạng (8–20 ký tự gồm số, dấu cách, + - . ( ))');
   if (trim(info.ngayKyHopDong) && !HAKDates.isValid(info.ngayKyHopDong)) e.push('Ngày ký hợp đồng “' + info.ngayKyHopDong + '”: ' + HAKDates.why(info.ngayKyHopDong));
   if (!isCccd(info.cccd)) e.push('CCCD phải đủ 12 chữ số');
   if (!info.ngayCap) e.push('Thiếu Ngày cấp CCCD');
@@ -2199,7 +2200,8 @@ function partyBlock(label, p, fullName, o = {}) {   // o.noSinh: không in năm 
     P('**' + label + ': ' + upper(fullName) + '**', {after: 60}),
     ...(o.noSinh ? [] : [P('Sinh năm: ' + (p.ngaySinh || '…………'), {ind: 360, after: 40})]),
     P('Căn cước công dân số: ' + (p.cccd || '…………') + ', cấp ngày: ' + (p.ngayCap || '…………') + ', nơi cấp: ' + (p.noiCap || '…………'), {ind: 360, after: 40}),
-    P('Địa chỉ thường trú: ' + (p.diaChi || '…………'), {ind: 360, after: 160})
+    P('Địa chỉ thường trú: ' + (p.diaChi || '…………'), {ind: 360, after: o.noSinh && p.sdt ? 40 : 160}),
+    ...(o.noSinh && p.sdt ? [P('Điện thoại: ' + p.sdt, {ind: 360, after: 160})] : [])   // chủ rừng có khai số điện thoại thì in
   ];
 }
 function signTable(l, r) {
@@ -3264,6 +3266,7 @@ const INFO_FIELDS = [
   ['cccd', 'CCCD', 'text', true],
   ['ngayCap', 'Ngày cấp CCCD', 'text', true],
   ['noiCap', 'Nơi cấp CCCD', 'text', true],
+  ['sdt', 'Số điện thoại', 'text', false],
   ['diaChi', 'Địa chỉ thường trú', 'wide', true]
 ];
 function panelInfo(rec) {
@@ -3656,7 +3659,7 @@ function saveInfo(form) {
   const info = {
     ma: trim(fd.get('ma')), danhXung: trim(fd.get('danhXung')), ten: trim(fd.get('ten')),
     soHopDong: trim(fd.get('soHopDong')), ngayKyHopDong: trim(fd.get('ngayKyHopDong')), cccd: normCccd(fd.get('cccd')), ngayCap: trim(fd.get('ngayCap')),
-    noiCap: trim(fd.get('noiCap')), diaChi: trim(fd.get('diaChi'))
+    noiCap: trim(fd.get('noiCap')), diaChi: trim(fd.get('diaChi')), sdt: trim(fd.get('sdt'))
   };
   const errs = infoErrors(info, rec.id);
   if (errs.length) { formMsg(form, 'Chưa lưu: ' + errs.join('; ')); return; }

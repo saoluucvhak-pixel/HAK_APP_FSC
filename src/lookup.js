@@ -439,7 +439,7 @@ function ownerOf(cccd, R, T, K) {
   } else if (T && T['ThuongTru']) f.push(field('diaChi', 'Địa chỉ thường trú', clean(T['ThuongTru']), src('ToaDoRung_QC', T._row, 'ThuongTru')));
   const ref = [];
   if (R && R['Địa chỉ hiện tại']) ref.push(field('diaChiHienTai', 'Địa chỉ hiện tại', clean(R['Địa chỉ hiện tại']), src('HoSoRung_QC', R._row, 'Địa chỉ hiện tại')));
-  if (R && clean(R['SĐT']) && clean(R['SĐT']) !== '0') ref.push(field('sdt', 'SĐT', clean(R['SĐT']), src('HoSoRung_QC', R._row, 'SĐT')));
+  if (R && clean(R['SĐT']) && clean(R['SĐT']) !== '0') f.push(field('sdt', 'Số điện thoại', clean(R['SĐT']), src('HoSoRung_QC', R._row, 'SĐT')));   // thành trường của chủ rừng (trước đây chỉ để tham chiếu)
   return {code: cccd, fields: f, ref};
 }
 
