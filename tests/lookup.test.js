@@ -205,3 +205,23 @@ test('cha–con: gom kết quả theo hợp đồng (CCCD + mã hợp đồng), 
   const kỳ = L.search('', 'HoSoKeo_QC', {group: 'contract', from: '01/03/2026'}); assert.ok(kỳ.groups.every(g => g.phieu >= 1) && kỳ.groups.every(g => g.matched.HoSoKeo_QC === g.phieu));
   assert.strictEqual(L.search('', '', {group: 'contract', limit: 2}).groups.length, 2);
 });
+
+test('bảng tính khác (sao chép, đổi tên tab) nhưng cấu trúc cột giống: đọc được và ghi chú tab được nhận', () => {
+  // khác chữ hoa/thường, khoảng trắng, dấu gạch
+  const a = fresh().L.load(build('names:hosokeo_qc |HoSoRung-QC|ToaDoRung QC'), 'google', 'sheet khac');
+  assert.ok(a.ok, JSON.stringify(a.errors)); assert.deepStrictEqual(a.counts, {HoSoKeo_QC: 8, HoSoRung_QC: 5, ToaDoRung_QC: 7});
+  assert.strictEqual(a.notes.length, 3); assert.match(a.notes[0], /được nhận là “HoSoKeo_QC”/);
+  // tên khác hẳn nhưng đủ cột bắt buộc
+  const L = fresh().L, b = L.load(build('names:Sheet1|Sheet2|Sheet3'), 'google', 'sheet khac');
+  assert.ok(b.ok, JSON.stringify(b.errors)); assert.deepStrictEqual(b.counts, {HoSoKeo_QC: 8, HoSoRung_QC: 5, ToaDoRung_QC: 7});
+  assert.ok(b.notes.every(n => /đủ các cột bắt buộc/.test(n)), JSON.stringify(b.notes));
+  assert.strictEqual(L.status().last.ok, true); assert.strictEqual(L.status().last.notes.length, 3);
+  assert.strictEqual(L.search('', '').total, 20, 'dữ liệu đọc đúng như bản gốc');
+  // đúng tên: không có ghi chú
+  assert.deepStrictEqual(fresh().L.load(build(), 'excel', 'x').notes, []);
+});
+test('thiếu tab thật sự: báo rõ file đang có những tab nào', () => {
+  const r = fresh().L.load(build('missingTab'), 'google', 'x');
+  assert.strictEqual(r.ok, false); assert.match(r.errors[0], /Thiếu tab "ToaDoRung_QC"/); assert.ok(r.errors.some(e => /File đang có các tab: “HoSoKeo_QC”, “HoSoRung_QC”/.test(e)), JSON.stringify(r.errors));
+  const w = fresh().L.load(build('names:Sheet1|Sheet2|Sheet3').constructor === Buffer ? Buffer.from('x') : Buffer.from('x'), 'google', 'x'); assert.strictEqual(w.ok, false);
+});

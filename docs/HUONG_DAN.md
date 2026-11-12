@@ -116,7 +116,7 @@ Nút **🔎 Tra cứu Google Sheets** (hoặc **Lấy dữ liệu từ Google Sh
 **Lấy bản tra cứu**
 - **Đồng bộ ngay**: tải bảng tính theo liên kết đã lưu, chỉ đọc. Bảng tính để chế độ “Ai có liên kết đều xem được” thì không cần đăng nhập; nếu giới hạn quyền xem, bấm **🔑 Đăng nhập Google (chỉ đọc)** bằng tài khoản được chia sẻ (cách cấu hình: `docs/GOOGLE_OAUTH.md`).
 - **Nhập bản Excel**: chọn `HoSoKeo_QC.xlsx` hoặc file cùng cấu trúc khi **không có mạng**.
-- Phần mềm kiểm tra đủ 3 tab `HoSoKeo_QC`, `HoSoRung_QC`, `ToaDoRung_QC` và các cột bắt buộc. Thiếu hoặc đổi tên thì báo rõ tab và cột và **giữ bản tra cứu cũ**. Bản tra cứu lưu trên máy nên **tra cứu offline** vẫn dùng được.
+- Phần mềm kiểm tra đủ 3 tab `HoSoKeo_QC`, `HoSoRung_QC`, `ToaDoRung_QC` và các cột bắt buộc. **Tên tab được so khoan dung**: khác chữ hoa/thường, dấu, khoảng trắng hay gạch vẫn nhận; tab tên khác hẳn (ví dụ bảng tính sao chép, đặt lại tên) vẫn nhận **nếu có đủ các cột bắt buộc** của tab đó, và phần mềm ghi chú tab nào được nhận là tab nào. Thiếu thật sự thì báo rõ tab thiếu, **liệt kê các tab file đang có** và **giữ bản tra cứu cũ**. Bản tra cứu lưu trên máy nên **tra cứu offline** vẫn dùng được.
 
 **Tìm và ghi vào hồ sơ**
 1. Gõ mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã hợp đồng, địa chỉ, số phiếu cân hoặc biển số → **Tìm**. Cú pháp nâng cao: nhiều từ = phải có đủ; `"cụm từ"`; `-từ` để loại trừ; `cccd:` `hd:` `rung:` `phieu:` `bien:` `ten:` `dc:` để tìm đúng trường.
@@ -150,6 +150,11 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 **In hồ sơ làm hai đợt khi chưa xong khai thác** (đã có nhân công, vận chuyển nhưng chưa có phiếu cân, chưa nghiệm thu): ở tab **Xuất hồ sơ → Tất cả** có hai nút.
 - **Đợt 1 – hồ sơ làm ngay (.zip)**: tất cả biểu mẫu **trừ** BM-08 bảng thanh toán tiền công, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển và BM-14 nghiệm thu, thanh lý. In và ký đợt này trước.
 - **Đợt 2 – sau khi xong rừng (.zip)**: **chỉ** BM-08, BM-09, BM-10 và BM-14. Khi rừng xong: nạp phiếu cân ở tab Vận chuyển, nhập khối lượng khai thác thực tế ở Thông tin rừng, nhập thông số nghiệm thu rồi tải đợt 2. Chưa đủ phiếu cân hợp lệ thì đợt 2 chỉ có BM-08 và BM-14, phần mềm báo rõ thiếu BM-09, BM-10; nạp phiếu cân xong tải lại.
+**In mẫu đợt 2 để trống số, rồi in đè số lên mẫu đã in** (khi cần in sẵn cả BM-08, BM-09, BM-10, BM-14 trước khi có số liệu): ở tab **Xuất hồ sơ → Tất cả**, khung “In mẫu đợt 2 để trống số, rồi in đè số sau”.
+1. **Bước 1 – Mẫu trống**: tải và in. Số biên bản, ngày lập, khối lượng, tiền để **chấm** hoặc **ô trống**; BM-09 có số dòng chuyến cố định (ô “Số dòng chuyến của BM-09”, mặc định 12); BM-10 có một dòng cho mỗi xe trong đội xe (biển số in sẵn). Làm được ngay khi đã có nhân công và đội xe, không cần phiếu cân.
+2. **Bước 2 – Chỉ phần số để in đè**: khi có số liệu (phiếu cân, khối lượng thực tế, ngày lập, số tiền đã thanh toán), tải bản này và in lên **đúng tờ mẫu đã in**. Chữ cố định, đường kẻ, nền và chân trang được ẩn (không tốn mực), chỉ các con số hiện ra đúng chỗ trên mẫu: số biên bản, ngày, khối lượng, số chuyến, thành tiền, tổng cộng, bằng chữ.
+3. Để số khớp vị trí: in cả hai bản **cùng khổ A4, tỉ lệ 100% (không “Fit to page”), cùng lề, cùng máy in**, cho tờ vào đúng chiều như lần in đầu; in thử một tờ nháp trước. Dùng **cùng một giá trị “Số dòng chuyến”** cho cả hai lần; nếu một xe có nhiều chuyến hơn số dòng này, phần mềm cảnh báo, hãy tăng số dòng rồi in lại mẫu trống.
+4. Hai bản có bố cục giống hệt nhau (đã kiểm tra: cùng số đoạn, dòng bảng, số trang và vị trí các dòng chữ). Hai nhóm xe trùng tên người ký vẫn ra hai file riêng.
 - Mỗi biểu mẫu là một file Word riêng, nên bộ hồ sơ đã in ở đợt 1 chỉ cần **bổ sung hoặc thay** các biểu mẫu của đợt 2. Hai đợt gộp lại đúng bằng nút “Tải toàn bộ hồ sơ”. BM-08 tính theo khối lượng thực tế đã nhập, chưa nhập thì theo sản lượng dự kiến, nên chỉ nên in BM-08 ở đợt 2.
 
 

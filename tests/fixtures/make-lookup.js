@@ -9,6 +9,8 @@ const H_TD = ['ID_RUNG', 'ID_GPS', 'Mã rừng', 'Số hợp đồng', 'Ngày k�
 const keo = (i, kh, hd, so, ngay, xe, kg, tan, gia, ten, dia) => [i, kh, hd, null, so, ngay, xe, null, 'Gỗ Tròn Keo Lai Controlled Wood', null, null, xe, kg + 4000, 4000, kg, tan, gia, Math.round(kg * gia / 1000), 'QS', null, i, '000000' + i + '/BKLS', ten, dia, null, null, null, null, null];
 
 function build(variant) {
+  /* variant 'names:a|b|c' đặt tên ba tab khác đi (cấu trúc cột giữ nguyên) để thử bảng tính sao chép hoặc đổi tên tab */
+  const NM = typeof variant === 'string' && variant.startsWith('names:') ? variant.slice(6).split('|') : ['HoSoKeo_QC', 'HoSoRung_QC', 'ToaDoRung_QC'];
   const K = [H_KEO,
     keo(1, '049000000001', '101', '1001/2026/NK', D(2026, 1, 22), '92C-12345', 2840, 2.84, 1500000, 'NGUYỄN VĂN AN', 'Thôn Phú Cường, xã Quế Sơn Trung'),
     keo(2, '049000000001', '101', '1002/2026/NK', D(2026, 1, 23), 'XE CN NAM', 4440, 4.44, 1500000, 'NGUYỄN VĂN AN', 'Thôn Phú Cường, xã Quế Sơn Trung'),
@@ -34,9 +36,9 @@ function build(variant) {
     ['HAKQN06', '20260320-001', '20260320_001', 401, D(2026, 3, 20), 'LÊ VĂN ĐÔNG', 49000000004, 'Xã Đại Lộc', 'Xã Đại Lộc', 15000, 'Giấy chứng nhận QSDĐ', '555QSDĐ', D(2010, 1, 1), 15.8, 108.0, '', '']];
   if (variant === 'missingCol') T[0] = T[0].map(h => h === 'DienTich_m2' ? 'DienTich' : h);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(K, {cellDates: true}), 'HoSoKeo_QC');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(R, {cellDates: true}), 'HoSoRung_QC');
-  if (variant !== 'missingTab') XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(T, {cellDates: true}), 'ToaDoRung_QC');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(K, {cellDates: true}), NM[0]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(R, {cellDates: true}), NM[1]);
+  if (variant !== 'missingTab') XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(T, {cellDates: true}), NM[2]);
   return XLSX.write(wb, {type: 'buffer', bookType: 'xlsx', cellDates: false});
 }
 module.exports = {build};

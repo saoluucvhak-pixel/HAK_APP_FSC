@@ -242,6 +242,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <tr><td>3. Vận chuyển</td><td>BM-04 HĐVC, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển</td></tr>
 <tr><td>4. FSC, giám sát</td><td>BM-11 cam kết nguồn gốc, BM-12 cam kết lao động, BM-13 kiểm tra hiện trường, BM-17 thẩm định, BM-18 nhật ký khai thác, BM-19 phổ biến chính sách FSC</td></tr></table>
 <p><b>In hai đợt khi chưa xong rừng</b>: ở tab Xuất hồ sơ → Tất cả, <i>Đợt 1</i> gồm hồ sơ làm ngay (trừ BM-08, BM-09, BM-10, BM-14); khi rừng xong, nạp phiếu cân, nhập khối lượng thực tế rồi tải <i>Đợt 2</i> chỉ gồm BM-08, BM-09, BM-10, BM-14 để bổ sung vào bộ đã in.</p>
+<p><b>In mẫu đợt 2 để trống số rồi in đè số</b>: ở tab Xuất hồ sơ → Tất cả, <i>Bước 1 – Mẫu trống</i> in sẵn BM-08, BM-09, BM-10, BM-14 với phần số để chấm; khi có số liệu, <i>Bước 2 – Chỉ phần số</i> in lên đúng tờ đã in (chữ cố định và đường kẻ được ẩn). In cùng khổ A4, tỉ lệ 100%, cùng lề, cùng máy in, cùng giá trị “Số dòng chuyến”; in thử một tờ nháp trước.</p>
 <p><b>Số hợp đồng trên biểu mẫu</b>: nhập số đầy đủ (ví dụ <code>015/2025-KT</code>) thì được giữ nguyên; chỉ nhập phần số (<code>015</code>) thì phần mềm ghép năm lấy từ <b>ngày ký của chính hợp đồng đó</b>; thiếu ngày ký thì năm để trống và khung <i>Số hợp đồng đầy đủ sẽ in</i> ở tab Xuất hồ sơ nêu cần bổ sung ngày nào. BM-01, BM-14, BM-20 luôn cùng một số hợp đồng khai thác.</p>
 <p><b>📊 Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (5 mẫu: điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
 <h3>9. Sao lưu và khôi phục</h3>
@@ -816,26 +817,49 @@ const P = (text, o = {}) => ({t: 'p', text: text ?? '', al: o.al || 'both', b: !
 const T = (widths, rows, o = {}) => ({t: 'tbl', widths, rows, borders: o.borders !== false, head: !!o.head, headRows: o.headRows, sz: o.sz, rowH: o.rowH, al: o.al, alignCols: o.alignCols, keep: !!o.keep, pad: o.pad});
 const bl = text => P('- ' + text, {ind: 360});
 
+/* ===== Chế độ in biểu mẫu: 'day' (đầy đủ) | 'trong' (mẫu trống số: các giá trị chưa có để chấm hoặc ô trống) | 'de' (CHỈ phần số, in đè lên mẫu 'trong' đã in).
+ * Giá trị chưa biết khi lập mẫu (số biên bản, ngày lập, khối lượng, tiền…) được bọc bằng V(giá trị, độ rộng chấm, chữ thay thế). Chữ cố định không bọc.
+ *  - day: in giá trị.   - trong: in chấm (hoặc chữ thay thế, hoặc để trống ở ô bảng).
+ *  - de: bố cục GIỮ NGUYÊN như 'trong': chữ cố định, đường kẻ, nền đổi sang trắng/ẩn (không tốn mực), chỉ giá trị in màu đen, kèm đệm trắng cho đúng độ rộng của phần chấm
+ *    nên các chữ phía sau không bị lệch dòng. Hai bản phải in cùng khổ giấy, tỉ lệ 100%, cùng lề. */
+let docMode = 'day';
+const VS = '', VW = '', VB = '', VE = '';
+const V = (text, w, blank) => VS + (w || 0) + VW + (blank || '') + VB + (text == null ? '' : text) + VE;
+const emw = str => [...String(str)].reduce((a, c) => a + (c === '…' ? 1 : /\d/.test(c) ? 0.5 : /[.,:;\/ \-()]/.test(c) ? 0.27 : /[A-ZĐ]/.test(c) ? 0.7 : 0.5), 0);
 function runsXml(text, base) {
   const out = [];
+  const run = (seg, bold, white) => '<w:r><w:rPr>' + (bold ? '<w:b/>' : '') + (base.i ? '<w:i/>' : '') + (white ? '<w:color w:val="FFFFFF"/>' : '') +
+    '<w:sz w:val="' + base.sz + '"/><w:szCs w:val="' + base.sz + '"/></w:rPr><w:t xml:space="preserve">' + xe(seg) + '</w:t></w:r>';
   String(text).split('**').forEach((seg, i) => {
     if (seg === '') return;
-    const bold = (i % 2 === 1) || base.b;
-    out.push('<w:r><w:rPr>' + (bold ? '<w:b/>' : '') + (base.i ? '<w:i/>' : '') +
-      '<w:sz w:val="' + base.sz + '"/><w:szCs w:val="' + base.sz + '"/></w:rPr><w:t xml:space="preserve">' + xe(seg) + '</w:t></w:r>');
+    const bold = (i % 2 === 1) || base.b, de = docMode === 'de', re = /(\d+)([^]*)([^]*)/g;
+    let last = 0, m;
+    while ((m = re.exec(seg))) {
+      if (m.index > last) out.push(run(seg.slice(last, m.index), bold, de));        // chữ cố định: in đè thì trắng
+      const blank = m[2] || '…'.repeat(+m[1]), val = m[3];
+      if (docMode === 'day') { if (val !== '') out.push(run(val, bold, false)); }
+      else if (docMode === 'trong') { if (blank) out.push(run(blank, bold, false)); }
+      else {
+        if (val !== '') out.push(run(val, bold, false));
+        const diff = emw(blank) - emw(val);
+        if (diff > 0.3) { const n = Math.floor(diff), sp = Math.round((diff - n) / 0.27); out.push(run('…'.repeat(n) + ' '.repeat(sp), bold, true)); }   // đệm trắng cho đủ độ rộng phần chấm của mẫu trống
+      }
+      last = re.lastIndex;
+    }
+    if (last < seg.length) out.push(run(seg.slice(last), bold, de));
   });
   return out.join('');
 }
 function paraXml(p) {
   const ind = p.ind || p.hang || p.indR ? '<w:ind w:left="' + (p.ind || 0) + '"' + (p.indR ? ' w:right="' + p.indR + '"' : '') + (p.hang ? ' w:hanging="' + p.hang + '"' : '') + '/>' : '';
-  return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + (p.bdb ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : '') +
+  return '<w:p><w:pPr>' + (p.keep ? '<w:keepNext/>' : '') + (p.bdb && docMode !== 'de' ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : '') +
     '<w:spacing w:before="' + p.before + '" w:after="' + p.after + '" w:line="276" w:lineRule="auto"/>' + ind +
-    '<w:jc w:val="' + p.al + '"/></w:pPr>' + runsXml(p.text, p) + '</w:p>';
+    '<w:jc w:val="' + (docMode !== 'day' && p.al === 'both' ? 'left' : p.al) + '"/></w:pPr>' + runsXml(p.text, p) + '</w:p>';   // mẫu trống và in đè: canh trái để chữ không bị giãn khác nhau giữa hai bản
 }
 function tblXml(t) {
   const total = t.widths.reduce((a, b) => a + b, 0);
   const sides = ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'];
-  const bd = sides.map(k => t.borders ? '<w:' + k + ' w:val="single" w:sz="' + (/^inside/.test(k) ? 4 : 8) + '" w:space="0" w:color="000000"/>' : '<w:' + k + ' w:val="nil"/>').join('');
+  const bd = sides.map(k => t.borders && docMode !== 'de' ? '<w:' + k + ' w:val="single" w:sz="' + (/^inside/.test(k) ? 4 : 8) + '" w:space="0" w:color="000000"/>' : '<w:' + k + ' w:val="nil"/>').join('');
   const grid = t.widths.map(w => '<w:gridCol w:w="' + w + '"/>').join('');
   const nHead = t.headRows || (t.head ? 1 : 0);
   const sz = t.sz || 22;
@@ -851,7 +875,7 @@ function tblXml(t) {
       const paras = lines.map(x => paraXml({text: x ?? '', al, b: head, i: !!obj.i, sz, after: 0, before: 0, keep: !!t.keep && ri < t.rows.length - 1})).join('');
       col += span;
       return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (span > 1 ? '<w:gridSpan w:val="' + span + '"/>' : '') +
-        (head ? '<w:shd w:val="clear" w:color="auto" w:fill="E7E6E6"/>' : '') + '<w:vAlign w:val="center"/></w:tcPr>' + paras + '</w:tc>';
+        (head && docMode !== 'de' ? '<w:shd w:val="clear" w:color="auto" w:fill="E7E6E6"/>' : '') + '<w:vAlign w:val="center"/></w:tcPr>' + paras + '</w:tc>';
     }).join('');
     const h = (!head && t.rowH) ? '<w:trHeight w:val="' + t.rowH + '" w:hRule="atLeast"/>' : '';
     return '<w:tr><w:trPr><w:cantSplit/>' + h + (head ? '<w:tblHeader/>' : '') + '</w:trPr>' + cells + '</w:tr>';
@@ -867,10 +891,11 @@ const DOCRELS = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relatio
 const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="' + W + '"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="26"/><w:szCs w:val="26"/><w:lang w:val="vi-VN"/></w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>';
 
 function footerXml(text, width) {
-  const run = (t, extra) => '<w:r><w:rPr><w:i/><w:color w:val="595959"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>' + (extra || '') + '<w:t xml:space="preserve">' + xe(t) + '</w:t></w:r>';
-  const fld = ins => '<w:fldSimple w:instr=" ' + ins + ' "><w:r><w:rPr><w:i/><w:color w:val="595959"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>';
+  const FC = docMode === 'de' ? 'FFFFFF' : '595959';   // in đè: chân trang cũng ẩn
+  const run = (t, extra) => '<w:r><w:rPr><w:i/><w:color w:val="' + FC + '"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>' + (extra || '') + '<w:t xml:space="preserve">' + xe(t) + '</w:t></w:r>';
+  const fld = ins => '<w:fldSimple w:instr=" ' + ins + ' "><w:r><w:rPr><w:i/><w:color w:val="' + FC + '"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>';
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="' + W + '"><w:p><w:pPr>' +
-    '<w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="7F7F7F"/></w:pBdr><w:tabs><w:tab w:val="right" w:pos="' + width + '"/></w:tabs>' +
+    (docMode === 'de' ? '' : '<w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="7F7F7F"/></w:pBdr>') + '<w:tabs><w:tab w:val="right" w:pos="' + width + '"/></w:tabs>' +
     '<w:spacing w:before="0" w:after="0"/></w:pPr>' + run(text) + '<w:r><w:tab/></w:r>' + run('Trang ') + fld('PAGE') + run('/') + fld('NUMPAGES') + '</w:p></w:ftr>';
 }
 async function makeDocx(blocks, o = {}) {
@@ -1241,11 +1266,11 @@ function docNghiemThu(rec, ex) {
   return [
     ...TITLE_HEAD(),
     P('**BIÊN BẢN NGHIỆM THU VÀ THANH LÝ KHAI THÁC**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Số: ' + ex._so.nt.so, {al: 'center', after: 200}),
+    P('Số: ' + V(ex._so.nt.so, 18), {al: 'center', after: 200}),
     P(LAW_BLDS),
     P('- Căn cứ ' + hd + ';'),
     P('- Căn cứ kết quả khai thác thực tế tại rừng.'),
-    P('Hôm nay, ' + ngayLine({ngayKy: ex.ntNgay}) + ' tại ' + (rs.diaDiem || '…………') + ', chúng tôi gồm có:', {after: 140}),
+    P('Hôm nay, ' + V(ngayLine({ngayKy: ex.ntNgay}), 0, HAKHopDong.ngayTrong()) + ' tại ' + (rs.diaDiem || '…………') + ', chúng tôi gồm có:', {after: 140}),
     ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName, {noSinh: true}),
     ...partyBlock(direct ? 'ĐẠI DIỆN TỔ KHAI THÁC (BÊN B)' : 'BÊN KHAI THÁC (BÊN B)', tt, ttName),
     P('Hai bên cùng tiến hành nghiệm thu và thanh lý với các nội dung sau:', {keep: true}),
@@ -1253,14 +1278,16 @@ function docNghiemThu(rec, ex) {
     P('Mã rừng: ' + dot(rs.maRung, 4) + '. Địa điểm: ' + dot(rs.diaDiem, 8) + rungText(rs) + '.', {ind: 360}),
     P('Thời gian khai thác: từ ngày ' + (rs.tuNgay || '…/…/……') + ' đến ngày ' + (rs.denNgay || '…/…/……') + '.', {ind: 360}),
     P('**Điều 2: Nghiệm thu khối lượng**', {keep: true}),
-    P('2.1. Khối lượng khai thác được nghiệm thu: **' + (vol ? fmtT(kg) : '………') + ' tấn**' + (vol ? ' (' + vol.src + ')' : '') + '.', {ind: 360}),
-    ...(pcKg ? [P('2.2. Khối lượng đã vận chuyển về nhà máy theo phiếu cân: ' + fmtT(pcKg) + ' tấn (' + (rec.pc || []).length + ' chuyến).', {ind: 360})] : []),
-    P((pcKg ? '2.3' : '2.2') + '. Hiện trường đã được thu dọn; khai thác đúng ranh giới, thời gian; không phát sinh tranh chấp, tai nạn lao động hay sự cố môi trường.', {ind: 360}),
+    P('2.1. Khối lượng khai thác được nghiệm thu: **' + V(vol ? fmtT(kg) : '………', 14) + ' tấn**' + (ex._mode === 'day' ? V(vol ? ' (' + vol.src + ')' : '', 0, '') : '') + '.', {ind: 360}),
+    ...((pcKg || ex._mode !== 'day') ? [P('2.2. Khối lượng đã vận chuyển về nhà máy theo phiếu cân: ' + V(pcKg ? fmtT(pcKg) : '', 14) + ' tấn (' + V(pcKg ? String((rec.pc || []).length) : '', 4) + ' chuyến).', {ind: 360})] : []),
+    P(((pcKg || ex._mode !== 'day') ? '2.3' : '2.2') + '. Hiện trường đã được thu dọn; khai thác đúng ranh giới, thời gian; không phát sinh tranh chấp, tai nạn lao động hay sự cố môi trường.', {ind: 360}),
     P('**Điều 3: Thanh toán và thanh lý**', {keep: true}),
     ...(direct
       ? [P('3.1. Tiền công của người lao động được thanh toán theo hợp đồng lao động và Bảng thanh toán tiền công kèm theo.', {ind: 360})]
-      : [P('3.1. Đơn giá khoán theo vai trò (' + bs.unit + '): ' + roleRates(rec).join('; ') + '. ' + (bs.qty === 'ha' ? 'Diện tích' : 'Khối lượng') + ' chia đều ' + pr.N + ' người. Thành tiền: **' + (tien ? fmt(tien) : '………') + ' đồng**' + (tien ? ' (' + moneyWords(tien).replace(/\.$/, '') + ')' : '') + '.', {ind: 360}),
-         P('3.2. Bên A đã thanh toán trước: ' + (daTT ? fmt(daTT) + ' đồng' : '………………… đồng') + '. Số tiền còn lại bên A thanh toán cho bên B: **' + (tien && ex.ntDaTT ? fmt(Math.max(tien - daTT, 0)) : '…………………') + ' đồng**.', {ind: 360})]),
+      : [P('3.1. Đơn giá khoán theo vai trò (' + bs.unit + '): ' + roleRates(rec).join('; ') + '. ' + (bs.qty === 'ha' ? 'Diện tích' : 'Khối lượng') + ' chia đều ' + pr.N + ' người. Thành tiền: **' + V(tien ? fmt(tien) : '………', 18) + ' đồng**' +
+           (ex._mode === 'day' ? (tien ? ' (' + moneyWords(tien).replace(/\.$/, '') + ')' : '') : '') + '.', {ind: 360}),
+         ...(ex._mode === 'day' ? [] : [P('Bằng chữ: ' + V(tien ? moneyWords(tien) : '', 0, '…'.repeat(64)), {ind: 360, i: true})]),
+         P('3.2. Bên A đã thanh toán trước: ' + V(daTT ? fmt(daTT) : '…………………', 18) + ' đồng. Số tiền còn lại bên A thanh toán cho bên B: **' + V(tien && ex.ntDaTT ? fmt(Math.max(tien - daTT, 0)) : '…………………', 18) + ' đồng**.', {ind: 360})]),
     P('**Điều 4: Cam kết**', {keep: true}),
     P('Sau khi hai bên hoàn tất nghĩa vụ nêu trên, ' + hd + ' được thanh lý. Hai bên xác nhận không còn tranh chấp, khiếu nại nào khác về việc khai thác tại rừng nêu trên.', {ind: 360}),
     P('Biên bản được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị như nhau và có hiệu lực kể từ ngày ký.', {ind: 360}),
@@ -1368,28 +1395,29 @@ function docKiemTraHienTruong(rec, ex) {
 function docXNKLVC(rec, ex, g) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tr = tripsOf(rec, g), kg = totalKg(tr);
   const hdNo = ex._so.vc.so;
-  const d0 = tr.length ? tr[0].ngay : '……', d1 = tr.length ? tr[tr.length - 1].ngay : '……';
-  const noiGiao = ex.vcDiemDen || tr.map(r => r.noiGiao).find(Boolean) || '………………';   // điểm đến theo hồ sơ rừng; cột “Nơi giao” từng phiếu giữ nguyên dữ liệu nguồn
+  const d0 = V(tr.length ? tr[0].ngay : '……', 0, '…/…/……'), d1 = V(tr.length ? tr[tr.length - 1].ngay : '……', 0, '…/…/……');
+  const noiGiao = ex.vcDiemDen || (ex._mode === 'day' ? tr.map(r => r.noiGiao).find(Boolean) : '') || '………………';   // mẫu trống và in đè: chữ cố định phải giống nhau, không lấy từ phiếu cân   // điểm đến theo hồ sơ rừng; cột “Nơi giao” từng phiếu giữ nguyên dữ liệu nguồn
   return [
     ...TITLE_HEAD(),
     P('**BIÊN BẢN XÁC NHẬN KHỐI LƯỢNG VẬN CHUYỂN**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('Số: ' + ex._so.xn.so, {al: 'center', after: 0}),
+    P('Số: ' + V(ex._so.xn.so, 18), {al: 'center', after: 0}),
     P('(Kèm theo Hợp đồng vận chuyển số ' + hdNo + ')', {al: 'center', i: true, after: 200}),
     P(LAW_BLDS),
     P('- Căn cứ Hợp đồng vận chuyển gỗ keo số ' + hdNo + ' giữa hai bên;'),
     P('- Căn cứ các phiếu cân do nhà máy tiếp nhận cấp cho từng chuyến hàng.'),
-    P('Hôm nay, ' + ngayLine({ngayKy: ex.pcNgay}) + ', chúng tôi gồm có:', {after: 160}),
+    P('Hôm nay, ' + V(ngayLine({ngayKy: ex.pcNgay}), 0, HAKHopDong.ngayTrong()) + ', chúng tôi gồm có:', {after: 160}),
     P('**BÊN CHỦ RỪNG (BÊN A): ' + upper(rsName) + '** — CCCD số ' + (rs.cccd || '…………') + ', địa chỉ thường trú: ' + (rs.diaChi || '…………') + '.', {after: 80}),
     P('**BÊN VẬN CHUYỂN (BÊN B): ' + upper(g.ten) + '** — CCCD số ' + (g.cccd || '…………') + ', địa chỉ thường trú: ' + (g.diaChi || '…………') + '.', {after: 120}),
     P('Hai bên cùng xác nhận khối lượng gỗ keo rừng trồng đã vận chuyển từ rừng tại ' + rs.diaDiem + (rungRef(rs) ? ' (' + rungRef(rs) + ')' : '') + ' về ' + noiGiao +
       ', từ ngày ' + d0 + ' đến ngày ' + d1 + ', căn cứ phiếu cân nhà máy (khối lượng giao tại nhà máy), cụ thể như sau:', {after: 120}),
     T([650, 1450, 1650, 2000, 2000, 1605],
       [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Nơi giao (nhà máy)', 'Khối lượng (tấn)'],
-        ...tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))]),
-        [{v: '**Tổng cộng (' + tr.length + ' chuyến)**', span: 5}, '**' + fmtT(kg) + '**']],
+        ...(ex._mode === 'day' ? tr.map((r, i) => [String(i + 1), r.ngay, r.bienSo, r.soPhieu, r.noiGiao || '', fmtT(Math.round(r.kl * 1000))])
+          : Array.from({length: Math.max(ex._dong, tr.length)}, (_, i) => { const r = tr[i]; return [String(i + 1), V(r ? r.ngay : ''), V(r ? r.bienSo : ''), V(r ? r.soPhieu : ''), V(r ? (r.noiGiao || '') : ''), V(r ? fmtT(Math.round(r.kl * 1000)) : '')]; })),   // in đè: số dòng cố định để dòng tổng cộng nằm đúng chỗ của mẫu trống
+        [{v: '**Tổng cộng (' + V(tr.length ? String(tr.length) : '', 4) + ' chuyến)**', span: 5}, '**' + V(tr.length ? fmtT(kg) : '') + '**']],
       {head: true, borders: true, sz: 20, alignCols: ['center', 'center', 'center', 'center', 'left', 'right']}),
     P('', {after: 80}),
-    P('Tổng khối lượng xác nhận: **' + fmtT(kg) + ' tấn** (' + tr.length + ' chuyến). Khối lượng này là căn cứ để thanh toán tiền vận chuyển theo Hợp đồng nêu trên.', {before: 80}),
+    P('Tổng khối lượng xác nhận: **' + V(tr.length ? fmtT(kg) : '………', 14) + ' tấn** (' + V(tr.length ? String(tr.length) : '…', 4) + ' chuyến). Khối lượng này là căn cứ để thanh toán tiền vận chuyển theo Hợp đồng nêu trên.', {before: 80}),
     P('Biên bản được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị như nhau. Hai bên không có ý kiến khác về khối lượng đã xác nhận.'),
     P('', {after: 120}),
     signTable(['ĐẠI DIỆN BÊN A', '(Ký, ghi rõ họ tên)', rsName], ['ĐẠI DIỆN BÊN B', '(Ký, ghi rõ họ tên)', g.ten])
@@ -1398,11 +1426,11 @@ function docXNKLVC(rec, ex, g) {
 function docTTVC(rec, ex, g) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), py = payVC(rec, g), tp = transportPrice(rs);
   const hdNo = ex._so.vc.so;
-  const tr = tripsOf(rec, g), d0 = tr.length ? tr[0].ngay : '……', d1 = tr.length ? tr[tr.length - 1].ngay : '……';
+  const tr = tripsOf(rec, g), d0 = V(tr.length ? tr[0].ngay : '……', 0, '…/…/……'), d1 = V(tr.length ? tr[tr.length - 1].ngay : '……', 0, '…/…/……');
   return [
     ...TITLE_HEAD(),
     P('**BẢNG THANH TOÁN TIỀN VẬN CHUYỂN**', {al: 'center', sz: 28, before: 120, after: 60}),
-    P('(Kèm theo Hợp đồng vận chuyển số ' + hdNo + ' và Biên bản xác nhận khối lượng vận chuyển số ' + ex._so.xn.so + ')', {al: 'center', i: true, after: 200}),
+    P('(Kèm theo Hợp đồng vận chuyển số ' + hdNo + ' và Biên bản xác nhận khối lượng vận chuyển số ' + V(ex._so.xn.so, 16) + ')', {al: 'center', i: true, after: 200}),
     P('**Bên trả tiền (Bên A): ' + upper(rsName) + '**', {after: 40}),
     P('Địa chỉ: ' + (rs.diaChi || '…………') + ' · CCCD số: ' + (rs.cccd || '…………'), {ind: 360, after: 100}),
     P('**Bên nhận tiền (Bên B): ' + upper(g.ten) + '**', {after: 40}),
@@ -1412,14 +1440,15 @@ function docTTVC(rec, ex, g) {
     P('Đơn giá: **' + fmt(g.donGia) + ' đồng/tấn** (' + tp.text + '), tính theo khối lượng giao tại nhà máy theo phiếu cân.', {after: 140}),
     T([650, 2100, 1300, 1700, 1700, 1905],
       [['STT', 'Biển kiểm soát', 'Số chuyến', 'Khối lượng (tấn)', 'Đơn giá (đồng/tấn)', 'Thành tiền (đồng)'],
-        ...py.rows.map((r, i) => [String(i + 1), r.bienSo, String(r.n), fmtT(r.kg), fmt(g.donGia), fmt(r.tien)]),
-        [{v: '**Tổng cộng**', span: 2}, '**' + py.n + '**', '**' + fmtT(py.kg) + '**', '', '**' + fmt(py.tien) + '**']],
+        ...(ex._mode === 'day' ? py.rows.map((r, i) => [String(i + 1), r.bienSo, String(r.n), fmtT(r.kg), fmt(g.donGia), fmt(r.tien)])
+          : g.xe.map((x, i) => { const r = py.rows.find(y => y.bienSo === x.bienSo); return [String(i + 1), x.bienSo, V(r ? String(r.n) : ''), V(r ? fmtT(r.kg) : ''), fmt(g.donGia), V(r ? fmt(r.tien) : '')]; })),   // in đè: một dòng cho mỗi xe trong đội xe, giống mẫu trống
+        [{v: '**Tổng cộng**', span: 2}, '**' + V(py.n ? String(py.n) : '') + '**', '**' + V(py.n ? fmtT(py.kg) : '') + '**', '', '**' + V(py.n ? fmt(py.tien) : '') + '**']],
       {head: true, borders: true, sz: 20, alignCols: ['center', 'center', 'center', 'right', 'right', 'right']}),
     P('', {after: 80}),
-    P('Tổng số tiền thanh toán: **' + fmt(py.tien) + ' đồng**.', {before: 80, after: 40}),
-    P('Bằng chữ: ' + moneyWords(py.tien), {i: true}),
+    P('Tổng số tiền thanh toán: **' + V(py.n ? fmt(py.tien) : '………', 16) + ' đồng**.', {before: 80, after: 40}),
+    P('Bằng chữ: ' + V(moneyWords(py.tien), 0, '…'.repeat(64)), {i: true}),
     P('Các khoản thuế, phí (nếu có) được thực hiện theo quy định của pháp luật hiện hành.'),
-    P(ngayLine({ngayKy: ex.pcNgay}).replace(/^ngày/, 'Đà Nẵng, ngày'), {al: 'right', before: 160, after: 120}),
+    P(V(ngayLine({ngayKy: ex.pcNgay}).replace(/^ngày/, 'Đà Nẵng, ngày'), 0, 'Đà Nẵng, ' + HAKHopDong.ngayTrong()), {al: 'right', before: 160, after: 120}),
     T([3118, 3118, 3119], [
       ['**NGƯỜI LẬP BẢNG**', '**ĐẠI DIỆN BÊN A**', '**ĐẠI DIỆN BÊN B**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
@@ -1590,7 +1619,18 @@ function buildFiles(rec, kind) {
   if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
   ex._so = HAKHopDong.numbers(ex);                                                // MỘT quy tắc số hợp đồng cho BM-01, BM-04, BM-09, BM-10, BM-14, BM-20 (src/hopdong.js)
   const s = slug(rec.info.ten);
-  const files = [];
+  const files = [], used = new Set();
+  /* Hai người ký trùng tên (khác CCCD) không được ghi đè file của nhau trong ZIP: thêm hậu tố _2, _3… */
+  files.push = f => { let q = f.path, k = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + k++ + '.docx'); used.add(q); f.path = q; return Array.prototype.push.call(files, f); };
+  ex._mode = kind === 'trong2' ? 'trong' : kind === 'de2' ? 'de' : 'day';          // chế độ in của đợt 2: mẫu trống số / chỉ phần số để in đè
+  ex._dong = Math.min(40, Math.max(1, parseInt(ex.pcDong, 10) || 12));             // số dòng chuyến cố định của BM-09 khi in mẫu trống / in đè
+  if (ex._mode !== 'day') {   // đợt 2 dạng "mẫu trống" và "in đè": cùng tập file, cùng bố cục: BM-08, BM-09, BM-10, BM-14
+    files.push({path: '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(rec, ex), land: true});
+    files.push({path: '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(rec, ex)});
+    groupsDX(rec).forEach(g => files.push({path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}));
+    groupsDX(rec).forEach(g => files.push({path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}));
+    return files;
+  }
   /* In làm HAI ĐỢT khi chưa xong khai thác: 'dau' = hồ sơ làm được ngay (hợp đồng, lao động, vận chuyển, FSC...), 'cuoi' = phần chỉ làm được khi xong rừng (tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10, nghiệm thu BM-14); 'all' = tất cả một lần */
   const PHAN_CUOI = ['tc', 'nttl', 'xnvc', 'ttvc'], dau = kind === 'all' || kind === 'dau';
   if ((kind === 'gk' || dau) && !isDirect(rec.info)) files.push({path: '01_HD_Giao_khoan_' + s + '.docx', blocks: docGiaoKhoan(rec, ex)});
@@ -1631,13 +1671,13 @@ const docOpts = (f, rec) => ({landscape: f.land,
 function docTienCong(rec, ex) {
   const rs = rec.info, tt = rec.nc.find(isTT);
   const pr = payRows(rec, ex), plan = pr.plan, ngc = plan.ngc, ha = plan.basis === 'ha', N = pr.N, each = pr.each, sum = pr.sum, bs = basisOf(rs);
-  const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, (!ngc && each != null) ? fmtTan(each) : '', x.rate ? fmt(x.rate) : '',
-    ngc && plan.cong != null ? String(plan.cong) : '', x.tien != null ? fmt(x.tien) : '', x.tien != null ? fmt(x.tien) : '', '']);
-  if (sum > 0) rows.push(['', '**TỔNG CỘNG**', '', '', '', '', fmt(sum), fmt(sum), '']);
-  const from = plan.tu || '……/……/……', to = plan.den || '……/……/……';
+  const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, V((!ngc && each != null) ? fmtTan(each) : ''), x.rate ? fmt(x.rate) : '',
+    V(ngc && plan.cong != null ? String(plan.cong) : ''), V(x.tien != null ? fmt(x.tien) : ''), V(x.tien != null ? fmt(x.tien) : ''), '']);
+  if (sum > 0 || ex._mode !== 'day') rows.push(['', '**TỔNG CỘNG**', '', '', '', '', V(sum > 0 ? fmt(sum) : ''), V(sum > 0 ? fmt(sum) : ''), '']);
+  const from = V(plan.tu || '……/……/……', 0, '……/……/……'), to = V(plan.den || '……/……/……', 0, '……/……/……');
   const info = ngc
-    ? (plan.cong != null ? 'Số ngày công: ' + plan.cong + ' công (không tính Chủ nhật).' : '')
-    : (plan.vol ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + fmtTan(plan.vol.v) + ' ' + bs.qty + ' (' + plan.vol.src + '), chia đều ' + N + ' người: ' + fmtTan(each) + ' ' + bs.qty + '/người.' : '');
+    ? ((plan.cong != null || ex._mode !== 'day') ? 'Số ngày công: ' + V(plan.cong != null ? String(plan.cong) : '', 6) + ' công (không tính Chủ nhật).' : '')
+    : ((plan.vol || ex._mode !== 'day') ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + V(plan.vol ? fmtTan(plan.vol.v) : '', 10) + ' ' + bs.qty + (ex._mode === 'day' ? V(plan.vol ? ' (' + plan.vol.src + ')' : '', 0, '') : '') + ', chia đều ' + N + ' người: ' + V(each != null ? fmtTan(each) : '', 10) + ' ' + bs.qty + '/người.' : '');
   return [
     P('**BẢNG THANH TOÁN TIỀN NHÂN CÔNG KHAI THÁC RỪNG ' + upper(personName(rs.danhXung, rs.ten)) + '**', {al: 'center', sz: 26, before: 60, after: 40}),
     P('(Địa chỉ: ' + rs.diaDiem + ')', {al: 'center', after: 60}),
@@ -1699,20 +1739,28 @@ async function exportKind(kind, idx) {
   const rec = curRec();
   if (!rec) return;
   const g = gate(rec);
-  const ok = {gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD}[kind];
+  const ok = {gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD, trong2: g.canBHLD && g.canHDVC, de2: g.canBHLD && g.canHDVC}[kind];
   if (!ok) { note('Hồ sơ còn lỗi hoặc thiếu dữ liệu, chưa xuất. Xem tab Xuất hồ sơ.', 'err'); return; }
-  const files = buildFiles(rec, kind);
-  const pick = idx != null ? files.filter((f, i) => i === idx) : files;
-  if (pick.length === 1) {
-    const f = pick[0];
-    download(await makeDocx(f.blocks, docOpts(f, rec)), f.path.split('/').pop());
-    return;
-  }
-  const z = new JSZip();
-  for (const f of pick) z.file(f.path, await makeDocx(f.blocks, docOpts(f, rec)));
-  const blob = await z.generateAsync({type: 'blob'});
-  download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung'}[kind] || kind) + '.zip');
-  if (kind === 'cuoi' && !g.canPC) note('Đợt 2 đã tải, nhưng CHƯA có BM-09 (xác nhận khối lượng) và BM-10 (thanh toán vận chuyển) vì chưa đủ phiếu cân hợp lệ. Nạp phiếu cân ở tab Vận chuyển rồi tải đợt 2 lần nữa.', 'warn');
+  docMode = kind === 'trong2' ? 'trong' : kind === 'de2' ? 'de' : 'day';   // chế độ in cho cả lần tạo file
+  try {
+    const files = buildFiles(rec, kind);
+    const pick = idx != null ? files.filter((f, i) => i === idx) : files;
+    if (pick.length === 1) {
+      const f = pick[0];
+      download(await makeDocx(f.blocks, docOpts(f, rec)), f.path.split('/').pop());
+      return;
+    }
+    const z = new JSZip();
+    for (const f of pick) z.file(f.path, await makeDocx(f.blocks, docOpts(f, rec)));
+    const blob = await z.generateAsync({type: 'blob'});
+    download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung', trong2: 'dot2_MAU_TRONG_in_truoc', de2: 'dot2_CHI_PHAN_SO_in_de'}[kind] || kind) + '.zip');
+    if (kind === 'cuoi' && !g.canPC) note('Đợt 2 đã tải, nhưng CHƯA có BM-09 (xác nhận khối lượng) và BM-10 (thanh toán vận chuyển) vì chưa đủ phiếu cân hợp lệ. Nạp phiếu cân ở tab Vận chuyển rồi tải đợt 2 lần nữa.', 'warn');
+    if (kind === 'de2') {
+      const nTrip = groupsDX(rec).map(x => tripsOf(rec, x).length), nDong = Math.min(40, Math.max(1, parseInt((rec.exp || {}).pcDong, 10) || 12));
+      if (!g.canPC) note('Đã tải bản CHỈ PHẦN SỐ, nhưng chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có số để in đè. Nạp phiếu cân rồi tải lại.', 'warn');
+      else if (nTrip.some(n => n > nDong)) note('Có xe/nhóm xe nhiều chuyến hơn số dòng cố định của BM-09 (' + nDong + '). Dòng thừa sẽ làm lệch bố cục so với mẫu đã in: tăng “Số dòng chuyến” rồi in lại mẫu trống và bản in đè.', 'warn');
+    }
+  } finally { docMode = 'day'; }
 }
 
 /* ========== Trang tổng quan ========== */
@@ -2234,6 +2282,10 @@ function panelXuat(rec) {
     '<div class="card"><h3 style="margin-top:0">In làm hai đợt khi chưa xong khai thác</h3><p class="mut" style="margin:0 0 8px">Chưa có phiếu cân hoặc chưa nghiệm thu thì in <b>đợt 1</b> trước; khi rừng xong, cập nhật phiếu cân và khối lượng thực tế rồi in <b>đợt 2</b> để bổ sung đúng các biểu mẫu còn thiếu (mỗi biểu mẫu là một file Word riêng nên thay hoặc chèn vào bộ hồ sơ đã in rất dễ).</p>' +
       '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('⬇ Tải đợt 1', 'dau', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>' +
       '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') + '</div></div>' + btn('⬇ Tải đợt 2', 'cuoi', null, g.canBHLD) + '</div></div>' +
+    '<div class="card"><h3 style="margin-top:0">In mẫu đợt 2 để trống số, rồi in đè số sau</h3><p class="mut" style="margin:0 0 8px">Dùng khi cần in sẵn cả BM-08, BM-09, BM-10, BM-14 trước khi có số liệu. <b>Bước 1</b>: tải và in <b>mẫu trống</b> (số biên bản, ngày lập, khối lượng, tiền để chấm hoặc ô trống). <b>Bước 2</b>: khi có số liệu, tải <b>chỉ phần số</b> và in lên <b>đúng tờ mẫu đã in</b> (cùng khổ A4, tỉ lệ 100%, cùng máy in, cho tờ vào đúng chiều như lần in đầu): chữ cố định và đường kẻ được ẩn, chỉ các con số hiện ra đúng chỗ. In thử trước một tờ giấy nháp. BM-09 dùng số dòng cố định cho các chuyến để dòng tổng cộng nằm đúng chỗ.</p>' +
+      '<label style="display:inline-flex;gap:8px;align-items:center;margin-bottom:8px">Số dòng chuyến của BM-09 (mẫu trống và in đè phải dùng cùng một số) <input data-exp="pcDong" value="' + esc(ex.pcDong || '') + '" placeholder="12" style="width:70px"></label>' +
+      '<div class="docrow"><div><b>Bước 1 – Mẫu trống (.zip)</b><div class="mut">BM-08, BM-09, BM-10, BM-14 với phần số để chấm hoặc để trống. Làm được ngay khi đã có nhân công và đội xe.</div></div>' + btn('⬇ Tải mẫu trống', 'trong2', null, g.canBHLD && g.canHDVC) + '</div>' +
+      '<div class="docrow"><div><b>Bước 2 – Chỉ phần số để in đè (.zip)</b><div class="mut">Cùng bốn biểu mẫu nhưng chỉ in các con số, đúng vị trí trên mẫu đã in.' + (g.canPC ? '' : ' <b>Cần phiếu cân hợp lệ để có số cho BM-09 và BM-10.</b>') + '</div></div>' + btn('⬇ Tải phần số để in đè', 'de2', null, g.canBHLD && g.canHDVC) + '</div></div>' +
     '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung.</div></div>' + btn('⬇ Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>';
 }
 
@@ -2776,7 +2828,7 @@ function lkStatusHtml() {
   return '<div class="card" style="margin-bottom:10px"><div class="row" style="justify-content:space-between">' +
     '<div><b>Bản tra cứu đang dùng:</b> ' + (a ? (a.source === 'google' ? 'Google Sheets' : 'File Excel “' + esc(a.detail) + '”') + ' · cập nhật thành công lúc <b>' + fmtDT(a.loadedAt) + '</b> · ' + Object.entries(a.counts).map(([k, v]) => esc(k) + ': ' + fmt(v)).join(' · ') : '<span class="pill err">chưa có — bấm Đồng bộ ngay hoặc Nhập bản Excel</span>') +
     '<br><span class="mut">Kết nối: ' + (online ? 'có mạng' : 'đang ngoại tuyến (vẫn tra cứu được bản đã lưu)') +
-    (l ? ' · Lần cập nhật gần nhất (' + fmtDT(l.at) + '): ' + (l.ok ? 'thành công' : '<span style="color:var(--err)">lỗi — ' + esc(l.error) + '</span>') : '') + '</span></div>' +
+    (l ? ' · Lần cập nhật gần nhất (' + fmtDT(l.at) + '): ' + (l.ok ? 'thành công' + ((l.notes || []).length ? ' <span style="color:var(--warn,#a16207)">· ' + l.notes.map(esc).join('; ') + '</span>' : '') : '<span style="color:var(--err)">lỗi — ' + esc(l.error) + '</span>') : '') + '</span></div>' +
     '<div class="row"><button class="btn sm" data-act="lkSync"' + (lk.busy ? ' disabled' : '') + '>⟳ Đồng bộ ngay</button><button class="btn ghost sm" data-act="lkExcel"' + (lk.busy ? ' disabled' : '') + '>⬆ Nhập bản Excel</button></div></div>' +
     lkGoogleHtml() + '<details style="margin-top:6px"><summary class="mut">Liên kết Google Sheets (chỉ đọc, bảng tính để “Ai có liên kết đều xem được”)</summary><div class="row" style="margin-top:6px"><input id="lkLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '"><button class="btn ghost sm" data-act="lkSetLink">Lưu liên kết</button></div></details>' +
     (lk.busy ? '<div class="msg warn">' + esc(lk.busy) + '</div>' : '') + (lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + '</div>';
