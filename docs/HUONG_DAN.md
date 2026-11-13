@@ -269,6 +269,12 @@ Hai mẫu trong nút **Báo cáo**, xuất **Word** hoặc **Excel**:
 - **Danh sách lao động theo lô**: tổng hợp từng lô (số lao động, tổ trưởng, công nhân khai thác, công nhân cưa, vị trí khác, số người dưới 18 tuổi) và danh sách chi tiết (họ tên, vai trò, chức danh, ngày sinh, tuổi, CCCD, địa chỉ, ngày và nơi cấp CCCD, đơn giá theo cơ sở tính của lô). Tuổi tính tại ngày bắt đầu khai thác của lô (không có thì ngày lập báo cáo). Có ghi chú dưới 18 tuổi, lô chưa có tổ trưởng, và mục “Hồ sơ lao động cần bổ sung” khi thiếu ngày sinh hoặc CCCD không đủ 12 số.
 - **Danh sách xe vận chuyển theo lô**: tổng hợp từng lô (số xe, số chuyến, khối lượng) và danh sách xe (biển số, loại xe, chủ xe, người ký hợp đồng vận chuyển, tên tài xế, CCCD người ký, SĐT, hạn bảo hiểm, hạn GPLX, số chuyến và khối lượng theo phiếu cân; lọc kỳ theo ngày cân). Biển số có trong phiếu cân nhưng chưa có trong danh sách xe được liệt kê ở mục III.
 
+**Bộ lọc thông minh cho mẫu báo cáo.** Trong nút **Báo cáo**, mọi mẫu có thanh lọc: **Tìm nhanh** (gõ rồi Enter; không phân biệt dấu và hoa thường, nhiều từ = phải có đủ), **Lô rừng**, **Chủ rừng**, khoảng ngày cân, và điều kiện riêng của từng mẫu:
+- **Danh sách lao động**: chức danh, vai trò, chỉ người dưới 18 tuổi, chỉ hồ sơ cần bổ sung (thiếu ngày sinh hoặc CCCD).
+- **Danh sách xe**: người ký hợp đồng vận chuyển, chỉ xe chưa có số điện thoại, chỉ xe có chuyến hoặc chưa có chuyến trong kỳ.
+- **Sổ phiếu cân**: tìm theo số phiếu, biển số, khách hàng, nơi giao.
+Mỗi điều kiện hiện thành **chip** (bấm × để bỏ, “Xóa hết” để bỏ tất cả). Có thể **lưu bộ lọc** theo tên cho từng mẫu và mở lại sau. Bộ lọc áp dụng **trước khi lập báo cáo** nên KPI, tổng cộng, file Word và Excel đều khớp phần đã lọc; dòng “phạm vi lọc” dưới tiêu đề ghi rõ các điều kiện đã dùng.
+
 ## 13. Xử lý sự cố
 | Hiện tượng | Cách xử lý |
 | --- | --- |
