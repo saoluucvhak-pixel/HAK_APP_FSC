@@ -19,6 +19,8 @@ Bảng **Quy trình hồ sơ theo đợt** ở tab Xuất hồ sơ hiện năm b
 - **Dữ liệu**: *Đủ* (in chính thức được), *Bản nháp* (xuất được nhưng thiếu điều kiện của riêng mẫu, nhãn “BẢN NHÁP”), *Chưa đủ* (chưa xuất được). Điều kiện từng mẫu: `src/bannhap.js` và `gate()`.
 - **In ấn**: *Chưa in*, *Đã in, còn khớp*, *Đã in nhưng dữ liệu đã đổi: in lại*. “Đã in” do người dùng xác nhận (có “Đánh dấu cả đợt … đã in”). Phần mềm ghi **chữ ký nội dung** của mẫu (băm file sẽ in: thân tài liệu, chân trang, khổ giấy, nhãn BẢN NHÁP). Dữ liệu đổi sau đó → chữ ký đổi → hiện “in lại”. Trạng thái lưu trong dữ liệu của từng lô (`inAn`), nên đóng và mở lại vẫn nhớ.
 
+Thứ tự trên tab Xuất hồ sơ đi theo quy trình: **Quy trình hồ sơ theo đợt** (xem trạng thái, việc nên làm tiếp) → **Tải hồ sơ theo đợt** (gói đợt 1, gói đợt 2) → **In hồ sơ đợt 2** (giấy trắng, mẫu nền, in đè) → **Toàn bộ hồ sơ** → **Bản chính thức hay bản nháp** → các tab tải từng mẫu.
+
 Riêng đợt 2 có thêm hướng in (mục “In hồ sơ đợt 2”): **giấy trắng** một lần, hoặc **mẫu nền** rồi **in đè** (trạng thái “đã in mẫu nền” và chữ ký bố cục: `src/inan2.js`).
 
 ## 2b. Đợt 2: hai hướng in và vị trí của “in đè” trong quy trình
