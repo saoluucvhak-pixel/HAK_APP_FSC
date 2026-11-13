@@ -277,6 +277,7 @@ Chi tiết ở `docs/QUY_TRINH_HO_SO.md`. Bất biến “đợt 1 độc lập 
 ## 41. In phiếu cân bằng nguyên bản công cụ PhieuCan (bản 1.4.29)
 - File `renderer/PhieuCan.html` do người dùng cung cấp được giữ nguyên từng byte; `tests/phieucan.test.js` (4 kiểm tra) so dấu vân tay SHA-256, kiểm khổ giấy 240 × 279 mm và bố cục mm còn trong file, kiểm bảng dữ liệu nạp vào công cụ (`src/phieucan.js`).
 - `scripts/e2e-phieucan.js` (10 kiểm tra, Electron thật): mở công cụ từ rừng và từ menu ngang, nạp đúng 3 phiếu, nội dung phiếu, bản in PDF qua Chromium đúng 2 trang 240 × 279 mm, chọn A4 thì ra 210 × 297 mm, nút “Tải PDF PhieuCan” ra file 2 trang 240 × 279 mm.
+- **In theo rừng, giản lược** (`scripts/e2e-phieucan.js`, `tests/phieucan.test.js`): thẻ In phiếu cân nằm ở tab Xuất hồ sơ (bỏ nút ở menu ngang và tab Vận chuyển); công cụ ẩn phần Excel, mẫu, khách hàng, công ty, Số CT/đơn giá; phiếu từ file nhập ở rừng, Google Sheets và cập nhật biển số cho ra cùng một dòng dữ liệu; báo phiếu thiếu thông tin.
 - Thông tin công ty: hồ sơ công ty có thêm **Fax** và **Nơi lập chứng từ**; tiêu đề phiếu cân (tên, địa chỉ, điện thoại, fax, nơi lập) lấy từ đó (`tests/phieucan.test.js`, 2 kiểm tra e2e).
 - **Chưa kiểm được**: in ra giấy lỗ thật bằng máy in của người dùng (đường xé, lề vật lý).
 

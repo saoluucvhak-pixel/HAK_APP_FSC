@@ -21,9 +21,10 @@ const P = (stt, so, bien, c1, c2, kg, kh, g1, g2) => ({_row: stt + 1, maRung: 'R
   const tool = async fn => { const [pw] = await Promise.all([app.waitForEvent('window'), fn()]); await pw.waitForLoadState('domcontentloaded'); return pw; };
 
   // 1. từ rừng: nạp đúng 3 phiếu
-  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]');
-  ok('tab Vận chuyển có nút In phiếu cân', !!(await w.$('#main [data-act=pcPrint]')));
-  const pw = await tool(() => w.click('#main [data-act=pcPrint]'));
+  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
+  ok('mục In phiếu cân nằm ở tab Xuất hồ sơ (theo rừng), báo 3 phiếu, 1 phiếu thiếu khách hàng; không còn nút ở menu ngang hay tab Vận chuyển', !!(await w.$('#pcPrintCard [data-act=pcPrint]')) && /3 phiếu cân của rừng này/.test(await w.innerText('#pcPrintCard')) && /2 phiếu đủ thông tin; còn thiếu: khách hàng \(1 phiếu\)/.test(await w.innerText('#pcPrintCard')) && !(await w.$('.nb[data-act=pcPrint]')));
+  if (process.env.SHOTS) await (await w.$('#pcPrintCard')).screenshot({path: path.join(process.env.SHOTS, 'phieucan_the_xuat_ho_so.png')});
+  const pw = await tool(() => w.$eval('#pcPrintCard [data-act=pcPrint]', b => b.click()));
   await pw.waitForFunction(() => document.querySelectorAll('#tb tr.row').length === 3, null, {timeout: 15000});
   const cnt = await pw.innerText('#count');
   ok('công cụ mở bằng đúng file gốc, tải sẵn 3 phiếu của rừng, mặc định 2 phiếu / trang → 2 trang', (await pw.title()) === 'PhieuCan' && /Đã chọn 3\/3 phiếu · 2 trang/.test(cnt) && (await pw.$$eval('#tb tr.row td:nth-child(2)', t => t.map(x => x.textContent))).join() === 'PA1,PA2,PA3', cnt);
@@ -49,13 +50,26 @@ const P = (stt, so, bien, c1, c2, kg, kh, g1, g2) => ({_row: stt + 1, maRung: 'R
   await pw.$eval('#pdf', b => b.click()); let f = null; for (let i = 0; i < 200 && !f; i++) { f = fs.readdirSync(out).find(x => x === 'PhieuCan.pdf'); if (!f) await pw.waitForTimeout(150); } await pw.waitForTimeout(400);
   b = f ? box(fs.readFileSync(path.join(out, f))) : [];
   ok('“Tải PDF PhieuCan”: file PhieuCan.pdf có 2 trang, mỗi trang 240 × 279 mm', b.length === 2 && b.every(x => Math.abs(x[0] - 240) <= 0.3 && Math.abs(x[1] - 279) <= 0.3), JSON.stringify(b));
+
+  // 4. giao diện công cụ đã gọn: dữ liệu và công ty lấy từ phần mềm
+  ok('công cụ đã gọn: không còn ô chọn file Excel, tải mẫu, cột khách hàng, thông tin công ty, cột Số CT/đơn giá; vẫn còn khổ giấy, dịch lề, loại hàng, danh sách phiếu', !(await pw.isVisible('#drop')) && !(await pw.isVisible('#getTpl')) && !(await pw.isVisible('#khWrap')) && !(await pw.isVisible('#coBox')) && !(await pw.isVisible('#soCol')) && !(await pw.isVisible('#priceCol')) && (await pw.isVisible('#goods')) && (await pw.isVisible('#tb')) && (await pw.isVisible('#pdf')) && (await pw.isVisible('#print')));
   await pw.close();
 
-  // 4. từ menu ngang: công cụ trống để nạp file Excel
-  const pw2 = await tool(() => w.$eval('[data-act=pcPrint][data-blank]', b => b.click()));
-  await pw2.waitForSelector('#drop');
-  ok('menu ngang “In phiếu cân”: mở công cụ trống (chưa có dữ liệu), vẫn có ô chọn file Excel', /Chưa có dữ liệu/.test(await pw2.innerText('#fileinfo')) && !!(await pw2.$('#file')) && (await pw2.$$('#tb tr.row')).length === 0);
-  await pw2.close();
+  // 5. cùng một khung nhìn cho mọi nguồn phiếu cân: file nhập ở rừng, Google Sheets, cập nhật biển số; báo phiếu thiếu thông tin
+  const imp = P(1, 'IM1', '92C-11111', 30000, 10000, 20000, 'KH A', '08:00:00', '09:00:00');                                  // như nhập file ở rừng
+  const goo = {...P(2, 'GS1', '92C-22222', 31000, 11000, 20000, 'KH B', '10:00:00', '11:00:00'), klTan: 20, maKhachHang: 'K01', noiGiao: '', _src: {tab: 'HoSoKeo_QC', row: 5}};   // như đưa từ Google Sheets
+  const upd = {...P(3, 'UP1', '92C-33333', 32000, 12000, 20000, 'KH C', '12:00:00', '13:00:00'), _src: {tab: 'HoSoKeo_QC', row: 6}};   // sau khi cập nhật biển số xe
+  const thieu = {...P(4, 'TH1', '92C-44444', null, null, null, '', '', ''), kl: 15, klKg: null};                                 // thiếu giờ cân, cân 1/2, khách hàng
+  const D2 = seed([lot('fa', 'R-A', {exp: {}, pc: [imp, goo, upd, thieu]})]); D2.congTy = D.congTy;
+  await w.waitForTimeout(700); await w.evaluate(d => window.hak.save(d), D2); await w.reload(); await w.waitForSelector('#side');
+  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
+  const card = await w.innerText('#pcPrintCard');
+  ok('báo rõ phiếu còn thiếu: 3 phiếu đủ thông tin, 1 phiếu thiếu cân lần 1/2, giờ cân, khách hàng; chỉ cách bổ sung', /4 phiếu cân của rừng này/.test(card) && /3 phiếu đủ thông tin/.test(card) && /cân lần 1 \(1 phiếu\)/.test(card) && /giờ cân 1 \(1 phiếu\)/.test(card) && /khách hàng \(1 phiếu\)/.test(card) && /Tra cứu Google Sheets/.test(card), card);
+  const pw3 = await tool(() => w.$eval('#pcPrintCard [data-act=pcPrint]', b => b.click()));
+  await pw3.waitForFunction(() => document.querySelectorAll('#tb tr.row').length === 4, null, {timeout: 15000});
+  const t3 = await pw3.$eval('#render', r => r.innerText);
+  ok('4 phiếu từ các nguồn khác nhau cùng in được, đủ trường: số phiếu, biển số, cân, khách hàng; phiếu thiếu thì để trống phần thiếu', ['IM1', 'GS1', 'UP1', 'TH1', '92C-11111', '92C-22222', '92C-33333', '92C-44444', 'KH A', 'KH B', 'KH C'].every(x => t3.includes(x)) && /30\.000/.test(t3) && /31\.000/.test(t3) && /32\.000/.test(t3), t3.slice(0, 300));
+  await pw3.close();
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

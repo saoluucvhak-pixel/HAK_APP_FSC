@@ -33,6 +33,23 @@ test('thông tin công ty điền vào tiêu đề phiếu; chưa khai công ty 
   const js = PC.inject([], co); assert.doesNotThrow(() => new Function(js));
   for (const k of ['coName', 'coAddr', 'coPhone', 'coFax', 'place']) assert.ok(js.includes('getElementById("' + k + '")'), k);   // fax trống vẫn được xóa
   const js2 = PC.inject([], PC.company({ten: 'B', diaChi: 'x'})); assert.ok(!js2.includes('"place"'));   // nơi lập trống: giữ giá trị của công cụ
-  assert.ok(!PC.inject([], {}).includes('getElementById'));
+  assert.ok(!PC.inject([], {}).includes('"coName"'));
+});
+test('cùng một khung nhìn cho phiếu từ file nhập ở rừng, Google Sheets và cập nhật biển số: cùng dòng dữ liệu, thiếu gì thì báo', () => {
+  const base = {ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', can1: 40000, can2: 15000, klKg: 25000, kl: 25, khachHang: 'KH'};
+  const imp = {_row: 2, soPhieu: 'A1', bienSo: '92C-1', ...base, noiGiao: 'KCN'};
+  const goo = {_row: 3, soPhieu: 'A1', bienSo: '92C-1', ...base, klTan: 25, maKhachHang: 'K1', noiGiao: '', _src: {tab: 'HoSoKeo_QC', row: 9}};
+  const upd = {...imp, bienSo: '92C-1', _src: {tab: 'HoSoKeo_QC', row: 9}};
+  const rec = pc => ({info: {ten: 'CHỦ', diaDiem: 'Thôn A'}, pc: [pc]});
+  assert.deepStrictEqual(PC.aoa(rec(imp)), PC.aoa(rec(goo))); assert.deepStrictEqual(PC.aoa(rec(imp)), PC.aoa(rec(upd)));
+  for (const p of [imp, goo, upd]) { const g = PC.gaps([p]); assert.strictEqual(g.full, 1); assert.deepStrictEqual(g.issues, []); }
+  const g = PC.gaps([imp, {soPhieu: 'B2', ngay: '', bienSo: '92C-2', can1: null, can2: undefined, kl: 0, gioCan1: '', gioCan2: '', khachHang: ''}]);
+  assert.strictEqual(g.total, 2); assert.strictEqual(g.full, 1); assert.deepStrictEqual(g.issues[0].missing, ['ngày cân', 'cân lần 1', 'cân lần 2', 'khối lượng', 'giờ cân 1', 'giờ cân 2', 'khách hàng']); assert.strictEqual(g.by['cân lần 1'], 1);
+  assert.deepStrictEqual(PC.gaps([]), {total: 0, full: 0, issues: [], by: {}});
+  const kgOnly = PC.gaps([{...imp, klKg: null, kl: 25}]); assert.strictEqual(kgOnly.full, 1);   // chỉ có tấn: vẫn đủ khối lượng
+});
+test('giao diện gọn: ẩn phần Excel, công ty, cột Số CT / đơn giá nhưng không đụng tới bố cục phiếu', () => {
+  for (const id of ['#drop', '#getTpl', '#fileinfo', '#khWrap', '#coBox', '#soCol', '#priceCol']) assert.ok(PC.SIMPLE_CSS.includes(id), id);
+  assert.ok(!/\.sheet|\.slip|@page/.test(PC.SIMPLE_CSS));
 });
 

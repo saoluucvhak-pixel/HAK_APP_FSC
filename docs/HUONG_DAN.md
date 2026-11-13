@@ -50,11 +50,14 @@ Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa c
 - Thanh **Tiến độ hồ sơ · checklist FSC** ở đầu lô cho biết % hoàn thành và từng mục còn thiếu.
 
 ## 3b. In phiếu cân (giấy lỗ 240 × 279 mm)
-Phần mềm dùng **nguyên bản công cụ PhieuCan**: file `renderer/PhieuCan.html` được giữ nguyên từng byte (bố cục tính theo mm, giấy lỗ 240 × 279 mm, đường xé nằm giữa, chỉnh lề, in 2 phiếu hoặc 2 liên trên một trang, tải PDF), không được vẽ lại, nên bản in giống hệt công cụ gốc.
-- **Từ một rừng**: tab **Vận chuyển** → thẻ **In phiếu cân**. Công cụ mở trong cửa sổ riêng, đã nạp sẵn mọi phiếu cân của rừng (số phiếu, ngày và giờ cân 1/2, biển số, cân lần 1/2, khối lượng kg, khách hàng, địa chỉ rừng). Khách hàng để trống thì lấy tên chủ rừng. **Tiêu đề phiếu** (tên công ty, địa chỉ, điện thoại, fax, nơi lập) lấy từ **Cài đặt → Công ty**: khai đủ tên, địa chỉ, số điện thoại, **Fax** và **Nơi lập chứng từ** (ví dụ Đà Nẵng) một lần là mọi phiếu in đúng. Chưa khai công ty thì công cụ dùng tiêu đề mặc định của nó; Fax để trống thì phiếu không in FAX; Nơi lập để trống thì giữ giá trị của công cụ. Phần mềm chưa quản lý giá mua nên phiếu in giá mua và thành tiền là 0; cần có giá thì dùng file Excel có cột đơn giá (xem bước dưới).
-- **Từ menu ngang**: nút **In phiếu cân** mở công cụ trống để nạp file Excel phiếu cân như bản gốc (nút “Tải file Excel mẫu” trong công cụ).
-- Trong công cụ: chọn phiếu, chỉnh **Khổ giấy** (mặc định giấy lỗ 240 × 279 mm), cách xếp, dịch lề, rồi bấm **Tải PDF PhieuCan** hoặc **In / Lưu PDF bằng trình duyệt**. Bấm “Lưu cài đặt trên máy này” để nhớ các chỉnh lề đã canh.
-- Kiểm thử tự động xác nhận file công cụ không đổi (dấu vân tay SHA-256 trong `tests/phieucan.sha256`) và PDF ra đúng 240 × 279 mm. In ra giấy thật phải bạn tự kiểm tra trên máy in của mình.
+In phiếu cân **theo rừng**, giống xuất hồ sơ: vào lô → tab **Xuất hồ sơ** → thẻ **In phiếu cân** → bấm **In phiếu cân**.
+- **Dùng nguyên bản công cụ PhieuCan**: file `renderer/PhieuCan.html` giữ nguyên từng byte (bố cục tính theo mm, giấy lỗ 240 × 279 mm, đường xé giữa, chỉnh lề, 2 phiếu hoặc 2 liên một trang, tải PDF). Phần mềm không vẽ lại phiếu nên bản in giống hệt công cụ gốc. Công cụ mở trong cửa sổ riêng, đã có sẵn phiếu cân của rừng; phần chọn file Excel, thông tin công ty bị ẩn vì dữ liệu đã có trong phần mềm.
+- **Một nguồn dữ liệu cho mọi cách đưa phiếu cân vào rừng**: nhập file phiếu cân ở tab Vận chuyển, đưa từ **Tra cứu Google Sheets** sang rừng, hay **cập nhật biển số xe**, đều ghi cùng các trường (số phiếu, ngày và giờ cân 1/2, biển số, cân lần 1/2, khối lượng kg, khách hàng). Thẻ In phiếu cân đọc đúng các trường đó nên không cần file Excel riêng.
+- **Báo phiếu còn thiếu**: thẻ cho biết bao nhiêu phiếu đủ thông tin và còn thiếu gì (ví dụ cân lần 1, giờ cân, khách hàng). Phiếu thiếu vẫn in được, phần thiếu để trống. Bổ sung bằng Tra cứu Google Sheets (chọn các phiếu đã có để cập nhật) hoặc nhập lại file phiếu cân của rừng.
+- **Tiêu đề phiếu** (tên công ty, địa chỉ, điện thoại, fax, nơi lập) lấy từ **Cài đặt → Công ty**; có thêm hai ô **Fax** và **Nơi lập chứng từ** (ví dụ Đà Nẵng). Chưa khai công ty thì công cụ dùng tiêu đề mặc định; Fax trống thì không in FAX; Nơi lập trống thì giữ giá trị của công cụ. Khách hàng trống thì lấy tên chủ rừng; địa chỉ rừng lấy từ hồ sơ rừng.
+- Phần mềm chưa quản lý giá mua nên phiếu in giá mua và thành tiền là 0.
+- Trong công cụ: chọn phiếu, chỉnh **Khổ giấy** (mặc định giấy lỗ 240 × 279 mm), cách xếp, dịch lề, rồi **Tải PDF PhieuCan** hoặc **In / Lưu PDF bằng trình duyệt**; “Lưu cài đặt trên máy này” để nhớ lề đã canh.
+- Kiểm thử tự động xác nhận file công cụ không đổi (SHA-256 trong `tests/phieucan.sha256`) và PDF ra đúng 240 × 279 mm. In ra giấy thật phải bạn tự kiểm tra trên máy in của mình.
 
 ## 4. Nhân công, hợp đồng và đơn giá
 Vào lô → tab **Nhân công** → mục **Thông số hợp đồng và đơn giá**:

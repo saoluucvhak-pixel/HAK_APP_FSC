@@ -246,7 +246,6 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
     <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
-    <button class="nb deskOnly" data-act="pcPrint" data-blank="1" hidden title="Mở công cụ in phiếu cân (khổ giấy lỗ 240 × 279 mm), nạp file Excel phiếu cân">In phiếu cân</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức BHLĐ</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
@@ -955,6 +954,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return [HEAD.slice()].concat((rec.pc || []).map(p => [String(p.soPhieu || ''), p.ngay || '', p.gioCan1 || '', p.ngay || '', p.gioCan2 || '', p.bienSo || '', typeof p.can1 === 'number' ? p.can1 : '', typeof p.can2 === 'number' ? p.can2 : '', kgOf(p),
       p.khachHang || owner, info.diaDiem || '', '', '']));
   }
+  /* Một khung nhìn chuẩn của phiếu cân để in, DÙNG CHUNG cho mọi nguồn (nhập file ở rừng, đưa từ Google Sheets, cập nhật biển số): chỉ đọc các trường chuẩn
+   * soPhieu, ngay, gioCan1/2, bienSo, can1/2, klKg (hoặc kl tấn), khachHang. Phiếu thiếu trường nào vẫn in được (phần đó để trống) nhưng được báo để bổ sung. */
+  const FIELDS = [['soPhieu', 'số phiếu'], ['ngay', 'ngày cân'], ['bienSo', 'biển số xe'], ['can1', 'cân lần 1'], ['can2', 'cân lần 2'], ['kl', 'khối lượng'], ['gioCan1', 'giờ cân 1'], ['gioCan2', 'giờ cân 2'], ['khachHang', 'khách hàng']];
+  const has = (p, k) => k === 'kl' ? kgOf(p) !== '' : k === 'can1' || k === 'can2' ? typeof p[k] === 'number' : String(p[k] == null ? '' : p[k]).trim() !== '';
+  function gaps(pc) {
+    const list = pc || [], by = {}, issues = [];
+    list.forEach(p => { const miss = FIELDS.filter(([k]) => !has(p, k)).map(([, l]) => l); if (miss.length) { issues.push({soPhieu: String(p.soPhieu || '(chưa có số phiếu)'), missing: miss}); miss.forEach(m => { by[m] = (by[m] || 0) + 1; }); } });
+    return {total: list.length, full: list.length - issues.length, issues, by};
+  }
+  /* Giao diện gọn: dữ liệu đã có trong hồ sơ nên bỏ phần chọn file Excel, tải mẫu, cột khách hàng, thông tin công ty (lấy từ Cài đặt); bố cục và cách in của công cụ giữ nguyên */
+  const SIMPLE_CSS = '#drop,#getTpl,#fileinfo,#khWrap,#coBox,label:has(#soCol),label:has(#priceCol){display:none!important}';
+  const SIMPLE_JS = 'var s=document.querySelector(".sec p");if(s)s.innerHTML="Chọn phiếu, tải PDF <b>PhieuCan.pdf</b> hoặc in.";var fi=document.getElementById("fileinfo");if(fi&&fi.parentElement)fi.parentElement.style.display="block";';
   /* Thông tin tiêu đề phiếu lấy từ hồ sơ công ty (Cài đặt → Công ty): tên, địa chỉ, điện thoại, fax, nơi lập. Chưa khai thì không gửi gì (công cụ dùng giá trị mặc định của nó) */
   const company = c => c && String(c.ten || '').trim() ? {coName: String(c.ten).trim(), coAddr: String(c.diaChi || '').trim(), coPhone: String(c.sdt || '').trim(), coFax: String(c.fax || '').trim(), place: String(c.noiLap || '').trim()} : {};
   /* Mã chạy trong cửa sổ công cụ sau khi tải xong: điền thông tin công ty vào các ô của công cụ, rồi đưa bảng vào ô chọn file như người dùng chọn một file .xlsx.
@@ -962,10 +973,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function inject(rows, co) {
     const set = Object.entries(co || {}).filter(([k, v]) => k === 'coFax' ? (co.coName || v) : v);   // công ty đã khai thì fax trống nghĩa là không in fax
     const fill = set.map(([k, v]) => 'var e=document.getElementById(' + JSON.stringify(k) + ');e.value=' + JSON.stringify(v) + ';e.dispatchEvent(new Event("input",{bubbles:true}));').join('');
-    return '(function(){try{' + fill + (rows && rows.length > 1 ? 'var a=' + JSON.stringify(rows).replace(/\u2028|\u2029/g, '') + ';var ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"PHIEU_CAN");' +
+    return '(function(){try{' + SIMPLE_JS + fill + (rows && rows.length > 1 ? 'var a=' + JSON.stringify(rows).replace(/\u2028|\u2029/g, '') + ';var ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"PHIEU_CAN");' +
       'var buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});var f=new File([buf],"PhieuCan_HAKQN.xlsx",{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});var dt=new DataTransfer();dt.items.add(f);var i=document.getElementById("file");i.files=dt.files;i.dispatchEvent(new Event("change",{bubbles:true}));' : '') + 'return true}catch(e){return String(e&&e.message||e)}})()';
   }
-  const api = {HEAD, aoa, inject, company};
+  const api = {HEAD, aoa, inject, company, gaps, FIELDS, SIMPLE_CSS};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKPhieuCan = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
@@ -4462,7 +4473,7 @@ function panelDX(rec) {
 
 function panelPhieuCan(rec) {
   const c = checkPC(rec), pc = rec.pc || [];
-  const head = panelImport('pc', rec) + (HB ? '<div class="card row" style="justify-content:space-between;align-items:center"><div><b>In phiếu cân</b><div class="mut">Mở công cụ in phiếu cân nguyên bản (giấy lỗ 240 × 279 mm, đường xé giữa, chỉnh lề) với ' + pc.length + ' phiếu cân của rừng này.</div></div><button class="btn" data-act="pcPrint"' + (pc.length ? '' : ' disabled') + '>In phiếu cân</button></div>' : '');
+  const head = panelImport('pc', rec);
   if (!pc.length) return head + '<div class="empty">Chưa có phiếu cân. Bấm “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
   return head + issuesBox(c.errs, c.warns) +
     '<div class="wrap"><table><thead><tr><th>Dòng</th><th>Ngày cân</th><th>Giờ cân 1</th><th>Giờ cân 2</th><th>Biển kiểm soát</th><th>Số phiếu cân</th><th style="text-align:right">Cân lần 1 (kg)</th><th style="text-align:right">Cân lần 2 (kg)</th><th style="text-align:right">Khối lượng (kg)</th><th style="text-align:right">Khối lượng (tấn)</th><th>Khách hàng</th><th>Nơi giao</th></tr></thead><tbody>' +
@@ -4583,6 +4594,17 @@ function qtMarkAct(codes, on) {
   codes.forEach(c => { if (!on) HAKQuyTrinh.unmark(st, c); else { const it = all.find(x => x.code === c); if (it && it.ready !== 'thieu') HAKQuyTrinh.mark(st, c, it.sig, now); } });
   persist();
 }
+/* In phiếu cân theo rừng (giống xuất hồ sơ): dùng đúng phiếu cân của rừng đang mở, bất kể phiếu đến từ file nhập ở rừng, Tra cứu Google Sheets hay cập nhật biển số */
+function pcPrintCard(rec) {
+  const g = HAKPhieuCan.gaps(rec.pc), n = g.total, co = theCompany();
+  const head = '<div class="card" id="pcPrintCard"><h3 style="margin-top:0">In phiếu cân <span class="mut" style="font-weight:400">giấy lỗ 240 × 279 mm, công cụ PhieuCan nguyên bản</span></h3>';
+  if (!HB) return head + '<p class="mut" style="margin:0">Chỉ có ở bản cài đặt trên máy tính (Windows).</p></div>';
+  const miss = Object.entries(g.by).map(([k, v]) => esc(k) + ' (' + v + ' phiếu)').join('; ');
+  return head + '<div class="docrow"><div><b>' + (n ? n + ' phiếu cân của rừng này' : 'Rừng này chưa có phiếu cân') + '</b><div class="mut">' + (n ? (g.full === n ? 'Phiếu nào cũng đủ thông tin để in.' : g.full + ' phiếu đủ thông tin; còn thiếu: ' + miss + '. Phiếu thiếu vẫn in được, phần thiếu để trống.') : 'Nhập file phiếu cân ở tab Vận chuyển, hoặc đưa từ Tra cứu Google Sheets sang rừng này.') +
+    (n && g.full < n ? ' Bổ sung bằng <b>Tra cứu Google Sheets</b> (chọn các phiếu đã có để cập nhật) hoặc nhập lại file phiếu cân của rừng.' : '') + '</div>' +
+    '<div class="mut">Tiêu đề phiếu lấy từ <b>Cài đặt → Công ty</b>' + (co && co.ten ? ': ' + esc(co.ten) : ' (chưa khai: dùng tiêu đề mặc định của công cụ)') + '. Địa chỉ rừng và khách hàng lấy theo hồ sơ rừng.</div></div>' +
+    '<div class="d2btns"><button class="btn" style="white-space:nowrap" data-act="pcPrint"' + (n ? '' : ' disabled') + '>In phiếu cân</button>' + (n ? '' : '<button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify({ftab: 'dx'})) + '">Mở tab Vận chuyển</button>') + '</div></div></div>';
+}
 function panelXuat(rec) {
   const g = gate(rec);
   const ex = rec.exp || {};
@@ -4667,7 +4689,7 @@ function panelXuat(rec) {
     '<div class="card"><h3 style="margin-top:0">Tải hồ sơ theo đợt</h3><p class="mut" style="margin:0 0 8px">Chưa xong khai thác thì in <b>đợt 1</b> trước; khi rừng xong, cập nhật phiếu cân và khối lượng thực tế rồi in <b>đợt 2</b> (mỗi biểu mẫu là một file Word riêng nên thay hoặc chèn vào bộ hồ sơ đã in rất dễ). Đợt 2 muốn in nền rồi in đè thì dùng mục “In hồ sơ đợt 2” ngay bên dưới.</p>' +
       '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('Tải đợt 1', 'dau', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>' +
       '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') + '</div></div>' + btn('Tải đợt 2', 'cuoi', null, g.canBHLD) + '</div></div>' +
-    d2Panel(rec) +
+    d2Panel(rec) + pcPrintCard(rec) +
     '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung. <b>Hồ sơ đã đủ dữ liệu thì in một lần bằng nút này</b>; mục nào chưa đủ (phiếu cân, khối lượng thực tế, ngày lập, địa chỉ giao…) sẽ được nêu ngay sau khi tải.</div></div>' + btn('Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>' +
     draftCard +
     '<div class="tabs" style="margin-top:6px">' + TABS.map(([k, l]) => '<button class="' + (cur === k ? 'on' : '') + '" data-xtab="' + k + '">' + l + '</button>').join('') + '</div>' +
@@ -5895,7 +5917,7 @@ document.addEventListener('click', async e => {
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|fillKl|dmDefault)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) return ccAct(act);
-  if (act === 'pcPrint') { const rec = el.dataset.blank ? null : curRec(); const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(rec ? HAKPhieuCan.aoa(rec) : [], HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
+  if (act === 'pcPrint') { const rec = curRec(); if (!rec) return; const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(HAKPhieuCan.aoa(rec), HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
   if (act === 'keoDel') { const tr = el.closest('tr'); tr.querySelectorAll('input').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'pcFixDate') {   // sửa ngày phiếu cũ bị sai: chỉ nhận ngày có thật; giữ nguyên mọi dữ liệu khác của phiếu

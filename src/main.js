@@ -459,8 +459,9 @@ async function openPhieuCan(rows, company) {
   } else { if (pcWin.isMinimized()) pcWin.restore(); pcWin.focus(); }
   const w = pcWin;
   await new Promise((res, rej) => { w.webContents.once('did-finish-load', res); w.webContents.once('did-fail-load', (e, c, d) => rej(new Error(d))); w.loadFile(path.join(__dirname, '..', 'renderer', 'PhieuCan.html')); });
+  await w.webContents.insertCSS(require('./phieucan').SIMPLE_CSS);
   const co = company && typeof company === 'object' ? Object.fromEntries(['coName', 'coAddr', 'coPhone', 'coFax', 'place'].map(k => [k, typeof company[k] === 'string' ? company[k] : ''])) : {};
-  if (list.length > 1 || Object.values(co).some(Boolean)) { const r = await w.webContents.executeJavaScript(require('./phieucan').inject(list, co)); if (r !== true) throw new Error('Không nạp được dữ liệu vào công cụ in phiếu cân: ' + r); }
+  { const r = await w.webContents.executeJavaScript(require('./phieucan').inject(list, co)); if (r !== true) throw new Error('Không nạp được dữ liệu vào công cụ in phiếu cân: ' + r); }
 }
 
 function createWindow() {
