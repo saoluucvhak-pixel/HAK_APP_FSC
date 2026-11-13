@@ -31,8 +31,10 @@ const app0 = () => electron.launch({executablePath: require('electron'), args: [
   const open = async (fid = 'fa') => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]'); await w.waitForSelector('#d2Table'); };
   const setDb = async d => { await w.waitForTimeout(700); return w.evaluate(x => window.hak.save(x), d); };   // đợi lần tự lưu của trang xong để không ghi đè dữ liệu thử
   const adv = async () => w.evaluate(() => Object.fromEntries([...document.querySelectorAll('#d2Table tr[data-d2]')].map(r => [r.dataset.d2, r.dataset.adv])));
+  const menus = () => w.evaluate(() => document.querySelectorAll('details.d2more').forEach(d => { d.open = true; }));   // menu “Khác” chứa các nút ít dùng
+  const rc = async sel => { await menus(); await w.$eval(sel, b => b.click()); };   // nút trong menu nằm xa trong trang cuộn: bấm trực tiếp
   const clean = () => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); };
-  const grab = async sel => { clean(); await w.click(sel); let f = null; for (let i = 0; i < 100 && !f; i++) { f = fs.existsSync(out) && fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x) && !x.endsWith('.part')); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(200); f = fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); const full = path.join(out, f); const docs = /\.zip$/.test(f) ? await readZip(full) : null; return {name: f, docs}; };
+  const grab = async sel => { clean(); await menus(); await w.click(sel); let f = null; for (let i = 0; i < 100 && !f; i++) { f = fs.existsSync(out) && fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x) && !x.endsWith('.part')); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(200); f = fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); const full = path.join(out, f); const docs = /\.zip$/.test(f) ? await readZip(full) : null; return {name: f, docs}; };
   const noDraft = r => !/BAN_NHAP/.test(r.name) && (!r.docs || Object.keys(r.docs).every(n => !/BAN_NHAP/.test(n) && !/BẢN NHÁP/.test(plain(r.docs[n].xml)) && !/BẢN NHÁP/.test(plain(r.docs[n].foot))));
   const K77 = '09:049000000077', K78 = '09:049000000078', J77 = '10:049000000077', J78 = '10:049000000078';
   const btnOn = async sel => { const b = await w.$(sel); return !!b && !(await b.isDisabled()); };
@@ -52,7 +54,7 @@ const app0 = () => electron.launch({executablePath: require('electron'), args: [
   const N1 = await grab('#d2Card .docrow [data-act=d2dl][data-mode=nen]'); 
   ok('gói nền: tên ZIP nêu rõ là MẪU NỀN, đủ bốn biểu mẫu và từng nhóm xe, không có “BẢN NHÁP” (tên file, nội dung, chân trang)', /MAU_NEN_in_truoc\.zip$/.test(N1.name) && noDraft(N1) && Object.keys(N1.docs).length === 6, N1.name + ' ' + JSON.stringify(Object.keys(N1.docs)));
   await open(); a = await adv();
-  ok('chỉ tải file nền: trạng thái KHÔNG đổi (chưa xác nhận đã in)', Object.values(a).every(v => v === 'nen') && !/✔ ngày/.test(await w.innerText('#d2Table')));
+  ok('chỉ tải file nền: trạng thái KHÔNG đổi (chưa xác nhận đã in)', Object.values(a).every(v => v === 'nen') && !/Đã in \d/.test(await w.innerText('#d2Table')));
   const nBefore = await grab('[data-act=d2dl][data-mode=nen][data-keys="08"]');
   ok('tải riêng một mẫu nền: file Word đơn, tên có _MAU_NEN, không BẢN NHÁP', /^08_.*_MAU_NEN\.docx$/.test(nBefore.name) && !/BAN_NHAP/.test(nBefore.name));
 
@@ -77,11 +79,11 @@ const app0 = () => electron.launch({executablePath: require('electron'), args: [
   await open(); a = await adv(); ok('tải gói in đè không làm đổi trạng thái', Object.values(a).every(v => v === 'de'));
 
   // ===== 4. Bỏ xác nhận (tờ nền hỏng/mất) → in đầy đủ trên giấy trắng cho riêng mẫu đó =====
-  await w.click('#d2Table tr[data-d2="14"] [data-act=d2undo]'); await w.waitForFunction(() => document.querySelector('#d2Table tr[data-d2="14"]').dataset.adv === 'trang');
+  await rc('#d2Table tr[data-d2="14"] [data-act=d2undo]'); await w.waitForFunction(() => document.querySelector('#d2Table tr[data-d2="14"]').dataset.adv === 'trang');
   a = await adv(); ok('bỏ xác nhận BM-14: quay về “in đầy đủ giấy trắng”, các mẫu khác vẫn in đè', a['14'] === 'trang' && a['08'] === 'de' && a[K77] === 'de', JSON.stringify(a));
   const T1 = await grab('[data-act=d2dl][data-mode=trang][data-keys="14"]');
   ok('tải riêng BM-14 giấy trắng: đủ nội dung, không BẢN NHÁP', /^14_/.test(T1.name) && !/BAN_NHAP/.test(T1.name));
-  await w.click('#d2Table tr[data-d2="14"] [data-act=d2confirm]'); await w.waitForFunction(() => document.querySelector('#d2Table tr[data-d2="14"]').dataset.adv === 'de');
+  await rc('#d2Table tr[data-d2="14"] [data-act=d2confirm]'); await w.waitForFunction(() => document.querySelector('#d2Table tr[data-d2="14"]').dataset.adv === 'de');
 
   // ===== 5. Đổi bố cục sau khi in nền: thêm một người lao động và đổi địa chỉ giao =====
   await w.waitForTimeout(700); const cur2 = await w.evaluate(() => window.hak.loadSync().db); const L3 = JSON.parse(JSON.stringify(cur2));
@@ -102,7 +104,7 @@ const app0 = () => electron.launch({executablePath: require('electron'), args: [
   // ===== 6. In nền một phần; thiếu dữ liệu =====
   const L6 = seed([lot('fa', 'R-A', {exp: EXP0, inDot2: {v: 1, items: {}}})]);
   await setDb(L6); await open();
-  await w.click('#d2Table tr[data-d2="08"] [data-act=d2confirm]'); await w.click('#d2Table tr[data-d2="' + K77 + '"] [data-act=d2confirm]');
+  await rc('#d2Table tr[data-d2="08"] [data-act=d2confirm]'); await rc('#d2Table tr[data-d2="' + K77 + '"] [data-act=d2confirm]');
   await w.waitForFunction(() => document.querySelector('#d2Table tr[data-d2="08"]').dataset.adv === 'cho');
   a = await adv(); ok('nền in một phần: mẫu/nhóm đã in là “chờ dữ liệu”, mẫu/nhóm còn lại vẫn là “nền”', a['08'] === 'cho' && a[K77] === 'cho' && a[K78] === 'nen' && a['14'] === 'nen' && a[J77] === 'nen', JSON.stringify(a));
   await w.waitForTimeout(700); const L7 = JSON.parse(JSON.stringify(await w.evaluate(() => window.hak.loadSync().db))); Object.assign(L7.rs.own1.forests.fa, {pc: PC, exp: EXP1}); L7.rs.own1.forests.fa.info.khoiLuong = 29.75;
@@ -119,10 +121,10 @@ const app0 = () => electron.launch({executablePath: require('electron'), args: [
   ok('bản giấy trắng có số biên bản, ngày lập và số tiền (không để trống)', Object.entries(T3.docs).some(([n, x]) => /09\/2026|Số: 09/.test(plain(x.xml)) || /20\/12\/2026/.test(plain(x.xml))));
 
   // ===== 8. Nền in từ trước (hồ sơ cũ): bắt buộc đối chiếu =====
-  await open(); dialogs.length = 0;
-  await w.click('#d2Table tr[data-d2="08"] [data-act=d2legacy]'); await w.waitForFunction(() => document.querySelector('#d2Table tr[data-d2="08"]').dataset.adv === 'kiemtra');
+  await open(); dialogs.length = 0; 
+  await rc('#d2Table tr[data-d2="08"] [data-act=d2legacy]'); await w.waitForFunction(() => document.querySelector('#d2Table tr[data-d2="08"]').dataset.adv === 'kiemtra');
   ok('“đã có tờ nền in từ trước”: chưa biết bố cục → yêu cầu đối chiếu', (await adv())['08'] === 'kiemtra' && /Chưa biết bố cục/.test(await w.innerText('#d2Table')));
-  await w.click('#d2Table tr[data-d2="08"] [data-act=d2dl][data-mode=de]'); await w.waitForTimeout(800);
+  await rc('#d2Table tr[data-d2="08"] [data-act=d2dl][data-mode=de]'); await w.waitForTimeout(800);
   ok('in đè nền cũ: hiện hộp hỏi đối chiếu trước khi tải; sau khi đồng ý mục chuyển sang in đè', dialogs.some(d => /tờ nền in từ trước/.test(d)) && (await adv())['08'] === 'de', dialogs.join('|').slice(0, 120));
 
   // ===== 9. Tách theo lô =====
