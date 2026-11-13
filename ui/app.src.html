@@ -107,6 +107,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 .issues{margin:6px 0 0 18px;padding:0;font-size:13px}
 .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:550;background:var(--accSoft);color:var(--acc)}
 .pill.err{background:var(--errBg);color:var(--err)}.pill.ok{background:var(--okBg);color:var(--ok)}
+.linkbtn{background:none;border:0;padding:0;color:var(--brand);cursor:pointer;font:inherit;text-decoration:underline}
 .normTbl{table-layout:fixed;min-width:760px}.normTbl th:first-child,.normTbl td:first-child{width:200px}.normTbl td input{width:100%;min-width:0;box-sizing:border-box}
 .d2btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .d2act{white-space:normal}
@@ -475,7 +476,12 @@ function jobView(o, f) {
     ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
 }
 const curRec = () => { const o = curOwner(), f = curForest(); return o && f ? jobView(o, f) : null; };
-const forestYield = i => (typeof i.dienTich === 'number' && typeof i.dinhMucTanHa === 'number') ? i.dienTich * i.dinhMucTanHa : null;
+/* Định mức (tấn/ha) của rừng: giá trị rừng tự điền; chưa điền thì lấy định mức gỗ keo mặc định có hiệu lực theo ngày bắt đầu khai thác (Định mức BHLĐ → gỗ keo) */
+const dinhMucEff = i => {
+  if (typeof i.dinhMucTanHa === 'number' && i.dinhMucTanHa > 0) return {v: i.dinhMucTanHa, src: 'rừng'};
+  const k = HAKDinhMuc.keoPick(db, i.tuNgay || ''); return k.found ? {v: k.item.tanHa, src: 'mặc định', tu: k.item.tuNgay} : null;
+};
+const forestYield = i => { const d = dinhMucEff(i); return (typeof i.dienTich === 'number' && d) ? i.dienTich * d.v : null; };
 const toDec = v => { const s = trim(v).replace(',', '.'); if (!s) return null; const n = Number(s); return isFinite(n) ? n : 'x'; };
 const GIAY_LOAI = ['Giấy chứng nhận QSDĐ', 'Giấy xác nhận', 'Khác'];
 
@@ -2117,19 +2123,29 @@ function panelRung(own) {
     (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(job) : ftab === 'dx' ? panelDX(job) + panelPhieuCan(job) : ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu</b>.' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + panelXuat(job));
 }
 
+/* Ô Định mức (tấn/ha) của rừng: để trống thì dùng định mức gỗ keo mặc định (hiệu lực theo ngày bắt đầu khai thác); tự điền thì dùng số của rừng */
+function dmField(i) {
+  const own = typeof i.dinhMucTanHa === 'number' && i.dinhMucTanHa > 0, k = HAKDinhMuc.keoPick(db, i.tuNgay || '');
+  const ph = k.found ? 'mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha' : 'chưa có định mức mặc định';
+  const note = own ? 'Đang dùng số riêng của rừng. <button type="button" class="linkbtn" data-act="dmDefault">Dùng mặc định</button>'
+    : k.found ? 'Đang dùng định mức gỗ keo mặc định <b>' + fmtTan(k.item.tanHa) + ' tấn/ha</b> (hiệu lực từ ' + (k.item.tuNgay || '…') + '). Tự điền số khác nếu rừng khác định mức.'
+    : 'Chưa có định mức mặc định: khai ở <b>Định mức BHLĐ → Định mức gỗ keo</b>, hoặc tự điền số cho rừng.';
+  return '<label><span>Định mức (tấn/ha)</span><input name="dinhMucTanHa" value="' + esc(i.dinhMucTanHa ?? '') + '" placeholder="' + esc(ph) + '"><small class="mut" id="dmNote">' + note + '</small></label>';
+}
+const fillBtn = (act, label) => '<small class="mut"><button type="button" class="linkbtn" data-act="' + act + '">' + label + '</button></small>';
 function panelForest(f) {
   const i = f.info || {};
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
-    '<input name="' + k + '" value="' + esc(i[k] ?? '') + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '></label>';
+    '<input name="' + k + '" value="' + esc(i[k] ?? '') + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
   return '<div class="card"><h3 style="margin-top:0">Thông tin khai thác của rừng</h3>' +
     '<form id="forestForm" class="grid">' +
     inp('maRung', 'Mã rừng', {req: true}) + inp('tenRung', 'Tên rừng / lô') + inp('diaDiem', 'Địa điểm khai thác (rừng)', {req: true, wide: true}) +
     inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +
-    inp('dienTich', 'Diện tích (ha)') + inp('dinhMucTanHa', 'Định mức (tấn/ha)') +
+    inp('dienTich', 'Diện tích (ha)') + dmField(i) +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
-    inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến'}) +
-    inp('tuNgay', 'Thời gian khai thác — từ ngày') + inp('denNgay', 'Thời gian khai thác — đến ngày') + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: 'VD: 45. Chỉ cần khi tính cước tấn/km'}) +
+    inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến', btn: fillBtn('fillKl', 'Lấy tổng từ phiếu cân')}) +
+    inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: 'VD: 45. Chỉ cần khi tính cước tấn/km'}) +
     '<label><span>Đơn giá giao khoán Tổ trưởng (đồng/tấn)</span><input name="donGia" inputmode="numeric" style="text-align:right" value="' + esc(i.donGia > 0 ? fmt(i.donGia) : '') + '" placeholder="để trống: tự suy"><small class="mut">Để trống thì giao khoán tự suy đơn giá từ định biên nhân sự.</small></label>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
@@ -2213,7 +2229,21 @@ function panelNorm() {
     '<div class="wrap" style="margin-top:8px"><table class="normTbl"><thead><tr><th>Vị trí (chức danh)</th>' + BHLD_ITEMS.map(x => '<th>' + x[1] + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu bản định mức này</button></div></form>' +
     '<div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm bản mới, hiệu lực từ ngày</span><input id="normNewDate" placeholder="dd/mm/yyyy" style="width:160px"></label><button class="btn ghost" type="button" data-act="normAddVer">Thêm bản mới (sao chép bản đang chọn)</button></div>' +
-    '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm vị trí mới (áp dụng cho mọi bản)</span><input id="normNewPos" placeholder="VD: Công nhân phụ" style="width:260px"></label><button class="btn ghost" type="button" data-act="normAddPos">Thêm vị trí</button></div></div>';
+    '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm vị trí mới (áp dụng cho mọi bản)</span><input id="normNewPos" placeholder="VD: Công nhân phụ" style="width:260px"></label><button class="btn ghost" type="button" data-act="normAddPos">Thêm vị trí</button></div></div>' + keoCard();
+}
+/* Định mức gỗ keo: 1 ha = ? tấn, có hiệu lực từ ngày. Rừng lấy làm mặc định theo ngày bắt đầu khai thác; rừng tự điền số khác thì dùng số riêng */
+function keoCard() {
+  const items = HAKDinhMuc.keoItems(db);
+  const row = (x, n) => '<tr data-keo="' + n + '"><td><input name="k_tu" value="' + esc(x.tuNgay) + '" placeholder="dd/mm/yyyy" style="width:150px"></td><td><input name="k_tan" value="' + esc(x.tanHa == null ? '' : String(x.tanHa).replace('.', ',')) + '" placeholder="VD: 80" style="width:130px;text-align:right"></td><td>' + (x.tuNgay ? '<button class="btn ghost sm" type="button" data-act="keoDel">Xóa</button>' : '') + '</td></tr>';
+  return '<h2 style="margin-top:24px">Định mức gỗ keo: 1 ha = ? tấn</h2><div class="card"><form id="keoForm">' +
+    '<p class="mut" style="margin-top:0">Mỗi định mức có <b>hiệu lực từ ngày</b>. Rừng lấy định mức này làm <b>mặc định</b> theo ngày bắt đầu khai thác của rừng (chưa có ngày thì dùng bản mới nhất). Rừng có định mức khác thì tự điền ở Thông tin rừng.</p>' +
+    '<table class="normTbl" style="min-width:0;table-layout:auto;max-width:560px"><thead><tr><th>Hiệu lực từ ngày</th><th>1 ha = … tấn</th><th></th></tr></thead><tbody>' + items.map(row).join('') + row({tuNgay: '', tanHa: null}, 'new') + '</tbody></table>' +
+    '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu định mức gỗ keo</button><span class="mut">Dòng cuối để thêm định mức mới.</span></div></form></div>';
+}
+function saveKeo(form) {
+  const rows = [...form.querySelectorAll('tr[data-keo]')].map(tr => ({tuNgay: trim(tr.querySelector('[name=k_tu]').value), tanHa: trim(tr.querySelector('[name=k_tan]').value)})).filter(r => r.tuNgay || r.tanHa);
+  const r = HAKDinhMuc.keoSetAll(db, rows); if (!r.ok) { note('Chưa lưu định mức gỗ keo: ' + r.error, 'err'); return; }
+  persist(); note('Đã lưu định mức gỗ keo.');
 }
 function saveNorm(form) {
   const dm = {};
@@ -2617,6 +2647,21 @@ function formMsg(form, text) {
   m.textContent = text;
 }
 
+/* Nút điền nhanh ở form Thông tin rừng: chỉ điền vào ô (chưa lưu); người dùng vẫn tự sửa được rồi bấm Lưu */
+function forestFill(act, el) {
+  const f = curForest(), form = document.getElementById('forestForm'); if (!f || !form) return;
+  const setv = (name, v) => { const inp = form.elements[name]; inp.value = v; inp.dispatchEvent(new Event('input', {bubbles: true})); };
+  const hint = t => { let h = document.getElementById('forestHint'); if (!h) { h = document.createElement('div'); h.id = 'forestHint'; h.className = 'msg warn'; h.style.gridColumn = '1/-1'; form.prepend(h); } h.textContent = t; };
+  const pcs = (f.pc || []);
+  if (act === 'dmDefault') { setv('dinhMucTanHa', ''); const k = HAKDinhMuc.keoPick(db, trim(form.elements.tuNgay.value)); document.getElementById('dmNote').textContent = k.found ? 'Sẽ dùng định mức gỗ keo mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha sau khi lưu.' : 'Chưa có định mức mặc định.'; return; }
+  if (act === 'fillKl') {
+    const nums = pcs.map(p => p.kl).filter(x => typeof x === 'number' && x > 0); if (!nums.length) return hint('Chưa có phiếu cân nào của rừng này để lấy khối lượng.');
+    const sum = Math.round(nums.reduce((a, b) => a + b, 0) * 1000) / 1000; setv('khoiLuong', String(sum).replace('.', ',')); return hint('Đã điền tổng ' + fmtTan(sum) + ' tấn từ ' + nums.length + ' phiếu cân. Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa số.');
+  }
+  const ds = pcs.map(p => HAKDates.parse(p.ngay)).filter(Boolean); if (!ds.length) return hint('Chưa có phiếu cân có ngày hợp lệ của rừng này.');
+  const pick = ds.reduce((a, b) => (act === 'fillTu' ? (b.key < a.key ? b : a) : (b.key > a.key ? b : a)));
+  setv(act === 'fillTu' ? 'tuNgay' : 'denNgay', HAKDates.format(pick)); hint('Đã điền ' + (act === 'fillTu' ? 'ngày cân nhỏ nhất ' : 'ngày cân lớn nhất ') + HAKDates.format(pick) + ' (từ ' + ds.length + ' phiếu cân). Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa ngày.');
+}
 function saveForest(form) {
   const f = curForest(); if (!f) return;
   const info = Object.assign({}, f.info, readForest(form));
@@ -3603,6 +3648,8 @@ document.addEventListener('click', async e => {
   if (act === 'setOpenData') return HB.openDataFolder();
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
+  if (/^(fillTu|fillDen|fillKl|dmDefault)$/.test(act)) return forestFill(act, el);
+  if (act === 'keoDel') { const tr = el.closest('tr'); tr.querySelectorAll('input').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'pcFixDate') {   // sửa ngày phiếu cũ bị sai: chỉ nhận ngày có thật; giữ nguyên mọi dữ liệu khác của phiếu
     const f = curForest(), row = el.dataset.row, r = f && (f.pc || []).find(x => String(x._row) === String(row)), inp = document.querySelector('[data-pcfix="' + row + '"]');
@@ -3679,6 +3726,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'vcForm') { e.preventDefault(); saveVc(e.target); }
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
   if (e.target.id === 'normForm') { e.preventDefault(); saveNorm(e.target); }
+  if (e.target.id === 'keoForm') { e.preventDefault(); saveKeo(e.target); }
 });
 
 document.addEventListener('change', e => {
@@ -3744,7 +3792,8 @@ document.addEventListener('input', e => {
     if (a) a.innerHTML = soPreviewHtml(rec, exo, 'hd'); if (b) b.innerHTML = soPreviewHtml(rec, exo, 'vc');
   }
   if (t.form && t.form.id === 'forestForm' && (t.name === 'dienTich' || t.name === 'dinhMucTanHa')) {   // sản lượng dự kiến tự nhảy ngay khi gõ, không cần bấm Lưu
-    const dt = toDec(t.form.elements.dienTich.value), dm = toDec(t.form.elements.dinhMucTanHa.value), out = document.getElementById('slDuKien');
+    const dt = toDec(t.form.elements.dienTich.value); let dm = toDec(t.form.elements.dinhMucTanHa.value), out = document.getElementById('slDuKien');
+    if (dm == null) { const k = HAKDinhMuc.keoPick(db, trim(t.form.elements.tuNgay.value)); dm = k.found ? k.item.tanHa : null; }   // để trống: định mức mặc định
     if (out) out.value = (typeof dt === 'number' && typeof dm === 'number') ? fmt(Math.round(dt * dm)) + ' tấn' : (dt === 'x' || dm === 'x') ? 'Diện tích hoặc định mức không phải là số' : '';
     return;
   }

@@ -41,3 +41,16 @@ test('thêm vị trí mới: không trùng (không phân biệt hoa thường), 
 test('vị trí có trong định mức nhưng chưa khai (lô khôi phục từ máy khác) vẫn được nhận', () => {
   const db = base(); db.dinhMuc['Lái máy xúc'] = {qa: '1 bộ'}; assert.ok(DM.allPositions(db).includes('Lái máy xúc'));
 });
+
+test('định mức gỗ keo (tấn/ha) có hiệu lực từ ngày: chọn theo ngày, mặc định bản mới nhất khi không có ngày', () => {
+  const db = {}; assert.strictEqual(DM.keoPick(db, '01/01/2026').item, null);
+  assert.ok(DM.keoAdd(db, '01/01/2025', 80).ok); assert.ok(DM.keoAdd(db, '01/07/2026', '95,5').ok);
+  assert.strictEqual(DM.keoPick(db, '30/06/2026').item.tanHa, 80); assert.strictEqual(DM.keoPick(db, '01/07/2026').item.tanHa, 95.5);
+  assert.strictEqual(DM.keoPick(db, '').item.tanHa, 95.5, 'không có ngày: bản mới nhất'); assert.strictEqual(DM.keoPick(db, '31/12/2024').found, false);
+});
+test('định mức gỗ keo: kiểm tra ngày, số lớn hơn 0, không trùng ngày; sửa cả danh sách không ghi khi có lỗi', () => {
+  const db = {}; assert.strictEqual(DM.keoAdd(db, '31/02/2026', 80).ok, false); assert.strictEqual(DM.keoAdd(db, '01/01/2026', 0).ok, false); assert.strictEqual(DM.keoAdd(db, '01/01/2026', 'abc').ok, false); assert.strictEqual(DM.keoAdd(db, '01/01/2026', 5000).ok, false);
+  assert.ok(DM.keoAdd(db, '01/01/2026', 80).ok); assert.strictEqual(DM.keoAdd(db, '1/1/2026', 90).ok, false);
+  const r = DM.keoSetAll(db, [{tuNgay: '01/01/2026', tanHa: 80}, {tuNgay: '01/01/2026', tanHa: 90}]); assert.strictEqual(r.ok, false); assert.strictEqual(db.dinhMucKeo.length, 1, 'không ghi khi có lỗi');
+  assert.ok(DM.keoSetAll(db, [{tuNgay: '01/03/2026', tanHa: 85}, {tuNgay: '01/01/2026', tanHa: 80}]).ok); assert.deepStrictEqual(DM.keoItems(db).map(x => x.tuNgay), ['01/01/2026', '01/03/2026']);
+});

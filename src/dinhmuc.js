@@ -77,6 +77,40 @@
     if (db.dinhMuc) delete db.dinhMuc[name]; (db.dinhMucBan || []).forEach(v => { if (v.dm) delete v.dm[name]; });
     return {ok: true};
   }
-  const api = {BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
+
+  /* ===== Định mức gỗ keo: 1 ha = ? tấn, có hiệu lực từ ngày (db.dinhMucKeo = [{tuNgay, tanHa}]) =====
+   * Rừng lấy định mức này làm MẶC ĐỊNH khi chưa tự điền định mức của riêng rừng. */
+  const keoItems = db => (db.dinhMucKeo || []).map((x, i) => ({id: i, tuNgay: trim(x.tuNgay), key: keyOf(trim(x.tuNgay)), tanHa: x.tanHa})).sort((a, b) => a.key - b.key || a.id - b.id);
+  /* ref (dd/mm/yyyy) không hợp lệ hoặc trống → bản mới nhất. Trả {item, found, noDate} */
+  function keoPick(db, ref) {
+    const list = keoItems(db), rk = keyOf(trim(ref));
+    if (!list.length) return {item: null, found: false, noDate: !rk};
+    if (!rk) return {item: list[list.length - 1], found: true, noDate: true};
+    let it = null; list.forEach(x => { if (x.key <= rk) it = x; });
+    return {item: it, found: !!it, noDate: false, earliest: list[0]};
+  }
+  function keoCheck(tuNgay, tanHa) {
+    const p = D.parse(trim(tuNgay)); if (!p) return {error: 'Ngày hiệu lực phải đúng dd/mm/yyyy và có thật trên lịch'};
+    const n = typeof tanHa === 'number' ? tanHa : Number(String(tanHa).replace(',', '.'));
+    if (!isFinite(n) || n <= 0) return {error: 'Định mức (tấn/ha) phải là số lớn hơn 0'};
+    if (n > 1000) return {error: 'Định mức (tấn/ha) quá lớn (tối đa 1000)'};
+    return {p, n};
+  }
+  function keoAdd(db, tuNgay, tanHa) {
+    const c = keoCheck(tuNgay, tanHa); if (c.error) return {ok: false, error: c.error};
+    if (keoItems(db).some(x => x.key === c.p.key)) return {ok: false, error: 'Đã có định mức gỗ keo hiệu lực từ ngày ' + D.format(c.p)};
+    db.dinhMucKeo = (db.dinhMucKeo || []).concat([{tuNgay: D.format(c.p), tanHa: c.n}]); return {ok: true};
+  }
+  /* thay toàn bộ danh sách (từ biểu mẫu): rows = [{tuNgay, tanHa}] ; báo lỗi theo dòng, không ghi nếu có lỗi */
+  function keoSetAll(db, rows) {
+    const out = [], seen = new Set();
+    for (let i = 0; i < rows.length; i++) {
+      const c = keoCheck(rows[i].tuNgay, rows[i].tanHa); if (c.error) return {ok: false, error: 'Dòng ' + (i + 1) + ': ' + c.error};
+      if (seen.has(c.p.key)) return {ok: false, error: 'Dòng ' + (i + 1) + ': trùng ngày hiệu lực ' + D.format(c.p)}; seen.add(c.p.key);
+      out.push({tuNgay: D.format(c.p), tanHa: c.n});
+    }
+    db.dinhMucKeo = out; return {ok: true};
+  }
+  const api = {keoItems, keoPick, keoAdd, keoSetAll, BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDinhMuc = api;
 })(typeof self !== 'undefined' ? self : this);
