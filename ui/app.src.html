@@ -388,12 +388,15 @@ function migrateV1(o) {
 }
 const HB = window.hak || null;   // cầu nối với bản desktop (SQLite); không có khi chạy trong trình duyệt
 let dbInfo = null;
+let pendingNotice = null;   // thông báo từ chương trình chính sau khi đổi thư mục dữ liệu
+let dataIssueUi = null;   // vị trí dữ liệu đã cấu hình không mở được: hiện màn hình xử lý, KHÔNG làm việc trên bản trống/mặc định
 function loadDb() {
   if (HB) {
     try {
       const r = HB.loadSync();
-      if (!r || !r.ok) { storeOk = false; dbInfo = {error: (r && r.error) || 'không đọc được cơ sở dữ liệu'}; }
-      else { dbInfo = r; const o = r.db; return withDefaults(o && o.v === 2 ? o : (o && o.rs && Object.keys(o.rs).length ? migrateV1(o) : {v: 2, rs: {}})); }
+      if (r && r.unavailable) { dataIssueUi = r.issue || {path: '', reason: r.error || 'không mở được cơ sở dữ liệu', code: 'OPEN_FAILED'}; storeOk = false; dbInfo = {error: r.error}; }
+      else if (!r || !r.ok) { storeOk = false; dbInfo = {error: (r && r.error) || 'không đọc được cơ sở dữ liệu'}; }
+      else { dbInfo = r; if (r.notice) pendingNotice = r.notice; const o = r.db; return withDefaults(o && o.v === 2 ? o : (o && o.rs && Object.keys(o.rs).length ? migrateV1(o) : {v: 2, rs: {}})); }
     } catch (e) { storeOk = false; dbInfo = {error: e.message}; }
     return withDefaults({v: 2, rs: {}});
   }
@@ -420,6 +423,7 @@ function flushSave() {
   }).catch(e => { storeOk = false; showSave('✖ Lỗi lưu: ' + e.message, true); });
 }
 function persist() {
+  if (dataIssueUi) return;   // chưa mở được cơ sở dữ liệu: không ghi gì
   if (HB) {
     showSave('… Đang lưu');
     if (saveTimer) clearTimeout(saveTimer);
@@ -2358,6 +2362,7 @@ function renderCtx() {
   else showSave(saveSt.text, saveSt.err);
 }
 function render() {
+  if (dataIssueUi) return renderIssue();
   renderSide();
   renderMain();
   renderCtx();
@@ -2371,7 +2376,7 @@ function newRs() {
   const id = 'rs' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   db.rs[id] = {id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
   persist();
-  cur = id; curF = null; tab = 'info';
+  cur = id; curF = null; tab = 'info'; view = 'owner';
   note('Đã tạo chủ rừng mới. Nhập thông tin rồi bấm Lưu.');
 }
 
@@ -2596,11 +2601,17 @@ async function downloadTemplate(kind) {
   } catch (e) { note('Không tạo được file mẫu: ' + e.message, 'err'); }
 }
 
+let backupBusy = false;
 async function backupAll() {
   if (HB) {
-    const r = await HB.backupTo();
-    if (r.canceled) return;
-    return note(r.ok ? 'Đã sao lưu vào: ' + r.jsonFile + ' (kèm file .sqlite cùng tên).' : 'Không sao lưu được: ' + r.error, r.ok ? 'ok' : 'err');
+    if (backupBusy) return note('Đang sao lưu, vui lòng đợi xong rồi bấm lại.', 'warn');
+    backupBusy = true; note('Đang sao lưu và kiểm tra hai file…', 'warn');
+    try {
+      const r = await HB.backupTo();
+      if (r.canceled) return;
+      // chỉ báo thành công khi cả hai file (JSON và SQLite) đã ghi và qua kiểm tra; ngược lại nêu rõ file nào dùng được
+      return note(r.ok ? 'Đã sao lưu và kiểm tra xong: ' + r.jsonFile + ' và ' + r.sqlFile + '.' : 'Sao lưu chưa đầy đủ: ' + (r.message || r.error || 'lỗi không rõ'), r.ok ? 'ok' : 'err');
+    } finally { backupBusy = false; }
   }
   const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});
   download(blob, 'HoSoKhaiThac_SaoLuu_' + new Date().toISOString().slice(0, 10) + '.json');
@@ -2671,6 +2682,34 @@ async function importGo() {
 }
 
 
+
+/* ===== Vị trí dữ liệu đã cấu hình không truy cập được (ổ rút ra, thư mục/file bị chuyển, không có quyền…) ===== */
+const issueUi = {msg: null, busy: false};
+function renderIssue() {
+  const it = dataIssueUi || {}, why = {DIR_MISSING: 'Thư mục dữ liệu không còn', FILE_MISSING: 'Không thấy file cơ sở dữ liệu', NO_PERMISSION: 'Không có quyền truy cập', OPEN_FAILED: 'Không mở được cơ sở dữ liệu', IO: 'Lỗi đọc/ghi ổ đĩa'}[it.code] || 'Không truy cập được cơ sở dữ liệu';
+  document.getElementById('side') && (document.getElementById('side').style.display = 'none');
+  $('#main').innerHTML = '<div class="card" id="dataIssue"><h2 style="margin-top:0">⚠ ' + esc(why) + '</h2>' +
+    '<p>Phần mềm <b>chưa mở</b> dữ liệu của bạn để không ghi nhầm vào một bản mặc định cũ hoặc trống.</p>' +
+    '<div class="msg err" style="word-break:break-all"><b>Đường dẫn:</b> <code id="issuePath">' + esc(it.path || '') + '</code><br><b>Nguyên nhân:</b> <span id="issueReason">' + esc(it.reason || '') + '</span></div>' +
+    '<p class="mut">Nếu dữ liệu nằm trên ổ ngoài hoặc ổ mạng, hãy cắm lại ổ rồi bấm <b>Thử lại</b>. Cấu hình đường dẫn cũ được giữ nguyên cho đến khi bạn chọn đổi.</p>' +
+    (issueUi.msg ? '<div class="msg ' + issueUi.msg[1] + '" id="issueMsg">' + esc(issueUi.msg[0]) + '</div>' : '') +
+    '<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="dataRetry" id="dataRetryBtn">Thử lại</button>' +
+    '<button class="btn ghost" data-act="dataPick" id="dataPickBtn">Chọn cơ sở dữ liệu khác…</button>' +
+    '<button class="btn ghost" data-act="dataDefault" id="dataDefaultBtn">Dùng vị trí mặc định…</button></div></div>';
+  const cx = document.getElementById('ctxBar'); if (cx) cx.style.display = 'none';
+}
+async function issueAct(kind) {
+  if (issueUi.busy) return; issueUi.busy = true;
+  try {
+    const r = await (kind === 'retry' ? HB.data.retry() : kind === 'pick' ? HB.data.pickOther() : HB.data.useDefault());
+    if (r.canceled) return;
+    if (r.ok) { issueUi.msg = ['Đã mở được cơ sở dữ liệu, đang tải lại…', 'ok']; return; }
+    if (r.issue) dataIssueUi = r.issue;
+    issueUi.msg = [r.error || 'Vẫn chưa mở được: ' + ((r.issue && r.issue.reason) || ''), 'err'];
+  } catch (e) { issueUi.msg = ['Lỗi: ' + e.message, 'err']; }
+  finally { issueUi.busy = false; renderIssue(); }
+}
+
 /* ===== Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu (bản cài trên máy; xử lý ở src/main.js, src/settings.js) ===== */
 const setg = {s: null, msg: null};
 function panelSettings() {
@@ -2685,7 +2724,8 @@ function settingsPaint() {
     '<div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn" data-act="' + act + '"' + (s.lockedByEnv && act === 'setData' ? ' disabled' : '') + '>Chọn thư mục…</button>' +
     (custom ? '<button class="btn ghost" data-act="' + actDef + '">Về mặc định</button>' : '') + (extra || '') + '</div>' +
     '<div class="mut" style="margin-top:6px;font-size:12px">Mặc định: ' + esc(def) + '</div></div>';
-  box.className = ''; box.innerHTML =
+  const di = s.dbInfo || {}, nowCard = '<div class="card" style="margin:10px 0" id="dbNow"><h3 style="margin:0 0 4px">Cơ sở dữ liệu đang dùng</h3><div style="word-break:break-all"><code data-db-now>' + esc(s.dbFile) + '</code></div><div class="mut" style="margin-top:4px">' + (di.size != null ? 'Dung lượng ' + (di.size / 1048576 >= 1 ? (di.size / 1048576).toFixed(1) + ' MB' : Math.ceil(di.size / 1024) + ' KB') : '') + (di.mtime ? ' · sửa lần cuối ' + esc(new Date(di.mtime).toLocaleString('vi-VN')) : '') + (di.version ? ' · cấu trúc v' + di.version : '') + '</div></div>';
+  box.className = ''; box.innerHTML = nowCard +
     (s.missing.length ? '<div class="msg warn">Thư mục đã chọn trước đây không còn: ' + s.missing.map(esc).join('; ') + '. Ứng dụng đang dùng vị trí mặc định.</div>' : '') +
     (s.lockedByEnv ? '<div class="msg warn">Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB nên không đổi được ở đây.</div>' : '') +
     row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).', s.dbFile, s.customData, s.defaultDataDir, 'setData', 'setDataDefault', '<button class="btn ghost" data-act="setOpenData">Mở thư mục chứa dữ liệu</button>') +
@@ -2702,12 +2742,16 @@ async function settingsLoad() {
   if (r.ok) { setg.s = r.settings; settingsPaint(); } else { const b = document.getElementById('setBox'); if (b) b.innerHTML = '<div class="msg err">Không đọc được cài đặt: ' + esc(r.error) + '</div>'; }
 }
 async function settingsData(reset) {
+  setg.msg = ['Đang kiểm tra và sao chép dữ liệu… không đóng phần mềm lúc này (thao tác lưu trong lúc đó được giữ lại và chạy sau khi chuyển xong).', 'warn']; render();
   const r = await HB.settings.setData(reset);
-  if (r.canceled) return;
-  if (!r.ok) { setg.msg = ['Không đổi được thư mục dữ liệu: ' + r.error, 'err']; return render(); }
+  if (r.canceled) { setg.msg = null; return render(); }
+  if (!r.ok) {
+    setg.msg = ['Không đổi được thư mục dữ liệu: ' + r.error + (r.rolledBack === false ? '' : ' — Đã hoàn tác; vẫn dùng ' + ((r.settings && r.settings.dbFile) || 'vị trí cũ') + ', dữ liệu cũ và dữ liệu ở thư mục đích được giữ nguyên.'), 'err'];
+    if (r.settings) setg.s = r.settings;
+    return render();
+  }
   if (r.same) { setg.msg = ['Đó đang là thư mục dữ liệu hiện tại.', 'warn']; return render(); }
-  setg.msg = null;   // cửa sổ được tải lại từ vị trí mới; thông báo kết quả lưu để hiện sau khi tải
-  try { sessionStorage.setItem('hakqn.setmsg', 'Đã chuyển dữ liệu sang ' + r.settings.dbFile + (r.choice === 'use' ? ' (dùng dữ liệu có sẵn ở đó)' : ' (đã sao chép)') + '. Bản cũ vẫn còn ở ' + r.from + ', xóa tay khi chắc chắn không cần.'); } catch (e) { /* không có sessionStorage */ }
+  // chương trình chính tự tải lại cửa sổ từ cơ sở dữ liệu mới và hiện thông báo kết quả sau khi tải
 }
 async function settingsBackup(reset) {
   const r = await HB.settings.setBackup(reset);
@@ -3320,6 +3364,9 @@ document.addEventListener('click', async e => {
   if (act === 'delForest') return delForest(), render();
   if (act === 'addGiay') return addGiayRow();
   if (act === 'openSettings') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'settings'; setg.msg = null; return render(); }
+  if (act === 'dataRetry') return issueAct('retry');
+  if (act === 'dataPick') return issueAct('pick');
+  if (act === 'dataDefault') return issueAct('default');
   if (act === 'setData' || act === 'setDataDefault') return settingsData(act === 'setDataDefault');
   if (act === 'setBackup' || act === 'setBackupDefault') return settingsBackup(act === 'setBackupDefault');
   if (act === 'setOpenBackup') return HB.settings.openBackup();
@@ -3458,7 +3505,7 @@ document.addEventListener('change', e => {
   if (t.id === 'mhAddr') { mh.addrId = t.value === '@main' ? '' : t.value; return render(); }
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
-try { const m = sessionStorage.getItem('hakqn.setmsg'); if (m) { sessionStorage.removeItem('hakqn.setmsg'); view = 'settings'; setg.msg = [m, 'ok']; } } catch (e) { /* không có sessionStorage */ }
+if (pendingNotice) { view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
 if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind; if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở ⚙ Cài đặt hệ thống).', 'warn'); }).catch(() => {});
 render();
 })();

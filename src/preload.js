@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld('hak', {
     setRemind: d => ipcRenderer.invoke('settings:setRemind', d),
     openBackup: () => ipcRenderer.invoke('settings:openBackup')
   },
+  data: {
+    status: () => ipcRenderer.invoke('data:status'),
+    retry: () => ipcRenderer.invoke('data:retry'),
+    pickOther: () => ipcRenderer.invoke('data:pickOther'),
+    useDefault: () => ipcRenderer.invoke('data:useDefault')
+  },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
   google: {
     status: () => ipcRenderer.invoke('google:status'),

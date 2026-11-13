@@ -94,6 +94,20 @@ jobs:
             if ($pr.ExitCode -ne 0) { throw "Pha ${ph}: kiểm tra khói thất bại (mã thoát $($pr.ExitCode))" }
           }
           Copy-Item (Join-Path $env:RUNNER_TEMP 'smoke-*.json') dist/
+      - name: Đổi thư mục dữ liệu và sao lưu bằng bộ cài thật (sao chép, ghi đè có dự phòng, hoàn tác, đích đang dùng, ổ biến mất)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-installed'
+          $app = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          if (-not $app) { throw 'Không thấy file chạy sau khi cài' }
+          $out = Join-Path $env:RUNNER_TEMP 'smoke-relocate.json'
+          $env:HAKQN_USERDATA = Join-Path $env:RUNNER_TEMP 'hakqn-userdata-reloc'; $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = 'relocate'; $env:HAKQN_SMOKE_DIR = $env:RUNNER_TEMP
+          $pr = Start-Process -FilePath $app.FullName -PassThru
+          if (-not $pr.WaitForExit(180000)) { $pr.Kill(); throw 'Pha relocate: ứng dụng không tự thoát sau 180 giây' }
+          if (-not (Test-Path $out)) { throw "Pha relocate: không có file kết quả (mã thoát $($pr.ExitCode))" }
+          Get-Content $out -Raw
+          if ($pr.ExitCode -ne 0) { throw "Pha relocate: thất bại (mã thoát $($pr.ExitCode))" }
+          Copy-Item $out dist/smoke-relocate.json
       - name: Nâng cấp từ bộ cài THẬT v1.0.0 (cài v1.0.0, mở, đặt dữ liệu cũ, cài đè bản mới, kiểm tra dữ liệu)
         shell: pwsh
         env:

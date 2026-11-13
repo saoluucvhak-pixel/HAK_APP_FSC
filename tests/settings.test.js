@@ -14,9 +14,10 @@ test('lưu rồi đọc lại; file hỏng hoặc thiếu thì về mặc địn
   const r = S.resolve(u); assert.equal(r.dbFile, path.join(d, 'hakqn.sqlite')); assert.equal(r.backupDir, b); assert.ok(r.customData && r.customBackup);
   fs.writeFileSync(S.file(u), '{hỏng'); assert.deepEqual(S.load(u), {dataDir: '', backupDir: '', lastBackup: '', remindDays: 7});
 });
-test('thư mục đã chọn bị xóa mất: quay về mặc định và báo trong missing', () => {
-  const u = tmp(), d = path.join(tmp(), 'khong-co'); S.save(u, {dataDir: d, backupDir: ''});
-  const r = S.resolve(u); assert.equal(r.dbFile, path.join(u, 'hakqn.sqlite')); assert.deepEqual(r.missing, [d]);
+test('thư mục dữ liệu đã cấu hình bị mất: KHÔNG tự quay về mặc định (giữ đường dẫn, báo không truy cập được); thư mục sao lưu mất thì dùng mặc định và báo', () => {
+  const u = tmp(), d = path.join(tmp(), 'khong-co'), b = path.join(tmp(), 'khong-co-bk'); S.save(u, {dataDir: d, backupDir: b});
+  const r = S.resolve(u); assert.strictEqual(r.dbFile, path.join(d, 'hakqn.sqlite')); assert.deepStrictEqual(r.missing, [b]); assert.strictEqual(r.backupDir, path.join(d, 'backups'));
+  assert.strictEqual(S.checkConfigured(u).state, 'unavailable');
 });
 test('thư mục sao lưu mặc định đi theo thư mục dữ liệu mới', () => {
   const u = tmp(), d = tmp(); S.save(u, {dataDir: d, backupDir: ''});

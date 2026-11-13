@@ -27,7 +27,7 @@ const launch = env => electron.launch({executablePath: require('electron'), args
   await app.close(); app = await launch({HAKQN_PICK_DIR: dd}); w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   ok('mở lại: dữ liệu và thư mục sao lưu được nhớ', /CÀI ĐẶT/i.test(await w.innerText('#sideList')));
   await w.click('#moreMenu summary'); await w.click('#openSettingsBtn'); await w.waitForSelector('#setBox [data-set-path]');
-  await w.click('[data-act=setData]'); await w.waitForSelector('#setMsg'); await w.waitForSelector('#side');
+  await w.click('[data-act=setData]'); await w.waitForFunction(() => /Đã chuyển dữ liệu/.test((document.querySelector('#main') || {}).innerText || ''), null, {timeout: 25000}); await w.waitForSelector('#side');
   const t2 = await w.innerText('#main');
   ok('đổi thư mục dữ liệu: file mới có trong thư mục đã chọn, bản cũ còn nguyên', fs.existsSync(path.join(dd, 'hakqn.sqlite')) && fs.existsSync(path.join(ud, 'hakqn.sqlite')));
   ok('sau khi đổi: thông báo nêu vị trí mới và bản cũ', /Đã chuyển dữ liệu/.test(t2) && t2.includes(dd), t2.slice(0, 300));
