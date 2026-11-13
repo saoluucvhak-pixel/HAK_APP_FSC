@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('hak', {
     useDefault: () => ipcRenderer.invoke('data:useDefault')
   },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
+  phieuCan: (rows, company) => ipcRenderer.invoke('phieucan:open', rows, company),
   google: {
     status: () => ipcRenderer.invoke('google:status'),
     login: () => ipcRenderer.invoke('google:login'),

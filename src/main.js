@@ -315,6 +315,7 @@ function registerIpc() {
       return {ok: true};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
+  ipcMain.handle('phieucan:open', async (e, rows, company) => { try { await openPhieuCan(rows, company); return {ok: true}; } catch (err) { log('ERROR', 'phieucan: ' + err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('app:openData', () => { shell.showItemInFolder(loc.dbFile); return {ok: true}; });
 }
 
@@ -444,6 +445,22 @@ async function smoke() {
   r.ok = !r.error && Object.values(r.checks).every(Boolean);
   fs.writeFileSync(out, JSON.stringify(r, null, 2));
   app.exit(r.ok ? 0 : 3);
+}
+
+/* In phiếu cân: mở NGUYÊN BẢN công cụ renderer/PhieuCan.html (không sửa file) trong cửa sổ riêng, nạp sẵn phiếu cân của rừng bằng ô chọn file của chính công cụ (src/phieucan.js) */
+let pcWin = null;
+async function openPhieuCan(rows, company) {
+  const list = Array.isArray(rows) ? rows.slice(0, 5001).map(r => Array.isArray(r) ? r.slice(0, 40).map(v => (typeof v === 'number' || typeof v === 'string') ? v : '') : []) : [];
+  if (!pcWin || pcWin.isDestroyed()) {
+    pcWin = new BrowserWindow({width: 1280, height: 860, minWidth: 900, minHeight: 600, title: 'In phiếu cân', autoHideMenuBar: true, backgroundColor: '#f5f2ec',
+      webPreferences: {contextIsolation: true, nodeIntegration: false, sandbox: true}});
+    pcWin.webContents.setWindowOpenHandler(() => ({action: 'deny'}));
+    pcWin.on('closed', () => { pcWin = null; });
+  } else { if (pcWin.isMinimized()) pcWin.restore(); pcWin.focus(); }
+  const w = pcWin;
+  await new Promise((res, rej) => { w.webContents.once('did-finish-load', res); w.webContents.once('did-fail-load', (e, c, d) => rej(new Error(d))); w.loadFile(path.join(__dirname, '..', 'renderer', 'PhieuCan.html')); });
+  const co = company && typeof company === 'object' ? Object.fromEntries(['coName', 'coAddr', 'coPhone', 'coFax', 'place'].map(k => [k, typeof company[k] === 'string' ? company[k] : ''])) : {};
+  if (list.length > 1 || Object.values(co).some(Boolean)) { const r = await w.webContents.executeJavaScript(require('./phieucan').inject(list, co)); if (r !== true) throw new Error('Không nạp được dữ liệu vào công cụ in phiếu cân: ' + r); }
 }
 
 function createWindow() {

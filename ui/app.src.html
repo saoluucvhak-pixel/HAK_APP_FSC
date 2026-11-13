@@ -167,6 +167,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
     <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
+    <button class="nb deskOnly" data-act="pcPrint" data-blank="1" hidden title="Mở công cụ in phiếu cân (khổ giấy lỗ 240 × 279 mm), nạp file Excel phiếu cân">In phiếu cân</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức BHLĐ</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
@@ -293,6 +294,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@INAN2@@*/</script>
 <script>/*@@KHOAN@@*/</script>
 <script>/*@@CHAMCONG@@*/</script>
+<script>/*@@PHIEUCAN@@*/</script>
 <script>/*@@DINHMUC@@*/</script>
 <script>/*@@QUYTRINH@@*/</script>
 <script>/*@@NHAPLIEU@@*/</script>
@@ -2415,14 +2417,14 @@ function panelCty() {
     (theCompany() ? ' ' + ctyForestsUsing() + ' rừng đã chọn địa chỉ giao.' : '') + '</p></div></div>' + (m ? '<div class="msg ' + m.kind + '">' + esc(m.text) + '</div>' : '') +
     '<div class="card" id="ctyCard"><form id="ctyForm" class="grid">' +
     f('ten', 'Tên pháp lý', {req: true, wide: true}) + f('mst', 'Mã số thuế', {ph: '10 hoặc 13 chữ số'}) + f('diaChi', 'Địa chỉ công ty', {req: true, wide: true}) +
-    f('nguoiDaiDien', 'Người đại diện') + f('chucVu', 'Chức vụ') + f('sdt', 'Số điện thoại') + f('email', 'Email') +
+    f('nguoiDaiDien', 'Người đại diện') + f('chucVu', 'Chức vụ') + f('sdt', 'Số điện thoại') + f('fax', 'Fax', {ph: 'tùy chọn; in ở tiêu đề phiếu cân'}) + f('noiLap', 'Nơi lập chứng từ', {ph: 'VD: Đà Nẵng; in trước ngày tháng năm trên phiếu cân'}) + f('email', 'Email') +
     '<div style="grid-column:1/-1"><div class="mut">Địa chỉ giao hàng khác (kho, nhà máy…). Khi chọn điểm đến cho rừng, địa chỉ công ty luôn là lựa chọn đầu tiên, sau đó là các địa chỉ này.</div><div id="ctyAddrs">' + (c.diaChiGiao || []).map(addrRowHtml).join('') + '</div>' +
       '<button type="button" class="btn ghost sm" style="margin-top:6px" data-act="ctyAddAddr">+ Thêm địa chỉ giao hàng</button></div>' +
     '<div id="ctyMsg" style="grid-column:1/-1"></div><div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin công ty</button></div></form></div>';
 }
 function ctyReadForm() {
   const form = $('#ctyForm'), fd = new FormData(form), c = {...(cty.edit || MH.newCompany())};
-  ['ten', 'mst', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'email'].forEach(k => { c[k] = fd.get(k) ?? ''; });
+  ['ten', 'mst', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'email'].forEach(k => { c[k] = fd.get(k) ?? ''; });
   c.diaChiGiao = [...form.querySelectorAll('.ctyAddr')].map(r => ({id: r.dataset.aid || '', nhan: r.querySelector('[name=a_nhan]').value, diaChi: r.querySelector('[name=a_dia]').value}));
   return MH.clean(c, newId);
 }
@@ -2491,7 +2493,7 @@ function panelDX(rec) {
 
 function panelPhieuCan(rec) {
   const c = checkPC(rec), pc = rec.pc || [];
-  const head = panelImport('pc', rec);
+  const head = panelImport('pc', rec) + (HB ? '<div class="card row" style="justify-content:space-between;align-items:center"><div><b>In phiếu cân</b><div class="mut">Mở công cụ in phiếu cân nguyên bản (giấy lỗ 240 × 279 mm, đường xé giữa, chỉnh lề) với ' + pc.length + ' phiếu cân của rừng này.</div></div><button class="btn" data-act="pcPrint"' + (pc.length ? '' : ' disabled') + '>In phiếu cân</button></div>' : '');
   if (!pc.length) return head + '<div class="empty">Chưa có phiếu cân. Bấm “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
   return head + issuesBox(c.errs, c.warns) +
     '<div class="wrap"><table><thead><tr><th>Dòng</th><th>Ngày cân</th><th>Giờ cân 1</th><th>Giờ cân 2</th><th>Biển kiểm soát</th><th>Số phiếu cân</th><th style="text-align:right">Cân lần 1 (kg)</th><th style="text-align:right">Cân lần 2 (kg)</th><th style="text-align:right">Khối lượng (kg)</th><th style="text-align:right">Khối lượng (tấn)</th><th>Khách hàng</th><th>Nơi giao</th></tr></thead><tbody>' +
@@ -3924,6 +3926,7 @@ document.addEventListener('click', async e => {
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|fillKl|dmDefault)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) return ccAct(act);
+  if (act === 'pcPrint') { const rec = el.dataset.blank ? null : curRec(); const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(rec ? HAKPhieuCan.aoa(rec) : [], HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
   if (act === 'keoDel') { const tr = el.closest('tr'); tr.querySelectorAll('input').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'pcFixDate') {   // sửa ngày phiếu cũ bị sai: chỉ nhận ngày có thật; giữ nguyên mọi dữ liệu khác của phiếu

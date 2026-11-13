@@ -246,6 +246,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
     <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
+    <button class="nb deskOnly" data-act="pcPrint" data-blank="1" hidden title="Mở công cụ in phiếu cân (khổ giấy lỗ 240 × 279 mm), nạp file Excel phiếu cân">In phiếu cân</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức BHLĐ</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
@@ -940,6 +941,34 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKChamCong = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
+<script>/* In phiếu cân bằng NGUYÊN BẢN công cụ PhieuCan (renderer/PhieuCan.html, giữ nguyên từng byte: bố cục tính theo mm, khổ giấy lỗ 240 × 279 mm,
+ * đường xé giữa, dịch lề, hai liên…). Phần mềm KHÔNG vẽ lại phiếu: chỉ mở đúng file đó trong một cửa sổ riêng và nạp sẵn danh sách phiếu cân của rừng
+ * bằng chính ô chọn file Excel của công cụ (tạo một bảng tính có đúng các cột công cụ yêu cầu), nên cách đọc dữ liệu, xem trước, in và tải PDF giống hệt bản gốc.
+ * Hàm thuần: dùng ở giao diện (tạo bảng) và ở tiến trình chính (tạo mã nạp dữ liệu). */
+(function (root) {
+  const HEAD = ['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Ngày cân 2', 'Giờ cân 2', 'Biển số 1', 'Cân 1', 'Cân 2', 'KL', 'Khách hàng', 'Địa chỉ', 'Đơn giá_TC', 'Thành tiền'];
+  const kgOf = p => (typeof p.klKg === 'number' && p.klKg > 0) ? p.klKg : (typeof p.kl === 'number' && p.kl > 0 ? Math.round(p.kl * 1000) : '');
+  /* Bảng dữ liệu: dòng tiêu đề + mỗi phiếu cân một dòng. KL tính bằng kg; Địa chỉ = địa điểm rừng (in ở dòng “Địa chỉ rừng”); khách hàng trống thì lấy chủ rừng.
+   * Đơn giá và Thành tiền để trống (phiếu in “0”): hồ sơ khai thác chưa quản lý giá mua; cần giá thì nạp file Excel có cột giá ngay trong công cụ. */
+  function aoa(rec) {
+    const info = rec.info || {}, owner = String(info.ten || '').trim();
+    return [HEAD.slice()].concat((rec.pc || []).map(p => [String(p.soPhieu || ''), p.ngay || '', p.gioCan1 || '', p.ngay || '', p.gioCan2 || '', p.bienSo || '', typeof p.can1 === 'number' ? p.can1 : '', typeof p.can2 === 'number' ? p.can2 : '', kgOf(p),
+      p.khachHang || owner, info.diaDiem || '', '', '']));
+  }
+  /* Thông tin tiêu đề phiếu lấy từ hồ sơ công ty (Cài đặt → Công ty): tên, địa chỉ, điện thoại, fax, nơi lập. Chưa khai thì không gửi gì (công cụ dùng giá trị mặc định của nó) */
+  const company = c => c && String(c.ten || '').trim() ? {coName: String(c.ten).trim(), coAddr: String(c.diaChi || '').trim(), coPhone: String(c.sdt || '').trim(), coFax: String(c.fax || '').trim(), place: String(c.noiLap || '').trim()} : {};
+  /* Mã chạy trong cửa sổ công cụ sau khi tải xong: điền thông tin công ty vào các ô của công cụ, rồi đưa bảng vào ô chọn file như người dùng chọn một file .xlsx.
+   * Ô nơi lập để trống thì giữ giá trị của công cụ; fax để trống thì phiếu không in FAX. */
+  function inject(rows, co) {
+    const set = Object.entries(co || {}).filter(([k, v]) => k === 'coFax' ? (co.coName || v) : v);   // công ty đã khai thì fax trống nghĩa là không in fax
+    const fill = set.map(([k, v]) => 'var e=document.getElementById(' + JSON.stringify(k) + ');e.value=' + JSON.stringify(v) + ';e.dispatchEvent(new Event("input",{bubbles:true}));').join('');
+    return '(function(){try{' + fill + (rows && rows.length > 1 ? 'var a=' + JSON.stringify(rows).replace(/\u2028|\u2029/g, '') + ';var ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"PHIEU_CAN");' +
+      'var buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});var f=new File([buf],"PhieuCan_HAKQN.xlsx",{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});var dt=new DataTransfer();dt.items.add(f);var i=document.getElementById("file");i.files=dt.files;i.dispatchEvent(new Event("change",{bubbles:true}));' : '') + 'return true}catch(e){return String(e&&e.message||e)}})()';
+  }
+  const api = {HEAD, aoa, inject, company};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKPhieuCan = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
 <script>/* Định mức BHLĐ theo vị trí (chức danh) có HIỆU LỰC TỪ NGÀY, và danh sách vị trí có thể thêm. Hàm thuần, thao tác trên đối tượng db.
  *  - db.dinhMuc / db.dinhMucTu: bản gốc (dữ liệu cũ giữ nguyên); db.dinhMucTu = ngày hiệu lực dd/mm/yyyy ('' = áp dụng từ trước đến nay).
  *  - db.dinhMucBan: [{tuNgay, dm: {vị trí: {qa, giay, mu, gang, nut, kinh}}}] các bản có hiệu lực từ ngày muộn hơn.
@@ -1224,7 +1253,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 /* Danh mục "Công ty mua hàng" và điểm đến vận chuyển. Thuần dữ liệu, không phụ thuộc DOM/Electron: dùng ở giao diện (nhúng khi build) và kiểm thử Node.
  *
  * Công ty (db.congTy[id]):
- *   {id, ten, mst, diaChi, nguoiDaiDien, chucVu, sdt, email, diaChiGiao: [{id, nhan, diaChi}], ghiChu}
+ *   {id, ten, mst, diaChi, nguoiDaiDien, chucVu, sdt, fax, noiLap, email, diaChiGiao: [{id, nhan, diaChi}], ghiChu}
  *   - ten (tên pháp lý) và diaChi (địa chỉ công ty/trụ sở) BẮT BUỘC; các trường còn lại tùy chọn.
  *   - diaChiGiao: các địa chỉ giao hàng khác của công ty (kho, nhà máy…); địa chỉ công ty luôn là lựa chọn đầu tiên.
  * Công ty mua hàng là một VAI TRÒ riêng, chọn theo từng rừng; hồ sơ rừng lưu BẢN CHỤP (info.muaHang) tên + địa chỉ đã xác nhận:
@@ -1241,12 +1270,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const mstValid = v => { const m = normMst(v); return m === '' || /^\d{10}$/.test(m) || /^\d{13}$/.test(m); };
   const mstShow = v => { const m = normMst(v); return m.length === 13 ? m.slice(0, 10) + '-' + m.slice(10) : m; };
 
-  function newCompany() { return {id: '', ten: '', mst: '', diaChi: '', nguoiDaiDien: '', chucVu: '', sdt: '', email: '', diaChiGiao: [], ghiChu: ''}; }
+  function newCompany() { return {id: '', ten: '', mst: '', diaChi: '', nguoiDaiDien: '', chucVu: '', sdt: '', fax: '', noiLap: '', email: '', diaChiGiao: [], ghiChu: ''}; }
 
   /* Chuẩn hóa dữ liệu nhập (không đổi ý nghĩa): cắt khoảng trắng, MST chuẩn hóa, bỏ địa chỉ giao rỗng, giữ id địa chỉ */
   function clean(o, newId) {
     const c = Object.assign(newCompany(), o || {});
-    ['ten', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'email', 'ghiChu'].forEach(k => { c[k] = trim(c[k]); });
+    ['ten', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'email', 'ghiChu'].forEach(k => { c[k] = trim(c[k]); });
     c.mst = mstShow(c.mst);
     let n = 0;
     c.diaChiGiao = (Array.isArray(c.diaChiGiao) ? c.diaChiGiao : []).map(a => ({id: trim(a && a.id) || (newId ? newId('a') : 'a' + (++n)), nhan: trim(a && a.nhan), diaChi: trim(a && a.diaChi)})).filter(a => a.diaChi || a.nhan);
@@ -4357,14 +4386,14 @@ function panelCty() {
     (theCompany() ? ' ' + ctyForestsUsing() + ' rừng đã chọn địa chỉ giao.' : '') + '</p></div></div>' + (m ? '<div class="msg ' + m.kind + '">' + esc(m.text) + '</div>' : '') +
     '<div class="card" id="ctyCard"><form id="ctyForm" class="grid">' +
     f('ten', 'Tên pháp lý', {req: true, wide: true}) + f('mst', 'Mã số thuế', {ph: '10 hoặc 13 chữ số'}) + f('diaChi', 'Địa chỉ công ty', {req: true, wide: true}) +
-    f('nguoiDaiDien', 'Người đại diện') + f('chucVu', 'Chức vụ') + f('sdt', 'Số điện thoại') + f('email', 'Email') +
+    f('nguoiDaiDien', 'Người đại diện') + f('chucVu', 'Chức vụ') + f('sdt', 'Số điện thoại') + f('fax', 'Fax', {ph: 'tùy chọn; in ở tiêu đề phiếu cân'}) + f('noiLap', 'Nơi lập chứng từ', {ph: 'VD: Đà Nẵng; in trước ngày tháng năm trên phiếu cân'}) + f('email', 'Email') +
     '<div style="grid-column:1/-1"><div class="mut">Địa chỉ giao hàng khác (kho, nhà máy…). Khi chọn điểm đến cho rừng, địa chỉ công ty luôn là lựa chọn đầu tiên, sau đó là các địa chỉ này.</div><div id="ctyAddrs">' + (c.diaChiGiao || []).map(addrRowHtml).join('') + '</div>' +
       '<button type="button" class="btn ghost sm" style="margin-top:6px" data-act="ctyAddAddr">+ Thêm địa chỉ giao hàng</button></div>' +
     '<div id="ctyMsg" style="grid-column:1/-1"></div><div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin công ty</button></div></form></div>';
 }
 function ctyReadForm() {
   const form = $('#ctyForm'), fd = new FormData(form), c = {...(cty.edit || MH.newCompany())};
-  ['ten', 'mst', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'email'].forEach(k => { c[k] = fd.get(k) ?? ''; });
+  ['ten', 'mst', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'email'].forEach(k => { c[k] = fd.get(k) ?? ''; });
   c.diaChiGiao = [...form.querySelectorAll('.ctyAddr')].map(r => ({id: r.dataset.aid || '', nhan: r.querySelector('[name=a_nhan]').value, diaChi: r.querySelector('[name=a_dia]').value}));
   return MH.clean(c, newId);
 }
@@ -4433,7 +4462,7 @@ function panelDX(rec) {
 
 function panelPhieuCan(rec) {
   const c = checkPC(rec), pc = rec.pc || [];
-  const head = panelImport('pc', rec);
+  const head = panelImport('pc', rec) + (HB ? '<div class="card row" style="justify-content:space-between;align-items:center"><div><b>In phiếu cân</b><div class="mut">Mở công cụ in phiếu cân nguyên bản (giấy lỗ 240 × 279 mm, đường xé giữa, chỉnh lề) với ' + pc.length + ' phiếu cân của rừng này.</div></div><button class="btn" data-act="pcPrint"' + (pc.length ? '' : ' disabled') + '>In phiếu cân</button></div>' : '');
   if (!pc.length) return head + '<div class="empty">Chưa có phiếu cân. Bấm “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
   return head + issuesBox(c.errs, c.warns) +
     '<div class="wrap"><table><thead><tr><th>Dòng</th><th>Ngày cân</th><th>Giờ cân 1</th><th>Giờ cân 2</th><th>Biển kiểm soát</th><th>Số phiếu cân</th><th style="text-align:right">Cân lần 1 (kg)</th><th style="text-align:right">Cân lần 2 (kg)</th><th style="text-align:right">Khối lượng (kg)</th><th style="text-align:right">Khối lượng (tấn)</th><th>Khách hàng</th><th>Nơi giao</th></tr></thead><tbody>' +
@@ -5866,6 +5895,7 @@ document.addEventListener('click', async e => {
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|fillKl|dmDefault)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) return ccAct(act);
+  if (act === 'pcPrint') { const rec = el.dataset.blank ? null : curRec(); const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(rec ? HAKPhieuCan.aoa(rec) : [], HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
   if (act === 'keoDel') { const tr = el.closest('tr'); tr.querySelectorAll('input').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'pcFixDate') {   // sửa ngày phiếu cũ bị sai: chỉ nhận ngày có thật; giữ nguyên mọi dữ liệu khác của phiếu
