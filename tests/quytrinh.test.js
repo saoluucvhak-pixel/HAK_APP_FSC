@@ -31,3 +31,22 @@ test('tổng hợp từng đợt và việc nên làm tiếp theo theo đúng th
 test('stateOf tạo mới khi hỏng; peek không ghi vào dữ liệu', () => {
   const f = {inAn: 'hỏng'}; assert.deepStrictEqual(Q.stateOf(f).items, {}); const g = {a: 1}; assert.deepStrictEqual(Q.peek(g).items, {}); assert.deepStrictEqual(Object.keys(g), ['a']);
 });
+
+test('hướng in đợt 2 (giấy trắng / nền + in đè) tổng hợp từ trạng thái từng mục', () => {
+  const R = adv => Q.route(adv.map(a => ({advice: a})));
+  assert.strictEqual(R(['trang', 'trang']).key, 'trang'); assert.strictEqual(R(['nen']).key, 'nen'); assert.strictEqual(R(['thieu']).key, 'thieu');
+  assert.strictEqual(R(['de', 'de']).key, 'de'); assert.strictEqual(R(['cho', 'cho']).key, 'cho'); assert.strictEqual(R([]).key, 'trong');
+  assert.strictEqual(R(['de', 'doibocuc']).key, 'doibocuc', 'một nhóm đổi bố cục thì cả mẫu cảnh báo');
+  const m = R(['de', 'trang', 'cho']); assert.strictEqual(m.key, 'hon'); assert.ok(/1\/3 in đè/.test(m.text) && /1\/3 giấy trắng/.test(m.text));
+  assert.ok(/đối chiếu/.test(R(['kiemtra', 'de']).text));
+});
+test('việc nên làm tiếp nêu đúng bước in nền, chờ dữ liệu, in đè', () => {
+  const st = Q.emptyState(); Q.applicable('giaokhoan').filter(f => f.dot === 1).forEach(f => Q.mark(st, f.code, 's' + f.code, 'n'));
+  const s = Q.summary(Q.evaluate(items('giaokhoan'), st)), N = (o) => Q.next(s, o);
+  assert.ok(/in sẵn mẫu nền đợt 2/.test(N({coPhieuCan: false, d2: {nenReady: 6, nenPrinted: 0, deReady: 0, cho: 0, doibocuc: 0, trang: 0}}).text));
+  assert.ok(/Đã in nền 6 mục/.test(N({coPhieuCan: false, d2: {nenReady: 6, nenPrinted: 6, deReady: 0, cho: 6, doibocuc: 0, trang: 0}}).text));
+  const de = N({coPhieuCan: true, d2: {nenReady: 6, nenPrinted: 6, deReady: 6, cho: 0, doibocuc: 0, trang: 0}}); assert.strictEqual(de.step, 'dot2'); assert.ok(/In đè đợt 2: nạp lại tờ mẫu nền đã in cho 6 mục/.test(de.text));
+  assert.ok(/Bố cục/.test(N({coPhieuCan: true, d2: {nenReady: 6, nenPrinted: 6, deReady: 4, cho: 0, doibocuc: 2, trang: 0}}).text) || /đổi bố cục/.test(N({coPhieuCan: true, d2: {nenReady: 6, nenPrinted: 6, deReady: 4, cho: 0, doibocuc: 2, trang: 0}}).text));
+  assert.ok(/giấy trắng/.test(N({coPhieuCan: true, d2: {nenReady: 6, nenPrinted: 0, deReady: 0, cho: 0, doibocuc: 0, trang: 6}}).text));
+  assert.ok(/thiếu dữ liệu để in đè/.test(N({coPhieuCan: true, d2: {nenReady: 6, nenPrinted: 6, deReady: 0, cho: 6, doibocuc: 0, trang: 0}}).text));
+});

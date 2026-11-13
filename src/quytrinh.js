@@ -59,20 +59,44 @@
     });
     return out;
   }
-  /* việc nên làm tiếp theo (một câu), theo thứ tự quy trình */
+  /* Hướng in đợt 2 của một mẫu, tổng hợp từ trạng thái từng mục (BM-09, BM-10: mỗi người vận chuyển một mục; src/inan2.js).
+   * items = [{advice}] với advice: trang | nen | thieu | de | cho | kiemtra | doibocuc.  Trả {cls, text, key}. */
+  function route(items) {
+    const n = items.length, c = a => items.filter(x => x.advice === a).length;
+    if (!n) return {cls: 'err', key: 'trong', text: 'Chưa có mục nào (khai đội xe ở tab Vận chuyển)'};
+    if (c('doibocuc')) return {cls: 'err', key: 'doibocuc', text: 'Bố cục đã đổi sau khi in nền: in lại nền hoặc in giấy trắng'};
+    if (c('de') + c('kiemtra') === n) return {cls: 'ok', key: 'de', text: 'Nền đã in, đủ dữ liệu: in đè' + (c('kiemtra') ? ' (đối chiếu nền in từ trước)' : '')};
+    if (c('cho') === n) return {cls: 'warn', key: 'cho', text: 'Nền đã in, chờ bổ sung dữ liệu để in đè'};
+    if (c('trang') === n) return {cls: 'ok', key: 'trang', text: 'Đủ dữ liệu, chưa in nền: in giấy trắng'};
+    if (c('nen') === n) return {cls: 'warn', key: 'nen', text: 'Chưa đủ để in đầy đủ: in mẫu nền trước'};
+    if (c('thieu') === n) return {cls: 'err', key: 'thieu', text: 'Chưa đủ dữ liệu để dựng cả mẫu nền'};
+    const parts = [['de', 'in đè'], ['kiemtra', 'đối chiếu nền cũ'], ['cho', 'nền đã in, chờ dữ liệu'], ['trang', 'giấy trắng'], ['nen', 'in nền'], ['thieu', 'chưa đủ dữ liệu']].map(([k, l]) => c(k) ? c(k) + '/' + n + ' ' + l : '').filter(Boolean);
+    return {cls: 'warn', key: 'hon', text: 'Từng nhóm khác nhau: ' + parts.join('; ')};
+  }
+  /* d2 = {nenReady, nenPrinted, deReady, cho, doibocuc, trang} (đếm số MỤC đợt 2) */
+  const d2Text = d2 => (!d2 ? '' : 'nền ' + d2.nenPrinted + ' mục · in đè ' + d2.deReady + ' mục');
+  /* việc nên làm tiếp (một câu), theo thứ tự quy trình. o: {chuaChuanBi, coPhieuCan, d2} */
   function next(sum, o) {
-    o = o || {};
+    o = o || {}; const d2 = o.d2 || {nenReady: 0, nenPrinted: 0, deReady: 0, cho: 0, doibocuc: 0, trang: 0};
     if (o.chuaChuanBi) return {step: 'chuanbi', text: 'Hoàn tất bước chuẩn bị: ' + o.chuaChuanBi};
     const a = sum.dot1;
     if (a.thieu) return {step: 'dot1', text: 'Đợt 1 còn ' + a.thieu + ' mẫu chưa đủ dữ liệu để xuất.'};
     if (a.doi) return {step: 'dot1', text: 'Đợt 1: ' + a.doi + ' mẫu đã in nhưng dữ liệu đã đổi, cần in lại.'};
     if (a.chuaIn || a.nhap) return {step: 'dot1', text: 'In đợt 1: còn ' + a.chuaIn + ' mẫu chưa in' + (a.nhap ? ', ' + a.nhap + ' mẫu đang là bản nháp' : '') + '.'};
-    if (!o.coPhieuCan) return {step: 'khaithac', text: 'Đợt 1 đã in xong. Chờ khai thác và cân: nạp phiếu cân, nhập khối lượng thực tế.'};
     const b = sum.dot2;
+    if (b.xong) return {step: 'xong', text: 'Hồ sơ đã in xong cả hai đợt và còn khớp dữ liệu hiện tại.'};
+    if (d2.doibocuc) return {step: 'dot2', text: 'Đợt 2: ' + d2.doibocuc + ' mục đã đổi bố cục sau khi in nền. Không in đè được: in lại mẫu nền (rồi xác nhận lại) hoặc in đầy đủ trên giấy trắng.'};
+    if (!o.coPhieuCan) {
+      if (d2.nenPrinted) return {step: 'khaithac', text: 'Đã in nền ' + d2.nenPrinted + ' mục đợt 2. Chờ khai thác và cân: nạp phiếu cân, nhập khối lượng thực tế và ngày lập; khi đủ dữ liệu sẽ in đè lên tờ nền đã in.'};
+      if (d2.nenReady) return {step: 'khaithac', text: 'Đợt 1 đã in xong. Có thể in sẵn mẫu nền đợt 2 ngay bây giờ (chữ cố định in sẵn, số để trống; nhớ bấm “Xác nhận đã in mẫu nền”), rồi chờ phiếu cân; hoặc chờ đủ dữ liệu để in đầy đủ một lần trên giấy trắng.'};
+      return {step: 'khaithac', text: 'Đợt 1 đã in xong. Chờ khai thác và cân: nạp phiếu cân, nhập khối lượng thực tế.'};
+    }
+    if (d2.deReady) return {step: 'dot2', text: 'In đè đợt 2: nạp lại tờ mẫu nền đã in cho ' + d2.deReady + ' mục rồi in phần bổ sung' + (d2.trang ? '; ' + d2.trang + ' mục chưa in nền thì in giấy trắng' : '') + '. Sau khi in xong, đánh dấu đã in.'};
+    if (d2.cho) return {step: 'dot2', text: 'Đã in nền ' + d2.cho + ' mục nhưng còn thiếu dữ liệu để in đè: bổ sung (xem cột “Hướng in”).'};
     if (b.doi) return {step: 'dot2', text: 'Đợt 2: ' + b.doi + ' mẫu đã in nhưng dữ liệu đã đổi, cần in lại.'};
-    if (b.chuaIn || b.nhap || b.thieu) return {step: 'dot2', text: 'In đợt 2: còn ' + (b.chuaIn) + ' mẫu chưa in (xem hướng in giấy trắng hoặc nền + in đè).'};
-    return {step: 'xong', text: 'Hồ sơ đã in xong cả hai đợt và còn khớp dữ liệu hiện tại.'};
+    if (b.chuaIn || b.nhap || b.thieu) return {step: 'dot2', text: 'In đợt 2: ' + (d2.trang ? d2.trang + ' mục đủ dữ liệu, chưa in nền: in giấy trắng. ' : '') + 'Sau khi in xong (giấy trắng hoặc in đè), đánh dấu đã in.'};
+    return {step: 'dot2', text: 'Đợt 2: đánh dấu các mẫu đã in xong.'};
   }
-  const api = {FORMS, byCode, applicable, emptyState, peek, stateOf, mark, unmark, evaluate, summary, next};
+  const api = {FORMS, byCode, applicable, emptyState, peek, stateOf, mark, unmark, evaluate, summary, route, d2Text, next};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKQuyTrinh = api;
 })(typeof self !== 'undefined' ? self : this);

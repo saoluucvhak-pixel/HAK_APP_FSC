@@ -17,6 +17,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const row = code => w.$eval('#qtCard tr[data-qt="' + code + '"]', r => ({ready: r.dataset.ready, printed: r.dataset.printed}));
   const rows = async () => w.$$eval('#qtCard tr[data-qt]', rs => Object.fromEntries(rs.map(r => [r.dataset.qt, r.dataset.printed + '/' + r.dataset.ready])));
   const waitSave = () => w.waitForTimeout(700);
+  const route = code => w.$eval('#qtCard tr[data-qt="' + code + '"]', r => r.dataset.route);
+  const routes = async () => Object.fromEntries(await Promise.all(['08', '09', '10', '14'].map(async c => [c, await route(c)])));
   const CT = {c1: {id: 'c1', ten: 'CÔNG TY TNHH DĂM AN PHÁT', diaChi: 'KCN Điện Nam, Quảng Nam', diaChiGiao: [{id: 'g1', ten: 'Nhà máy', diaChi: 'KCN Điện Nam, Quảng Nam'}]}};
   const setDb = async d => { await waitSave(); d.congTy = d.congTy && Object.keys(d.congTy).length ? d.congTy : CT; await w.evaluate(x => window.hak.save(x), d); };
 
@@ -35,13 +37,21 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('việc nên làm tiếp: đợt 1 đã in xong, chờ khai thác và cân', /Đợt 1 đã in xong/.test(await w.innerText('#qtNext')), await w.innerText('#qtNext'));
   await waitSave(); await app.close(); app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'q.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}}); w = await app.firstWindow(); hook(); await w.waitForSelector('#side');
   await open(); r1 = await rows(); ok('đóng và mở lại ứng dụng: trạng thái “đã in” vẫn còn', d1.every(c => r1[c].startsWith('da/')));
+  // 2b. IN ĐÈ trong quy trình: hướng in đợt 2 của từng mẫu, in nền → xác nhận → chờ dữ liệu
+  let rt = await routes(); ok('đợt 2 chưa có phiếu cân: cột “Hướng in đợt 2” của cả bốn mẫu là “in mẫu nền trước”', Object.values(rt).every(v => v === 'nen'), JSON.stringify(rt));
+  ok('việc nên làm tiếp: gợi ý in sẵn mẫu nền đợt 2 và nhớ xác nhận', /in sẵn mẫu nền đợt 2/.test(await w.innerText('#qtNext')) && /Xác nhận đã in mẫu nền/.test(await w.innerText('#qtNext')), await w.innerText('#qtNext'));
+  ok('bước 4 ghi rõ “giấy trắng hoặc nền + in đè”', /giấy trắng hoặc nền \+ in đè/.test(await w.innerText('#qtCard .qtSteps')));
+  await w.click('#d2Card button[data-act=d2confirm][data-keys*="|"]'); await w.waitForTimeout(600); rt = await routes();
+  ok('sau khi xác nhận đã in nền: hướng in chuyển sang “nền đã in, chờ dữ liệu”', Object.values(rt).every(v => v === 'cho'), JSON.stringify(rt));
+  ok('việc nên làm tiếp: đã in nền, chờ khai thác và cân, sẽ in đè', /Đã in nền \d+ mục/.test(await w.innerText('#qtNext')) && /in đè/.test(await w.innerText('#qtNext')), await w.innerText('#qtNext'));
   // 3. dữ liệu ĐỢT 2 thay đổi: đợt 1 vẫn khớp (bất biến)
   const cur = JSON.parse(JSON.stringify(await w.evaluate(() => window.hak.loadSync().db))); const f = cur.rs.own1.forests.fa;
   f.pc = PC; f.info.khoiLuong = 29.75; f.exp = {...f.exp, ...EXP1};
   await setDb(cur); await open(); r1 = await rows();
   ok('BẤT BIẾN trên màn hình: nhập phiếu cân, khối lượng thực tế, ngày lập → mọi mẫu đợt 1 VẪN “đã in, còn khớp”', d1.every(c => r1[c].startsWith('da/')), JSON.stringify(r1));
+  rt = await routes(); ok('có đủ dữ liệu sau khi đã in nền: hướng in của cả bốn mẫu là “nền đã in, đủ dữ liệu: in đè”', Object.values(rt).every(v => v === 'de'), JSON.stringify(rt));
+  ok('việc nên làm tiếp: “In đè đợt 2: nạp lại tờ mẫu nền đã in”', /In đè đợt 2: nạp lại tờ mẫu nền đã in/.test(await w.innerText('#qtNext')), await w.innerText('#qtNext'));
   ok('đợt 2 nay đủ dữ liệu (BM-08, 09, 10, 14 “du”) và chưa in', ['08', '09', '10', '14'].every(c => r1[c] === 'chua/du'), JSON.stringify(r1));
-  ok('việc nên làm tiếp: in đợt 2', /In đợt 2/.test(await w.innerText('#qtNext')), await w.innerText('#qtNext'));
   // 4. dữ liệu ĐỢT 1 đổi: chỉ các mẫu liên quan hiện “dữ liệu đã đổi”
   const cur2 = JSON.parse(JSON.stringify(await w.evaluate(() => window.hak.loadSync().db))); cur2.rs.own1.forests.fa.nc.push({...nv(4, 'Công nhân', 'NGÔ THÊM MỚI', 'Công nhân cưa', '049085000004'), maRung: 'R-A'});
   await setDb(cur2); await open(); r1 = await rows();
@@ -51,6 +61,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('việc nên làm tiếp: nêu mẫu đợt 1 đã đổi cần in lại', /đã in nhưng dữ liệu đã đổi/.test(await w.innerText('#qtNext')), await w.innerText('#qtNext'));
   // in lại → khớp
   await w.evaluate(() => { const b = [...document.querySelectorAll('#qtCard [data-act=qtMark]')].find(x => (x.dataset.codes || '').includes(',') && /đợt 1/.test(x.textContent)); b.click(); }); await w.waitForTimeout(500);
+  rt = await routes(); ok('thêm người lao động sau khi in nền: BM-08 báo “bố cục đã đổi” (không in đè), BM-09/10/14 vẫn in đè được', rt['08'] === 'doibocuc' && rt['14'] === 'de' && rt['09'] === 'de', JSON.stringify(rt));
+  ok('việc nên làm tiếp nêu mục đã đổi bố cục: in lại nền hoặc giấy trắng', /đổi bố cục/.test(await w.innerText('#qtNext')) || /đã in nhưng dữ liệu đã đổi/.test(await w.innerText('#qtNext')));
   r1 = await rows(); ok('in lại và đánh dấu: các mẫu đã đổi trở về “đã in, còn khớp”', d1.every(c => r1[c].startsWith('da/')), JSON.stringify(r1));
   // 5. đợt 2 xong → hoàn tất; bỏ xác nhận
   await w.evaluate(() => { const b = [...document.querySelectorAll('#qtCard [data-act=qtMark]')].find(x => (x.dataset.codes || '').includes(',') && /đợt 2/.test(x.textContent)); b.click(); }); await w.waitForTimeout(500);
