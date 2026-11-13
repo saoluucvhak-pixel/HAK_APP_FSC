@@ -18,6 +18,13 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   await find('1001/2026'); await w.click('[data-lkpick]'); await w.waitForSelector('[data-act=lkModeNew]');
   await w.selectOption('#lkOwner', 'new'); await w.click('[data-act=lkModeNew]'); await w.waitForSelector('[data-act=lkApply]');
   await w.fill('[data-lkalias]', '92C-99999'); await w.dispatchEvent('[data-lkalias]', 'change'); await w.waitForTimeout(150); await w.click('[data-act=lkPcAll]');
+  // xe đã đổi: sửa biển số ngay trong bảng xem trước rồi mới đưa qua (ở đây sửa thử rồi trả lại để các bước sau giữ nguyên)
+  const ov = '[data-lkov="1001/2026/NK"]';
+  ok('bảng phiếu cân khi đưa qua có ô sửa biển số cho từng phiếu', !!(await w.$(ov)) && (await w.inputValue(ov)) === '92C-12345');
+  await w.fill(ov, '92c-77777'); await w.dispatchEvent(ov, 'change'); await w.waitForTimeout(200);
+  ok('sửa biển số trước khi đưa qua: hiện “đã đổi từ 92C-12345”, biển mới viết hoa 92C-77777', (await w.inputValue(ov)) === '92C-77777' && /đã đổi từ 92C-12345/.test(await w.innerText('#lkBody')));
+  await w.fill(ov, '92C-12345'); await w.dispatchEvent(ov, 'change'); await w.waitForTimeout(200);
+  ok('trả lại biển gốc: không còn nhãn “đã đổi”', !/đã đổi từ/.test(await w.innerText('#lkBody')));
   ok('lần nạp đầu không có phiếu nào đổi biển (chưa hiện khung cập nhật biển số)', !(await w.$('#lkBienDoi')));
   await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await w.waitForTimeout(500);
   let d = await db(); const forest = () => Object.values(Object.values(d.rs)[0].forests)[0];

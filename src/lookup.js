@@ -623,7 +623,7 @@ function forestOf(code, T, R, keo, nRung, hd) {
     const donGia = moneyOf(r['Đơn giá']), thanhTien = moneyOf(r['Thành tiền'] != null && r['Thành tiền'] !== '' ? r['Thành tiền'] : r['Thanh toán']);   // thành tiền: cột “Thành tiền” nếu có, không thì “Thanh toán” (chỉ nhận số)
     return {soPhieu: clean(r['SỐ PHIẾU CÂN']), ngay, bienRaw, isPlate: isPlate(bienRaw), kl, donGia, thanhTien, thanhToan: r['Thanh toán'], issue, row: r._row, assignable,
       gioCan1: timeText(r['Giờ cân 1']), gioCan2: timeText(r['Giờ cân 2']), can1: kgOf(r['Cân lần 1']), can2: kgOf(r['Cân lần 2']), klKg, klTan: kl,
-      khachHang: stripSuffix(clean(r['Họ và tên chủ rừng'])), maKhachHang: clean(r['Mã khách hàng'])};
+      khachHang: stripSuffix(clean(r['Họ và tên chủ rừng'])), maKhachHang: clean(r['Mã khách hàng']), diaChi: clean(r['ĐỊA CHỈ RỪNG']), nguonGoc: clean(r['Nguồn gốc'])};
   });
   return {maRung: code, fields: f, area, areaConflict, gps, docs, ref, phieu, warns};
 }
