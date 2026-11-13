@@ -2340,7 +2340,8 @@ function payRows(rec, ex) {
   });
   return {plan, list, N, each, rows, sum};
 }
-const roleRates = rec => CHUCDANH.map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; const rate = n ? rateOf(rec.info, {chucDanh: cd}) : null; return n ? cd + ': ' + (rate ? fmt(rate) : '………') + ' ' + basisOf(rec.info).unit + ' (' + n + ' người)' : null; }).filter(Boolean);
+/* Đơn giá khoán theo TỪNG vị trí: luôn liệt kê đủ cả ba vị trí (Tổ trưởng, Công nhân khai thác, Công nhân cưa), kể cả khi chưa có người ở vị trí đó */
+const roleRates = rec => CHUCDANH.map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; const rate = rateOf(rec.info, {chucDanh: cd}); return cd + ': ' + (rate ? fmt(rate) : '………') + ' ' + basisOf(rec.info).unit + (n ? ' (' + n + ' người)' : ' (hiện chưa có người ở vị trí này)'); });
 const normErrors = rec => [...new Set(rec.nc.map(r => r.chucDanh))]
   .filter(cd => CHUCDANH.includes(cd) && !BHLD_ITEMS.some(([k]) => trim(normOf(cd)[k])))
   .map(cd => 'chưa có định mức BHLĐ cho chức danh "' + cd + '"');
@@ -3364,7 +3365,7 @@ function docTienCong(rec, ex) {
   const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, V((!ngc && each != null) ? fmtTan(each) : ''), x.rate ? fmt(x.rate) : '',
     V(ngc && plan.cong != null ? String(plan.cong) : ''), V(x.tien != null ? fmt(x.tien) : ''), V(x.tien != null ? fmt(x.tien) : ''), '']);
   if (sum > 0 || ex._mode !== 'day') rows.push(['', '**TỔNG CỘNG**', '', '', '', '', V(sum > 0 ? fmt(sum) : ''), V(sum > 0 ? fmt(sum) : ''), '']);
-  const nRow = rows.length, dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
+  const nRow = rows.length + (isDirect(rs) ? 0 : 2), dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
   const info = ngc
     ? ((plan.cong != null || ex._mode !== 'day') ? 'Số ngày công: ' + V(plan.cong != null ? String(plan.cong) : '', 6) + ' công (không tính Chủ nhật).' : '')
     : ((plan.vol || ex._mode !== 'day') ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + V(plan.vol ? fmtTan(plan.vol.v) : '', 10) + ' ' + bs.qty + (ex._mode === 'day' ? V(plan.vol ? ' (' + plan.vol.src + ')' : '', 0, '') : '') + ', chia đều ' + N + ' người: ' + V(each != null ? fmtTan(each) : '', 10) + ' ' + bs.qty + '/người.' : '');
@@ -3378,6 +3379,7 @@ function docTienCong(rec, ex) {
        ['', '', '', '', '', 'Số công', 'Số tiền', '', ''], ...rows],
       {headRows: 2, borders: true, sz: dense.sz, rowH: dense.rowH, pad: dense.pad,   // nhiều người: thu nhỏ cỡ chữ và độ cao hàng để bảng và khối ký vẫn nằm trọn một trang
        alignCols: ['center', 'left', 'left', 'center', 'right', 'center', 'right', 'right', 'center']}),
+    ...(isDirect(rs) ? [] : [P('Hình thức giao khoán: Tổ trưởng ' + upper(tt.ten) + ' nhận thay cho cả tổ tổng số tiền ' + V(sum > 0 ? fmt(sum) : '', 12) + ' đồng (bằng chữ: ' + V(sum > 0 ? moneyWords(sum) : '', 0, '…'.repeat(40)) + ') và chi trả lại cho từng người theo cột “Thực nhận”.', {al: 'left', sz: dense.sz, before: 80, after: 0})]),
     ...footerSign('Đại diện Tổ khai thác', tt.ten, dense.sign)
   ];
   if (dense.tight) out.tight = true;   // nhiều người: lề trên/dưới hẹp hơn để vẫn gọn một trang
