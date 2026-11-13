@@ -120,6 +120,8 @@ Nút **🔎 Tra cứu Google Sheets** (hoặc **Lấy dữ liệu từ Google Sh
 - Phần mềm nhận cột theo **tiêu đề dòng 1**: được **đổi thứ tự cột** và **thêm cột**; thiếu cột bắt buộc thì báo **tên tab và tên cột** cần bổ sung (kể cả khi tên tab đúng chuẩn).
 - **Chọn tab khác tên**: tab đặt tên khác hẳn nhưng đủ cột bắt buộc được **đề xuất để bạn xác nhận** (hộp “Cần xác nhận tên tab trước khi nạp”). Có nhiều tab phù hợp — kể cả khi trong bảng có cả tên mới lẫn tên `_QC` — thì bạn **chọn trong danh sách**. Phần mềm kiểm tra lại các cột bắt buộc rồi mới nạp. Bản tra cứu đang dùng **không bị thay đổi** cho đến khi cả ba vai trò đã xác định và đọc đúng; bấm *Hủy* để giữ bản cũ.
 - **Ghi nhớ**: lựa chọn được nhớ theo **ID bảng tính Google** (hoặc tên file Excel), nên lần đồng bộ sau không hỏi lại. Luồng hiện tại tải bảng tính dạng XLSX nên không có mã riêng của từng tab: nếu bạn đổi tên tab sau khi đã chọn, phần mềm nhận diện lại theo cấu trúc cột và hỏi xác nhận (hoặc tự nhận nếu trả lại tên chuẩn).
+- **Mỗi tab chỉ giữ một vai trò**: nếu cùng một tab bị gán cho hai vai trò (lựa chọn mới hoặc ánh xạ đã nhớ), phần mềm **không nạp**, nêu rõ “Tab “X” đang được gán cho cả “HoSoKeo” và “HoSoRung””, và cho chọn lại; bản tra cứu gần nhất và thời điểm cập nhật thành công được giữ nguyên.
+- **Cột khối lượng của HoSoKeo**: chỉ cần **một trong hai** cột “KL hàng (KG)” hoặc “Khối lượng (Tấn)”. Chỉ có KG thì chia 1000 ra tấn; có cả hai mà lệch nhau thì phần mềm báo **số phiếu cân và cả hai giá trị** (đang dùng cột Tấn). Thiếu cả hai cột: báo lỗi riêng ở cấp tab; dòng không có khối lượng hợp lệ: báo riêng theo số phiếu. Tên ba tab chuẩn, hậu tố `_QC` và ánh xạ tab đặt tên khác vẫn như trước.
 - Đồng bộ lỗi (mất mạng, thiếu cột, bảng yêu cầu đăng nhập…): phần mềm **giữ bản tra cứu gần nhất** cùng thời điểm cập nhật thành công và nêu lỗi. Phần mềm chỉ **đọc** Google Sheets.
 
 **Tìm và ghi vào hồ sơ**
@@ -158,11 +160,32 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 **In hồ sơ làm hai đợt khi chưa xong khai thác** (đã có nhân công, vận chuyển nhưng chưa có phiếu cân, chưa nghiệm thu): ở tab **Xuất hồ sơ → Tất cả** có hai nút.
 - **Đợt 1 – hồ sơ làm ngay (.zip)**: tất cả biểu mẫu **trừ** BM-08 bảng thanh toán tiền công, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển và BM-14 nghiệm thu, thanh lý. In và ký đợt này trước.
 - **Đợt 2 – sau khi xong rừng (.zip)**: **chỉ** BM-08, BM-09, BM-10 và BM-14. Khi rừng xong: nạp phiếu cân ở tab Vận chuyển, nhập khối lượng khai thác thực tế ở Thông tin rừng, nhập thông số nghiệm thu rồi tải đợt 2. Chưa đủ phiếu cân hợp lệ thì đợt 2 chỉ có BM-08 và BM-14, phần mềm báo rõ thiếu BM-09, BM-10; nạp phiếu cân xong tải lại.
-**In mẫu đợt 2 để trống số, rồi in đè số lên mẫu đã in** (khi cần in sẵn cả BM-08, BM-09, BM-10, BM-14 trước khi có số liệu): ở tab **Xuất hồ sơ → Tất cả**, khung “In mẫu đợt 2 để trống số, rồi in đè số sau”.
-1. **Bước 1 – Mẫu trống**: tải và in. Số biên bản, ngày lập, khối lượng, tiền để **chấm** hoặc **ô trống**; BM-09 **không in khung bảng phiếu cân**: bảng nằm ở trang riêng “Bảng kê khối lượng đính kèm”, in đầy đủ khi đã có phiếu cân. Làm được ngay khi đã có nhân công và đội xe, không cần phiếu cân.
-2. **Bước 2 – Chỉ phần số để in đè**: khi có số liệu (phiếu cân, khối lượng thực tế, ngày lập, số tiền đã thanh toán), tải bản này và in lên **đúng tờ mẫu đã in**. Chữ cố định, đường kẻ, nền và chân trang được ẩn (không tốn mực), chỉ các con số hiện ra đúng chỗ trên mẫu: số biên bản, ngày, khối lượng, số chuyến, thành tiền, tổng cộng, bằng chữ.
-3. Để số khớp vị trí: in cả hai bản **cùng khổ A4, tỉ lệ 100% (không “Fit to page”), cùng lề, cùng máy in**, cho tờ vào đúng chiều như lần in đầu; in thử một tờ nháp trước. Dùng **cùng một giá trị “Số dòng chuyến”** cho cả hai lần; nếu một xe có nhiều chuyến hơn số dòng này, phần mềm cảnh báo, hãy tăng số dòng rồi in lại mẫu trống.
-4. Hai bản có bố cục giống hệt nhau (đã kiểm tra: cùng số đoạn, dòng bảng, số trang và vị trí các dòng chữ). Hai nhóm xe trùng tên người ký vẫn ra hai file riêng.
+**In hồ sơ đợt 2 (BM-08, BM-09, BM-10, BM-14)**: mục **In hồ sơ đợt 2** ở tab **Xuất hồ sơ** gom hai cách in vào một chỗ. Bảng ở đầu mục cho từng biểu mẫu (BM-09 và BM-10 theo **từng người vận chuyển**) biết: *đủ dữ liệu để in* hay chưa, *đã in mẫu nền* hay chưa, **nên dùng giấy nào**, và còn thiếu gì (có nút mở đúng tab để bổ sung). Hai trạng thái này độc lập và tính riêng cho từng lô.
+
+| Tình trạng của mục | Nên dùng |
+| --- | --- |
+| Đủ dữ liệu, **chưa** in nền | **Giấy trắng** (in đầy đủ một lần) |
+| Chưa đủ để in đầy đủ nhưng đủ dựng nền | **In mẫu nền** trước |
+| **Đã in nền**, đủ dữ liệu, bố cục còn khớp | **In đè** phần bổ sung lên tờ nền đã in |
+| Đã in nền, chưa đủ dữ liệu | Chờ bổ sung dữ liệu |
+| Đã in nền nhưng **bố cục đã đổi** | In lại mẫu nền (rồi xác nhận lại) **hoặc** in đầy đủ trên giấy trắng |
+
+**Cách A – in đầy đủ trên giấy trắng.** Khi cả bốn biểu mẫu đủ điều kiện chính thức (ngày ký, địa chỉ giao, ngày lập biên bản, khối lượng thực tế, phiếu cân…) và chưa mẫu nào in nền, nút chính là **In đầy đủ đợt 2 – dùng giấy trắng** (gói `…_dot2_IN_GIAY_TRANG.zip`). Mẫu nào chưa đủ thì nằm ngoài gói và được nêu rõ thiếu gì.
+
+**Cách B – in nền trước, in đè sau.**
+1. **Bước 1 – In mẫu nền đợt 2** (gói `…_dot2_MAU_NEN_in_truoc.zip`): chữ cố định in đầy đủ; số biên bản, ngày lập, khối lượng, tiền, tổng cộng **để trống chừa chỗ**. Làm được khi đã có nhân công, đội xe, **ngày ký hợp đồng** và **địa chỉ giao** (đây là chữ cố định nên phải biết trước khi in nền). BM-09 và BM-10 không in sẵn khung bảng phiếu cân; hai **Bảng kê đính kèm** luôn in đầy đủ trên giấy mới.
+2. Sau khi in, bấm **✔ Xác nhận đã in mẫu nền** (cả bộ, hoặc từng mẫu/từng nhóm ở bảng). **Tải file Word hoặc ZIP không làm đổi trạng thái**; chỉ nút xác nhận mới ghi nhận. Phần mềm lưu xác nhận cùng **chữ ký bố cục** của mẫu nền vào dữ liệu của lô, nên đóng rồi mở lại vẫn nhớ.
+3. **Bước 2 – In đè phần bổ sung** (gói `…_dot2_IN_DE_phan_bo_sung.zip`): khi có số liệu, tải gói này, **nạp lại tờ mẫu nền đã in** vào máy in và in. Chỉ gồm các mục đã in nền, đủ dữ liệu và còn khớp bố cục. Nhập thêm số liệu (số biên bản, ngày lập, khối lượng, phiếu cân, tiền) **không làm mất** xác nhận.
+
+**Nền in một phần.** Có thể xác nhận từng mẫu/nhóm: mục đã in nền cho vào gói in đè, mục chưa in nền cho vào gói giấy trắng; hai gói tách riêng và tên khác nhau, nên không lẫn tờ.
+
+**Bố cục đổi sau khi in nền.** Chữ ký bố cục là băm của chính file nền (chữ cố định, số dòng, ngắt trang, khổ giấy, lề, chân trang, phiên bản mẫu). Thêm/bớt người lao động, đổi nhóm vận chuyển, đổi địa chỉ giao hoặc tên người ký, nâng phiên bản mẫu… làm chữ ký đổi: mục đó **bị loại khỏi gói in đè**, hiện cảnh báo nêu khác biệt (ví dụ “số dòng bảng: 10 → 12”) và đề nghị in lại nền hoặc in giấy trắng.
+
+**Bỏ xác nhận.** Tờ nền hỏng/mất, hoặc muốn in lại trên giấy trắng: bấm **Bỏ xác nhận** ở dòng đó; mục quay về “giấy trắng”.
+
+**Hồ sơ cũ đã in nền từ trước.** Bấm **Đã có nền in từ trước** ở dòng đó. Vì phần mềm không biết bố cục của tờ đã in, khi bấm **In đè** sẽ có hộp **bắt buộc đối chiếu** (khổ giấy, hướng giấy, lề, chữ cố định, số dòng). Chỉ sau khi bạn đồng ý, mục mới được in đè; nếu không khớp, in lại nền hoặc in giấy trắng.
+
+**Quy tắc chung.** Mẫu nền và phần in đè **không bao giờ có chữ “BẢN NHÁP”** (nội dung, đầu/chân trang, tên file Word, tên ZIP); mọi cảnh báo chỉ hiện trên màn hình. Cách tính tiền công, cước cố định, cước tấn–km và làm tròn **không đổi**. In cả hai lần **cùng khổ A4, tỉ lệ 100% (không “Fit to page”), cùng lề, cùng máy in**, cho tờ vào đúng chiều như lần in đầu; **in thử một tờ** trước khi in cả bộ. Bố cục nền và phần in đè giống hệt nhau (đã kiểm tra tự động: cùng số đoạn, dòng bảng, số trang, vị trí dòng chữ); việc in lên giấy thật cần kiểm bằng máy in của bạn.
 - Mỗi biểu mẫu là một file Word riêng, nên bộ hồ sơ đã in ở đợt 1 chỉ cần **bổ sung hoặc thay** các biểu mẫu của đợt 2. Hai đợt gộp lại đúng bằng nút “Tải toàn bộ hồ sơ”. BM-08 tính theo khối lượng thực tế đã nhập, chưa nhập thì theo sản lượng dự kiến, nên chỉ nên in BM-08 ở đợt 2.
 
 

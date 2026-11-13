@@ -41,12 +41,28 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   ok('hủy: giữ bản cũ và báo rõ', (await status()).active.detail === goodNow && /Đã hủy, vẫn dùng bản tra cứu đã lưu/.test(await txt()));
   // chọn sai tab (thiếu cột) → từ chối, vẫn chờ chọn lại
   await pick(wf('ten_la.xlsx', 'names:Sheet1|Sheet2|Sheet3')); await w.click('[data-act=lkExcel]'); await w.waitForSelector('#lkPend');
-  const bad = await w.evaluate(() => window.hak.lookup.confirmTabs({HoSoKeo_QC: 'Sheet2', HoSoRung_QC: 'Sheet2', ToaDoRung_QC: 'Sheet3'}));
+  const bad = await w.evaluate(() => window.hak.lookup.confirmTabs({HoSoKeo_QC: 'Sheet2', HoSoRung_QC: 'Sheet1', ToaDoRung_QC: 'Sheet3'}));
   ok('chọn tab thiếu cột: từ chối, nêu tên tab và cột; bản cũ giữ nguyên', !bad.ok && /Tab “Sheet2” \(chọn làm “HoSoKeo”\) thiếu cột/.test((bad.errors || []).join(' ')) && (await status()).active.detail === goodNow);
   await w.click('[data-act=lkConfirmTabs]'); await done(/Đã nạp và ghi nhớ tab đã chọn/);
   ok('xác nhận đề xuất: nạp được, hiển thị tên chuẩn', /ten_la\.xlsx/.test(await txt()) && /HoSoKeo 8 dòng/.test(await txt()) && !(await w.$('#lkPend')));
   await pick(wf('ten_la.xlsx', 'names:Sheet1|Sheet2|Sheet3')); await w.click('[data-act=lkExcel]'); await done(/Đã cập nhật bản tra cứu/);
   ok('nhập lại cùng file: đã nhớ ánh xạ, không hỏi lại', !(await w.$('#lkPend')));
+
+  // 3b. một tab gán cho hai vai trò: chặn, nêu tên tab và hai vai trò, giữ bản cũ; chọn lại được
+  const keepAt = (await status()).active.loadedAt;
+  await pick(wf('x_la.xlsx', 'names:A1|A2|A3')); await w.click('[data-act=lkExcel]'); await w.waitForSelector('#lkPend');
+  const dup2 = await w.evaluate(() => window.hak.lookup.confirmTabs({HoSoKeo_QC: 'A1', HoSoRung_QC: 'A1', ToaDoRung_QC: 'A3'}));
+  ok('gán A1 cho hai vai trò: không nạp, nêu tab và hai vai trò', !dup2.ok && /Tab “A1” đang được gán cho cả “HoSoKeo” và “HoSoRung”/.test((dup2.conflicts || []).join(' ')));
+  ok('giữ bản tra cứu gần nhất và thời điểm nạp thành công', (await status()).active.detail && (await status()).active.loadedAt >= keepAt);
+  const fixR = await w.evaluate(() => window.hak.lookup.confirmTabs({HoSoKeo_QC: 'A1', HoSoRung_QC: 'A2', ToaDoRung_QC: 'A3'}));
+  ok('chọn lại đúng: nạp được', fixR.ok);
+  // HoSoKeo chỉ có cột KG, chỉ có cột Tấn, thiếu cả hai
+  await pick(wf('chi_kg.xlsx', 'kgOnly')); await w.click('[data-act=lkExcel]'); await done(/Đã cập nhật bản tra cứu/);
+  ok('chỉ có cột “KL hàng (KG)”: nạp được', /chi_kg\.xlsx/.test(await txt()));
+  await pick(wf('chi_tan.xlsx', 'tanOnly')); await w.click('[data-act=lkExcel]'); await done(/Đã cập nhật bản tra cứu/);
+  ok('chỉ có cột “Khối lượng (Tấn)”: nạp được', /chi_tan\.xlsx/.test(await txt()));
+  await pick(wf('khong_kl.xlsx', 'noWeight')); await w.click('[data-act=lkExcel]'); await done(/Chưa cập nhật bản tra cứu/);
+  ok('thiếu cả hai cột khối lượng: báo lỗi riêng, giữ bản cũ', /một trong hai cột “KL hàng \(KG\)” hoặc “Khối lượng \(Tấn\)”/.test(await txt()) && /chi_tan\.xlsx/.test(await txt()));
 
   // 4. có đồng thời tên mới và _QC (qua Google giả lập): danh sách chọn
   // bảng tính Google khác (ID khác, chưa có ánh xạ đã nhớ); dữ liệu vẫn lấy từ máy chủ giả lập

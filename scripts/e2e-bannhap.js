@@ -47,7 +47,12 @@ const hasBanner = x => /BẢN NHÁP – chưa đủ dữ liệu/.test(x);
   ok('xuất lẻ BM-14 đủ dữ liệu: bản chính thức', !/BAN_NHAP/.test(f) && !/BẢN NHÁP/.test(await zipInfo2(path.join(out, f))), f);
   // 4. mẫu trống / chỉ phần số: không gắn nhãn dù thiếu dữ liệu
   await load(SEED); await w.click('[data-xtab=all]');
-  for (const kind of ['trong2', 'de2']) { f = await grab(kind, 'all'); items = await zipInfo(path.join(out, f)); ok('gói ' + kind + ': không gắn nhãn BẢN NHÁP (mẫu thiết kế để điền sau)', !/BAN_NHAP/.test(f) && Object.keys(items).every(n => !/BAN_NHAP/.test(n) && !/BẢN NHÁP/.test(items[n])), f); }
+  { /* gói nền đợt 2: không gắn nhãn BẢN NHÁP dù biểu mẫu chính thức thiếu dữ liệu (mẫu nền thiết kế để điền sau) */
+    fs.mkdirSync(out, {recursive: true}); for (const x of fs.readdirSync(out)) fs.unlinkSync(path.join(out, x));
+    const b = await w.$('#d2Card .docrow [data-act=d2dl][data-mode=nen]'); ok('đợt 2: có nút mẫu nền', !!b);
+    if (b && !(await b.isDisabled())) { await b.click(); let g = null; for (let i = 0; i < 80 && !g; i++) { g = fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); if (!g) await w.waitForTimeout(150); } await w.waitForTimeout(300); g = fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); items = await zipInfo(path.join(out, g));
+      ok('gói mẫu nền đợt 2: không gắn nhãn BẢN NHÁP (mẫu thiết kế để điền sau)', !/BAN_NHAP/.test(g) && Object.keys(items).every(n => !/BAN_NHAP/.test(n) && !/BẢN NHÁP/.test(items[n])), g); }
+  }
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

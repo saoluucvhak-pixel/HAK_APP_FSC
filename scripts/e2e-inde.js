@@ -19,7 +19,7 @@ const seed = (pc, exp, kl) => ({v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
 const PC = [P(1, '05/10/2026', '92C-12345', 'PA1', 12.5), P(2, '06/10/2026', '92C-67890', 'PA2', 9.25), P(3, '07/10/2026', '92C-12345', 'PA3', 8)];
 const EXP0 = {soKT: '015', ngayKy: '02/10/2026', soVC: '07', ntSo: '03', pcSo: '09'};
 const EXP1 = Object.assign({}, EXP0, {ntNgay: '20/12/2026', pcNgay: '20/12/2026', ntDaTT: '50000000'});
-async function load(file) { const z = await JSZip.loadAsync(fs.readFileSync(file)); const o = {}; for (const n of Object.keys(z.files).filter(n => n.endsWith('.docx'))) { const d = await JSZip.loadAsync(await z.file(n).async('nodebuffer')); o[n] = {xml: await d.file('word/document.xml').async('string'), foot: await d.file('word/footer1.xml').async('string'), buf: await z.file(n).async('nodebuffer')}; } return o; }
+async function load(file) { const z = await JSZip.loadAsync(fs.readFileSync(file)); const o = {}; for (const n of Object.keys(z.files).filter(n => n.endsWith('.docx'))) { const d = await JSZip.loadAsync(await z.file(n).async('nodebuffer')); o[n.replace(/_(MAU_NEN|IN_DE)\.docx$/, '.docx')] = {xml: await d.file('word/document.xml').async('string'), foot: await d.file('word/footer1.xml').async('string'), buf: await z.file(n).async('nodebuffer')}; } return o; }
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('');
 const blackText = xml => (xml.match(/<w:r>(?:(?!<\/w:r>)[\s\S])*<\/w:r>/g) || []).filter(r => !/w:color w:val="FFFFFF"/.test(r)).map(plain).join('');
 const count = (xml, tag) => (xml.match(new RegExp('<' + tag + '[ >/]', 'g')) || []).length;
@@ -27,13 +27,13 @@ const count = (xml, tag) => (xml.match(new RegExp('<' + tag + '[ >/]', 'g')) || 
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'i.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => { errs.push(e.message); if (process.env.DBG) console.log('PAGEERR', e.message); }); w.on('console', m => { if (process.env.DBG && m.type() === 'error') console.log('CONSOLE', m.text()); }); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const open = async () => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]'); };
-  const grab = async (kind, tag) => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); await w.click(`button[data-act=dl][data-kind=${kind}]`); let f = null; for (let i = 0; i < 100 && !f; i++) { f = fs.existsSync(out) && fs.readdirSync(out).find(x => x.endsWith('.zip')); if (!f) await w.waitForTimeout(100); } if (!f && process.env.DBG) console.log('MSGS', (await w.innerText('#main')).slice(0, 800)); await w.waitForTimeout(300); const dst = path.join(dir, tag + '.zip'); fs.copyFileSync(path.join(out, f), dst); return {name: f, docs: await load(dst)}; };
+  const grab = async (kind, tag) => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); await w.click(`#d2Card .docrow [data-act=d2dl][data-mode=${kind === 'trong2' ? 'nen' : 'de'}]`); let f = null; for (let i = 0; i < 100 && !f; i++) { f = fs.existsSync(out) && fs.readdirSync(out).find(x => x.endsWith('.zip')); if (!f) await w.waitForTimeout(100); } if (!f && process.env.DBG) console.log('MSGS', (await w.innerText('#main')).slice(0, 800)); await w.waitForTimeout(300); const dst = path.join(dir, tag + '.zip'); fs.copyFileSync(path.join(out, f), dst); return {name: f, docs: await load(dst)}; };
 
   // ===== Bước 1: trước khi có số liệu (chưa có phiếu cân, chưa nhập ngày lập, số tiền) =====
   await w.evaluate(d => window.hak.save(d), seed([], EXP0, null)); await open();
-  ok('màn hình có nút mẫu trống và nút chỉ phần số', !!(await w.$('button[data-kind=trong2]')) && !!(await w.$('button[data-kind=de2]')));
+  ok('màn hình có nút mẫu nền và nút in đè (luồng In hồ sơ đợt 2)', !!(await w.$('#d2Card .docrow [data-act=d2dl][data-mode=nen]')) && !!(await w.$('#d2Card .docrow [data-act=d2dl][data-mode=de]')));
   const B = await grab('trong2', 'trong');
-  ok('mẫu trống: tên ZIP nêu rõ', /MAU_TRONG/.test(B.name), B.name);
+  ok('mẫu trống: tên ZIP nêu rõ', /MAU_NEN_in_truoc/.test(B.name), B.name);
   const names = Object.keys(B.docs).map(n => /\//.test(n) ? n.replace(/^(\d\d)_[^/]*\/(.*)$/, '$1_/$2') : n.slice(0, 2)).sort();
   ok('mẫu trống gồm BM-08, BM-14 và BM-09, BM-10 cho từng nhóm xe (dù chưa có phiếu cân)', ['08', '14'].every(k => names.includes(k)) && names.some(n => n.startsWith('09_/')) && names.some(n => n.startsWith('10_/')), JSON.stringify(names));
   const key = n => n.replace(/\.docx$/, '');
@@ -45,10 +45,13 @@ const count = (xml, tag) => (xml.match(new RegExp('<' + tag + '[ >/]', 'g')) || 
   ok('BM-08 mẫu trống: số tiền để trống', !/\d{1,3}(\.\d{3}){2}/.test(plain(b08.xml.replace(/Đơn giá[\s\S]{0,0}/, ''))) || true);
 
   // ===== Bước 2: xong rừng, có số liệu =====
-  await w.evaluate(d => window.hak.save(d), seed(PC, EXP1, 29.75)); await open();
+  await w.click('#d2Card button[data-act=d2confirm][data-keys*="|"]'); await w.waitForTimeout(900);   // xác nhận đã in nền (cả bộ) rồi mới có số liệu
+  const inDot2 = await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.inDot2);
+  const full = seed(PC, EXP1, 29.75); full.rs.own1.forests.fa.inDot2 = inDot2;
+  await w.evaluate(d => window.hak.save(d), full); await open();
   const D = await grab('de2', 'de');
   ok('hai nhóm xe cùng tên người ký vẫn ra hai file BM-09 và hai file BM-10 (không ghi đè nhau)', Object.keys(B.docs).filter(n => n.startsWith('09_')).length === 2 && Object.keys(B.docs).filter(n => n.startsWith('10_')).length === 2, JSON.stringify(Object.keys(B.docs)));
-  ok('bản chỉ phần số: tên ZIP nêu rõ; cùng tập file với mẫu trống', /CHI_PHAN_SO_in_de/.test(D.name) && JSON.stringify(Object.keys(D.docs).sort()) === JSON.stringify(Object.keys(B.docs).sort()), D.name);
+  ok('bản chỉ phần số: tên ZIP nêu rõ; cùng tập file với mẫu trống', /IN_DE_phan_bo_sung/.test(D.name) && JSON.stringify(Object.keys(D.docs).sort()) === JSON.stringify(Object.keys(B.docs).sort()), D.name);
   let same = true, why = '';
   for (const n of Object.keys(B.docs)) { const a = B.docs[n].xml, b = D.docs[n].xml.split('<w:br w:type="page"/>')[0] + (/^09_/.test(n) ? '' : '');   // BM-09: trang Bảng kê đính kèm chỉ có ở bản in đè/đầy đủ, so bố cục phần trang 1
       for (const t of ['w:p', 'w:tr', 'w:tbl', 'w:tc']) if (count(a, t) !== count(b, t)) { same = false; why += n + ' ' + t + ' ' + count(a, t) + '≠' + count(b, t) + '; '; } }

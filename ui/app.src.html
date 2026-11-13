@@ -276,6 +276,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@SF@@*/</script>
 <script>/*@@DATES@@*/</script>
 <script>/*@@BANNHAP@@*/</script>
+<script>/*@@INAN2@@*/</script>
 <script>/*@@NHAPLIEU@@*/</script>
 <script>/*@@MUAHANG@@*/</script>
 <script>/*@@LORUNG@@*/</script>
@@ -929,12 +930,16 @@ function tidySign(blocks) {
   }
   return out;
 }
+/* Phần thân tài liệu (XML) của một danh sách khối, theo chế độ in hiện tại (docMode). Dùng chung cho ghi file và cho chữ ký bố cục của mẫu nền. */
+function bodyXml(blocks) {
+  const ser = b => b.t === 'p' ? paraXml(b) : b.t === 'tbl' ? tblXml(b) : b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '';
+  return blocks.map(b => { if (!b.full || docMode === 'day') return ser(b); const m = docMode; docMode = 'day'; try { return ser(b); } finally { docMode = m; } }).join('') +
+    (blocks.length && blocks[blocks.length - 1].t === 'tbl' ? '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>' : '');
+}
 async function makeDocx(blocks, o = {}) {
   blocks = tidySign(blocks);
   if (o.draft && o.draft.length) blocks = [P('**' + HAKBanNhap.banner(o.draft) + '**', {al: 'center', col: 'C00000', sz: 20, after: 120, full: true}), ...blocks];   // nhãn BẢN NHÁP ở đầu tài liệu (màu đỏ, luôn hiện)
-  const ser = b => b.t === 'p' ? paraXml(b) : b.t === 'tbl' ? tblXml(b) : b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '';
-  const body = blocks.map(b => { if (!b.full || docMode === 'day') return ser(b); const m = docMode; docMode = 'day'; try { return ser(b); } finally { docMode = m; } }).join('') +   // khối “full”: luôn in đầy đủ, kể cả khi cả biên bản đang ở chế độ in đè (ví dụ Bảng kê khối lượng đính kèm) +
-    (blocks.length && blocks[blocks.length - 1].t === 'tbl' ? '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>' : '');   // đoạn đệm bắt buộc sau bảng: thu nhỏ để không đẩy sang trang trắng
+  const body = bodyXml(blocks);
   const pg = o.landscape
     ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="' + (o.tight ? 567 : 850) + '" w:right="567" w:bottom="' + (o.tight ? 680 : 850) + '" w:left="1134" w:header="425" w:footer="425" w:gutter="0"/>'
     : '<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701" w:header="567" w:footer="567" w:gutter="0"/>';
@@ -1674,27 +1679,36 @@ const draftList = rec => { const c = draftCtx(rec); return Object.keys(HAKBanNha
  * Mẫu trống / chỉ phần số (in hai bước) là mẫu thiết kế để điền sau nên không gắn nhãn. */
 function buildFiles(rec, kind) {
   const files = buildFilesRaw(rec, kind);
-  if (kind === 'trong2' || kind === 'de2') return files;
   const c = draftCtx(rec);
   files.forEach(f => { const code = (f.path.match(/^(\d\d)_/) || [])[1], list = HAKBanNhap.issues(code, c); if (list.length) { f.draft = list; f.path = HAKBanNhap.draftPath(f.path); } });
   return files;
 }
-function buildFilesRaw(rec, kind) {
+/* Thông số xuất của lô + chế độ in: dùng chung cho xuất hồ sơ và cho luồng in đợt 2 */
+function exOf(rec, mode) {
   const ex = Object.assign({}, rec.exp || {}, {vcDiemDen: destOf(rec).text});
   if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
   ex._so = HAKHopDong.numbers(ex);                                                // MỘT quy tắc số hợp đồng cho BM-01, BM-04, BM-09, BM-10, BM-14, BM-20 (src/hopdong.js)
+  ex._mode = mode || 'day';
+  return ex;
+}
+/* In đợt 2 (BM-08, BM-09, BM-10, BM-14) ở một chế độ ('day' đầy đủ | 'trong' mẫu nền | 'de' chỉ phần bổ sung) cho các mục có khóa trong keys (không truyền = tất cả).
+ * Mỗi file mang key (khóa mục) để lọc và để ghi chữ ký bố cục. Phải gọi khi docMode đã đặt đúng chế độ. */
+function dot2Files(rec, mode, keys) {
+  const ex = exOf(rec, mode), s = slug(rec.info.ten), IA = HAKInAn2, files = [], used = new Set();
+  const want = k => !keys || keys.includes(k);
+  const push = f => { let q = f.path, n = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + n++ + '.docx'); used.add(q); f.path = q; files.push(f); };
+  if (want('08')) push({key: '08', path: '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(rec, ex), land: true});
+  if (want('14')) push({key: '14', path: '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(rec, ex)});
+  groupsDX(rec).forEach(g => { const k = IA.keyOf('09', g.cccd || g.ten); if (want(k)) push({key: k, path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}); });
+  groupsDX(rec).forEach(g => { const k = IA.keyOf('10', g.cccd || g.ten); if (want(k)) push({key: k, path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}); });
+  return files;
+}
+function buildFilesRaw(rec, kind) {
+  const ex = exOf(rec, 'day');
   const s = slug(rec.info.ten);
   const files = [], used = new Set();
   /* Hai người ký trùng tên (khác CCCD) không được ghi đè file của nhau trong ZIP: thêm hậu tố _2, _3… */
   files.push = f => { let q = f.path, k = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + k++ + '.docx'); used.add(q); f.path = q; return Array.prototype.push.call(files, f); };
-  ex._mode = kind === 'trong2' ? 'trong' : kind === 'de2' ? 'de' : 'day';          // chế độ in của đợt 2: mẫu trống số / chỉ phần số để in đè
-  if (ex._mode !== 'day') {   // đợt 2 dạng "mẫu trống" và "in đè": cùng tập file, cùng bố cục: BM-08, BM-09, BM-10, BM-14
-    files.push({path: '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(rec, ex), land: true});
-    files.push({path: '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(rec, ex)});
-    groupsDX(rec).forEach(g => files.push({path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}));
-    groupsDX(rec).forEach(g => files.push({path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}));
-    return files;
-  }
   /* In làm HAI ĐỢT khi chưa xong khai thác: 'dau' = hồ sơ làm được ngay (hợp đồng, lao động, vận chuyển, FSC...), 'cuoi' = phần chỉ làm được khi xong rừng (tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10, nghiệm thu BM-14); 'all' = tất cả một lần */
   const PHAN_CUOI = ['tc', 'nttl', 'xnvc', 'ttvc'], dau = kind === 'all' || kind === 'dau';
   if ((kind === 'gk' || dau) && !isDirect(rec.info)) files.push({path: '01_HD_Giao_khoan_' + s + '.docx', blocks: docGiaoKhoan(rec, ex)});
@@ -1726,6 +1740,63 @@ function buildFilesRaw(rec, kind) {
   if (want('xn')) files.push({path: '07_XN_dao_tao_ATLD_' + s + '.docx', blocks: docXNDaoTao(rec, ex), land: true});
   if (want('tc')) files.push({path: '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(rec, ex), land: true});
   return files;
+}
+/* ========== In hồ sơ đợt 2: trạng thái "đủ dữ liệu" / "đã in mẫu nền" (src/inan2.js) ========== */
+const D2_GO = {ngayKy: {ftab: 'xuat'}, diaChiGiao: {ftab: 'dx'}, klThucTe: {ftab: 'finfo'}, ntNgay: {ftab: 'xuat'}, pcNgay: {ftab: 'xuat'}};
+/* Điều kiện CHỮ CỐ ĐỊNH của mẫu nền (phải biết khi in nền vì được in thật lên giấy): ngày ký hợp đồng và điểm đến. Các giá trị còn lại (số biên bản, ngày lập, khối lượng, tiền) để trống dành chỗ. */
+const D2_NEN_NEED = {'08': [], '09': ['ngayKy', 'diaChiGiao'], '10': ['ngayKy', 'diaChiGiao'], '14': ['ngayKy']};
+const withMode = (m, fn) => { const o = docMode; docMode = m; try { return fn(); } finally { docMode = o; } };
+/* chữ ký bố cục của file mẫu nền: băm XML tài liệu ở chế độ nền + khổ giấy, cỡ lề, chân trang */
+function d2Layout(f, rec) {
+  const o = docOpts(f, rec), blocks = tidySign(f.blocks);
+  const stats = {rows: 0, paras: 0, maxLine: 0};
+  blocks.forEach(b => { if (b.t === 'tbl') stats.rows += b.rows.length; else if (b.t === 'p') { stats.paras++; stats.maxLine = Math.max(stats.maxLine, String(b.text || '').length); } });
+  return HAKInAn2.signature({land: !!o.landscape, tight: !!o.tight, footer: o.footer, xml: withMode('trong', () => bodyXml(blocks)), stats});
+}
+function d2Items(rec) {
+  const g = gate(rec), c = draftCtx(rec), IA = HAKInAn2, items = [];
+  const miss = (code, keys) => HAKBanNhap.issues(code, c).filter(x => keys.includes(x.key)).map(x => ({text: x.text, where: x.where, go: D2_GO[x.key] || {ftab: 'xuat'}}));
+  const baseNC = g.canBHLD ? [] : [{text: 'chưa đủ thông tin chủ rừng hoặc nhân công: ' + [...g.info, ...g.nc.errs].slice(0, 3).join('; ') + (g.nc.errs.length + g.info.length > 3 ? '…' : ''), where: 'Thông tin rừng / Nhân công', go: {ftab: g.info.length ? 'finfo' : 'nc'}}];
+  const baseVC = g.canHDVC ? [] : [{text: 'chưa đủ thông tin chủ rừng, đội xe hoặc đơn giá vận chuyển: ' + [...g.info, ...g.dx.errs, ...g.vc].slice(0, 3).join('; '), where: 'Vận chuyển', go: {ftab: g.info.length ? 'finfo' : 'dx'}}];
+  const mk = (code, gkey, label, nen, full) => items.push({key: IA.keyOf(code, gkey), code, gkey: gkey || '', label, nenMissing: nen, fullMissing: [...nen, ...full], sig: '', info: null});
+  mk('08', '', FORMS_D2['08'], baseNC.concat(miss('08', D2_NEN_NEED['08'])), miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k))));
+  groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = gr.cccd || gr.ten;
+    const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : g.pc && g.pc.errs.length ? [{text: 'phiếu cân còn lỗi (' + g.pc.errs.length + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : [];
+    ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + gr.ten + ' (' + gr.vaiTro + ')', baseVC.concat(miss(code, D2_NEN_NEED[code])), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))))); });
+  mk('14', '', FORMS_D2['14'], baseNC.concat(miss('14', D2_NEN_NEED['14'])), miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k))));
+  items.sort((a, b) => IA.ORDER.indexOf(a.code) - IA.ORDER.indexOf(b.code));
+  // chữ ký bố cục từ chính file mẫu nền sẽ in (chỉ khi dựng được mẫu)
+  try {
+    withMode('trong', () => dot2Files(rec, 'trong', null)).forEach(f => { const it = items.find(x => x.key === f.key); if (it) { const L = d2Layout(f, rec); it.sig = L.sig; it.info = L.info; it.file = f.path; it.land = !!f.land; } });
+  } catch (e) { items.forEach(it => { if (!it.sig) it.nenMissing = it.nenMissing.concat([{text: 'không dựng được mẫu nền (' + e.message + ')', where: '', go: {ftab: 'finfo'}}]); it.fullMissing = it.fullMissing.concat(it.nenMissing.slice(-1)); }); }
+  return items;
+}
+const FORMS_D2 = Object.fromEntries(Object.entries(HAKInAn2.FORMS).map(([k, v]) => [k, v.label]));
+function d2Eval(rec, f) {
+  const st = HAKInAn2.stateOf(f || curForest() || {}), list = d2Items(rec).map(it => HAKInAn2.evaluate(it, st));
+  return {list, plan: HAKInAn2.plan(list), absent: HAKInAn2.coverage(list), state: st};
+}
+const D2_PKG = {trang: ['dot2_IN_GIAY_TRANG', '', 'In đầy đủ đợt 2 – giấy trắng'], nen: ['dot2_MAU_NEN_in_truoc', '_MAU_NEN', 'Mẫu nền đợt 2'], de: ['dot2_IN_DE_phan_bo_sung', '_IN_DE', 'Phần bổ sung in đè đợt 2']};
+/* Tải mẫu nền / phần in đè / bản đầy đủ giấy trắng cho các mục keys. KHÔNG đổi trạng thái đã in nền. Nền và in đè không bao giờ gắn BẢN NHÁP. */
+async function exportDot2(mode, keys) {
+  const rec = curRec(); if (!rec || !keys || !keys.length) return;
+  const docM = {trang: 'day', nen: 'trong', de: 'de'}[mode], P_ = D2_PKG[mode];
+  docMode = docM;
+  try {
+    const files = dot2Files(rec, docM, keys);
+    if (!files.length) { note('Không có mẫu nào để tải.', 'warn'); return; }
+    const nm = f => f.path.split('/').pop().replace(/\.docx$/, P_[1] + '.docx');
+    if (files.length === 1) { download(await makeDocx(files[0].blocks, docOpts(files[0], rec)), nm(files[0])); return; }
+    const z = new JSZip();
+    for (const f of files) { const q = f.path.split('/'); z.file(q.length > 1 ? q[0] + '/' + nm(f) : nm(f), await makeDocx(f.blocks, docOpts(f, rec))); }
+    download(await z.generateAsync({type: 'blob'}), 'HoSo_' + slug(rec.info.ten) + '_' + P_[0] + '.zip');
+  } finally { docMode = 'day'; }
+}
+function d2Confirm(keys, legacy) {
+  const f = curForest(), rec = curRec(); if (!f || !rec) return;
+  const st = HAKInAn2.stateOf(f), now = new Date().toISOString(), all = d2Items(rec);
+  keys.forEach(k => { const it = all.find(x => x.key === k); if (it && it.nenMissing.length === 0) (legacy ? HAKInAn2.confirmLegacy : HAKInAn2.confirm)(st, it, now); });
+  persist();
 }
 const DOC_CODES = {'17': 'BM-17 · Phiếu thẩm định chủ rừng và rừng', '18': 'BM-18 · Nhật ký khai thác hằng ngày', '19': 'BM-19 · Biên bản phổ biến chính sách FSC', '15': 'BM-15 · Sổ theo dõi tai nạn lao động, sự cố', '16': 'BM-16 · Biên bản kiểm tra, bảo dưỡng thiết bị', '14': 'BM-14 · Biên bản nghiệm thu, thanh lý khai thác', '11': 'BM-11 · Cam kết nguồn gốc gỗ rừng trồng', '12': 'BM-12 · Cam kết sử dụng lao động', '13': 'BM-13 · Biên bản kiểm tra hiện trường khai thác', '09': 'BM-09 · Biên bản xác nhận khối lượng vận chuyển', '10': 'BM-10 · Bảng thanh toán tiền vận chuyển', '01': 'BM-01 · Hợp đồng khai thác (giao khoán)', '02': 'BM-02 · Danh sách cấp phát BHLĐ', '03': 'BM-03 · Hợp đồng lao động',
   '04': 'BM-04 · Hợp đồng vận chuyển', '05': 'BM-05 · Bảng chấm công', '06': 'BM-06 · Danh sách đội khai thác',
@@ -1821,9 +1892,9 @@ async function exportKind(kind, idx) {
   const rec = curRec();
   if (!rec) return;
   const g = gate(rec);
-  const ok = {gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD, trong2: g.canBHLD && g.canHDVC, de2: g.canBHLD && g.canHDVC}[kind];
+  const ok = {gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD}[kind];
   if (!ok) { note('Hồ sơ còn lỗi hoặc thiếu dữ liệu, chưa xuất. Xem tab Xuất hồ sơ.', 'err'); return; }
-  docMode = kind === 'trong2' ? 'trong' : kind === 'de2' ? 'de' : 'day';   // chế độ in cho cả lần tạo file
+  docMode = 'day';
   try {
     const files = buildFiles(rec, kind);
     const pick = idx != null ? files.filter((f, i) => i === idx) : files;
@@ -1836,11 +1907,8 @@ async function exportKind(kind, idx) {
     const z = new JSZip();
     for (const f of pick) z.file(f.path, await makeDocx(f.blocks, docOpts(f, rec)));
     const blob = await z.generateAsync({type: 'blob'});
-    download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung', trong2: 'dot2_MAU_TRONG_in_truoc', de2: 'dot2_CHI_PHAN_SO_in_de'}[kind] || kind) + (pick.some(f => f.draft) ? '_BAN_NHAP' : '') + '.zip');
+    download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung'}[kind] || kind) + (pick.some(f => f.draft) ? '_BAN_NHAP' : '') + '.zip');
     if (['all', 'dau', 'cuoi'].includes(kind)) { const nt = exportNotes(rec, g, kind); const dr = pick.filter(f => f.draft); if (dr.length) nt.unshift('Các biểu mẫu mang nhãn BẢN NHÁP (tên file, đầu tài liệu và tên gói): ' + dr.map(f => (HAKBanNhap.label((f.path.match(/(?:^|\/)(\d\d)_/) || [])[1]) || f.path).replace(/ .*/, '') + ' (' + f.draft.map(x => x.text).join('; ') + ')').join(' · ') + '.'); if (nt.length) note('Đã tải file nhưng còn ' + nt.length + ' lưu ý:\n• ' + nt.join('\n• '), 'warn'); else note('Đã tải file: dữ liệu đủ, không có lưu ý.', 'ok'); }
-    if (kind === 'de2') {
-      if (!g.canPC) note('Đã tải bản CHỈ PHẦN SỐ, nhưng chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có số để in đè. Nạp phiếu cân rồi tải lại.', 'warn');
-    }
   } finally { docMode = 'day'; }
 }
 
@@ -2281,6 +2349,39 @@ function soPreviewHtml(rec, exo, which) {
   return '<table><tr><th>Văn bản</th><th>Số đầy đủ sẽ in</th><th>Ghi chú</th></tr>' + rows.join('') + '</table>' +
     (need.length ? '<div class="msg warn" style="margin-top:6px">Chưa có năm trong số: ' + need.map(c => esc(c.label) + ' — bổ sung <b>' + esc(c.truong) + '</b> (dd/mm/yyyy, ngày có thật)').join('; ') + '. Năm được lấy từ ngày ký của chính hợp đồng, không ghi sẵn năm cố định.</div>' : '');
 }
+/* Màn hình "In hồ sơ đợt 2": một nơi cho BM-08, BM-09, BM-10, BM-14 với hai cách in (giấy trắng một lần / in nền trước, in đè sau) */
+function d2Panel(rec) {
+  const {list, plan, absent} = d2Eval(rec), IA = HAKInAn2, g = gate(rec);
+  const ADV = {trang: ['ok', 'Đủ dữ liệu, chưa in nền → <b>in đầy đủ trên giấy trắng</b>'], nen: ['warn', 'Chưa đủ dữ liệu để in đầy đủ; <b>có thể in mẫu nền trước</b>'], thieu: ['err', 'Chưa đủ dữ liệu để dựng cả mẫu nền'],
+    de: ['ok', 'Đã in nền, đủ dữ liệu → <b>in đè phần bổ sung</b>'], cho: ['warn', 'Đã in nền, <b>chờ bổ sung dữ liệu</b> rồi in đè'], kiemtra: ['warn', 'Tờ nền in từ trước → <b>đối chiếu</b> rồi mới in đè'],
+    doibocuc: ['err', 'Bố cục đã đổi so với tờ nền đã in → <b>in lại mẫu nền hoặc in đầy đủ giấy trắng</b>']};
+  const ab = (act, label, o = {}) => '<button class="btn sm ' + (o.primary ? '' : 'ghost') + '" ' + (o.disabled ? 'disabled ' : '') + 'data-act="' + act + '"' + (o.mode ? ' data-mode="' + o.mode + '"' : '') + (o.keys ? ' data-keys="' + esc(o.keys.join('|')) + '"' : '') + (o.title ? ' title="' + esc(o.title) + '"' : '') + '>' + label + '</button>';
+  const keysOf = a => a.map(x => x.key);
+  const rows = list.map(x => { const [cls, txt] = ADV[x.advice]; const k = [x.key];
+    const acts = [x.nenReady ? ab('d2dl', '⬇ Nền', {mode: 'nen', keys: k, title: 'Tải mẫu nền của riêng mẫu này'}) : '', x.fullReady ? ab('d2dl', '⬇ Giấy trắng', {mode: 'trang', keys: k, title: 'Tải bản đầy đủ in một lần trên giấy trắng'}) : '',
+      (x.advice === 'de' || x.advice === 'kiemtra') ? ab('d2dl', '⬇ In đè', {mode: 'de', keys: k, title: 'Tải phần bổ sung để in đè lên tờ nền đã in'}) : '',
+      (x.nenReady && (!x.printed || x.advice === 'doibocuc')) ? ab('d2confirm', '✔ Đã in nền', {keys: k, title: 'Xác nhận đã in tờ nền này (ghi nhận bố cục hiện tại)'}) : '',
+      !x.printed && x.nenReady ? ab('d2legacy', 'Đã có nền in từ trước', {keys: k, title: 'Tờ nền đã in trước khi có chức năng này: bắt buộc đối chiếu trước khi in đè'}) : '',
+      x.printed ? ab('d2undo', 'Bỏ xác nhận', {keys: k, title: 'Tờ nền hỏng/mất hoặc muốn in lại trên giấy trắng'}) : ''].join(' ');
+    const miss = (x.printed && x.advice !== 'cho' ? [] : x.fullMissing).concat(x.printed && x.advice === 'cho' ? x.fullMissing : []);
+    return '<tr data-d2="' + esc(x.key) + '" data-adv="' + x.advice + '"><td><b>' + esc(x.label) + '</b></td><td>' + (x.fullReady ? '✔ đủ để in đầy đủ' : x.nenReady ? '◐ đủ để in nền' : '✖ chưa đủ') + '</td><td>' + (x.printed ? '✔ ' + (x.legacy ? 'nền in từ trước' : 'ngày ' + esc(HAKDates && x.at ? x.at.slice(0, 10).split('-').reverse().join('/') : '')) : '—') + '</td><td class="' + cls + '">' + txt + '</td><td>' + acts + '</td></tr>' +
+      ((miss.length || x.diff.length || x.advice === 'doibocuc' || x.advice === 'kiemtra') ? '<tr><td colspan="5" class="mut" style="padding-top:0">' +
+        (x.advice === 'doibocuc' ? '<div class="msg warn" style="margin:2px 0">Bố cục mẫu đã khác lúc in nền' + (x.diff.length ? ' (' + x.diff.map(esc).join('; ') + ')' : ' (chữ cố định như tên, địa chỉ, số hợp đồng đã đổi)') + '. Tờ nền cũ không còn khớp: in lại mẫu nền (rồi xác nhận lại) hoặc in đầy đủ trên giấy trắng.</div>' : '') +
+        (x.advice === 'kiemtra' ? '<div class="msg warn" style="margin:2px 0">Chưa biết bố cục của tờ nền in từ trước. Trước khi in đè, đối chiếu tờ nền với mẫu hiện tại (khổ giấy, hướng giấy, lề, chữ cố định, số dòng); phần mềm sẽ hỏi xác nhận khi bạn bấm “In đè”.</div>' : '') +
+        (miss.length ? 'Còn thiếu để in đầy đủ: ' + miss.map(m => esc(m.text) + ' <button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(m.go)) + '">Mở ' + (({finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', xuat: 'Xuất hồ sơ'})[m.go.ftab] || 'tab') + '</button>').join('; ') : '') + '</td></tr>' : ''); }).join('');
+  const full4 = plan.allFull && !absent.length, nT = plan.trang.length, nN = plan.nen.length, nD = plan.de.length + plan.kiemtra.length;
+  const absentTxt = absent.length ? '<div class="msg warn">Chưa có mục nào cho ' + absent.map(c => esc(IA.FORMS[c].label)).join(', ') + (absent.some(c => c === '09' || c === '10') ? ' (cần khai đội xe ở tab Vận chuyển)' : '') + '.</div>' : '';
+  const anyDirty = plan.doibocuc.length;
+  return '<div class="card" id="d2Card"><h3 style="margin-top:0">In hồ sơ đợt 2 <span class="mut" style="font-weight:400">· BM-08, BM-09, BM-10, BM-14</span></h3>' +
+    '<p class="mut" style="margin:0 0 8px">Hai cách in, cùng bố cục, <b>không có chữ “BẢN NHÁP”</b> trong mẫu nền và phần in đè. <b>Cách A</b>: khi đủ dữ liệu, in đầy đủ một lần trên <b>giấy trắng</b>. <b>Cách B</b>: in <b>mẫu nền</b> trước (số biên bản, ngày lập, khối lượng, tiền để trống), bấm <b>“Xác nhận đã in mẫu nền”</b>; khi có số liệu, <b>nạp lại tờ mẫu nền đã in</b> vào máy in và in đè phần bổ sung (cùng khổ A4, tỉ lệ 100%, cùng máy in, đúng chiều giấy). Riêng BM-09, <b>Bảng kê khối lượng đính kèm</b> luôn in đầy đủ trên giấy mới. Tải file Word hoặc ZIP <b>không</b> làm đổi trạng thái; chỉ nút xác nhận mới ghi nhận đã in.</p>' +
+    absentTxt +
+    '<table class="tbl" id="d2Table" style="width:100%"><thead><tr><th>Biểu mẫu</th><th>Đủ dữ liệu để in</th><th>Đã in mẫu nền</th><th>Nên dùng</th><th>Thao tác</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    (anyDirty ? '<div class="msg warn" id="d2Dirty">Có ' + anyDirty + ' mục đã đổi bố cục sau khi in nền: không dùng phần in đè cho các mục này.</div>' : '') +
+    '<div class="docrow"><div><b>Cách A · In đầy đủ đợt 2 – dùng giấy trắng (.zip)</b><div class="mut">' + (full4 && plan.nonePrinted ? 'Cả bốn biểu mẫu đã đủ điều kiện in chính thức và chưa in nền: in một lần trên giấy trắng.' : nT ? 'Gồm ' + nT + ' mục đã đủ điều kiện in chính thức (chưa in nền hoặc cần in lại).' : 'Chưa mục nào đủ điều kiện in chính thức (xem “Còn thiếu” ở bảng trên).') + '</div></div>' + ab('d2dl', '⬇ In đầy đủ đợt 2 – dùng giấy trắng', {primary: plan.primary === 'trang', mode: 'trang', keys: keysOf(plan.trang), disabled: !nT}) + '</div>' +
+    '<div class="docrow"><div><b>Cách B · Bước 1 – In mẫu nền đợt 2 (.zip)</b><div class="mut">' + (nN ? 'Gồm ' + nN + ' mục đủ dữ liệu để dựng nền.' : 'Chưa mục nào đủ dữ liệu để dựng nền.') + ' Sau khi in, bấm xác nhận để phần mềm nhớ (kể cả khi đóng rồi mở lại).</div></div>' + ab('d2dl', '⬇ In mẫu nền đợt 2', {primary: plan.primary === 'nen', mode: 'nen', keys: keysOf(plan.nen), disabled: !nN}) + ab('d2confirm', '✔ Xác nhận đã in mẫu nền', {keys: keysOf(plan.nen), disabled: !nN, title: 'Ghi nhận cả bộ đã in nền; có thể xác nhận từng mẫu ở bảng trên'}) + '</div>' +
+    '<div class="docrow"><div><b>Cách B · Bước 2 – In đè phần bổ sung (.zip)</b><div class="mut">' + (nD ? 'Gồm ' + nD + ' mục đã in nền, đủ dữ liệu' + (plan.kiemtra.length ? ' (có ' + plan.kiemtra.length + ' mục nền in từ trước, sẽ hỏi đối chiếu)' : '') + '. Nạp lại tờ mẫu nền đã in rồi in.' : 'Chưa mục nào vừa đã in nền vừa đủ dữ liệu.') + (plan.cho.length ? ' Đang chờ dữ liệu: ' + plan.cho.map(x => esc(x.label.replace(/^BM-(\d\d).*?·?\s*/, 'BM-$1 '))).join('; ') + '.' : '') + '</div></div>' + ab('d2dl', '⬇ In đè phần bổ sung', {primary: plan.primary === 'de', mode: 'de', keys: plan.de.concat(plan.kiemtra).map(x => x.key), disabled: !nD}) + '</div>' +
+    '</div>';
+}
 function panelXuat(rec) {
   const g = gate(rec);
   const ex = rec.exp || {};
@@ -2368,9 +2469,7 @@ function panelXuat(rec) {
     '<div class="card"><h3 style="margin-top:0">In làm hai đợt khi chưa xong khai thác</h3><p class="mut" style="margin:0 0 8px">Chưa có phiếu cân hoặc chưa nghiệm thu thì in <b>đợt 1</b> trước; khi rừng xong, cập nhật phiếu cân và khối lượng thực tế rồi in <b>đợt 2</b> để bổ sung đúng các biểu mẫu còn thiếu (mỗi biểu mẫu là một file Word riêng nên thay hoặc chèn vào bộ hồ sơ đã in rất dễ).</p>' +
       '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('⬇ Tải đợt 1', 'dau', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>' +
       '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') + '</div></div>' + btn('⬇ Tải đợt 2', 'cuoi', null, g.canBHLD) + '</div></div>' +
-    '<div class="card"><h3 style="margin-top:0">In mẫu đợt 2 để trống số, rồi in đè số sau</h3><p class="mut" style="margin:0 0 8px">Dùng khi cần in sẵn cả BM-08, BM-09, BM-10, BM-14 trước khi có số liệu. <b>Bước 1</b>: tải và in <b>mẫu trống</b> (số biên bản, ngày lập, khối lượng, tiền để chấm hoặc ô trống). <b>Bước 2</b>: khi có số liệu, tải <b>chỉ phần số</b> và in lên <b>đúng tờ mẫu đã in</b> (cùng khổ A4, tỉ lệ 100%, cùng máy in, cho tờ vào đúng chiều như lần in đầu): chữ cố định và đường kẻ được ẩn, chỉ các con số hiện ra đúng chỗ. In thử trước một tờ giấy nháp. BM-09 dùng số dòng cố định cho các chuyến để dòng tổng cộng nằm đúng chỗ.</p>' +
-      '<div class="docrow"><div><b>Bước 1 – Mẫu trống (.zip)</b><div class="mut">BM-08, BM-09, BM-10, BM-14 với phần số để chấm hoặc để trống. Làm được ngay khi đã có nhân công và đội xe.</div></div>' + btn('⬇ Tải mẫu trống', 'trong2', null, g.canBHLD && g.canHDVC) + '</div>' +
-      '<div class="docrow"><div><b>Bước 2 – Chỉ phần số để in đè (.zip)</b><div class="mut">Cùng bốn biểu mẫu nhưng chỉ in các con số, đúng vị trí trên mẫu đã in. Riêng BM-09: khung bảng phiếu cân không in sẵn; <b>Bảng kê khối lượng đính kèm</b> là trang riêng (trang 2), in đầy đủ trên giấy mới khi đã có phiếu cân.' + (g.canPC ? '' : ' <b>Cần phiếu cân hợp lệ để có số cho BM-09 và BM-10.</b>') + '</div></div>' + btn('⬇ Tải phần số để in đè', 'de2', null, g.canBHLD && g.canHDVC) + '</div></div>' +
+    d2Panel(rec) +
     '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung. <b>Hồ sơ đã đủ dữ liệu thì in một lần bằng nút này</b>; mục nào chưa đủ (phiếu cân, khối lượng thực tế, ngày lập, địa chỉ giao…) sẽ được nêu ngay sau khi tải.</div></div>' + btn('⬇ Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>';
 }
 
@@ -2985,7 +3084,7 @@ async function lkLoad(kind) {
   lk.busy = '';
   if (r.canceled) return lkRender();
   lk.st = r.status || await HB.lookup.status(); lk.det = {};
-  if (r.pending) { lk.pend = {pending: r.pending, sheets: r.sheets, choice: Object.fromEntries(Object.entries(r.pending).map(([k, v]) => [k, v.proposed]))}; lk.msg = {kind: 'warn', text: 'Có tab cần bạn xác nhận hoặc chọn (xem bên dưới). Chưa thay đổi bản tra cứu.'}; return lkRender(); }
+  if (r.pending) { lk.pend = {pending: r.pending, conflicts: r.conflicts || [], sheets: r.sheets, choice: Object.fromEntries(Object.entries(r.pending).map(([k, v]) => [k, v.proposed]))}; lk.msg = {kind: 'warn', text: 'Có tab cần bạn xác nhận hoặc chọn (xem bên dưới). Chưa thay đổi bản tra cứu.'}; return lkRender(); }
   lk.pend = null;
   if (r.ok) { lk.msg = {kind: 'ok', text: 'Đã cập nhật bản tra cứu: ' + Object.entries(r.counts).map(([k, v]) => TL(k) + ' ' + fmt(v) + ' dòng').join(', ') + '.'}; await lkSearch(); }
   else lk.msg = {kind: 'err', text: 'Chưa cập nhật bản tra cứu, vẫn dùng bản đã lưu. ' + (r.errors || []).join('; ')};
@@ -3003,11 +3102,12 @@ const LK_ROLE_DESC = {HoSoKeo_QC: 'phiếu cân và khối lượng', HoSoRung_Q
 function lkPendHtml() {
   const P = lk.pend; if (!P) return '';
   return '<div class="card" id="lkPend" style="margin:8px 0;border-color:var(--warn,#a16207)"><b>Cần xác nhận tên tab trước khi nạp</b>' +
+    (P.conflicts && P.conflicts.length ? '<div class="msg err" id="lkConflict">' + P.conflicts.map(esc).join('<br>') + '</div>' : '') +
     '<p class="mut" style="margin:4px 0">Bản tra cứu đang dùng chưa bị thay đổi. Chọn tab cho từng vai trò; phần mềm sẽ kiểm tra lại các cột bắt buộc rồi mới nạp và ghi nhớ lựa chọn cho bảng tính này. Tab trong file: ' + (P.sheets || []).map(x => '“' + esc(x) + '”').join(', ') + '.</p>' +
     Object.keys(P.pending).map(role => { const p = P.pending[role];
       return '<div style="margin:8px 0"><b>' + esc(TL(role)) + '</b> <span class="mut">(' + esc(LK_ROLE_DESC[role] || '') + ')</span><div class="mut">' + (p.kind === 'confirm' ? 'Đề xuất: ' : 'Chọn một: ') + esc(p.why || '') + '.</div>' +
         p.candidates.map(c => '<label style="flex-direction:row;gap:8px;color:var(--ink)"><input type="radio" name="lkPend_' + esc(role) + '" data-act="lkPendPick" data-role="' + esc(role) + '" data-tab="' + esc(c) + '"' + (P.choice[role] === c ? ' checked' : '') + '> <span>Dùng tab “' + esc(c) + '” làm “' + esc(TL(role)) + '”</span></label>').join('') +
-        (p.invalid || []).map(x => '<div class="mut">Tab “' + esc(x.tab) + '” cùng tên vai trò này nhưng thiếu cột: ' + x.missing.map(m => '“' + esc(m) + '”').join(', ') + '.</div>').join('') + '</div>'; }).join('') +
+        (p.invalid || []).map(x => '<div class="mut">Tab “' + esc(x.tab) + '” cùng tên vai trò này nhưng thiếu cột: ' + x.missing.map(m => /^một trong/.test(m) ? esc(m) : '“' + esc(m) + '”').join(', ') + '.</div>').join('') + '</div>'; }).join('') +
     '<div class="row"><button class="btn sm" data-act="lkConfirmTabs">Xác nhận và nạp</button><button class="btn ghost sm" data-act="lkCancelTabs">Hủy, giữ bản cũ</button></div></div>';
 }
 function lkStatusHtml() {
@@ -3360,6 +3460,7 @@ document.addEventListener('click', async e => {
     lk.busy = 'Đang kiểm tra tab và nạp…'; lkRender();
     const r = await HB.lookup.confirmTabs(lk.pend.choice); lk.busy = '';
     lk.st = r.status || await HB.lookup.status(); lk.det = {};
+    if (r.pending) { lk.pend = {pending: r.pending, conflicts: r.conflicts || [], sheets: r.sheets, choice: Object.fromEntries(Object.entries(r.pending).map(([k, v]) => [k, v.proposed]))}; lk.msg = {kind: 'err', text: 'Chưa nạp, vẫn dùng bản đã lưu. ' + (r.conflicts || []).join(' ')}; return lkRender(); }
     if (r.ok) { lk.pend = null; lk.msg = {kind: 'ok', text: 'Đã nạp và ghi nhớ tab đã chọn cho bảng tính này. ' + Object.entries(r.counts).map(([k, v]) => TL(k) + ' ' + fmt(v) + ' dòng').join(', ') + '.'}; await lkSearch(); }
     else lk.msg = {kind: 'err', text: 'Chưa nạp, vẫn dùng bản đã lưu. ' + (r.errors || []).join('; ')};
     return lkRender();
@@ -3481,6 +3582,24 @@ document.addEventListener('click', async e => {
     else { f.dx = []; f.dxFile = ''; f.dxAt = ''; }
     persist(); note('Đã xóa dữ liệu.'); return;
   }
+  if (act === 'd2dl') {
+    let keys = (el.dataset.keys || '').split('|').filter(Boolean); const mode = el.dataset.mode;
+    try {
+      if (mode === 'de') {   // nền in từ trước: bắt buộc đối chiếu trước khi in đè
+        const f = curForest(), st = HAKInAn2.stateOf(f), pend = keys.filter(k => st.items[k] && st.items[k].legacy && !st.items[k].crossChecked);
+        if (pend.length) {
+          if (confirm('Có ' + pend.length + ' tờ nền in từ trước, chưa biết bố cục.\n\nĐối chiếu tờ nền đã in với mẫu hiện tại: khổ giấy, hướng giấy, lề, chữ cố định (tên, địa chỉ, số hợp đồng), số dòng bảng. Nếu khớp, bấm OK để in đè; nếu không, bấm Hủy rồi in lại mẫu nền hoặc in đầy đủ trên giấy trắng.\n\nBạn đã đối chiếu và thấy khớp?')) { pend.forEach(k => HAKInAn2.crossChecked(st, k, new Date().toISOString())); persist(); render(); }
+          else keys = keys.filter(k => !pend.includes(k));
+        }
+      }
+      if (!keys.length) { note('Không có mẫu nào để tải.', 'warn'); return; }
+      await exportDot2(mode, keys);
+    } catch (err) { note('Lỗi khi tạo file: ' + err.message, 'err'); }
+    return;
+  }
+  if (act === 'd2confirm') { d2Confirm((el.dataset.keys || '').split('|').filter(Boolean), false); note('Đã ghi nhận đã in mẫu nền.', 'ok'); return render(); }
+  if (act === 'd2legacy') { d2Confirm((el.dataset.keys || '').split('|').filter(Boolean), true); note('Đã ghi nhận có tờ nền in từ trước; sẽ hỏi đối chiếu trước khi in đè.', 'ok'); return render(); }
+  if (act === 'd2undo') { const f = curForest(), st = HAKInAn2.stateOf(f); (el.dataset.keys || '').split('|').filter(Boolean).forEach(k => HAKInAn2.unconfirm(st, k)); persist(); note('Đã bỏ xác nhận in nền.', 'ok'); return render(); }
   if (act === 'dl') {
     const idx = el.dataset.idx != null ? Number(el.dataset.idx) : null;
     try { await exportKind(el.dataset.kind, idx); }

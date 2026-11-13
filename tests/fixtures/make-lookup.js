@@ -1,7 +1,7 @@
 'use strict';
 /* Tạo file Excel GIẢ LẬP cùng cấu trúc HoSoKeo_QC.xlsx (3 tab) để kiểm thử. Không chứa dữ liệu thật.
  * Tên tab mặc định là bộ chuẩn HoSoKeo, HoSoRung, ToaDoRung. variant: 'legacy' (hậu tố _QC), 'names:a|b|c' (tên tùy ý), 'order' (đổi thứ tự cột + thêm cột),
- * 'both' (có cả tên chuẩn lẫn _QC), 'twin' (tên tùy ý + một tab thứ tư cùng cấu trúc với tab phiếu cân), 'missingCol', 'missingTab'. */
+ * 'both' (có cả tên chuẩn lẫn _QC), 'twin' (tên tùy ý + một tab thứ tư cùng cấu trúc với tab phiếu cân), 'missingCol', 'missingTab', 'kgOnly', 'tanOnly', 'noWeight'. */
 const XLSX = require('xlsx');
 const path = require('path');
 const D = (y, m, d) => new Date(Date.UTC(y, m - 1, d));
@@ -36,6 +36,10 @@ function build(variant) {
     ['HAKQN04', '20260220-002', '20260220_002', 201, D(2026, 2, 20), 'TRẦN THỊ BÌNH', '049000000002', 'Xã Hiệp Đức', 'Lô 2, xã Hiệp Đức', 50000, 'Giấy chứng nhận QSDĐ', '112QSDĐ', null, 15.51, 108.11, '', ''],
     ['HAKQN05', '20260301-001', '20260301_001', 101, D(2026, 3, 1), 'NGUYỄN VĂN AN', '049000000003', 'Xã Việt An', 'Xã Việt An', 12000, 'Khác', 'KH-01', null, 154712975, 108.2, '', ''],
     ['HAKQN06', '20260320-001', '20260320_001', 401, D(2026, 3, 20), 'LÊ VĂN ĐÔNG', 49000000004, 'Xã Đại Lộc', 'Xã Đại Lộc', 15000, 'Giấy chứng nhận QSDĐ', '555QSDĐ', D(2010, 1, 1), 15.8, 108.0, '', '']];
+  const drop = names => { const ix = names.map(n => H_KEO.indexOf(n)); for (let r = 0; r < K.length; r++) K[r] = K[r].filter((_, c) => !ix.includes(c)); };
+  if (variant === 'kgOnly') drop(['Khối lượng (Tấn)']);          // chỉ có cột KG
+  if (variant === 'tanOnly') drop(['KL hàng (KG)']);              // chỉ có cột Tấn (dòng 8 không có tấn → dòng thiếu khối lượng)
+  if (variant === 'noWeight') drop(['KL hàng (KG)', 'Khối lượng (Tấn)']);
   if (variant === 'missingCol') T[0] = T[0].map(h => h === 'DienTich_m2' ? 'DienTich' : h);
   const reorder = aoa => aoa.map((r, i) => [...r.slice().reverse(), i === 0 ? 'Cột thêm' : 'ghi chú ' + i]);   // đổi thứ tự cột (đảo ngược) và thêm một cột
   const [K2, R2, T2] = variant === 'order' ? [reorder(K), reorder(R), reorder(T)] : [K, R, T];
