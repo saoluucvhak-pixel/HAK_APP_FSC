@@ -2368,6 +2368,16 @@ function payRows(rec, ex) {
   const khoan = HAKKhoan.derive(list.map(r => rateOf(rs, r)), (!plan.ngc && plan.vol) ? plan.vol.v : null);   // đơn giá khoán của tổ suy ra từ định biên
   return {plan, list, N, each, rows, sum, khoan};
 }
+/* Giao khoán, trường hợp 1 (Thông tin rừng KHÔNG có đơn giá Tổ trưởng): đơn giá khoán của tổ = đơn giá bình quân suy ra từ định biên nhân sự (số người từng vị trí ở sheet nhân công × đơn giá vị trí).
+ * Trường hợp 2 (Thông tin rừng có đơn giá Tổ trưởng): làm như cũ. Trả null khi không áp dụng. */
+const khoanSuyRa = rec => {
+  const rs = rec.info; if (isDirect(rs) || rs.donGia > 0) return null;
+  const pr = payRows(rec, {}); if (pr.plan.ngc || !pr.khoan.ok) return null;
+  const bs = basisOf(rs), pos = CHUCDANH.map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; return {cd, n, rate: rateOf(rs, {chucDanh: cd})}; });
+  const used = pos.filter(x => x.n > 0), k = pr.khoan;
+  const formula = '(' + used.map(x => x.n + ' × ' + fmt(x.rate)).join(' + ') + ') ÷ ' + k.N + ' người = ' + HAKKhoan.fmtPrice(k.sumRates) + ' ÷ ' + k.N + ' = ' + HAKKhoan.fmtPrice(k.price) + ' ' + bs.unit;
+  return {pr, k, bs, pos, used, formula, price: HAKKhoan.fmtPrice(k.price), qty: bs.qty === 'ha' ? 'diện tích' : 'sản lượng'};
+};
 /* Đơn giá khoán theo TỪNG vị trí: luôn liệt kê đủ cả ba vị trí (Tổ trưởng, Công nhân khai thác, Công nhân cưa), kể cả khi chưa có người ở vị trí đó */
 const roleRates = rec => CHUCDANH.map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; const rate = rateOf(rec.info, {chucDanh: cd}); return cd + ': ' + (rate ? fmt(rate) : '………') + ' ' + basisOf(rec.info).unit + (n ? ' (' + n + ' người)' : ' (hiện chưa có người ở vị trí này)'); });
 const normErrors = rec => [...new Set(rec.nc.map(r => r.chucDanh))]
@@ -2597,7 +2607,13 @@ function docGiaoKhoan(rec, ex) {
     P('Bên B đồng ý nhận và bên A đồng ý giao khai thác gỗ Keo Lai rừng trồng có kiểm soát tại địa chỉ: ' + rs.diaDiem + rungText(rs) + '.'),
     P('**Điều 2: Giá cả và phương thức thanh toán**', {keep: true}),
     P('2.1. Đơn giá khoán theo vai trò (' + bs.unit + '): ' + roleRates(rec).join('; ') + '.', {ind: 360}),
-    P('2.2. Theo định biên nhân sự ' + pr.N + ' người của tổ, đơn giá khoán của tổ (giá Tổ trưởng ký) được suy ra bằng tổng đơn giá các vị trí chia cho ' + pr.N + ' người' + (pr.khoan.price != null ? ': **' + HAKKhoan.fmtPrice(pr.khoan.price) + ' ' + bs.unit + '**' : '') + '. ' + (bs.qty === 'ha' ? 'Diện tích khai thác' : 'Sản lượng khai thác') + ' được chia đều cho ' + pr.N + ' người; tiền của mỗi người bằng phần được chia nhân với đơn giá khoán theo vị trí của người đó.' + (pr.sum ? ' Tổng tiền khoán dự tính: ' + fmt(pr.sum) + ' đồng, bằng tổng tiền của từng người cộng lại (tương ứng đơn giá khoán của tổ nhân ' + (bs.qty === 'ha' ? 'diện tích' : 'sản lượng') + ').' : ''), {ind: 360}),
+    ...(khoanSuyRa(rec) ? (kh => [
+      P('2.2. Đơn giá khoán của tổ (giá Tổ trưởng ký) là **đơn giá bình quân ' + kh.price + ' ' + kh.bs.unit + '**, tính từ định biên nhân sự ' + kh.k.N + ' người của tổ (kể cả Tổ trưởng) theo đơn giá của từng vị trí:', {ind: 360, after: 40}),
+      ...kh.pos.map(x => bl(x.cd + ': ' + (x.n ? x.n + ' người × ' + fmt(x.rate) + ' ' + kh.bs.unit + ' = ' + fmt(x.n * x.rate) : 'chưa có người ở vị trí này (đơn giá ' + (x.rate ? fmt(x.rate) : '………') + ' ' + kh.bs.unit + ')'))),
+      bl('Cơ sở tính giá trung bình: tổng (số người × đơn giá vị trí) chia tổng số người = ' + kh.formula + '.'),
+      bl((kh.bs.qty === 'ha' ? 'Diện tích khai thác' : 'Sản lượng khai thác') + ' chia đều cho ' + kh.k.N + ' người; tiền của mỗi người bằng phần được chia nhân với đơn giá vị trí của người đó.'),
+      ...(pr.sum ? [bl('Tổng giá trị khoán = đơn giá bình quân × ' + kh.qty + ' = **' + fmt(pr.sum) + ' đồng**, bằng tổng tiền thanh toán cho ' + kh.k.N + ' người kể cả Tổ trưởng (cộng tiền của từng người theo Bảng thanh toán tiền công).')] : [])
+    ])(khoanSuyRa(rec)) : [P('2.2. ' + (bs.qty === 'ha' ? 'Diện tích khai thác' : 'Sản lượng khai thác') + ' được chia đều cho ' + pr.N + ' người trong tổ; tiền của mỗi người bằng phần được chia nhân với đơn giá khoán theo vai trò của người đó.' + (pr.sum ? ' Tổng tiền khoán dự tính: ' + fmt(pr.sum) + ' đồng.' : ''), {ind: 360})]),
     P('2.3. Hình thức thanh toán: Căn cứ theo số lượng bán cho nhà máy, hai bên tiến hành thanh toán bằng tiền mặt.', {ind: 360}),
     P('2.4. Thời gian khai thác: từ ngày ' + (rs.tuNgay || '…/…/……') + ' ' +
       (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến hết khi khai thác hết rừng keo tại địa điểm trên') + '.', {ind: 360}),
@@ -3393,7 +3409,7 @@ function docTienCong(rec, ex) {
   const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, V((!ngc && each != null) ? fmtTan(each) : ''), x.rate ? fmt(x.rate) : '',
     V(ngc && plan.cong != null ? String(plan.cong) : ''), V(x.tien != null ? fmt(x.tien) : ''), V(x.tien != null ? fmt(x.tien) : ''), '']);
   if (sum > 0 || ex._mode !== 'day') rows.push(['', '**TỔNG CỘNG**', '', '', '', '', V(sum > 0 ? fmt(sum) : ''), V(sum > 0 ? fmt(sum) : ''), '']);
-  const nRow = rows.length + (isDirect(rs) ? 0 : 3), dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
+  const nRow = rows.length + (khoanSuyRa(rec) ? 3 : 0), dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
   const info = ngc
     ? ((plan.cong != null || ex._mode !== 'day') ? 'Số ngày công: ' + V(plan.cong != null ? String(plan.cong) : '', 6) + ' công (không tính Chủ nhật).' : '')
     : ((plan.vol || ex._mode !== 'day') ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + V(plan.vol ? fmtTan(plan.vol.v) : '', 10) + ' ' + bs.qty + (ex._mode === 'day' ? V(plan.vol ? ' (' + plan.vol.src + ')' : '', 0, '') : '') + ', chia đều ' + N + ' người: ' + V(each != null ? fmtTan(each) : '', 10) + ' ' + bs.qty + '/người.' : '');
@@ -3407,7 +3423,7 @@ function docTienCong(rec, ex) {
        ['', '', '', '', '', 'Số công', 'Số tiền', '', ''], ...rows],
       {headRows: 2, borders: true, sz: dense.sz, rowH: dense.rowH, pad: dense.pad,   // nhiều người: thu nhỏ cỡ chữ và độ cao hàng để bảng và khối ký vẫn nằm trọn một trang
        alignCols: ['center', 'left', 'left', 'center', 'right', 'center', 'right', 'right', 'center']}),
-    ...(isDirect(rs) ? [] : [P('Hình thức giao khoán: ' + (pr.khoan.price != null ? 'đơn giá khoán của tổ ' + HAKKhoan.fmtPrice(pr.khoan.price) + ' ' + bs.unit + ' (tổng đơn giá các vị trí ÷ ' + N + ' người) × ' + (ha ? 'diện tích' : 'sản lượng') + ' = tổng tiền từng người cộng lại. ' : '') + 'Tổ trưởng ' + upper(tt.ten) + ' nhận thay cho cả tổ tổng số tiền ' + V(sum > 0 ? fmt(sum) : '', 12) + ' đồng (bằng chữ: ' + V(sum > 0 ? moneyWords(sum) : '', 0, '…'.repeat(40)) + ') và chi trả lại cho từng người theo cột “Thực nhận”.', {al: 'left', sz: dense.sz, before: 80, after: 0})]),
+    ...(!khoanSuyRa(rec) ? [] : [P('Hình thức giao khoán: đơn giá khoán của tổ ' + khoanSuyRa(rec).price + ' ' + bs.unit + ' (tổng số người × đơn giá vị trí ÷ ' + N + ' người) × ' + (ha ? 'diện tích' : 'sản lượng') + ' = tổng tiền từng người cộng lại. Tổ trưởng ' + upper(tt.ten) + ' nhận thay cho cả tổ tổng số tiền ' + V(sum > 0 ? fmt(sum) : '', 12) + ' đồng (bằng chữ: ' + V(sum > 0 ? moneyWords(sum) : '', 0, '…'.repeat(40)) + ') và chi trả lại cho từng người theo cột “Thực nhận”.', {al: 'left', sz: dense.sz, before: 80, after: 0})]),
     ...footerSign('Đại diện Tổ khai thác', tt.ten, dense.sign)
   ];
   if (dense.tight) out.tight = true;   // nhiều người: lề trên/dưới hẹp hơn để vẫn gọn một trang
@@ -3441,6 +3457,7 @@ function docUyQuyen(rec, ex) {
     P('**Điều 2: Thời hạn ủy quyền**', {keep: true}),
     P('Từ ngày ' + (rs.tuNgay || '…/…/……') + ' ' + (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến khi nghiệm thu, thanh lý và thanh toán xong hợp đồng khai thác') + ', hoặc đến khi chấm dứt ủy quyền theo thỏa thuận hoặc theo quy định của pháp luật.'),
     P('**Điều 3: Thù lao và trách nhiệm**', {keep: true}),
+    ...(khoanSuyRa(rec) ? (kh => [bl('Đơn giá ký: Bên B ký hợp đồng khai thác với chủ rừng theo **đơn giá khoán bình quân của tổ ' + kh.price + ' ' + kh.bs.unit + '**, tính bằng tổng (số người × đơn giá vị trí) chia tổng số người của tổ (kể cả Bên B) = ' + kh.formula + '. Đơn giá từng vị trí: ' + kh.pos.map(x => x.cd + ' ' + (x.rate ? fmt(x.rate) : '………') + (x.n ? ' (' + x.n + ' người)' : ' (chưa có người)')).join('; ') + '. Tổng giá trị khoán bằng tổng tiền thanh toán cho ' + kh.k.N + ' người; Bên B chi trả cho từng người đúng đơn giá vị trí của người đó.')])(khoanSuyRa(rec)) : []),
     bl('Thù lao ủy quyền: ' + (ex.uqThuLao || 'Không có thù lao riêng; Bên B hưởng tiền theo vai trò của mình trong Bảng thanh toán tiền công.')),
     bl('Bên B chịu trách nhiệm thực hiện đúng phạm vi ủy quyền, thanh toán đầy đủ, đúng hạn cho từng người lao động và báo cáo khi Bên A yêu cầu.'),
     bl('Bên A xác nhận đủ 18 tuổi, tự nguyện ủy quyền, đã đọc và đồng ý nội dung hợp đồng khai thác; Bên A có quyền yêu cầu Bên B báo cáo và có quyền chấm dứt ủy quyền, thông báo cho Bên B và chủ rừng.'),
