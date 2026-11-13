@@ -325,3 +325,15 @@ test('HoSoKeo chỉ cần MỘT trong hai cột “KL hàng (KG)” / “Khối 
   const c = fresh().L, r = c.load(build('noWeight'), 'excel', 'khong.xlsx');
   assert.strictEqual(r.ok, false); assert.match(r.errors.join(' '), /Tab “HoSoKeo” \(vai trò “HoSoKeo”\) thiếu cột: một trong hai cột “KL hàng \(KG\)” hoặc “Khối lượng \(Tấn\)”/);
 });
+
+test('phiếu cân lấy thêm giờ cân 1/2, cân lần 1/2 (kg), khối lượng kg và tấn, khách hàng', () => {
+  const {L} = fresh(); assert.ok(L.load(build(), 'excel', 'gia_lap.xlsx').ok);
+  const hit = L.search('1001/2026', 'HoSoKeo_QC').rows[0], c = L.candidates(hit.tab, hit.row), p = c.forests.flatMap(f => f.phieu).find(x => x.soPhieu === '1001/2026/NK');
+  assert.ok(p, 'có phiếu 1001'); assert.strictEqual(p.gioCan1, '08:15:00'); assert.strictEqual(p.gioCan2, '09:40:00');
+  assert.strictEqual(p.can1, 6840); assert.strictEqual(p.can2, 4000); assert.strictEqual(p.klKg, 2840); assert.strictEqual(p.klTan, 2.84); assert.strictEqual(p.khachHang, 'NGUYỄN VĂN AN'); assert.strictEqual(p.maKhachHang, '049000000001');
+  const k = c.forests.flatMap(f => f.phieu).find(x => x.soPhieu === '1004/2026/NK');
+  if (k) assert.strictEqual(k.khachHang, 'NGUYỄN VĂN AN', 'bỏ hậu tố _001 của tên khách hàng');
+  const L2 = fresh().L; assert.ok(L2.load(build('tanOnly'), 'excel', 't.xlsx').ok);
+  const h2 = L2.search('1001/2026', 'HoSoKeo_QC').rows[0], q = L2.candidates(h2.tab, h2.row).forests.flatMap(f => f.phieu).find(x => x.soPhieu === '1001/2026/NK');
+  assert.strictEqual(q.klKg, 2840, 'chỉ có cột tấn: kg = tấn × 1000'); assert.strictEqual(q.klTan, 2.84);
+});

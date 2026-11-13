@@ -46,10 +46,10 @@ test('Excel: ô ngày thật, chuỗi dạng công thức được vô hiệu, C
   const a = R.toAoa(m, {org: '=SUM(1)', today: 'x'});
   const t = a.tables[0], row = a[t.first];
   assert.ok(row[1] instanceof Date && row[1].toISOString().startsWith('2026-02-01'));          // ngày là ô ngày thật
-  assert.ok(typeof row[7] === 'number');                                                          // khối lượng là ô số thật
-  assert.strictEqual(row[2], "'-P"); assert.strictEqual(row[3], "'=cmd"); assert.strictEqual(row[4], "'=HYPERLINK(\"x\")");
+  assert.ok(typeof row[11] === 'number');                                                          // khối lượng là ô số thật
+  assert.strictEqual(row[4], "'-P"); assert.strictEqual(row[5], "'=cmd"); assert.strictEqual(row[6], "'=HYPERLINK(\"x\")");
   assert.strictEqual(R.safeText('-5'), '-5'); assert.strictEqual(R.safeText('049000000001'), '049000000001');   // số thật và chuỗi số không bị đổi
-  assert.ok(t.last >= t.first && t.cols === 11);
+  assert.ok(t.last >= t.first && t.cols === 16);
 });
 
 test('cha–con: chủ rừng = tổng rừng = tổng phiếu cân; tổng cộng khớp chỉ tiêu; kèm phiếu thì có cấp 2', () => {

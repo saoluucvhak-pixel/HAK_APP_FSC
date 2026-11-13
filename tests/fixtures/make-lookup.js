@@ -1,14 +1,14 @@
 'use strict';
 /* Tạo file Excel GIẢ LẬP cùng cấu trúc HoSoKeo_QC.xlsx (3 tab) để kiểm thử. Không chứa dữ liệu thật.
  * Tên tab mặc định là bộ chuẩn HoSoKeo, HoSoRung, ToaDoRung. variant: 'legacy' (hậu tố _QC), 'names:a|b|c' (tên tùy ý), 'order' (đổi thứ tự cột + thêm cột),
- * 'both' (có cả tên chuẩn lẫn _QC), 'twin' (tên tùy ý + một tab thứ tư cùng cấu trúc với tab phiếu cân), 'missingCol', 'missingTab', 'kgOnly', 'tanOnly', 'noWeight'. */
+ * 'both' (có cả tên chuẩn lẫn _QC), 'twin' (tên tùy ý + một tab thứ tư cùng cấu trúc với tab phiếu cân), 'missingCol', 'missingTab', 'kgOnly', 'tanOnly', 'noWeight', 'newplate' (đổi biển 92C-12345 → 92C-54321). */
 const XLSX = require('xlsx');
 const path = require('path');
 const D = (y, m, d) => new Date(Date.UTC(y, m - 1, d));
 const H_KEO = ['STT', 'Mã khách hàng', 'Mã hợp đồng', 'SỐ PHIẾU CHI', 'SỐ PHIẾU CÂN', 'Ngày nhập', 'SỐ XE', 'Đại Lý', 'Hàng hóa', 'Giờ cân 1', 'Giờ cân 2', 'Biển số 1', 'Cân lần 1', 'Cân lần 2', 'KL hàng (KG)', 'Khối lượng (Tấn)', 'Đơn giá', 'Thanh toán', 'Nguồn gốc', 'Người cân', 'Số thứ tự BKLS', 'Số BKLS', 'Họ và tên chủ rừng', 'ĐỊA CHỈ RỪNG', 'DoKho', 'DoAm', 'TKHQ', 'Tàu xuất', 'Ngày xuất'];
 const H_RUNG = ['STT', 'Mã KH_CCCD', 'Họ và tên chủ rừng', 'Mã hợp đồng', 'Mã thanh lý hợp đồng', 'Ngày ký hợp đồng', 'Ngày thanh lý', 'Tình trạng Hợp đồng', 'Địa chỉ thường trú', 'Địa chỉ hiện tại', 'Ngày cấp', 'Nơi cấp', 'SĐT', 'ĐỊA CHỈ RỪNG', 'HECTA', 'Định mức tấn/Ha', 'Pháp lý rừng', 'Tọa độ', 'Định mức quy đổi Tấn/M3', 'Quy cách đường kính', 'Quy cách chiều dài', 'Phương án khai thác', 'Năm trồng'];
 const H_TD = ['ID_RUNG', 'ID_GPS', 'Mã rừng', 'Số hợp đồng', 'Ngày ký hợp đồng', 'HoVaTenChuRung', 'SoCCCD', 'ThuongTru', 'DiaChiRungTrong', 'DienTich_m2', 'HoSoNguonGoc', 'SoGiayTo', 'NgayGiayTo', 'Latitude_Vĩ độ', 'Longtitude_Kinh độ', 'Location', 'Địa điểm tra GPS'];
-const keo = (i, kh, hd, so, ngay, xe, kg, tan, gia, ten, dia) => [i, kh, hd, null, so, ngay, xe, null, 'Gỗ Tròn Keo Lai Controlled Wood', null, null, xe, kg + 4000, 4000, kg, tan, gia, Math.round(kg * gia / 1000), 'QS', null, i, '000000' + i + '/BKLS', ten, dia, null, null, null, null, null];
+const keo = (i, kh, hd, so, ngay, xe, kg, tan, gia, ten, dia) => [i, kh, hd, null, so, ngay, xe, null, 'Gỗ Tròn Keo Lai Controlled Wood', '08:15:00', '09:40:00', xe, kg + 4000, 4000, kg, tan, gia, Math.round(kg * gia / 1000), 'QS', null, i, '000000' + i + '/BKLS', ten, dia, null, null, null, null, null];
 
 function build(variant) {
   /* variant 'names:a|b|c' đặt tên ba tab khác đi (cấu trúc cột giữ nguyên) để thử bảng tính sao chép hoặc đổi tên tab */
@@ -40,6 +40,7 @@ function build(variant) {
   if (variant === 'kgOnly') drop(['Khối lượng (Tấn)']);          // chỉ có cột KG
   if (variant === 'tanOnly') drop(['KL hàng (KG)']);              // chỉ có cột Tấn (dòng 8 không có tấn → dòng thiếu khối lượng)
   if (variant === 'noWeight') drop(['KL hàng (KG)', 'Khối lượng (Tấn)']);
+  if (variant === 'newplate') K.forEach((r, i) => { if (i > 0 && r[6] === '92C-12345') { r[6] = '92C-54321'; r[11] = '92C-54321'; } });   // biển số mới của các phiếu xe 92C-12345
   if (variant === 'missingCol') T[0] = T[0].map(h => h === 'DienTich_m2' ? 'DienTich' : h);
   const reorder = aoa => aoa.map((r, i) => [...r.slice().reverse(), i === 0 ? 'Cột thêm' : 'ghi chú ' + i]);   // đổi thứ tự cột (đảo ngược) và thêm một cột
   const [K2, R2, T2] = variant === 'order' ? [reorder(K), reorder(R), reorder(T)] : [K, R, T];

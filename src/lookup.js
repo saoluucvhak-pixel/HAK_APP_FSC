@@ -34,6 +34,8 @@ const baseCccd = v => clean(v).replace(/_\d+$/, '');
 const stripSuffix = v => clean(v).replace(/_\d+$/, '');
 
 /* Đọc 1 ô: ngày -> dd/mm/yyyy; cột văn bản -> chuỗi (giữ số 0 đầu; CCCD dạng số thì bù đủ 12 chữ số) */
+/* giờ cân: ô giờ (phần ngày của Excel 0..1) → HH:MM:SS; chuỗi giữ nguyên */
+const timeText = v => { if (typeof v === 'number' && v >= 0 && v < 1) { const t = Math.round(v * 86400); return pad2(Math.floor(t / 3600)) + ':' + pad2(Math.floor(t % 3600 / 60)) + ':' + pad2(t % 60); } return clean(v); };
 function cellValue(cell, isText, isCccd) {
   if (!cell || cell.v == null || cell.v === '') return '';
   if (cell.t === 'd' || (cell.t === 'n' && cell.z && XLSX.SSF.is_date(cell.z))) {
@@ -615,7 +617,12 @@ function forestOf(code, T, R, keo, nRung, hd) {
     const ngay = D.isValid(r['Ngày nhập']) ? r['Ngày nhập'] : '';
     if (!ngay && !issue) issue = clean(r['Ngày nhập']) ? 'Ngày cân sai: ' + D.why(r['Ngày nhập']) : 'Không có ngày cân (Ngày nhập)';
     const bienRaw = clean(r['Biển số 1'] || r['SỐ XE']);
-    return {soPhieu: clean(r['SỐ PHIẾU CÂN']), ngay, bienRaw, isPlate: isPlate(bienRaw), kl, donGia: r['Đơn giá'], thanhToan: r['Thanh toán'], issue, row: r._row, assignable};
+    // thông tin cân: giờ cân 1/2, cân lần 1/2 (kg), khối lượng kg và tấn, khách hàng
+    const kgOf = v => (typeof v === 'number' && isFinite(v) && v >= 0 ? v : null);
+    const klKg = kg > 0 ? kg : (kl > 0 ? Math.round(kl * 1000) : null);
+    return {soPhieu: clean(r['SỐ PHIẾU CÂN']), ngay, bienRaw, isPlate: isPlate(bienRaw), kl, donGia: r['Đơn giá'], thanhToan: r['Thanh toán'], issue, row: r._row, assignable,
+      gioCan1: timeText(r['Giờ cân 1']), gioCan2: timeText(r['Giờ cân 2']), can1: kgOf(r['Cân lần 1']), can2: kgOf(r['Cân lần 2']), klKg, klTan: kl,
+      khachHang: stripSuffix(clean(r['Họ và tên chủ rừng'])), maKhachHang: clean(r['Mã khách hàng'])};
   });
   return {maRung: code, fields: f, area, areaConflict, gps, docs, ref, phieu, warns};
 }

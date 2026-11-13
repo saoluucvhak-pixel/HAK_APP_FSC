@@ -67,7 +67,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   // theo ha: 2,5 ha chia đều 4 người = 0,625 ha/người
   await w.click('[data-ftab=nc]'); await w.selectOption('#luongForm [name=hinhThucLuong]', 'ha'); await price('ha_', HA); await save(); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   f = await exp('gk', '.docx'); t = await docText(f);
-  ok('BM-01 giao khoán theo ha: đơn giá từng vai trò (đồng/ha), diện tích chia đều, tổng = ' + fmt(total(2.5, HA)), /Đơn giá khoán theo vai trò \(đồng\/ha\)/.test(t) && HA.every(v => t.includes(fmt(v))) && /Diện tích khai thác được chia đều/.test(t) && t.includes(fmt(total(2.5, HA)) + ' đồng'), t.slice(t.indexOf('Điều 2'), t.indexOf('Điều 2') + 500));
+  ok('BM-01 giao khoán theo ha: đơn giá từng vai trò (đồng/ha), diện tích chia đều, tổng = ' + fmt(total(2.5, HA)), /Đơn giá khoán theo vai trò \(đồng\/ha\)/.test(t) && HA.every(v => t.includes(fmt(v))) && /Diện tích khai thác chia đều cho 4 người/.test(t) && /đơn giá bình quân 6\.750\.000 đồng\/ha/.test(t) && t.includes(fmt(total(2.5, HA)) + ' đồng'), t.slice(t.indexOf('Điều 2'), t.indexOf('Điều 2') + 500));
   f = await exp('tc', '.docx'); t = await docText(f);
   ok('BM-08 theo ha: cột diện tích chia đều (ha) 0,625; đơn giá đồng/ha; tổng khớp', t.includes('Diện tích chia đều (ha)') && t.includes('Đơn giá (đồng/ha)') && t.includes('0,625') && t.includes(fmt(total(2.5, HA))), t.slice(0, 400));
   f = await exp('nttl', '.docx'); t = await docText(f);

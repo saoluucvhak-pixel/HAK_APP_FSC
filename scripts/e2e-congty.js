@@ -38,7 +38,7 @@ async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f1]'); await w.click('[data-ftab=dx]');
 
   // ===== màn hình hồ sơ công ty (một công ty, không có danh mục nhiều công ty) =====
-  await w.click('#navCty'); await w.waitForSelector('#ctyForm');
+  await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
   ok('chỉ có MỘT hồ sơ công ty: không có danh sách, tìm kiếm, thêm hay xóa công ty', !(await w.$('#ctySearch')) && !(await w.$('[data-act=ctyNew]')) && !(await w.$('[data-act=ctyDel]')) && !(await w.$('#ctyList')));
   ok('hồ sơ công ty hiện thông tin đã lưu trong SQLite', (await w.inputValue('#ctyForm [name=ten]')) === C1.ten && (await w.inputValue('#ctyForm [name=mst]')) === '0401234567' && (await w.inputValue('#ctyForm [name=nguoiDaiDien]')) === 'Nguyễn Văn A');
   await w.fill('#ctyForm [name=ten]', ''); await w.fill('#ctyForm [name=diaChi]', ''); await w.click('#ctyForm button[type=submit]');
@@ -87,7 +87,7 @@ async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(
 
   // ===== sửa địa chỉ công ty: hồ sơ rừng giữ nguyên cho đến khi xác nhận =====
   const NEW = '99 Nguyễn Văn Linh, Hải Châu, Đà Nẵng';
-  await w.click('#navCty'); await w.waitForSelector('#ctyForm');
+  await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
   await w.fill('#ctyForm [name=diaChi]', NEW); await w.click('#ctyForm button[type=submit]');
   ok('lưu hồ sơ công ty: báo rừng đã chọn vẫn giữ địa chỉ đã lưu', /GIỮ địa chỉ đã lưu/.test(await w.innerText('#main')));
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f2]'); await w.click('[data-ftab=dx]');

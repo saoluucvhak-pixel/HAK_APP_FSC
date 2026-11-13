@@ -73,7 +73,7 @@ Tiền vận chuyển tính theo **tấn giao tại nhà máy** (theo phiếu c�
 **Phiếu cân**: nạp bằng Excel, **mỗi chuyến một dòng**. Nạp **đội xe trước**, vì phiếu cân chỉ nhận biển số có trong danh sách xe (so khớp bỏ dấu chấm, gạch, khoảng trắng). Phiếu **trùng số** vẫn được cộng vào tổng nhưng bị đánh dấu để kiểm tra.
 
 **Công ty mua hàng và địa chỉ giao** (tên công ty cũng tự điền vào dòng “Kính gửi” của BM-11 cam kết nguồn gốc: ưu tiên ô “Cam kết: đơn vị nhận” nếu có nhập, rồi công ty đã chốt cho lô, rồi hồ sơ Công ty mua hàng)
-- Phần mềm dùng cho **một công ty**: khai **một hồ sơ** ở nút **Công ty mua hàng** (tên pháp lý và địa chỉ bắt buộc; MST, người đại diện, chức vụ, SĐT, email; có thể thêm nhiều **địa chỉ giao hàng** như kho, nhà máy).
+- Phần mềm dùng cho **một công ty**: khai **một hồ sơ** ở **Cài đặt → Công ty** (menu ngang trên cùng) (tên pháp lý và địa chỉ bắt buộc; MST, người đại diện, chức vụ, SĐT, email; có thể thêm nhiều **địa chỉ giao hàng** như kho, nhà máy).
 - Ở tab Vận chuyển của từng lô: **Chọn địa chỉ giao hàng** → chọn một địa chỉ → xem bảng so sánh “hiện tại / mới” → **Xác nhận**. Địa chỉ được lưu cùng hồ sơ lô và tự điền vào “Địa điểm vận chuyển đến”; dùng ở **BM-04, BM-09, BM-10 và Sổ phiếu cân**.
 - Sửa tên hoặc địa chỉ trong hồ sơ công ty **không tự đổi** các lô đã chọn: lô giữ địa chỉ đã lưu và hiện thông báo, bấm **Xem và cập nhật** để áp dụng.
 - Hồ sơ cũ nhập tay điểm đến vẫn giữ nguyên; lần đầu chọn địa chỉ sẽ thấy giá trị cũ cạnh địa chỉ đề xuất.
@@ -189,13 +189,20 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 - Mỗi biểu mẫu là một file Word riêng, nên bộ hồ sơ đã in ở đợt 1 chỉ cần **bổ sung hoặc thay** các biểu mẫu của đợt 2. Hai đợt gộp lại đúng bằng nút “Tải toàn bộ hồ sơ”. BM-08 tính theo khối lượng thực tế đã nhập, chưa nhập thì theo sản lượng dự kiến, nên chỉ nên in BM-08 ở đợt 2.
 
 
+**Giao khoán: đơn giá khoán của tổ.** Nếu **Thông tin rừng không có đơn giá Tổ trưởng**, phần mềm suy ra đơn giá khoán của tổ từ định biên nhân sự: tổng (số người từng vị trí ở sheet nhân công × đơn giá vị trí) ÷ tổng số người. Hợp đồng khoán (BM-01) ghi rõ cơ sở tính giá trung bình, chi tiết giá từng vị trí và **tổng giá trị khoán = tổng thanh toán cho tất cả mọi người, kể cả Tổ trưởng**; Giấy ủy quyền (BM-20) ghi đơn giá ký tương ứng; BM-08 ghi đơn giá khoán và tổng. Nếu **có nhập “Đơn giá giao khoán Tổ trưởng (đồng/tấn)” ở Thông tin rừng** thì làm như cũ (không có phần suy ra). Ô này **tùy chọn**: để trống thì app tự suy từ định biên.
+
+**Định mức BHLĐ có hiệu lực từ ngày, và thêm vị trí mới.** Nút **Định mức BHLĐ** ở menu ngang trên cùng (cạnh Công ty mua hàng) mở màn hình định mức theo vị trí (chức danh).
+- **Hiệu lực từ ngày**: mỗi bản định mức có ngày hiệu lực. Bản gốc (dữ liệu cũ) để trống ngày thì áp dụng từ trước đến nay; nên điền ngày cho rõ. **Thêm bản mới** (ô “Thêm bản mới, hiệu lực từ ngày”) sao chép bản đang chọn để sửa tiếp; ngày phải có thật (dd/mm/yyyy) và không trùng bản khác. Chọn bản ở ô “Bản định mức”, sửa rồi **Lưu bản định mức này**; bản không phải gốc có thể xóa.
+- **Biểu mẫu dùng bản nào**: bản có ngày hiệu lực lớn nhất không vượt quá ngày của biểu mẫu. Danh sách cấp phát BHLĐ (BM-02) theo **ngày cấp phát** (không nhập thì theo ngày bắt đầu khai thác của rừng) và ghi rõ “Định mức theo bản có hiệu lực từ ngày …”; hợp đồng lao động theo ngày bắt đầu hợp đồng, ngày ký hoặc ngày bắt đầu khai thác. Ngày cấp phát **trước mọi bản** thì chặn xuất BM-02 và báo chưa có bản định mức hiệu lực.
+- **Thêm vị trí mới** (ô “Thêm vị trí mới”, ví dụ “Công nhân phụ”): vị trí hiện thêm một dòng trong mọi bản định mức, thêm ô đơn giá ở tab Nhân công (mục Thông số hợp đồng và đơn giá), được chọn trong cột **Chức danh** khi nạp nhân công và có trong file Excel mẫu nhân công tải sau đó. Vị trí có người giữ trong giao khoán nằm trong chi tiết đơn giá và công thức đơn giá bình quân. Chỉ **Tổ trưởng** có vai trò riêng; tên vị trí mới không được bắt đầu bằng “Tổ trưởng”. Xóa vị trí chỉ khi chưa còn nhân công nào giữ.
+
 **Số hợp đồng và năm trên biểu mẫu** (BM-01, BM-04, BM-09, BM-10, BM-14, BM-20): số in có dạng `<phần số>/<năm>-<hậu tố>`, ví dụ `015/2027-KT`.
 - Nhập số **đầy đủ** (có dấu “/” hoặc đã có hậu tố, ví dụ `015/2025-KT`): phần mềm **giữ nguyên**.
 - Chỉ nhập **phần số** (`015`): phần mềm ghép **năm lấy từ ngày ký của chính hợp đồng đó** và hậu tố. Hợp đồng khai thác (BM-01, BM-14, BM-20) và hợp đồng vận chuyển (BM-04) theo **Ngày ký hợp đồng**; Giấy ủy quyền theo ngày lập giấy (trống thì theo ngày ký hợp đồng); biên bản nghiệm thu, thanh lý và biên bản xác nhận khối lượng theo ngày lập biên bản.
 - **Thiếu hoặc sai ngày ký**: năm để trống (`015/……-KT`), không tự điền năm cố định; khung “Số hợp đồng đầy đủ sẽ in (xem trước)” ở tab Xuất hồ sơ nêu rõ cần bổ sung ngày nào. Các dòng ngày để trống in “ngày ….. tháng ….. năm …….”.
 - BM-01, BM-14 và BM-20 của cùng hồ sơ giao khoán luôn tham chiếu **cùng một số** hợp đồng khai thác.
 
-**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Năm mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
+**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Tám mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
 
 ## 10. Sao lưu và khôi phục
 Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.
@@ -236,6 +243,40 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 | Điểm đến vận chuyển | Địa chỉ giao hàng đã xác nhận theo từng lô; “Nơi giao” trên phiếu giữ nguyên dữ liệu nguồn |
 | Cước | Chỉ hai cách: cố định (đồng/tấn) hoặc tấn/km; tính theo tấn giao tại nhà máy |
 | Tiền công | Tổng theo từng chức danh (phần chia đều × đơn giá chức danh), gồm cả Tổ trưởng |
+
+## Cài đặt: Hệ thống, Google Sheets, Công ty, Hiển thị số
+Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
+- **Hệ thống**: thư mục dữ liệu, thư mục sao lưu, nhắc sao lưu.
+- **Google Sheets**: **địa chỉ bảng tính** dùng cho màn Tra cứu (chỉ đọc). Màn Tra cứu không còn ô nhập địa chỉ; chỉ ghi địa chỉ đang dùng và nút “Đổi trong Cài đặt”.
+- **Công ty**: thông tin **Công ty mua hàng** (một hồ sơ cho cả phần mềm, các địa chỉ giao hàng). Nút Công ty mua hàng không còn ở menu ngang.
+- **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
+
+## Định mức gỗ keo (1 ha = ? tấn) và nút điền nhanh ở Thông tin rừng
+- **Định mức gỗ keo**: ở màn **Định mức BHLĐ**, mục “Định mức gỗ keo: 1 ha = ? tấn”, mỗi dòng có **hiệu lực từ ngày**. Dòng cuối để thêm định mức mới; ngày phải có thật và không trùng.
+- **Mặc định cho rừng**: rừng lấy định mức có hiệu lực theo **ngày bắt đầu khai thác** của rừng (chưa có ngày thì dùng bản mới nhất). Ô “Định mức (tấn/ha)” ở Thông tin rừng để trống là dùng mặc định (gợi ý ngay trong ô); **tự điền số** thì rừng dùng số riêng; nút **Dùng mặc định** xóa số riêng. Sản lượng dự kiến tự tính theo định mức đang dùng.
+- **Từ ngày / đến ngày**: nút **Lấy ngày cân nhỏ nhất** và **Lấy ngày cân lớn nhất** (từ phiếu cân của rừng) điền vào ô; vẫn tự điền hoặc sửa được.
+- **Khối lượng thực tế**: nút **Lấy tổng từ phiếu cân** điền tổng khối lượng phiếu cân; vẫn tự điền số. Các nút chỉ điền vào ô, bấm **Lưu thông tin rừng** để ghi nhận.
+
+## Cập nhật biển số xe từ bảng tính tra cứu, và báo cáo theo lô
+- **Cập nhật biển số xe**: khi mở bảng tra cứu và chọn **Điền vào rừng đang mở**, nếu phiếu cân đã có trong hồ sơ nhưng bảng tính có **biển số khác**, màn hình xem trước hiện khung **“Biển số xe khác với hồ sơ”** (số phiếu, biển cũ → biển mới) và nút **Chỉ cập nhật biển số xe**. Nút này chỉ đổi biển số, **giữ nguyên** ngày cân, khối lượng, nơi giao. Cách khác: chọn phiếu (trạng thái “cập nhật”) rồi **Lưu vào hồ sơ** để cập nhật cả phiếu; biển số đổi cũng được ghi lại.
+- **Thông tin cân lấy từ bảng tính**: khi ghi phiếu cân từ tra cứu, ngoài số phiếu, ngày cân, biển số và khối lượng, phần mềm lấy thêm **giờ cân 1, giờ cân 2, cân lần 1 (kg), cân lần 2 (kg), khối lượng (kg), khối lượng (tấn) và khách hàng** (tên khách hàng ở cột “Họ và tên chủ rừng”, mã ở cột “Mã khách hàng”). Màn xem trước và danh sách phiếu cân ở tab Vận chuyển hiện đủ các cột này. Chỉ có cột tấn thì kg = tấn × 1000; chỉ có cột kg thì tấn = kg ÷ 1000. **Phiếu cân đã có trong hồ sơ nhưng thiếu các thông tin này** hiện trạng thái “cập nhật” với ghi chú “Bổ sung giờ cân, cân lần 1, cân lần 2…”: chọn rồi Lưu vào hồ sơ để bổ sung. Cột giờ cân trong bảng tính có thể là ô giờ hoặc chữ.
+- **Sổ theo dõi phiếu cân và file Excel mẫu phiếu cân** có thêm các cột **Giờ cân 1, Giờ cân 2, Cân lần 1 (kg), Cân lần 2 (kg), Khối lượng (kg), Khối lượng (tấn), Khách hàng**. File Excel mẫu: các cột mới là tùy chọn; file cũ không có các cột này vẫn nạp được. Giờ cân nhập dạng ô giờ hoặc chữ (08:15). Chỉ điền kg thì tấn = kg ÷ 1000; kg và tấn lệch nhau, hoặc kg khác chênh lệch hai lần cân quá 1 kg, thì có cảnh báo (không chặn nạp). Báo cáo Sổ theo dõi phiếu cân (Word, Excel) có đủ các cột, kể cả tổng kg và tổng tấn.
+- **Nhật ký đổi biển số** lưu trong lô rừng: số phiếu, biển cũ, biển mới, thời điểm, nguồn (Google Sheets). Phiếu đổi nhiều lần giữ đủ các dòng.
+- **Báo cáo “Phiếu cân đã cập nhật biển số xe”** (nút Báo cáo): theo **từng lô rừng**, có bảng tổng hợp theo lô (số phiếu cân, số phiếu đã cập nhật biển, tỷ lệ, khối lượng) và bảng chi tiết (số phiếu, ngày cân, biển cũ, biển mới, thời điểm cập nhật). Lọc theo kỳ (ngày cân), xuất Word hoặc Excel.
+
+## Báo cáo danh sách lao động và danh sách xe
+Hai mẫu trong nút **Báo cáo**, xuất **Word** hoặc **Excel**:
+- **Danh sách lao động theo lô**: tổng hợp từng lô (số lao động, tổ trưởng, công nhân khai thác, công nhân cưa, vị trí khác, số người dưới 18 tuổi) và danh sách chi tiết (họ tên, vai trò, chức danh, ngày sinh, tuổi, CCCD, địa chỉ, ngày và nơi cấp CCCD, đơn giá theo cơ sở tính của lô). Tuổi tính tại ngày bắt đầu khai thác của lô (không có thì ngày lập báo cáo). Có ghi chú dưới 18 tuổi, lô chưa có tổ trưởng, và mục “Hồ sơ lao động cần bổ sung” khi thiếu ngày sinh hoặc CCCD không đủ 12 số.
+- **Danh sách xe vận chuyển theo lô**: tổng hợp từng lô (số xe, số chuyến, khối lượng) và danh sách xe (biển số, loại xe, chủ xe, người ký hợp đồng vận chuyển, tên tài xế, CCCD người ký, SĐT, hạn bảo hiểm, hạn GPLX, số chuyến và khối lượng theo phiếu cân; lọc kỳ theo ngày cân). Biển số có trong phiếu cân nhưng chưa có trong danh sách xe được liệt kê ở mục III.
+
+**Bộ lọc thông minh cho mẫu báo cáo.** Trong nút **Báo cáo**, mọi mẫu có thanh lọc: **Tìm nhanh** (gõ rồi Enter; không phân biệt dấu và hoa thường, nhiều từ = phải có đủ), **Lô rừng**, **Chủ rừng**, khoảng ngày cân, và điều kiện riêng của từng mẫu:
+- **Danh sách lao động**: chức danh, vai trò, chỉ người dưới 18 tuổi, chỉ hồ sơ cần bổ sung (thiếu ngày sinh hoặc CCCD).
+- **Danh sách xe**: người ký hợp đồng vận chuyển, chỉ xe chưa có số điện thoại, chỉ xe có chuyến hoặc chưa có chuyến trong kỳ.
+- **Sổ phiếu cân**: tìm theo số phiếu, biển số, khách hàng, nơi giao.
+Mỗi điều kiện hiện thành **chip** (bấm × để bỏ, “Xóa hết” để bỏ tất cả). Có thể **lưu bộ lọc** theo tên cho từng mẫu và mở lại sau. Bộ lọc áp dụng **trước khi lập báo cáo** nên KPI, tổng cộng, file Word và Excel đều khớp phần đã lọc; dòng “phạm vi lọc” dưới tiêu đề ghi rõ các điều kiện đã dùng.
+
+## Quy trình hồ sơ theo đợt
+Tab **Xuất hồ sơ** có bảng **Quy trình hồ sơ theo đợt** ở đầu: năm bước (Chuẩn bị, In đợt 1, Khai thác và cân, In đợt 2, Hoàn tất), một dòng **Việc nên làm tiếp**, và danh sách mẫu của đợt 1 và đợt 2 với trạng thái **Dữ liệu** (Đủ, Bản nháp, Chưa đủ) và **In ấn** (Chưa in, Đã in còn khớp, Đã in nhưng dữ liệu đã đổi). Bấm **Đánh dấu đã in** sau khi in (từng mẫu hoặc cả đợt); nếu sau đó dữ liệu của mẫu đổi, mẫu hiện **“in lại”**. Đợt 1 chỉ dùng dữ liệu có trước khi khai thác nên bản in đợt 1 **không đổi** khi nhập phiếu cân hoặc khối lượng thực tế. Với đợt 2, cột **Hướng in đợt 2** cho biết mỗi mẫu đang ở bước nào của hai hướng in: **giấy trắng** hoặc **in nền rồi in đè**; “Việc nên làm tiếp” nêu rõ bước in nền, chờ dữ liệu, in đè hay in lại khi bố cục đổi, và bấm **Đã in xong** sau khi in xong. Đầy đủ quy tắc và kết quả rà soát: `docs/QUY_TRINH_HO_SO.md`.
 
 ## 13. Xử lý sự cố
 | Hiện tượng | Cách xử lý |
