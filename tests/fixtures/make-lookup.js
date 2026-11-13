@@ -1,5 +1,7 @@
 'use strict';
-/* Tạo file Excel GIẢ LẬP cùng cấu trúc HoSoKeo_QC.xlsx (3 tab) để kiểm thử. Không chứa dữ liệu thật. */
+/* Tạo file Excel GIẢ LẬP cùng cấu trúc HoSoKeo_QC.xlsx (3 tab) để kiểm thử. Không chứa dữ liệu thật.
+ * Tên tab mặc định là bộ chuẩn HoSoKeo, HoSoRung, ToaDoRung. variant: 'legacy' (hậu tố _QC), 'names:a|b|c' (tên tùy ý), 'order' (đổi thứ tự cột + thêm cột),
+ * 'both' (có cả tên chuẩn lẫn _QC), 'twin' (tên tùy ý + một tab thứ tư cùng cấu trúc với tab phiếu cân), 'missingCol', 'missingTab', 'kgOnly', 'tanOnly', 'noWeight'. */
 const XLSX = require('xlsx');
 const path = require('path');
 const D = (y, m, d) => new Date(Date.UTC(y, m - 1, d));
@@ -9,6 +11,8 @@ const H_TD = ['ID_RUNG', 'ID_GPS', 'Mã rừng', 'Số hợp đồng', 'Ngày k�
 const keo = (i, kh, hd, so, ngay, xe, kg, tan, gia, ten, dia) => [i, kh, hd, null, so, ngay, xe, null, 'Gỗ Tròn Keo Lai Controlled Wood', null, null, xe, kg + 4000, 4000, kg, tan, gia, Math.round(kg * gia / 1000), 'QS', null, i, '000000' + i + '/BKLS', ten, dia, null, null, null, null, null];
 
 function build(variant) {
+  /* variant 'names:a|b|c' đặt tên ba tab khác đi (cấu trúc cột giữ nguyên) để thử bảng tính sao chép hoặc đổi tên tab */
+  const NM = typeof variant === 'string' && variant.startsWith('names:') ? variant.slice(6).split('|') : variant === 'twin' ? ['Sheet1', 'Sheet2', 'Sheet3'] : variant === 'legacy' ? ['HoSoKeo_QC', 'HoSoRung_QC', 'ToaDoRung_QC'] : ['HoSoKeo', 'HoSoRung', 'ToaDoRung'];
   const K = [H_KEO,
     keo(1, '049000000001', '101', '1001/2026/NK', D(2026, 1, 22), '92C-12345', 2840, 2.84, 1500000, 'NGUYỄN VĂN AN', 'Thôn Phú Cường, xã Quế Sơn Trung'),
     keo(2, '049000000001', '101', '1002/2026/NK', D(2026, 1, 23), 'XE CN NAM', 4440, 4.44, 1500000, 'NGUYỄN VĂN AN', 'Thôn Phú Cường, xã Quế Sơn Trung'),
@@ -32,18 +36,27 @@ function build(variant) {
     ['HAKQN04', '20260220-002', '20260220_002', 201, D(2026, 2, 20), 'TRẦN THỊ BÌNH', '049000000002', 'Xã Hiệp Đức', 'Lô 2, xã Hiệp Đức', 50000, 'Giấy chứng nhận QSDĐ', '112QSDĐ', null, 15.51, 108.11, '', ''],
     ['HAKQN05', '20260301-001', '20260301_001', 101, D(2026, 3, 1), 'NGUYỄN VĂN AN', '049000000003', 'Xã Việt An', 'Xã Việt An', 12000, 'Khác', 'KH-01', null, 154712975, 108.2, '', ''],
     ['HAKQN06', '20260320-001', '20260320_001', 401, D(2026, 3, 20), 'LÊ VĂN ĐÔNG', 49000000004, 'Xã Đại Lộc', 'Xã Đại Lộc', 15000, 'Giấy chứng nhận QSDĐ', '555QSDĐ', D(2010, 1, 1), 15.8, 108.0, '', '']];
+  const drop = names => { const ix = names.map(n => H_KEO.indexOf(n)); for (let r = 0; r < K.length; r++) K[r] = K[r].filter((_, c) => !ix.includes(c)); };
+  if (variant === 'kgOnly') drop(['Khối lượng (Tấn)']);          // chỉ có cột KG
+  if (variant === 'tanOnly') drop(['KL hàng (KG)']);              // chỉ có cột Tấn (dòng 8 không có tấn → dòng thiếu khối lượng)
+  if (variant === 'noWeight') drop(['KL hàng (KG)', 'Khối lượng (Tấn)']);
   if (variant === 'missingCol') T[0] = T[0].map(h => h === 'DienTich_m2' ? 'DienTich' : h);
+  const reorder = aoa => aoa.map((r, i) => [...r.slice().reverse(), i === 0 ? 'Cột thêm' : 'ghi chú ' + i]);   // đổi thứ tự cột (đảo ngược) và thêm một cột
+  const [K2, R2, T2] = variant === 'order' ? [reorder(K), reorder(R), reorder(T)] : [K, R, T];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(K, {cellDates: true}), 'HoSoKeo_QC');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(R, {cellDates: true}), 'HoSoRung_QC');
-  if (variant !== 'missingTab') XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(T, {cellDates: true}), 'ToaDoRung_QC');
+  const add = (aoa, name) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa, {cellDates: true}), name);
+  add(K2, NM[0]); add(R2, NM[1]);
+  if (variant !== 'missingTab') add(T2, NM[2]);
+  if (variant === 'both') { add(K, 'HoSoKeo_QC'); add(R, 'HoSoRung_QC'); add(T, 'ToaDoRung_QC'); }
+  if (variant === 'twin') add(K, 'Sheet4');
   return XLSX.write(wb, {type: 'buffer', bookType: 'xlsx', cellDates: false});
 }
 module.exports = {build};
 if (require.main === module) {
   const fs = require('fs');
-  fs.writeFileSync(path.join(__dirname, 'gia_lap_HoSoKeo_QC.xlsx'), build());
+  fs.writeFileSync(path.join(__dirname, 'gia_lap_HoSoKeo_QC.xlsx'), build('legacy'));   // file đang dùng: tên tab có hậu tố _QC
+  fs.writeFileSync(path.join(__dirname, 'gia_lap_chuan.xlsx'), build());                 // bộ tên chuẩn HoSoKeo, HoSoRung, ToaDoRung
   fs.writeFileSync(path.join(__dirname, 'gia_lap_thieu_cot.xlsx'), build('missingCol'));
   fs.writeFileSync(path.join(__dirname, 'gia_lap_thieu_tab.xlsx'), build('missingTab'));
-  console.log('Đã tạo 3 file giả lập');
+  console.log('Đã tạo 4 file giả lập');
 }

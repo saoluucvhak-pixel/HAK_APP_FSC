@@ -4,6 +4,10 @@ const path = require('path');
 const fs = require('fs');
 const {Store, SCHEMA_VERSION} = require('./store');
 const {Lookup} = require('./lookup');
+const LoRung = require('./lorung');
+const Settings = require('./settings');
+const DM = require('./datamove');
+const Backup = require('./backup');
 const {GoogleAuth, fileIdOf} = require('./google-auth');
 
 // Kiểm thử/ chạy thử có thể đặt thư mục dữ liệu riêng, không đụng dữ liệu thật
@@ -19,6 +23,15 @@ function exportUrl(link) {
   return m ? 'https://docs.google.com/spreadsheets/d/' + m[1] + '/export?format=xlsx' : null;
 }
 let gauth = null;
+/* Nạp bản tra cứu. Tab tên khác chuẩn / nhiều tab phù hợp: giữ bản tải về trong bộ nhớ chờ người dùng xác nhận hoặc chọn (lookup:confirmTabs),
+ * KHÔNG đổi bản tra cứu đang dùng cho đến khi cả ba vai trò đã xác định và kiểm tra thành công. sheetKey = định danh bảng tính (ID Google / excel:tên file). */
+let pendingTabs = null;
+function loadLookup(buf, source, detail, sheetKey) {
+  const r = lookup.load(buf, source, detail, {sheetKey});
+  pendingTabs = r.pending ? {buf, source, detail, sheetKey} : null;
+  return r;
+}
+const sheetKeyOf = link => 'google:' + (fileIdOf(link) || link);
 const fetchPublic = async (url, signal) => {
   const res = await net.fetch(url, {signal, redirect: 'follow'});
   if (!res.ok) { const e = new Error('Máy chủ trả lỗi HTTP ' + res.status + (res.status === 401 || res.status === 403 || res.status === 404 ? ' (bảng tính chưa để "Ai có liên kết đều xem được" hoặc sai liên kết; có thể dùng "Đăng nhập Google")' : '')); e.http = res.status; throw e; }
@@ -36,10 +49,10 @@ async function syncSheets() {
   try {
     let apiErr = null;
     if (gauth.status().signedIn && !process.env.HAKQN_SHEET_URL) {
-      try { return lookup.load(await gauth.exportXlsx(fileIdOf(link), ctl.signal), 'google', link + ' (tài khoản Google)'); }
+      try { return loadLookup(await gauth.exportXlsx(fileIdOf(link), ctl.signal), 'google', link + ' (tài khoản Google)', sheetKeyOf(link)); }
       catch (e) { apiErr = e; if (e.code === 'network' || e.code === 'timeout') return fail(e.message); }
     }
-    try { return lookup.load(await fetchPublic(url, ctl.signal), 'google', link); }
+    try { return loadLookup(await fetchPublic(url, ctl.signal), 'google', link, sheetKeyOf(link)); }
     catch (e) {
       const why = e.name === 'AbortError' ? 'Hết thời gian chờ kết nối' : e.http ? e.message : 'Không kết nối được (' + e.message + ')';
       return fail(apiErr ? 'Đăng nhập Google: ' + apiErr.message + ' · Liên kết công khai: ' + why : why);
@@ -48,7 +61,11 @@ async function syncSheets() {
 }
 
 const TITLE = 'HAKQN – Hồ sơ khai thác và vận chuyển gỗ keo';
-let store = null, win = null;
+let store = null, win = null, loc = null;
+let dataIssue = null;        // khác null khi vị trí dữ liệu đã cấu hình không mở được: KHÔNG tự dùng bản mặc định, chờ người dùng chọn
+let relocating = null;       // Promise khi đang đổi thư mục dữ liệu: mọi thao tác ghi chờ xong rồi mới chạy trên cơ sở dữ liệu mới
+let notice = null;           // thông báo hiện sau khi cửa sổ tải lại từ cơ sở dữ liệu mới (không phụ thuộc vào renderer kịp lưu trước khi tải lại)
+let backingUp = false;       // đang sao lưu toàn bộ: chặn bấm hai lần
 
 /* Nhật ký lỗi: không ghi dữ liệu cá nhân (che dãy từ 6 chữ số liên tiếp: CCCD, số điện thoại...) và không ghi nội dung hồ sơ */
 function log(level, msg) {
@@ -61,37 +78,103 @@ function log(level, msg) {
 
 function openStore() {
   const dir = app.getPath('userData'); fs.mkdirSync(dir, {recursive: true});
-  store = new Store(process.env.HAKQN_DB || path.join(dir, 'hakqn.sqlite'), {log});
-  lookup = new Lookup(store);
-  gauth = new GoogleAuth({dir: app.getPath('userData'), fetch: (u, o) => net.fetch(u, o), openExternal: u => shell.openExternal(u), safeStorage});
+  if (store) { try { store.db.close(); } catch (e) { /* đã đóng */ } store = null; }
+  loc = Settings.resolve(dir, process.env);
+  gauth = new GoogleAuth({dir, fetch: (u, o) => net.fetch(u, o), openExternal: u => shell.openExternal(u), safeStorage});
+  // Kiểm tra cả thư mục lẫn file hakqn.sqlite đã cấu hình TRƯỚC khi mở (Store sẽ tự tạo file trống nếu thiếu): không tự chuyển sang bản mặc định
+  const chk = Settings.checkConfigured(dir, process.env);
+  if (chk.state !== 'ok') { dataIssue = chk; lookup = null; log('ERROR', 'Không truy cập được dữ liệu đã cấu hình (' + chk.code + ')'); return false; }
+  try {
+    fs.mkdirSync(path.dirname(loc.dbFile), {recursive: true});
+    store = new Store(loc.dbFile, {log, backupDir: loc.backupDir});
+    lookup = new Lookup(store); dataIssue = null;
+  } catch (e) {
+    store = null; lookup = null;
+    dataIssue = {state: 'unavailable', path: loc.dbFile, dir: path.dirname(loc.dbFile), code: 'OPEN_FAILED', reason: Settings.describeError(e, loc.dbFile)};
+    log('ERROR', 'Không mở được cơ sở dữ liệu: ' + e.message); return false;
+  }
+  loc.missing.forEach(m => log('WARN', 'Thư mục sao lưu đã chọn không còn: ' + m + ', dùng mặc định'));
+  return true;
 }
 
-function wrap(fn) { return (...a) => { try { return {ok: true, ...fn(...a)}; } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; } }; }
+const NO_STORE = () => 'Chưa mở được cơ sở dữ liệu' + (dataIssue ? ': ' + dataIssue.reason + ' (' + dataIssue.path + ')' : '') + '. Hãy xử lý ở màn hình thông báo trước.';
+function wrap(fn, anyState) { return (...a) => { try { if (!store && !anyState) throw Object.assign(new Error(NO_STORE()), {unavailable: true}); return {ok: true, ...fn(...a)}; } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message, unavailable: !!e.unavailable}; } }; }
+/* Mọi thao tác ghi/đọc dữ liệu chờ nếu đang đổi thư mục dữ liệu: không mất thao tác lưu phát sinh lúc đó, và chạy trên cơ sở dữ liệu mới sau khi chuyển */
+const afterReloc = fn => async (...a) => { if (relocating) { try { await relocating; } catch (e) { /* lỗi đã được báo ở nơi đổi */ } } return fn(...a); };
 
 function registerIpc() {
   ipcMain.on('db:load', e => {
-    try { e.returnValue = {ok: true, db: store.load(), file: store.file, schema: SCHEMA_VERSION, version: app.getVersion()}; }
+    if (!store) { e.returnValue = {ok: false, unavailable: true, issue: dataIssue, error: NO_STORE()}; return; }
+    try { e.returnValue = {ok: true, db: store.load(), file: store.file, schema: SCHEMA_VERSION, version: app.getVersion(), notice}; notice = null; }
     catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, error: err.message}; }
   });
-  ipcMain.handle('db:save', (e, db) => wrap(() => store.save(db))());
-  ipcMain.handle('import:preview', (e, db) => wrap(() => store.previewImport(db))());
-  ipcMain.handle('import:apply', (e, db, strategy) => wrap(() => ({...store.applyImport(db, strategy), db: store.load()}))());
-  ipcMain.handle('backup:to', async () => {
+  ipcMain.handle('db:save', afterReloc((e, db) => wrap(() => store.save(db))()));
+  ipcMain.handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, opts))()));
+  ipcMain.handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))()));
+  ipcMain.handle('backup:to', afterReloc(async () => {
+    if (!store) return {ok: false, error: NO_STORE(), unavailable: true};
+    if (backingUp) return {ok: false, error: 'Đang sao lưu, vui lòng đợi xong rồi bấm lại.'};
+    backingUp = true;
     try {
-      const r = await dialog.showOpenDialog(win, {title: 'Chọn thư mục lưu bản sao lưu', properties: ['openDirectory', 'createDirectory']});
-      if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
-      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const jsonFile = path.join(r.filePaths[0], 'HoSoKhaiThac_SaoLuu_' + stamp + '.json');
-      const sqlFile = path.join(r.filePaths[0], 'HoSoKhaiThac_SaoLuu_' + stamp + '.sqlite');
-      fs.writeFileSync(jsonFile, JSON.stringify(store.load(), null, 2));
-      await store.db.backup(sqlFile);
-      return {ok: true, jsonFile, sqlFile};
+      let outDir;
+      if (loc.customBackup) outDir = loc.backupDir;   // đã chọn thư mục sao lưu ở Cài đặt hệ thống: lưu thẳng vào đó
+      else {
+        const r = await dialog.showOpenDialog(win, {title: 'Chọn thư mục lưu bản sao lưu', defaultPath: loc.backupDir, properties: ['openDirectory', 'createDirectory']});
+        if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
+        outDir = r.filePaths[0];
+      }
+      const t = process.env.HAKQN_TEST_BACKUP_FAIL;   // chỉ dùng khi kiểm thử: json | sqlite | enospc | space
+      const hooks = {};
+      if (t === 'json' || t === 'enospc') hooks.beforeJson = () => { throw Object.assign(new Error('giả lập'), {code: t === 'enospc' ? 'ENOSPC' : 'EIO'}); };
+      if (t === 'sqlite') hooks.beforeSqlite = () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); };
+      if (t === 'space') hooks.freeBytes = 1024;
+      const res = await Backup.backupAll({db: store.db, data: store.load(), outDir, dbBytes: sizeWithWal(store.file), hooks});
+      if (res.ok) { try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); } }   // chỉ khi cả hai file đã ghi và qua kiểm tra
+      else log('ERROR', 'Sao lưu không đầy đủ: ' + res.message);
+      return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite};
     } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
+    finally { backingUp = false; }
+  }));
+  /* Sao lưu / khôi phục MỘT lô rừng: chạy hoàn toàn trên máy, không cần mạng. Khi kiểm thử tự động: HAKQN_LOT_DIR (thư mục lưu) và HAKQN_LOT_FILE (file mở) thay cho hộp thoại. */
+  const sha = txt => require('crypto').createHash('sha256').update(txt).digest('hex');
+  const sizeWithWal = f => { let n = 0; for (const x of ['', '-wal']) try { n += fs.statSync(f + x).size; } catch (e) { /* không có */ } return n; };
+  ipcMain.handle('lot:save', async (e, pkg) => {
+    try {
+      const sealed = LoRung.seal(LoRung.parsePackage(pkg).pkg || (() => { throw new Error('Dữ liệu lô không hợp lệ.'); })(), sha), name = LoRung.fileName(sealed);
+      let file = process.env.HAKQN_LOT_DIR ? path.join(process.env.HAKQN_LOT_DIR, name) : null;
+      if (!file) {
+        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackup ? loc.backupDir : app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});
+        if (r.canceled || !r.filePath) return {ok: true, canceled: true};
+        file = r.filePath;
+      }
+      // ghi qua file tạm, đọc lại kiểm tra gói lô; tên tự đặt (kiểm thử) không ghi đè bản có sẵn; chọn qua hộp thoại thì hệ điều hành đã hỏi ghi đè
+      const out = Backup.saveLotFile({file, text: JSON.stringify(sealed, null, 2), unique: !!process.env.HAKQN_LOT_DIR, verify: t => { const pp = LoRung.parsePackage(t, sha); if (!pp.ok) throw new Error('gói lô ghi ra không hợp lệ: ' + pp.error); }});
+      return {ok: true, file: out};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
+  ipcMain.handle('lot:open', async (e, filePath) => {
+    try {
+      if (!store) throw new Error(NO_STORE());
+      if (relocating) await relocating.catch(() => {});
+      let p = filePath || process.env.HAKQN_LOT_FILE;
+      if (!p) {
+        const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu lô rừng', filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}], properties: ['openFile']});
+        if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
+        p = r.filePaths[0];
+      }
+      const parsed = LoRung.parsePackage(fs.readFileSync(p, 'utf8'), sha);
+      if (!parsed.ok) return {ok: false, error: parsed.error, file: p};
+      return {ok: true, file: p, pkg: parsed.pkg, plan: store.previewLot(parsed.pkg)};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  ipcMain.handle('lot:apply', afterReloc((e, pkg, action) => wrap(() => {
+    const parsed = LoRung.parsePackage(pkg, sha); if (!parsed.ok) throw new Error(parsed.error);
+    return {...store.applyLot(parsed.pkg, action), db: store.load()};
+  })()));
   ipcMain.handle('lookup:status', () => wrap(() => ({...lookup.status(), sheetUrl: lookup.getMeta('sheetUrl') || DEFAULT_SHEET}))());
-  ipcMain.handle('lookup:setSheet', (e, link) => wrap(() => { if (!exportUrl(link)) throw new Error('Liên kết không phải Google Sheets'); lookup.setMeta('sheetUrl', link); return {}; })());
-  ipcMain.handle('lookup:sync', async () => { try { return await syncSheets(); } catch (e) { log('ERROR', e.message); return {ok: false, errors: [e.message]}; } });
-  ipcMain.handle('lookup:importExcel', async (e, filePath) => {
+  ipcMain.handle('lookup:setSheet', afterReloc((e, link) => wrap(() => { if (!exportUrl(link)) throw new Error('Liên kết không phải Google Sheets'); lookup.setMeta('sheetUrl', link); return {}; })()));
+  ipcMain.handle('lookup:sync', afterReloc(async () => { try { return await syncSheets(); } catch (e) { log('ERROR', e.message); return {ok: false, errors: [e.message]}; } }));
+  ipcMain.handle('lookup:importExcel', afterReloc(async (e, filePath) => {
     try {
       let p = filePath;
       if (!p) {
@@ -99,21 +182,218 @@ function registerIpc() {
         if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
         p = r.filePaths[0];
       }
-      return lookup.load(fs.readFileSync(p), 'excel', path.basename(p));
+      return loadLookup(fs.readFileSync(p), 'excel', path.basename(p), 'excel:' + path.basename(p));
     } catch (err) { log('ERROR', err.message); return {ok: false, errors: [err.message]}; }
-  });
+  }));
+  ipcMain.handle('lookup:confirmTabs', afterReloc((e, choices) => {
+    try {
+      if (!lookup) throw new Error(NO_STORE());
+      if (!pendingTabs) return {ok: false, errors: ['Không còn bản tải về đang chờ xác nhận tab. Hãy đồng bộ hoặc nhập file lại.']};
+      const p = pendingTabs, r = lookup.load(p.buf, p.source, p.detail, {sheetKey: p.sheetKey, choices: choices || {}});
+      if (r.ok) pendingTabs = null;           // thành công: đã kiểm tra cấu trúc và ghi nhớ ánh xạ
+      return r;                                // lỗi (ví dụ chọn tab thiếu cột): giữ bản chờ để người dùng chọn lại
+    } catch (err) { log('ERROR', err.message); return {ok: false, errors: [err.message]}; }
+  }));
+  ipcMain.handle('lookup:template', () => { try { return {ok: true, file: 'HAK_Mau_TraCuu.xlsx', bytes: require('./lookup').buildTemplate(app.getVersion())}; } catch (err) { return {ok: false, error: err.message}; } });
+  ipcMain.handle('lookup:cancelTabs', () => { pendingTabs = null; return {ok: true}; });
   ipcMain.handle('google:status', () => gauth.status());
   ipcMain.handle('google:login', async () => { try { return {ok: true, status: await gauth.login()}; } catch (e) { log('ERROR', 'google login: ' + e.code); return {ok: false, code: e.code, error: e.message, status: gauth.status()}; } });
   ipcMain.handle('google:logout', () => ({ok: true, status: gauth.logout()}));
   ipcMain.handle('lookup:search', (e, q, tab, opts) => wrap(() => lookup.search(q || '', tab || '', opts || {}))());
   ipcMain.handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
-  ipcMain.handle('app:openData', () => { shell.showItemInFolder(store.file); return {ok: true}; });
+  /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
+  const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
+  const dbInfo = () => { try { const st = fs.statSync(loc.dbFile); return {size: st.size, mtime: st.mtime.toISOString(), version: store ? store.db.pragma('user_version', {simple: true}) : null, open: !!store}; } catch (e) { return {size: 0, mtime: null, version: null, open: !!store}; } };
+  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
+  const pickFolder = async title => {
+    if (process.env.HAKQN_PICK_DIR) return process.env.HAKQN_PICK_DIR;
+    const r = await dialog.showOpenDialog(win, {title, properties: ['openDirectory', 'createDirectory']});
+    return r.canceled || !r.filePaths[0] ? '' : r.filePaths[0];
+  };
+  ipcMain.handle('settings:get', () => wrap(() => ({settings: setView()}), true)());
+  ipcMain.handle('settings:setRemind', (e, days) => wrap(() => { const ud = app.getPath('userData'); const d = Math.max(0, Math.min(365, parseInt(days, 10) || 0)); Settings.save(ud, {...Settings.load(ud), remindDays: d}); return {settings: setView()}; })());
+  ipcMain.handle('settings:openBackup', () => { try { fs.mkdirSync(loc.backupDir, {recursive: true}); shell.openPath(loc.backupDir); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
+  ipcMain.handle('settings:setBackup', async (e, reset) => {
+    try {
+      let dir = '';
+      if (!reset) { dir = await pickFolder('Chọn thư mục lưu bản sao lưu'); if (!dir) return {ok: true, canceled: true}; dir = Settings.checkFolder(dir); }
+      const cur = Settings.load(app.getPath('userData')); Settings.save(app.getPath('userData'), {...cur, backupDir: dir});
+      loc = Settings.resolve(app.getPath('userData'), process.env); store.backupDir = loc.backupDir;
+      log('INFO', 'Đổi thư mục sao lưu: ' + (reset ? 'mặc định' : 'thư mục riêng'));
+      return {ok: true, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  /* Đổi thư mục dữ liệu (src/datamove.js): bản sao qua file tạm có kiểm tra toàn vẹn; ghi đè có bản dự phòng nhất quán đã kiểm tra; chỉ lưu đường dẫn mới
+   * sau khi mở và dùng được cơ sở dữ liệu mới; lỗi ở bước nào cũng hoàn tác và giữ phiên làm việc cũ. Trong lúc đổi, mọi thao tác lưu chờ rồi chạy trên cơ sở dữ liệu mới. */
+  const vi = d => d ? new Date(d).toLocaleString('vi-VN') : 'không rõ';
+  const describeDb = i => (i.counts && i.counts.owners != null ? i.counts.owners + ' chủ rừng, ' + (i.counts.forests || 0) + ' lô rừng · ' : '') + 'cấu trúc v' + i.version + ' · sửa lần cuối ' + vi(i.mtime);
+  ipcMain.handle('settings:setData', async (e, reset) => {
+    if (relocating) return {ok: false, error: 'Đang đổi thư mục dữ liệu, vui lòng đợi xong.'};
+    let done; relocating = new Promise(r => { done = r; });
+    try {
+      if (!store) throw new Error(NO_STORE());
+      if (loc.lockedByEnv) throw new Error('Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB; không đổi được trong ứng dụng.');
+      const userDir = app.getPath('userData');
+      let dir = loc.defaultDataDir;
+      if (!reset) { dir = await pickFolder('Chọn thư mục lưu dữ liệu'); if (!dir) return {ok: true, canceled: true}; }
+      dir = Settings.checkFolder(dir);
+      const target = path.join(dir, Settings.DB_NAME);
+      if (path.resolve(target) === path.resolve(loc.dbFile)) return {ok: true, same: true, settings: setView()};
+      let choice;
+      if (fs.existsSync(target)) {
+        const insp = DM.inspect(target, SCHEMA_VERSION);
+        choice = process.env.HAKQN_PICK_CHOICE;
+        if (!choice) {
+          const canUse = insp.ok, canOver = insp.ok || insp.code === 'NEWER_VERSION';
+          if (!canUse && !canOver) return {ok: false, code: insp.code, error: 'Thư mục này đã có file ' + Settings.DB_NAME + ' nhưng không dùng được và cũng không thể ghi đè an toàn: ' + insp.error + ' Hãy di chuyển hoặc xóa file đó thủ công, hoặc chọn thư mục khác.'};
+          const buttons = [...(canUse ? ['Dùng dữ liệu có sẵn'] : []), 'Ghi đè bằng dữ liệu đang dùng', 'Hủy'];
+          const m = await dialog.showMessageBox(win, {type: 'question', title: TITLE, message: 'Thư mục này đã có dữ liệu HAKQN.',
+            detail: target + '\nĐích: ' + (insp.ok ? describeDb(insp) : insp.error) + '\nĐang dùng: ' + describeDb(DM.inspect(store.file, SCHEMA_VERSION)) + '\n\n' + (canUse ? 'Dùng dữ liệu có sẵn: chuyển sang bản ở thư mục đó, không sao chép gì.\n' : '') + 'Ghi đè: thay bằng dữ liệu đang dùng; bản có sẵn ở đích được sao lưu nhất quán (kèm giao dịch còn trong WAL) vào thư mục sao lưu và kiểm tra mở được trước khi thay.', buttons, defaultId: buttons.length - 1, cancelId: buttons.length - 1});
+          const label = buttons[m.response];
+          choice = label === 'Dùng dữ liệu có sẵn' ? 'use' : label.startsWith('Ghi đè') ? 'overwrite' : null;
+        }
+        if (!choice) return {ok: true, canceled: true};
+      }
+      const failAt = process.env.HAKQN_TEST_FAIL_STEP, delay = +process.env.HAKQN_RELOC_DELAY_MS || 0;
+      const hooks = {step: async n => { if (delay && n === 'after-tmp') await new Promise(r => setTimeout(r, delay)); if (failAt === n) throw new Error('Lỗi giả lập tại bước ' + n); }};
+      const prev = Settings.load(userDir), want = reset ? '' : dir;
+      const backupDirFor = d => loc.customBackup ? loc.backupDir : path.join(d, 'backups');
+      const res = await DM.relocate({srcDb: store.db, srcFile: store.file, destDir: dir, choice, backupDir: loc.customBackup ? loc.backupDir : path.join(loc.dataDir, 'backups'), supportedVersion: SCHEMA_VERSION,
+        openNew: f => new Store(f, {log, backupDir: backupDirFor(dir)}),
+        commitConfig: () => { Settings.save(userDir, {...Settings.load(userDir), dataDir: want}); if ((Settings.load(userDir).dataDir || '') !== want) throw new Error('cấu hình không được ghi'); },
+        hooks, log});
+      // chuyển phiên làm việc sang cơ sở dữ liệu mới; lỗi ở đây thì trả cấu hình về như cũ
+      const old = store, from = loc.dbFile;
+      try {
+        store = res.newStore; loc = Settings.resolve(userDir, process.env); store.backupDir = loc.backupDir; lookup = new Lookup(store); dataIssue = null;
+      } catch (er) {
+        try { Settings.save(userDir, prev); } catch (e2) { log('ERROR', 'Không trả được cấu hình: ' + e2.message); }
+        try { res.newStore.db.close(); } catch (e3) { /* bỏ qua */ }
+        store = old; loc = Settings.resolve(userDir, process.env); lookup = new Lookup(store);
+        throw new Error('Không chuyển được phiên làm việc sang cơ sở dữ liệu mới: ' + er.message + '. Vẫn dùng vị trí cũ.');
+      }
+      try { old.db.close(); } catch (er) { /* đã đóng */ }
+      log('INFO', 'Đổi thư mục dữ liệu (' + res.choice + ')');
+      notice = 'Đã chuyển dữ liệu sang ' + loc.dbFile + (res.choice === 'use' ? ' (dùng dữ liệu có sẵn ở đó)' : ' (đã sao chép và kiểm tra)') + '. Bản cũ vẫn còn ở ' + from + ', xóa tay khi chắc chắn không cần.' + (res.backupFile ? ' Bản dự phòng của dữ liệu đã có ở đích: ' + res.backupFile + '.' : '');
+      setTimeout(() => { if (win && !win.isDestroyed()) win.webContents.reload(); }, 150);   // trả kết quả về renderer trước, rồi tải lại từ cơ sở dữ liệu mới
+      return {ok: true, choice: res.choice, from, backupFile: res.backupFile || null, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message, code: err.code, rolledBack: err.rolledBack !== false, settings: (() => { try { return setView(); } catch (e) { return null; } })()}; }
+    finally { relocating = null; done(); }
+  });
+  /* Ổ hoặc thư mục dữ liệu đã cấu hình không truy cập được: thử lại / chọn cơ sở dữ liệu khác / (xác nhận) dùng vị trí mặc định. Cấu hình cũ giữ nguyên cho đến khi người dùng chọn đổi. */
+  ipcMain.handle('data:status', () => ({ok: true, unavailable: !store, issue: dataIssue}));
+  ipcMain.handle('data:retry', () => { if (store) return {ok: true}; const ok = openStore(); if (ok) setTimeout(() => { if (win && !win.isDestroyed()) win.webContents.reload(); }, 150); return {ok, unavailable: !ok, issue: dataIssue}; });
+  ipcMain.handle('data:pickOther', async () => {
+    try {
+      const userDir = app.getPath('userData'), dir = await pickFolder('Chọn thư mục chứa cơ sở dữ liệu HAKQN (file ' + Settings.DB_NAME + ')');
+      if (!dir) return {ok: true, canceled: true};
+      const insp = DM.inspect(path.join(dir, Settings.DB_NAME), SCHEMA_VERSION);
+      if (!insp.ok) return {ok: false, error: 'Thư mục đó không dùng được: ' + (insp.code === 'MISSING' ? 'không có file ' + Settings.DB_NAME + ' trong thư mục.' : insp.error)};
+      const prev = Settings.load(userDir);
+      Settings.save(userDir, {...prev, dataDir: dir});
+      if (!openStore()) { const why = dataIssue; Settings.save(userDir, prev); openStore(); return {ok: false, error: 'Không mở được cơ sở dữ liệu đã chọn: ' + (why && why.reason) + '. Cấu hình cũ được giữ nguyên.', issue: dataIssue}; }
+      setTimeout(() => { if (win && !win.isDestroyed()) win.webContents.reload(); }, 150);
+      return {ok: true, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  ipcMain.handle('data:useDefault', async () => {
+    try {
+      const userDir = app.getPath('userData'), defFile = path.join(userDir, Settings.DB_NAME), exists = fs.existsSync(defFile), insp = exists ? DM.inspect(defFile, SCHEMA_VERSION) : null;
+      let okc = process.env.HAKQN_CONFIRM_DEFAULT === '1';
+      if (!okc) {
+        const m = await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Dùng cơ sở dữ liệu ở vị trí mặc định?',
+          detail: 'Vị trí mặc định: ' + defFile + '\n' + (exists ? (insp.ok ? 'Đã có dữ liệu: ' + describeDb(insp) + '. Đây có thể là bản cũ hoặc khác với dữ liệu ở ổ chính.' : 'Đã có file nhưng không dùng được: ' + insp.error) : 'Chưa có file: sẽ tạo cơ sở dữ liệu trống.') +
+            '\n\nĐường dẫn đang cấu hình (' + ((dataIssue && dataIssue.dir) || '') + ') sẽ không còn được dùng. Dữ liệu ở đó không bị xóa.', buttons: ['Dùng vị trí mặc định', 'Hủy'], defaultId: 1, cancelId: 1});
+        okc = m.response === 0;
+      }
+      if (!okc) return {ok: true, canceled: true};
+      const prev = Settings.load(userDir);
+      Settings.save(userDir, {...prev, dataDir: ''});
+      if (!openStore()) { const why = dataIssue; Settings.save(userDir, prev); openStore(); return {ok: false, error: 'Không mở được cơ sở dữ liệu mặc định: ' + (why && why.reason) + '. Cấu hình cũ được giữ nguyên.', issue: dataIssue}; }
+      setTimeout(() => { if (win && !win.isDestroyed()) win.webContents.reload(); }, 150);
+      return {ok: true};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  ipcMain.handle('app:openData', () => { shell.showItemInFolder(loc.dbFile); return {ok: true}; });
 }
 
-/* Kiểm tra khói cho bản đã cài (dùng trong CI và khi nghiệm thu): HAKQN_SMOKE=<file kết quả>, HAKQN_SMOKE_PHASE=create|verify.
+/* Kiểm tra khói cho bản đã cài (dùng trong CI và khi nghiệm thu): HAKQN_SMOKE=<file kết quả>, HAKQN_SMOKE_PHASE=create|verify|upgrade|upgrade14 (upgrade: mở dữ liệu do bản 1.0.0 tạo; upgrade14: một chủ hai lô của bản 1.4.x).
  * create: ghi 1 chủ rừng có 2 rừng; verify: đọc lại sau khi đóng/mở app. Cả hai kiểm tra giao diện có bộ lọc mới và menu Báo cáo. */
+/* Kiểm tra khói đổi thư mục dữ liệu bằng bộ cài thật (CI Windows): sao chép, ghi đè có bản dự phòng, hoàn tác khi lỗi, đích đang được dùng,
+ * dùng dữ liệu có sẵn, ổ biến mất. Dùng đúng hàm DM.relocate như thao tác thật; thư mục làm việc: HAKQN_SMOKE_DIR (mặc định thư mục tạm). */
+async function smokeRelocate() {
+  const out = process.env.HAKQN_SMOKE, r = {phase: 'relocate', version: app.getVersion(), platform: process.platform, checks: {}};
+  try {
+    const base = fs.mkdtempSync(path.join(process.env.HAKQN_SMOKE_DIR || require('os').tmpdir(), 'hakqn-reloc-'));
+    const mk = (tag, k) => ({v: 2, rs: Object.fromEntries(Array.from({length: k}, (_, i) => [tag + i, {id: tag + i, info: {ma: tag + i, ten: 'CHỦ ' + tag + i, cccd: '04900000000' + i}, forests: {}}]))});
+    const dir = n => { const d = path.join(base, n); fs.mkdirSync(d, {recursive: true}); return d; };
+    const owners = f => DM.inspect(f).counts.owners;
+    const src = new Store(path.join(dir('src'), Settings.DB_NAME)); src.save(mk('S', 3));
+    const cfg = {dataDir: ''}, bk = dir('bk');
+    const run = (destDir, choice, o = {}) => DM.relocate({srcDb: src.db, srcFile: src.file, destDir, choice, backupDir: bk, supportedVersion: SCHEMA_VERSION, log,
+      openNew: f => new Store(f, {backupDir: path.join(destDir, 'backups')}), hooks: o.hooks, commitConfig: () => { if (o.failCommit) throw new Error('giả lập'); cfg.dataDir = destDir; }});
+    const fails = async p => { try { await p; return null; } catch (e) { return e; } };
+    // 1. sao chép sang thư mục trống
+    const d1 = dir('d1'), r1 = await run(d1);
+    r.checks.copy = r1.choice === 'copy' && owners(path.join(d1, Settings.DB_NAME)) === 3 && cfg.dataDir === d1 && fs.readdirSync(d1).filter(n => /\.tmp-|\.thay-/.test(n)).length === 0;
+    r1.newStore.db.close();
+    // 2. ghi đè đích có dữ liệu khác: bản dự phòng nhất quán mở được; đích mang dữ liệu nguồn
+    const d2 = dir('d2'), t2 = new Store(path.join(d2, Settings.DB_NAME)); t2.save(mk('D', 5)); t2.db.close();
+    cfg.dataDir = '';
+    const r2 = await run(d2, 'overwrite');
+    r.checks.overwrite = r2.choice === 'overwrite' && !!r2.backupFile && DM.inspect(r2.backupFile).ok && owners(r2.backupFile) === 5 && owners(path.join(d2, Settings.DB_NAME)) === 3 && cfg.dataDir === d2 && fs.readdirSync(d2).filter(n => /\.tmp-|\.thay-/.test(n)).length === 0;
+    r2.newStore.db.close();
+    // 3. lỗi sau khi đã thay file đích / khi lưu cấu hình: hoàn tác, đích cũ nguyên vẹn, cấu hình không đổi
+    for (const [name, o] of [['rollbackReplace', {hooks: {step: n => { if (n === 'after-replace') throw new Error('giả lập'); }}}], ['rollbackCommit', {failCommit: true}]]) {
+      const d = dir('d3' + name), t = new Store(path.join(d, Settings.DB_NAME)); t.save(mk('D', 4)); t.db.close(); cfg.dataDir = '';
+      const e = await fails(run(d, 'overwrite', o));
+      r.checks[name] = !!e && cfg.dataDir === '' && owners(path.join(d, Settings.DB_NAME)) === 4 && DM.inspect(path.join(d, Settings.DB_NAME)).ok && fs.readdirSync(d).filter(n => /\.tmp-|\.thay-/.test(n)).length === 0;
+    }
+    // 4. đích đang được tiến trình khác mở: ghi đè bị từ chối, đích không đổi (khóa file thật của Windows)
+    const d4 = dir('d4'), t4 = new Store(path.join(d4, Settings.DB_NAME)); t4.save(mk('D', 2)); cfg.dataDir = '';
+    const e4 = await fails(run(d4, 'overwrite'));
+    r.checks.inUse = !!e4 && e4.code === 'IN_USE' && cfg.dataDir === '' && owners(path.join(d4, Settings.DB_NAME)) === 2;
+    t4.db.close();
+    // 5. dùng dữ liệu có sẵn
+    const r5 = await run(d4, 'use');
+    r.checks.useExisting = r5.choice === 'use' && cfg.dataDir === d4 && Object.keys(r5.newStore.load().rs).length === 2; r5.newStore.db.close();
+    // 6. đích hỏng: từ chối cả hai lựa chọn, giữ nguyên byte
+    const d6 = dir('d6'), bad = Buffer.from('SQLite format 3\0' + 'x'.repeat(4000), 'latin1'); fs.writeFileSync(path.join(d6, Settings.DB_NAME), bad);
+    const e6a = await fails(run(d6, 'use')), e6b = await fails(run(d6, 'overwrite'));
+    r.checks.corruptDest = !!e6a && !!e6b && Buffer.compare(fs.readFileSync(path.join(d6, Settings.DB_NAME)), bad) === 0;
+    // 7. ổ biến mất rồi xuất hiện lại
+    const ud = dir('ud'), drive = dir('ODIA'), t7 = new Store(path.join(drive, Settings.DB_NAME)); t7.save(mk('M', 2)); t7.db.close();
+    Settings.save(ud, {dataDir: drive, backupDir: ''}); fs.renameSync(drive, drive + '.rut');
+    const c7a = Settings.checkConfigured(ud); fs.mkdirSync(drive); const c7b = Settings.checkConfigured(ud); fs.rmdirSync(drive); fs.renameSync(drive + '.rut', drive); const c7c = Settings.checkConfigured(ud);
+    r.checks.driveGone = c7a.state === 'unavailable' && c7a.code === 'DIR_MISSING' && c7b.code === 'FILE_MISSING' && c7c.state === 'ok' && Settings.load(ud).dataDir === drive && !fs.existsSync(path.join(ud, Settings.DB_NAME));
+    // 9. không có quyền truy cập file dữ liệu đã cấu hình: Windows dùng ACL từ chối ghi (icacls), POSIX không root dùng chmod; root thì không tạo được ca này (ghi vào skipped)
+    {
+      const ud9 = dir('ud9'), d9 = dir('ODIN'), f9 = path.join(d9, Settings.DB_NAME), t9 = new Store(f9); t9.save(mk('N', 1)); t9.db.close(); Settings.save(ud9, {dataDir: d9, backupDir: ''});
+      const cp = require('child_process'), who = process.env.USERNAME || 'Everyone'; let undo = null;
+      try {
+        if (process.platform === 'win32') { cp.execFileSync('icacls', [f9, '/deny', who + ':(W,WD,AD)'], {stdio: 'ignore'}); undo = () => cp.execFileSync('icacls', [f9, '/remove:d', who], {stdio: 'ignore'}); }
+        else if (process.getuid && process.getuid() !== 0) { fs.chmodSync(f9, 0o444); undo = () => fs.chmodSync(f9, 0o644); }
+      } catch (e) { r.error = 'Không đặt được quyền thử: ' + e.message; }
+      if (undo) {
+        const c9 = Settings.checkConfigured(ud9); undo(); const c9b = Settings.checkConfigured(ud9);
+        r.checks.noPermission = c9.state === 'unavailable' && c9.code === 'NO_PERMISSION' && c9.path === f9 && c9b.state === 'ok' && Settings.load(ud9).dataDir === d9;
+      } else { r.skipped = (r.skipped || []).concat('noPermission (chạy bằng root, không đặt được quyền từ chối)'); r.checks.noPermission = true; }
+    }
+    // 8. sao lưu toàn bộ: hai file riêng, bấm liền không ghi đè, lỗi một file giữ lại file dùng được
+    const out8 = dir('bk8'), now = () => new Date(2026, 10, 13, 9, 0, 0, 1);
+    const b1 = await Backup.backupAll({db: src.db, data: src.load(), outDir: out8, now}), b2 = await Backup.backupAll({db: src.db, data: src.load(), outDir: out8, now});
+    const b3 = await Backup.backupAll({db: src.db, data: src.load(), outDir: out8, now, hooks: {beforeSqlite: () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); }}});
+    r.checks.backup = b1.ok && b2.ok && b1.json.file !== b2.json.file && !b3.ok && b3.json.ok && !b3.sqlite.ok && fs.readdirSync(out8).filter(n => /\.tmp-/.test(n)).length === 0;
+    src.db.close();
+  } catch (e) { r.error = e.message; }
+  r.ok = !r.error && Object.values(r.checks).every(Boolean);
+  fs.writeFileSync(out, JSON.stringify(r, null, 2));
+  app.exit(r.ok ? 0 : 3);
+}
+
 async function smoke() {
+  if (process.env.HAKQN_SMOKE_PHASE === 'relocate') return smokeRelocate();
   const out = process.env.HAKQN_SMOKE, phase = process.env.HAKQN_SMOKE_PHASE || 'create', r = {phase, version: app.getVersion(), online: net.isOnline(), file: store.file, checks: {}};
   try {
     const mkF = (id, ma, dia) => ({id, info: {maRung: ma, tenRung: 'Rừng ' + ma, diaDiem: dia, lat: null, lng: null, dienTich: 2, dinhMucTanHa: 10, cuLy: null, tuNgay: '', denNgay: '', donGia: 340000, giayTo: []}, nc: [], dx: [], pc: [{stt: 1, ngay: '05/01/2026', bienSo: '92C-11111', soPhieu: 'S-' + ma, kl: 10, noiGiao: 'NM'}], exp: {}});
@@ -123,14 +403,42 @@ async function smoke() {
       store.save(db);
     }
     const db2 = store.load(), o = (db2.rs || {}).smoke1;
-    r.checks.owner = !!o && o.info.ten === 'CHỦ RỪNG THỬ NGHIỆM';
-    r.checks.twoForests = !!o && Object.keys(o.forests || {}).length === 2;
-    r.checks.forestData = !!o && o.forests.f2.info.diaDiem === 'Thôn B' && o.forests.f1.pc.length === 1;
+    if (phase === 'upgrade') {
+      // Nâng cấp từ v1.0.0: dữ liệu do bản 1.0.0 tạo (tests/fixtures/hakqn_v1_0_0.sqlite) phải còn đủ sau khi cài đè bản mới
+      const own = (db2.rs || {}).own1, F = (own && own.forests) || {}, bk = fs.existsSync(store.backupDir) ? fs.readdirSync(store.backupDir) : [];
+      r.checks.upOwner = !!own && own.info.ten === 'CHỦ RỪNG CŨ';
+      r.checks.upThreeForests = Object.keys(F).length === 3;
+      r.checks.upRecords = ['f1', 'f2', 'f3'].map(k => F[k] ? F[k].dx.length + '/' + F[k].pc.length : '').join() === '2/2,2/1,2/3';
+      r.checks.upTypedDestination = !!F.f1 && F.f1.exp.vcDiemDen === 'Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc' && !F.f1.info.muaHang;   // địa chỉ cũ còn nguyên, chưa tự đổi
+      r.checks.upBacSauCu = !!F.f2 && F.f2.info.vanChuyen.mode === 'tanDoan' && F.f2.info.vanChuyen.bac.length === 2;
+      r.checks.upBackup = bk.some(f => /^truoc-nang-cap-v2-len-v\d+-/.test(f));
+      r.checks.upSchema = store.db.pragma('user_version', {simple: true}) === SCHEMA_VERSION;
+      const lk = lookup.status(); r.checks.upLookup = !!lk && JSON.stringify(lk).length > 20;
+    } else if (phase === 'upgrade14') {
+      // Cài đè từ bản 1.4.0: một chủ hai lô A và B (tests/fixtures/hakqn_v1_4.sqlite) còn đủ dữ liệu sau khi cài bản mới
+      const own = (db2.rs || {}).own1, F = (own && own.forests) || {}, A = F.fa || {info: {}, exp: {}}, B = F.fb || {info: {}, exp: {}};
+      r.checks.u14Owner = !!own && own.info.ten === 'NGUYỄN VĂN MỘT';
+      r.checks.u14Phone = !!own && own.info.sdt === '0905 123 456';
+      r.checks.u14Contract = !!own && own.info.soHopDong === 'HD-2026/015' && own.info.ngayKyHopDong === '02/10/2026';
+      r.checks.u14TwoLots = Object.keys(F).length === 2;
+      r.checks.u14Records = ['fa', 'fb'].map(k => F[k] ? F[k].nc.length + '/' + F[k].dx.length + '/' + F[k].pc.length : '').join() === '3/2/2,3/2/1';
+      r.checks.u14Delivery = !!A.info.muaHang && A.info.muaHang.diaChi === 'Cảng dăm Kỳ Hà, Núi Thành, Quảng Nam' && !!B.info.muaHang && B.info.muaHang.diaChi.startsWith('KCN Điện Nam');
+      r.checks.u14Freight = A.info.vanChuyen.mode === 'tanKm' && A.info.vanChuyen.donGiaKm === 1000 && A.info.cuLy === 45 && B.info.vanChuyen.mode === 'coDinh' && B.info.vanChuyen.coDinh === 52000;
+      r.checks.u14Company = Object.keys(db2.congTy || {}).length === 1;
+      r.checks.u14Schema = store.db.pragma('user_version', {simple: true}) === SCHEMA_VERSION;
+      const lk = lookup.status(); r.checks.u14Lookup = !!lk && JSON.stringify(lk).length > 20;
+      r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('NGUYỄN VĂN MỘT')");
+    } else {
+      r.checks.owner = !!o && o.info.ten === 'CHỦ RỪNG THỬ NGHIỆM';
+      r.checks.twoForests = !!o && Object.keys(o.forests || {}).length === 2;
+      r.checks.forestData = !!o && o.forests.f2.info.diaDiem === 'Thôn B' && o.forests.f1.pc.length === 1;
+    }
     await new Promise(res => { if (win.webContents.isLoading()) win.webContents.once('did-finish-load', res); else res(); });
     r.dom = await win.webContents.executeJavaScript(`(async()=>({title: document.title, reportMenu: !!document.querySelector('[data-act=rpOpen]'), lookupMenu: !!document.querySelector('[data-act=lkOpen]'), sideFilter: !!document.getElementById('sideQ'),
       reports: typeof HAKReports === 'object' && HAKReports.REPORTS.length, ownerShown: document.getElementById('side').innerText.includes('CHỦ RỪNG THỬ NGHIỆM'),
       filter: await window.hak.lookup.search('', '', {onlyIssues: true, from: '2026-01-01', sort: 'tan'}).then(x => x.ok && !!x.facets).catch(() => false)}))()`);
-    r.checks.reportMenu = r.dom.reportMenu && r.dom.reports === 4; r.checks.smartFilter = r.dom.sideFilter && r.dom.filter === true; r.checks.lookupMenu = r.dom.lookupMenu === true;
+    r.checks.reportMenu = r.dom.reportMenu && r.dom.reports >= 5; r.checks.smartFilter = r.dom.sideFilter && r.dom.filter === true; r.checks.lookupMenu = r.dom.lookupMenu === true;
+    if (phase === 'upgrade') r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('CHỦ RỪNG CŨ')"); // giao diện hiện lại chủ rừng cũ
     if (phase === 'verify') r.checks.ownerInUi = r.dom.ownerShown; // sau khi đóng và mở lại, giao diện phải hiện lại chủ rừng đã lưu
   } catch (e) { r.error = e.message; }
   r.ok = !r.error && Object.values(r.checks).every(Boolean);
@@ -159,9 +467,9 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
   app.whenReady().then(() => {
-    try { openStore(); } catch (e) { log('ERROR', e.message); dialog.showErrorBox(TITLE, 'Không mở được cơ sở dữ liệu: ' + e.message); app.quit(); return; }
+    try { openStore(); } catch (e) { log('ERROR', e.message); dialog.showErrorBox(TITLE, 'Không khởi động được: ' + e.message); app.quit(); return; }   // vị trí dữ liệu không mở được: không thoát, màn hình chính hiện thông báo và cho thử lại/chọn khác
     Menu.setApplicationMenu(Menu.buildFromTemplate([
-      {label: 'Tệp', submenu: [{label: 'Mở thư mục dữ liệu', click: () => shell.showItemInFolder(store.file)}, {type: 'separator'}, {role: 'quit', label: 'Thoát'}]},
+      {label: 'Tệp', submenu: [{label: 'Mở thư mục dữ liệu', click: () => shell.showItemInFolder(loc.dbFile)}, {type: 'separator'}, {role: 'quit', label: 'Thoát'}]},
       {label: 'Xem', submenu: [{role: 'zoomIn', label: 'Phóng to'}, {role: 'zoomOut', label: 'Thu nhỏ'}, {role: 'resetZoom', label: 'Cỡ chữ mặc định'}, {role: 'togglefullscreen', label: 'Toàn màn hình'}]}
     ]));
     registerIpc(); createWindow();

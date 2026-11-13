@@ -1,3 +1,5 @@
+> Từ bản 1.4.25 ba tab có tên chuẩn **HoSoKeo, HoSoRung, ToaDoRung**; hậu tố `_QC` (tên cũ) vẫn được nhận. Trong bảng dưới, tên có `_QC` là tên cũ của cùng tab.
+
 # Bảng ánh xạ cột nguồn → trường hồ sơ (đã triển khai)
 
 Nguồn: Google Sheets (xuất .xlsx chỉ đọc) hoặc file Excel cùng cấu trúc. Nhận diện cột theo **tiêu đề** (không theo vị trí).
@@ -10,7 +12,7 @@ CCCD, mã khách hàng, mã hợp đồng, mã rừng, số phiếu cân, số g
 | Rừng / hợp đồng | CCCD + mã hợp đồng | `Mã hợp đồng` (HoSoKeo_QC, HoSoRung_QC) = `Số hợp đồng` (ToaDoRung_QC). Một hợp đồng nhiều `Mã rừng` → người dùng chọn |
 | Phiếu cân | `SỐ PHIẾU CÂN` | Đã có trong rừng → bỏ qua / cập nhật |
 
-## HoSoRung_QC
+## HoSoRung (tên cũ HoSoRung_QC)
 | Cột nguồn | Trường đích | Quy tắc |
 | --- | --- | --- |
 | Họ và tên chủ rừng | Chủ rừng · Họ và tên | Bỏ hậu tố `_001` |
@@ -24,7 +26,7 @@ CCCD, mã khách hàng, mã hợp đồng, mã rừng, số phiếu cân, số g
 | Pháp lý rừng | Giấy tờ pháp lý (loại) | Chỉ dùng khi ToaDoRung_QC không có giấy tờ |
 | Mã hợp đồng, Ngày ký, Ngày thanh lý, Mã thanh lý, Tình trạng, Tọa độ, Quy cách, Phương án, Năm trồng | Tham chiếu của rừng | Không dùng làm thời gian khai thác |
 
-## ToaDoRung_QC
+## ToaDoRung (tên cũ ToaDoRung_QC)
 | Cột nguồn | Trường đích | Quy tắc |
 | --- | --- | --- |
 | Mã rừng | Rừng · Mã rừng | Không dùng `ID_RUNG` (lưu ở tham chiếu); kiểm tra trùng mã |
@@ -34,7 +36,7 @@ CCCD, mã khách hàng, mã hợp đồng, mã rừng, số phiếu cân, số g
 | HoSoNguonGoc, SoGiayTo, NgayGiayTo | Giấy tờ pháp lý (loại, số, ngày cấp) | “Giấy chứng nhận QSDĐ” → cùng loại; “Đơn xác nhận…” → Giấy xác nhận; khác → Khác |
 | Số hợp đồng, SoCCCD, HoVaTenChuRung, ThuongTru | Ghép và đối chiếu | ThuongTru dùng khi HoSoRung_QC không có |
 
-## HoSoKeo_QC
+## HoSoKeo (tên cũ HoSoKeo_QC)
 | Cột nguồn | Trường đích | Quy tắc |
 | --- | --- | --- |
 | SỐ PHIẾU CÂN | Phiếu cân · Số phiếu | Khóa chống trùng |

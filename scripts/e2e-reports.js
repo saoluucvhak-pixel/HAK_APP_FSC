@@ -40,11 +40,12 @@ async function wordTables(file) {
   await w.reload(); await w.waitForSelector('#side'); await w.click('header [data-act=rpOpen]'); await w.waitForSelector('#rpBox.on');
   await w.fill('#rpFrom', '2026-01-01'); await w.dispatchEvent('#rpFrom', 'change'); await w.fill('#rpTo', '2026-02-28'); await w.dispatchEvent('#rpTo', 'change');
 
-  for (const id of ['dieuhanh', 'sanluong', 'phieucan', 'tiendo']) {
+  for (const id of ['dieuhanh', 'sanluong', 'phieucan', 'chacon', 'tiendo']) {
     await w.click('[data-rpsel=' + id + ']');
+    if (id === 'chacon') { await w.check('#rpDetail'); await w.waitForTimeout(150); }
     const title = await w.textContent('#rpBody h3');
     const kpis = await w.$$eval('#rpBody .kpi > div', els => els.map(e => [e.querySelector('b').textContent, e.textContent.slice(e.querySelector('b').textContent.length)]));
-    const tables = await w.$$eval('#rpBody table', ts => ts.map(t => Array.from(t.rows).map(r => Array.from(r.cells).map(c => c.textContent.trim()))));
+    const tables = await w.$$eval('#rpBody table', ts => ts.map(t => Array.from(t.rows).map(r => Array.from(r.cells).map(c => c.textContent.trim().replace(/^[▾▸]\s+/, '')))));
     // Word
     const wt = await wordTables(await exportTo(w, '[data-act=rpWord]', '.docx'));
     const nK = Math.ceil(kpis.length / (id === 'dieuhanh' ? 3 : 5));
@@ -64,8 +65,26 @@ async function wordTables(file) {
       cursor = headIdx + 1 + body.length;
     }
     ok(id + ' · Excel: có đủ các bảng và số dòng khớp', secOk && rowsOk, why);
+    ok(id + ' · Excel: đơn vị tính và thời điểm lập ở đầu bảng', /Đơn vị tính/.test(String(aoa[3][0])) && /^Lập lúc \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/.test(String(aoa[4][0])));
     ok(id + ' · Excel: cột số là số thật (tính tổng được) và đúng giá trị xem trước', numOk, why);
 
+    if (id === 'chacon') {
+      const rows = tables[0].slice(1, -1), lv = await w.$$eval('#rpBody tr[data-rplv]', t => t.map(r => +r.dataset.rplv));
+      ok('cha–con: 2 chủ rừng, 3 rừng, 4 phiếu trong kỳ (kèm phiếu)', lv.filter(x => x === 0).length === 2 && lv.filter(x => x === 1).length === 3 && lv.filter(x => x === 2).length === 4, JSON.stringify(lv));
+      const sum = l => Math.round(rows.filter((r, i) => lv[i] === l).reduce((a, r) => a + (num(r[6]) || 0), 0) * 1000) / 1000;
+      ok('cha–con: tổng cha = tổng rừng = tổng phiếu = 31,75 tấn', sum(0) === 31.75 && sum(1) === 31.75 && sum(2) === 31.75, [sum(0), sum(1), sum(2)].join('/'));
+      ok('cha–con: dòng cha NGUYỄN VĂN AN có 4 chuyến, 31,750 tấn', rows[0][0] === 'NGUYỄN VĂN AN' && rows[0][5] === '4' && rows[0][6] === '31,750', JSON.stringify(rows[0]));
+      const hi = aoa.findIndex(r => String(r[0]).startsWith('Chủ rừng / Rừng / Phiếu cân'));
+      const xr = aoa.slice(hi + 1, hi + 1 + rows.length);
+      ok('cha–con: Excel có đủ dòng, cột số là số thật và tổng cấp 2 = 31,75', xr.length === rows.length && xr.filter((r, i) => lv[i] === 2).reduce((a, r) => a + r[6], 0) === 31.75);
+      // thu gọn / mở rộng ở màn hình xem trước (Word và Excel luôn đủ dòng)
+      await w.click('[data-rpfold="0"]'); const hidden = await w.$$eval('#rpBody tr[data-rplv][hidden]', t => t.length);
+      ok('cha–con: bấm thu gọn chủ rừng đầu thì ẩn 2 rừng và 4 phiếu con', hidden === 6, String(hidden));
+      await w.click('[data-rpfold="0"]');
+      const xf = await exportTo(w, '[data-act=rpExcel]', '.xlsx'), ws = XLSX.readFile(xf, {cellDates: true}).Sheets['Bao cao'];
+      const sheetXml = await (await JSZip.loadAsync(fs.readFileSync(xf))).file('xl/worksheets/sheet1.xml').async('string');
+      ok('cha–con: Excel có bộ lọc tự động và nhóm dòng theo cấp (outlineLevel 1 và 2)', !!ws['!autofilter'] && /<autoFilter /.test(sheetXml) && /outlineLevel="1"/.test(sheetXml) && /outlineLevel="2"/.test(sheetXml));
+    }
     if (id === 'phieucan') {
       const k = Object.fromEntries(kpis.map(([v, l]) => [l.trim(), v]));
       ok('sổ phiếu cân: ' + EXPECT.trips + ' chuyến trong kỳ (loại phiếu P3 ngoài kỳ)', k['Số phiếu cân'] === String(EXPECT.trips), JSON.stringify(k));

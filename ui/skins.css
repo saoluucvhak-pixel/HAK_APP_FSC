@@ -1,0 +1,28 @@
+/* Hai bảng màu bổ sung cho HAK Enterprise Design System: neutral (xám xanh doanh nghiệp) và champagne (vàng ấm).
+   LƯU Ý: tài liệu design system chỉ mô tả hai chủ đề này bằng chữ, repository không có giá trị màu. Bộ giá trị dưới đây do HAKQN tự định nghĩa,
+   dùng cùng tên token với luxe.css và được kiểm tra tương phản WCAG AA (tests/skins.test.js). Khi design system công bố giá trị chính thức, thay bằng giá trị đó.
+   classic (xanh ngọc/teal) và luxe (navy + champagne + ngà) lấy nguyên từ thư viện: classic = :root của luxe.css khi không đặt data-skin. */
+[data-skin="neutral"]{--mut-aa:#5f6c7a;--brand:#35475a;--brand2:#4b6078;--brandH:#283644;--brandA:#1e2833;--brandSoft:rgba(53,71,90,.10);--onBrand:#fff;
+--bg:#f3f5f7;--card:#fff;--ink:#1b232c;--mut:#5f6c7a;--line:#dde2e8;--line2:#e8ecf0;--ctl:#cbd2da;--th:#edf0f3;--hover:#f0f3f6;--field:#fff;
+--sb:linear-gradient(180deg,#1f2a36 0%,#151d26 100%);--sbText:#c4ceda;--sbMut:#8793a1;--sbLine:rgba(255,255,255,.08);
+--warnBg:#f7f1e3;--warnBd:#e3d3a8;--warnFg:#664712;--okBg:#e9eef3;--okFg:#35475a;--infoBg:#edf1f6;--infoBd:#cbd5e1;--infoFg:#25364d;--edit:#a8812f;--editBg:#faf6ea;--focus:rgba(75,96,120,.32);
+--shadow:0 1px 2px rgba(27,35,44,.05),0 8px 22px rgba(27,35,44,.07);--shadowH:0 12px 28px rgba(53,71,90,.16);--r:12px;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(255,255,255,.14),transparent 60%),linear-gradient(120deg,#1f2a36,#35475a);
+--c1:#e9eef3;--c1f:#35475a;--deep:#1f2a36;--champ:#a8812f;--champL:#dcc48a;--gold:#c2a15a}
+[data-skin="neutral"][data-theme="dark"]{--mut-aa:#9aa5b1;--brand:#a9bdd1;--brand2:#c0d0e0;--brandH:#c0d0e0;--brandA:#d6e1ec;--brandSoft:rgba(169,189,209,.16);--onBrand:#111820;
+--bg:#0e1216;--card:#161b21;--ink:#e6eaee;--mut:#9aa5b1;--line:#252d36;--line2:#1d242c;--ctl:#36414d;--th:#1b2128;--hover:#1c232b;--field:#10151a;
+--sb:linear-gradient(180deg,#0b0f13 0%,#07090c 100%);--okBg:rgba(169,189,209,.14);--okFg:#c0d0e0;--focus:rgba(169,189,209,.34);--edit:#d3ae5e;--editBg:#221d10;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(255,255,255,.08),transparent 60%),linear-gradient(120deg,#0b0f13,#26323f);
+--c1:rgba(169,189,209,.16);--c1f:#c0d0e0;--deep:#0b0f13}
+[data-skin="champagne"]{--mut-aa:#6a5f49;--brand:#85601a;--brand2:#a47a28;--brandH:#6d4e13;--brandA:#583f0e;--brandSoft:rgba(133,96,26,.12);--onBrand:#fff;
+--bg:#faf6ec;--card:#fffdf8;--ink:#2a2417;--mut:#6a5f49;--line:#eadfc4;--line2:#f1e8d3;--ctl:#dccfaf;--th:#f4ecd8;--hover:#f8f0dd;--field:#fff;
+--sb:linear-gradient(180deg,#2b2411 0%,#1d180a 100%);--sbText:#d8cfb6;--sbMut:#a09676;--sbLine:rgba(214,178,106,.2);
+--warnBg:#fbf1d9;--warnBd:#e8d296;--warnFg:#6b4a10;--okBg:#f3ead2;--okFg:#6d4e13;--infoBg:#f4efe0;--infoBd:#e0d4b2;--infoFg:#4a3d1c;--edit:#a47a28;--editBg:#fdf6e2;--focus:rgba(164,122,40,.32);
+--shadow:0 1px 2px rgba(42,36,23,.05),0 8px 22px rgba(42,36,23,.07);--shadowH:0 12px 28px rgba(133,96,26,.18);--r:12px;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(240,207,143,.28),transparent 60%),linear-gradient(120deg,#2b2411,#85601a);
+--c1:#f3ead2;--c1f:#6d4e13;--deep:#2b2411;--champ:#a47a28;--champL:#ecd49a;--gold:#c9a45c}
+[data-skin="champagne"][data-theme="dark"]{--mut-aa:#a69d88;--brand:#dcb862;--brand2:#e8c97c;--brandH:#e8c97c;--brandA:#f1d9a0;--brandSoft:rgba(220,184,98,.16);--onBrand:#1d1503;
+--bg:#14110a;--card:#1d1910;--ink:#efe9da;--mut:#a69d88;--line:#2e2819;--line2:#251f13;--ctl:#403823;--th:#231e12;--hover:#241f13;--field:#171309;
+--sb:linear-gradient(180deg,#0f0c06 0%,#0a0804 100%);--okBg:rgba(220,184,98,.14);--okFg:#e8c97c;--focus:rgba(220,184,98,.34);--edit:#dcb862;--editBg:#262010;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(220,184,98,.14),transparent 60%),linear-gradient(120deg,#0f0c06,#3a2d12);
+--c1:rgba(220,184,98,.16);--c1f:#e8c97c;--deep:#0f0c06}

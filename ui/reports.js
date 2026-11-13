@@ -6,7 +6,9 @@
  *   cột: {h, w (tỉ lệ), al: left|center|right, f: n0|n1|n2|n3|pct}. Ô là chuỗi hoặc số (số được định dạng theo f). */
 const HAKReports = (function () {
   'use strict';
-  const dateKey = v => { const m = String(v || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? +m[3] * 10000 + +m[2] * 100 + +m[1] : 0; };
+  /* Quy tắc ngày lịch dùng chung (src/dates.js): ngày không có thật (31/02/2026) → 0, không lọt vào bất kỳ kỳ nào */
+  const D = typeof HAKDates !== 'undefined' ? HAKDates : require('../src/dates.js');
+  const dateKey = v => D.key(v);
   const num = v => typeof v === 'number' && isFinite(v) ? v : 0;
   const round = (v, d) => { const k = Math.pow(10, d); return Math.round(v * k + (v < 0 ? -1e-9 : 1e-9)) / k; };
   const group = s => String(s).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -24,14 +26,17 @@ const HAKReports = (function () {
   }
 
   /* ---- Bộ lọc dữ liệu đầu vào ---- */
-  function inRange(ngay, from, to) {
-    const k = dateKey(ngay), a = dateKey(from), b = dateKey(to);
-    if (!a && !b) return true;
-    if (!k) return false;
-    return (!a || k >= a) && (!b || k <= b);
-  }
+  const inRange = (ngay, from, to) => D.inRange(ngay, from, to);
   const periodText = (from, to) => from && to ? 'Từ ngày ' + from + ' đến ngày ' + to : from ? 'Từ ngày ' + from : to ? 'Đến hết ngày ' + to : 'Toàn bộ thời gian';
-  function pcOf(r, o) { return (r.pc || []).filter(p => inRange(p.ngay, o.from, o.to)); }
+  /* Phiếu cân dùng cho báo cáo: ngày phải CÓ THẬT và nằm trong kỳ. Phiếu ngày sai bị loại khỏi mọi tổng (kể cả không lọc kỳ) và được liệt kê riêng, không bị xóa. */
+  function pcOf(r, o) { return (r.pc || []).filter(p => D.isValid(p.ngay) && inRange(p.ngay, o.from, o.to)); }
+  function badPc(recs) {
+    const out = [];
+    recs.forEach(r => (r.pc || []).forEach(p => { if (!D.isValid(p.ngay)) out.push({rung: r.maRung, chu: r.chuRung, soPhieu: p.soPhieu || '(không số)', ngay: p.ngay || '', ly: D.why(p.ngay), kl: num(p.kl)}); }));
+    return out;
+  }
+  const badNote = bad => bad.length ? bad.length + ' phiếu cân có ngày không hợp lệ bị loại khỏi tổng (' + bad.slice(0, 6).map(b => b.soPhieu + ': ' + b.ly).join('; ') + (bad.length > 6 ? '; …' : '') + '). Dữ liệu phiếu được giữ nguyên; sửa ngày ở tab Vận chuyển để tính lại.' : '';
+  const rangeNote = o => D.range(o.from, o.to).problem;
   const sumKl = list => round(list.reduce((s, p) => s + num(p.kl), 0), 3);
   const yieldOf = r => (typeof r.dienTich === 'number' && typeof r.dinhMuc === 'number') ? round(r.dienTich * r.dinhMuc, 3) : null;
   const byName = (a, b) => String(a).localeCompare(String(b), 'vi');
@@ -67,6 +72,7 @@ const HAKReports = (function () {
     if (vuot.length) notes.push('Rừng có sản lượng thực tế vượt định mức trên 5%: ' + vuot.map(r => nameOf(r) + ' (' + r.maRung + ')').join('; ') + '. Cần đối chiếu diện tích, định mức và phiếu cân.');
     if (chua.length) notes.push('Rừng chưa có phiếu cân trong kỳ: ' + chua.map(r => r.maRung || nameOf(r)).join(', ') + '.');
     const dp = dupInfo(sorted, o); if (dp.extra) notes.push('Phiếu cân trùng số trong kỳ: ' + dp.keys.join(', ') + '. ' + dupNote(dp));
+    const bad = badPc(sorted); if (bad.length) notes.unshift(badNote(bad)); if (rangeNote(o)) notes.unshift(rangeNote(o));
     notes.push('Sản lượng thực tế = tổng khối lượng các phiếu cân của rừng trong kỳ; sản lượng dự kiến = diện tích × định mức (tấn/ha).');
     return {id: 'sanluong', title: 'BÁO CÁO SẢN LƯỢNG KHAI THÁC THEO RỪNG', orient: 'landscape', period: periodText(o.from, o.to), kpis,
       sections: [{heading: 'Chi tiết theo rừng', cols: [
@@ -80,10 +86,12 @@ const HAKReports = (function () {
   /* ---- 2. Sổ theo dõi phiếu cân – vận chuyển ---- */
   function soPhieuCan(recs, o) {
     const all = [];
-    recs.forEach(r => pcOf(r, o).forEach(p => all.push(Object.assign({}, p, {rung: r.maRung, chu: r.chuRung}))));
+    recs.forEach(r => pcOf(r, o).forEach(p => all.push(Object.assign({}, p, {rung: r.maRung, chu: r.chuRung, dd: r.diemDen || null}))));
     all.sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay) || String(a.soPhieu).localeCompare(String(b.soPhieu)));
+    const MH = typeof HAKMuaHang !== 'undefined' ? HAKMuaHang : require('../src/muahang.js');
+    const lech = p => p.dd && p.dd.src === 'congty' && !MH.noiGiaoKhop(p.noiGiao, p.dd);
     const dpi = dupInfo(recs, o), isDup = {}; dpi.keys.forEach(k => { isDup[k] = true; });
-    const rows = all.map((p, i) => [i + 1, p.ngay, p.soPhieu, p.bienSo, p.chu, p.rung, p.noiGiao || '', num(p.kl), isDup[String(p.soPhieu || '').trim().toUpperCase()] ? 'Trùng số phiếu' : '']);
+    const rows = all.map((p, i) => [i + 1, p.ngay, p.soPhieu, p.bienSo, p.chu, p.rung, p.noiGiao || '', num(p.kl), isDup[String(p.soPhieu || '').trim().toUpperCase()] ? 'Trùng số phiếu' : '', (p.dd && p.dd.text) || '', lech(p) ? 'Khác điểm đến theo hồ sơ' : '']);
     const total = sumKl(all);
     const byPlate = {}, byDay = {}, byForest = {};
     all.forEach(p => {
@@ -94,21 +102,25 @@ const HAKReports = (function () {
     });
     const tbl = (obj, label, keyCmp) => {
       const ks = Object.keys(obj).sort(keyCmp), tn = ks.reduce((s, k) => s + obj[k].n, 0), tt = round(ks.reduce((s, k) => s + obj[k].t, 0), 3);
-      return {cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: label, w: 40}, {h: 'Số chuyến', w: 16, al: 'center', f: 'n0'}, {h: 'Khối lượng (tấn)', w: 20, al: 'right', f: 'n3'}],
+      return {cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: label, w: 40, f: label === 'Ngày cân' ? 'date' : undefined}, {h: 'Số chuyến', w: 16, al: 'center', f: 'n0'}, {h: 'Khối lượng (tấn)', w: 20, al: 'right', f: 'n3'}],
         rows: ks.map((k, i) => [i + 1, k, obj[k].n, round(obj[k].t, 3)]), foot: ['', 'Cộng', tn, tt]};
     };
-    const notes = [];
+    const notes = [], bad = badPc(recs); if (rangeNote(o)) notes.push(rangeNote(o)); if (bad.length) notes.push(badNote(bad));
     if (dpi.extra) notes.push('Số phiếu cân xuất hiện nhiều lần (cần kiểm tra trùng): ' + dpi.keys.join(', ') + '. ' + dupNote(dpi));
+    const nLech = all.filter(lech).length; if (nLech) notes.push(nLech + ' phiếu cân có “Nơi giao” khác điểm đến theo hồ sơ rừng (nội dung phiếu giữ nguyên theo nguồn; cần đối chiếu).');
+    const noDest = [...new Set(recs.filter(r => !(r.diemDen && r.diemDen.text) && pcOf(r, o).length).map(r => r.maRung))]; if (noDest.length) notes.push('Rừng chưa có điểm đến vận chuyển (chưa chọn công ty mua hàng): ' + noDest.join(', ') + '.');
     const noPlate = all.filter(p => !p.bienSo).length; if (noPlate) notes.push(noPlate + ' phiếu cân chưa có biển kiểm soát.');
     return {id: 'phieucan', title: 'SỔ THEO DÕI PHIẾU CÂN – VẬN CHUYỂN GỖ KEO', orient: 'landscape', period: periodText(o.from, o.to),
       kpis: [{label: 'Số phiếu cân', value: all.length, f: 'n0'}, {label: 'Tổng khối lượng (tấn)', value: total, f: 'n3'}, {label: 'Số xe', value: Object.keys(byPlate).length, f: 'n0'},
-        {label: 'Bình quân (tấn/chuyến)', value: all.length ? round(total / all.length, 3) : 0, f: 'n3'}, {label: 'Phiếu trùng số (đã tính vào tổng)', value: dpi.extra, f: 'n0'}],
+        {label: 'Bình quân (tấn/chuyến)', value: all.length ? round(total / all.length, 3) : 0, f: 'n3'}, {label: 'Phiếu trùng số (đã tính vào tổng)', value: dpi.extra, f: 'n0'}, ...(bad.length ? [{label: 'Phiếu bị loại (ngày không hợp lệ)', value: bad.length, f: 'n0'}] : [])],
       sections: [
-        {heading: 'I. Danh sách phiếu cân', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Ngày cân', w: 10, al: 'center'}, {h: 'Số phiếu cân', w: 14}, {h: 'Biển kiểm soát', w: 12, al: 'center'},
-          {h: 'Chủ rừng', w: 17}, {h: 'Mã rừng', w: 11}, {h: 'Nơi giao', w: 15}, {h: 'Khối lượng (tấn)', w: 11, al: 'right', f: 'n3'}, {h: 'Ghi chú', w: 10}], rows, foot: ['', 'TỔNG CỘNG', '', '', '', '', '', total, '']},
+        {heading: 'I. Danh sách phiếu cân', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Ngày cân', w: 10, f: 'date'}, {h: 'Số phiếu cân', w: 14}, {h: 'Biển kiểm soát', w: 12, al: 'center'},
+          {h: 'Chủ rừng', w: 17}, {h: 'Mã rừng', w: 11}, {h: 'Nơi giao', w: 15}, {h: 'Khối lượng (tấn)', w: 11, al: 'right', f: 'n3'}, {h: 'Ghi chú', w: 10}, {h: 'Điểm đến theo hồ sơ rừng', w: 22}, {h: 'Đối chiếu nơi giao', w: 14}], rows, foot: ['', 'TỔNG CỘNG', '', '', '', '', '', total, '', '', '']},
         Object.assign({heading: 'II. Tổng hợp theo rừng'}, tbl(byForest, 'Mã rừng', byName)),
         Object.assign({heading: 'III. Tổng hợp theo biển kiểm soát'}, tbl(byPlate, 'Biển kiểm soát', byName)),
-        Object.assign({heading: 'IV. Tổng hợp theo ngày cân'}, tbl(byDay, 'Ngày cân', (a, b) => dateKey(a) - dateKey(b) || byName(a, b)))],
+        Object.assign({heading: 'IV. Tổng hợp theo ngày cân'}, tbl(byDay, 'Ngày cân', (a, b) => dateKey(a) - dateKey(b) || byName(a, b))),
+        ...(bad.length ? [{heading: 'V. Phiếu cân bị loại (ngày không hợp lệ)', note: 'Không tính vào các bảng trên. Sửa ngày ở tab Vận chuyển.', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Số phiếu', w: 16}, {h: 'Ngày ghi trên phiếu', w: 16}, {h: 'Lý do', w: 38}, {h: 'Mã rừng', w: 12}, {h: 'Khối lượng (tấn)', w: 12, al: 'right', f: 'n3'}],
+          rows: bad.map((b, i) => [i + 1, b.soPhieu, b.ngay, b.ly, b.rung, b.kl]), foot: ['', 'Cộng', '', '', '', round(bad.reduce((x, b) => x + b.kl, 0), 3)]}] : [])],
       notes};
   }
 
@@ -148,6 +160,7 @@ const HAKReports = (function () {
       if (r.pct < 50) risks.push([r.chuRung, r.maRung, 'Hồ sơ FSC dưới 50%', 'Tiến độ ' + fmtNum(r.pct, 1) + '%']);
       (r.thieu || []).filter(t => !t.warn && /Tọa độ|Giấy tờ pháp lý/.test(t.label)).forEach(t => risks.push([r.chuRung, r.maRung, 'Thiếu ' + t.label.toLowerCase(), t.hint || '']));
     });
+    badPc(recs).forEach(b => risks.push([b.chu, b.rung, 'Phiếu cân ngày không hợp lệ', 'Phiếu ' + b.soPhieu + ': ' + b.ly + ' — bị loại khỏi tổng']));
     const dpd = dupInfo(recs, o); if (dpd.extra) risks.push(['(nhiều rừng)', dpd.keys.join(', '), 'Trùng số phiếu cân', dpd.extra + ' phiếu, ' + fmtNum(dpd.tons, 3) + ' tấn đang tính trong tổng']);
     return {id: 'dieuhanh', title: 'BÁO CÁO TỔNG HỢP ĐIỀU HÀNH KHAI THÁC VÀ VẬN CHUYỂN GỖ KEO', orient: 'portrait', period: periodText(o.from, o.to),
       kpis: [{label: 'Chủ rừng', value: list.length, f: 'n0'}, {label: 'Số rừng', value: recs.length, f: 'n0'}, {label: 'Diện tích (ha)', value: totHa, f: 'n2'}, {label: 'Khối lượng vận chuyển (tấn)', value: totT, f: 'n3'},
@@ -157,32 +170,80 @@ const HAKReports = (function () {
           {h: 'Khối lượng (tấn)', w: 16, al: 'right', f: 'n3'}, {h: 'Tiến độ TB', w: 12, al: 'right', f: 'pct'}],
           rows: list.map((x, i) => [i + 1, x.ten, x.n, round(x.ha, 3), x.trips, round(x.t, 3), x.n ? round(x.pct / x.n, 1) : 0]), foot: ['', 'TỔNG CỘNG', recs.length, totHa, trips, totT, avg]},
         {heading: 'II. Vấn đề cần xử lý', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Chủ rừng', w: 22}, {h: 'Mã rừng', w: 16}, {h: 'Vấn đề', w: 26}, {h: 'Chi tiết', w: 30}], rows: risks.map((x, i) => [i + 1, ...x])}],
-      notes: risks.length ? [] : ['Không phát hiện vấn đề cần xử lý ở các tiêu chí đã kiểm tra.']};
+      notes: [...(rangeNote(o) ? [rangeNote(o)] : []), ...(risks.length ? [] : ['Không phát hiện vấn đề cần xử lý ở các tiêu chí đã kiểm tra.'])]};
+  }
+
+  /* Căn lề theo chuẩn: số → phải; ngày → giữa; văn bản/mã → trái. STT là số thứ tự (nhãn) nên giữ căn giữa. */
+  const NUMERIC = {n0: 1, n1: 1, n2: 1, n3: 1, pct: 1};
+  function finalize(m, unit) {
+    m.unit = unit;
+    m.sections.forEach(s => s.cols.forEach(c => {
+      if (c.h === 'STT') c.al = 'center';
+      else if (NUMERIC[c.f]) c.al = 'right';
+      else if (c.f === 'date' || /^(Ngày|Thời gian)/.test(c.h)) c.al = 'center';
+      else c.al = 'left';
+    }));
+    return m;
+  }
+  const withUnit = (fn, unit) => (recs, o) => finalize(fn(recs, o), unit);
+
+  /* ---- 5. Bảng cha–con: chủ rừng → rừng → (tuỳ chọn) phiếu cân. Cha là tổng của con; không tính lại ở nơi khác. ---- */
+  function chaCon(recs, o) {
+    const owners = {}; recs.forEach(r => { const k = r.maChu || r.chuRung; (owners[k] = owners[k] || {ten: r.chuRung, ma: r.maChu, forests: []}).forests.push(r); });
+    const list = Object.values(owners).sort((a, b) => byName(a.ten, b.ten));
+    const rows = [], levels = [], tot = {ha: 0, t: 0, n: 0};
+    list.forEach(ow => {
+      const fs = ow.forests.slice().sort((a, b) => byName(a.maRung, b.maRung));
+      const sums = fs.map(r => { const pcs = pcOf(r, o); return {r, pcs, t: sumKl(pcs), ha: num(r.dienTich)}; });
+      const oh = round(sums.reduce((x, y) => x + y.ha, 0), 3), ot = round(sums.reduce((x, y) => x + y.t, 0), 3), on = sums.reduce((x, y) => x + y.pcs.length, 0);
+      tot.ha += oh; tot.t += ot; tot.n += on;
+      rows.push([ow.ten, ow.ma || '', fs.length + ' rừng', '', oh, on, ot, round(fs.reduce((x, r) => x + r.pct, 0) / fs.length, 1)]); levels.push(0);
+      sums.forEach(x => {
+        rows.push(['└ ' + nameOf(x.r), x.r.maRung, x.r.diaDiem || '', '', typeof x.r.dienTich === 'number' ? x.r.dienTich : '', x.pcs.length, x.t, x.r.pct]); levels.push(1);
+        if (o.detail) x.pcs.slice().sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay)).forEach(p => { rows.push(['• Phiếu ' + (p.soPhieu || '(không số)'), p.soPhieu || '', p.bienSo || '', p.ngay || '', '', 1, num(p.kl), '']); levels.push(2); });
+      });
+    });
+    const dp = dupInfo(recs, o), notes = [], bad = badPc(recs);
+    if (rangeNote(o)) notes.push(rangeNote(o)); if (bad.length) notes.push(badNote(bad));
+    if (dp.extra) notes.push('Phiếu cân trùng số trong kỳ: ' + dp.keys.join(', ') + '. ' + dupNote(dp));
+    notes.push('Dòng đậm là chủ rừng (cha) = tổng các rừng (con) bên dưới; rừng = tổng các phiếu cân của rừng đó trong kỳ.' + (o.detail ? '' : ' Bật “Kèm từng phiếu cân” để xem cấp phiếu.'));
+    return {id: 'chacon', title: 'BẢNG CHA–CON: CHỦ RỪNG – RỪNG – PHIẾU CÂN', orient: 'landscape', period: periodText(o.from, o.to),
+      kpis: [{label: 'Chủ rừng', value: list.length, f: 'n0'}, {label: 'Số rừng', value: recs.length, f: 'n0'}, {label: 'Diện tích (ha)', value: round(tot.ha, 3), f: 'n2'}, {label: 'Số chuyến', value: tot.n, f: 'n0'}, {label: 'Khối lượng (tấn)', value: round(tot.t, 3), f: 'n3'}],
+      sections: [{heading: 'Chi tiết theo cấp', cols: [{h: 'Chủ rừng / Rừng / Phiếu cân', w: 24}, {h: 'Mã', w: 14}, {h: 'Địa điểm / Biển số', w: 17}, {h: 'Ngày cân', w: 10, f: 'date'}, {h: 'Diện tích (ha)', w: 9, f: 'n2'}, {h: 'Số chuyến', w: 8, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 10, f: 'n3'}, {h: 'Tiến độ hồ sơ', w: 8, f: 'pct'}],
+        rows, levels, foot: ['TỔNG CỘNG', '', '', '', round(tot.ha, 3), tot.n, round(tot.t, 3), '']}], notes};
   }
 
   const REPORTS = [
-    {id: 'dieuhanh', name: 'Tổng hợp điều hành', desc: 'Một trang cho lãnh đạo: số liệu chính theo chủ rừng và các vấn đề cần xử lý.', build: dieuHanh},
-    {id: 'sanluong', name: 'Sản lượng khai thác theo rừng', desc: 'Diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân; cảnh báo vượt định mức.', build: sanLuong},
-    {id: 'phieucan', name: 'Sổ theo dõi phiếu cân – vận chuyển', desc: 'Danh sách phiếu cân theo kỳ, tổng hợp theo rừng, biển số, ngày; phát hiện trùng phiếu.', build: soPhieuCan},
-    {id: 'tiendo', name: 'Tiến độ hồ sơ và checklist FSC', desc: 'Tiến độ từng rừng và danh sách hạng mục còn thiếu để hoàn thiện hồ sơ.', build: tienDo}
+    {id: 'dieuhanh', name: 'Tổng hợp điều hành', desc: 'Một trang cho lãnh đạo: số liệu chính theo chủ rừng và các vấn đề cần xử lý.', build: withUnit(dieuHanh, 'Đơn vị tính: diện tích ha; khối lượng tấn; tiến độ %')},
+    {id: 'sanluong', name: 'Sản lượng khai thác theo rừng', desc: 'Diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân; cảnh báo vượt định mức.', build: withUnit(sanLuong, 'Đơn vị tính: diện tích ha; định mức tấn/ha; sản lượng tấn')},
+    {id: 'phieucan', name: 'Sổ theo dõi phiếu cân – vận chuyển', desc: 'Danh sách phiếu cân theo kỳ, tổng hợp theo rừng, biển số, ngày; phát hiện trùng phiếu.', build: withUnit(soPhieuCan, 'Đơn vị tính: khối lượng tấn (làm tròn 3 chữ số, theo phiếu cân ghi kg)')},
+    {id: 'chacon', name: 'Bảng cha–con: chủ rừng – rừng – phiếu cân', desc: 'Chủ rừng (cha) là tổng các rừng (con), rừng là tổng các phiếu cân; có thể kèm từng phiếu.', build: withUnit(chaCon, 'Đơn vị tính: diện tích ha; khối lượng tấn')},
+    {id: 'tiendo', name: 'Tiến độ hồ sơ và checklist FSC', desc: 'Tiến độ từng rừng và danh sách hạng mục còn thiếu để hoàn thiện hồ sơ.', build: withUnit(tienDo, 'Đơn vị tính: tiến độ %; số lượng theo từng cột')}
   ];
 
   /* Mô hình -> bảng dữ liệu phẳng (dùng cho Excel) */
+  /* Chuỗi bắt đầu bằng = + - @ (hoặc tab/CR) sẽ bị Excel hiểu là công thức: thêm dấu ' để luôn là văn bản (chống chèn công thức). */
+  const safeText = v => (typeof v === 'string' && /^[=+\-@\t\r]/.test(v) && !/^-?\d+([.,]\d+)?%?$/.test(v)) ? "'" + v : v;
+  const toDate = v => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); return m ? new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])) : v; };
+  /* Mô hình -> bảng phẳng cho Excel. Trả về mảng dòng; thuộc tính phụ (meta) mô tả vị trí các bảng để áp bộ lọc tự động và nhóm dòng. */
   function toAoa(m, meta) {
     meta = meta || {};
-    const a = [[meta.org || 'HAK GROUP'], [m.title], [m.period + (meta.scope ? ' · ' + meta.scope : '')], []];
+    const a = [[meta.org || 'HAK GROUP'], [m.title], [m.period + (meta.scope ? ' · ' + meta.scope : '')], [m.unit || ''], ['Lập lúc ' + (meta.stamp || meta.today || '')], []];
+    const tables = [];
     if (m.kpis.length) { a.push(['Chỉ tiêu tổng hợp']); m.kpis.forEach(k => a.push([k.label, k.value])); a.push([]); }
     m.sections.forEach(s => {
-      a.push([s.heading]); a.push(s.cols.map(c => c.h));
-      s.rows.forEach(r => a.push(r.slice()));
-      if (s.foot) a.push(s.foot.slice());
+      a.push([s.heading]); const head = a.length; a.push(s.cols.map(c => c.h));
+      s.rows.forEach((r, i) => a.push(r.map((v, k) => s.cols[k] && s.cols[k].f === 'date' ? toDate(v) : safeText(v))));
+      tables.push({head, first: head + 1, last: head + s.rows.length, cols: s.cols.length, levels: s.levels || null});
+      if (s.foot) a.push(s.foot.map(safeText));
       a.push([]);
     });
-    m.notes.forEach(n => a.push(['Ghi chú: ' + n]));
+    m.notes.forEach(n => a.push([safeText('Ghi chú: ' + n)]));
     a.push([], ['Lập ngày ' + (meta.today || '')]);
+    Object.defineProperty(a, 'tables', {value: tables, enumerable: false});
     return a;
   }
 
-  return {REPORTS, dateKey, fmtNum, fmtCell, toAoa, sanLuong, soPhieuCan, tienDo, dieuHanh, inRange, periodText};
+  return {REPORTS, chaCon, safeText, finalize, dateKey, fmtNum, fmtCell, toAoa, sanLuong, soPhieuCan, tienDo, dieuHanh, inRange, periodText};
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = HAKReports;

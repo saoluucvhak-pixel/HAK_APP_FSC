@@ -1,0 +1,7 @@
+{
+  "exclude": ["node_modules", "dist", "renderer", "legacy-html", "reports", "vendor"],
+  "maxLines": 1000,
+  "failOn": "error",
+  "rules": {"long-file": "warning", "duplicate-file": "warning", "debugger": "error", "syntax": "error", "dependency-cycle": "warning"},
+  "appsScript": {"enabled": true}
+}
