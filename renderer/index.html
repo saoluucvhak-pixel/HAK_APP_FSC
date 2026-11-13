@@ -186,6 +186,14 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 .issues{margin:6px 0 0 18px;padding:0;font-size:13px}
 .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:550;background:var(--accSoft);color:var(--acc)}
 .pill.err{background:var(--errBg);color:var(--err)}.pill.ok{background:var(--okBg);color:var(--ok)}
+.d2btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.d2act{white-space:normal}
+.d2act .btn{margin:0 4px 4px 0}
+.d2more{display:inline-block;position:relative}
+.d2more>summary{list-style:none;cursor:pointer;padding:4px 12px;border:1px solid var(--line);border-radius:var(--rs);font-size:13px;color:var(--mut-aa)}
+.d2more>summary::-webkit-details-marker{display:none}
+.d2menu{position:absolute;right:0;z-index:5;margin-top:4px;min-width:200px;padding:4px;background:var(--card,#fff);border:1px solid var(--line);border-radius:var(--rs);display:flex;flex-direction:column;gap:4px}
+.d2help{margin:0 0 12px}.d2help>summary{cursor:pointer;color:var(--mut-aa);font-size:13px}
 .docrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
 .empty{padding:48px 14px;text-align:center;color:var(--mut-aa)}
 .prog{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 12px}
@@ -230,26 +238,26 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <h1>Hồ sơ khai thác & vận chuyển gỗ keo<small>HAK Group · Bộ hồ sơ theo rừng, chuẩn truy xuất nguồn gốc FSC</small></h1>
   </button>
   <nav class="nav">
-    <button class="nb" data-act="goHome" id="navHome">🏠 Tổng quan</button>
-    <button class="nb deskOnly" data-act="lkOpen" hidden>🔎 Tra cứu Google Sheets</button>
-    <button class="nb" data-act="rpOpen">📊 Báo cáo</button>
-    <button class="nb" data-act="openCty" id="navCty">🏢 Công ty mua hàng</button>
+    <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
+    <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
+    <button class="nb" data-act="rpOpen">Báo cáo</button>
+    <button class="nb" data-act="openCty" id="navCty">Công ty mua hàng</button>
   </nav>
-  <button class="hbtn" data-act="theme" id="themeBtn">🌙 Chế độ tối</button>
+  <button class="hbtn" data-act="theme" id="themeBtn">Chế độ tối</button>
   <details class="menu" id="moreMenu"><summary class="hbtn">⋯ Thêm</summary><div class="pop">
-    <button class="mi" data-act="guide">❓ Hướng dẫn sử dụng</button>
-    <button class="mi deskOnly" data-act="openSettings" id="openSettingsBtn">⚙ Cài đặt hệ thống</button>
+    <button class="mi" data-act="guide">Hướng dẫn sử dụng</button>
+    <button class="mi deskOnly" data-act="openSettings" id="openSettingsBtn">Cài đặt hệ thống</button>
     <hr>
     <div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu"></div>
     <hr>
-    <button class="mi" data-act="backup">⬇ Sao lưu toàn bộ dữ liệu (.json)</button>
-    <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">⬆ Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
-    <button class="mi" data-act="lotRestore" id="lotRestoreBtn">⬆ Khôi phục lô rừng…</button>
+    <button class="mi" data-act="backup">Sao lưu toàn bộ dữ liệu (.json)</button>
+    <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
+    <button class="mi" data-act="lotRestore" id="lotRestoreBtn">Khôi phục lô rừng…</button>
   </div></details>
 </header>
 <div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><span class="pill" id="saveSt"></span></div>
 <div class="layout">
-  <aside id="side"><input class="sideq" id="sideQ" type="search" placeholder="🔍 Lọc chủ rừng…" aria-label="Lọc chủ rừng"><div id="sideList"></div></aside>
+  <aside id="side"><input class="sideq" id="sideQ" type="search" placeholder="Lọc chủ rừng…" aria-label="Lọc chủ rừng"><div id="sideList"></div></aside>
   <main id="main"></main>
 </div>
 
@@ -261,14 +269,14 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <p>HAKQN Desktop lập hồ sơ khai thác và vận chuyển gỗ keo theo chuẩn FSC. Dữ liệu lưu ngay trên máy (SQLite); nhập liệu, kiểm tra, xuất hồ sơ, sao lưu và khôi phục <b>không cần mạng</b>. Chỉ đồng bộ Google Sheets mới cần mạng. Bản đầy đủ có hình thức trình bày chi tiết hơn: tệp <code>docs/HUONG_DAN.md</code>.</p>
 <h3>1. Quy trình 8 bước</h3>
 <ol>
-<li>Khai <b>🏢 Công ty mua hàng</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
-<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>🔎 Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số điện thoại</b>, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
+<li>Khai <b>Công ty mua hàng</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
+<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số điện thoại</b>, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
 <li>Tạo <b>Lô rừng</b>: mã lô, địa điểm, tọa độ, diện tích, thời gian khai thác, giấy tờ pháp lý.</li>
 <li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo chức danh, rồi nạp Excel nhân công.</li>
 <li>Tab <b>Vận chuyển</b>: chọn cách tính cước, nạp Excel xe, nạp Excel phiếu cân, chọn <b>địa chỉ giao hàng</b>.</li>
 <li>Tab <b>Kiểm tra trước khi xuất</b>: xử lý các mục chặn xuất và cần đối chiếu.</li>
 <li>Tab <b>Xuất hồ sơ</b>: nhập thông số biên bản, tải biểu mẫu (từng file hoặc ZIP).</li>
-<li><b>Sao lưu</b>: nút ⬇ Sao lưu lô rừng, hoặc ⋯ Thêm → Sao lưu toàn bộ dữ liệu.</li>
+<li><b>Sao lưu</b>: nút Sao lưu lô rừng, hoặc ⋯ Thêm → Sao lưu toàn bộ dữ liệu.</li>
 </ol>
 <p>Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa chỉ giao riêng; chủ rừng chỉ giữ thông tin chung.</p>
 <h3>2. Mã lô</h3>
@@ -281,7 +289,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li><b>Giao khoán</b>: tổ trưởng ký hợp đồng khoán (BM-01), công nhân ký <b>một Giấy ủy quyền (BM-20)</b> cho tổ trưởng; tính theo <b>tấn hoặc ha</b>. <b>Trực tiếp</b>: mỗi người ký hợp đồng lao động (BM-03); tính theo <b>tấn hoặc ngày công</b>.</li>
 <li><b>Đơn giá theo từng chức danh</b> (Tổ trưởng, Công nhân khai thác, Công nhân cưa). Sản lượng chia đều cho mọi người trong tổ, kể cả tổ trưởng; tiền mỗi người = phần chia × đơn giá chức danh.</li>
 <li><b>Ngày bắt đầu</b> dùng cho hợp đồng, chấm công và kiểm tra đủ 18 tuổi (dưới 18 tuổi không xuất được Giấy ủy quyền). Mỗi lô cần <b>đúng một tổ trưởng</b>.</li>
-<li><b>⚙ Định mức BHLĐ</b> khai theo chức danh để in sổ cấp phát.</li>
+<li><b>Định mức BHLĐ</b> khai theo chức danh để in sổ cấp phát.</li>
 </ul>
 <h3>4. Tab Vận chuyển</h3>
 <ul>
@@ -292,7 +300,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li>“Nơi giao” ghi trên phiếu cân là dữ liệu nguồn, giữ nguyên; khác địa chỉ đã chốt thì có cảnh báo. Đổi điểm đến không tự sửa cự ly hay đơn giá; cước tấn/km được nhắc kiểm tra lại cự ly.</li>
 </ul>
 <h3>5. File Excel mẫu (có hướng dẫn từng mẫu)</h3>
-<p>Nút <b>⬇ Tải file mẫu (có hướng dẫn)</b> ở ô nạp nhân công, xe, phiếu cân. Mỗi file có 3 trang tính:</p>
+<p>Nút <b>Tải file mẫu (có hướng dẫn)</b> ở ô nạp nhân công, xe, phiếu cân. Mỗi file có 3 trang tính:</p>
 <table><tr><th>Trang</th><th>Dùng để</th></tr>
 <tr><td><b>HUONG_DAN</b></td><td>Mục đích, các bước, <b>mô tả từng cột</b> (bắt buộc, định dạng, ví dụ, lưu ý), phần mềm kiểm tra gì, lỗi thường gặp và cách sửa.</td></tr>
 <tr><td><b>NHAN_CONG / DOI_XE / PHIEU_CAN</b></td><td><b>Trang cần điền</b>, dòng 1 là tiêu đề, điền từ dòng 2. Phần mềm chỉ đọc trang này.</td></tr>
@@ -304,7 +312,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 </ul>
 <h3>6. Tra cứu Google Sheets</h3>
 <ul>
-<li><b>Đồng bộ ngay</b> tải 3 tab <code>HoSoKeo</code> (phiếu cân), <code>HoSoRung</code> (chủ rừng, hợp đồng), <code>ToaDoRung</code> (mã rừng, tọa độ, giấy tờ) (chỉ đọc). Bảng tính giới hạn quyền thì bấm <b>🔑 Đăng nhập Google (chỉ đọc)</b>. Khi không có mạng dùng <b>Nhập bản Excel</b>. Bản tra cứu chỉ được thay khi cả 3 tab hợp lệ; lỗi thì giữ bản cũ; bản đã lưu tra cứu được khi offline.. Chấp nhận thêm tên cũ có hậu tố <code>_QC</code> và tên khác hoa/thường. Tab đặt tên khác hẳn nhưng đủ cột được <b>đề xuất để bạn xác nhận</b>; có nhiều tab phù hợp (kể cả có cả tên mới lẫn <code>_QC</code>) thì bạn chọn trong danh sách. Chỉ khi cả ba vai trò đã xác định và đọc đúng mới thay bản tra cứu</li>
+<li><b>Đồng bộ ngay</b> tải 3 tab <code>HoSoKeo</code> (phiếu cân), <code>HoSoRung</code> (chủ rừng, hợp đồng), <code>ToaDoRung</code> (mã rừng, tọa độ, giấy tờ) (chỉ đọc). Bảng tính giới hạn quyền thì bấm <b>Đăng nhập Google (chỉ đọc)</b>. Khi không có mạng dùng <b>Nhập bản Excel</b>. Bản tra cứu chỉ được thay khi cả 3 tab hợp lệ; lỗi thì giữ bản cũ; bản đã lưu tra cứu được khi offline.. Chấp nhận thêm tên cũ có hậu tố <code>_QC</code> và tên khác hoa/thường. Tab đặt tên khác hẳn nhưng đủ cột được <b>đề xuất để bạn xác nhận</b>; có nhiều tab phù hợp (kể cả có cả tên mới lẫn <code>_QC</code>) thì bạn chọn trong danh sách. Chỉ khi cả ba vai trò đã xác định và đọc đúng mới thay bản tra cứu</li>
 <li>Tìm theo mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã hợp đồng, địa chỉ, số phiếu cân, biển số → <b>Chọn</b> → <b>Điền vào rừng đang mở</b> hoặc <b>Tạo rừng mới</b> → xem trước, chọn từng trường và phiếu → <b>Lưu vào hồ sơ</b>.</li>
 <li>Ô đã có dữ liệu khác phải chọn giữ hay thay. Phiếu cân có ngày không có thật bị loại và nêu lý do.</li>
 </ul>
@@ -324,14 +332,14 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <p><b>In hai đợt khi chưa xong rừng</b>: ở tab Xuất hồ sơ → Tất cả, <i>Đợt 1</i> gồm hồ sơ làm ngay (trừ BM-08, BM-09, BM-10, BM-14); khi rừng xong, nạp phiếu cân, nhập khối lượng thực tế rồi tải <i>Đợt 2</i> chỉ gồm BM-08, BM-09, BM-10, BM-14 để bổ sung vào bộ đã in.</p>
 <p><b>In mẫu đợt 2 để trống số rồi in đè số</b>: ở tab Xuất hồ sơ → Tất cả, <i>Bước 1 – Mẫu trống</i> in sẵn BM-08, BM-09, BM-10, BM-14 với phần số để chấm; khi có số liệu, <i>Bước 2 – Chỉ phần số</i> in lên đúng tờ đã in (chữ cố định và đường kẻ được ẩn). In cùng khổ A4, tỉ lệ 100%, cùng lề, cùng máy in, cùng giá trị “Số dòng chuyến”; in thử một tờ nháp trước.</p>
 <p><b>Số hợp đồng trên biểu mẫu</b>: nhập số đầy đủ (ví dụ <code>015/2025-KT</code>) thì được giữ nguyên; chỉ nhập phần số (<code>015</code>) thì phần mềm ghép năm lấy từ <b>ngày ký của chính hợp đồng đó</b>; thiếu ngày ký thì năm để trống và khung <i>Số hợp đồng đầy đủ sẽ in</i> ở tab Xuất hồ sơ nêu cần bổ sung ngày nào. BM-01, BM-14, BM-20 luôn cùng một số hợp đồng khai thác.</p>
-<p><b>📊 Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (5 mẫu: điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
+<p><b>Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (5 mẫu: điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
 <h3>9. Sao lưu và khôi phục</h3>
 <ul>
 <li>Phần mềm tự sao lưu cơ sở dữ liệu vào thư mục <code>backups</code> trước mỗi lần nâng cấp và khôi phục; ghi trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.</li>
 <li><b>⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json)</b>. <b>⋯ Thêm → Khôi phục toàn bộ dữ liệu (.json)</b> (cũng dùng để nhập bản sao lưu từ bản HTML cũ): xem trước từng chủ/lô là <b>THÊM</b>, <b>TRÙNG</b> hay <b>GIỮ</b>; chọn <i>giữ bản trên máy</i>, <i>ghi đè lô trùng</i> (chỉ thay đúng lô trùng, lô khác của chủ được giữ), <i>giữ cả hai</i> (xác nhận <b>mã mới</b> cho từng lô nhân bản) hoặc <i>thay toàn bộ</i> (có xác nhận nêu rõ phạm vi). ID, mã lô, chủ rừng mâu thuẫn thì dừng và liệt kê hồ sơ cần đối chiếu.</li>
-<li><b>⋯ Thêm → ⚙ Cài đặt hệ thống</b>: chọn <b>thư mục dữ liệu</b> (nơi lưu cơ sở dữ liệu; khi đổi, dữ liệu được sao chép sang thư mục mới, bản cũ giữ nguyên) và <b>thư mục sao lưu</b> (sao lưu toàn bộ lưu thẳng vào đó; bản tự động trước khi nâng cấp cũng ở đó). Nên chọn ổ cứng của máy, không chọn ổ mạng hay thư mục đồng bộ đám mây.</li>
-<li><b>⬇ Sao lưu lô rừng</b> (đầu hồ sơ lô): file <code>HAKQN_LoRung_&lt;MaLo&gt;_&lt;Ngày&gt;.json</code> chứa đúng một lô, kèm địa chỉ giao đã chốt; không chứa lô khác, tra cứu hay thông tin đăng nhập.</li>
-<li><b>⋯ Thêm → ⬆ Khôi phục lô rừng…</b>: xem trước chủ, mã lô, thời điểm sao lưu, số nhân công/xe/phiếu cân/tổng tấn. Thêm vào đúng chủ đã có hoặc tạo chủ mới. Lô đã có: mặc định giữ bản hiện có; thay thì chỉ thay đúng lô đó và có bảng trước/sau. Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: máy đích giữ thiết lập của mình, màn hình nêu phần hồ sơ có thể khác. File hỏng, sai loại/phiên bản hoặc không xác định được lô đích thì báo lỗi và không ghi.</li>
+<li><b>⋯ Thêm → Cài đặt hệ thống</b>: chọn <b>thư mục dữ liệu</b> (nơi lưu cơ sở dữ liệu; khi đổi, dữ liệu được sao chép sang thư mục mới, bản cũ giữ nguyên) và <b>thư mục sao lưu</b> (sao lưu toàn bộ lưu thẳng vào đó; bản tự động trước khi nâng cấp cũng ở đó). Nên chọn ổ cứng của máy, không chọn ổ mạng hay thư mục đồng bộ đám mây.</li>
+<li><b>Sao lưu lô rừng</b> (đầu hồ sơ lô): file <code>HAKQN_LoRung_&lt;MaLo&gt;_&lt;Ngày&gt;.json</code> chứa đúng một lô, kèm địa chỉ giao đã chốt; không chứa lô khác, tra cứu hay thông tin đăng nhập.</li>
+<li><b>⋯ Thêm → Khôi phục lô rừng…</b>: xem trước chủ, mã lô, thời điểm sao lưu, số nhân công/xe/phiếu cân/tổng tấn. Thêm vào đúng chủ đã có hoặc tạo chủ mới. Lô đã có: mặc định giữ bản hiện có; thay thì chỉ thay đúng lô đó và có bảng trước/sau. Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: máy đích giữ thiết lập của mình, màn hình nêu phần hồ sơ có thể khác. File hỏng, sai loại/phiên bản hoặc không xác định được lô đích thì báo lỗi và không ghi.</li>
 </ul>
 <h3>10. Lỗi thường gặp</h3>
 <table><tr><th>Hiện tượng</th><th>Cách xử lý</th></tr>
@@ -1962,16 +1970,16 @@ function loadDb() {
   return withDefaults({v: 2, rs: {}});
 }
 let db = loadDb();
-if (HB) { document.addEventListener('DOMContentLoaded', () => { const l = document.getElementById('restoreLbl'); if (l) l.firstChild.textContent = '⬆ Khôi phục toàn bộ dữ liệu (.json)'; document.querySelectorAll('.deskOnly').forEach(x => { x.hidden = false; }); }); }
+if (HB) { document.addEventListener('DOMContentLoaded', () => { const l = document.getElementById('restoreLbl'); if (l) l.firstChild.textContent = 'Khôi phục toàn bộ dữ liệu (.json)'; document.querySelectorAll('.deskOnly').forEach(x => { x.hidden = false; }); }); }
 let saveSt = {text: '', err: false}, saveTimer = null;
 function showSave(text, err) { saveSt = {text, err: !!err}; const el = document.getElementById('saveSt'); if (el) { el.textContent = text; el.classList.toggle('err', !!err); } }
 const hhmm = () => new Date().toLocaleTimeString('vi-VN');
 function flushSave() {
   saveTimer = null;
   HB.save(db).then(r => {
-    if (r && r.ok) { storeOk = true; showSave('✔ Đã lưu vào máy lúc ' + hhmm()); }
-    else { storeOk = false; showSave('✖ Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
-  }).catch(e => { storeOk = false; showSave('✖ Lỗi lưu: ' + e.message, true); });
+    if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); }
+    else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
+  }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });
 }
 function persist() {
   if (dataIssueUi) return;   // chưa mở được cơ sở dữ liệu: không ghi gì
@@ -1982,7 +1990,7 @@ function persist() {
     return;
   }
   try { localStorage.setItem(KEY, JSON.stringify(db)); storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
-  catch (e) { storeOk = false; showSave('✖ Trình duyệt không lưu được', true); }
+  catch (e) { storeOk = false; showSave('Trình duyệt không lưu được', true); }
 }
 if (HB) window.addEventListener('beforeunload', () => { if (saveTimer) { clearTimeout(saveTimer); flushSave(); } });
 
@@ -3309,7 +3317,7 @@ function d2Items(rec) {
   mk('08', '', FORMS_D2['08'], baseNC.concat(miss('08', D2_NEN_NEED['08'])), miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k))));
   groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = gr.cccd || gr.ten;
     const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : g.pc && g.pc.errs.length ? [{text: 'phiếu cân còn lỗi (' + g.pc.errs.length + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : [];
-    ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + gr.ten + ' (' + gr.vaiTro + ')', baseVC.concat(miss(code, D2_NEN_NEED[code])), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))))); });
+    ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + d2GroupLabel(rec, gr), baseVC.concat(miss(code, D2_NEN_NEED[code])), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))))); });
   mk('14', '', FORMS_D2['14'], baseNC.concat(miss('14', D2_NEN_NEED['14'])), miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k))));
   items.sort((a, b) => IA.ORDER.indexOf(a.code) - IA.ORDER.indexOf(b.code));
   // chữ ký bố cục từ chính file mẫu nền sẽ in (chỉ khi dựng được mẫu)
@@ -3430,7 +3438,7 @@ function exportNotes(rec, g, kind) {
     if (!ex.ntNgay) n.push('BM-14: chưa nhập ngày lập biên bản nghiệm thu (ô “Nghiệm thu, thanh lý: ngày lập”), ngày và năm trong số biên bản để trống.');
     if (g.canPC && !ex.pcNgay) n.push('BM-09, BM-10: chưa nhập ngày lập biên bản xác nhận khối lượng, ngày và năm trong số biên bản để trống.');
   }
-  if (head && !ex.ckNhan && !buyerName(rec)) n.push('BM-11 (cam kết nguồn gốc): dòng “Kính gửi” để chấm vì chưa khai Công ty mua hàng (nút 🏢 Công ty mua hàng) và chưa nhập “đơn vị nhận”.');
+  if (head && !ex.ckNhan && !buyerName(rec)) n.push('BM-11 (cam kết nguồn gốc): dòng “Kính gửi” để chấm vì chưa khai Công ty mua hàng (nút Công ty mua hàng) và chưa nhập “đơn vị nhận”.');
   if (head && !destOf(rec).text) n.push('BM-04, BM-09, BM-10: chưa chọn địa chỉ giao hàng nên dòng điểm đến để chấm (tab Vận chuyển → Chọn địa chỉ giao hàng).');
   if (head) { const cb = HAKHopDong.canBoSung(ex).filter(c => /BM-01|BM-04/.test(c.label)); if (cb.length) n.push('Số hợp đồng chưa có năm (' + cb.map(c => c.label.replace(/ \(.*\)/, '')).join('; ') + '): nhập “Ngày ký hợp đồng”.'); }
   return n;
@@ -3465,7 +3473,7 @@ function panelHome() {
   if (!n) {
     return '<div class="hero"><div><h2>Chào mừng đến với HAKQN</h2><p class="mut">Hồ sơ khai thác và vận chuyển gỗ keo theo từng rừng, chuẩn FSC.</p></div></div>' +
       '<div class="card"><h3>Bắt đầu trong 4 bước</h3><ol style="line-height:2;margin:0;padding-left:20px"><li><b>Chủ rừng</b>: tạo hồ sơ chủ rừng (hoặc lấy từ Tra cứu Google Sheets).</li><li><b>Rừng</b>: khai báo từng rừng, diện tích, tọa độ, giấy tờ pháp lý.</li><li><b>Nhân công và vận chuyển</b>: nạp file Excel nhân công, xe, phiếu cân.</li><li><b>Xuất hồ sơ</b>: kiểm tra checklist FSC rồi xuất BM-01…BM-19.</li></ol>' +
-      '<div class="row" style="margin-top:14px"><button class="btn" data-act="newRs">+ Chủ rừng mới</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">🔎 Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></div>';
+      '<div class="row" style="margin-top:14px"><button class="btn" data-act="newRs">+ Chủ rừng mới</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></div>';
   }
   const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { a.t += +p.kl || 0; a.n++; }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
   const avg = recs.length ? Math.round(tot.pct / recs.length * 10) / 10 : 0;
@@ -3476,7 +3484,7 @@ function panelHome() {
   recent.sort((a, b) => b.k - a.k).splice(8);
   const kp = (v, l, f, acc) => '<div' + (acc ? ' class="acc"' : '') + '><b>' + esc(F(v, f)) + '</b>' + esc(l) + '</div>';
   return '<div class="hero"><div><h2>Tổng quan</h2><p class="mut">' + todayStr() + ' · dữ liệu lưu ' + (HB ? 'trong SQLite trên máy' : 'trong trình duyệt') + '</p></div>' +
-    '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">📊 Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">🔎 Tra cứu</button>' : '') + '</div></div>' +
+    '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Tra cứu</button>' : '') + '</div></div>' +
     '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)', 'n3') + kp(tot.n, 'Số chuyến', 'n0') + kp(avg, 'Tiến độ hồ sơ TB', 'pct', true) + '</div>' +
     '<div class="grid2"><div class="card"><h3>Hồ sơ cần hoàn thiện</h3>' + (todo.length ? '<div class="dlist">' + todo.map(r => '<button class="drow" data-dash="' + esc(r.oid + '|' + r.fid) + '"><span><b>' + esc(r.tenRung || r.maRung || '(rừng chưa đặt tên)') + '</b> <span class="mut">· ' + esc(r.chuRung) + '</span><small>' + esc((r.thieu || []).slice(0, 2).map(x => x.label).join('; ') || '') + ((r.thieu || []).length > 2 ? ' và ' + ((r.thieu || []).length - 2) + ' mục khác' : '') + '</small></span><span class="ring ' + ringCls(r.pct) + '" style="--p:' + r.pct + '"><i>' + Math.round(r.pct) + '%</i></span></button>').join('') + '</div>' : '<p class="mut">Tất cả hồ sơ đã đạt 100%.</p>') + '</div>' +
     '<div class="card"><h3>Phiếu cân gần đây</h3>' + (recent.length ? '<div class="wrap" style="max-height:none"><table><tr><th>Ngày</th><th>Số phiếu</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th></tr>' + recent.map(p => '<tr><td>' + esc(p.ngay) + '</td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + esc(F(+p.kl || 0, 'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Tra cứu Google Sheets' : '') + '.</p>') + '</div></div>';
@@ -3494,7 +3502,7 @@ function renderSide() {
       const kids = id === cur ? forestList(r).map(f => '<button class="item sub ' + (f.id === curF ? 'on' : '') + '" data-sforest="' + f.id + '"><b>' + esc(f.info.tenRung || f.info.maRung || '(rừng chưa đặt tên)') + '</b><small>' + esc(f.info.maRung || '') + '</small></button>').join('') : '';
       return '<button class="item ' + (id === cur ? 'on' : '') + '" data-open="' + id + '"><b>' + (id === cur ? '▾ ' : '▸ ') + esc(r.info.ten || '(chưa đặt tên)') +
         '</b><small>Mã ' + esc(r.info.ma) + ' · ' + forestList(r).length + ' rừng</small></button>' + (kids ? '<div class="subs">' + kids + '</div>' : '');
-    }).join('') : (sideQ ? '<p class="mut">Không có chủ rừng khớp “' + esc(sideQ) + '”.</p>' : '<p class="mut">Chưa có chủ rừng. Bấm “+ Chủ rừng mới”.</p>')) + '<button class="btn ghost" style="width:100%;margin-top:14px" data-act="openNorm">⚙ Định mức BHLĐ</button>';
+    }).join('') : (sideQ ? '<p class="mut">Không có chủ rừng khớp “' + esc(sideQ) + '”.</p>' : '<p class="mut">Chưa có chủ rừng. Bấm “+ Chủ rừng mới”.</p>')) + '<button class="btn ghost" style="width:100%;margin-top:14px" data-act="openNorm">Định mức BHLĐ</button>';
 }
 
 function renderMsgs() {
@@ -3548,7 +3556,7 @@ function panelTienDo(job) {
   const {L, pct} = progressOf(job);
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Tiến độ hồ sơ rừng · checklist FSC</h3><b>' + pct + '%</b></div>' +
     '<div class="prog"><i style="width:' + pct + '%"></i></div><div class="chk">' +
-    L.map(x => '<div class="' + (x.ok ? '' : x.warn ? 'wn' : 'no') + '"><b>' + (x.ok ? '✓' : x.warn ? '!' : '✕') + '</b><span>' + esc(x.label) + (x.hint ? '<small>' + esc(x.hint) + '</small>' : '') + '</span></div>').join('') + '</div></div>';
+    L.map(x => '<div class="' + (x.ok ? '' : x.warn ? 'wn' : 'no') + '"><b>' + (x.ok ? '' : x.warn ? '!' : '✕') + '</b><span>' + esc(x.label) + (x.hint ? '<small>' + esc(x.hint) + '</small>' : '') + '</span></div>').join('') + '</div></div>';
 }
 
 /* ========== Kiểm tra hồ sơ trước khi xuất: dùng lại gate/checklist FSC, nhóm thành “chặn xuất” và “cần đối chiếu”, kèm số phiếu/trường và liên kết đến đúng tab ========== */
@@ -3621,7 +3629,7 @@ function panelRung(own) {
   const job = curRec();
   const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'], ['xuat', 'Xuất hồ sơ']];
   return list +
-    '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">⬇ Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
+    '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
     panelTienDo(job) + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
     (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(job) : ftab === 'dx' ? panelDX(job) + panelPhieuCan(job) : ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu</b>.' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + panelXuat(job));
 }
@@ -3639,12 +3647,12 @@ function panelForest(f) {
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến'}) +
     inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: 'VD: 45. Chỉ cần khi tính cước tấn/km'}) + inp('tuNgay', 'Thời gian khai thác — từ ngày') + inp('denNgay', 'Thời gian khai thác — đến ngày') +
-    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">🔎 Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
+    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
 
 const luongOptions = (direct, cur) => {
   const opts = direct ? [['sanluong', 'Theo tấn (đ/tấn)'], ['ngaycong', 'Theo ngày công (đ/công, một ngày công bao nhiêu tiền)']] : [['sanluong', 'Khoán theo tấn (đ/tấn)'], ['ha', 'Khoán theo ha (đ/ha)']];
-  const all = opts.some(o => o[0] === cur) ? opts : [...opts, [cur, '⚠ ' + (BASIS[cur] ? BASIS[cur].short : cur) + ' — không áp dụng cho hình thức này, hãy chọn lại']];
+  const all = opts.some(o => o[0] === cur) ? opts : [...opts, [cur, '' + (BASIS[cur] ? BASIS[cur].short : cur) + ' — không áp dụng cho hình thức này, hãy chọn lại']];
   return all.map(([v, l]) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + l + '</option>').join('');
 };
 function panelLuong(rec) {
@@ -3666,7 +3674,7 @@ function panelLuong(rec) {
 
 const vcOptions = cur => {
   const opts = [['coDinh', 'Đơn giá cố định (đồng/tấn)'], ['tanKm', 'Đơn giá tấn/km (đồng/tấn/km × cự ly)']];
-  const all = opts.some(o => o[0] === cur) ? opts : [...opts, [cur, '⚠ Theo bậc cự ly — không còn áp dụng, hãy chọn lại']];
+  const all = opts.some(o => o[0] === cur) ? opts : [...opts, [cur, 'Theo bậc cự ly — không còn áp dụng, hãy chọn lại']];
   return all.map(([v, l]) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + l + '</option>').join('');
 };
 function panelVc(rec) {
@@ -3760,8 +3768,8 @@ function panelImport(kind, rec) {
   return '<div class="card"><div class="row" style="justify-content:space-between">' +
     '<div><h3 style="margin:0">' + M.title + '</h3>' +
     '<div class="mut">Sheet ' + name + '. ' + (count ? 'Đã nạp ' + count + ' dòng' + (file ? ' từ ' + esc(file) : '') + (at ? ' lúc ' + esc(at) : '') : 'Chưa có dữ liệu.') + '</div></div>' +
-    '<div class="row"><button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">⬇ Tải file mẫu (có hướng dẫn)</button>' +
-    '<label class="btn sm" style="cursor:pointer">⬆ Chọn file Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label>' +
+    '<div class="row"><button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">Tải file mẫu (có hướng dẫn)</button>' +
+    '<label class="btn sm" style="cursor:pointer">Chọn file Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label>' +
     (count ? '<button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu</button>' : '') + '</div></div></div>';
 }
 
@@ -3851,7 +3859,7 @@ function panelMua(rec) {
   }
   const ddBox = '<label style="margin-top:8px"><span>Địa điểm vận chuyển đến (tự điền từ địa chỉ giao đã chọn)</span><input id="mhDiemDen" readonly value="' + esc(dd.diaChi) + '" placeholder="Chưa có: chọn địa chỉ giao hàng"></label>';
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Địa chỉ giao hàng và điểm đến vận chuyển</h3>' + (co ? '<button class="btn' + (m ? ' ghost' : '') + '" data-act="mhOpen">' + (m ? 'Đổi địa chỉ giao' : 'Chọn địa chỉ giao hàng') + '</button>' : '') + '</div>' +
-    '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở nút <b>🏢 Công ty mua hàng</b> trên thanh trên; mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
+    '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở nút <b>Công ty mua hàng</b> trên thanh trên; mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
     (msg ? '<div class="msg ' + msg.kind + '">' + esc(msg.text) + '</div>' : '') + cur + ddBox + drift + misBox + pick + '</div>';
 }
 function panelDX(rec) {
@@ -3896,38 +3904,42 @@ function soPreviewHtml(rec, exo, which) {
   return '<table><tr><th>Văn bản</th><th>Số đầy đủ sẽ in</th><th>Ghi chú</th></tr>' + rows.join('') + '</table>' +
     (need.length ? '<div class="msg warn" style="margin-top:6px">Chưa có năm trong số: ' + need.map(c => esc(c.label) + ' — bổ sung <b>' + esc(c.truong) + '</b> (dd/mm/yyyy, ngày có thật)').join('; ') + '. Năm được lấy từ ngày ký của chính hợp đồng, không ghi sẵn năm cố định.</div>' : '');
 }
-/* Màn hình "In hồ sơ đợt 2": một nơi cho BM-08, BM-09, BM-10, BM-14 với hai cách in (giấy trắng một lần / in nền trước, in đè sau) */
+/* Màn hình "In hồ sơ đợt 2": việc cần làm ở trên cùng; bảng chi tiết từng mẫu/nhóm ở dưới, mỗi dòng chỉ hiện nút hợp với tình trạng */
+const D2_SHORT = {trang: 'Giấy trắng', nen: 'In nền', thieu: 'Thiếu dữ liệu', de: 'In đè', cho: 'Chờ dữ liệu', kiemtra: 'Đối chiếu nền cũ', doibocuc: 'In lại nền hoặc giấy trắng'};
+const D2_TONE = {trang: 'ok', nen: 'warn', thieu: 'err', de: 'ok', cho: 'warn', kiemtra: 'warn', doibocuc: 'err'};
+const D2_TAB = {finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', xuat: 'Xuất hồ sơ'};
+/* nhãn phân biệt các nhóm vận chuyển cùng tên: biển số xe và 4 số cuối CCCD */
+function d2GroupLabel(rec, gr) { const xe = [...new Set(gr.xe.map(r => r.bienSo).filter(Boolean))]; return gr.ten + ' (' + gr.vaiTro.toLowerCase() + ')' + (xe.length ? ' · xe ' + xe.slice(0, 2).join(', ') + (xe.length > 2 ? ' +' + (xe.length - 2) : '') : '') + (gr.cccd ? ' · CCCD …' + String(gr.cccd).slice(-4) : ''); }
 function d2Panel(rec) {
-  const {list, plan, absent} = d2Eval(rec), IA = HAKInAn2, g = gate(rec);
-  const ADV = {trang: ['ok', 'Đủ dữ liệu, chưa in nền → <b>in đầy đủ trên giấy trắng</b>'], nen: ['warn', 'Chưa đủ dữ liệu để in đầy đủ; <b>có thể in mẫu nền trước</b>'], thieu: ['err', 'Chưa đủ dữ liệu để dựng cả mẫu nền'],
-    de: ['ok', 'Đã in nền, đủ dữ liệu → <b>in đè phần bổ sung</b>'], cho: ['warn', 'Đã in nền, <b>chờ bổ sung dữ liệu</b> rồi in đè'], kiemtra: ['warn', 'Tờ nền in từ trước → <b>đối chiếu</b> rồi mới in đè'],
-    doibocuc: ['err', 'Bố cục đã đổi so với tờ nền đã in → <b>in lại mẫu nền hoặc in đầy đủ giấy trắng</b>']};
+  const {list, plan, absent} = d2Eval(rec), IA = HAKInAn2;
   const ab = (act, label, o = {}) => '<button class="btn sm ' + (o.primary ? '' : 'ghost') + '" ' + (o.disabled ? 'disabled ' : '') + 'data-act="' + act + '"' + (o.mode ? ' data-mode="' + o.mode + '"' : '') + (o.keys ? ' data-keys="' + esc(o.keys.join('|')) + '"' : '') + (o.title ? ' title="' + esc(o.title) + '"' : '') + '>' + label + '</button>';
   const keysOf = a => a.map(x => x.key);
-  const rows = list.map(x => { const [cls, txt] = ADV[x.advice]; const k = [x.key];
-    const acts = [x.nenReady ? ab('d2dl', '⬇ Nền', {mode: 'nen', keys: k, title: 'Tải mẫu nền của riêng mẫu này'}) : '', x.fullReady ? ab('d2dl', '⬇ Giấy trắng', {mode: 'trang', keys: k, title: 'Tải bản đầy đủ in một lần trên giấy trắng'}) : '',
-      (x.advice === 'de' || x.advice === 'kiemtra') ? ab('d2dl', '⬇ In đè', {mode: 'de', keys: k, title: 'Tải phần bổ sung để in đè lên tờ nền đã in'}) : '',
-      (x.nenReady && (!x.printed || x.advice === 'doibocuc')) ? ab('d2confirm', '✔ Đã in nền', {keys: k, title: 'Xác nhận đã in tờ nền này (ghi nhận bố cục hiện tại)'}) : '',
-      !x.printed && x.nenReady ? ab('d2legacy', 'Đã có nền in từ trước', {keys: k, title: 'Tờ nền đã in trước khi có chức năng này: bắt buộc đối chiếu trước khi in đè'}) : '',
-      x.printed ? ab('d2undo', 'Bỏ xác nhận', {keys: k, title: 'Tờ nền hỏng/mất hoặc muốn in lại trên giấy trắng'}) : ''].join(' ');
-    const miss = (x.printed && x.advice !== 'cho' ? [] : x.fullMissing).concat(x.printed && x.advice === 'cho' ? x.fullMissing : []);
-    return '<tr data-d2="' + esc(x.key) + '" data-adv="' + x.advice + '"><td><b>' + esc(x.label) + '</b></td><td>' + (x.fullReady ? '✔ đủ để in đầy đủ' : x.nenReady ? '◐ đủ để in nền' : '✖ chưa đủ') + '</td><td>' + (x.printed ? '✔ ' + (x.legacy ? 'nền in từ trước' : 'ngày ' + esc(HAKDates && x.at ? x.at.slice(0, 10).split('-').reverse().join('/') : '')) : '—') + '</td><td class="' + cls + '">' + txt + '</td><td>' + acts + '</td></tr>' +
-      ((miss.length || x.diff.length || x.advice === 'doibocuc' || x.advice === 'kiemtra') ? '<tr><td colspan="5" class="mut" style="padding-top:0">' +
-        (x.advice === 'doibocuc' ? '<div class="msg warn" style="margin:2px 0">Bố cục mẫu đã khác lúc in nền' + (x.diff.length ? ' (' + x.diff.map(esc).join('; ') + ')' : ' (chữ cố định như tên, địa chỉ, số hợp đồng đã đổi)') + '. Tờ nền cũ không còn khớp: in lại mẫu nền (rồi xác nhận lại) hoặc in đầy đủ trên giấy trắng.</div>' : '') +
-        (x.advice === 'kiemtra' ? '<div class="msg warn" style="margin:2px 0">Chưa biết bố cục của tờ nền in từ trước. Trước khi in đè, đối chiếu tờ nền với mẫu hiện tại (khổ giấy, hướng giấy, lề, chữ cố định, số dòng); phần mềm sẽ hỏi xác nhận khi bạn bấm “In đè”.</div>' : '') +
-        (miss.length ? 'Còn thiếu để in đầy đủ: ' + miss.map(m => esc(m.text) + ' <button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(m.go)) + '">Mở ' + (({finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', xuat: 'Xuất hồ sơ'})[m.go.ftab] || 'tab') + '</button>').join('; ') : '') + '</td></tr>' : ''); }).join('');
-  const full4 = plan.allFull && !absent.length, nT = plan.trang.length, nN = plan.nen.length, nD = plan.de.length + plan.kiemtra.length;
-  const absentTxt = absent.length ? '<div class="msg warn">Chưa có mục nào cho ' + absent.map(c => esc(IA.FORMS[c].label)).join(', ') + (absent.some(c => c === '09' || c === '10') ? ' (cần khai đội xe ở tab Vận chuyển)' : '') + '.</div>' : '';
-  const anyDirty = plan.doibocuc.length;
-  return '<div class="card" id="d2Card"><h3 style="margin-top:0">In hồ sơ đợt 2 <span class="mut" style="font-weight:400">· BM-08, BM-09, BM-10, BM-14</span></h3>' +
-    '<p class="mut" style="margin:0 0 8px">Hai cách in, cùng bố cục, <b>không có chữ “BẢN NHÁP”</b> trong mẫu nền và phần in đè. <b>Cách A</b>: khi đủ dữ liệu, in đầy đủ một lần trên <b>giấy trắng</b>. <b>Cách B</b>: in <b>mẫu nền</b> trước (số biên bản, ngày lập, khối lượng, tiền để trống), bấm <b>“Xác nhận đã in mẫu nền”</b>; khi có số liệu, <b>nạp lại tờ mẫu nền đã in</b> vào máy in và in đè phần bổ sung (cùng khổ A4, tỉ lệ 100%, cùng máy in, đúng chiều giấy). Riêng BM-09, <b>Bảng kê khối lượng đính kèm</b> luôn in đầy đủ trên giấy mới. Tải file Word hoặc ZIP <b>không</b> làm đổi trạng thái; chỉ nút xác nhận mới ghi nhận đã in.</p>' +
-    absentTxt +
-    '<table class="tbl" id="d2Table" style="width:100%"><thead><tr><th>Biểu mẫu</th><th>Đủ dữ liệu để in</th><th>Đã in mẫu nền</th><th>Nên dùng</th><th>Thao tác</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-    (anyDirty ? '<div class="msg warn" id="d2Dirty">Có ' + anyDirty + ' mục đã đổi bố cục sau khi in nền: không dùng phần in đè cho các mục này.</div>' : '') +
-    '<div class="docrow"><div><b>Cách A · In đầy đủ đợt 2 – dùng giấy trắng (.zip)</b><div class="mut">' + (full4 && plan.nonePrinted ? 'Cả bốn biểu mẫu đã đủ điều kiện in chính thức và chưa in nền: in một lần trên giấy trắng.' : nT ? 'Gồm ' + nT + ' mục đã đủ điều kiện in chính thức (chưa in nền hoặc cần in lại).' : 'Chưa mục nào đủ điều kiện in chính thức (xem “Còn thiếu” ở bảng trên).') + '</div></div>' + ab('d2dl', '⬇ In đầy đủ đợt 2 – dùng giấy trắng', {primary: plan.primary === 'trang', mode: 'trang', keys: keysOf(plan.trang), disabled: !nT}) + '</div>' +
-    '<div class="docrow"><div><b>Cách B · Bước 1 – In mẫu nền đợt 2 (.zip)</b><div class="mut">' + (nN ? 'Gồm ' + nN + ' mục đủ dữ liệu để dựng nền.' : 'Chưa mục nào đủ dữ liệu để dựng nền.') + ' Sau khi in, bấm xác nhận để phần mềm nhớ (kể cả khi đóng rồi mở lại).</div></div>' + ab('d2dl', '⬇ In mẫu nền đợt 2', {primary: plan.primary === 'nen', mode: 'nen', keys: keysOf(plan.nen), disabled: !nN}) + ab('d2confirm', '✔ Xác nhận đã in mẫu nền', {keys: keysOf(plan.nen), disabled: !nN, title: 'Ghi nhận cả bộ đã in nền; có thể xác nhận từng mẫu ở bảng trên'}) + '</div>' +
-    '<div class="docrow"><div><b>Cách B · Bước 2 – In đè phần bổ sung (.zip)</b><div class="mut">' + (nD ? 'Gồm ' + nD + ' mục đã in nền, đủ dữ liệu' + (plan.kiemtra.length ? ' (có ' + plan.kiemtra.length + ' mục nền in từ trước, sẽ hỏi đối chiếu)' : '') + '. Nạp lại tờ mẫu nền đã in rồi in.' : 'Chưa mục nào vừa đã in nền vừa đủ dữ liệu.') + (plan.cho.length ? ' Đang chờ dữ liệu: ' + plan.cho.map(x => esc(x.label.replace(/^BM-(\d\d).*?·?\s*/, 'BM-$1 '))).join('; ') + '.' : '') + '</div></div>' + ab('d2dl', '⬇ In đè phần bổ sung', {primary: plan.primary === 'de', mode: 'de', keys: plan.de.concat(plan.kiemtra).map(x => x.key), disabled: !nD}) + '</div>' +
-    '</div>';
+  const same = list.length > 0 && list.every(x => x.advice === list[0].advice);
+  const rows = list.map(x => { const k = [x.key], adv = x.advice;
+    const bNen = ab('d2dl', 'Tải nền', {mode: 'nen', keys: k, title: 'Tải mẫu nền của riêng mẫu này'}), bTrang = ab('d2dl', 'Tải giấy trắng', {mode: 'trang', keys: k, title: 'Tải bản đầy đủ, in một lần trên giấy trắng'}),
+      bDe = ab('d2dl', 'Tải in đè', {mode: 'de', keys: k, title: 'Tải phần bổ sung để in đè lên tờ nền đã in'}), bConf = ab('d2confirm', 'Đã in nền', {keys: k, title: 'Xác nhận đã in tờ nền này (ghi nhận bố cục hiện tại)'}),
+      bOld = ab('d2legacy', 'Đã có nền in từ trước', {keys: k, title: 'Tờ nền in trước khi có chức năng này: bắt buộc đối chiếu trước khi in đè'}), bUndo = ab('d2undo', 'Bỏ xác nhận', {keys: k, title: 'Tờ nền hỏng, mất hoặc muốn in lại trên giấy trắng'});
+    const vis = {trang: [bTrang], nen: [bNen, bConf], thieu: [], de: [bDe], cho: [], kiemtra: [bDe], doibocuc: [bNen, bConf]}[adv];
+    const more = {trang: [x.nenReady && bNen, bConf, bOld], nen: [bOld], thieu: [], de: [x.fullReady && bTrang, bUndo], cho: [bUndo], kiemtra: [x.fullReady && bTrang, bUndo], doibocuc: [x.fullReady && bTrang, bUndo]}[adv].filter(Boolean);
+    const acts = vis.join(' ') + (more.length ? ' <details class="d2more"><summary>Khác</summary><div class="d2menu">' + more.join('') + '</div></details>' : '');
+    const miss = x.fullMissing;
+    const note = (adv === 'doibocuc' ? '<div class="msg warn">Bố cục mẫu đã khác lúc in nền' + (x.diff.length ? ' (' + x.diff.map(esc).join('; ') + ')' : ' (chữ cố định như tên, địa chỉ, số hợp đồng đã đổi)') + '. Tờ nền cũ không còn khớp: in lại mẫu nền rồi xác nhận lại, hoặc in đầy đủ trên giấy trắng.</div>' : '') +
+      (adv === 'kiemtra' ? '<div class="msg warn">Chưa biết bố cục tờ nền in từ trước. Trước khi in đè, đối chiếu tờ nền với mẫu hiện tại (khổ giấy, hướng giấy, lề, chữ cố định, số dòng); app sẽ hỏi khi bạn bấm “Tải in đè”.</div>' : '') +
+      (miss.length ? '<div class="mut">Còn thiếu để in đầy đủ: ' + miss.map(m => esc(m.text) + ' <button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(m.go)) + '">Mở ' + (D2_TAB[m.go.ftab] || 'tab') + '</button>').join('; ') + '</div>' : '');
+    return '<tr data-d2="' + esc(x.key) + '" data-adv="' + adv + '"><td><b>' + esc(x.label) + '</b>' + note + '</td><td>' + (x.fullReady ? 'Đủ' : x.nenReady ? 'Đủ để in nền' : 'Chưa đủ') + '</td><td>' + (x.printed ? (x.legacy ? 'Nền in từ trước' : 'Đã in ' + esc((x.at || '').slice(0, 10).split('-').reverse().join('/'))) : '—') + '</td>' + (same ? '' : '<td class="' + D2_TONE[adv] + '">' + D2_SHORT[adv] + '</td>') + '<td class="d2act">' + acts + '</td></tr>'; }).join('');
+  const nT = plan.trang.length, nN = plan.nen.length, nD = plan.de.length + plan.kiemtra.length, full4 = plan.allFull && !absent.length;
+  const absentTxt = absent.length ? '<div class="msg warn">Chưa có mục nào cho ' + absent.map(c => esc(IA.FORMS[c].label)).join(', ') + (absent.some(c => c === '09' || c === '10') ? ' (khai đội xe ở tab Vận chuyển)' : '') + '.</div>' : '';
+  const summary = same ? '<div class="msg ' + D2_TONE[list[0].advice] + '" id="d2Sum">Cả ' + list.length + ' mục: ' + ({trang: 'đủ dữ liệu, chưa in nền. Nên in đầy đủ trên giấy trắng', nen: 'chưa đủ để in đầy đủ, đủ để in mẫu nền', thieu: 'chưa đủ dữ liệu để dựng cả mẫu nền', de: 'đã in nền, đủ dữ liệu. In đè phần bổ sung', cho: 'đã in nền, chờ bổ sung dữ liệu', kiemtra: 'nền in từ trước, cần đối chiếu', doibocuc: 'bố cục đã đổi sau khi in nền'}[list[0].advice]) + '.</div>' : '';
+  const action = (title, sub, btns) => '<div class="docrow"><div><b>' + title + '</b><div class="mut">' + sub + '</div></div><div class="d2btns">' + btns + '</div></div>';
+  return '<div class="card" id="d2Card"><h3 style="margin-top:0">In hồ sơ đợt 2 <span class="mut" style="font-weight:400">BM-08, BM-09, BM-10, BM-14</span></h3>' +
+    '<p class="mut" style="margin:0 0 8px">Khi đủ dữ liệu, in đầy đủ một lần trên giấy trắng (cách A). Chưa đủ thì in mẫu nền trước, xác nhận đã in, rồi in đè phần bổ sung lên đúng tờ đó (cách B). Mẫu nền và phần in đè không có chữ “BẢN NHÁP”.</p>' +
+    '<details class="d2help"><summary>Cách in chi tiết</summary><p class="mut">Cách B: in mẫu nền (số biên bản, ngày lập, khối lượng, tiền để trống), bấm “Xác nhận đã in mẫu nền”. Khi có số liệu, nạp lại tờ mẫu nền đã in vào máy in và in đè phần bổ sung, cùng khổ A4, tỉ lệ 100%, cùng máy in, đúng chiều giấy. Riêng BM-09, Bảng kê khối lượng đính kèm luôn in đầy đủ trên giấy mới. Tải file Word hoặc ZIP không làm đổi trạng thái; chỉ nút xác nhận mới ghi nhận đã in.</p></details>' +
+    absentTxt + summary +
+    action('Cách A: in đầy đủ đợt 2 trên giấy trắng', full4 && plan.nonePrinted ? 'Cả bốn biểu mẫu đủ điều kiện in chính thức, chưa in nền.' : nT ? nT + ' mục đủ điều kiện in chính thức (chưa in nền hoặc cần in lại).' : 'Chưa mục nào đủ điều kiện in chính thức.', ab('d2dl', 'In đầy đủ đợt 2 – dùng giấy trắng', {primary: plan.primary === 'trang', mode: 'trang', keys: keysOf(plan.trang), disabled: !nT})) +
+    action('Cách B, bước 1: in mẫu nền đợt 2', (nN ? nN + ' mục đủ dữ liệu để dựng nền.' : 'Chưa mục nào đủ dữ liệu để dựng nền.') + ' Sau khi in, bấm xác nhận để app nhớ.', ab('d2dl', 'In mẫu nền đợt 2', {primary: plan.primary === 'nen', mode: 'nen', keys: keysOf(plan.nen), disabled: !nN}) + ab('d2confirm', 'Xác nhận đã in mẫu nền', {keys: keysOf(plan.nen), disabled: !nN, title: 'Ghi nhận cả bộ đã in nền; có thể xác nhận từng mẫu ở bảng dưới'})) +
+    action('Cách B, bước 2: in đè phần bổ sung', (nD ? nD + ' mục đã in nền, đủ dữ liệu' + (plan.kiemtra.length ? ' (' + plan.kiemtra.length + ' mục nền in từ trước, sẽ hỏi đối chiếu)' : '') + '. Nạp lại tờ nền đã in rồi in.' : 'Chưa mục nào vừa đã in nền vừa đủ dữ liệu.') + (plan.cho.length ? ' Đang chờ dữ liệu: ' + plan.cho.length + ' mục.' : ''), ab('d2dl', 'In đè phần bổ sung', {primary: plan.primary === 'de', mode: 'de', keys: plan.de.concat(plan.kiemtra).map(x => x.key), disabled: !nD})) +
+    (plan.doibocuc.length ? '<div class="msg warn" id="d2Dirty">' + plan.doibocuc.length + ' mục đã đổi bố cục sau khi in nền: không dùng phần in đè cho các mục này.</div>' : '') +
+    '<table class="tbl" id="d2Table" style="width:100%;margin-top:8px"><thead><tr><th>Biểu mẫu</th><th>Dữ liệu</th><th>Mẫu nền</th>' + (same ? '' : '<th>Nên dùng</th>') + '<th>Thao tác</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 function panelXuat(rec) {
   const g = gate(rec);
@@ -3956,12 +3968,12 @@ function panelXuat(rec) {
     '<div class="card"><h3 style="margin-top:0">Số hợp đồng đầy đủ sẽ in (xem trước)</h3><div id="soPreviewHd">' + soPreviewHtml(rec, null, 'hd') + '</div></div>' +
     '<div class="card"><h3 style="margin-top:0">Hợp đồng khai thác và nghiệm thu</h3>' +
     (g.direct ? row('Hợp đồng khai thác (giao khoán)', 'Không dùng: chủ rừng ký hợp đồng lao động trực tiếp với từng người', '')
-      : row('Hợp đồng khai thác gỗ keo (giao khoán tổ trưởng)', 'Bên A: chủ rừng · Bên B: tổ trưởng', btn('⬇ Tải .docx', 'gk', null, g.canGK))) +
-    row('Biên bản nghiệm thu, thanh lý khai thác', g.direct ? 'Chủ rừng và đại diện tổ khai thác · theo hợp đồng lao động' : 'Chủ rừng và tổ trưởng · sản lượng chia đều × đơn giá khoán theo vai trò', btn('⬇ Tải .docx', 'nttl', null, g.canBHLD)) + '</div>' +
+      : row('Hợp đồng khai thác gỗ keo (giao khoán tổ trưởng)', 'Bên A: chủ rừng · Bên B: tổ trưởng', btn('Tải .docx', 'gk', null, g.canGK))) +
+    row('Biên bản nghiệm thu, thanh lý khai thác', g.direct ? 'Chủ rừng và đại diện tổ khai thác · theo hợp đồng lao động' : 'Chủ rừng và tổ trưởng · sản lượng chia đều × đơn giá khoán theo vai trò', btn('Tải .docx', 'nttl', null, g.canBHLD)) + '</div>' +
     (g.direct
-      ? '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng lao động (chủ rừng ký trực tiếp với từng người)</h3>' + btn('⬇ Tải tất cả (.zip)', 'hdld', null, g.canHDLD) + '</div>' +
-        (hdld.length ? hdld.map((r, i) => row(esc(personName(r.danhXung, r.ten)), esc(r.chucDanh) + ' · ' + fmt(rateOf(rec.info, r)) + ' ' + basisOf(rec.info).short, btn('⬇ .docx', 'hdld', i, g.canHDLD))).join('') : '<p class="mut">Chưa có nhân công.</p>') + '</div>'
-      : '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Giấy ủy quyền (công nhân ủy quyền cho Tổ trưởng)</h3>' + btn('⬇ Tải .docx', 'uq', null, g.canUQ) + '</div>' +
+      ? '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng lao động (chủ rừng ký trực tiếp với từng người)</h3>' + btn('Tải tất cả (.zip)', 'hdld', null, g.canHDLD) + '</div>' +
+        (hdld.length ? hdld.map((r, i) => row(esc(personName(r.danhXung, r.ten)), esc(r.chucDanh) + ' · ' + fmt(rateOf(rec.info, r)) + ' ' + basisOf(rec.info).short, btn('.docx', 'hdld', i, g.canHDLD))).join('') : '<p class="mut">Chưa có nhân công.</p>') + '</div>'
+      : '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Giấy ủy quyền (công nhân ủy quyền cho Tổ trưởng)</h3>' + btn('Tải .docx', 'uq', null, g.canUQ) + '</div>' +
         '<p class="mut">Một giấy cho cả tổ: ' + ucList(rec).length + ' công nhân cùng ký (danh sách kèm họ tên, ngày sinh, giới tính, nơi cư trú, chữ ký). Người ủy quyền phải từ đủ 18 tuổi' + (minorsOf(rec).length ? ' — <b style="color:var(--err)">hiện có ' + minorsOf(rec).length + ' người dưới 18 tuổi, chưa xuất được</b>' : '') + '. Mẫu do phần mềm soạn theo Bộ luật Dân sự 2015 và Điều 18 Bộ luật Lao động 2019, cần đối chiếu pháp lý.</p></div>');
   S.ld = params('Thông số bảo hộ, đào tạo, kiểm tra thiết bị', [
       ['capNgay', 'BHLĐ: ngày cấp phát', 'dd/mm/yyyy'], ['capHan', 'BHLĐ: thời hạn sử dụng', 'VD: 06 tháng'], ['capNguoi', 'BHLĐ: người cấp phát', 'mặc định: chủ rừng'],
@@ -3969,40 +3981,40 @@ function panelXuat(rec) {
       ['dtNguoi', 'ATLĐ: người đào tạo', 'mặc định: chủ rừng'], ['dtNoiDung', 'ATLĐ: nội dung (cách nhau dấu ;)', 'trống = nội dung mặc định'],
       ['tbNgay', 'Kiểm tra thiết bị: ngày kiểm tra', 'dd/mm/yyyy'], ['tbNguoi', 'Kiểm tra thiết bị: người kiểm tra', 'trống = ký tay'], ['tbSoBinh', 'Kiểm tra thiết bị: số bình chữa cháy', 'mặc định: 2']]) +
     '<div class="card"><h3 style="margin-top:0">Bảo hộ, đào tạo, chấm công, tiền công, an toàn</h3>' +
-    row('Danh sách cấp phát BHLĐ', rec.nc.length ? rec.nc.length + ' người' : 'Cần nạp nhân công', btn('⬇ Tải .docx', 'bhld', null, g.canPhat)) +
-    row('Biên bản xác nhận đào tạo ATLĐ', 'Người đào tạo: chủ rừng (theo mẫu)', btn('⬇ Tải .docx', 'xn', null, g.canBHLD)) +
-    row('Danh sách đội khai thác', 'Lấy từ file nhân công', btn('⬇ Tải .docx', 'dsd', null, g.canBHLD)) +
-    row('Bảng chấm công', 'Tháng <input data-exp="thang" value="' + esc(ex.thang || '') + '" style="width:70px" placeholder="MM hoặc MM/yyyy"> · nhập tháng (hoặc MM/yyyy để có năm) · bảng trống để chấm tay', btn('⬇ Tải .docx', 'cc', null, g.canBHLD)) +
+    row('Danh sách cấp phát BHLĐ', rec.nc.length ? rec.nc.length + ' người' : 'Cần nạp nhân công', btn('Tải .docx', 'bhld', null, g.canPhat)) +
+    row('Biên bản xác nhận đào tạo ATLĐ', 'Người đào tạo: chủ rừng (theo mẫu)', btn('Tải .docx', 'xn', null, g.canBHLD)) +
+    row('Danh sách đội khai thác', 'Lấy từ file nhân công', btn('Tải .docx', 'dsd', null, g.canBHLD)) +
+    row('Bảng chấm công', 'Tháng <input data-exp="thang" value="' + esc(ex.thang || '') + '" style="width:70px" placeholder="MM hoặc MM/yyyy"> · nhập tháng (hoặc MM/yyyy để có năm) · bảng trống để chấm tay', btn('Tải .docx', 'cc', null, g.canBHLD)) +
     '<div class="docrow"><div><b>Bảng thanh toán tiền công</b><div class="mut">Từ <input data-exp="tuNgayTT" value="' + esc(ex.tuNgayTT || '') + '" placeholder="' + esc(rec.info.tuNgay || 'dd/mm/yyyy') + '" style="width:110px"> đến <input data-exp="denNgayTT" value="' + esc(ex.denNgayTT || '') + '" placeholder="' + esc(rec.info.denNgay || 'dd/mm/yyyy') + '" style="width:110px"> · để trống thì lấy thời gian khai thác của rừng</div>' +
       '<div class="' + (pay.issues.length ? 'msg warn' : 'mut') + '" style="margin-top:4px">' + (pay.issues.length ? 'Chưa tính được tiền: ' + esc(pay.issues.join('; ')) + '. Cột tiền sẽ để trống.'
-        : pay.ngc ? 'Tự tính: ' + pay.cong + ' công (từ ' + esc(pay.tu) + ' đến ' + esc(pay.den) + ', trừ Chủ nhật)' : 'Tự tính: ' + fmtTan(pay.vol.v) + (pay.basis === 'ha' ? ' ha (' : ' tấn (') + pay.vol.src + ') chia đều ' + (rec.nc.length || 0) + ' người') + '</div></div>' + btn('⬇ Tải .docx', 'tc', null, g.canBHLD) + '</div>' +
-    row('Sổ theo dõi tai nạn lao động, sự cố', 'Sổ trống để ghi tại hiện trường, có xác nhận cuối đợt (in ngang)', btn('⬇ Tải .docx', 'stai', null, g.canBHLD)) +
-    row('Biên bản kiểm tra, bảo dưỡng thiết bị', 'Cưa xăng, phương tiện (lấy từ tab Vận chuyển), bình chữa cháy (in ngang)', btn('⬇ Tải .docx', 'tbi', null, g.canBHLD)) + '</div>';
+        : pay.ngc ? 'Tự tính: ' + pay.cong + ' công (từ ' + esc(pay.tu) + ' đến ' + esc(pay.den) + ', trừ Chủ nhật)' : 'Tự tính: ' + fmtTan(pay.vol.v) + (pay.basis === 'ha' ? ' ha (' : ' tấn (') + pay.vol.src + ') chia đều ' + (rec.nc.length || 0) + ' người') + '</div></div>' + btn('Tải .docx', 'tc', null, g.canBHLD) + '</div>' +
+    row('Sổ theo dõi tai nạn lao động, sự cố', 'Sổ trống để ghi tại hiện trường, có xác nhận cuối đợt (in ngang)', btn('Tải .docx', 'stai', null, g.canBHLD)) +
+    row('Biên bản kiểm tra, bảo dưỡng thiết bị', 'Cưa xăng, phương tiện (lấy từ tab Vận chuyển), bình chữa cháy (in ngang)', btn('Tải .docx', 'tbi', null, g.canBHLD)) + '</div>';
   S.vc = params('Thông số hợp đồng vận chuyển, khối lượng và thanh toán', [
       ['soVC', 'Số HĐ vận chuyển (nhập phần số hoặc số đầy đủ)', 'năm lấy từ Ngày ký hợp đồng'], ['vcChiPhi', 'HĐVC: chi phí khác (cầu đường, bốc xếp, thuế)', 'trống = dòng chấm'],
       ['pcSo', 'Xác nhận KL vận chuyển: số biên bản (phần số hoặc số đầy đủ)', 'năm lấy từ ngày lập biên bản'], ['pcNgay', 'Xác nhận KL, thanh toán: ngày lập', 'dd/mm/yyyy'],
       ['pcNguoiLap', 'Thanh toán vận chuyển: người lập bảng', 'trống = để ký tay'], ['pcNguong', 'Cảnh báo lệch khối lượng (%)', 'VD: 5 · trống = không kiểm tra']]) +
     '<div class="card"><h3 style="margin-top:0">Số hợp đồng đầy đủ sẽ in (xem trước)</h3><div id="soPreviewVc">' + soPreviewHtml(rec, null, 'vc') + '</div></div>' +
     (g.dx.warns.length ? '<div class="msg warn">Vận chuyển có ' + g.dx.warns.length + ' dòng cần lưu ý (giấy tờ thiếu hoặc sắp hết hạn). Xem tab Vận chuyển, không chặn xuất hồ sơ.</div>' : '') +
-    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng vận chuyển (theo người ký)</h3>' + btn('⬇ Tải tất cả (.zip)', 'hdvc', null, g.canHDVC) + '</div>' +
-    (groups.length ? groups.map((x, i) => row(esc(x.ten), x.vaiTro + ' ký · ' + x.xe.length + ' xe · ' + fmt(x.donGia) + ' đ/tấn', btn('⬇ .docx', 'hdvc', i, g.canHDVC))).join('') : '<p class="mut">Chưa có vận chuyển.</p>') + '</div>' +
-    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Xác nhận khối lượng và thanh toán tiền vận chuyển</h3>' + (gpc.length ? btn('⬇ Biên bản (.zip)', 'xnvc', null, g.canPC) + btn('⬇ Bảng thanh toán (.zip)', 'ttvc', null, g.canPC) : '') + '</div>' +
+    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng vận chuyển (theo người ký)</h3>' + btn('Tải tất cả (.zip)', 'hdvc', null, g.canHDVC) + '</div>' +
+    (groups.length ? groups.map((x, i) => row(esc(x.ten), x.vaiTro + ' ký · ' + x.xe.length + ' xe · ' + fmt(x.donGia) + ' đ/tấn', btn('.docx', 'hdvc', i, g.canHDVC))).join('') : '<p class="mut">Chưa có vận chuyển.</p>') + '</div>' +
+    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Xác nhận khối lượng và thanh toán tiền vận chuyển</h3>' + (gpc.length ? btn('Biên bản (.zip)', 'xnvc', null, g.canPC) + btn('Bảng thanh toán (.zip)', 'ttvc', null, g.canPC) : '') + '</div>' +
     (!(rec.pc || []).length ? '<p class="mut">Chưa có phiếu cân. Nạp file phiếu cân ở tab Vận chuyển (mỗi chuyến một dòng).</p>'
       : g.pc.errs.length ? '<div class="msg err">Phiếu cân còn ' + g.pc.errs.length + ' lỗi, xem tab Vận chuyển.</div>' : '') +
     (g.pc.warns.length ? '<div class="msg warn">' + esc(g.pc.warns.join(' · ')) + '</div>' : '') +
-    gpc.map((x, i) => { const py = payVC(rec, x); return row(esc(x.ten), py.n + ' chuyến · ' + fmtT(py.kg) + ' tấn · ' + fmt(py.tien) + ' đồng', '<div class="row">' + btn('⬇ Biên bản', 'xnvc', i, g.canPC) + btn('⬇ Thanh toán', 'ttvc', i, g.canPC) + '</div>'); }).join('') + '</div>';
+    gpc.map((x, i) => { const py = payVC(rec, x); return row(esc(x.ten), py.n + ' chuyến · ' + fmtT(py.kg) + ' tấn · ' + fmt(py.tien) + ' đồng', '<div class="row">' + btn('Biên bản', 'xnvc', i, g.canPC) + btn('Thanh toán', 'ttvc', i, g.canPC) + '</div>'); }).join('') + '</div>';
   S.fsc = params('Thông số hồ sơ FSC và giám sát', [
       ['tdNgay', 'Thẩm định: ngày thẩm định', 'dd/mm/yyyy'], ['tdNguoi', 'Thẩm định: người thẩm định', 'trống = ký tay'],
       ['ckNhan', 'Cam kết: đơn vị nhận (Kính gửi)', buyerName(rec) ? 'mặc định: ' + buyerName(rec) + ' (Công ty mua hàng)' : 'VD: Công ty TNHH ... (hoặc khai Công ty mua hàng để tự điền)'], ['ckNgay', 'Cam kết: ngày lập', 'dd/mm/yyyy'],
       ['ktNgayTruoc', 'Kiểm tra hiện trường: ngày trước KT', 'dd/mm/yyyy'], ['ktNgaySau', 'Kiểm tra hiện trường: ngày sau KT', 'dd/mm/yyyy'], ['ktNguoi', 'Kiểm tra hiện trường: người kiểm tra', 'trống = ký tay'],
       ['fscNgay', 'Phổ biến FSC: thời gian', 'dd/mm/yyyy'], ['fscDiaDiem', 'Phổ biến FSC: địa điểm', 'VD: tại rừng khai thác'], ['fscNguoi', 'Phổ biến FSC: người phổ biến', 'trống = ký tay'], ['fscDauMoi', 'Phổ biến FSC: đầu mối nhận khiếu nại', 'tên, số điện thoại']]) +
     '<div class="card"><h3 style="margin-top:0">Hồ sơ FSC tại rừng</h3>' +
-    row('Phiếu thẩm định chủ rừng và rừng', 'Checklist trước khai thác (QT-FSC-01 bước 1) · tự điền giấy tờ, tọa độ, khối lượng', btn('⬇ Tải .docx', 'tdcr', null, !g.info.length)) +
-    row('Cam kết nguồn gốc gỗ rừng trồng', 'Chủ rừng cam kết · lấy giấy tờ, tọa độ, thời gian khai thác của rừng', btn('⬇ Tải .docx', 'ckng', null, !g.info.length)) +
-    row('Cam kết sử dụng lao động', 'Không lao động trẻ em, cưỡng bức, phân biệt đối xử · kèm danh sách ký', btn('⬇ Tải .docx', 'cklc', null, g.canBHLD)) +
-    row('Biên bản phổ biến chính sách FSC', 'Chủ rừng, tổ khai thác, bên vận chuyển cùng ký', btn('⬇ Tải .docx', 'fsc', null, g.canBHLD)) +
-    row('Biên bản kiểm tra hiện trường khai thác', 'Checklist trước và sau khai thác (in ngang)', btn('⬇ Tải .docx', 'kthn', null, g.canBHLD)) +
-    row('Nhật ký khai thác hằng ngày', 'Tự lập các ngày từ thời gian khai thác (bỏ Chủ nhật) · in ngang', btn('⬇ Tải .docx', 'nkkt', null, g.canBHLD)) + '</div>';
+    row('Phiếu thẩm định chủ rừng và rừng', 'Checklist trước khai thác (QT-FSC-01 bước 1) · tự điền giấy tờ, tọa độ, khối lượng', btn('Tải .docx', 'tdcr', null, !g.info.length)) +
+    row('Cam kết nguồn gốc gỗ rừng trồng', 'Chủ rừng cam kết · lấy giấy tờ, tọa độ, thời gian khai thác của rừng', btn('Tải .docx', 'ckng', null, !g.info.length)) +
+    row('Cam kết sử dụng lao động', 'Không lao động trẻ em, cưỡng bức, phân biệt đối xử · kèm danh sách ký', btn('Tải .docx', 'cklc', null, g.canBHLD)) +
+    row('Biên bản phổ biến chính sách FSC', 'Chủ rừng, tổ khai thác, bên vận chuyển cùng ký', btn('Tải .docx', 'fsc', null, g.canBHLD)) +
+    row('Biên bản kiểm tra hiện trường khai thác', 'Checklist trước và sau khai thác (in ngang)', btn('Tải .docx', 'kthn', null, g.canBHLD)) +
+    row('Nhật ký khai thác hằng ngày', 'Tự lập các ngày từ thời gian khai thác (bỏ Chủ nhật) · in ngang', btn('Tải .docx', 'nkkt', null, g.canBHLD)) + '</div>';
   const TABS = [['hd', '1. Hợp đồng'], ['ld', '2. Lao động, an toàn'], ['vc', '3. Vận chuyển'], ['fsc', '4. FSC, giám sát'], ['all', 'Tất cả']];
   const cur = TABS.some(t => t[0] === xtab) ? xtab : 'hd';
   const INTRO = {hd: 'Nhập số, ngày, thông số hợp đồng và nghiệm thu, rồi tải từng mẫu.', ld: 'Bảo hộ lao động, đào tạo ATLĐ, chấm công, tiền công, sổ tai nạn và kiểm tra thiết bị.',
@@ -4014,10 +4026,10 @@ function panelXuat(rec) {
     '<p class="mut" style="margin:0 0 10px">' + INTRO[cur] + '</p>' +
     (cur === 'all' ? S.hd + S.ld + S.vc + S.fsc : S[cur]) +
     '<div class="card"><h3 style="margin-top:0">In làm hai đợt khi chưa xong khai thác</h3><p class="mut" style="margin:0 0 8px">Chưa có phiếu cân hoặc chưa nghiệm thu thì in <b>đợt 1</b> trước; khi rừng xong, cập nhật phiếu cân và khối lượng thực tế rồi in <b>đợt 2</b> để bổ sung đúng các biểu mẫu còn thiếu (mỗi biểu mẫu là một file Word riêng nên thay hoặc chèn vào bộ hồ sơ đã in rất dễ).</p>' +
-      '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('⬇ Tải đợt 1', 'dau', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>' +
-      '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') + '</div></div>' + btn('⬇ Tải đợt 2', 'cuoi', null, g.canBHLD) + '</div></div>' +
+      '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('Tải đợt 1', 'dau', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>' +
+      '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') + '</div></div>' + btn('Tải đợt 2', 'cuoi', null, g.canBHLD) + '</div></div>' +
     d2Panel(rec) +
-    '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung. <b>Hồ sơ đã đủ dữ liệu thì in một lần bằng nút này</b>; mục nào chưa đủ (phiếu cân, khối lượng thực tế, ngày lập, địa chỉ giao…) sẽ được nêu ngay sau khi tải.</div></div>' + btn('⬇ Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>';
+    '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung. <b>Hồ sơ đã đủ dữ liệu thì in một lần bằng nút này</b>; mục nào chưa đủ (phiếu cân, khối lượng thực tế, ngày lập, địa chỉ giao…) sẽ được nêu ngay sau khi tải.</div></div>' + btn('Tải toàn bộ hồ sơ', 'all', null, (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length) + '</div>';
 }
 
 function renderCtx() {
@@ -4026,7 +4038,7 @@ function renderCtx() {
   const nc = document.getElementById('navCty'); if (nc) nc.classList.toggle('on', view === 'cty');
   $('#ctxOwner').innerHTML = 'Chủ rừng: <b>' + esc(o ? (o.info.ten || '(chưa đặt tên)') : 'chưa mở') + '</b>';
   $('#ctxForest').innerHTML = 'Rừng: <b>' + esc(f ? ((f.info.maRung || '(chưa có mã)') + (f.info.tenRung ? ' · ' + f.info.tenRung : '')) : 'chưa mở') + '</b>';
-  if (!saveSt.text) showSave(HB ? (storeOk ? 'Dữ liệu lưu trong SQLite trên máy' : '✖ Chưa đọc được cơ sở dữ liệu') : 'Dữ liệu lưu trong trình duyệt', !storeOk);
+  if (!saveSt.text) showSave(HB ? (storeOk ? 'Dữ liệu lưu trong SQLite trên máy' : 'Chưa đọc được cơ sở dữ liệu') : 'Dữ liệu lưu trong trình duyệt', !storeOk);
   else showSave(saveSt.text, saveSt.err);
 }
 function render() {
@@ -4357,7 +4369,7 @@ const issueUi = {msg: null, busy: false};
 function renderIssue() {
   const it = dataIssueUi || {}, why = {DIR_MISSING: 'Thư mục dữ liệu không còn', FILE_MISSING: 'Không thấy file cơ sở dữ liệu', NO_PERMISSION: 'Không có quyền truy cập', OPEN_FAILED: 'Không mở được cơ sở dữ liệu', IO: 'Lỗi đọc/ghi ổ đĩa'}[it.code] || 'Không truy cập được cơ sở dữ liệu';
   document.getElementById('side') && (document.getElementById('side').style.display = 'none');
-  $('#main').innerHTML = '<div class="card" id="dataIssue"><h2 style="margin-top:0">⚠ ' + esc(why) + '</h2>' +
+  $('#main').innerHTML = '<div class="card" id="dataIssue"><h2 style="margin-top:0">' + esc(why) + '</h2>' +
     '<p>Phần mềm <b>chưa mở</b> dữ liệu của bạn để không ghi nhầm vào một bản mặc định cũ hoặc trống.</p>' +
     '<div class="msg err" style="word-break:break-all"><b>Đường dẫn:</b> <code id="issuePath">' + esc(it.path || '') + '</code><br><b>Nguyên nhân:</b> <span id="issueReason">' + esc(it.reason || '') + '</span></div>' +
     '<p class="mut">Nếu dữ liệu nằm trên ổ ngoài hoặc ổ mạng, hãy cắm lại ổ rồi bấm <b>Thử lại</b>. Cấu hình đường dẫn cũ được giữ nguyên cho đến khi bạn chọn đổi.</p>' +
@@ -4383,7 +4395,7 @@ async function issueAct(kind) {
 const setg = {s: null, msg: null};
 function panelSettings() {
   if (!HB) return '<div class="card"><h2>Cài đặt hệ thống</h2><div class="msg warn">Cài đặt thư mục dữ liệu và sao lưu chỉ có ở bản cài trên Windows.</div></div>';
-  return '<div class="card"><h2 style="margin-top:0">⚙ Cài đặt hệ thống</h2>' + (setg.msg ? '<div class="msg ' + setg.msg[1] + '" id="setMsg">' + esc(setg.msg[0]) + '</div>' : '') +
+  return '<div class="card"><h2 style="margin-top:0">Cài đặt hệ thống</h2>' + (setg.msg ? '<div class="msg ' + setg.msg[1] + '" id="setMsg">' + esc(setg.msg[0]) + '</div>' : '') +
     '<div id="setBox" class="mut">Đang đọc cài đặt…</div></div>';
 }
 function settingsPaint() {
@@ -4574,7 +4586,7 @@ function rpRender() {
     '<div class="rpl">' + HAKReports.REPORTS.map(r => '<button class="rpc ' + (rp.id === r.id ? 'on' : '') + '" data-rpsel="' + r.id + '"><b>' + esc(r.name) + '</b><small>' + esc(r.desc) + '</small></button>').join('') + '</div>' +
     '<div class="row" style="align-items:flex-end;flex-wrap:wrap"><label>Từ ngày<br><input type="date" id="rpFrom" value="' + esc(viToIso(rp.from)) + '"></label><label>Đến ngày<br><input type="date" id="rpTo" value="' + esc(viToIso(rp.to)) + '"></label>' +
     '<label>Chủ rừng<br><select id="rpOwner"><option value="">Tất cả chủ rừng</option>' + owners.map(o => '<option value="' + esc(o.id) + '"' + (rp.owner === o.id ? ' selected' : '') + '>' + esc(o.info.ten || '(chưa đặt tên)') + '</option>').join('') + '</select></label>' +
-    (rp.id === 'chacon' ? '<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="rpDetail"' + (rp.detail ? ' checked' : '') + '> Kèm từng phiếu cân</label>' : '') + '<button class="btn" data-act="rpWord">⬇ Xuất Word (.docx)</button><button class="btn ghost" data-act="rpExcel">⬇ Xuất Excel (.xlsx)</button></div>' +
+    (rp.id === 'chacon' ? '<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="rpDetail"' + (rp.detail ? ' checked' : '') + '> Kèm từng phiếu cân</label>' : '') + '<button class="btn" data-act="rpWord">Xuất Word (.docx)</button><button class="btn ghost" data-act="rpExcel">Xuất Excel (.xlsx)</button></div>' +
     '<p class="mut">Khoảng ngày áp dụng cho ngày cân của phiếu cân. Báo cáo tiến độ luôn tính tại thời điểm hiện tại.</p>' +
     (rp.msg ? '<div class="msg ' + rp.msg.kind + '">' + esc(rp.msg.text) + '</div>' : '') +
     '<h3 style="margin:10px 0 0">' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + ' · ' + rpScope()) + '<br>' + esc(m.unit || '') + '</p>' +
@@ -4642,7 +4654,7 @@ function lkGoogleHtml() {
   const g = lk.g; if (!g) return '';
   return '<div class="row" style="margin-top:8px"><span class="mut">Bảng tính giới hạn quyền xem:</span> ' + (g.signedIn
     ? '<span class="pill ok">Đã đăng nhập Google' + (g.email ? ': ' + esc(g.email) : '') + (g.persistent ? '' : ' (chỉ trong phiên này)') + '</span><button class="btn ghost sm" data-act="lkGLogout">Đăng xuất</button>'
-    : (g.configured ? '<button class="btn ghost sm" data-act="lkGLogin"' + (lk.busy ? ' disabled' : '') + '>🔑 Đăng nhập Google (chỉ đọc)</button>' : '<span class="pill">Chưa cấu hình OAuth Google — xem docs/GOOGLE_OAUTH.md</span>')) + '</div>';
+    : (g.configured ? '<button class="btn ghost sm" data-act="lkGLogin"' + (lk.busy ? ' disabled' : '') + '>Đăng nhập Google (chỉ đọc)</button>' : '<span class="pill">Chưa cấu hình OAuth Google — xem docs/GOOGLE_OAUTH.md</span>')) + '</div>';
 }
 /* Tab khác tên chuẩn hoặc có nhiều tab phù hợp: người dùng xác nhận/chọn từng vai trò; app kiểm tra lại cấu trúc trước khi ghi nhận ánh xạ */
 const LK_ROLE_DESC = {HoSoKeo_QC: 'phiếu cân và khối lượng', HoSoRung_QC: 'chủ rừng, thông tin rừng, hợp đồng', ToaDoRung_QC: 'mã rừng, tọa độ, diện tích, giấy tờ nguồn gốc'};
@@ -4664,7 +4676,7 @@ function lkStatusHtml() {
     '<div><b>Bản tra cứu đang dùng:</b> ' + (a ? (a.source === 'google' ? 'Google Sheets' : 'File Excel “' + esc(a.detail) + '”') + ' · cập nhật thành công lúc <b>' + fmtDT(a.loadedAt) + '</b> · ' + Object.entries(a.counts).map(([k, v]) => esc(TL(k)) + ': ' + fmt(v)).join(' · ') : '<span class="pill err">chưa có — bấm Đồng bộ ngay hoặc Nhập bản Excel</span>') +
     '<br><span class="mut">Kết nối: ' + (online ? 'có mạng' : 'đang ngoại tuyến (vẫn tra cứu được bản đã lưu)') +
     (l ? ' · Lần cập nhật gần nhất (' + fmtDT(l.at) + '): ' + (l.ok ? 'thành công' + ((l.notes || []).length ? ' <span style="color:var(--warn,#a16207)">· ' + l.notes.map(esc).join('; ') + '</span>' : '') : '<span style="color:var(--err)">lỗi — ' + esc(l.error) + '</span>') : '') + '</span></div>' +
-    '<div class="row"><button class="btn sm" data-act="lkSync"' + (lk.busy ? ' disabled' : '') + '>⟳ Đồng bộ ngay</button><button class="btn ghost sm" data-act="lkExcel"' + (lk.busy ? ' disabled' : '') + '>⬆ Nhập bản Excel</button><button class="btn ghost sm" data-act="lkTemplate">⬇ Tải file mẫu (3 tab chuẩn)</button></div></div>' +
+    '<div class="row"><button class="btn sm" data-act="lkSync"' + (lk.busy ? ' disabled' : '') + '>⟳ Đồng bộ ngay</button><button class="btn ghost sm" data-act="lkExcel"' + (lk.busy ? ' disabled' : '') + '>Nhập bản Excel</button><button class="btn ghost sm" data-act="lkTemplate">Tải file mẫu (3 tab chuẩn)</button></div></div>' +
     lkGoogleHtml() + '<details style="margin-top:6px"><summary class="mut">Liên kết Google Sheets (chỉ đọc, bảng tính để “Ai có liên kết đều xem được”)</summary><div class="row" style="margin-top:6px"><input id="lkLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '"><button class="btn ghost sm" data-act="lkSetLink">Lưu liên kết</button></div></details>' +
     lkPendHtml() + (lk.busy ? '<div class="msg warn">' + esc(lk.busy) + '</div>' : '') + (lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + '</div>';
 }
@@ -4694,7 +4706,7 @@ function lkBarHtml() {
   const core = HAKCore.sf, st = lkSf(), conds = core.conditions(LK_SF, st), names = lkPresets().list(LK_SF.screenId);
   lk.conds = conds;
   return '<div class="row" style="margin:6px 0;justify-content:space-between"><div class="row"><b>Hiển thị:</b>' +
-    [['flat', '☰ Bảng phẳng'], ['tree', '⛓ Cha–con (hợp đồng → rừng → phiếu cân)']].map(([k, l]) => '<button class="btn sm ' + (lk.layout === k ? '' : 'ghost') + '" data-lklayout="' + k + '">' + l + '</button>').join('') + '</div>' +
+    [['flat', 'Bảng phẳng'], ['tree', 'Cha–con (hợp đồng → rừng → phiếu cân)']].map(([k, l]) => '<button class="btn sm ' + (lk.layout === k ? '' : 'ghost') + '" data-lklayout="' + k + '">' + l + '</button>').join('') + '</div>' +
     '<div class="row"><select id="lkPreset" aria-label="Bộ lọc đã lưu"><option value="">Bộ lọc đã lưu…</option>' + names.map(n => '<option' + (n === lk.presetSel ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>' +
     '<input id="lkPresetName" size="14" placeholder="Tên bộ lọc mới"><button class="btn ghost sm" data-act="lkPresetSave">Lưu bộ lọc</button><button class="btn ghost sm" data-act="lkPresetDel">Xóa bộ lọc đã chọn</button></div></div>' +
     (conds.length ? '<div class="row" style="margin:4px 0">' + conds.map((c, i) => '<span class="pill">' + esc(c.text) + ' <button class="chipx" data-lkrm="' + i + '" aria-label="Bỏ điều kiện: ' + esc(c.text) + '">×</button></span>').join('') +
@@ -4971,7 +4983,7 @@ async function persistNow() {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   showSave('… Đang lưu');
   const r = await HB.save(db);
-  if (r && r.ok) { storeOk = true; showSave('✔ Đã lưu vào máy lúc ' + hhmm()); } else { storeOk = false; showSave('✖ Lỗi lưu: ' + ((r && r.error) || ''), true); }
+  if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); } else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || ''), true); }
   return r || {ok: false, error: 'không rõ'};
 }
 
@@ -5129,6 +5141,7 @@ document.addEventListener('click', async e => {
     else { f.dx = []; f.dxFile = ''; f.dxAt = ''; }
     persist(); note('Đã xóa dữ liệu.'); return;
   }
+  if (act === 'd2dl' || act === 'd2confirm' || act === 'd2legacy' || act === 'd2undo') { const dt = el.closest('details.d2more'); if (dt) dt.open = false; }
   if (act === 'd2dl') {
     let keys = (el.dataset.keys || '').split('|').filter(Boolean); const mode = el.dataset.mode;
     try {
@@ -5211,7 +5224,7 @@ function setTheme(t) {
   document.documentElement.dataset.theme = t;
   try { localStorage.setItem('hskt.theme', t); } catch (e) {}
   const b = document.getElementById('themeBtn');
-  if (b) b.textContent = t === 'dark' ? '☀ Chế độ sáng' : '🌙 Chế độ tối';
+  if (b) b.textContent = t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối';
 }
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('hskt.theme'); } catch (e) {}
@@ -5239,7 +5252,7 @@ document.addEventListener('change', e => {
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
 if (pendingNotice) { view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
-if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind; if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở ⚙ Cài đặt hệ thống).', 'warn'); }).catch(() => {});
+if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind; if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
 render();
 })();
 </script>

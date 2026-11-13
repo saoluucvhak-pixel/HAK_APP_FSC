@@ -24,19 +24,19 @@ Tài liệu dành cho người nhập liệu và người lập hồ sơ. Phần
 1. Chạy `HAKQN-HoSoKhaiThac-Setup-<phiên bản>.exe`, chọn thư mục cài rồi bấm Cài đặt. Bộ cài chưa ký số nên Windows có thể hiện cảnh báo SmartScreen: chọn **More info → Run anyway**.
 2. Mở từ **Start Menu → HAKQN - Hồ sơ khai thác** hoặc biểu tượng trên Desktop.
 3. Dữ liệu nằm ở `%APPDATA%\hakqn-ho-so-khai-thac\hakqn.sqlite` (menu **Tệp → Mở thư mục dữ liệu**). Cài bản mới đè lên bản cũ **không mất dữ liệu**; gỡ cài đặt cũng không xóa dữ liệu.
-4. Thanh trên cùng: **Tổng quan · Tra cứu Google Sheets · Báo cáo · Công ty mua hàng**, nút sáng/tối và menu **⋯ Thêm** (Hướng dẫn, Bảng màu, Sao lưu, Khôi phục, Khôi phục lô rừng). Dòng ngay dưới cho biết chủ rừng, lô đang mở và trạng thái lưu (“✔ Đã lưu vào máy”).
+4. Thanh trên cùng: **Tổng quan · Tra cứu Google Sheets · Báo cáo · Công ty mua hàng**, nút sáng/tối và menu **⋯ Thêm** (Hướng dẫn, Bảng màu, Sao lưu, Khôi phục, Khôi phục lô rừng). Dòng ngay dưới cho biết chủ rừng, lô đang mở và trạng thái lưu (“Đã lưu vào máy”).
 
 ## 2. Quy trình làm việc 8 bước
 | Bước | Việc cần làm | Ở đâu |
 | --- | --- | --- |
-| 1 | Khai **Công ty mua hàng** (một lần cho cả phần mềm) | Nút 🏢 Công ty mua hàng |
+| 1 | Khai **Công ty mua hàng** (một lần cho cả phần mềm) | Nút Công ty mua hàng |
 | 2 | Tạo **Chủ rừng** (hoặc lấy từ Tra cứu Google Sheets) | + Chủ rừng mới |
 | 3 | Tạo **Lô rừng** của chủ: mã lô, địa điểm, tọa độ, diện tích, thời gian, giấy tờ | Chủ rừng → Rừng → + Rừng mới |
 | 4 | Chọn hình thức hợp đồng, đơn giá, rồi **nạp Excel nhân công** | Lô → tab Nhân công |
 | 5 | Chọn cách tính cước, **nạp Excel xe**, rồi **nạp Excel phiếu cân**, chọn **địa chỉ giao hàng** | Lô → tab Vận chuyển |
 | 6 | Mở **Kiểm tra trước khi xuất**, xử lý các mục chặn và mục cần đối chiếu | Lô → tab Kiểm tra trước khi xuất |
 | 7 | Nhập thông số biên bản, **tải biểu mẫu** (từng file hoặc ZIP) | Lô → tab Xuất hồ sơ |
-| 8 | **Sao lưu** lô hoặc toàn bộ dữ liệu | ⬇ Sao lưu lô rừng / ⋯ Thêm → Sao lưu |
+| 8 | **Sao lưu** lô hoặc toàn bộ dữ liệu | Sao lưu lô rừng / ⋯ Thêm → Sao lưu |
 
 Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa chỉ giao riêng; chủ rừng chỉ giữ thông tin chung (họ tên, CCCD, địa chỉ).
 
@@ -57,7 +57,7 @@ Vào lô → tab **Nhân công** → mục **Thông số hợp đồng và đơn
 2. **Đơn giá theo từng chức danh** (Tổ trưởng, Công nhân khai thác, Công nhân cưa): ô đơn giá hiện theo cơ sở tính đã chọn (đồng/tấn, đồng/ha, đồng/công). Thiếu đơn giá của chức danh nào thì dòng nhân công đó báo lỗi.
 3. **Sản lượng chia đều**: tấn (hoặc ha, hoặc số công) chia đều cho **mọi người trong tổ, kể cả Tổ trưởng**; tiền mỗi người = phần chia × đơn giá chức danh của người đó.
 4. **Ngày bắt đầu** dùng cho hợp đồng, chấm công và kiểm tra **đủ 18 tuổi**. Người dưới 18 tuổi bị cảnh báo và **không xuất được Giấy ủy quyền**.
-5. **Định mức BHLĐ** theo chức danh (nút **⚙ Định mức BHLĐ** ở cột bên trái) dùng cho sổ cấp phát.
+5. **Định mức BHLĐ** theo chức danh (nút **Định mức BHLĐ** ở cột bên trái) dùng cho sổ cấp phát.
 6. Nạp danh sách người bằng file Excel mẫu (xem mục 6). Mỗi lô cần **đúng một Tổ trưởng**.
 
 ## 5. Vận chuyển: xe, phiếu cân, cước, địa chỉ giao
@@ -73,7 +73,7 @@ Tiền vận chuyển tính theo **tấn giao tại nhà máy** (theo phiếu c�
 **Phiếu cân**: nạp bằng Excel, **mỗi chuyến một dòng**. Nạp **đội xe trước**, vì phiếu cân chỉ nhận biển số có trong danh sách xe (so khớp bỏ dấu chấm, gạch, khoảng trắng). Phiếu **trùng số** vẫn được cộng vào tổng nhưng bị đánh dấu để kiểm tra.
 
 **Công ty mua hàng và địa chỉ giao** (tên công ty cũng tự điền vào dòng “Kính gửi” của BM-11 cam kết nguồn gốc: ưu tiên ô “Cam kết: đơn vị nhận” nếu có nhập, rồi công ty đã chốt cho lô, rồi hồ sơ Công ty mua hàng)
-- Phần mềm dùng cho **một công ty**: khai **một hồ sơ** ở nút **🏢 Công ty mua hàng** (tên pháp lý và địa chỉ bắt buộc; MST, người đại diện, chức vụ, SĐT, email; có thể thêm nhiều **địa chỉ giao hàng** như kho, nhà máy).
+- Phần mềm dùng cho **một công ty**: khai **một hồ sơ** ở nút **Công ty mua hàng** (tên pháp lý và địa chỉ bắt buộc; MST, người đại diện, chức vụ, SĐT, email; có thể thêm nhiều **địa chỉ giao hàng** như kho, nhà máy).
 - Ở tab Vận chuyển của từng lô: **Chọn địa chỉ giao hàng** → chọn một địa chỉ → xem bảng so sánh “hiện tại / mới” → **Xác nhận**. Địa chỉ được lưu cùng hồ sơ lô và tự điền vào “Địa điểm vận chuyển đến”; dùng ở **BM-04, BM-09, BM-10 và Sổ phiếu cân**.
 - Sửa tên hoặc địa chỉ trong hồ sơ công ty **không tự đổi** các lô đã chọn: lô giữ địa chỉ đã lưu và hiện thông báo, bấm **Xem và cập nhật** để áp dụng.
 - Hồ sơ cũ nhập tay điểm đến vẫn giữ nguyên; lần đầu chọn địa chỉ sẽ thấy giá trị cũ cạnh địa chỉ đề xuất.
@@ -81,7 +81,7 @@ Tiền vận chuyển tính theo **tấn giao tại nhà máy** (theo phiếu c�
 - Đổi điểm đến **không tự sửa cự ly hay đơn giá**; với cước tấn/km, phần mềm nhắc kiểm tra lại cự ly.
 
 ## 6. File Excel mẫu và cách điền
-Ở mỗi ô nạp dữ liệu (nhân công, xe, phiếu cân) có nút **⬇ Tải file mẫu (có hướng dẫn)**. Mỗi file mẫu có **3 trang tính**:
+Ở mỗi ô nạp dữ liệu (nhân công, xe, phiếu cân) có nút **Tải file mẫu (có hướng dẫn)**. Mỗi file mẫu có **3 trang tính**:
 
 | Trang | Dùng để |
 | --- | --- |
@@ -111,11 +111,11 @@ Trong trang dữ liệu: tiêu đề **màu đỏ sẫm = cột bắt buộc**, 
 | Số phiếu cân … trùng | Kiểm tra phiếu nhập hai lần |
 
 ## 7. Tra cứu Google Sheets
-Nút **🔎 Tra cứu Google Sheets** (hoặc **Lấy dữ liệu từ Google Sheets** trong Thông tin rừng).
+Nút **Tra cứu Google Sheets** (hoặc **Lấy dữ liệu từ Google Sheets** trong Thông tin rừng).
 
 **Lấy bản tra cứu**
-- **Đồng bộ ngay**: tải bảng tính theo liên kết đã lưu, chỉ đọc. Bảng tính để chế độ “Ai có liên kết đều xem được” thì không cần đăng nhập; nếu giới hạn quyền xem, bấm **🔑 Đăng nhập Google (chỉ đọc)** bằng tài khoản được chia sẻ (cách cấu hình: `docs/GOOGLE_OAUTH.md`).
-- **Nhập bản Excel**: chọn file Excel có ba tab chuẩn (ví dụ `HoSoKeo_QC.xlsx` đang dùng) khi **không có mạng**. Bấm **⬇ Tải file mẫu (3 tab chuẩn)** để lấy file mẫu có sẵn tiêu đề.
+- **Đồng bộ ngay**: tải bảng tính theo liên kết đã lưu, chỉ đọc. Bảng tính để chế độ “Ai có liên kết đều xem được” thì không cần đăng nhập; nếu giới hạn quyền xem, bấm **Đăng nhập Google (chỉ đọc)** bằng tài khoản được chia sẻ (cách cấu hình: `docs/GOOGLE_OAUTH.md`).
+- **Nhập bản Excel**: chọn file Excel có ba tab chuẩn (ví dụ `HoSoKeo_QC.xlsx` đang dùng) khi **không có mạng**. Bấm **Tải file mẫu (3 tab chuẩn)** để lấy file mẫu có sẵn tiêu đề.
 - **Ba tên tab chuẩn**: `HoSoKeo` (phiếu cân, khối lượng), `HoSoRung` (chủ rừng, thông tin rừng, hợp đồng), `ToaDoRung` (mã rừng, tọa độ, diện tích, giấy tờ nguồn gốc). **File đang dùng hậu tố `_QC` (`HoSoKeo_QC`, `HoSoRung_QC`, `ToaDoRung_QC`) vẫn đọc và đồng bộ được, không cần đổi tên.** Tên không phân biệt chữ hoa/thường, dấu, khoảng trắng đầu/cuối (ví dụ `HOsokeo` = `HoSoKeo`).
 - Phần mềm nhận cột theo **tiêu đề dòng 1**: được **đổi thứ tự cột** và **thêm cột**; thiếu cột bắt buộc thì báo **tên tab và tên cột** cần bổ sung (kể cả khi tên tab đúng chuẩn).
 - **Chọn tab khác tên**: tab đặt tên khác hẳn nhưng đủ cột bắt buộc được **đề xuất để bạn xác nhận** (hộp “Cần xác nhận tên tab trước khi nạp”). Có nhiều tab phù hợp — kể cả khi trong bảng có cả tên mới lẫn tên `_QC` — thì bạn **chọn trong danh sách**. Phần mềm kiểm tra lại các cột bắt buộc rồi mới nạp. Bản tra cứu đang dùng **không bị thay đổi** cho đến khi cả ba vai trò đã xác định và đọc đúng; bấm *Hủy* để giữ bản cũ.
@@ -160,7 +160,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 **In hồ sơ làm hai đợt khi chưa xong khai thác** (đã có nhân công, vận chuyển nhưng chưa có phiếu cân, chưa nghiệm thu): ở tab **Xuất hồ sơ → Tất cả** có hai nút.
 - **Đợt 1 – hồ sơ làm ngay (.zip)**: tất cả biểu mẫu **trừ** BM-08 bảng thanh toán tiền công, BM-09 xác nhận khối lượng, BM-10 thanh toán tiền vận chuyển và BM-14 nghiệm thu, thanh lý. In và ký đợt này trước.
 - **Đợt 2 – sau khi xong rừng (.zip)**: **chỉ** BM-08, BM-09, BM-10 và BM-14. Khi rừng xong: nạp phiếu cân ở tab Vận chuyển, nhập khối lượng khai thác thực tế ở Thông tin rừng, nhập thông số nghiệm thu rồi tải đợt 2. Chưa đủ phiếu cân hợp lệ thì đợt 2 chỉ có BM-08 và BM-14, phần mềm báo rõ thiếu BM-09, BM-10; nạp phiếu cân xong tải lại.
-**In hồ sơ đợt 2 (BM-08, BM-09, BM-10, BM-14)**: mục **In hồ sơ đợt 2** ở tab **Xuất hồ sơ** gom hai cách in vào một chỗ. Bảng ở đầu mục cho từng biểu mẫu (BM-09 và BM-10 theo **từng người vận chuyển**) biết: *đủ dữ liệu để in* hay chưa, *đã in mẫu nền* hay chưa, **nên dùng giấy nào**, và còn thiếu gì (có nút mở đúng tab để bổ sung). Hai trạng thái này độc lập và tính riêng cho từng lô.
+**In hồ sơ đợt 2 (BM-08, BM-09, BM-10, BM-14)**: mục **In hồ sơ đợt 2** ở tab **Xuất hồ sơ** gom hai cách in vào một chỗ. Ba nút việc cần làm (Cách A, Cách B bước 1, bước 2) nằm ở đầu mục, kèm một dòng tóm tắt khi cả bộ cùng tình trạng. Bảng bên dưới cho từng biểu mẫu (BM-09 và BM-10 theo **từng người vận chuyển**) biết: *đủ dữ liệu để in* hay chưa, *đã in mẫu nền* hay chưa, **nên dùng giấy nào**, và còn thiếu gì (có nút mở đúng tab để bổ sung). Mỗi dòng chỉ hiện nút hợp với tình trạng; các nút ít dùng (Tải nền, Đã in nền, Đã có nền in từ trước, Bỏ xác nhận…) nằm trong menu **Khác**. BM-09 và BM-10 của nhiều người vận chuyển được phân biệt bằng biển số xe và 4 số cuối CCCD. Hai trạng thái này độc lập và tính riêng cho từng lô.
 
 | Tình trạng của mục | Nên dùng |
 | --- | --- |
@@ -174,7 +174,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 
 **Cách B – in nền trước, in đè sau.**
 1. **Bước 1 – In mẫu nền đợt 2** (gói `…_dot2_MAU_NEN_in_truoc.zip`): chữ cố định in đầy đủ; số biên bản, ngày lập, khối lượng, tiền, tổng cộng **để trống chừa chỗ**. Làm được khi đã có nhân công, đội xe, **ngày ký hợp đồng** và **địa chỉ giao** (đây là chữ cố định nên phải biết trước khi in nền). BM-09 và BM-10 không in sẵn khung bảng phiếu cân; hai **Bảng kê đính kèm** luôn in đầy đủ trên giấy mới.
-2. Sau khi in, bấm **✔ Xác nhận đã in mẫu nền** (cả bộ, hoặc từng mẫu/từng nhóm ở bảng). **Tải file Word hoặc ZIP không làm đổi trạng thái**; chỉ nút xác nhận mới ghi nhận. Phần mềm lưu xác nhận cùng **chữ ký bố cục** của mẫu nền vào dữ liệu của lô, nên đóng rồi mở lại vẫn nhớ.
+2. Sau khi in, bấm **Xác nhận đã in mẫu nền** (cả bộ, hoặc từng mẫu/từng nhóm ở bảng). **Tải file Word hoặc ZIP không làm đổi trạng thái**; chỉ nút xác nhận mới ghi nhận. Phần mềm lưu xác nhận cùng **chữ ký bố cục** của mẫu nền vào dữ liệu của lô, nên đóng rồi mở lại vẫn nhớ.
 3. **Bước 2 – In đè phần bổ sung** (gói `…_dot2_IN_DE_phan_bo_sung.zip`): khi có số liệu, tải gói này, **nạp lại tờ mẫu nền đã in** vào máy in và in. Chỉ gồm các mục đã in nền, đủ dữ liệu và còn khớp bố cục. Nhập thêm số liệu (số biên bản, ngày lập, khối lượng, phiếu cân, tiền) **không làm mất** xác nhận.
 
 **Nền in một phần.** Có thể xác nhận từng mẫu/nhóm: mục đã in nền cho vào gói in đè, mục chưa in nền cho vào gói giấy trắng; hai gói tách riêng và tên khác nhau, nên không lẫn tờ.
@@ -195,7 +195,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 - **Thiếu hoặc sai ngày ký**: năm để trống (`015/……-KT`), không tự điền năm cố định; khung “Số hợp đồng đầy đủ sẽ in (xem trước)” ở tab Xuất hồ sơ nêu rõ cần bổ sung ngày nào. Các dòng ngày để trống in “ngày ….. tháng ….. năm …….”.
 - BM-01, BM-14 và BM-20 của cùng hồ sơ giao khoán luôn tham chiếu **cùng một số** hợp đồng khai thác.
 
-**Nút 📊 Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Năm mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
+**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Năm mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
 
 ## 10. Sao lưu và khôi phục
 Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.
@@ -210,9 +210,9 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 
 Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác nhau** thì phần mềm **dừng**, không ghi gì và liệt kê hồ sơ cần đối chiếu.
 
-**Sao lưu một lô rừng** (dùng khi chuyển lô sang máy khác, hoặc lưu riêng một lô): mở lô → **⬇ Sao lưu lô rừng** → chọn nơi lưu bằng hộp thoại Windows. File `HAKQN_LoRung_<MaLo>_<Ngày>.json` chứa đúng **một** lô: thông tin, giấy tờ, nhân công, xe, phiếu cân, hợp đồng, đơn giá, thông số biểu mẫu, dấu vết nhập, **địa chỉ giao hàng đã chốt** (để BM-04 vẫn đúng sau khi chuyển máy), nhận diện chủ rừng và các thiết lập dùng chung lô cần. File **không** chứa lô khác, chủ khác, bản tra cứu Google Sheets hay thông tin đăng nhập.
+**Sao lưu một lô rừng** (dùng khi chuyển lô sang máy khác, hoặc lưu riêng một lô): mở lô → **Sao lưu lô rừng** → chọn nơi lưu bằng hộp thoại Windows. File `HAKQN_LoRung_<MaLo>_<Ngày>.json` chứa đúng **một** lô: thông tin, giấy tờ, nhân công, xe, phiếu cân, hợp đồng, đơn giá, thông số biểu mẫu, dấu vết nhập, **địa chỉ giao hàng đã chốt** (để BM-04 vẫn đúng sau khi chuyển máy), nhận diện chủ rừng và các thiết lập dùng chung lô cần. File **không** chứa lô khác, chủ khác, bản tra cứu Google Sheets hay thông tin đăng nhập.
 
-**Khôi phục một lô rừng**: **⋯ Thêm → ⬆ Khôi phục lô rừng…** → chọn file. Màn hình xem trước nêu chủ rừng và mã lô đích, thời điểm sao lưu, số nhân công, xe, phiếu cân, tổng tấn:
+**Khôi phục một lô rừng**: **⋯ Thêm → Khôi phục lô rừng…** → chọn file. Màn hình xem trước nêu chủ rừng và mã lô đích, thời điểm sao lưu, số nhân công, xe, phiếu cân, tổng tấn:
 - Chủ đã có thì lô được **thêm vào đúng chủ đó**; chưa có thì **tạo chủ mới**.
 - Lô đã tồn tại: mặc định **giữ bản hiện có**; chọn **thay** thì chỉ thay đúng lô đó, kèm bảng **trước / sau** (nhân công, xe, phiếu cân, tổng tấn, giấy tờ, cách tính cước, địa chỉ giao).
 - Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: **máy đích giữ thiết lập của mình**; màn hình nêu giá trị hai bên và phần hồ sơ có thể khác. Mục máy chưa có sẽ được bổ sung.
@@ -260,7 +260,7 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 
 
 ## Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu
-Mở **⋯ Thêm → ⚙ Cài đặt hệ thống**.
+Mở **⋯ Thêm → Cài đặt hệ thống**.
 - **Thư mục dữ liệu**: nơi lưu cơ sở dữ liệu (`hakqn.sqlite`). Bấm *Chọn thư mục…* để đổi: phần mềm sao chép toàn bộ dữ liệu sang thư mục mới rồi dùng từ đó; **bản cũ không bị xóa** (xóa tay khi chắc chắn không cần). Nếu thư mục mới đã có dữ liệu HAKQN, phần mềm hỏi: dùng dữ liệu có sẵn đó, ghi đè bằng dữ liệu đang dùng (bản có sẵn được lưu lại trước), hoặc hủy. *Về mặc định* đưa dữ liệu về thư mục của ứng dụng.
 - **Thư mục sao lưu**: bản sao lưu tự động trước khi nâng cấp dữ liệu, **Sao lưu toàn bộ dữ liệu** (lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc USB.
 - Thư mục phải có sẵn và ghi được, nếu không phần mềm báo lỗi và giữ cài đặt cũ. Nếu thư mục đã chọn bị xóa hoặc ổ không còn, phần mềm dùng vị trí mặc định và nêu rõ trong màn Cài đặt.
@@ -272,7 +272,7 @@ Mở **⋯ Thêm → ⚙ Cài đặt hệ thống**.
 
 
 ## Đổi thư mục dữ liệu an toàn, ổ dữ liệu không truy cập được, sao lưu đáng tin cậy
-**Đổi thư mục dữ liệu** (⋯ Thêm → ⚙ Cài đặt hệ thống). Phần mềm làm theo thứ tự và chỉ chuyển khi mọi bước đã qua kiểm tra:
+**Đổi thư mục dữ liệu** (⋯ Thêm → Cài đặt hệ thống). Phần mềm làm theo thứ tự và chỉ chuyển khi mọi bước đã qua kiểm tra:
 1. Tạo bản sao dữ liệu đang dùng thành **file tạm** ở thư mục đích, kiểm tra toàn vẹn, phiên bản cấu trúc và số bản ghi từng bảng.
 2. Mở thử cơ sở dữ liệu mới và đọc thử; **chỉ sau đó mới lưu đường dẫn mới**. Lỗi ở bất kỳ bước nào: hoàn tác, vẫn làm việc ở vị trí cũ, dữ liệu cũ không bị đổi.
 3. Thư mục đích đã có dữ liệu: hộp thoại nêu số chủ rừng, số lô, ngày sửa của cả hai bên và cho chọn **Dùng dữ liệu có sẵn**, **Ghi đè bằng dữ liệu đang dùng** hoặc **Hủy**. *Dùng dữ liệu có sẵn* kiểm tra đúng cơ sở dữ liệu HAKQN, không hỏng, phiên bản cấu trúc được hỗ trợ. *Ghi đè* trước hết tạo **bản dự phòng nhất quán của đích** (gồm cả giao dịch đã commit còn trong nhật ký WAL) vào thư mục sao lưu và **kiểm tra mở được** rồi mới thay; đích đang được chương trình khác dùng thì dừng và báo; đích hỏng hoặc không phải HAKQN thì không ghi đè.
@@ -293,7 +293,7 @@ Mỗi biểu mẫu có **điều kiện in chính thức riêng**. Thiếu đi�
 | BM-04 Hợp đồng vận chuyển | Ngày ký + địa chỉ giao hàng đã chốt | Tab Vận chuyển → Chọn địa chỉ giao hàng |
 | BM-08 Bảng thanh toán tiền công | Khối lượng khai thác **thực tế** (không phải sản lượng dự kiến); tính theo ngày công thì không cần | Thông tin rừng → Khối lượng thực tế |
 | BM-09, BM-10 | Ngày ký + địa chỉ giao hàng + ngày lập biên bản xác nhận khối lượng (và phải có phiếu cân hợp lệ mới có file) | Tab Xuất hồ sơ → Xác nhận khối lượng, thanh toán: ngày lập |
-| BM-11 Cam kết nguồn gốc | Đơn vị nhận (Công ty mua hàng) | Nút 🏢 Công ty mua hàng |
+| BM-11 Cam kết nguồn gốc | Đơn vị nhận (Công ty mua hàng) | Nút Công ty mua hàng |
 | BM-14 Nghiệm thu, thanh lý | Ngày ký + khối lượng thực tế + ngày lập biên bản nghiệm thu | Tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập |
 
 Các mẫu còn lại không có điều kiện riêng nên luôn là bản chính thức (khi dữ liệu cơ bản đã đủ để xuất). **Mẫu trống / chỉ phần số** (in hai bước) là mẫu thiết kế để điền sau nên không gắn nhãn. Khi đã bổ sung đủ, tải lại để có bản chính thức.
