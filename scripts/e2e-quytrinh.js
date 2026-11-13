@@ -61,7 +61,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('việc nên làm tiếp: nêu mẫu đợt 1 đã đổi cần in lại', /đã in nhưng dữ liệu đã đổi/.test(await w.innerText('#qtNext')), await w.innerText('#qtNext'));
   // in lại → khớp
   await w.evaluate(() => { const b = [...document.querySelectorAll('#qtCard [data-act=qtMark]')].find(x => (x.dataset.codes || '').includes(',') && /đợt 1/.test(x.textContent)); b.click(); }); await w.waitForTimeout(500);
-  rt = await routes(); ok('thêm người lao động sau khi in nền: BM-08 báo “bố cục đã đổi” (không in đè), BM-09/10/14 vẫn in đè được', rt['08'] === 'doibocuc' && rt['14'] === 'de' && rt['09'] === 'de', JSON.stringify(rt));
+  rt = await routes(); ok('thêm người lao động sau khi in nền: BM-08 và BM-14 (có bảng theo người lao động) báo “bố cục đã đổi”, không in đè; BM-09, BM-10 (vận chuyển) vẫn in đè được', rt['08'] === 'doibocuc' && rt['14'] === 'doibocuc' && rt['09'] === 'de' && rt['10'] === 'de', JSON.stringify(rt));
   ok('việc nên làm tiếp nêu mục đã đổi bố cục: in lại nền hoặc giấy trắng', /đổi bố cục/.test(await w.innerText('#qtNext')) || /đã in nhưng dữ liệu đã đổi/.test(await w.innerText('#qtNext')));
   r1 = await rows(); ok('in lại và đánh dấu: các mẫu đã đổi trở về “đã in, còn khớp”', d1.every(c => r1[c].startsWith('da/')), JSON.stringify(r1));
   // 5. đợt 2 xong → hoàn tất; bỏ xác nhận
