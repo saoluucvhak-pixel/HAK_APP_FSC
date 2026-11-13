@@ -116,6 +116,7 @@ jobs:
           $old = Join-Path $env:RUNNER_TEMP 'old-release'; New-Item -ItemType Directory $old | Out-Null
           gh release download v1.0.0 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-1.0.0.exe' -D $old
           $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-1.0.0.exe'
+          if (-not (Test-Path $oldSetup)) { Write-Host "::warning::Bản phát hành v1.0.0 không còn trên GitHub Releases (đã dọn) nên bỏ qua bước nâng cấp từ bộ cài thật của bản này. Kiểm thử nâng cấp bằng cơ sở dữ liệu mẫu trong bước kiểm thử đầu-cuối vẫn chạy."; exit 0 }
           $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
           if ($h -ne '8AAE5F969F7A19A3591A0E91DC23D247846B4B329F23B6D791659758AB62C68D') { throw "Bộ cài v1.0.0 tải về không khớp mã băm công bố: $h" }
           $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade-userdata'
@@ -158,6 +159,7 @@ jobs:
           $old = Join-Path $env:RUNNER_TEMP 'old-release-140'; New-Item -ItemType Directory $old | Out-Null
           gh release download v1.4.0 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-1.4.0.exe' -D $old
           $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-1.4.0.exe'
+          if (-not (Test-Path $oldSetup)) { Write-Host "::warning::Bản phát hành v1.4.0 không còn trên GitHub Releases (đã dọn) nên bỏ qua bước nâng cấp từ bộ cài thật của bản này. Kiểm thử nâng cấp bằng cơ sở dữ liệu mẫu trong bước kiểm thử đầu-cuối vẫn chạy."; exit 0 }
           $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
           if ($h -ne 'FA0B8FE1745FC46DF59EFF6B638BB2CE0DBF87D0D1FE32CC59C36E63E4160AC5') { throw "Bộ cài v1.4.0 tải về không khớp mã băm công bố: $h" }
           $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade140'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade140-userdata'

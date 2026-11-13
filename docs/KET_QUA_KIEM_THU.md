@@ -245,4 +245,4 @@ Rà bằng skill unslop (chế độ polish: giao diện đã dùng bảng màu 
 - **Mục đợt 2**: ba nút việc cần làm đưa lên đầu, bảng chi tiết xuống dưới; mỗi dòng chỉ hiện nút hợp với tình trạng, nút ít dùng vào menu “Khác”; BM-09/BM-10 nhiều người vận chuyển phân biệt bằng biển số xe và 4 số cuối CCCD; đoạn giải thích rút còn hai câu (phần chi tiết trong “Cách in chi tiết”); khi cả bộ cùng tình trạng, bỏ cột “Nên dùng” và hiện một dòng tóm tắt.
 - **Toàn app**: bỏ emoji và ký hiệu dùng làm biểu tượng (menu trên cùng, nút tải, trạng thái lưu, nút đăng nhập Google, tiêu đề cảnh báo…); nút chế độ sáng/tối chỉ còn chữ. Giữ nguyên ô ☐ trong biểu mẫu Word và các dấu → ←.
 - Kiểm thử: `npm test` và toàn bộ `npm run test:e2e` (chạy lại với bố cục mới; `e2e-inan2` cập nhật để mở menu “Khác”).
-
+- **CI sau khi dọn Release**: hai bước “nâng cấp từ bộ cài THẬT v1.0.0 / v1.4.0” tải bộ cài cũ từ GitHub Releases; khi các bản đó đã bị xóa, bước báo cảnh báo và bỏ qua thay vì làm hỏng build. **Hệ quả**: từ đây CI không còn cài đè lên bộ cài thật của bản cũ; việc nâng cấp dữ liệu từ v1.0.0 và v1.4.0 vẫn được kiểm bằng cơ sở dữ liệu mẫu (`e2e-nangcap`, `e2e-nangcap2`).
