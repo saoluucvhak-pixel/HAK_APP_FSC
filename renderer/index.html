@@ -179,6 +179,7 @@ th,td{border-bottom:1px solid var(--line);padding:8px 9px;text-align:left;vertic
 th{background:var(--th);font-weight:650;position:sticky;top:0;color:var(--mut-aa);font-size:12px;text-transform:none;z-index:1}
 tbody tr:hover td,table tr:hover td{background:color-mix(in srgb,var(--accSoft) 55%,transparent)}
 tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
+.ccTbl{border-collapse:collapse;font-size:12px}.ccTbl th,.ccTbl td{padding:2px 3px;text-align:center;border:1px solid var(--line)}.ccTbl .ccName{text-align:left;white-space:nowrap;padding:2px 8px}.ccIn{width:34px;padding:2px;text-align:center;border:0;background:transparent;font:inherit}.ccIn:focus{outline:2px solid var(--accent,#2f6f4f)}.ccBad{background:#fde8e8}.ccSun{background:rgba(127,127,127,.14)}.ccTot{font-weight:600;min-width:46px}
 .wrap{overflow:auto;max-height:440px;border:1px solid var(--line);border-radius:var(--r)}
 /* Thông báo, nhãn */
 .msg{padding:10px 14px;border-radius:var(--rs);margin:10px 0;white-space:pre-line;border-left:4px solid currentColor}
@@ -894,6 +895,50 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const api = {derive, fmtPrice};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKKhoan = api;
 })(typeof self !== 'undefined' ? self : this);
+</script>
+<script>/* Chấm công thực tế theo ngày (hình thức tính lương theo ngày công, cả giao khoán lẫn trực tiếp).
+ * Dữ liệu lưu trong rừng: cc = { 'yyyy-mm': { <khóa người>: { '1': 1, '2': 0.5, ... } } }.
+ * Khóa người = CCCD, không có thì họ tên. Ô để trống = chưa chấm; 0 = nghỉ. Một ô là số công của ngày đó (0 đến 3, tối đa 2 số lẻ).
+ * Quy tắc tính tiền: nếu rừng đã có bất kỳ dữ liệu chấm công nào thì số công mỗi người = tổng công đã chấm của người đó (người chưa chấm = 0);
+ * chưa có dữ liệu thì dùng số công theo thời gian khai thác (trừ Chủ nhật). Hàm thuần, dùng chung cho giao diện, BM-05, BM-08 và kiểm thử. */
+(function (root) {
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const key = (y, m) => y + '-' + pad(m);
+  const daysIn = k => { const [y, m] = k.split('-').map(Number); return new Date(y, m, 0).getDate(); };
+  const isSunday = (k, d) => { const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, d).getDay() === 0; };
+  const personKey = r => String((r && (r.cccd || r.ten)) || '').trim();
+  /* các tháng (yyyy-mm) từ ngày a đến ngày b (Date); thiếu một trong hai thì rỗng */
+  function monthsBetween(a, b) {
+    if (!(a instanceof Date) || !(b instanceof Date) || isNaN(a) || isNaN(b) || b < a) return [];
+    const out = []; let y = a.getFullYear(), m = a.getMonth() + 1; const ey = b.getFullYear(), em = b.getMonth() + 1;
+    while (y < ey || (y === ey && m <= em)) { out.push(key(y, m)); m++; if (m > 12) { m = 1; y++; } if (out.length > 60) break; }
+    return out;
+  }
+  /* đọc ô nhập của người dùng: '', '1', '0,5', '0.5' → null | số; trả undefined nếu không hợp lệ */
+  function parseCell(s) {
+    const t = String(s == null ? '' : s).trim().replace(',', '.'); if (t === '') return null;
+    if (!/^\d+(\.\d{1,2})?$/.test(t)) return undefined; const v = Number(t); return v >= 0 && v <= 3 ? v : undefined;
+  }
+  const get = (cc, k, p, d) => { const v = (((cc || {})[k] || {})[p] || {})[d]; return typeof v === 'number' ? v : null; };
+  /* ghi một ô; v = null thì xóa ô (dọn các nhánh rỗng) */
+  function set(cc, k, p, d, v) {
+    if (v == null) { const m = cc[k] && cc[k][p]; if (m) { delete m[d]; if (!Object.keys(m).length) delete cc[k][p]; if (!Object.keys(cc[k]).length) delete cc[k]; } return cc; }
+    ((cc[k] = cc[k] || {})[p] = cc[k][p] || {})[d] = v; return cc;
+  }
+  const hasAny = cc => Object.values(cc || {}).some(m => Object.values(m || {}).some(p => Object.keys(p || {}).length > 0));
+  const round2 = x => Math.round(x * 100) / 100;
+  const total = (cc, p) => round2(Object.values(cc || {}).reduce((s, m) => s + Object.values((m || {})[p] || {}).reduce((a, v) => a + (typeof v === 'number' ? v : 0), 0), 0));
+  const monthTotal = (cc, k, p) => round2(Object.values(((cc || {})[k] || {})[p] || {}).reduce((a, v) => a + (typeof v === 'number' ? v : 0), 0));
+  /* điền 1 công cho mọi ngày làm việc (không phải Chủ nhật) của tháng k nằm trong [a, b] (Date) cho các người ps; ghi đè ô đã có */
+  function fillWork(cc, k, ps, a, b) {
+    const n = daysIn(k), [y, m] = k.split('-').map(Number); let c = 0;
+    for (let d = 1; d <= n; d++) { const t = new Date(y, m - 1, d); if (t.getDay() === 0 || (a && t < a) || (b && t > b)) continue; ps.forEach(p => set(cc, k, p, d, 1)); c++; }
+    return c;
+  }
+  const clearMonth = (cc, k) => { delete cc[k]; return cc; };
+  const api = {key, daysIn, isSunday, personKey, monthsBetween, parseCell, get, set, hasAny, total, monthTotal, fillWork, clearMonth};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKChamCong = api;
+})(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>/* Định mức BHLĐ theo vị trí (chức danh) có HIỆU LỰC TỪ NGÀY, và danh sách vị trí có thể thêm. Hàm thuần, thao tác trên đối tượng db.
  *  - db.dinhMuc / db.dinhMucTu: bản gốc (dữ liệu cũ giữ nguyên); db.dinhMucTu = ngày hiệu lực dd/mm/yyyy ('' = áp dụng từ trước đến nay).
@@ -2379,7 +2424,7 @@ const destOf = rec => HAKMuaHang.diemDen(rec.info, rec.exp);
 const curForest = () => { const o = curOwner(); return (o && curF && o.forests[curF]) || null; };
 // Hồ sơ làm việc của một rừng: thông tin chủ rừng + thông tin rừng, kèm nhân công/vận chuyển/thông tin xuất của rừng đó
 function jobView(o, f) {
-  return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info), nc: f.nc, dx: f.dx, pc: f.pc || [], exp: f.exp,
+  return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info), nc: f.nc, dx: f.dx, pc: f.pc || [], exp: f.exp, cc: f.cc || {},
     ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
 }
 const curRec = () => { const o = curOwner(), f = curForest(); return o && f ? jobView(o, f) : null; };
@@ -2671,14 +2716,14 @@ function rateOf(i, r) {
 }
 const isDirect = i => i.moHinhKy === 'tructiep';
 /* Cơ sở tính đơn giá. Hợp đồng có 2 hình thức:
-   - Giao khoán (chủ rừng ký với Tổ trưởng, công nhân ủy quyền cho Tổ trưởng): tính theo TẤN hoặc HA.
+   - Giao khoán (chủ rừng ký với Tổ trưởng, công nhân ủy quyền cho Tổ trưởng): tính theo TẤN, HA hoặc NGÀY CÔNG (Tổ trưởng nhận thay cả tổ rồi chi trả từng người).
    - Trực tiếp (chủ rừng ký với tất cả nhân công): tính theo TẤN hoặc NGÀY CÔNG.
    Đơn giá theo từng vai trò (chức danh); sản lượng (tấn, ha) hoặc số công chia đều cho mọi người. */
 const BASIS = {sanluong: {map: 'donGiaTan', unit: 'đồng/tấn', short: 'đ/tấn', qty: 'tấn'}, ha: {map: 'donGiaHa', unit: 'đồng/ha', short: 'đ/ha', qty: 'ha'}, ngaycong: {map: 'donGiaNgay', unit: 'đồng/công', short: 'đ/công', qty: 'công'}};
 const basisOf = i => BASIS[i.hinhThucLuong] || BASIS.sanluong;
-const basisAllowed = (direct, b) => direct ? b !== 'ha' : b !== 'ngaycong';
+const basisAllowed = (direct, b) => direct ? b !== 'ha' : true;   // giao khoán: tấn, ha hoặc ngày công; trực tiếp: tấn hoặc ngày công
 const giaErrors = i => basisAllowed(isDirect(i), i.hinhThucLuong || 'sanluong') ? []
-  : [isDirect(i) ? 'Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công (không tính theo ha): chọn lại ở tab Nhân công' : 'Giao khoán chỉ tính theo tấn hoặc ha (không tính theo ngày công): chọn lại ở tab Nhân công'];
+  : ['Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công (không tính theo ha): chọn lại ở tab Nhân công'];
 const hdldList = rec => isDirect(rec.info) ? rec.nc : [];   // giao khoán: thay bằng một Giấy ủy quyền (BM-20)
 const ucList = rec => rec.nc.filter(r => !isTT(r));         // người ủy quyền cho Tổ trưởng (hình thức giao khoán)
 // Khối lượng dùng cho bảng lương: thực tế nếu có, không thì dự kiến (diện tích × định mức)
@@ -2689,6 +2734,7 @@ const volumeOf = i => {
 };
 /* Khối lượng DỰ KIẾN (diện tích × định mức): dùng cho các biểu mẫu đợt 1 (hợp đồng, thẩm định, cam kết…) để bản in không đổi khi sau này nhập khối lượng thực tế */
 const forecastVol = i => { const y = forestYield(i); return y > 0 ? {v: y, src: 'dự kiến'} : null; };
+const fmtCong = n => numSwap(n.toLocaleString('vi-VN', {maximumFractionDigits: 2}));
 const fmtTan = n => numSwap(n.toLocaleString('vi-VN', {maximumFractionDigits: 3}));
 const workDays = (a, b) => { let n = 0; for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) if (d.getDay() !== 0) n++; return n; };
 function payrollPlan(rec, ex) {
@@ -2714,14 +2760,15 @@ function payRows(rec, ex) {
   const rs = rec.info, plan = payrollPlan(rec, ex), list = [rec.nc.find(isTT), ...rec.nc.filter(r => !isTT(r))].filter(Boolean), N = list.length;
   const each = (!plan.ngc && plan.vol && N) ? plan.vol.v / N : null;
   let sum = 0;
+  const actual = plan.ngc && !(ex && ex._forecast) && HAKChamCong.hasAny(rec.cc);   // đã chấm công thực tế: số công từng người; hợp đồng (đợt 1) luôn dùng số công dự tính
   const rows = list.map(r => {
-    const rate = rateOf(rs, r); let tien = null;
-    if (rate) tien = plan.ngc ? (plan.cong != null ? rate * plan.cong : null) : (each != null ? Math.round(each * rate) : null);
+    const rate = rateOf(rs, r), cong = plan.ngc ? (actual ? HAKChamCong.total(rec.cc, HAKChamCong.personKey(r)) : plan.cong) : null; let tien = null;
+    if (rate) tien = plan.ngc ? (cong != null ? Math.round(rate * cong) : null) : (each != null ? Math.round(each * rate) : null);
     if (tien != null) sum += tien;
-    return {r, rate, tien};
+    return {r, rate, tien, cong};
   });
   const khoan = HAKKhoan.derive(list.map(r => rateOf(rs, r)), (!plan.ngc && plan.vol) ? plan.vol.v : null);   // đơn giá khoán của tổ suy ra từ định biên
-  return {plan, list, N, each, rows, sum, khoan};
+  return {plan, list, N, each, rows, sum, khoan, actual};
 }
 /* Giao khoán, trường hợp 1 (Thông tin rừng KHÔNG có đơn giá Tổ trưởng): đơn giá khoán của tổ = đơn giá bình quân suy ra từ định biên nhân sự (số người từng vị trí ở sheet nhân công × đơn giá vị trí).
  * Trường hợp 2 (Thông tin rừng có đơn giá Tổ trưởng): làm như cũ. Trả null khi không áp dụng. */
@@ -2967,7 +3014,8 @@ function docGiaoKhoan(rec, ex) {
     P('Bên B đồng ý nhận và bên A đồng ý giao khai thác gỗ Keo Lai rừng trồng có kiểm soát tại địa chỉ: ' + rs.diaDiem + rungText(rs) + '.'),
     P('**Điều 2: Giá cả và phương thức thanh toán**', {keep: true}),
     P('2.1. Đơn giá khoán theo vai trò (' + bs.unit + '): ' + roleRates(rec).join('; ') + '.', {ind: 360}),
-    ...(khoanSuyRa(rec) ? (kh => [
+    ...(pr.plan.ngc ? [P('2.2. Hình thức trả theo ngày công: số công của từng người do Tổ trưởng chấm hằng ngày vào Bảng chấm công; tiền của mỗi người bằng số công thực tế nhân với đơn giá công theo vai trò ở mục 2.1. Bên B nhận thay cho cả tổ và chi trả lại cho từng người.' + (pr.sum && pr.plan.cong != null ? ' Dự tính ' + fmtCong(pr.plan.cong) + ' công mỗi người (theo thời gian khai thác, không tính Chủ nhật), tổng tiền công dự tính: ' + fmt(pr.sum) + ' đồng.' : ''), {ind: 360})] : [])
+    ,...(pr.plan.ngc ? [] : khoanSuyRa(rec) ? (kh => [
       P('2.2. Đơn giá khoán của tổ (giá Tổ trưởng ký) là **đơn giá bình quân ' + kh.price + ' ' + kh.bs.unit + '**, tính từ định biên nhân sự ' + kh.k.N + ' người của tổ (kể cả Tổ trưởng) theo đơn giá của từng vị trí:', {ind: 360, after: 40}),
       ...kh.pos.map(x => bl(x.cd + ': ' + (x.n ? x.n + ' người × ' + fmt(x.rate) + ' ' + kh.bs.unit + ' = ' + fmt(x.n * x.rate) : 'chưa có người ở vị trí này (đơn giá ' + (x.rate ? fmt(x.rate) : '………') + ' ' + kh.bs.unit + ')'))),
       bl('Cơ sở tính giá trung bình: tổng (số người × đơn giá vị trí) chia tổng số người = ' + kh.formula + '.'),
@@ -2979,7 +3027,7 @@ function docGiaoKhoan(rec, ex) {
       (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến hết khi khai thác hết rừng keo tại địa điểm trên') + '.', {ind: 360}),
     P('**Điều 3: Trách nhiệm của mỗi bên**', {keep: true}),
     P('3.1. Trách nhiệm của bên A', {keep: true}),
-    bl('Thanh toán cho bên B theo đơn giá quy định tại Điều 2 dựa trên khối lượng gỗ đã khai thác.'),
+    bl(pr.plan.ngc ? 'Thanh toán cho bên B theo đơn giá quy định tại Điều 2 dựa trên số công thực tế ghi trong Bảng chấm công.' : 'Thanh toán cho bên B theo đơn giá quy định tại Điều 2 dựa trên khối lượng gỗ đã khai thác.'),
     bl('Chịu trách nhiệm mở đường và các chi phí khác để tạo điều kiện cho bên B khai thác gỗ.'),
     bl('Sắp xếp xe vận chuyển theo đúng tiến độ.'),
     P('3.2. Trách nhiệm của bên B', {keep: true}),
@@ -3557,11 +3605,14 @@ function docChamCong(rec, ex) {
   const list = [tt, ...rec.nc.filter(r => !isTT(r))];
   const dayHead = Array.from({length: 31}, (_, i) => String(i + 1));
   const widths = [450, 2400, ...Array(31).fill(360), 1000];
-  const rows = list.map((r, i) => [String(i + 1), upper(r.ten), ...Array(31).fill(''), '']);
+  const CC = HAKChamCong, km = ex._ccMonth || '';   // _ccMonth chỉ có khi in bảng chấm công ĐÃ NHẬP; các gói hồ sơ luôn in mẫu trống để chấm tay
+  const cell = (r, d) => { if (!km || d > CC.daysIn(km)) return ''; const v = CC.get(rec.cc, km, CC.personKey(r), d); return v == null ? '' : fmtCong(v); };
+  const sumOf = r => { if (!km) return ''; const m = ((rec.cc || {})[km] || {})[CC.personKey(r)]; return m && Object.keys(m).length ? fmtCong(CC.monthTotal(rec.cc, km, CC.personKey(r))) : ''; };
+  const rows = list.map((r, i) => [String(i + 1), upper(r.ten), ...Array.from({length: 31}, (_, d) => cell(r, d + 1)), sumOf(r)]);
   return [
     P('**BẢNG CHẤM CÔNG LAO ĐỘNG KHAI THÁC RỪNG ' + upper(personName(rs.danhXung, rs.ten)) + '**', {al: 'center', sz: 26, before: 60, after: 40}),
     P('(Địa chỉ: ' + rs.diaDiem + ')', {al: 'center', after: 40}),
-    P('**Tháng ' + (ex.thang ? (/\//.test(ex.thang) ? ex.thang : ex.thang + '/' + HAKHopDong.NAM_TRONG) : '……/' + HAKHopDong.NAM_TRONG) + '**', {al: 'center', after: 160}),
+    P('**Tháng ' + (km ? km.split('-')[1] + '/' + km.split('-')[0] : ex.thang ? (/\//.test(ex.thang) ? ex.thang : ex.thang + '/' + HAKHopDong.NAM_TRONG) : '……/' + HAKHopDong.NAM_TRONG) + '**', {al: 'center', after: 160}),
     T(widths, [['TT', 'Họ và tên', ...dayHead, 'Tổng số công'], ...rows],
       {head: true, borders: true, sz: 16, rowH: 420,
        alignCols: ['center', 'left', ...Array(31).fill('center'), 'center']}),
@@ -3769,9 +3820,10 @@ function docTienCong(rec, ex) {
   const rs = rec.info, tt = rec.nc.find(isTT);
   const pr = payRows(rec, ex), plan = pr.plan, ngc = plan.ngc, ha = plan.basis === 'ha', N = pr.N, each = pr.each, sum = pr.sum, bs = basisOf(rs);
   const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, V((!ngc && each != null) ? fmtTan(each) : ''), x.rate ? fmt(x.rate) : '',
-    V(ngc && plan.cong != null ? String(plan.cong) : ''), V(x.tien != null ? fmt(x.tien) : ''), V(x.tien != null ? fmt(x.tien) : ''), '']);
+    V(ngc && x.cong != null ? fmtCong(x.cong) : ''), V(x.tien != null ? fmt(x.tien) : ''), V(x.tien != null ? fmt(x.tien) : ''), '']);
   if (sum > 0 || ex._mode !== 'day') rows.push(['', '**TỔNG CỘNG**', '', '', '', '', V(sum > 0 ? fmt(sum) : ''), V(sum > 0 ? fmt(sum) : ''), '']);
-  const nRow = rows.length + (khoanSuyRa(rec) ? 3 : 0), dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
+  const khoanNgay = ngc && !isDirect(rs);   // giao khoán trả theo ngày công: Tổ trưởng nhận thay cả tổ
+  const nRow = rows.length + (khoanSuyRa(rec) || khoanNgay ? 3 : 0), dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
   const info = ngc
     ? ((plan.cong != null || ex._mode !== 'day') ? 'Số ngày công: ' + V(plan.cong != null ? String(plan.cong) : '', 6) + ' công (không tính Chủ nhật).' : '')
     : ((plan.vol || ex._mode !== 'day') ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + V(plan.vol ? fmtTan(plan.vol.v) : '', 10) + ' ' + bs.qty + (ex._mode === 'day' ? V(plan.vol ? ' (' + plan.vol.src + ')' : '', 0, '') : '') + ', chia đều ' + N + ' người: ' + V(each != null ? fmtTan(each) : '', 10) + ' ' + bs.qty + '/người.' : '');
@@ -3786,6 +3838,7 @@ function docTienCong(rec, ex) {
       {headRows: 2, borders: true, sz: dense.sz, rowH: dense.rowH, pad: dense.pad,   // nhiều người: thu nhỏ cỡ chữ và độ cao hàng để bảng và khối ký vẫn nằm trọn một trang
        alignCols: ['center', 'left', 'left', 'center', 'right', 'center', 'right', 'right', 'center']}),
     ...(!khoanSuyRa(rec) ? [] : [P('Hình thức giao khoán: đơn giá khoán của tổ ' + khoanSuyRa(rec).price + ' ' + bs.unit + ' (tổng số người × đơn giá vị trí ÷ ' + N + ' người) × ' + (ha ? 'diện tích' : 'sản lượng') + ' = tổng tiền từng người cộng lại. Tổ trưởng ' + upper(tt.ten) + ' nhận thay cho cả tổ tổng số tiền ' + V(sum > 0 ? fmt(sum) : '', 12) + ' đồng (bằng chữ: ' + V(sum > 0 ? moneyWords(sum) : '', 0, '…'.repeat(40)) + ') và chi trả lại cho từng người theo cột “Thực nhận”.', {al: 'left', sz: dense.sz, before: 80, after: 0})]),
+    ...(!khoanNgay ? [] : [P('Hình thức giao khoán, trả theo ngày công: tiền của từng người = số công thực tế × đơn giá công theo chức danh. Tổ trưởng ' + upper(tt.ten) + ' nhận thay cho cả tổ tổng số tiền ' + V(sum > 0 ? fmt(sum) : '', 12) + ' đồng (bằng chữ: ' + V(sum > 0 ? moneyWords(sum) : '', 0, '…'.repeat(40)) + ') và chi trả lại cho từng người theo cột “Thực nhận”.', {al: 'left', sz: dense.sz, before: 80, after: 0})]),
     ...footerSign('Đại diện Tổ khai thác', tt.ten, dense.sign)
   ];
   if (dense.tight) out.tight = true;   // nhiều người: lề trên/dưới hẹp hơn để vẫn gọn một trang
@@ -3813,7 +3866,7 @@ function docUyQuyen(rec, ex) {
     P('**Điều 1: Phạm vi ủy quyền**', {keep: true}),
     P('Bên A ủy quyền cho Bên B, trong phạm vi công việc khai thác gỗ keo nêu trên:', {after: 60}),
     bl('Thay mặt Bên A giao kết, thực hiện và thanh lý Hợp đồng khai thác gỗ keo với chủ rừng; tổ chức, điều hành công việc khai thác của tổ.'),
-    bl('Nhận tiền thanh toán theo hợp đồng và chi trả cho từng người lao động đúng theo Bảng thanh toán tiền công (sản lượng chia đều, đơn giá theo vai trò) có chữ ký nhận của từng người.'),
+    bl('Nhận tiền thanh toán theo hợp đồng và chi trả cho từng người lao động đúng theo Bảng thanh toán tiền công (' + (rs.hinhThucLuong === 'ngaycong' ? 'số công thực tế, đơn giá công theo vai trò' : 'sản lượng chia đều, đơn giá theo vai trò') + ') có chữ ký nhận của từng người.'),
     bl('Làm việc với chủ rừng về tiến độ, khối lượng và nghiệm thu.'),
     P('Bên B không được ủy quyền lại cho người khác; không được thay đổi đơn giá, thu nhập hay quyền lợi của người lao động khi chưa có thỏa thuận bằng văn bản của người lao động đó.'),
     P('**Điều 2: Thời hạn ủy quyền**', {keep: true}),
@@ -4075,7 +4128,7 @@ function panelForest(f) {
 }
 
 const luongOptions = (direct, cur) => {
-  const opts = direct ? [['sanluong', 'Theo tấn (đ/tấn)'], ['ngaycong', 'Theo ngày công (đ/công, một ngày công bao nhiêu tiền)']] : [['sanluong', 'Khoán theo tấn (đ/tấn)'], ['ha', 'Khoán theo ha (đ/ha)']];
+  const opts = direct ? [['sanluong', 'Theo tấn (đ/tấn)'], ['ngaycong', 'Theo ngày công (đ/công, một ngày công bao nhiêu tiền)']] : [['sanluong', 'Khoán theo tấn (đ/tấn)'], ['ha', 'Khoán theo ha (đ/ha)'], ['ngaycong', 'Khoán, trả theo ngày công (đ/công; Tổ trưởng nhận thay cả tổ)']];
   const all = opts.some(o => o[0] === cur) ? opts : [...opts, [cur, '' + (BASIS[cur] ? BASIS[cur].short : cur) + ' — không áp dụng cho hình thức này, hãy chọn lại']];
   return all.map(([v, l]) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + l + '</option>').join('');
 };
@@ -4085,7 +4138,7 @@ function panelLuong(rec) {
     esc(((map || {})[cd]) ?? ((legacyTt && k === 0 && i.donGia > 0) ? i.donGia : '')) + '"></label>').join('');
   const grp = (name, html) => '<div class="grid" data-grp="' + name + '" style="grid-column:1/-1;' + (cur === name ? '' : 'display:none') + '">' + html + '</div>';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá</h3>' +
-    '<p class="mut" style="margin-top:0">Danh sách nhân công nạp từ file Excel. <b>Giao khoán</b>: chủ rừng ký với Tổ trưởng, công nhân ký một Giấy ủy quyền cho Tổ trưởng; tính theo tấn hoặc ha. <b>Trực tiếp</b>: chủ rừng ký hợp đồng lao động với tất cả nhân công; tính theo tấn hoặc ngày công. Sản lượng (tấn, ha) hoặc số công chia đều cho mọi người; đơn giá theo từng vai trò.</p>' +
+    '<p class="mut" style="margin-top:0">Danh sách nhân công nạp từ file Excel. <b>Giao khoán</b>: chủ rừng ký với Tổ trưởng, công nhân ký một Giấy ủy quyền cho Tổ trưởng; tính theo tấn, ha hoặc ngày công. <b>Trực tiếp</b>: chủ rừng ký hợp đồng lao động với tất cả nhân công; tính theo tấn hoặc ngày công. Sản lượng (tấn, ha) hoặc số công chia đều cho mọi người; đơn giá theo từng vai trò.</p>' +
     '<form id="luongForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Hình thức hợp đồng</span><select name="moHinhKy">' +
       '<option value="giaokhoan"' + (!direct ? ' selected' : '') + '>Giao khoán: chủ rừng ký với Tổ trưởng; công nhân ký một Giấy ủy quyền cho Tổ trưởng</option>' +
@@ -4228,9 +4281,59 @@ function panelImport(kind, rec) {
     (count ? '<button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu</button>' : '') + '</div></div></div>';
 }
 
+/* ========== Chấm công thực tế (tính lương theo ngày công; src/chamcong.js) ========== */
+let ccMonth = '';
+function ccMonths(rec) {
+  const CC = HAKChamCong, set = new Set(CC.monthsBetween(parseVN(rec.info.tuNgay), parseVN(rec.info.denNgay)));
+  Object.keys(rec.cc || {}).forEach(k => set.add(k)); return [...set].sort();
+}
+const ccCur = rec => { const m = ccMonths(rec); return m.includes(ccMonth) ? ccMonth : m[0] || ''; };
+const ccPersons = rec => [rec.nc.find(isTT), ...rec.nc.filter(r => !isTT(r))].filter(Boolean);
+function panelChamCong(rec) {
+  if (rec.info.hinhThucLuong !== 'ngaycong' || !rec.nc.length) return '';
+  const CC = HAKChamCong, months = ccMonths(rec), has = CC.hasAny(rec.cc);
+  const head = '<div class="card" id="ccCard"><h3 style="margin-top:0">Chấm công thực tế <span class="mut" style="font-weight:400">tiền công = số công × đơn giá công</span></h3>';
+  if (!months.length) return head + '<div class="msg warn">Nhập Thời gian khai thác (từ ngày, đến ngày) ở tab Thông tin rừng để chọn tháng chấm công.</div></div>';
+  const k = ccCur(rec), n = CC.daysIn(k), ps = ccPersons(rec);
+  const th = Array.from({length: n}, (_, i) => '<th class="' + (CC.isSunday(k, i + 1) ? 'ccSun' : '') + '">' + (i + 1) + '</th>').join('');
+  const body = ps.map(r => { const pk = CC.personKey(r);
+    return '<tr data-ccp="' + esc(pk) + '"><td class="ccName">' + esc(r.ten) + '</td>' + Array.from({length: n}, (_, i) => { const d = i + 1, v = CC.get(rec.cc, k, pk, d);
+      return '<td class="' + (CC.isSunday(k, d) ? 'ccSun' : '') + '"><input class="ccIn" inputmode="decimal" data-cc="' + d + '" value="' + (v == null ? '' : esc(String(v).replace('.', ','))) + '" aria-label="' + esc(r.ten) + ' ngày ' + d + '"></td>'; }).join('') +
+      '<td class="ccTot" data-ccm="' + esc(pk) + '">' + fmtCong(CC.monthTotal(rec.cc, k, pk)) + '</td><td class="ccTot" data-cca="' + esc(pk) + '"><b>' + fmtCong(CC.total(rec.cc, pk)) + '</b></td></tr>'; }).join('');
+  return head + '<p class="mut" style="margin:0 0 8px">Nhập số công mỗi ngày: <b>1</b> = đủ công, <b>0,5</b> = nửa công, <b>0</b> hoặc để trống = nghỉ. Khi đã có số công chấm tay, <b>BM-08 dùng số công này cho từng người</b>; chưa nhập thì BM-08 tính theo thời gian khai thác (trừ Chủ nhật), mọi người bằng nhau. Hợp đồng (BM-01, BM-03) luôn dùng số công dự tính nên không đổi khi bạn chấm công.</p>' +
+    '<div class="row" style="align-items:center;gap:8px;flex-wrap:wrap"><label style="margin:0">Tháng <select id="ccMonthSel">' + months.map(m => '<option value="' + m + '"' + (m === k ? ' selected' : '') + '>' + m.split('-')[1] + '/' + m.split('-')[0] + '</option>').join('') + '</select></label>' +
+    '<button class="btn sm ghost" data-act="ccFill" title="Điền 1 công cho mọi người ở các ngày không phải Chủ nhật trong thời gian khai thác của tháng này">Điền đủ công (trừ Chủ nhật)</button>' +
+    '<button class="btn sm ghost" data-act="ccClear">Xóa tháng này</button>' +
+    '<button class="btn sm" data-act="ccPrint" title="Tải Bảng chấm công (BM-05) có số công đã nhập của tháng này">In bảng chấm công đã nhập</button></div>' +
+    '<div class="msg ' + (has ? 'ok' : '') + '" id="ccNote" style="margin:8px 0">' + (has ? 'Đã có số công chấm tay: BM-08 dùng tổng công của từng người.' : 'Chưa chấm công: BM-08 dùng số công dự tính theo thời gian khai thác.') + '</div>' +
+    '<div class="wrap"><table class="ccTbl"><thead><tr><th>Họ và tên</th>' + th + '<th>Tháng</th><th>Cả đợt</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
+}
+function ccCommit(note_) { persist(); const n = document.getElementById('ccNote'); if (n) { n.className = 'msg ok'; n.textContent = note_ || 'Đã có số công chấm tay: BM-08 dùng tổng công của từng người.'; } }
+function ccRefreshTotals(f, k) {
+  const CC = HAKChamCong; document.querySelectorAll('#ccCard tr[data-ccp]').forEach(tr => { const pk = tr.dataset.ccp; const a = tr.querySelector('[data-ccm]'), b = tr.querySelector('[data-cca]'); if (a) a.textContent = fmtCong(CC.monthTotal(f.cc, k, pk)); if (b) b.innerHTML = '<b>' + fmtCong(CC.total(f.cc, pk)) + '</b>'; });
+}
+function ccAct(act) {
+  const f = curForest(), rec = curRec(); if (!f || !rec) return; f.cc = f.cc || {}; const CC = HAKChamCong, k = ccCur(rec); if (!k) return;
+  if (act === 'ccFill') { CC.fillWork(f.cc, k, ccPersons(rec).map(CC.personKey), parseVN(rec.info.tuNgay), parseVN(rec.info.denNgay)); persist(); return render(); }
+  if (act === 'ccClear') { CC.clearMonth(f.cc, k); persist(); return render(); }
+  if (act === 'ccPrint') return ccExport(rec, k);
+}
+async function ccExport(rec, k) {
+  const ex = exOf(rec, 'day'); ex._ccMonth = k; docMode = 'day';
+  try { const f = {path: '05_Bang_cham_cong_' + slug(rec.info.ten) + '_' + k + '.docx', blocks: docChamCong(rec, ex), land: true}; download(await makeDocx(f.blocks, docOpts(f, rec)), f.path.split('/').pop()); }
+  catch (err) { note('Lỗi khi tạo file: ' + err.message, 'err'); }
+}
+document.addEventListener('change', e => {
+  const t = e.target; if (!t || !t.closest) return;
+  if (t.id === 'ccMonthSel') { ccMonth = t.value; return render(); }
+  if (!t.classList || !t.classList.contains('ccIn')) return;
+  const f = curForest(); if (!f) return; const CC = HAKChamCong, tr = t.closest('tr'), k = ccCur(curRec()), pk = tr.dataset.ccp, d = t.dataset.cc, v = CC.parseCell(t.value);
+  if (v === undefined) { const o = CC.get(f.cc, k, pk, d); t.value = o == null ? '' : String(o).replace('.', ','); t.classList.add('ccBad'); return ccCommit('Số công mỗi ngày từ 0 đến 3 (ví dụ 1 hoặc 0,5): giá trị đã nhập không hợp lệ nên được giữ như cũ.'); }
+  t.classList.remove('ccBad'); f.cc = f.cc || {}; CC.set(f.cc, k, pk, d, v); t.value = v == null ? '' : String(v).replace('.', ','); ccRefreshTotals(f, k); ccCommit();
+});
 function panelNC(rec) {
   const c = checkNC(rec);
-  const head = panelLuong(rec) + panelImport('nc', rec);
+  const head = panelLuong(rec) + panelImport('nc', rec) + panelChamCong(rec);
   if (!rec.nc.length) return head + '<div class="empty">Chưa có danh sách nhân công. Bấm “Tải file mẫu”, điền rồi nạp lại.</div>';
   return head + issuesBox(c.errs, c.warns) +
     '<div class="wrap"><table><thead><tr><th>Dòng</th><th>Vai trò</th><th>Danh xưng</th><th>Họ và tên</th><th>Ngày sinh</th><th>CCCD</th><th>Chức danh</th><th>Đơn giá</th></tr></thead><tbody>' +
@@ -5762,6 +5865,7 @@ document.addEventListener('click', async e => {
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|fillKl|dmDefault)$/.test(act)) return forestFill(act, el);
+  if (/^cc(Fill|Clear|Print)$/.test(act)) return ccAct(act);
   if (act === 'keoDel') { const tr = el.closest('tr'); tr.querySelectorAll('input').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'pcFixDate') {   // sửa ngày phiếu cũ bị sai: chỉ nhận ngày có thật; giữ nguyên mọi dữ liệu khác của phiếu

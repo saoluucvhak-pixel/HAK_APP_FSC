@@ -267,3 +267,9 @@ Rà bằng skill unslop (chế độ polish: giao diện đã dùng bảng màu 
 ## 39. Rà soát và hệ thống hóa quy trình theo đợt (bản 1.4.28)
 Chi tiết ở `docs/QUY_TRINH_HO_SO.md`. Bất biến “đợt 1 độc lập đợt 2” (`scripts/e2e-batbien.js`) **phát hiện bốn lỗi thật** ở BM-01, BM-11, BM-17, BM-18 (mẫu đợt 1 đọc dữ liệu đợt 2), đã sửa; kiểm tra chéo BM-08/09/10/14/01 không lệch. Bảng Quy trình hồ sơ theo đợt (`src/quytrinh.js`, `tests/quytrinh.test.js` 5 ca, `scripts/e2e-quytrinh.js`): trạng thái dữ liệu, đánh dấu đã in lưu bền (đóng/mở lại), phát hiện dữ liệu đổi sau khi in (chỉ các mẫu liên quan), nhập dữ liệu đợt 2 không làm đợt 1 “in lại”, việc nên làm tiếp theo thứ tự quy trình.
 
+## 40. Giao khoán trả theo ngày công và chấm công thực tế (bản 1.4.29)
+- **Quy tắc**: giao khoán chọn được tấn, ha hoặc ngày công; trực tiếp vẫn chỉ tấn hoặc ngày công. Giao khoán theo ngày công: BM-01 (mục 2.2 trả theo ngày công, dự tính số công), BM-08 (đoạn Tổ trưởng nhận thay cả tổ, có trong cả mẫu nền và in đè), BM-20 (chi trả theo số công thực tế).
+- **Chấm công** (`src/chamcong.js`, `tests/chamcong.test.js` 7 kiểm tra; `scripts/e2e-chamcong.js` 19 kiểm tra): thẻ Chấm công thực tế, điền đủ công trừ Chủ nhật, sửa ô (0,5 / 0 / 1,5), ô sai hoặc quá 3 công bị từ chối và giữ giá trị cũ, tổng tháng và cả đợt, lưu lại sau khi mở lại, BM-08 dùng công từng người (5,5 / 5 / 6,5 công ra 5.780.000 đồng), in BM-05 đã nhập, ký trực tiếp dùng chung số công.
+- **Bất biến giữ nguyên**: BM-01, BM-20 và BM-05 trong gói hồ sơ giống hệt trước và sau khi chấm công; BM-08 mẫu nền không in số công, số tiền.
+- `scripts/e2e-hopdong.js` đổi theo quy tắc mới (giao khoán có ngày công; trường hợp sai nay là trực tiếp + ha).
+- **Chưa kiểm được**: in giấy thật và mở bằng Microsoft Word.

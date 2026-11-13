@@ -52,12 +52,13 @@ Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa c
 ## 4. Nhân công, hợp đồng và đơn giá
 Vào lô → tab **Nhân công** → mục **Thông số hợp đồng và đơn giá**:
 1. **Hình thức hợp đồng**
-   - **Giao khoán**: chủ rừng ký hợp đồng khoán (BM-01) với **Tổ trưởng**; các công nhân ký **một Giấy ủy quyền (BM-20)** cho Tổ trưởng. Tính theo **tấn hoặc ha**.
+   - **Giao khoán**: chủ rừng ký hợp đồng khoán (BM-01) với **Tổ trưởng**; các công nhân ký **một Giấy ủy quyền (BM-20)** cho Tổ trưởng. Tính theo **tấn, ha hoặc ngày công**. Khi chọn **ngày công**, Tổ trưởng nhận thay cả tổ tổng tiền rồi chi trả lại từng người theo cột “Thực nhận” của BM-08.
    - **Trực tiếp**: chủ rừng ký hợp đồng lao động (BM-03) với **mọi nhân công**. Tính theo **tấn hoặc ngày công**.
 2. **Đơn giá theo từng chức danh** (Tổ trưởng, Công nhân khai thác, Công nhân cưa): ô đơn giá hiện theo cơ sở tính đã chọn (đồng/tấn, đồng/ha, đồng/công). Thiếu đơn giá của chức danh nào thì dòng nhân công đó báo lỗi.
 3. **Sản lượng chia đều**: tấn (hoặc ha, hoặc số công) chia đều cho **mọi người trong tổ, kể cả Tổ trưởng**; tiền mỗi người = phần chia × đơn giá chức danh của người đó.
 4. **Ngày bắt đầu** dùng cho hợp đồng, chấm công và kiểm tra **đủ 18 tuổi**. Người dưới 18 tuổi bị cảnh báo và **không xuất được Giấy ủy quyền**.
-5. **Định mức BHLĐ** theo chức danh (nút **Định mức BHLĐ** ở cột bên trái) dùng cho sổ cấp phát.
+5. **Chấm công thực tế** (chỉ khi cơ sở tính là **ngày công**, cả giao khoán lẫn trực tiếp): thẻ **Chấm công thực tế** ngay dưới thông số ở tab Nhân công. Chọn tháng, nhập số công từng ngày cho từng người (**1** đủ công, **0,5** nửa công, **0** hoặc trống là nghỉ; tối đa 3 mỗi ngày), hoặc bấm **Điền đủ công (trừ Chủ nhật)** rồi sửa các ngày nghỉ. Tổng tháng và cả đợt hiện ngay. Quy tắc: **chưa chấm công** thì BM-08 tính mọi người bằng số công theo thời gian khai thác (trừ Chủ nhật); **đã chấm công** thì BM-08 dùng tổng công của từng người (người chưa chấm là 0 công). Hợp đồng (BM-01, BM-03, BM-20) luôn dùng số công dự tính nên không đổi khi chấm công. Nút **In bảng chấm công đã nhập** tải BM-05 của tháng đang chọn có sẵn số công; BM-05 trong các gói hồ sơ vẫn là mẫu trống để chấm tay.
+6. **Định mức BHLĐ** theo chức danh (nút **Định mức BHLĐ** ở cột bên trái) dùng cho sổ cấp phát.
 6. Nạp danh sách người bằng file Excel mẫu (xem mục 6). Mỗi lô cần **đúng một Tổ trưởng**.
 
 ## 5. Vận chuyển: xe, phiếu cân, cước, địa chỉ giao
