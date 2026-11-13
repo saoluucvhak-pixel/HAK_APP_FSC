@@ -91,7 +91,8 @@ const HAKReports = (function () {
     const MH = typeof HAKMuaHang !== 'undefined' ? HAKMuaHang : require('../src/muahang.js');
     const lech = p => p.dd && p.dd.src === 'congty' && !MH.noiGiaoKhop(p.noiGiao, p.dd);
     const dpi = dupInfo(recs, o), isDup = {}; dpi.keys.forEach(k => { isDup[k] = true; });
-    const rows = all.map((p, i) => [i + 1, p.ngay, p.soPhieu, p.bienSo, p.chu, p.rung, p.noiGiao || '', num(p.kl), isDup[String(p.soPhieu || '').trim().toUpperCase()] ? 'Trùng số phiếu' : '', (p.dd && p.dd.text) || '', lech(p) ? 'Khác điểm đến theo hồ sơ' : '']);
+    const nz = v => (typeof v === 'number' && isFinite(v) ? v : '');
+    const rows = all.map((p, i) => [i + 1, p.ngay, p.gioCan1 || '', p.gioCan2 || '', p.soPhieu, p.bienSo, p.khachHang || p.chu, p.rung, nz(p.can1), nz(p.can2), nz(p.klKg) !== '' ? p.klKg : Math.round(num(p.kl) * 1000), num(p.kl), p.noiGiao || '', isDup[String(p.soPhieu || '').trim().toUpperCase()] ? 'Trùng số phiếu' : '', (p.dd && p.dd.text) || '', lech(p) ? 'Khác điểm đến theo hồ sơ' : '']);
     const total = sumKl(all);
     const byPlate = {}, byDay = {}, byForest = {};
     all.forEach(p => {
@@ -114,8 +115,9 @@ const HAKReports = (function () {
       kpis: [{label: 'Số phiếu cân', value: all.length, f: 'n0'}, {label: 'Tổng khối lượng (tấn)', value: total, f: 'n3'}, {label: 'Số xe', value: Object.keys(byPlate).length, f: 'n0'},
         {label: 'Bình quân (tấn/chuyến)', value: all.length ? round(total / all.length, 3) : 0, f: 'n3'}, {label: 'Phiếu trùng số (đã tính vào tổng)', value: dpi.extra, f: 'n0'}, ...(bad.length ? [{label: 'Phiếu bị loại (ngày không hợp lệ)', value: bad.length, f: 'n0'}] : [])],
       sections: [
-        {heading: 'I. Danh sách phiếu cân', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Ngày cân', w: 10, f: 'date'}, {h: 'Số phiếu cân', w: 14}, {h: 'Biển kiểm soát', w: 12, al: 'center'},
-          {h: 'Chủ rừng', w: 17}, {h: 'Mã rừng', w: 11}, {h: 'Nơi giao', w: 15}, {h: 'Khối lượng (tấn)', w: 11, al: 'right', f: 'n3'}, {h: 'Ghi chú', w: 10}, {h: 'Điểm đến theo hồ sơ rừng', w: 22}, {h: 'Đối chiếu nơi giao', w: 14}], rows, foot: ['', 'TỔNG CỘNG', '', '', '', '', '', total, '', '', '']},
+        {heading: 'I. Danh sách phiếu cân', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Ngày cân', w: 10, f: 'date'}, {h: 'Giờ cân 1', w: 7, al: 'center'}, {h: 'Giờ cân 2', w: 7, al: 'center'}, {h: 'Số phiếu cân', w: 9}, {h: 'Biển kiểm soát', w: 9, al: 'center'},
+          {h: 'Khách hàng', w: 11}, {h: 'Mã rừng', w: 7}, {h: 'Cân lần 1 (kg)', w: 8, al: 'right', f: 'n0'}, {h: 'Cân lần 2 (kg)', w: 8, al: 'right', f: 'n0'}, {h: 'Khối lượng (kg)', w: 8, al: 'right', f: 'n0'}, {h: 'Khối lượng (tấn)', w: 8, al: 'right', f: 'n3'},
+          {h: 'Nơi giao', w: 10}, {h: 'Ghi chú', w: 6}, {h: 'Điểm đến theo hồ sơ rừng', w: 10}, {h: 'Đối chiếu nơi giao', w: 8}], rows, foot: ['', 'TỔNG CỘNG', '', '', '', '', '', '', '', '', rows.reduce((x, r) => x + (r[10] || 0), 0), total, '', '', '', '']},
         Object.assign({heading: 'II. Tổng hợp theo rừng'}, tbl(byForest, 'Mã rừng', byName)),
         Object.assign({heading: 'III. Tổng hợp theo biển kiểm soát'}, tbl(byPlate, 'Biển kiểm soát', byName)),
         Object.assign({heading: 'IV. Tổng hợp theo ngày cân'}, tbl(byDay, 'Ngày cân', (a, b) => dateKey(a) - dateKey(b) || byName(a, b))),

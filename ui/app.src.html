@@ -312,7 +312,7 @@ const H_DX = {'STT':'stt','Chủ xe (bên vận chuyển)':'chuXe','Ngày sinh c
   'Tên tài xế':'taiXe','Ngày sinh tài xế':'ngaySinhTx','CCCD tài xế':'cccdTx','Ngày cấp CCCD tài xế':'ngayCapTx','Nơi cấp CCCD tài xế':'noiCapTx','Thường trú tài xế':'diaChiTx',
   'Số GPLX':'gplx','Ngày đến hạn GPLX':'hanGplx','Ngày đến hạn bảo hiểm':'hanBH','Kiểm định từ ngày':'kdTu','Kiểm định đến ngày':'kdDen','SĐT':'sdt'};
 const DX_REQ = ['Chủ xe (bên vận chuyển)','Biển kiểm soát','Người ký HĐ vận chuyển'];
-const H_PC = {'STT':'stt','Ngày cân':'ngay','Biển kiểm soát':'bienSo','Số phiếu cân':'soPhieu','Khối lượng (tấn)':'kl','Nơi giao (nhà máy)':'noiGiao','Ghi chú':'ghiChu'};
+const H_PC = {'STT':'stt','Ngày cân':'ngay','Giờ cân 1':'gioCan1','Giờ cân 2':'gioCan2','Biển kiểm soát':'bienSo','Số phiếu cân':'soPhieu','Cân lần 1 (kg)':'can1','Cân lần 2 (kg)':'can2','Khối lượng (kg)':'klKg','Khối lượng (tấn)':'kl','Khách hàng':'khachHang','Nơi giao (nhà máy)':'noiGiao','Ghi chú':'ghiChu'};
 const PC_REQ = ['Ngày cân','Biển kiểm soát','Số phiếu cân','Khối lượng (tấn)'];
 /* Cột “Mã rừng” KHÔNG còn trong file mẫu và không bắt buộc: dữ liệu luôn nạp vào lô đang mở. File cũ vẫn có thể có cột này (nếu điền thì phải khớp lô, dùng để chặn nạp nhầm file của lô khác; để trống thì tự lấy mã lô đang mở). */
 const H_LEGACY = {'Mã rừng': 'maRung'};
@@ -549,11 +549,17 @@ const normDX = o => {
   return r;
 };
 
-const normPC = o => ({
-  _row: o._row, maRung: trim(o.maRung), stt: trim(o.stt), ngay: normDate(o.ngay), bienSo: trim(o.bienSo).toUpperCase(),
-  soPhieu: typeof o.soPhieu === 'number' ? String(Math.round(o.soPhieu)) : trim(o.soPhieu),
-  kl: typeof o.kl === 'number' ? (isFinite(o.kl) ? o.kl : 'x') : toDec(o.kl), noiGiao: trim(o.noiGiao), ghiChu: trim(o.ghiChu)
-});
+/* giờ cân: ô giờ của Excel (phần ngày 0..1) → HH:MM:SS; chuỗi giữ nguyên */
+const timeCell = v => { if (typeof v === 'number' && v >= 0 && v < 1) { const t = Math.round(v * 86400); return pad2(Math.floor(t / 3600)) + ':' + pad2(Math.floor(t % 3600 / 60)) + ':' + pad2(t % 60); } return trim(v); };
+const normPC = o => {
+  const klKg = toDec(o.klKg); let kl = typeof o.kl === 'number' ? (isFinite(o.kl) ? o.kl : 'x') : toDec(o.kl);
+  if (kl == null && typeof klKg === 'number' && klKg > 0) kl = Math.round(klKg) / 1000;   // chỉ điền kg: tấn = kg ÷ 1000
+  return {
+    _row: o._row, maRung: trim(o.maRung), stt: trim(o.stt), ngay: normDate(o.ngay), gioCan1: timeCell(o.gioCan1), gioCan2: timeCell(o.gioCan2), bienSo: trim(o.bienSo).toUpperCase(),
+    soPhieu: typeof o.soPhieu === 'number' ? String(Math.round(o.soPhieu)) : trim(o.soPhieu), can1: toDec(o.can1), can2: toDec(o.can2), klKg,
+    kl, khachHang: trim(o.khachHang), noiGiao: trim(o.noiGiao), ghiChu: trim(o.ghiChu)
+  };
+};
 
 /* ========== Phiếu cân: khối lượng và tiền vận chuyển ========== */
 const bienKey = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
@@ -591,6 +597,9 @@ function checkPC(rec) {
     if (!r.soPhieu) mark(r, 'err', 'Thiếu số phiếu cân');
     else { const k = r.soPhieu.toUpperCase(); if (seen[k]) mark(r, 'err', 'Số phiếu cân ' + r.soPhieu + ' trùng với dòng ' + seen[k]); else seen[k] = r._row; }
     if (r.kl == null) mark(r, 'err', 'Thiếu khối lượng'); else if (r.kl === 'x' || !(r.kl > 0)) mark(r, 'err', 'Khối lượng không hợp lệ');
+    [['can1', 'Cân lần 1'], ['can2', 'Cân lần 2'], ['klKg', 'Khối lượng (kg)']].forEach(([k, label]) => { if (r[k] === 'x' || (typeof r[k] === 'number' && r[k] < 0)) mark(r, 'err', label + ' phải là số không âm'); });
+    if (typeof r.klKg === 'number' && typeof r.kl === 'number' && r.klKg > 0 && Math.abs(r.klKg / 1000 - r.kl) > 0.0005) mark(r, 'warn', 'Khối lượng kg (' + fmt(r.klKg) + ') và tấn (' + fmtT(Math.round(r.kl * 1000)) + ') không khớp nhau');
+    if (typeof r.can1 === 'number' && typeof r.can2 === 'number' && typeof r.klKg === 'number' && r.klKg > 0 && Math.abs(Math.abs(r.can1 - r.can2) - r.klKg) > 1) mark(r, 'warn', 'Khối lượng kg không bằng chênh lệch cân lần 1 và cân lần 2');
   });
   const ng = parseFloat(String((rec.exp || {}).pcNguong || '').replace(',', '.')), vol = volumeOf(rec.info);
   if (pc.length && ng > 0 && vol) {
@@ -3100,7 +3109,7 @@ function rpRecords(ownerFilter = rp.owner) {
       out.push({oid: o.id, fid: f.id, chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
         dienTich: i.dienTich, dinhMuc: i.dinhMucTanHa, khoiLuongTT: i.khoiLuong, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
         diemDen: destOf(jobView(o, f)),
-        pc: (f.pc || []).map(p => ({ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao})), bienLog: (f.bienLog || []).map(e => ({...e})),
+        pc: (f.pc || []).map(p => ({ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null, can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
         nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu});
     });
   });

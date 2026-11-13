@@ -89,9 +89,9 @@ async function wordTables(file) {
       const k = Object.fromEntries(kpis.map(([v, l]) => [l.trim(), v]));
       ok('sổ phiếu cân: ' + EXPECT.trips + ' chuyến trong kỳ (loại phiếu P3 ngoài kỳ)', k['Số phiếu cân'] === String(EXPECT.trips), JSON.stringify(k));
       ok('sổ phiếu cân: tổng 31,750 tấn', k['Tổng khối lượng (tấn)'] === '31,750', JSON.stringify(k));
-      const hi = aoa.findIndex(r => r[1] === 'Ngày cân' && r[2] === 'Số phiếu cân'); const body = aoa.slice(hi + 1, hi + 1 + EXPECT.trips);
-      const sum = body.reduce((s, r) => s + r[7], 0); ok('sổ phiếu cân: SUM cột khối lượng trong Excel = 31,75', Math.abs(sum - EXPECT.tons) < 1e-9, String(sum));
-      ok('sổ phiếu cân: phiếu trùng số P2 được đánh dấu ở cả hai dòng, không bị xóa', body.filter(r => r[8] === 'Trùng số phiếu').length === 2 && body.filter(r => r[2] === 'P2').length === 2);
+      const hi = aoa.findIndex(r => r[1] === 'Ngày cân' && r[4] === 'Số phiếu cân'); const body = aoa.slice(hi + 1, hi + 1 + EXPECT.trips);
+      const sum = body.reduce((s, r) => s + r[11], 0); ok('sổ phiếu cân: SUM cột khối lượng trong Excel = 31,75', Math.abs(sum - EXPECT.tons) < 1e-9, String(sum) + ' hi=' + hi + ' ' + JSON.stringify(body[0]));
+      ok('sổ phiếu cân: phiếu trùng số P2 được đánh dấu ở cả hai dòng, không bị xóa', body.filter(r => r[13] === 'Trùng số phiếu').length === 2 && body.filter(r => r[4] === 'P2').length === 2);
       ok('sổ phiếu cân: KPI và ghi chú nêu rõ cách tính phiếu trùng', k['Phiếu trùng số (đã tính vào tổng)'] === '1' && (await w.textContent('#rpBody .msg.warn')).includes('vẫn được cộng vào tổng'));
     }
     if (id === 'sanluong') {

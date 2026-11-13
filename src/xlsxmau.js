@@ -85,16 +85,22 @@
       purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG có cột Mã rừng. ' + 'Phiếu cân của nhà máy cho từng chuyến xe của MỘT lô rừng (một dòng = một chuyến). Từ đây phần mềm tính khối lượng giao, tiền vận chuyển từng xe (BM-09, BM-10), sổ phiếu cân và các báo cáo.',
       steps: ['Nạp đội xe của lô TRƯỚC (mẫu DOI_XE): phiếu cân chỉ nhận biển số có trong danh sách xe.',
         'Mở trang tính PHIEU_CAN. Điền từ dòng 2, mỗi chuyến một dòng; KHÔNG sửa dòng tiêu đề (dòng 1). Cột tiêu đề đỏ sẫm là cột bắt buộc.',
-        'Ngày cân nhập dạng dd/mm/yyyy và phải là ngày có thật. Khối lượng tính bằng TẤN (ví dụ 25,4 hoặc 25.4).',
+        'Ngày cân nhập dạng dd/mm/yyyy và phải là ngày có thật. Khối lượng tính bằng TẤN (ví dụ 25,4 hoặc 25.4). Các cột giờ cân, cân lần 1, cân lần 2, khối lượng kg và khách hàng là tùy chọn (giống phiếu cân nhà máy), có thể bỏ trống.',
         'Lưu file .xlsx. Trong phần mềm: tab “Vận chuyển” → mục Phiếu cân → “Nạp file Excel”.',
         'Phiếu có ngày không có thật (ví dụ 31/02/2026) làm cả file bị từ chối kèm số phiếu và lý do: sửa ngày rồi nạp lại.',
         'Nạp lại file sẽ thay danh sách phiếu cân của lô (kể cả phiếu lấy từ tra cứu); hộp xác nhận cho biết số phiếu bị bỏ.'],
       cols: [
         {n: 'STT', req: K, fmt: 'Số', ex: '1', note: 'Số thứ tự, có thể bỏ trống.'},
         {n: 'Ngày cân', req: A, fmt: 'dd/mm/yyyy', ex: '05/10/2026', note: 'Ngày có thật (31/02/2026 và 29/02/2026 là sai; 29/02/2028 hợp lệ). Phiếu sai ngày không được nhập và không được tính vào tổng của kỳ báo cáo.'},
+        {n: 'Giờ cân 1', req: K, fmt: 'hh:mm hoặc hh:mm:ss', ex: '08:15:00', note: 'Giờ cân lần 1 trên phiếu; có thể bỏ trống. Nhập dạng giờ hoặc văn bản.'},
+        {n: 'Giờ cân 2', req: K, fmt: 'hh:mm hoặc hh:mm:ss', ex: '09:40:00', note: 'Giờ cân lần 2 trên phiếu; có thể bỏ trống.'},
         {n: 'Biển kiểm soát', req: A, fmt: 'Văn bản', ex: '92C-123.45', note: 'Phải có trong danh sách xe của lô. So khớp bỏ dấu chấm, gạch, khoảng trắng và không phân biệt hoa thường.'},
         {n: 'Số phiếu cân', req: A, fmt: 'Văn bản hoặc số; không trùng', ex: 'PC001', note: 'Mỗi phiếu một số. Số phiếu trùng bị báo lỗi (bản ghi cũ đã lưu trùng số vẫn được tính vào tổng nhưng có đánh dấu).'},
+        {n: 'Cân lần 1 (kg)', req: K, fmt: 'Số kg không âm', ex: '40400', note: 'Số cân lần 1 (kg); có thể bỏ trống.'},
+        {n: 'Cân lần 2 (kg)', req: K, fmt: 'Số kg không âm', ex: '15000', note: 'Số cân lần 2 (kg); có thể bỏ trống. Khối lượng thường bằng chênh lệch hai lần cân; lệch quá 1 kg sẽ có cảnh báo.'},
+        {n: 'Khối lượng (kg)', req: K, fmt: 'Số kg không âm', ex: '25400', note: 'Khối lượng hàng (kg). Nếu cột tấn để trống thì tấn = kg ÷ 1000; nếu có cả hai mà lệch nhau sẽ có cảnh báo.'},
         {n: 'Khối lượng (tấn)', req: A, fmt: 'Số lớn hơn 0', ex: '25,4', note: 'Tính bằng tấn, dùng dấu phẩy hoặc dấu chấm thập phân. Khối lượng giao tại nhà máy là căn cứ tính tiền vận chuyển.'},
+        {n: 'Khách hàng', req: K, fmt: 'Văn bản', ex: 'NGUYỄN VĂN AN', note: 'Tên khách hàng trên phiếu cân (thường là chủ rừng); có thể bỏ trống.'},
         {n: 'Nơi giao (nhà máy)', req: K, fmt: 'Văn bản', ex: 'Nhà máy dăm A', note: 'Ghi đúng như trên phiếu của nhà máy; phần mềm giữ nguyên và chỉ cảnh báo nếu khác địa chỉ giao hàng đã chốt của lô.'},
         {n: 'Ghi chú', req: K, fmt: 'Văn bản', ex: '', note: 'Ghi chú tùy ý.'}],
       rules: ['Biển số có trong danh sách xe (tab Vận chuyển).', 'Ngày cân là ngày có thật theo lịch (có tính năm nhuận).', 'Số phiếu cân không trùng; khối lượng là số lớn hơn 0.',
@@ -102,7 +108,7 @@
       errors: [['Biển … chưa có trong danh sách xe', 'Thêm xe vào file đội xe, nạp lại đội xe rồi nạp phiếu cân.'], ['Ngày … không có thật / thiếu ngày cân', 'Sửa ngày đúng dd/mm/yyyy với ngày có thật (ví dụ 28/02/2026) rồi nạp lại.'],
         ['Số phiếu cân … trùng với dòng n', 'Kiểm tra phiếu nhập hai lần; xóa hoặc sửa số phiếu.'], ['Khối lượng không hợp lệ / thiếu khối lượng', 'Nhập số tấn lớn hơn 0 (25,4).'],
         ['Mã rừng "…" khác lô đang mở', 'Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng.'], ['File thiếu cột: ...', 'Dùng đúng file mẫu, không sửa dòng tiêu đề.']],
-      example: [['1', '05/10/2026', '92C-123.45', 'PC001', '25,4', 'Nhà máy dăm A', ''], ['2', '06/10/2026', '92C-678.90', 'PC002', '24,6', 'Nhà máy dăm A', ''], ['3', '29/02/2028', '92C-123.45', 'PC003', '26,1', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ']]
+      example: [['1', '05/10/2026', '08:15:00', '09:40:00', '92C-123.45', 'PC001', '40400', '15000', '25400', '25,4', 'NGUYỄN VĂN AN', 'Nhà máy dăm A', ''], ['2', '06/10/2026', '08:30:00', '10:05:00', '92C-678.90', 'PC002', '39600', '15000', '24600', '24,6', 'NGUYỄN VĂN AN', 'Nhà máy dăm A', ''], ['3', '29/02/2028', '', '', '92C-123.45', 'PC003', '', '', '', '26,1', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ']]
     }
   };
 
