@@ -2120,8 +2120,8 @@ function panelForest(f) {
     inp('dienTich', 'Diện tích (ha)') + inp('dinhMucTanHa', 'Định mức (tấn/ha)') +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến'}) +
-    inp('donGia', 'Đơn giá giao khoán Tổ trưởng (đồng/tấn)', {ph: 'để trống thì tự suy từ định biên nhân sự (giao khoán)', wide: true}) +
-    inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: 'VD: 45. Chỉ cần khi tính cước tấn/km'}) + inp('tuNgay', 'Thời gian khai thác — từ ngày') + inp('denNgay', 'Thời gian khai thác — đến ngày') +
+    inp('tuNgay', 'Thời gian khai thác — từ ngày') + inp('denNgay', 'Thời gian khai thác — đến ngày') + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: 'VD: 45. Chỉ cần khi tính cước tấn/km'}) +
+    '<label><span>Đơn giá giao khoán Tổ trưởng (đồng/tấn)</span><input name="donGia" inputmode="numeric" style="text-align:right" value="' + esc(i.donGia > 0 ? fmt(i.donGia) : '') + '" placeholder="để trống: tự suy"><small class="mut">Để trống thì giao khoán tự suy đơn giá từ định biên nhân sự.</small></label>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
 
