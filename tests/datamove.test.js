@@ -192,7 +192,7 @@ test('ổ biến mất rồi xuất hiện lại: khởi động không tự dù
   assert.strictEqual(Settings.checkConfigured(userDir).state, 'ok'); assert.strictEqual(counts(path.join(drive, 'hakqn.sqlite')).owners, 2);
 });
 
-test('không có quyền truy cập thư mục dữ liệu: báo NO_PERMISSION (bỏ qua nếu chạy bằng root)', { skip: process.getuid && process.getuid() === 0 }, () => {
+test('không có quyền truy cập thư mục dữ liệu: báo NO_PERMISSION (bỏ qua trên Windows vì chmod không chặn được, và khi chạy bằng root)', { skip: process.platform === 'win32' || (process.getuid && process.getuid() === 0) }, () => {
   const root = tmp(), userDir = path.join(root, 'ud'), d = path.join(root, 'x'); fs.mkdirSync(userDir); const s = mkStore(d, data('P')); s.close(); Settings.save(userDir, {dataDir: d, backupDir: ''});
   fs.chmodSync(d, 0o000);
   try { assert.strictEqual(Settings.checkConfigured(userDir).code, 'NO_PERMISSION'); } finally { fs.chmodSync(d, 0o755); }
