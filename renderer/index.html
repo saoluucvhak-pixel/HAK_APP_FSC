@@ -243,6 +243,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
     <button class="nb" data-act="openCty" id="navCty">Công ty mua hàng</button>
+    <button class="nb" data-act="openNorm" id="navNorm">Định mức BHLĐ</button>
   </nav>
   <button class="hbtn" data-act="theme" id="themeBtn">Chế độ tối</button>
   <details class="menu" id="moreMenu"><summary class="hbtn">⋯ Thêm</summary><div class="pop">
@@ -3641,7 +3642,7 @@ function renderSide() {
       const kids = id === cur ? forestList(r).map(f => '<button class="item sub ' + (f.id === curF ? 'on' : '') + '" data-sforest="' + f.id + '"><b>' + esc(f.info.tenRung || f.info.maRung || '(rừng chưa đặt tên)') + '</b><small>' + esc(f.info.maRung || '') + '</small></button>').join('') : '';
       return '<button class="item ' + (id === cur ? 'on' : '') + '" data-open="' + id + '"><b>' + (id === cur ? '▾ ' : '▸ ') + esc(r.info.ten || '(chưa đặt tên)') +
         '</b><small>Mã ' + esc(r.info.ma) + ' · ' + forestList(r).length + ' rừng</small></button>' + (kids ? '<div class="subs">' + kids + '</div>' : '');
-    }).join('') : (sideQ ? '<p class="mut">Không có chủ rừng khớp “' + esc(sideQ) + '”.</p>' : '<p class="mut">Chưa có chủ rừng. Bấm “+ Chủ rừng mới”.</p>')) + '<button class="btn ghost" style="width:100%;margin-top:14px" data-act="openNorm">Định mức BHLĐ</button>';
+    }).join('') : (sideQ ? '<p class="mut">Không có chủ rừng khớp “' + esc(sideQ) + '”.</p>' : '<p class="mut">Chưa có chủ rừng. Bấm “+ Chủ rừng mới”.</p>')) + '';
 }
 
 function renderMsgs() {
@@ -4193,6 +4194,7 @@ function renderCtx() {
   const o = curOwner(), f = curForest();
   const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && view !== 'norm' && view !== 'cty');
   const nc = document.getElementById('navCty'); if (nc) nc.classList.toggle('on', view === 'cty');
+  const nn = document.getElementById('navNorm'); if (nn) nn.classList.toggle('on', view === 'norm');
   $('#ctxOwner').innerHTML = 'Chủ rừng: <b>' + esc(o ? (o.info.ten || '(chưa đặt tên)') : 'chưa mở') + '</b>';
   $('#ctxForest').innerHTML = 'Rừng: <b>' + esc(f ? ((f.info.maRung || '(chưa có mã)') + (f.info.tenRung ? ' · ' + f.info.tenRung : '')) : 'chưa mở') + '</b>';
   if (!saveSt.text) showSave(HB ? (storeOk ? 'Dữ liệu lưu trong SQLite trên máy' : 'Chưa đọc được cơ sở dữ liệu') : 'Dữ liệu lưu trong trình duyệt', !storeOk);
