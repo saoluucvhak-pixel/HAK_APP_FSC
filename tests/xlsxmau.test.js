@@ -66,3 +66,12 @@ test('mẫu không có cột Mã rừng và Mã rừng không còn là cột b�
   }
   assert.ok(/const H_LEGACY = \{'Mã rừng': 'maRung'\}/.test(html), 'file cũ còn cột Mã rừng vẫn đọc được');
 });
+
+test('mẫu nhân công nhận danh sách vị trí của phần mềm (kể cả vị trí người dùng thêm): cột Chức danh và danh sách chọn', async () => {
+  const bytes = await M.build('nc', JSZip, {version: '9', chucDanh: ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa', 'Công nhân phụ']});
+  const z = await JSZip.loadAsync(bytes), all = (await Promise.all(Object.keys(z.files).filter(n => /sheet\d\.xml$/.test(n)).map(n => z.file(n).async('string')))).join('');
+  assert.ok(/Công nhân phụ/.test(all), 'vị trí mới có trong mẫu');
+  const wb = XLSX.read(bytes, {type: 'buffer'}); assert.ok(XLSX.utils.sheet_to_json(wb.Sheets.HUONG_DAN, {header: 1}).map(r => r.join(' ')).join('\n').includes('Công nhân phụ'));
+  const def = await JSZip.loadAsync(await M.build('nc', JSZip, {version: '9'})), d = (await Promise.all(Object.keys(def.files).filter(n => /sheet\d\.xml$/.test(n)).map(n => def.file(n).async('string')))).join('');
+  assert.ok(!/Công nhân phụ/.test(d), 'không truyền danh sách thì giữ ba vị trí mặc định');
+});

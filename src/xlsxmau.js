@@ -221,8 +221,10 @@
   }
 
   async function build(kind, JSZip, meta) {
-    const spec = SPECS[kind]; if (!spec) throw new Error('Không có mẫu cho: ' + kind);
+    let spec = SPECS[kind]; if (!spec) throw new Error('Không có mẫu cho: ' + kind);
     meta = meta || {};
+    // danh sách vị trí (chức danh) của phần mềm, kể cả vị trí người dùng thêm: ghi vào cột Chức danh và danh sách chọn
+    if (kind === 'nc' && Array.isArray(meta.chucDanh) && meta.chucDanh.length) spec = Object.assign({}, spec, {cols: spec.cols.map(c => c.n === 'Chức danh' ? Object.assign({}, c, {fmt: 'Chọn: ' + meta.chucDanh.join(' | '), list: meta.chucDanh.slice()}) : c)});
     const z = new JSZip(), names = ['HUONG_DAN', spec.sheet, 'VI_DU'];
     z.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
       names.map((_, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') +
