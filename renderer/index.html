@@ -863,6 +863,33 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKInAn2 = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
+<script>/* Đơn giá khoán của tổ suy ra từ định biên nhân sự (hình thức giao khoán).
+ * Mỗi người được chia đều sản lượng (tấn hoặc ha): tiền của người i = làm tròn(sản lượng ÷ N × đơn giá vị trí i).
+ * Đơn giá khoán của tổ (giá Tổ trưởng ký với chủ rừng) = (tổng đơn giá các vị trí theo định biên) ÷ N, nên
+ *   đơn giá khoán × sản lượng  =  tổng tiền của từng người cộng lại (sai khác chỉ do làm tròn từng người, tối đa N/2 đồng).
+ * Tổng tiền dùng trong biểu mẫu LUÔN là tổng tiền từng người cộng lại. Hàm thuần, dùng chung cho BM-01, BM-08, BM-14 và kiểm thử. */
+(function (root) {
+  /* rates: đơn giá của từng người (số > 0, theo định biên: Tổ trưởng + công nhân…); vol: sản lượng hoặc null */
+  function derive(rates, vol) {
+    const N = rates.length, ok = N > 0 && rates.every(r => typeof r === 'number' && r > 0);
+    const sumRates = ok ? rates.reduce((s, r) => s + r, 0) : null, price = ok ? sumRates / N : null;
+    const each = (ok && typeof vol === 'number' && vol > 0) ? vol / N : null;
+    const amounts = each != null ? rates.map(r => Math.round(each * r)) : null, total = amounts ? amounts.reduce((s, a) => s + a, 0) : null;
+    const byPrice = (price != null && each != null) ? price * vol : null;
+    return {N, ok, sumRates, price, each, amounts, total, byPrice, diff: (total != null && byPrice != null) ? byPrice - total : null};
+  }
+  const grp = n => String(Math.floor(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  /* hiển thị đơn giá: số nguyên → 360.000; có lẻ → 356.666,67 */
+  function fmtPrice(p) {
+    if (p == null || !isFinite(p)) return '';
+    if (Number.isInteger(p)) return grp(p);
+    const s = (Math.round(p * 100) / 100).toFixed(2), [i, d] = s.split('.');
+    return d === '00' ? grp(+i) : grp(+i) + ',' + d;
+  }
+  const api = {derive, fmtPrice};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKKhoan = api;
+})(typeof self !== 'undefined' ? self : this);
+</script>
 <script>/* Rà mâu thuẫn và chồng lấn khi nhập liệu của một lô: ngày ở nhiều ô khác nhau, khoảng ngày đảo, ngày phiếu cân ngoài thời gian khai thác…
  * Hàm thuần (không đọc giao diện/CSDL) để dùng chung cho màn "Kiểm tra trước khi xuất" và kiểm thử. Không tự sửa, chỉ báo.
  * kind 'chan' = nội dung in ra sẽ sai/vô nghĩa (ngày không có thật, khoảng bị đảo); kind 'doi' = có mâu thuẫn cần người dùng đối chiếu. */
@@ -2338,7 +2365,8 @@ function payRows(rec, ex) {
     if (tien != null) sum += tien;
     return {r, rate, tien};
   });
-  return {plan, list, N, each, rows, sum};
+  const khoan = HAKKhoan.derive(list.map(r => rateOf(rs, r)), (!plan.ngc && plan.vol) ? plan.vol.v : null);   // đơn giá khoán của tổ suy ra từ định biên
+  return {plan, list, N, each, rows, sum, khoan};
 }
 /* Đơn giá khoán theo TỪNG vị trí: luôn liệt kê đủ cả ba vị trí (Tổ trưởng, Công nhân khai thác, Công nhân cưa), kể cả khi chưa có người ở vị trí đó */
 const roleRates = rec => CHUCDANH.map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; const rate = rateOf(rec.info, {chucDanh: cd}); return cd + ': ' + (rate ? fmt(rate) : '………') + ' ' + basisOf(rec.info).unit + (n ? ' (' + n + ' người)' : ' (hiện chưa có người ở vị trí này)'); });
@@ -2569,7 +2597,7 @@ function docGiaoKhoan(rec, ex) {
     P('Bên B đồng ý nhận và bên A đồng ý giao khai thác gỗ Keo Lai rừng trồng có kiểm soát tại địa chỉ: ' + rs.diaDiem + rungText(rs) + '.'),
     P('**Điều 2: Giá cả và phương thức thanh toán**', {keep: true}),
     P('2.1. Đơn giá khoán theo vai trò (' + bs.unit + '): ' + roleRates(rec).join('; ') + '.', {ind: 360}),
-    P('2.2. ' + (bs.qty === 'ha' ? 'Diện tích khai thác' : 'Sản lượng khai thác') + ' được chia đều cho ' + pr.N + ' người trong tổ; tiền của mỗi người bằng phần được chia nhân với đơn giá khoán theo vai trò của người đó.' + (pr.sum ? ' Tổng tiền khoán dự tính: ' + fmt(pr.sum) + ' đồng.' : ''), {ind: 360}),
+    P('2.2. Theo định biên nhân sự ' + pr.N + ' người của tổ, đơn giá khoán của tổ (giá Tổ trưởng ký) được suy ra bằng tổng đơn giá các vị trí chia cho ' + pr.N + ' người' + (pr.khoan.price != null ? ': **' + HAKKhoan.fmtPrice(pr.khoan.price) + ' ' + bs.unit + '**' : '') + '. ' + (bs.qty === 'ha' ? 'Diện tích khai thác' : 'Sản lượng khai thác') + ' được chia đều cho ' + pr.N + ' người; tiền của mỗi người bằng phần được chia nhân với đơn giá khoán theo vị trí của người đó.' + (pr.sum ? ' Tổng tiền khoán dự tính: ' + fmt(pr.sum) + ' đồng, bằng tổng tiền của từng người cộng lại (tương ứng đơn giá khoán của tổ nhân ' + (bs.qty === 'ha' ? 'diện tích' : 'sản lượng') + ').' : ''), {ind: 360}),
     P('2.3. Hình thức thanh toán: Căn cứ theo số lượng bán cho nhà máy, hai bên tiến hành thanh toán bằng tiền mặt.', {ind: 360}),
     P('2.4. Thời gian khai thác: từ ngày ' + (rs.tuNgay || '…/…/……') + ' ' +
       (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến hết khi khai thác hết rừng keo tại địa điểm trên') + '.', {ind: 360}),
@@ -3365,7 +3393,7 @@ function docTienCong(rec, ex) {
   const rows = pr.rows.map((x, i) => [String(i + 1), upper(x.r.ten), x.r.chucDanh, V((!ngc && each != null) ? fmtTan(each) : ''), x.rate ? fmt(x.rate) : '',
     V(ngc && plan.cong != null ? String(plan.cong) : ''), V(x.tien != null ? fmt(x.tien) : ''), V(x.tien != null ? fmt(x.tien) : ''), '']);
   if (sum > 0 || ex._mode !== 'day') rows.push(['', '**TỔNG CỘNG**', '', '', '', '', V(sum > 0 ? fmt(sum) : ''), V(sum > 0 ? fmt(sum) : ''), '']);
-  const nRow = rows.length + (isDirect(rs) ? 0 : 2), dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
+  const nRow = rows.length + (isDirect(rs) ? 0 : 3), dense = nRow <= 6 ? {sz: 20, rowH: 420, pad: 40, sign: 3} : nRow <= 7 ? {sz: 20, rowH: 380, pad: 30, sign: 3} : nRow <= 9 ? {sz: 20, rowH: 340, pad: 20, sign: 2} : nRow <= 13 ? {sz: 18, rowH: 300, pad: 10, sign: 2} : nRow <= 17 ? {sz: 16, rowH: 250, pad: 0, sign: 2, tight: true} : {sz: 16, rowH: 215, pad: 0, sign: 1, tight: true};
   const info = ngc
     ? ((plan.cong != null || ex._mode !== 'day') ? 'Số ngày công: ' + V(plan.cong != null ? String(plan.cong) : '', 6) + ' công (không tính Chủ nhật).' : '')
     : ((plan.vol || ex._mode !== 'day') ? (ha ? 'Diện tích khai thác: ' : 'Khối lượng khai thác: ') + V(plan.vol ? fmtTan(plan.vol.v) : '', 10) + ' ' + bs.qty + (ex._mode === 'day' ? V(plan.vol ? ' (' + plan.vol.src + ')' : '', 0, '') : '') + ', chia đều ' + N + ' người: ' + V(each != null ? fmtTan(each) : '', 10) + ' ' + bs.qty + '/người.' : '');
@@ -3379,7 +3407,7 @@ function docTienCong(rec, ex) {
        ['', '', '', '', '', 'Số công', 'Số tiền', '', ''], ...rows],
       {headRows: 2, borders: true, sz: dense.sz, rowH: dense.rowH, pad: dense.pad,   // nhiều người: thu nhỏ cỡ chữ và độ cao hàng để bảng và khối ký vẫn nằm trọn một trang
        alignCols: ['center', 'left', 'left', 'center', 'right', 'center', 'right', 'right', 'center']}),
-    ...(isDirect(rs) ? [] : [P('Hình thức giao khoán: Tổ trưởng ' + upper(tt.ten) + ' nhận thay cho cả tổ tổng số tiền ' + V(sum > 0 ? fmt(sum) : '', 12) + ' đồng (bằng chữ: ' + V(sum > 0 ? moneyWords(sum) : '', 0, '…'.repeat(40)) + ') và chi trả lại cho từng người theo cột “Thực nhận”.', {al: 'left', sz: dense.sz, before: 80, after: 0})]),
+    ...(isDirect(rs) ? [] : [P('Hình thức giao khoán: ' + (pr.khoan.price != null ? 'đơn giá khoán của tổ ' + HAKKhoan.fmtPrice(pr.khoan.price) + ' ' + bs.unit + ' (tổng đơn giá các vị trí ÷ ' + N + ' người) × ' + (ha ? 'diện tích' : 'sản lượng') + ' = tổng tiền từng người cộng lại. ' : '') + 'Tổ trưởng ' + upper(tt.ten) + ' nhận thay cho cả tổ tổng số tiền ' + V(sum > 0 ? fmt(sum) : '', 12) + ' đồng (bằng chữ: ' + V(sum > 0 ? moneyWords(sum) : '', 0, '…'.repeat(40)) + ') và chi trả lại cho từng người theo cột “Thực nhận”.', {al: 'left', sz: dense.sz, before: 80, after: 0})]),
     ...footerSign('Đại diện Tổ khai thác', tt.ten, dense.sign)
   ];
   if (dense.tight) out.tight = true;   // nhiều người: lề trên/dưới hẹp hơn để vẫn gọn một trang
