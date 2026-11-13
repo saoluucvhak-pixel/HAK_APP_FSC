@@ -244,12 +244,80 @@ const HAKReports = (function () {
       notes};
   }
 
+  /* ---- 7. Danh sách lao động theo lô rừng ---- */
+  const ageOn = (sinh, ref) => { const a = dateKey(sinh), b = dateKey(ref); return (a && b) ? Math.floor(b / 10000) - Math.floor(a / 10000) - (b % 10000 < a % 10000 ? 1 : 0) : null; };
+  function laoDong(recs, o) {
+    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung)), ref = o.today || '';
+    const POS = ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa'];
+    const det = [], sum = [], minors = [], bad = [];
+    sorted.forEach(r => {
+      const L = (r.ncList || []).slice().sort((a, b) => (/^tổ trưởng/i.test(b.vaiTro || '') ? 1 : 0) - (/^tổ trưởng/i.test(a.vaiTro || '') ? 1 : 0) || String(a.stt).localeCompare(String(b.stt), 'vi', {numeric: true}));
+      const cnt = {}; L.forEach(x => { const k = x.chucDanh || '(chưa có chức danh)'; cnt[k] = (cnt[k] || 0) + 1; });
+      const nMin = L.filter(x => { const y = ageOn(x.ngaySinh, r.tuNgay && dateKey(r.tuNgay) ? r.tuNgay : ref); return y != null && y < 18; }).length;
+      sum.push([sum.length + 1, r.maRung, r.chuRung, L.length, cnt['Tổ trưởng'] || 0, cnt['Công nhân khai thác'] || 0, cnt['Công nhân cưa'] || 0, L.length - POS.reduce((n, k) => n + (cnt[k] || 0), 0), nMin]);
+      L.forEach(x => {
+        const y = ageOn(x.ngaySinh, r.tuNgay && dateKey(r.tuNgay) ? r.tuNgay : ref);
+        det.push([det.length + 1, r.maRung, r.chuRung, (x.danhXung ? x.danhXung + ' ' : '') + x.ten, x.vaiTro, x.chucDanh, x.ngaySinh, y == null ? '' : y, x.cccd, x.diaChi, x.ngayCap, x.noiCap, typeof x.rate === 'number' ? x.rate : '', r.donVi || '']);
+        if (y != null && y < 18) minors.push([minors.length + 1, r.maRung, x.ten, x.ngaySinh, y]);
+        if (!D.isValid(x.ngaySinh) || !/^\d{12}$/.test(String(x.cccd || ''))) bad.push([bad.length + 1, r.maRung, x.ten, !D.isValid(x.ngaySinh) ? 'Ngày sinh thiếu hoặc không có thật' : 'CCCD không đủ 12 chữ số']);
+      });
+    });
+    const total = det.length, tt = sum.reduce((n, r) => n + r[4], 0);
+    const notes = []; if (!total) notes.push('Chưa có nhân công nào. Nạp file nhân công ở tab Nhân công của từng lô.');
+    if (minors.length) notes.push('Có ' + minors.length + ' người dưới 18 tuổi (tính tại ngày bắt đầu khai thác hoặc ngày lập báo cáo): không được ký hợp đồng lao động hoặc giấy ủy quyền.');
+    const noTT = sorted.filter(r => (r.ncList || []).length && !(r.ncList || []).some(x => /^tổ trưởng/i.test(x.vaiTro || ''))).map(r => r.maRung); if (noTT.length) notes.push('Lô chưa có tổ trưởng: ' + noTT.join(', ') + '.');
+    return {id: 'laodong', title: 'BÁO CÁO DANH SÁCH LAO ĐỘNG THEO LÔ RỪNG', orient: 'landscape', period: 'Tính đến ngày ' + (o.today || ''),
+      kpis: [{label: 'Số lô có lao động', value: sum.filter(r => r[3]).length, f: 'n0'}, {label: 'Tổng số lao động', value: total, f: 'n0'}, {label: 'Số tổ trưởng', value: tt, f: 'n0'}, {label: 'Người dưới 18 tuổi', value: minors.length, f: 'n0'}],
+      sections: [
+        {heading: 'I. Tổng hợp theo lô rừng', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 14}, {h: 'Chủ rừng', w: 24}, {h: 'Số lao động', w: 10, f: 'n0'}, {h: 'Tổ trưởng', w: 9, f: 'n0'}, {h: 'Công nhân khai thác', w: 12, f: 'n0'}, {h: 'Công nhân cưa', w: 11, f: 'n0'}, {h: 'Vị trí khác', w: 9, f: 'n0'}, {h: 'Dưới 18 tuổi', w: 9, f: 'n0'}],
+          rows: sum, foot: ['', 'TỔNG CỘNG', '', total, tt, sum.reduce((n, r) => n + r[5], 0), sum.reduce((n, r) => n + r[6], 0), sum.reduce((n, r) => n + r[7], 0), minors.length]},
+        {heading: 'II. Danh sách lao động theo lô', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 8}, {h: 'Chủ rừng', w: 11}, {h: 'Họ và tên', w: 14}, {h: 'Vai trò', w: 8}, {h: 'Chức danh', w: 10}, {h: 'Ngày sinh', w: 10, f: 'date'}, {h: 'Tuổi', w: 5, f: 'n0'}, {h: 'CCCD', w: 13}, {h: 'Địa chỉ thường trú', w: 11}, {h: 'Ngày cấp CCCD', w: 10, f: 'date'}, {h: 'Nơi cấp CCCD', w: 8}, {h: 'Đơn giá', w: 8, f: 'n0'}, {h: 'Đơn vị giá', w: 6}],
+          rows: det, foot: ['', 'TỔNG CỘNG', '', total, '', '', '', '', '', '', '', '', '', '']},
+        ...(bad.length ? [{heading: 'III. Hồ sơ lao động cần bổ sung', note: 'Ngày sinh thiếu hoặc không có thật, hoặc CCCD không đủ 12 chữ số: sửa ở tab Nhân công rồi nạp lại.', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 16}, {h: 'Họ và tên', w: 24}, {h: 'Vấn đề', w: 40}], rows: bad, foot: ['', 'Cộng', '', bad.length + ' mục']}] : [])],
+      notes};
+  }
+
+  /* ---- 8. Danh sách xe vận chuyển theo lô rừng (kèm số chuyến, khối lượng theo phiếu cân) ---- */
+  const plateKey = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
+  function danhSachXe(recs, o) {
+    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung));
+    const det = [], sum = [], unknown = [];
+    sorted.forEach(r => {
+      const pcs = pcOf(r, o), by = {}; pcs.forEach(p => { const k = plateKey(p.bienSo); (by[k] = by[k] || {n: 0, t: 0}).n++; by[k].t += num(p.kl); });
+      const X = (r.dxList || []).slice().sort((a, b) => byName(a.bienSo, b.bienSo)); const known = new Set(X.map(x => plateKey(x.bienSo)));
+      let nT = 0, tT = 0;
+      X.forEach(x => {
+        const m = by[plateKey(x.bienSo)] || {n: 0, t: 0}; nT += m.n; tT += m.t;
+        const tx = x.nguoiKy === 'Tài xế';
+        det.push([det.length + 1, r.maRung, r.chuRung, x.bienSo, x.loaiXe || '', x.chuXe, x.nguoiKy || 'Chủ xe', tx ? x.taiXe : '', tx ? x.cccdTx : x.cccd, x.sdt || '', x.hanBH || '', x.hanGplx || '', m.n, round(m.t, 3)]);
+      });
+      Object.keys(by).filter(k => k && !known.has(k)).forEach(k => unknown.push([unknown.length + 1, r.maRung, k, by[k].n, round(by[k].t, 3)]));
+      sum.push([sum.length + 1, r.maRung, r.chuRung, X.length, nT, round(tT, 3)]);
+    });
+    const nXe = det.length, nT = det.reduce((n, r) => n + r[12], 0), tT = round(det.reduce((n, r) => n + r[13], 0), 3);
+    const notes = []; if (rangeNote(o)) notes.push(rangeNote(o));
+    if (!nXe) notes.push('Chưa có xe nào. Nạp file đội xe ở tab Vận chuyển của từng lô.');
+    if (unknown.length) notes.push(unknown.length + ' biển số có trong phiếu cân nhưng chưa có trong danh sách xe của lô (xem mục III).');
+    const noSdt = det.filter(r => !r[9]).length; if (noSdt) notes.push(noSdt + ' xe chưa có số điện thoại.');
+    return {id: 'danhsachxe', title: 'BÁO CÁO DANH SÁCH XE VẬN CHUYỂN THEO LÔ RỪNG', orient: 'landscape', period: periodText(o.from, o.to),
+      kpis: [{label: 'Số lô có xe', value: sum.filter(r => r[3]).length, f: 'n0'}, {label: 'Tổng số xe', value: nXe, f: 'n0'}, {label: 'Số chuyến (theo phiếu cân)', value: nT, f: 'n0'}, {label: 'Khối lượng (tấn)', value: tT, f: 'n3'}],
+      sections: [
+        {heading: 'I. Tổng hợp theo lô rừng', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 16}, {h: 'Chủ rừng', w: 28}, {h: 'Số xe', w: 10, f: 'n0'}, {h: 'Số chuyến', w: 12, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 16, f: 'n3'}],
+          rows: sum, foot: ['', 'TỔNG CỘNG', '', nXe, nT, tT]},
+        {heading: 'II. Danh sách xe', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 8}, {h: 'Chủ rừng', w: 10}, {h: 'Biển kiểm soát', w: 9, al: 'center'}, {h: 'Loại xe', w: 7}, {h: 'Chủ xe', w: 11}, {h: 'Người ký HĐ vận chuyển', w: 8}, {h: 'Tên tài xế', w: 10}, {h: 'CCCD người ký', w: 13}, {h: 'SĐT', w: 11}, {h: 'Hạn bảo hiểm', w: 10, f: 'date'}, {h: 'Hạn GPLX', w: 10, f: 'date'}, {h: 'Số chuyến', w: 6, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 8, f: 'n3'}],
+          rows: det, foot: ['', 'TỔNG CỘNG', '', nXe, '', '', '', '', '', '', '', '', nT, tT]},
+        ...(unknown.length ? [{heading: 'III. Biển số có trong phiếu cân nhưng chưa có trong danh sách xe', note: 'Thêm xe vào file đội xe của lô rồi nạp lại, hoặc sửa biển số phiếu cân.', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 16}, {h: 'Biển số (đã chuẩn hóa)', w: 22}, {h: 'Số chuyến', w: 12, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 16, f: 'n3'}], rows: unknown, foot: ['', 'Cộng', '', unknown.reduce((n, r) => n + r[3], 0), round(unknown.reduce((n, r) => n + r[4], 0), 3)]}] : [])],
+      notes};
+  }
+
   const REPORTS = [
     {id: 'dieuhanh', name: 'Tổng hợp điều hành', desc: 'Một trang cho lãnh đạo: số liệu chính theo chủ rừng và các vấn đề cần xử lý.', build: withUnit(dieuHanh, 'Đơn vị tính: diện tích ha; khối lượng tấn; tiến độ %')},
     {id: 'sanluong', name: 'Sản lượng khai thác theo rừng', desc: 'Diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân; cảnh báo vượt định mức.', build: withUnit(sanLuong, 'Đơn vị tính: diện tích ha; định mức tấn/ha; sản lượng tấn')},
     {id: 'phieucan', name: 'Sổ theo dõi phiếu cân – vận chuyển', desc: 'Danh sách phiếu cân theo kỳ, tổng hợp theo rừng, biển số, ngày; phát hiện trùng phiếu.', build: withUnit(soPhieuCan, 'Đơn vị tính: khối lượng tấn (làm tròn 3 chữ số, theo phiếu cân ghi kg)')},
     {id: 'chacon', name: 'Bảng cha–con: chủ rừng – rừng – phiếu cân', desc: 'Chủ rừng (cha) là tổng các rừng (con), rừng là tổng các phiếu cân; có thể kèm từng phiếu.', build: withUnit(chaCon, 'Đơn vị tính: diện tích ha; khối lượng tấn')},
     {id: 'bienso', name: 'Phiếu cân đã cập nhật biển số xe', desc: 'Theo từng lô rừng: phiếu cân nào đã được cập nhật biển số xe mới (biển cũ, biển mới, thời điểm, nguồn).', build: withUnit(bienSoDoi, 'Đơn vị tính: khối lượng tấn; tỷ lệ %')},
+    {id: 'laodong', name: 'Danh sách lao động theo lô', desc: 'Lao động của từng lô: vai trò, chức danh, ngày sinh, tuổi, CCCD, đơn giá; cảnh báo dưới 18 tuổi và thiếu thông tin.', build: withUnit(laoDong, 'Đơn vị tính: người; đơn giá theo cơ sở tính của lô (đồng/tấn, đồng/ha, đồng/công)')},
+    {id: 'danhsachxe', name: 'Danh sách xe vận chuyển theo lô', desc: 'Xe của từng lô: biển số, loại xe, chủ xe, người ký, liên hệ, số chuyến và khối lượng theo phiếu cân.', build: withUnit(danhSachXe, 'Đơn vị tính: khối lượng tấn (theo phiếu cân)')},
     {id: 'tiendo', name: 'Tiến độ hồ sơ và checklist FSC', desc: 'Tiến độ từng rừng và danh sách hạng mục còn thiếu để hoàn thiện hồ sơ.', build: withUnit(tienDo, 'Đơn vị tính: tiến độ %; số lượng theo từng cột')}
   ];
 

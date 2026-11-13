@@ -202,7 +202,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 - **Thiếu hoặc sai ngày ký**: năm để trống (`015/……-KT`), không tự điền năm cố định; khung “Số hợp đồng đầy đủ sẽ in (xem trước)” ở tab Xuất hồ sơ nêu rõ cần bổ sung ngày nào. Các dòng ngày để trống in “ngày ….. tháng ….. năm …….”.
 - BM-01, BM-14 và BM-20 của cùng hồ sơ giao khoán luôn tham chiếu **cùng một số** hợp đồng khai thác.
 
-**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Sáu mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
+**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Tám mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
 
 ## 10. Sao lưu và khôi phục
 Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.
@@ -263,6 +263,11 @@ Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
 - **Sổ theo dõi phiếu cân và file Excel mẫu phiếu cân** có thêm các cột **Giờ cân 1, Giờ cân 2, Cân lần 1 (kg), Cân lần 2 (kg), Khối lượng (kg), Khối lượng (tấn), Khách hàng**. File Excel mẫu: các cột mới là tùy chọn; file cũ không có các cột này vẫn nạp được. Giờ cân nhập dạng ô giờ hoặc chữ (08:15). Chỉ điền kg thì tấn = kg ÷ 1000; kg và tấn lệch nhau, hoặc kg khác chênh lệch hai lần cân quá 1 kg, thì có cảnh báo (không chặn nạp). Báo cáo Sổ theo dõi phiếu cân (Word, Excel) có đủ các cột, kể cả tổng kg và tổng tấn.
 - **Nhật ký đổi biển số** lưu trong lô rừng: số phiếu, biển cũ, biển mới, thời điểm, nguồn (Google Sheets). Phiếu đổi nhiều lần giữ đủ các dòng.
 - **Báo cáo “Phiếu cân đã cập nhật biển số xe”** (nút Báo cáo): theo **từng lô rừng**, có bảng tổng hợp theo lô (số phiếu cân, số phiếu đã cập nhật biển, tỷ lệ, khối lượng) và bảng chi tiết (số phiếu, ngày cân, biển cũ, biển mới, thời điểm cập nhật). Lọc theo kỳ (ngày cân), xuất Word hoặc Excel.
+
+## Báo cáo danh sách lao động và danh sách xe
+Hai mẫu trong nút **Báo cáo**, xuất **Word** hoặc **Excel**:
+- **Danh sách lao động theo lô**: tổng hợp từng lô (số lao động, tổ trưởng, công nhân khai thác, công nhân cưa, vị trí khác, số người dưới 18 tuổi) và danh sách chi tiết (họ tên, vai trò, chức danh, ngày sinh, tuổi, CCCD, địa chỉ, ngày và nơi cấp CCCD, đơn giá theo cơ sở tính của lô). Tuổi tính tại ngày bắt đầu khai thác của lô (không có thì ngày lập báo cáo). Có ghi chú dưới 18 tuổi, lô chưa có tổ trưởng, và mục “Hồ sơ lao động cần bổ sung” khi thiếu ngày sinh hoặc CCCD không đủ 12 số.
+- **Danh sách xe vận chuyển theo lô**: tổng hợp từng lô (số xe, số chuyến, khối lượng) và danh sách xe (biển số, loại xe, chủ xe, người ký hợp đồng vận chuyển, tên tài xế, CCCD người ký, SĐT, hạn bảo hiểm, hạn GPLX, số chuyến và khối lượng theo phiếu cân; lọc kỳ theo ngày cân). Biển số có trong phiếu cân nhưng chưa có trong danh sách xe được liệt kê ở mục III.
 
 ## 13. Xử lý sự cố
 | Hiện tượng | Cách xử lý |
