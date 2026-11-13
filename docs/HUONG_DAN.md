@@ -189,7 +189,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 - Mỗi biểu mẫu là một file Word riêng, nên bộ hồ sơ đã in ở đợt 1 chỉ cần **bổ sung hoặc thay** các biểu mẫu của đợt 2. Hai đợt gộp lại đúng bằng nút “Tải toàn bộ hồ sơ”. BM-08 tính theo khối lượng thực tế đã nhập, chưa nhập thì theo sản lượng dự kiến, nên chỉ nên in BM-08 ở đợt 2.
 
 
-**Giao khoán: đơn giá khoán của tổ.** Nếu **Thông tin rừng không có đơn giá Tổ trưởng**, phần mềm suy ra đơn giá khoán của tổ từ định biên nhân sự: tổng (số người từng vị trí ở sheet nhân công × đơn giá vị trí) ÷ tổng số người. Hợp đồng khoán (BM-01) ghi rõ cơ sở tính giá trung bình, chi tiết giá từng vị trí và **tổng giá trị khoán = tổng thanh toán cho tất cả mọi người, kể cả Tổ trưởng**; Giấy ủy quyền (BM-20) ghi đơn giá ký tương ứng; BM-08 ghi đơn giá khoán và tổng. Nếu **Thông tin rừng có đơn giá Tổ trưởng** (hồ sơ cũ) thì làm như cũ.
+**Giao khoán: đơn giá khoán của tổ.** Nếu **Thông tin rừng không có đơn giá Tổ trưởng**, phần mềm suy ra đơn giá khoán của tổ từ định biên nhân sự: tổng (số người từng vị trí ở sheet nhân công × đơn giá vị trí) ÷ tổng số người. Hợp đồng khoán (BM-01) ghi rõ cơ sở tính giá trung bình, chi tiết giá từng vị trí và **tổng giá trị khoán = tổng thanh toán cho tất cả mọi người, kể cả Tổ trưởng**; Giấy ủy quyền (BM-20) ghi đơn giá ký tương ứng; BM-08 ghi đơn giá khoán và tổng. Nếu **có nhập “Đơn giá giao khoán Tổ trưởng (đồng/tấn)” ở Thông tin rừng** thì làm như cũ (không có phần suy ra). Ô này **tùy chọn**: để trống thì app tự suy từ định biên.
 
 **Số hợp đồng và năm trên biểu mẫu** (BM-01, BM-04, BM-09, BM-10, BM-14, BM-20): số in có dạng `<phần số>/<năm>-<hậu tố>`, ví dụ `015/2027-KT`.
 - Nhập số **đầy đủ** (có dấu “/” hoặc đã có hậu tố, ví dụ `015/2025-KT`): phần mềm **giữ nguyên**.

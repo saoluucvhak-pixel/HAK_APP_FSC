@@ -2120,6 +2120,7 @@ function panelForest(f) {
     inp('dienTich', 'Diện tích (ha)') + inp('dinhMucTanHa', 'Định mức (tấn/ha)') +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến'}) +
+    inp('donGia', 'Đơn giá giao khoán Tổ trưởng (đồng/tấn)', {ph: 'để trống thì tự suy từ định biên nhân sự (giao khoán)', wide: true}) +
     inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: 'VD: 45. Chỉ cần khi tính cước tấn/km'}) + inp('tuNgay', 'Thời gian khai thác — từ ngày') + inp('denNgay', 'Thời gian khai thác — đến ngày') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
@@ -2554,7 +2555,8 @@ function readForest(form) {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
     lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: toDec(fd.get('dienTich')),
     dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), cuLy: toDec(fd.get('cuLy')),
-    tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay')), khoiLuong: toDec(fd.get('khoiLuong'))
+    tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay')), khoiLuong: toDec(fd.get('khoiLuong')),
+    donGia: toNum(fd.get('donGia'))   // để trống = null: giao khoán tự suy đơn giá khoán của tổ từ định biên nhân sự
   };
 }
 
