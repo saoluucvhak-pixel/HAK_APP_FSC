@@ -94,7 +94,7 @@ Trong trang dữ liệu: tiêu đề **màu đỏ sẫm = cột bắt buộc**, 
 **Quy tắc chung khi điền**
 - Không sửa, xóa, đổi tên hoặc đổi thứ tự **dòng tiêu đề**; không đổi tên trang tính dữ liệu, không thêm cột, không gộp ô, không để dòng trống giữa dữ liệu.
 - Ngày nhập dạng **dd/mm/yyyy** và phải là **ngày có thật** (31/02 là sai, 29/02/2028 hợp lệ).
-- Mã rừng ở mọi dòng phải **đúng mã lô đang mở**.
+- **Không cần điền Mã rừng**: file mẫu không có cột này, dữ liệu luôn được nạp vào lô đang mở và mỗi bản ghi tự mang mã lô đó. File cũ còn cột “Mã rừng” vẫn nạp được: để trống thì tự lấy mã lô đang mở; điền thì phải đúng lô (để chặn nạp nhầm file của lô khác).
 - Khối lượng phiếu cân tính bằng **tấn**, dùng dấu phẩy hoặc dấu chấm thập phân.
 - Sau khi nạp, phần mềm báo số dòng hợp lệ, dòng lỗi (kèm số dòng) và hỏi trước khi ghi. **Nạp lại file sẽ thay toàn bộ danh sách** của lô; phần mềm cho biết số bản ghi thêm, cập nhật, giữ, bỏ.
 - File thật chứa thông tin cá nhân (họ tên, CCCD, địa chỉ): chỉ lưu và gửi nội bộ.
@@ -103,7 +103,7 @@ Trong trang dữ liệu: tiêu đề **màu đỏ sẫm = cột bắt buộc**, 
 | Thông báo | Cách sửa |
 | --- | --- |
 | File thiếu cột … | Dùng đúng file mẫu, không sửa dòng tiêu đề |
-| Mã rừng "…" khác rừng đang mở | Sửa cột Mã rừng đúng với lô đang mở |
+| Mã rừng "…" khác lô đang mở | Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng |
 | CCCD phải đủ 12 chữ số | Nhập lại đủ 12 số, giữ số 0 đầu |
 | Cần đúng 1 tổ trưởng | Chỉ một dòng có Vai trò “Tổ trưởng” |
 | Biển … chưa có trong danh sách xe | Thêm xe vào file đội xe, nạp lại xe rồi nạp phiếu cân |

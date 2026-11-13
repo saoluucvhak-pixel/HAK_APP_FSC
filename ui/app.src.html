@@ -289,15 +289,17 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 const KEY = 'hskt.v2';
 const KEY_OLD = 'hskt.v1';
 const CHUCDANH = ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa'];
-const H_NC = {'Mã rừng':'maRung','Vai trò':'vaiTro','STT':'stt','Danh xưng':'danhXung','Họ và tên':'ten','Ngày sinh':'ngaySinh','CCCD':'cccd','Ngày cấp CCCD':'ngayCap','Nơi cấp CCCD':'noiCap','Địa chỉ thường trú':'diaChi','Chức danh':'chucDanh'};
-const NC_REQ = ['Mã rừng','Vai trò','Họ và tên','CCCD','Chức danh'];
-const H_DX = {'Mã rừng':'maRung','STT':'stt','Chủ xe (bên vận chuyển)':'chuXe','Ngày sinh chủ xe':'ngaySinh','CCCD chủ xe':'cccd','Ngày cấp CCCD chủ xe':'ngayCap','Nơi cấp CCCD chủ xe':'noiCap','Thường trú chủ xe':'diaChi',
+const H_NC = {'Vai trò':'vaiTro','STT':'stt','Danh xưng':'danhXung','Họ và tên':'ten','Ngày sinh':'ngaySinh','CCCD':'cccd','Ngày cấp CCCD':'ngayCap','Nơi cấp CCCD':'noiCap','Địa chỉ thường trú':'diaChi','Chức danh':'chucDanh'};
+const NC_REQ = ['Vai trò','Họ và tên','CCCD','Chức danh'];
+const H_DX = {'STT':'stt','Chủ xe (bên vận chuyển)':'chuXe','Ngày sinh chủ xe':'ngaySinh','CCCD chủ xe':'cccd','Ngày cấp CCCD chủ xe':'ngayCap','Nơi cấp CCCD chủ xe':'noiCap','Thường trú chủ xe':'diaChi',
   'Biển kiểm soát':'bienSo','Ngày cấp đăng ký xe (cà vẹt)':'cavet','Loại xe':'loaiXe','Người ký HĐ vận chuyển':'nguoiKy',
   'Tên tài xế':'taiXe','Ngày sinh tài xế':'ngaySinhTx','CCCD tài xế':'cccdTx','Ngày cấp CCCD tài xế':'ngayCapTx','Nơi cấp CCCD tài xế':'noiCapTx','Thường trú tài xế':'diaChiTx',
   'Số GPLX':'gplx','Ngày đến hạn GPLX':'hanGplx','Ngày đến hạn bảo hiểm':'hanBH','Kiểm định từ ngày':'kdTu','Kiểm định đến ngày':'kdDen','SĐT':'sdt'};
-const DX_REQ = ['Mã rừng','Chủ xe (bên vận chuyển)','Biển kiểm soát','Người ký HĐ vận chuyển'];
-const H_PC = {'Mã rừng':'maRung','STT':'stt','Ngày cân':'ngay','Biển kiểm soát':'bienSo','Số phiếu cân':'soPhieu','Khối lượng (tấn)':'kl','Nơi giao (nhà máy)':'noiGiao','Ghi chú':'ghiChu'};
-const PC_REQ = ['Mã rừng','Ngày cân','Biển kiểm soát','Số phiếu cân','Khối lượng (tấn)'];
+const DX_REQ = ['Chủ xe (bên vận chuyển)','Biển kiểm soát','Người ký HĐ vận chuyển'];
+const H_PC = {'STT':'stt','Ngày cân':'ngay','Biển kiểm soát':'bienSo','Số phiếu cân':'soPhieu','Khối lượng (tấn)':'kl','Nơi giao (nhà máy)':'noiGiao','Ghi chú':'ghiChu'};
+const PC_REQ = ['Ngày cân','Biển kiểm soát','Số phiếu cân','Khối lượng (tấn)'];
+/* Cột “Mã rừng” KHÔNG còn trong file mẫu và không bắt buộc: dữ liệu luôn nạp vào lô đang mở. File cũ vẫn có thể có cột này (nếu điền thì phải khớp lô, dùng để chặn nạp nhầm file của lô khác; để trống thì tự lấy mã lô đang mở). */
+const H_LEGACY = {'Mã rừng': 'maRung'};
 const PC_HEAD = Object.keys(H_PC);
 const NC_HEAD = Object.keys(H_NC);
 const DX_HEAD = Object.keys(H_DX);
@@ -477,7 +479,7 @@ function parseSheet(file, sheetName, map, req, norm) {
         const miss = req.filter(h => !heads.includes(h));
         if (miss.length) throw new Error('File thiếu cột: ' + miss.join(', ') + '. Hãy dùng đúng file mẫu.');
         const idx = {};
-        heads.forEach((h, i) => { if (map[h]) idx[map[h]] = i; });
+        heads.forEach((h, i) => { const k = map[h] || H_LEGACY[h]; if (k) idx[k] = i; });
         const rows = [];
         for (let r = 1; r < aoa.length; r++) {
           const line = aoa[r];
@@ -557,7 +559,7 @@ function checkPC(rec) {
   const mark = (r, k, m) => { (k === 'err' ? errs : warns).push('Dòng ' + r._row + ': ' + m); if (k === 'err' || !state[r._row]) state[r._row] = k; };
   const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seen = {};
   pc.forEach(r => {
-    if (r.maRung && r.maRung !== rec.info.maRung) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác rừng đang mở (' + rec.info.maRung + ')');
+    if (r.maRung && r.maRung !== rec.info.maRung) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
     if (!HAKDates.isValid(r.ngay)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(r.ngay).replace(/^thiếu ngày$/, 'thiếu ngày cân'));
     if (!r.bienSo) mark(r, 'err', 'Thiếu biển kiểm soát'); else if (!keys.has(bienKey(r.bienSo))) mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)');
     if (!r.soPhieu) mark(r, 'err', 'Thiếu số phiếu cân');
@@ -631,8 +633,7 @@ function checkNC(rec) {
     const at = 'Dòng ' + r._row + ': ';
     const bad = m => { errs.push(at + m); state[r._row] = 'err'; };
     const warn = m => { warns.push(at + m); if (!state[r._row]) state[r._row] = 'warn'; };
-    if (!r.maRung) bad('thiếu Mã rừng');
-    else if (r.maRung !== rec.info.maRung) bad('Mã rừng "' + r.maRung + '" khác rừng đang mở');
+    if (r.maRung && r.maRung !== rec.info.maRung) bad('Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
     const role = /^tổ trưởng/i.test(r.vaiTro) ? 'TT' : /^công nhân/i.test(r.vaiTro) ? 'CN' : null;
     if (!role) bad('Vai trò phải là "Tổ trưởng" hoặc "Công nhân"');
     if (role === 'TT') tt++;
@@ -668,8 +669,7 @@ function checkDX(rec) {
   rec.dx.forEach(r => {
     const at = 'Dòng ' + r._row + ': ';
     const bad = m => { errs.push(at + m); state[r._row] = 'err'; };
-    if (!r.maRung) bad('thiếu Mã rừng');
-    else if (r.maRung !== rec.info.maRung) bad('Mã rừng "' + r.maRung + '" khác rừng đang mở');
+    if (r.maRung && r.maRung !== rec.info.maRung) bad('Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
     if (!r.chuXe) bad('thiếu Chủ xe');
     if (!r.bienSo) bad('thiếu Biển kiểm soát');
     else if (plates[r.bienSo]) bad('Biển kiểm soát trùng dòng ' + plates[r.bienSo]);
@@ -2527,11 +2527,12 @@ function delRs() {
   note('Đã xóa hồ sơ chủ rừng.');
 }
 
-// File có đúng một Mã rừng và rừng đó tồn tại trong chủ rừng đang mở thì nạp vào rừng đó; ngược lại nạp vào rừng đang mở và báo lỗi nếu lệch mã
+// Mặc định nạp vào lô đang mở. File cũ có cột Mã rừng điền đúng một mã và lô đó tồn tại trong chủ rừng đang mở thì nạp vào lô đó; điền nhiều mã khác nhau thì nạp vào lô đang mở và báo lỗi các dòng lệch mã
 function targetForestFor(rows, f) {
-  const codes = [...new Set(rows.map(r => r.maRung))];
-  if (codes.length !== 1) return f;
-  return forestList(curOwner()).find(x => x.info.maRung === codes[0]) || f;
+  const codes = [...new Set(rows.map(r => r.maRung).filter(Boolean))];   // chỉ tính các ô có điền mã (file mới không có cột này)
+  const t = codes.length === 1 ? (forestList(curOwner()).find(x => x.info.maRung === codes[0]) || f) : f;
+  rows.forEach(r => { if (!r.maRung) r.maRung = t.info.maRung; });   // ô trống: gán mã lô đích để các bản ghi luôn mang mã lô
+  return t;
 }
 
 /* Trước khi ghi: số dòng hợp lệ/lỗi theo số dòng, và khi nạp lại thì số bản ghi sẽ thêm / cập nhật / giữ nguyên / bỏ */

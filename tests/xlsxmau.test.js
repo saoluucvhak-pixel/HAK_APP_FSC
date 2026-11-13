@@ -57,3 +57,12 @@ for (const kind of M.KINDS) {
     assert.strictEqual(red, nReq, 'tiêu đề cột bắt buộc tô màu riêng');
   });
 }
+
+test('mẫu không có cột Mã rừng và Mã rừng không còn là cột bắt buộc của bộ nạp (dữ liệu luôn nạp vào lô đang mở)', () => {
+  for (const k of M.KINDS) {
+    assert.ok(!M.SPECS[k].cols.some(c => c.n === 'Mã rừng'), k + ': mẫu không có cột Mã rừng');
+    assert.ok(!REQ[k].includes('Mã rừng'), k + ': Mã rừng không bắt buộc');
+    assert.ok(!HEAD[k].includes('Mã rừng'), k + ': tiêu đề mẫu không có Mã rừng');
+  }
+  assert.ok(/const H_LEGACY = \{'Mã rừng': 'maRung'\}/.test(html), 'file cũ còn cột Mã rừng vẫn đọc được');
+});
