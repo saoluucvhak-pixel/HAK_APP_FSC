@@ -24,10 +24,10 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   ok('chưa có bản tra cứu thì báo rõ', (await w.innerText('#lkBody')).includes('chưa có'));
   // Nhập bản Excel
   await pick(app, good); await w.click('[data-act=lkExcel]'); await w.waitForFunction(() => /Đã cập nhật bản tra cứu/.test(document.getElementById('lkBody').innerText));
-  ok('nhập Excel: hiện nguồn file + số dòng từng tab', /File Excel “gia_lap.xlsx”/.test(await w.innerText('#lkBody')) && /HoSoKeo_QC: 8/.test(await w.innerText('#lkBody')));
+  ok('nhập Excel: hiện nguồn file + số dòng từng tab', /File Excel “gia_lap.xlsx”/.test(await w.innerText('#lkBody')) && /HoSoKeo: 8/.test(await w.innerText('#lkBody')));
   // Excel sai cột: giữ bản cũ
   await pick(app, bad); await w.click('[data-act=lkExcel]'); await w.waitForFunction(() => /Chưa cập nhật bản tra cứu/.test(document.getElementById('lkBody').innerText));
-  ok('Excel thiếu cột: báo tab + cột, vẫn dùng bản cũ', /ToaDoRung_QC.*DienTich_m2/.test(await w.innerText('#lkBody')) && /gia_lap.xlsx/.test(await w.innerText('#lkBody')));
+  ok('Excel thiếu cột: báo tab + cột, vẫn dùng bản cũ', /ToaDoRung.*DienTich_m2/.test(await w.innerText('#lkBody')) && /gia_lap.xlsx/.test(await w.innerText('#lkBody')));
   // Tìm không dấu, lọc tab
   await w.click('[data-lktab=HoSoRung_QC]'); await w.fill('#lkQ', 'nguyen van an'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200);
   ok('tìm không dấu theo tên trong tab HoSoRung_QC: 3 dòng', (await w.$$('[data-lkpick]')).length === 3);
@@ -39,7 +39,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   ok('liệt kê hợp đồng khác của cùng chủ', (await w.$$('[data-lkhd]')).length === 1);
   await w.selectOption('#lkOwner', 'new'); await w.click('[data-act=lkModeNew]'); await w.waitForSelector('[data-act=lkApply]');
   const pv = await w.innerText('#lkBody');
-  ok('xem trước: có tab · dòng · cột nguồn', /HoSoRung_QC · dòng 2 · cột “Họ và tên chủ rừng”/.test(pv));
+  ok('xem trước: có tab · dòng · cột nguồn', /HoSoRung · dòng 2 · cột “Họ và tên chủ rừng”/.test(pv));
   ok('xem trước: điểm GPS độ-phút-giây được quy đổi và gắn nhãn', /đã quy đổi từ/.test(pv));
   ok('xem trước: cần ghép tên xe với biển số', /XE CN NAM/.test(pv) && /cần ghép biển/.test(pv));
   ok('xem trước: phiếu lệch tấn/kg cần kiểm tra', /cần kiểm tra — Khối lượng lệch/.test(pv));

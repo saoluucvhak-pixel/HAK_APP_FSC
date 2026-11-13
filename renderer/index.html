@@ -304,7 +304,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 </ul>
 <h3>6. Tra cứu Google Sheets</h3>
 <ul>
-<li><b>Đồng bộ ngay</b> tải 3 tab <code>HoSoKeo_QC</code>, <code>HoSoRung_QC</code>, <code>ToaDoRung_QC</code> (chỉ đọc). Bảng tính giới hạn quyền thì bấm <b>🔑 Đăng nhập Google (chỉ đọc)</b>. Khi không có mạng dùng <b>Nhập bản Excel</b>. Bản tra cứu chỉ được thay khi cả 3 tab hợp lệ; lỗi thì giữ bản cũ; bản đã lưu tra cứu được khi offline.</li>
+<li><b>Đồng bộ ngay</b> tải 3 tab <code>HoSoKeo</code> (phiếu cân), <code>HoSoRung</code> (chủ rừng, hợp đồng), <code>ToaDoRung</code> (mã rừng, tọa độ, giấy tờ) (chỉ đọc). Bảng tính giới hạn quyền thì bấm <b>🔑 Đăng nhập Google (chỉ đọc)</b>. Khi không có mạng dùng <b>Nhập bản Excel</b>. Bản tra cứu chỉ được thay khi cả 3 tab hợp lệ; lỗi thì giữ bản cũ; bản đã lưu tra cứu được khi offline.. Chấp nhận thêm tên cũ có hậu tố <code>_QC</code> và tên khác hoa/thường. Tab đặt tên khác hẳn nhưng đủ cột được <b>đề xuất để bạn xác nhận</b>; có nhiều tab phù hợp (kể cả có cả tên mới lẫn <code>_QC</code>) thì bạn chọn trong danh sách. Chỉ khi cả ba vai trò đã xác định và đọc đúng mới thay bản tra cứu</li>
 <li>Tìm theo mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã hợp đồng, địa chỉ, số phiếu cân, biển số → <b>Chọn</b> → <b>Điền vào rừng đang mở</b> hoặc <b>Tạo rừng mới</b> → xem trước, chọn từng trường và phiếu → <b>Lưu vào hồ sơ</b>.</li>
 <li>Ô đã có dữ liệu khác phải chọn giữ hay thay. Phiếu cân có ngày không có thật bị loại và nêu lý do.</li>
 </ul>
@@ -560,11 +560,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       get: function (screenId, name) { var p = (load().screens[screenId] || {})[name]; return p ? p : null; },
       save: function (screenId, name, state, now) {
         name = str(name); if (!name) return { ok: false, msg: "Chưa đặt tên bộ lọc" };
-        var o = load(); (o.screens[screenId] = o.screens[screenId] || {})[name] = { state: normalize(state), savedAt: now || new Date().toISOString() };
+        var o = load();
+        if (o.corrupt) return { ok: false, corrupt: true, msg: "Kho bộ lọc đã lưu bị lỗi hoặc thuộc phiên bản khác — không ghi đè. Dùng discardCorrupt() để sao lưu bản cũ rồi tạo kho mới." }; (o.screens[screenId] = o.screens[screenId] || {})[name] = { state: normalize(state), savedAt: now || new Date().toISOString() };
         return save(o) ? { ok: true } : { ok: false, msg: "Không lưu được bộ lọc trên máy này" };
       },
-      remove: function (screenId, name) { var o = load(); if (!o.screens[screenId] || !o.screens[screenId][name]) return false; delete o.screens[screenId][name]; return save(o); },
+      remove: function (screenId, name) { var o = load(); if (o.corrupt) return false; if (!o.screens[screenId] || !o.screens[screenId][name]) return false; delete o.screens[screenId][name]; return save(o); },
       isCorrupt: function () { return !!load().corrupt; },
+      /** Kho lỗi/khác phiên bản: chép nguyên văn sang khóa "<PRESET_KEY>.bak" (không mất dữ liệu) rồi mới tạo kho trống. */
+      discardCorrupt: function () {
+        if (!load().corrupt) return { ok: true, backedUp: false };
+        var raw; try { raw = storage.getItem(PRESET_KEY); } catch (e) { return { ok: false, msg: "Không đọc được kho bộ lọc" }; }
+        try { storage.setItem(PRESET_KEY + ".bak", raw); storage.setItem(PRESET_KEY, JSON.stringify({ schema: SCHEMA, screens: {} })); } catch (e) { return { ok: false, msg: "Không sao lưu được kho bộ lọc cũ" }; }
+        return { ok: true, backedUp: true, backupKey: PRESET_KEY + ".bak" };
+      },
       legacyNames: function () { return Object.keys(legacy()).sort(); },
       legacyGet: function (name) { var o = legacy(); return Object.prototype.hasOwnProperty.call(o, name) ? { legacy: o[name] } : null; }
     };
@@ -701,6 +709,50 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   const api = {isLeap, daysIn, parse, key, isValid, format, fromIso, why, range, inRange};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDates = api;
+})(typeof self !== 'undefined' ? self : this);
+</script>
+<script>/* Bản chính thức hay BẢN NHÁP: mỗi biểu mẫu có điều kiện riêng. Thiếu điều kiện thì vẫn xuất được để soạn trước nhưng gắn nhãn “BẢN NHÁP”
+ * trong tài liệu, tên file và tên gói; đủ điều kiện thì xuất bản chính thức. Hàm thuần (không đọc giao diện) để dùng chung cho xuất lẻ, xuất theo gói,
+ * màn hình “Xuất hồ sơ” và kiểm thử. Mẫu trống / chỉ phần số (in hai bước) là mẫu thiết kế để điền sau, không thuộc quy tắc này. */
+(function (root) {
+  /* điều kiện dữ liệu → câu báo thiếu và nơi bổ sung */
+  const NEED = {
+    ngayKy: {text: 'chưa có ngày ký hợp đồng (số hợp đồng thiếu năm)', where: 'Thông tin chủ rừng → Ngày ký hợp đồng (hoặc tab Xuất hồ sơ → Ngày ký hợp đồng)'},
+    diaChiGiao: {text: 'chưa chọn địa chỉ giao hàng đã chốt (điểm đến để chấm)', where: 'tab Vận chuyển → Chọn địa chỉ giao hàng'},
+    klThucTe: {text: 'chưa nhập khối lượng khai thác thực tế (đang tính theo sản lượng dự kiến)', where: 'Thông tin rừng → Khối lượng thực tế (tấn)'},
+    ntNgay: {text: 'chưa nhập ngày lập biên bản nghiệm thu', where: 'tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập'},
+    pcNgay: {text: 'chưa nhập ngày lập biên bản xác nhận khối lượng', where: 'tab Xuất hồ sơ → Xác nhận khối lượng, thanh toán: ngày lập'},
+    nguoiMua: {text: 'chưa khai đơn vị nhận (Công ty mua hàng) nên dòng “Kính gửi” để chấm', where: 'nút 🏢 Công ty mua hàng, hoặc tab Xuất hồ sơ → đơn vị nhận'}
+  };
+  /* điều kiện chính thức của từng biểu mẫu (mã hai chữ số của BM-xx); mẫu không liệt kê không có điều kiện riêng */
+  const FORMS = {
+    '01': {label: 'BM-01 Hợp đồng giao khoán', need: ['ngayKy']},
+    '04': {label: 'BM-04 Hợp đồng vận chuyển', need: ['ngayKy', 'diaChiGiao']},
+    '08': {label: 'BM-08 Bảng thanh toán tiền công', need: ['klThucTe']},
+    '09': {label: 'BM-09 Xác nhận khối lượng vận chuyển', need: ['ngayKy', 'diaChiGiao', 'pcNgay']},
+    '10': {label: 'BM-10 Thanh toán tiền vận chuyển', need: ['ngayKy', 'diaChiGiao', 'pcNgay']},
+    '11': {label: 'BM-11 Cam kết nguồn gốc', need: ['nguoiMua']},
+    '14': {label: 'BM-14 Nghiệm thu, thanh lý khai thác', need: ['ngayKy', 'klThucTe', 'ntNgay']},
+    '20': {label: 'BM-20 Giấy ủy quyền', need: ['ngayKy']}
+  };
+  /* ctx: các cờ true khi đủ điều kiện: {ngayKy, diaChiGiao, klThucTe, ntNgay, pcNgay, nguoiMua}. Trả danh sách thiếu [{key, text, where}] */
+  function issues(code, ctx) {
+    const f = FORMS[code]; if (!f) return [];
+    return f.need.filter(k => !ctx[k]).map(k => ({key: k, text: NEED[k].text, where: NEED[k].where}));
+  }
+  const label = code => (FORMS[code] && FORMS[code].label) || ('BM-' + code);
+  /* dòng nhãn đầu tài liệu */
+  const banner = list => 'BẢN NHÁP – chưa đủ dữ liệu để in chính thức: ' + list.map(x => x.text).join('; ') + '.';
+  /* tên file: BM-xx_… → BM-xx_BAN_NHAP_…; file trong thư mục: thư_mục/BAN_NHAP_tên */
+  function draftPath(p) {
+    if (/(^|\/|\d\d_)BAN_NHAP_/.test(p)) return p;
+    const slash = p.lastIndexOf('/');
+    if (slash >= 0) return p.slice(0, slash + 1) + 'BAN_NHAP_' + p.slice(slash + 1);
+    const m = /^(\d\d_)(.*)$/.exec(p);
+    return m ? m[1] + 'BAN_NHAP_' + m[2] : 'BAN_NHAP_' + p;
+  }
+  const api = {NEED, FORMS, issues, label, banner, draftPath};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKBanNhap = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
 <script>/* Rà mâu thuẫn và chồng lấn khi nhập liệu của một lô: ngày ở nhiều ô khác nhau, khoảng ngày đảo, ngày phiếu cân ngoài thời gian khai thác…
@@ -2216,7 +2268,7 @@ function gate(rec) {
 /* ========== Ghi file Word (.docx) ========== */
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const xe = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const P = (text, o = {}) => ({t: 'p', text: text ?? '', al: o.al || 'both', b: !!o.b, i: !!o.i, sz: o.sz || 26,
+const P = (text, o = {}) => ({t: 'p', text: text ?? '', col: o.col || '', al: o.al || 'both', b: !!o.b, i: !!o.i, sz: o.sz || 26,
   after: o.after ?? 100, before: o.before ?? 0, ind: o.ind || 0, indR: o.indR || 0, hang: o.hang || 0, keep: !!o.keep, bdb: !!o.bdb, full: !!o.full});
 const T = (widths, rows, o = {}) => ({t: 'tbl', widths, rows, borders: o.borders !== false, head: !!o.head, headRows: o.headRows, sz: o.sz, rowH: o.rowH, al: o.al, alignCols: o.alignCols, keep: !!o.keep, pad: o.pad, full: !!o.full});
 const bl = text => P('- ' + text, {ind: 360});
@@ -2239,7 +2291,7 @@ const V = (text, w, blank) => VS + (w || 0) + VW + (blank || '') + VB + (text ==
 const emw = str => [...String(str)].reduce((a, c) => a + (c === '…' ? 1 : /\d/.test(c) ? 0.5 : /[.,:;\/ \u00A0\-()]/.test(c) ? 0.27 : /[A-ZĐ]/.test(c) ? 0.7 : 0.5), 0);
 function runsXml(text, base) {
   const out = [];
-  const run = (seg, bold, white) => '<w:r><w:rPr>' + (bold ? '<w:b/>' : '') + (base.i ? '<w:i/>' : '') + (white ? '<w:color w:val="FFFFFF"/>' : '') +
+  const run = (seg, bold, white) => '<w:r><w:rPr>' + (bold ? '<w:b/>' : '') + (base.i ? '<w:i/>' : '') + (white ? '<w:color w:val="FFFFFF"/>' : base.col ? '<w:color w:val="' + base.col + '"/>' : '') +
     '<w:sz w:val="' + base.sz + '"/><w:szCs w:val="' + base.sz + '"/></w:rPr><w:t xml:space="preserve">' + xe(seg) + '</w:t></w:r>';
   String(text).split('**').forEach((seg, i) => {
     if (seg === '') return;
@@ -2327,6 +2379,7 @@ function tidySign(blocks) {
 }
 async function makeDocx(blocks, o = {}) {
   blocks = tidySign(blocks);
+  if (o.draft && o.draft.length) blocks = [P('**' + HAKBanNhap.banner(o.draft) + '**', {al: 'center', col: 'C00000', sz: 20, after: 120, full: true}), ...blocks];   // nhãn BẢN NHÁP ở đầu tài liệu (màu đỏ, luôn hiện)
   const ser = b => b.t === 'p' ? paraXml(b) : b.t === 'tbl' ? tblXml(b) : b.t === 'br' ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : '';
   const body = blocks.map(b => { if (!b.full || docMode === 'day') return ser(b); const m = docMode; docMode = 'day'; try { return ser(b); } finally { docMode = m; } }).join('') +   // khối “full”: luôn in đầy đủ, kể cả khi cả biên bản đang ở chế độ in đè (ví dụ Bảng kê khối lượng đính kèm) +
     (blocks.length && blocks[blocks.length - 1].t === 'tbl' ? '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>' : '');   // đoạn đệm bắt buộc sau bảng: thu nhỏ để không đẩy sang trang trắng
@@ -3057,7 +3110,24 @@ function groupsDX(rec) {
   });
   return out;
 }
+/* Điều kiện dữ liệu cho quy tắc BẢN NHÁP (src/bannhap.js): true = đủ */
+function draftCtx(rec) {
+  const i = rec.info, ex = Object.assign({}, rec.exp || {}); if (!ex.ngayKy && i.ngayKyHopDong) ex.ngayKy = i.ngayKyHopDong;
+  const vol = volumeOf(i); let ngc = false; try { ngc = !!payRows(rec, ex).plan.ngc; } catch (e) { /* chưa đủ dữ liệu tính tiền công */ }
+  const has = v => !!v && HAKDates.isValid(v);
+  return {ngayKy: has(ex.ngayKy), diaChiGiao: !!destOf(rec).text, klThucTe: ngc || !!(vol && vol.src === 'thực tế'), ntNgay: has(ex.ntNgay), pcNgay: has(ex.pcNgay), nguoiMua: !!(ex.ckNhan || buyerName(rec))};
+}
+const draftList = rec => { const c = draftCtx(rec); return Object.keys(HAKBanNhap.FORMS).map(code => ({code, label: HAKBanNhap.label(code), issues: HAKBanNhap.issues(code, c)})); };
+/* Xuất lẻ và xuất theo gói dùng chung: file thiếu điều kiện chính thức của riêng mẫu đó được gắn BẢN NHÁP (tên file + nhãn đầu tài liệu + chân trang).
+ * Mẫu trống / chỉ phần số (in hai bước) là mẫu thiết kế để điền sau nên không gắn nhãn. */
 function buildFiles(rec, kind) {
+  const files = buildFilesRaw(rec, kind);
+  if (kind === 'trong2' || kind === 'de2') return files;
+  const c = draftCtx(rec);
+  files.forEach(f => { const code = (f.path.match(/^(\d\d)_/) || [])[1], list = HAKBanNhap.issues(code, c); if (list.length) { f.draft = list; f.path = HAKBanNhap.draftPath(f.path); } });
+  return files;
+}
+function buildFilesRaw(rec, kind) {
   const ex = Object.assign({}, rec.exp || {}, {vcDiemDen: destOf(rec).text});
   if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
   ex._so = HAKHopDong.numbers(ex);                                                // MỘT quy tắc số hợp đồng cho BM-01, BM-04, BM-09, BM-10, BM-14, BM-20 (src/hopdong.js)
@@ -3108,8 +3178,8 @@ function buildFiles(rec, kind) {
 const DOC_CODES = {'17': 'BM-17 · Phiếu thẩm định chủ rừng và rừng', '18': 'BM-18 · Nhật ký khai thác hằng ngày', '19': 'BM-19 · Biên bản phổ biến chính sách FSC', '15': 'BM-15 · Sổ theo dõi tai nạn lao động, sự cố', '16': 'BM-16 · Biên bản kiểm tra, bảo dưỡng thiết bị', '14': 'BM-14 · Biên bản nghiệm thu, thanh lý khai thác', '11': 'BM-11 · Cam kết nguồn gốc gỗ rừng trồng', '12': 'BM-12 · Cam kết sử dụng lao động', '13': 'BM-13 · Biên bản kiểm tra hiện trường khai thác', '09': 'BM-09 · Biên bản xác nhận khối lượng vận chuyển', '10': 'BM-10 · Bảng thanh toán tiền vận chuyển', '01': 'BM-01 · Hợp đồng khai thác (giao khoán)', '02': 'BM-02 · Danh sách cấp phát BHLĐ', '03': 'BM-03 · Hợp đồng lao động',
   '04': 'BM-04 · Hợp đồng vận chuyển', '05': 'BM-05 · Bảng chấm công', '06': 'BM-06 · Danh sách đội khai thác',
   '07': 'BM-07 · Biên bản đào tạo ATLĐ', '08': 'BM-08 · Bảng thanh toán tiền công', '20': 'BM-20 · Giấy ủy quyền của người lao động cho tổ trưởng'};
-const docOpts = (f, rec) => ({landscape: f.land, tight: !!(f.blocks && f.blocks.tight),
-  footer: (DOC_CODES[(f.path.match(/^(\d\d)_/) || [])[1]] || '') + ' · Rừng ' + (rec.info.maRung || '') + ' · Phiên bản 1.0'});
+const docOpts = (f, rec) => ({landscape: f.land, tight: !!(f.blocks && f.blocks.tight), draft: f.draft || null,
+  footer: (DOC_CODES[(f.path.match(/^(\d\d)_/) || [])[1]] || '') + ' · Rừng ' + (rec.info.maRung || '') + ' · Phiên bản 1.0' + (f.draft ? ' · BẢN NHÁP' : '')});
 function docTienCong(rec, ex) {
   const rs = rec.info, tt = rec.nc.find(isTT);
   const pr = payRows(rec, ex), plan = pr.plan, ngc = plan.ngc, ha = plan.basis === 'ha', N = pr.N, each = pr.each, sum = pr.sum, bs = basisOf(rs);
@@ -3208,13 +3278,14 @@ async function exportKind(kind, idx) {
     if (pick.length === 1) {
       const f = pick[0];
       download(await makeDocx(f.blocks, docOpts(f, rec)), f.path.split('/').pop());
+      if (f.draft) note('Đã tải BẢN NHÁP (tên file và đầu tài liệu có nhãn “BẢN NHÁP”): ' + f.draft.map(x => x.text + ' → ' + x.where).join('; ') + '. Bổ sung rồi tải lại để có bản chính thức.', 'warn');
       return;
     }
     const z = new JSZip();
     for (const f of pick) z.file(f.path, await makeDocx(f.blocks, docOpts(f, rec)));
     const blob = await z.generateAsync({type: 'blob'});
-    download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung', trong2: 'dot2_MAU_TRONG_in_truoc', de2: 'dot2_CHI_PHAN_SO_in_de'}[kind] || kind) + '.zip');
-    if (['all', 'dau', 'cuoi'].includes(kind)) { const nt = exportNotes(rec, g, kind); if (nt.length) note('Đã tải file nhưng còn ' + nt.length + ' lưu ý:\n• ' + nt.join('\n• '), 'warn'); else note('Đã tải file: dữ liệu đủ, không có lưu ý.', 'ok'); }
+    download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung', trong2: 'dot2_MAU_TRONG_in_truoc', de2: 'dot2_CHI_PHAN_SO_in_de'}[kind] || kind) + (pick.some(f => f.draft) ? '_BAN_NHAP' : '') + '.zip');
+    if (['all', 'dau', 'cuoi'].includes(kind)) { const nt = exportNotes(rec, g, kind); const dr = pick.filter(f => f.draft); if (dr.length) nt.unshift('Các biểu mẫu mang nhãn BẢN NHÁP (tên file, đầu tài liệu và tên gói): ' + dr.map(f => (HAKBanNhap.label((f.path.match(/(?:^|\/)(\d\d)_/) || [])[1]) || f.path).replace(/ .*/, '') + ' (' + f.draft.map(x => x.text).join('; ') + ')').join(' · ') + '.'); if (nt.length) note('Đã tải file nhưng còn ' + nt.length + ' lưu ý:\n• ' + nt.join('\n• '), 'warn'); else note('Đã tải file: dữ liệu đủ, không có lưu ý.', 'ok'); }
     if (kind === 'de2') {
       if (!g.canPC) note('Đã tải bản CHỈ PHẦN SỐ, nhưng chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có số để in đè. Nạp phiếu cân rồi tải lại.', 'warn');
     }
@@ -3736,7 +3807,9 @@ function panelXuat(rec) {
   const cur = TABS.some(t => t[0] === xtab) ? xtab : 'hd';
   const INTRO = {hd: 'Nhập số, ngày, thông số hợp đồng và nghiệm thu, rồi tải từng mẫu.', ld: 'Bảo hộ lao động, đào tạo ATLĐ, chấm công, tiền công, sổ tai nạn và kiểm tra thiết bị.',
     vc: 'Hợp đồng vận chuyển theo người ký; xác nhận khối lượng và thanh toán lấy từ phiếu cân.', fsc: 'Thẩm định, cam kết, phổ biến, kiểm tra hiện trường, nhật ký khai thác phục vụ giám sát FSC.', all: 'Hiển thị toàn bộ thông số và mẫu của cả 4 nhóm.'};
-  return (why.length ? '<div class="msg err">Chưa xuất được:<br>' + esc(why.join(' · ')) + '</div>' : '<div class="msg ok">Hồ sơ đủ dữ liệu để xuất.</div>') +
+  const dl = draftList(rec).filter(x => x.issues.length);
+  const draftCard = '<div class="card" id="draftCard"><h3 style="margin-top:0">Bản chính thức hay bản nháp</h3>' + (dl.length ? '<p class="mut" style="margin:0 0 6px">Các mẫu dưới đây vẫn tải được để soạn trước nhưng mang nhãn <b>BẢN NHÁP</b> (tên file, đầu tài liệu, tên gói). Bổ sung dữ liệu rồi tải lại để có bản chính thức.</p>' + dl.map(x => '<div style="margin:4px 0"><b>' + esc(x.label) + '</b>: ' + x.issues.map(i => esc(i.text) + ' <span class="mut">→ ' + esc(i.where) + '</span>').join('; ') + '</div>').join('') : '<div class="msg ok" style="margin:0">Mọi biểu mẫu có điều kiện riêng (BM-01, 04, 08, 09, 10, 11, 14, 20) đã đủ để in bản chính thức.</div>') + '</div>';
+  return (why.length ? '<div class="msg err">Chưa xuất được:<br>' + esc(why.join(' · ')) + '</div>' : '<div class="msg ok">Hồ sơ đủ dữ liệu để xuất.</div>') + draftCard +
     '<div class="tabs" style="margin-top:6px">' + TABS.map(([k, l]) => '<button class="' + (cur === k ? 'on' : '') + '" data-xtab="' + k + '">' + l + '</button>').join('') + '</div>' +
     '<p class="mut" style="margin:0 0 10px">' + INTRO[cur] + '</p>' +
     (cur === 'all' ? S.hd + S.ld + S.vc + S.fsc : S[cur]) +
@@ -4332,10 +4405,12 @@ document.addEventListener('click', async e => {
 document.addEventListener('change', e => { const t = e.target; if (t && t.closest && t.closest('#rpBox') && /^rp(From|To|Owner|Detail)$/.test(t.id)) { rpReadParams(); rpRender(); } });
 
 /* ========== Tra cứu Google Sheets (chỉ bản desktop) ========== */
-const LK_TABS = [['', 'Tất cả'], ['HoSoKeo_QC', 'HoSoKeo_QC (phiếu cân)'], ['HoSoRung_QC', 'HoSoRung_QC (chủ rừng, hợp đồng)'], ['ToaDoRung_QC', 'ToaDoRung_QC (tọa độ, giấy tờ)']];
+const LK_TABS = [['', 'Tất cả'], ['HoSoKeo_QC', 'HoSoKeo (phiếu cân)'], ['HoSoRung_QC', 'HoSoRung (chủ rừng, hợp đồng)'], ['ToaDoRung_QC', 'ToaDoRung (tọa độ, giấy tờ)']];
 const lk = {view: 'search', tab: '', q: '', f: {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}, adv: false, layout: 'flat', gsel: '', presetSel: '', dt: 'rung', det: {}, conds: [], res: null, st: null, busy: '', msg: null, cand: null, fi: 0, mode: '', owner: '', sel: null};
 const foldVi = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
-const srcTxt = s => s ? esc(s.tab) + ' · dòng ' + s.row + ' · cột “' + esc(s.col) + '”' : '';
+/* Tên hiển thị của vai trò dữ liệu: bộ tên chuẩn HoSoKeo/HoSoRung/ToaDoRung (mã vai trò bên trong giữ hậu tố _QC để tương thích dữ liệu đã lưu) */
+const TL = t => ({HoSoKeo_QC: 'HoSoKeo', HoSoRung_QC: 'HoSoRung', ToaDoRung_QC: 'ToaDoRung'}[t] || t);
+const srcTxt = s => s ? esc(TL(s.tab)) + ' · dòng ' + s.row + ' · cột “' + esc(s.col) + '”' : '';
 const fmtDT = iso => { if (!iso) return ''; const d = new Date(iso); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' ' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear(); };
 const numTxt = v => typeof v === 'number' ? formatNumber(v, 6) : esc(v ?? '');
 
@@ -4358,7 +4433,9 @@ async function lkLoad(kind) {
   lk.busy = '';
   if (r.canceled) return lkRender();
   lk.st = r.status || await HB.lookup.status(); lk.det = {};
-  if (r.ok) { lk.msg = {kind: 'ok', text: 'Đã cập nhật bản tra cứu: ' + Object.entries(r.counts).map(([k, v]) => k + ' ' + fmt(v) + ' dòng').join(', ') + '.'}; await lkSearch(); }
+  if (r.pending) { lk.pend = {pending: r.pending, sheets: r.sheets, choice: Object.fromEntries(Object.entries(r.pending).map(([k, v]) => [k, v.proposed]))}; lk.msg = {kind: 'warn', text: 'Có tab cần bạn xác nhận hoặc chọn (xem bên dưới). Chưa thay đổi bản tra cứu.'}; return lkRender(); }
+  lk.pend = null;
+  if (r.ok) { lk.msg = {kind: 'ok', text: 'Đã cập nhật bản tra cứu: ' + Object.entries(r.counts).map(([k, v]) => TL(k) + ' ' + fmt(v) + ' dòng').join(', ') + '.'}; await lkSearch(); }
   else lk.msg = {kind: 'err', text: 'Chưa cập nhật bản tra cứu, vẫn dùng bản đã lưu. ' + (r.errors || []).join('; ')};
   lkRender();
 }
@@ -4369,16 +4446,28 @@ function lkGoogleHtml() {
     ? '<span class="pill ok">Đã đăng nhập Google' + (g.email ? ': ' + esc(g.email) : '') + (g.persistent ? '' : ' (chỉ trong phiên này)') + '</span><button class="btn ghost sm" data-act="lkGLogout">Đăng xuất</button>'
     : (g.configured ? '<button class="btn ghost sm" data-act="lkGLogin"' + (lk.busy ? ' disabled' : '') + '>🔑 Đăng nhập Google (chỉ đọc)</button>' : '<span class="pill">Chưa cấu hình OAuth Google — xem docs/GOOGLE_OAUTH.md</span>')) + '</div>';
 }
+/* Tab khác tên chuẩn hoặc có nhiều tab phù hợp: người dùng xác nhận/chọn từng vai trò; app kiểm tra lại cấu trúc trước khi ghi nhận ánh xạ */
+const LK_ROLE_DESC = {HoSoKeo_QC: 'phiếu cân và khối lượng', HoSoRung_QC: 'chủ rừng, thông tin rừng, hợp đồng', ToaDoRung_QC: 'mã rừng, tọa độ, diện tích, giấy tờ nguồn gốc'};
+function lkPendHtml() {
+  const P = lk.pend; if (!P) return '';
+  return '<div class="card" id="lkPend" style="margin:8px 0;border-color:var(--warn,#a16207)"><b>Cần xác nhận tên tab trước khi nạp</b>' +
+    '<p class="mut" style="margin:4px 0">Bản tra cứu đang dùng chưa bị thay đổi. Chọn tab cho từng vai trò; phần mềm sẽ kiểm tra lại các cột bắt buộc rồi mới nạp và ghi nhớ lựa chọn cho bảng tính này. Tab trong file: ' + (P.sheets || []).map(x => '“' + esc(x) + '”').join(', ') + '.</p>' +
+    Object.keys(P.pending).map(role => { const p = P.pending[role];
+      return '<div style="margin:8px 0"><b>' + esc(TL(role)) + '</b> <span class="mut">(' + esc(LK_ROLE_DESC[role] || '') + ')</span><div class="mut">' + (p.kind === 'confirm' ? 'Đề xuất: ' : 'Chọn một: ') + esc(p.why || '') + '.</div>' +
+        p.candidates.map(c => '<label style="flex-direction:row;gap:8px;color:var(--ink)"><input type="radio" name="lkPend_' + esc(role) + '" data-act="lkPendPick" data-role="' + esc(role) + '" data-tab="' + esc(c) + '"' + (P.choice[role] === c ? ' checked' : '') + '> <span>Dùng tab “' + esc(c) + '” làm “' + esc(TL(role)) + '”</span></label>').join('') +
+        (p.invalid || []).map(x => '<div class="mut">Tab “' + esc(x.tab) + '” cùng tên vai trò này nhưng thiếu cột: ' + x.missing.map(m => '“' + esc(m) + '”').join(', ') + '.</div>').join('') + '</div>'; }).join('') +
+    '<div class="row"><button class="btn sm" data-act="lkConfirmTabs">Xác nhận và nạp</button><button class="btn ghost sm" data-act="lkCancelTabs">Hủy, giữ bản cũ</button></div></div>';
+}
 function lkStatusHtml() {
   const st = lk.st || {}, a = st.active, l = st.last;
   const online = navigator.onLine;
   return '<div class="card" style="margin-bottom:10px"><div class="row" style="justify-content:space-between">' +
-    '<div><b>Bản tra cứu đang dùng:</b> ' + (a ? (a.source === 'google' ? 'Google Sheets' : 'File Excel “' + esc(a.detail) + '”') + ' · cập nhật thành công lúc <b>' + fmtDT(a.loadedAt) + '</b> · ' + Object.entries(a.counts).map(([k, v]) => esc(k) + ': ' + fmt(v)).join(' · ') : '<span class="pill err">chưa có — bấm Đồng bộ ngay hoặc Nhập bản Excel</span>') +
+    '<div><b>Bản tra cứu đang dùng:</b> ' + (a ? (a.source === 'google' ? 'Google Sheets' : 'File Excel “' + esc(a.detail) + '”') + ' · cập nhật thành công lúc <b>' + fmtDT(a.loadedAt) + '</b> · ' + Object.entries(a.counts).map(([k, v]) => esc(TL(k)) + ': ' + fmt(v)).join(' · ') : '<span class="pill err">chưa có — bấm Đồng bộ ngay hoặc Nhập bản Excel</span>') +
     '<br><span class="mut">Kết nối: ' + (online ? 'có mạng' : 'đang ngoại tuyến (vẫn tra cứu được bản đã lưu)') +
     (l ? ' · Lần cập nhật gần nhất (' + fmtDT(l.at) + '): ' + (l.ok ? 'thành công' + ((l.notes || []).length ? ' <span style="color:var(--warn,#a16207)">· ' + l.notes.map(esc).join('; ') + '</span>' : '') : '<span style="color:var(--err)">lỗi — ' + esc(l.error) + '</span>') : '') + '</span></div>' +
-    '<div class="row"><button class="btn sm" data-act="lkSync"' + (lk.busy ? ' disabled' : '') + '>⟳ Đồng bộ ngay</button><button class="btn ghost sm" data-act="lkExcel"' + (lk.busy ? ' disabled' : '') + '>⬆ Nhập bản Excel</button></div></div>' +
+    '<div class="row"><button class="btn sm" data-act="lkSync"' + (lk.busy ? ' disabled' : '') + '>⟳ Đồng bộ ngay</button><button class="btn ghost sm" data-act="lkExcel"' + (lk.busy ? ' disabled' : '') + '>⬆ Nhập bản Excel</button><button class="btn ghost sm" data-act="lkTemplate">⬇ Tải file mẫu (3 tab chuẩn)</button></div></div>' +
     lkGoogleHtml() + '<details style="margin-top:6px"><summary class="mut">Liên kết Google Sheets (chỉ đọc, bảng tính để “Ai có liên kết đều xem được”)</summary><div class="row" style="margin-top:6px"><input id="lkLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '"><button class="btn ghost sm" data-act="lkSetLink">Lưu liên kết</button></div></details>' +
-    (lk.busy ? '<div class="msg warn">' + esc(lk.busy) + '</div>' : '') + (lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + '</div>';
+    lkPendHtml() + (lk.busy ? '<div class="msg warn">' + esc(lk.busy) + '</div>' : '') + (lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + '</div>';
 }
 
 const LK_SORTS = [['relevance', 'Độ khớp'], ['ngay', 'Ngày cân mới nhất'], ['tan', 'Khối lượng lớn nhất'], ['ten', 'Tên chủ rừng A→Z']];
@@ -4470,7 +4559,7 @@ function lkSearchHtml() {
     '<label>Sắp xếp<br><select id="lkSort">' + LK_SORTS.map(([k, l]) => '<option value="' + k + '"' + (lk.f.sort === k ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
     '<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="lkIssues"' + (lk.f.onlyIssues ? ' checked' : '') + '> Chỉ dòng cần kiểm tra' + (fc.issues ? ' <span class="pill err">' + fmt(fc.issues) + '</span>' : '') + '</label>' +
     '<button class="btn sm" data-act="lkFind">Áp dụng</button><button class="btn ghost sm" data-act="lkClear">Xóa bộ lọc</button></div>' +
-    '<p class="mut" style="margin:4px 0 0">Khoảng ngày và khối lượng chỉ áp dụng cho phiếu cân (HoSoKeo_QC).</p></details>';
+    '<p class="mut" style="margin:4px 0 0">Khoảng ngày và khối lượng chỉ áp dụng cho phiếu cân (HoSoKeo).</p></details>';
   const relax = r.total === 0 && r.relax && r.relax.length ? '<div class="msg warn">Không có kết quả. Thử: ' + r.relax.map((x, i) => x.clearFilters ? '<button class="btn ghost sm" data-act="lkClear">bỏ bộ lọc (' + fmt(x.total) + ' dòng)</button>' : '<button class="btn ghost sm" data-lkrelax="' + i + '">bỏ “' + esc(x.drop) + '” (' + fmt(x.total) + ' dòng)</button>').join(' ') + '</div>' : '';
   const sum = lk.layout === 'tree' ? fmt(r.groupTotal || 0) + ' hợp đồng / chủ rừng (từ ' + fmt(r.total) + ' dòng). Bấm một dòng để xem rừng và phiếu cân ở khung bên phải.' : r.total > r.rows.length ? 'Hiển thị ' + fmt(r.rows.length) + ' / ' + fmt(r.total) + ' dòng — gõ thêm từ khóa hoặc dùng bộ lọc để thu hẹp.' : fmt(r.total) + ' dòng.';
   const tot = st.phieu ? ' · <b>' + fmt(st.phieu) + '</b> phiếu cân, tổng <b>' + numTxt(st.tan) + '</b> tấn' : '';
@@ -4480,7 +4569,7 @@ function lkSearchHtml() {
     (statuses.length && lk.tab !== 'HoSoKeo_QC' && lk.tab !== 'ToaDoRung_QC' ? '<div class="row" style="margin:4px 0">' + statuses.map(([k, c]) => '<button class="btn ' + (lk.f.status === k ? '' : 'ghost') + ' sm" data-lkstatus="' + esc(k) + '">' + esc(k) + ' · ' + c + '</button>').join('') + '</div>' : '') +
     (r.warns || []).map(w => '<div class="msg warn">' + esc(w) + '</div>').join('') + relax + '<p class="mut">' + sum + tot + '</p>' +
     (lk.layout === 'tree' ? lkTreeHtml(r) : '<div class="wrap" style="max-height:48vh"><table><tr><th>Tab</th><th>Dòng</th><th>Chủ rừng</th><th>CCCD</th><th>Hợp đồng</th><th>Mã rừng</th><th>Địa chỉ rừng</th><th>Chi tiết</th><th>Kiểm tra</th><th></th></tr>' +
-    r.rows.map(x => '<tr><td>' + esc(x.tab) + '</td><td>' + x.row + '</td><td>' + esc(x.ten) + '</td><td>' + esc(x.cccd) + '</td><td>' + esc(x.hd) + '</td><td>' + esc(x.maRung) + '</td><td>' + esc(x.diaChi) + '</td><td>' + cell(x) + '</td>' +
+    r.rows.map(x => '<tr><td>' + esc(TL(x.tab)) + '</td><td>' + x.row + '</td><td>' + esc(x.ten) + '</td><td>' + esc(x.cccd) + '</td><td>' + esc(x.hd) + '</td><td>' + esc(x.maRung) + '</td><td>' + esc(x.diaChi) + '</td><td>' + cell(x) + '</td>' +
       '<td>' + (x.flags || []).map(f => '<span class="pill err" style="margin:1px">' + esc(f) + '</span>').join('') + '</td>' +
       '<td><button class="btn sm" data-lkpick="' + esc(x.tab) + '|' + x.row + '">Chọn</button></td></tr>').join('') + '</table></div>');
 }
@@ -4598,7 +4687,7 @@ function lkPreviewHtml() {
       '<label style="flex-direction:row;color:var(--ink)"><input type="radio" name="lkArea" data-lkarea="skip"' + (s.area === 'skip' ? ' checked' : '') + '> không điền</label></td><td colspan="2">' + (F.areaConflict ? '<span class="pill err">hai nguồn khác nhau</span>' : '') + (s.area == null ? ' <span class="pill err">cần chọn</span>' : '') + '</td></tr>' : '') +
     (F.gps.length ? '<tr><td>Tọa độ điểm tâm (WGS84)</td><td>' + esc(isEmpty(T.fi.lat) ? '' : T.fi.lat + ', ' + T.fi.lng) + '</td><td colspan="4">' + F.gps.map((g, i) => '<label style="flex-direction:row;color:var(--ink)"><input type="radio" name="lkGps" data-lkgps="' + i + '"' + (s.gps === i ? ' checked' : '') + (g.ok ? '' : ' disabled') + '> ' +
       (g.ok ? '<b>' + g.lat + ', ' + g.lng + '</b>' + (g.converted ? ' <span class="pill">đã quy đổi từ “' + esc(g.raw) + '”</span>' : '') : '<span style="color:var(--err)">' + esc(g.raw) + ' — không dùng được: ' + esc(g.reason) + '</span>') +
-      ' <span class="mut">— ' + esc(g.id) + (g.noi ? ' · ' + esc(g.noi) : '') + ' · ToaDoRung_QC dòng ' + g.row + '</span></label>').join('') +
+      ' <span class="mut">— ' + esc(g.id) + (g.noi ? ' · ' + esc(g.noi) : '') + ' · ToaDoRung dòng ' + g.row + '</span></label>').join('') +
       (!isEmpty(T.fi.lat) ? '<label style="flex-direction:row;color:var(--ink)"><input type="radio" name="lkGps" data-lkgps="keep"' + (s.gps === 'keep' ? ' checked' : '') + '> giữ tọa độ hiện có</label>' : '') +
       '<label style="flex-direction:row;color:var(--ink)"><input type="radio" name="lkGps" data-lkgps="skip"' + (s.gps === 'skip' || s.gps == null ? ' checked' : '') + '> không điền tọa độ</label></td></tr>' : '') +
     '</table></div>' +
@@ -4702,13 +4791,27 @@ document.addEventListener('click', async e => {
   const a = el.dataset.act;
   if (a === 'lkOpen') return lkOpen();
   if (a === 'lkClose') return lkClose();
-  if (a === 'lkPresetSave') { lkReadFilters(); lk.q = ($('#lkQ') || {}).value ?? lk.q; const nm = ($('#lkPresetName') || {}).value || ''; const r = lkPresets().save(LK_SF.screenId, nm, lkSf()); lk.msg = r.ok ? {kind: 'ok', text: 'Đã lưu bộ lọc “' + nm.trim() + '”.'} : {kind: 'err', text: r.msg}; return lkRender(); }
+  if (a === 'lkPresetSave') { lkReadFilters(); lk.q = ($('#lkQ') || {}).value ?? lk.q; const nm = ($('#lkPresetName') || {}).value || ''; let r = lkPresets().save(LK_SF.screenId, nm, lkSf());
+    if (!r.ok && r.corrupt && confirm('Kho bộ lọc đã lưu trên máy bị lỗi hoặc thuộc phiên bản khác nên chưa ghi đè.\n\nSao lưu nguyên văn bản cũ (không mất dữ liệu) rồi tạo kho mới để lưu bộ lọc này?')) { const d = lkPresets().discardCorrupt(); r = d.ok ? lkPresets().save(LK_SF.screenId, nm, lkSf()) : d; }
+    lk.msg = r.ok ? {kind: 'ok', text: 'Đã lưu bộ lọc “' + nm.trim() + '”.'} : {kind: 'err', text: r.msg}; return lkRender(); }
   if (a === 'lkPresetDel') { const nm = lk.presetSel || ($('#lkPreset') || {}).value || ''; if (nm && lkPresets().remove(LK_SF.screenId, nm)) { lk.presetSel = ''; lk.msg = {kind: 'ok', text: 'Đã xóa bộ lọc “' + nm + '”.'}; } else lk.msg = {kind: 'err', text: 'Chọn một bộ lọc đã lưu để xóa.'}; return lkRender(); }
   if (a === 'lkGLogin') { lk.busy = 'Đang chờ đăng nhập Google trong trình duyệt…'; lk.msg = null; lkRender(); const r = await HB.google.login(); lk.busy = ''; lk.g = r.status; lk.msg = r.ok ? {kind: 'ok', text: 'Đã đăng nhập Google (quyền chỉ đọc). Bấm “Đồng bộ ngay” để tải bảng tính.'} : {kind: 'err', text: r.error}; return lkRender(); }
   if (a === 'lkGLogout') { const r = await HB.google.logout(); lk.g = r.status; lk.msg = {kind: 'ok', text: 'Đã đăng xuất Google.'}; return lkRender(); }
   if (a === 'lkFind') { lk.q = $('#lkQ').value; lkReadFilters(); lk.adv = !!($('#lkAdv') || {}).open; await lkSearch(); return lkRender(); }
   if (a === 'lkClearAll') { lk.q = ''; lk.tab = ''; lk.f = {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}; await lkSearch(); return lkRender(); }
   if (a === 'lkClear') { lk.f = {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}; lk.q = ($('#lkQ') || {}).value ?? lk.q; await lkSearch(); return lkRender(); }
+  if (a === 'lkTemplate') { const r = await HB.lookup.template(); if (!r.ok) { lk.msg = {kind: 'err', text: 'Không tạo được file mẫu: ' + r.error}; return lkRender(); } download(new Blob([r.bytes], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), r.file); lk.msg = {kind: 'ok', text: 'Đã tạo file mẫu ' + r.file + ' (3 tab HoSoKeo, HoSoRung, ToaDoRung và trang HUONG_DAN).'}; return lkRender(); }
+  if (a === 'lkPendPick') { if (lk.pend) lk.pend.choice[el.dataset.role] = el.dataset.tab; return; }
+  if (a === 'lkCancelTabs') { await HB.lookup.cancelTabs(); lk.pend = null; lk.msg = {kind: 'warn', text: 'Đã hủy, vẫn dùng bản tra cứu đã lưu.'}; return lkRender(); }
+  if (a === 'lkConfirmTabs') {
+    if (!lk.pend) return;
+    lk.busy = 'Đang kiểm tra tab và nạp…'; lkRender();
+    const r = await HB.lookup.confirmTabs(lk.pend.choice); lk.busy = '';
+    lk.st = r.status || await HB.lookup.status(); lk.det = {};
+    if (r.ok) { lk.pend = null; lk.msg = {kind: 'ok', text: 'Đã nạp và ghi nhớ tab đã chọn cho bảng tính này. ' + Object.entries(r.counts).map(([k, v]) => TL(k) + ' ' + fmt(v) + ' dòng').join(', ') + '.'}; await lkSearch(); }
+    else lk.msg = {kind: 'err', text: 'Chưa nạp, vẫn dùng bản đã lưu. ' + (r.errors || []).join('; ')};
+    return lkRender();
+  }
   if (a === 'lkSync') return lkLoad('sync');
   if (a === 'lkExcel') return lkLoad('excel');
   if (a === 'lkSetLink') { const r = await HB.lookup.setSheet($('#lkLink').value.trim()); lk.msg = r.ok ? {kind: 'ok', text: 'Đã lưu liên kết.'} : {kind: 'err', text: r.error}; lk.st = await HB.lookup.status(); return lkRender(); }
@@ -4738,7 +4841,21 @@ document.addEventListener('change', e => {
   if (sel.lkalias != null) { lk.alias = lk.alias || {}; const v = t.value.trim().toUpperCase(); if (v) lk.alias[sel.lkalias] = v; else delete lk.alias[sel.lkalias]; lkPhieuDefaultsKeep(); return lkRender(); }
 });
 function lkPhieuDefaultsKeep() { lkPhieuRows().forEach(p => { if (!(p.soPhieu in lk.sel.phieu) || (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn) && lk.sel.phieu[p.soPhieu] === false && p.bien)) lk.sel.phieu[p.soPhieu] = p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn); }); }
-document.addEventListener('keydown', async e => { if (e.key === 'Enter' && /^lk(Q|From|To|Min|Max)$/.test(e.target.id)) { lk.q = ($('#lkQ') || e.target).value; lkReadFilters(); await lkSearch(); lkRender(); } });
+document.addEventListener('keydown', async e => {
+  if (e.key === 'Enter' && /^lk(Q|From|To|Min|Max)$/.test(e.target.id)) {
+    const id = e.target.id; lk.q = ($('#lkQ') || e.target).value; lkReadFilters(); await lkSearch(); lkRender();
+    const n = document.getElementById(id); if (n) { n.focus(); try { const L = n.value.length; n.setSelectionRange(L, L); } catch (er) { /* ô ngày không có vùng chọn */ } }   // vẽ lại không làm mất tiêu điểm bàn phím
+    return;
+  }
+  if (e.key === 'Escape' && !e.defaultPrevented) {   // Esc đóng hộp thoại trên cùng (hộp nhập/khôi phục → báo cáo → tra cứu → hướng dẫn); hộp nhập/khôi phục = Hủy, không ghi gì
+    const open = id => { const b = document.getElementById(id); return b && b.classList.contains('on') ? b : null; };
+    if (open('impBox')) { window.__imp = null; $('#impBox').classList.remove('on'); e.preventDefault(); return; }
+    if (open('rpBox')) { rpClose(); e.preventDefault(); return; }
+    if (open('lkBox')) { lkClose(); e.preventDefault(); return; }
+    if (open('guideBox')) { document.getElementById('guideBox').classList.remove('on'); e.preventDefault(); return; }
+    const mm = document.getElementById('moreMenu'); if (mm && mm.open) { mm.open = false; e.preventDefault(); }
+  }
+});
 window.addEventListener('online', () => { if ($('#lkBox').classList.contains('on') && lk.view !== 'preview') lkRender(); });
 window.addEventListener('offline', () => { if ($('#lkBox').classList.contains('on') && lk.view !== 'preview') lkRender(); });
 

@@ -17,7 +17,7 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   const imp = await w.evaluate(p => window.hak.lookup.importExcel(p), path.join(FIX, 'gia_lap_HoSoKeo_QC.xlsx'));
   ok('nhập file Excel offline: đủ 3 tab (8 phiếu, 5 hợp đồng, 7 điểm GPS)', imp.ok && imp.counts.HoSoKeo_QC === 8 && imp.counts.HoSoRung_QC === 5 && imp.counts.ToaDoRung_QC === 7, JSON.stringify(imp));
   const bad = await w.evaluate(p => window.hak.lookup.importExcel(p), path.join(FIX, 'gia_lap_thieu_tab.xlsx'));
-  ok('file thiếu tab: báo rõ tab, giữ bản cũ', !bad.ok && /Thiếu tab "ToaDoRung_QC"/.test(bad.errors.join()) && (await w.evaluate(() => window.hak.lookup.status())).active.counts.HoSoKeo_QC === 8);
+  ok('file thiếu tab: báo rõ tab, giữ bản cũ', !bad.ok && /Thiếu tab “ToaDoRung”/.test(bad.errors.join()) && (await w.evaluate(() => window.hak.lookup.status())).active.counts.HoSoKeo_QC === 8);
 
   // 2. Dòng thiếu CCCD: không ghi được, báo rõ
   await find(w, '9001/2026'); await w.click('[data-lkpick]'); await w.waitForTimeout(250);

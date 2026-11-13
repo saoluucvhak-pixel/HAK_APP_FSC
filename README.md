@@ -13,7 +13,7 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 - Khôi phục toàn bộ dữ liệu (.json) (cũng nhận bản sao lưu từ bản HTML cũ) có xem trước số liệu và bản trùng; sao lưu ra thư mục tự chọn (.json + .sqlite).
 - Nạp Excel nhân công/xe/phiếu cân: báo dòng hợp lệ/lỗi và thêm/cập nhật/giữ nguyên/bỏ trước khi ghi. **File Excel mẫu** có 3 trang (HUONG_DAN giải thích từng cột, trang dữ liệu có định dạng/danh sách chọn/gợi ý, VI_DU) do `src/xlsxmau.js` tạo.
 - **Mã lô duy nhất**, khôi phục toàn bộ chỉ thay đúng lô trùng (`src/lorung.js`), “Giữ cả hai” có mã mới xác nhận; **sao lưu / khôi phục một lô rừng** (gói JSON có mã kiểm tra, dùng được khi mất mạng); tab **Kiểm tra trước khi xuất**; hồ sơ **Công ty mua hàng** và địa chỉ giao theo lô.
-- Menu **Tra cứu Google Sheets**: đồng bộ chỉ đọc 3 tab hoặc nhập bản Excel, lưu bản tra cứu trên máy, tìm có dấu/không dấu, xem trước và ghi vào rừng đang mở hoặc rừng mới, dấu vết nguồn, chống trùng.
+- Menu **Tra cứu Google Sheets**: ba tab chuẩn **HoSoKeo, HoSoRung, ToaDoRung** (tên cũ `_QC` vẫn dùng được; tab tên khác được đề xuất để xác nhận hoặc chọn, ghi nhớ theo ID bảng tính; có file mẫu 3 tab). Đồng bộ chỉ đọc hoặc nhập bản Excel, lưu bản tra cứu trên máy, tìm có dấu/không dấu, xem trước và ghi vào rừng đang mở hoặc rừng mới, dấu vết nguồn, chống trùng.
 
 - Bộ lọc tra cứu thông minh: cú pháp `trường:giá trị`, loại trừ, xếp theo độ khớp, lọc ngày/khối lượng/tình trạng, cờ cần kiểm tra, gợi ý nới lỏng.
 - Menu **Báo cáo**: 4 mẫu (điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC) xuất Word và Excel.
@@ -30,6 +30,7 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 | `src/muahang.js`, `src/dates.js` | Công ty mua hàng và địa chỉ giao; quy tắc ngày lịch dùng chung |
 | `src/xlsxmau.js` | File Excel mẫu nhập liệu có hướng dẫn từng cột |
 | `src/store.js` | Lớp SQLite hồ sơ: lưu/đọc, nâng cấp cấu trúc, nhập/khôi phục, sao lưu |
+| `src/bannhap.js` | Điều kiện bản chính thức riêng từng biểu mẫu; nhãn BẢN NHÁP cho xuất lẻ và theo gói |
 | `src/lookup.js` | Bản tra cứu: đọc/kiểm tra 3 tab, tìm kiếm, ghép CCCD + hợp đồng, tọa độ, biển số |
 | `ui/app.src.html` | Giao diện + nghiệp vụ (từ bản HTML) |
 | `src/google-auth.js` | Đăng nhập Google OAuth (PKCE, chỉ đọc), tải .xlsx qua Drive API |

@@ -23,6 +23,15 @@ function exportUrl(link) {
   return m ? 'https://docs.google.com/spreadsheets/d/' + m[1] + '/export?format=xlsx' : null;
 }
 let gauth = null;
+/* Nạp bản tra cứu. Tab tên khác chuẩn / nhiều tab phù hợp: giữ bản tải về trong bộ nhớ chờ người dùng xác nhận hoặc chọn (lookup:confirmTabs),
+ * KHÔNG đổi bản tra cứu đang dùng cho đến khi cả ba vai trò đã xác định và kiểm tra thành công. sheetKey = định danh bảng tính (ID Google / excel:tên file). */
+let pendingTabs = null;
+function loadLookup(buf, source, detail, sheetKey) {
+  const r = lookup.load(buf, source, detail, {sheetKey});
+  pendingTabs = r.pending ? {buf, source, detail, sheetKey} : null;
+  return r;
+}
+const sheetKeyOf = link => 'google:' + (fileIdOf(link) || link);
 const fetchPublic = async (url, signal) => {
   const res = await net.fetch(url, {signal, redirect: 'follow'});
   if (!res.ok) { const e = new Error('Máy chủ trả lỗi HTTP ' + res.status + (res.status === 401 || res.status === 403 || res.status === 404 ? ' (bảng tính chưa để "Ai có liên kết đều xem được" hoặc sai liên kết; có thể dùng "Đăng nhập Google")' : '')); e.http = res.status; throw e; }
@@ -40,10 +49,10 @@ async function syncSheets() {
   try {
     let apiErr = null;
     if (gauth.status().signedIn && !process.env.HAKQN_SHEET_URL) {
-      try { return lookup.load(await gauth.exportXlsx(fileIdOf(link), ctl.signal), 'google', link + ' (tài khoản Google)'); }
+      try { return loadLookup(await gauth.exportXlsx(fileIdOf(link), ctl.signal), 'google', link + ' (tài khoản Google)', sheetKeyOf(link)); }
       catch (e) { apiErr = e; if (e.code === 'network' || e.code === 'timeout') return fail(e.message); }
     }
-    try { return lookup.load(await fetchPublic(url, ctl.signal), 'google', link); }
+    try { return loadLookup(await fetchPublic(url, ctl.signal), 'google', link, sheetKeyOf(link)); }
     catch (e) {
       const why = e.name === 'AbortError' ? 'Hết thời gian chờ kết nối' : e.http ? e.message : 'Không kết nối được (' + e.message + ')';
       return fail(apiErr ? 'Đăng nhập Google: ' + apiErr.message + ' · Liên kết công khai: ' + why : why);
@@ -173,9 +182,20 @@ function registerIpc() {
         if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
         p = r.filePaths[0];
       }
-      return lookup.load(fs.readFileSync(p), 'excel', path.basename(p));
+      return loadLookup(fs.readFileSync(p), 'excel', path.basename(p), 'excel:' + path.basename(p));
     } catch (err) { log('ERROR', err.message); return {ok: false, errors: [err.message]}; }
   }));
+  ipcMain.handle('lookup:confirmTabs', afterReloc((e, choices) => {
+    try {
+      if (!lookup) throw new Error(NO_STORE());
+      if (!pendingTabs) return {ok: false, errors: ['Không còn bản tải về đang chờ xác nhận tab. Hãy đồng bộ hoặc nhập file lại.']};
+      const p = pendingTabs, r = lookup.load(p.buf, p.source, p.detail, {sheetKey: p.sheetKey, choices: choices || {}});
+      if (r.ok) pendingTabs = null;           // thành công: đã kiểm tra cấu trúc và ghi nhớ ánh xạ
+      return r;                                // lỗi (ví dụ chọn tab thiếu cột): giữ bản chờ để người dùng chọn lại
+    } catch (err) { log('ERROR', err.message); return {ok: false, errors: [err.message]}; }
+  }));
+  ipcMain.handle('lookup:template', () => { try { return {ok: true, file: 'HAK_Mau_TraCuu.xlsx', bytes: require('./lookup').buildTemplate(app.getVersion())}; } catch (err) { return {ok: false, error: err.message}; } });
+  ipcMain.handle('lookup:cancelTabs', () => { pendingTabs = null; return {ok: true}; });
   ipcMain.handle('google:status', () => gauth.status());
   ipcMain.handle('google:login', async () => { try { return {ok: true, status: await gauth.login()}; } catch (e) { log('ERROR', 'google login: ' + e.code); return {ok: false, code: e.code, error: e.message, status: gauth.status()}; } });
   ipcMain.handle('google:logout', () => ({ok: true, status: gauth.logout()}));
@@ -347,6 +367,19 @@ async function smokeRelocate() {
     Settings.save(ud, {dataDir: drive, backupDir: ''}); fs.renameSync(drive, drive + '.rut');
     const c7a = Settings.checkConfigured(ud); fs.mkdirSync(drive); const c7b = Settings.checkConfigured(ud); fs.rmdirSync(drive); fs.renameSync(drive + '.rut', drive); const c7c = Settings.checkConfigured(ud);
     r.checks.driveGone = c7a.state === 'unavailable' && c7a.code === 'DIR_MISSING' && c7b.code === 'FILE_MISSING' && c7c.state === 'ok' && Settings.load(ud).dataDir === drive && !fs.existsSync(path.join(ud, Settings.DB_NAME));
+    // 9. không có quyền truy cập file dữ liệu đã cấu hình: Windows dùng ACL từ chối ghi (icacls), POSIX không root dùng chmod; root thì không tạo được ca này (ghi vào skipped)
+    {
+      const ud9 = dir('ud9'), d9 = dir('ODIN'), f9 = path.join(d9, Settings.DB_NAME), t9 = new Store(f9); t9.save(mk('N', 1)); t9.db.close(); Settings.save(ud9, {dataDir: d9, backupDir: ''});
+      const cp = require('child_process'), who = process.env.USERNAME || 'Everyone'; let undo = null;
+      try {
+        if (process.platform === 'win32') { cp.execFileSync('icacls', [f9, '/deny', who + ':(W,WD,AD)'], {stdio: 'ignore'}); undo = () => cp.execFileSync('icacls', [f9, '/remove:d', who], {stdio: 'ignore'}); }
+        else if (process.getuid && process.getuid() !== 0) { fs.chmodSync(f9, 0o444); undo = () => fs.chmodSync(f9, 0o644); }
+      } catch (e) { r.error = 'Không đặt được quyền thử: ' + e.message; }
+      if (undo) {
+        const c9 = Settings.checkConfigured(ud9); undo(); const c9b = Settings.checkConfigured(ud9);
+        r.checks.noPermission = c9.state === 'unavailable' && c9.code === 'NO_PERMISSION' && c9.path === f9 && c9b.state === 'ok' && Settings.load(ud9).dataDir === d9;
+      } else { r.skipped = (r.skipped || []).concat('noPermission (chạy bằng root, không đặt được quyền từ chối)'); r.checks.noPermission = true; }
+    }
     // 8. sao lưu toàn bộ: hai file riêng, bấm liền không ghi đè, lỗi một file giữ lại file dùng được
     const out8 = dir('bk8'), now = () => new Date(2026, 10, 13, 9, 0, 0, 1);
     const b1 = await Backup.backupAll({db: src.db, data: src.load(), outDir: out8, now}), b2 = await Backup.backupAll({db: src.db, data: src.load(), outDir: out8, now});

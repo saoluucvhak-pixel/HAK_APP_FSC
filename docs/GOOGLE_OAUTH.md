@@ -7,7 +7,7 @@ Bảng tính nguồn có thể để chế độ “Ai có liên kết đều xe
 - Quyền xin: `https://www.googleapis.com/auth/drive.readonly` (chỉ đọc; cần để xuất bảng tính ra .xlsx). Ứng dụng không ghi, không sửa, không đổi quyền chia sẻ.
 - Mã làm mới (refresh token) chỉ lưu khi Windows mã hóa được (Electron safeStorage / DPAPI), trong `%APPDATA%\hakqn-ho-so-khai-thac\google-token.bin`. Nếu không mã hóa được thì chỉ giữ trong bộ nhớ, đóng ứng dụng là phải đăng nhập lại. Mật khẩu Google không bao giờ đi qua ứng dụng.
 - **Đồng bộ ngay**: đã đăng nhập → tải qua Drive API; nếu API từ chối quyền thì thử tiếp liên kết công khai; chưa đăng nhập → tải qua liên kết công khai.
-- Bản tra cứu chỉ được thay khi **cả ba tab** `HoSoKeo_QC`, `HoSoRung_QC`, `ToaDoRung_QC` đọc được và đủ cột bắt buộc. Mọi lỗi giữ nguyên bản đã lưu và báo nguyên nhân:
+- Bản tra cứu chỉ được thay khi **cả ba vai trò** (tab `HoSoKeo`, `HoSoRung`, `ToaDoRung`, hoặc tên cũ có hậu tố `_QC`, hoặc tab khác tên được bạn xác nhận) đọc được và đủ cột bắt buộc. Mọi lỗi giữ nguyên bản đã lưu và báo nguyên nhân:
 
 | Tình huống | Thông báo |
 | --- | --- |

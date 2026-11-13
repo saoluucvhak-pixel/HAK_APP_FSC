@@ -115,8 +115,12 @@ Nút **🔎 Tra cứu Google Sheets** (hoặc **Lấy dữ liệu từ Google Sh
 
 **Lấy bản tra cứu**
 - **Đồng bộ ngay**: tải bảng tính theo liên kết đã lưu, chỉ đọc. Bảng tính để chế độ “Ai có liên kết đều xem được” thì không cần đăng nhập; nếu giới hạn quyền xem, bấm **🔑 Đăng nhập Google (chỉ đọc)** bằng tài khoản được chia sẻ (cách cấu hình: `docs/GOOGLE_OAUTH.md`).
-- **Nhập bản Excel**: chọn `HoSoKeo_QC.xlsx` hoặc file cùng cấu trúc khi **không có mạng**.
-- Phần mềm kiểm tra đủ 3 tab `HoSoKeo_QC`, `HoSoRung_QC`, `ToaDoRung_QC` và các cột bắt buộc. **Tên tab được so khoan dung**: khác chữ hoa/thường, dấu, khoảng trắng hay gạch vẫn nhận; tab tên khác hẳn (ví dụ bảng tính sao chép, đặt lại tên) vẫn nhận **nếu có đủ các cột bắt buộc** của tab đó, và phần mềm ghi chú tab nào được nhận là tab nào. Thiếu thật sự thì báo rõ tab thiếu, **liệt kê các tab file đang có** và **giữ bản tra cứu cũ**. Bản tra cứu lưu trên máy nên **tra cứu offline** vẫn dùng được.
+- **Nhập bản Excel**: chọn file Excel có ba tab chuẩn (ví dụ `HoSoKeo_QC.xlsx` đang dùng) khi **không có mạng**. Bấm **⬇ Tải file mẫu (3 tab chuẩn)** để lấy file mẫu có sẵn tiêu đề.
+- **Ba tên tab chuẩn**: `HoSoKeo` (phiếu cân, khối lượng), `HoSoRung` (chủ rừng, thông tin rừng, hợp đồng), `ToaDoRung` (mã rừng, tọa độ, diện tích, giấy tờ nguồn gốc). **File đang dùng hậu tố `_QC` (`HoSoKeo_QC`, `HoSoRung_QC`, `ToaDoRung_QC`) vẫn đọc và đồng bộ được, không cần đổi tên.** Tên không phân biệt chữ hoa/thường, dấu, khoảng trắng đầu/cuối (ví dụ `HOsokeo` = `HoSoKeo`).
+- Phần mềm nhận cột theo **tiêu đề dòng 1**: được **đổi thứ tự cột** và **thêm cột**; thiếu cột bắt buộc thì báo **tên tab và tên cột** cần bổ sung (kể cả khi tên tab đúng chuẩn).
+- **Chọn tab khác tên**: tab đặt tên khác hẳn nhưng đủ cột bắt buộc được **đề xuất để bạn xác nhận** (hộp “Cần xác nhận tên tab trước khi nạp”). Có nhiều tab phù hợp — kể cả khi trong bảng có cả tên mới lẫn tên `_QC` — thì bạn **chọn trong danh sách**. Phần mềm kiểm tra lại các cột bắt buộc rồi mới nạp. Bản tra cứu đang dùng **không bị thay đổi** cho đến khi cả ba vai trò đã xác định và đọc đúng; bấm *Hủy* để giữ bản cũ.
+- **Ghi nhớ**: lựa chọn được nhớ theo **ID bảng tính Google** (hoặc tên file Excel), nên lần đồng bộ sau không hỏi lại. Luồng hiện tại tải bảng tính dạng XLSX nên không có mã riêng của từng tab: nếu bạn đổi tên tab sau khi đã chọn, phần mềm nhận diện lại theo cấu trúc cột và hỏi xác nhận (hoặc tự nhận nếu trả lại tên chuẩn).
+- Đồng bộ lỗi (mất mạng, thiếu cột, bảng yêu cầu đăng nhập…): phần mềm **giữ bản tra cứu gần nhất** cùng thời điểm cập nhật thành công và nêu lỗi. Phần mềm chỉ **đọc** Google Sheets.
 
 **Tìm và ghi vào hồ sơ**
 1. Gõ mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã hợp đồng, địa chỉ, số phiếu cân hoặc biển số → **Tìm**. Cú pháp nâng cao: nhiều từ = phải có đủ; `"cụm từ"`; `-từ` để loại trừ; `cccd:` `hd:` `rung:` `phieu:` `bien:` `ten:` `dc:` để tìm đúng trường.
@@ -255,3 +259,18 @@ Mở **⋯ Thêm → ⚙ Cài đặt hệ thống**.
 **Ổ hoặc thư mục dữ liệu không truy cập được khi mở phần mềm**: phần mềm kiểm tra cả thư mục và file `hakqn.sqlite` ở đường dẫn đã cấu hình. Nếu thiếu thư mục, thiếu file, mất kết nối ổ hoặc không có quyền, màn hình hiện **đúng đường dẫn và nguyên nhân** và **không mở bản mặc định** (tránh ghi nhầm vào một bản cũ hoặc trống). Bạn chọn: **Thử lại** (sau khi cắm lại ổ), **Chọn cơ sở dữ liệu khác…** (thư mục có `hakqn.sqlite` hợp lệ) hoặc **Dùng vị trí mặc định…** (có hộp thoại xác nhận nêu bản mặc định đang có gì). Cấu hình cũ được giữ nguyên cho đến khi bạn chọn đổi. Màn Cài đặt hệ thống luôn hiện **cơ sở dữ liệu đang dùng** (đường dẫn, dung lượng, ngày sửa, phiên bản cấu trúc).
 
 **Sao lưu toàn bộ** ghi hai file (JSON và SQLite) qua tên tạm, đọc lại kiểm tra (JSON hợp lệ; SQLite toàn vẹn, khớp số bản ghi), rồi mới đổi tên. Mốc “sao lưu toàn bộ gần nhất” chỉ cập nhật khi **cả hai file** thành công. Lỗi một file: thông báo nêu file nào dùng được, file tạm được dọn, mốc cũ giữ nguyên. Bấm liên tiếp không ghi đè nhau (tên có mili giây, trùng thì thêm _2, _3…) và bấm khi đang sao lưu thì bị từ chối. Thiếu dung lượng được kiểm tra trước khi ghi. Sao lưu lô rừng cũng ghi qua file tạm và đọc lại kiểm tra gói lô.
+
+
+## Bản chính thức và BẢN NHÁP khi xuất hồ sơ
+Mỗi biểu mẫu có **điều kiện in chính thức riêng**. Thiếu điều kiện thì phần mềm **vẫn cho tải để soạn trước** nhưng gắn nhãn **BẢN NHÁP**: dòng đỏ ở đầu tài liệu, chữ “BẢN NHÁP” ở chân trang, tên file có `BAN_NHAP` (ví dụ `14_BAN_NHAP_BB_nghiem_thu_…docx`) và tên gói ZIP có hậu tố `_BAN_NHAP`. Cùng một quy tắc cho **tải lẻ từng mẫu** và **tải theo gói** (Tất cả, Đợt 1, Đợt 2). Tab **Xuất hồ sơ** có khung “Bản chính thức hay bản nháp” nêu mẫu nào thiếu gì và bổ sung ở đâu.
+
+| Mẫu | Điều kiện bản chính thức | Bổ sung ở |
+| --- | --- | --- |
+| BM-01 Hợp đồng giao khoán, BM-20 Giấy ủy quyền | Có ngày ký hợp đồng (số hợp đồng đủ năm) | Thông tin chủ rừng → Ngày ký hợp đồng |
+| BM-04 Hợp đồng vận chuyển | Ngày ký + địa chỉ giao hàng đã chốt | Tab Vận chuyển → Chọn địa chỉ giao hàng |
+| BM-08 Bảng thanh toán tiền công | Khối lượng khai thác **thực tế** (không phải sản lượng dự kiến); tính theo ngày công thì không cần | Thông tin rừng → Khối lượng thực tế |
+| BM-09, BM-10 | Ngày ký + địa chỉ giao hàng + ngày lập biên bản xác nhận khối lượng (và phải có phiếu cân hợp lệ mới có file) | Tab Xuất hồ sơ → Xác nhận khối lượng, thanh toán: ngày lập |
+| BM-11 Cam kết nguồn gốc | Đơn vị nhận (Công ty mua hàng) | Nút 🏢 Công ty mua hàng |
+| BM-14 Nghiệm thu, thanh lý | Ngày ký + khối lượng thực tế + ngày lập biên bản nghiệm thu | Tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập |
+
+Các mẫu còn lại không có điều kiện riêng nên luôn là bản chính thức (khi dữ liệu cơ bản đã đủ để xuất). **Mẫu trống / chỉ phần số** (in hai bước) là mẫu thiết kế để điền sau nên không gắn nhãn. Khi đã bổ sung đủ, tải lại để có bản chính thức.

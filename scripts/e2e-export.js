@@ -49,7 +49,7 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
     catch (e) { bad++; }
   }
   // Gói ZIP toàn bộ hồ sơ: kiểm tra mã biểu mẫu của từng file bên trong (các nút tải lẻ cùng tên người có thể ghi đè nhau trong thư mục kiểm thử)
-  const allZip = zips.find(f => /_all\.zip$/.test(f));
+  const allZip = zips.find(f => /_all(_BAN_NHAP)?\.zip$/.test(f));
   if (allZip) {
     const z = await JSZip.loadAsync(fs.readFileSync(path.join(out, allZip)));
     for (const n of Object.keys(z.files).filter(n => n.endsWith('.docx'))) {

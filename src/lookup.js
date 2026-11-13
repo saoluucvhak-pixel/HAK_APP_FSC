@@ -1,5 +1,5 @@
 'use strict';
-/* Bản tra cứu: đọc 3 tab HoSoKeo_QC, HoSoRung_QC, ToaDoRung_QC (từ Google Sheets xuất .xlsx hoặc file Excel cùng cấu trúc),
+/* Bản tra cứu: đọc 3 tab HoSoKeo, HoSoRung, ToaDoRung (hoặc tên cũ có hậu tố _QC; từ Google Sheets xuất .xlsx hoặc file Excel cùng cấu trúc),
  * kiểm tra tên tab + tiêu đề cột, lưu vào SQLite, tìm kiếm có dấu/không dấu và dựng "kết quả" để điền vào hồ sơ rừng. */
 const XLSX = require('xlsx');
 const D = require('./dates');   // quy tắc ngày lịch dùng chung (31/02/2026 không có thật)
@@ -50,7 +50,13 @@ function cellValue(cell, isText, isCccd) {
   return clean(cell.v);
 }
 
-/* Đọc workbook (Buffer) -> {tabs:{ten:[rows]}, errors:[]} — chỉ hợp lệ khi đủ 3 tab và đủ cột bắt buộc */
+/* ===== Vai trò dữ liệu tách khỏi tên tab =====
+ * Ba VAI TRÒ dữ liệu (mã vai trò giữ nguyên tên cũ HoSoKeo_QC… vì đã nằm trong dữ liệu tra cứu, bộ lọc đã lưu và nguồn của từng trường):
+ *   phiếu cân/khối lượng, chủ rừng/rừng/hợp đồng, mã rừng/tọa độ/giấy tờ.
+ * TÊN TAB chuẩn hiển thị là HoSoKeo, HoSoRung, ToaDoRung; file đang dùng hậu tố _QC vẫn nhận. Tab đặt tên khác được nhận theo CỘT (không theo tên). */
+const STD = {HoSoKeo_QC: 'HoSoKeo', HoSoRung_QC: 'HoSoRung', ToaDoRung_QC: 'ToaDoRung'};
+const STD_NAMES = TAB_NAMES.map(r => STD[r]);
+const roleLabel = r => STD[r] || r;
 /* So tên tab khoan dung: bỏ dấu, không phân biệt hoa thường, bỏ khoảng trắng, gạch dưới, gạch nối (“HoSoKeo_QC ” = “hosokeo-qc”) */
 const normTab = v => fold(String(v == null ? '' : v)).replace(/[^a-z0-9]+/g, '');
 function headerRow(ws) {
@@ -59,51 +65,86 @@ function headerRow(ws) {
   for (let c = rg.s.c; c <= rg.e.c; c++) { const h = ws[XLSX.utils.encode_cell({r: rg.s.r, c})]; head.push(h ? clean(h.v) : ''); }
   return head;
 }
-/* Tìm tab cho từng tên chuẩn: (1) đúng tên, (2) khác hoa thường/dấu/khoảng trắng, (3) tên khác hẳn nhưng ĐỦ CÁC CỘT bắt buộc của tab đó (chỉ nhận khi có đúng một ứng viên).
- * Ví dụ bảng tính sao chép hoặc đặt lại tên tab nhưng cấu trúc cột giống y vẫn đọc được; mọi trường hợp nhận khác tên đều được ghi chú. */
-function resolveTabs(wb) {
-  const pick = {}, used = new Set(), notes = [], ambiguous = {};
-  TAB_NAMES.forEach(n => { if (wb.Sheets[n]) { pick[n] = n; used.add(n); } });
-  TAB_NAMES.filter(n => !pick[n]).forEach(n => {
-    const c = wb.SheetNames.find(x => !used.has(x) && normTab(x) === normTab(n));
-    if (c) { pick[n] = c; used.add(c); notes.push('Tab “' + c + '” được nhận là “' + n + '” (khác chữ hoa/thường, dấu hoặc khoảng trắng)'); }
-  });
-  TAB_NAMES.filter(n => !pick[n]).forEach(n => {
-    const cands = wb.SheetNames.filter(x => !used.has(x) && TABS[n].req.every(h => headerRow(wb.Sheets[x]).includes(h)));
-    if (cands.length === 1) { pick[n] = cands[0]; used.add(cands[0]); notes.push('Tab “' + cands[0] + '” được nhận là “' + n + '” vì có đủ các cột bắt buộc của tab này'); }
-    else if (cands.length > 1) ambiguous[n] = cands;
-  });
-  return {pick, notes, ambiguous};
+const missingCols = (ws, role) => { const h = headerRow(ws); return TABS[role].req.filter(c => !h.includes(c)); };
+/* Tên tab có phải tên của vai trò không: 'std' (HoSoKeo), 'legacy' (HoSoKeo_QC), 'fold' (khác hoa/thường, dấu, khoảng trắng, gạch) */
+function nameKind(sheet, role) {
+  const std = STD[role];
+  if (sheet === std) return 'std';
+  if (sheet === role) return 'legacy';
+  const k = normTab(sheet);
+  return k === normTab(std) || k === normTab(role) ? 'fold' : null;
 }
 
-/* Đọc workbook (Buffer) -> {tabs:{ten:[rows]}, errors:[], notes:[]} — chỉ hợp lệ khi đủ 3 tab và đủ cột bắt buộc */
-function parseWorkbook(buf) {
+/* Xác định tab cho từng vai trò. o = {saved: {vaiTro: tenTab đã ghi nhớ}, choices: {vaiTro: tenTab người dùng chọn}}.
+ * Thứ tự: (0) người dùng chọn (kiểm tra lại cột) → (1) ánh xạ đã nhớ còn đúng cấu trúc → (2) theo tên (chuẩn, _QC, khác hoa/thường) → (3) tên khác hẳn nhưng ĐỦ CỘT.
+ * Kết quả: pick (vaiTro → tab), pending (vaiTro → {kind: 'confirm'|'choose', candidates, proposed, invalid}) khi cần người dùng quyết định, errors (nêu tên tab và tên cột thiếu), notes. */
+function resolveTabs(wb, o = {}) {
+  const saved = o.saved || {}, choices = o.choices || {}, sheets = wb.SheetNames;
+  const pick = {}, how = {}, pending = {}, notes = [], errors = [], used = new Set();
+  const take = (role, sheet, h) => { pick[role] = sheet; how[role] = h; used.add(sheet); };
+  TAB_NAMES.forEach(role => {            // 0. người dùng chọn
+    const c = choices[role]; if (!c) return;
+    if (!wb.Sheets[c]) { errors.push('Tab “' + c + '” bạn chọn cho “' + roleLabel(role) + '” không có trong file'); return; }
+    const miss = missingCols(wb.Sheets[c], role);
+    if (miss.length) { errors.push('Tab “' + c + '” (chọn làm “' + roleLabel(role) + '”) thiếu cột: ' + miss.map(m => '“' + m + '”').join(', ')); return; }
+    take(role, c, 'user');
+  });
+  TAB_NAMES.filter(r => !pick[r]).forEach(role => {            // 1. ánh xạ đã nhớ
+    const sv = saved[role];
+    if (sv && wb.Sheets[sv] && !used.has(sv) && !missingCols(wb.Sheets[sv], role).length) take(role, sv, 'saved');
+  });
+  const nameMatched = x => TAB_NAMES.some(r => nameKind(x, r));
+  TAB_NAMES.filter(r => !pick[r] && !errors.some(e => e.includes('“' + roleLabel(r) + '”'))).forEach(role => {   // 2. theo tên
+    const cands = sheets.filter(x => !used.has(x) && nameKind(x, role));
+    if (!cands.length) return;
+    const valid = cands.filter(x => !missingCols(wb.Sheets[x], role).length), invalid = cands.filter(x => !valid.includes(x));
+    if (cands.length === 1) {
+      if (valid.length) { take(role, cands[0], nameKind(cands[0], role)); if (nameKind(cands[0], role) === 'fold') notes.push('Tab “' + cands[0] + '” được nhận là “' + roleLabel(role) + '” (khác chữ hoa/thường, dấu hoặc khoảng trắng)'); }
+      else errors.push('Tab “' + cands[0] + '” (vai trò “' + roleLabel(role) + '”) thiếu cột: ' + missingCols(wb.Sheets[cands[0]], role).map(m => '“' + m + '”').join(', '));
+      return;
+    }
+    // nhiều tab cùng tên vai trò (ví dụ có cả HoSoKeo và HoSoKeo_QC)
+    if (!valid.length) { invalid.forEach(x => errors.push('Tab “' + x + '” (vai trò “' + roleLabel(role) + '”) thiếu cột: ' + missingCols(wb.Sheets[x], role).map(m => '“' + m + '”').join(', '))); return; }
+    const first = valid.find(x => nameKind(x, role) === 'std') || valid[0];
+    pending[role] = {kind: valid.length > 1 ? 'choose' : 'confirm', candidates: valid, proposed: first, invalid: invalid.map(x => ({tab: x, missing: missingCols(wb.Sheets[x], role)})), why: 'có nhiều tab cùng tên vai trò này'};
+  });
+  TAB_NAMES.filter(r => !pick[r] && !pending[r] && !errors.some(e => e.includes('“' + roleLabel(r) + '”'))).forEach(role => {   // 3. tên khác hẳn nhưng đủ cột
+    const cands = sheets.filter(x => !used.has(x) && !nameMatched(x) && !Object.values(pending).some(p => p.candidates.includes(x)) && !missingCols(wb.Sheets[x], role).length);
+    if (cands.length === 1) pending[role] = {kind: 'confirm', candidates: cands, proposed: cands[0], invalid: [], why: 'tab này có đủ các cột bắt buộc của “' + roleLabel(role) + '”'};
+    else if (cands.length > 1) pending[role] = {kind: 'choose', candidates: cands, proposed: cands[0], invalid: [], why: 'có nhiều tab đủ cột của “' + roleLabel(role) + '”'};
+  });
+  TAB_NAMES.filter(r => !pick[r] && !pending[r] && !errors.some(e => e.includes('“' + roleLabel(r) + '”'))).forEach(role =>
+    errors.push('Thiếu tab “' + roleLabel(role) + '” (tên cũ “' + role + '” cũng được; hoặc một tab tên bất kỳ có đủ cột: ' + TABS[role].req.slice(0, 4).map(c => '“' + c + '”').join(', ') + '…)'));
+  return {pick, how, pending, notes, errors};
+}
+
+/* Đọc workbook (Buffer) -> {tabs, errors, notes, picks, pending}. Chỉ trả tabs khi cả ba vai trò đã xác định và đủ cột.
+ * Cần người dùng quyết định (xác nhận tab khác tên / chọn giữa nhiều tab): trả pending, KHÔNG đọc dữ liệu. */
+function parseWorkbook(buf, o = {}) {
   const wb = XLSX.read(buf, {type: 'buffer', cellDates: false, cellNF: true, dense: false});
-  const errors = [], tabs = {}, {pick, notes, ambiguous} = resolveTabs(wb);
+  const r0 = resolveTabs(wb, o), errors = r0.errors.slice(), tabs = {}, notes = r0.notes.slice();
+  if (errors.length || Object.keys(r0.pending).length) {
+    if (errors.length) errors.push('File đang có các tab: ' + (wb.SheetNames.map(x => '“' + x + '”').join(', ') || '(không có tab nào)') + '. Tên tab chuẩn: ' + STD_NAMES.join(', ') + ' (chấp nhận thêm hậu tố _QC).');
+    return {tabs, errors, notes, picks: r0.pick, pending: errors.length ? null : r0.pending, sheets: wb.SheetNames};
+  }
   TAB_NAMES.forEach(name => {
-    const ws = pick[name] ? wb.Sheets[pick[name]] : null;
-    if (!ws) { errors.push('Thiếu tab "' + name + '"' + (ambiguous[name] ? ' (có nhiều tab đủ cột: ' + ambiguous[name].map(x => '"' + x + '"').join(', ') + ', không tự chọn được; hãy đặt đúng tên tab)' : '')); return; }
-    if (!ws['!ref']) { errors.push('Tab "' + name + '" trống'); return; }
-    const rg = XLSX.utils.decode_range(ws['!ref']);
-    const head = [];
-    for (let c = rg.s.c; c <= rg.e.c; c++) { const h = ws[XLSX.utils.encode_cell({r: rg.s.r, c})]; head.push(h ? clean(h.v) : ''); }
-    const miss = TABS[name].req.filter(h => !head.includes(h));
-    if (miss.length) { errors.push('Tab "' + name + '" thiếu hoặc đổi tên cột: ' + miss.map(m => '"' + m + '"').join(', ')); return; }
+    const sheet = r0.pick[name], ws = wb.Sheets[sheet];
+    if (!ws['!ref']) { errors.push('Tab “' + sheet + '” (' + roleLabel(name) + ') trống'); return; }
+    const rg = XLSX.utils.decode_range(ws['!ref']), head = headerRow(ws);
     const T = new Set(TABS[name].text), C = new Set(TABS[name].cccd), rows = [];
     for (let r = rg.s.r + 1; r <= rg.e.r; r++) {
-      const o = {}; let any = false;
+      const o2 = {}; let any = false;
       head.forEach((h, i) => {
         if (!h) return;
         const v = cellValue(ws[XLSX.utils.encode_cell({r, c: rg.s.c + i})], T.has(h), C.has(h));
         if (v !== '') any = true;
-        o[h] = v;
+        o2[h] = v;
       });
-      if (any) { o._row = r + 1; rows.push(o); }
+      if (any) { o2._row = r + 1; rows.push(o2); }
     }
     tabs[name] = rows;
   });
-  if (errors.some(e => /^Thiếu tab/.test(e))) errors.push('File đang có các tab: ' + (wb.SheetNames.map(x => '“' + x + '”').join(', ') || '(không có tab nào)') + '. Đã thử khớp theo tên (không phân biệt hoa thường, dấu, khoảng trắng) và theo các cột bắt buộc.');
-  return {tabs, errors, notes};
+  return {tabs, errors, notes, picks: r0.pick, pending: null, sheets: wb.SheetNames};
 }
 
 function keysOf(tab, o) {
@@ -325,6 +366,30 @@ function runSearch(db, setId, pq, tab, adv, sort, limit, group) {
   return res;
 }
 
+/* File Excel MẪU cho bản tra cứu: trang HUONG_DAN + ba tab tên chuẩn HoSoKeo, HoSoRung, ToaDoRung chỉ có dòng tiêu đề (các cột bắt buộc; có thể thêm cột, đổi thứ tự).
+ * Các cột mã/CCCD/số phiếu định dạng văn bản để giữ số 0 đầu. Không chứa dữ liệu thật. Trả Buffer .xlsx. */
+function buildTemplate(version) {
+  const wb = XLSX.utils.book_new();
+  const guide = [['MẪU BẢN TRA CỨU HAKQN' + (version ? ' (phần mềm ' + version + ')' : '')], [''],
+    ['Ba tab chuẩn (tên không phân biệt chữ hoa/thường): ' + STD_NAMES.join(', ') + '. Tên cũ có hậu tố _QC (HoSoKeo_QC…) vẫn được nhận.'],
+    ['HoSoKeo: phiếu cân và khối lượng. HoSoRung: chủ rừng, thông tin rừng, hợp đồng. ToaDoRung: mã rừng, tọa độ, diện tích, giấy tờ nguồn gốc.'],
+    ['Phần mềm nhận cột theo TIÊU ĐỀ (dòng 1): được đổi thứ tự cột và thêm cột; không được sửa hoặc xóa tiêu đề của cột bắt buộc.'],
+    ['Tab đặt tên khác hẳn nhưng đủ cột bắt buộc được đề xuất để bạn xác nhận; có nhiều tab phù hợp thì bạn chọn. Bản tra cứu chỉ được thay khi cả ba tab đã xác định và đọc đúng.'],
+    ['Phần mềm chỉ ĐỌC bảng tính, không ghi vào Google Sheets.'], [''], ['Cột bắt buộc của từng tab:']];
+  TAB_NAMES.forEach(r => guide.push([STD[r] + ': ' + TABS[r].req.join(' | ')]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(guide), 'HUONG_DAN');
+  TAB_NAMES.forEach(r => {
+    const ws = XLSX.utils.aoa_to_sheet([TABS[r].req]);
+    ws['!cols'] = TABS[r].req.map(h => ({wch: Math.max(14, Math.min(34, h.length + 4))}));
+    ws['!autofilter'] = {ref: XLSX.utils.encode_range({s: {r: 0, c: 0}, e: {r: 0, c: TABS[r].req.length - 1}})};
+    // cột văn bản: định dạng @ cho 1000 dòng đầu để giữ số 0 đầu khi dán/nhập
+    TABS[r].req.forEach((h, c) => { if (TABS[r].text.includes(h)) for (let i = 1; i <= 1000; i++) ws[XLSX.utils.encode_cell({r: i, c})] = {t: 's', v: '', z: '@'}; });
+    ws['!ref'] = XLSX.utils.encode_range({s: {r: 0, c: 0}, e: {r: 1000, c: TABS[r].req.length - 1}});
+    XLSX.utils.book_append_sheet(wb, ws, STD[r]);
+  });
+  return XLSX.write(wb, {type: 'buffer', bookType: 'xlsx'});
+}
+
 class Lookup {
   constructor(store) { this.db = store.db; }
 
@@ -337,11 +402,15 @@ class Lookup {
     return {active: a ? {source: a.source, detail: a.detail, loadedAt: a.loaded_at, counts: JSON.parse(a.counts)} : null, last: this.getMeta('lastAttempt')};
   }
 
-  /* Nạp workbook: chỉ thay bản đang dùng khi đọc + kiểm tra thành công cả 3 tab. Lỗi thì giữ bản cũ. */
-  load(buf, source, detail) {
-    const at = new Date().toISOString();
+  /* Nạp workbook: chỉ thay bản đang dùng khi cả ba vai trò đã xác định và đọc + kiểm tra thành công. Lỗi thì giữ bản cũ (và mốc cập nhật thành công cũ).
+   * opts.sheetKey: định danh bảng tính (ID Google hoặc 'excel:tên file') để nhớ ánh xạ vai trò → tab; opts.choices: tab người dùng đã chọn.
+   * Cần người dùng quyết định: trả {ok: false, pending, sheets} và KHÔNG đổi gì (kể cả bản ghi “lần cập nhật gần nhất”). */
+  load(buf, source, detail, opts = {}) {
+    const at = new Date().toISOString(), key = opts.sheetKey || '';
+    const saved = (key && (this.getMeta('tabmap') || {})[key]) || {};
     let parsed;
-    try { parsed = parseWorkbook(buf); } catch (e) { parsed = {errors: ['Không đọc được file: ' + e.message]}; }
+    try { parsed = parseWorkbook(buf, {saved, choices: opts.choices || {}}); } catch (e) { parsed = {errors: ['Không đọc được file: ' + e.message]}; }
+    if (parsed.pending) return {ok: false, pending: parsed.pending, sheets: parsed.sheets, notes: parsed.notes || [], status: this.status()};
     if (parsed.errors.length) {
       this.setMeta('lastAttempt', {at, source, detail, ok: false, error: parsed.errors.join('; ')});
       return {ok: false, errors: parsed.errors, status: this.status()};
@@ -357,9 +426,10 @@ class Lookup {
       }));
       this.db.prepare('DELETE FROM lookup_sets WHERE id<>?').run(id);
       this.db.prepare('UPDATE lookup_sets SET active=1 WHERE id=?').run(id);
+      if (key) { const tm = this.getMeta('tabmap') || {}; tm[key] = parsed.picks; this.setMeta('tabmap', tm); }   // ghi nhớ ánh xạ sau khi đã kiểm tra cấu trúc
     })();
-    this.setMeta('lastAttempt', {at, source, detail, ok: true, notes: parsed.notes || []});
-    return {ok: true, counts, notes: parsed.notes || [], status: this.status()};
+    this.setMeta('lastAttempt', {at, source, detail, ok: true, notes: parsed.notes || [], picks: parsed.picks});
+    return {ok: true, counts, notes: parsed.notes || [], picks: parsed.picks, status: this.status()};
   }
 
   failAttempt(source, detail, error) {
@@ -535,4 +605,4 @@ function mapDoc(l) {
   return {loai: 'Khác', ten: clean(l) || 'Khác'};
 }
 
-module.exports = {parseQuery, Lookup, MIGRATION, TABS, TAB_NAMES, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};
+module.exports = {parseQuery, Lookup, MIGRATION, TABS, TAB_NAMES, buildTemplate, STD, STD_NAMES, roleLabel, resolveTabs, nameKind, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};

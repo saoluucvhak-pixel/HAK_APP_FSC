@@ -75,11 +75,13 @@ function checkConfigured(userDir, env = {}) {
   let st;
   try { st = fs.statSync(dir); } catch (e) { return bad(e.code === 'ENOENT' || e.code === 'ENOTDIR' ? 'DIR_MISSING' : e.code === 'EACCES' || e.code === 'EPERM' ? 'NO_PERMISSION' : 'IO', describeError(e, dir)); }
   if (!st.isDirectory()) return bad('DIR_MISSING', '“' + dir + '” không còn là thư mục');
-  try { fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK); } catch (e) { return bad(e.code === 'EACCES' || e.code === 'EPERM' ? 'NO_PERMISSION' : 'IO', describeError(e, dir)); }
+  // Thử ghi thật vào thư mục (accessSync không phản ánh quyền ACL của Windows)
+  const probe = path.join(dir, '.hakqn-ghi-thu-' + process.pid);
+  try { fs.writeFileSync(probe, 'x'); fs.unlinkSync(probe); } catch (e) { return bad(e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS' ? 'NO_PERMISSION' : 'IO', describeError(e, dir)); }
   let fst;
   try { fst = fs.statSync(file); } catch (e) { return bad(e.code === 'ENOENT' ? 'FILE_MISSING' : e.code === 'EACCES' || e.code === 'EPERM' ? 'NO_PERMISSION' : 'IO', e.code === 'ENOENT' ? 'Thư mục còn nhưng không thấy file ' + DB_NAME + ' (file đã bị chuyển/xóa, hoặc đây là ổ khác trùng tên thư mục)' : describeError(e, file)); }
   if (!fst.isFile()) return bad('FILE_MISSING', '“' + file + '” không phải file');
-  try { fs.accessSync(file, fs.constants.R_OK | fs.constants.W_OK); } catch (e) { return bad(e.code === 'EACCES' || e.code === 'EPERM' ? 'NO_PERMISSION' : 'IO', describeError(e, file)); }
+  try { const fd = fs.openSync(file, 'r+'); fs.closeSync(fd); } catch (e) { return bad(e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS' ? 'NO_PERMISSION' : 'IO', describeError(e, file)); }   // mở thử đọc-ghi file dữ liệu (không ghi gì)
   return {state: 'ok'};
 }
 /* Vị trí đang dùng. env.HAKQN_DB (kiểm thử/triển khai đặc biệt) được ưu tiên và khóa thư mục dữ liệu.

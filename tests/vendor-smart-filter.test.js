@@ -63,3 +63,17 @@ test("presets save and restore by screen", () => {
   f.reset(); const result = f.loadPreset("DN", storage);
   assert.equal(result.ok, true); assert.equal(f.getState().one.branch, "DN");
 });
+
+test("kho bộ lọc hỏng hoặc khác phiên bản: không ghi đè; discardCorrupt sao lưu nguyên văn rồi tạo kho mới (HAK_SMART_FILTER e99bb7e)", () => {
+  const map = new Map([["hak.sf.presets", "{hỏng"]]);
+  const storage = { getItem: k => map.get(k) ?? null, setItem: (k, v) => map.set(k, v) };
+  const p = core.presets(storage);
+  assert.equal(p.isCorrupt(), true);
+  const r = p.save("man-hinh", "ten", {});
+  assert.equal(r.ok, false); assert.equal(r.corrupt, true);
+  assert.equal(map.get("hak.sf.presets"), "{hỏng", "bản cũ không bị ghi đè");
+  const d = p.discardCorrupt();
+  assert.equal(d.ok, true); assert.equal(d.backedUp, true);
+  assert.equal(map.get(d.backupKey), "{hỏng", "bản cũ được sao lưu nguyên văn");
+  assert.equal(p.save("man-hinh", "ten", {}).ok, true);
+});

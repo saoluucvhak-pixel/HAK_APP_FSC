@@ -19,8 +19,8 @@ test('nạp Excel đủ 3 tab, giữ CCCD/mã hợp đồng/số phiếu dạng 
 test('thiếu cột hoặc thiếu tab: báo rõ tab/cột và GIỮ bản tra cứu cũ', () => {
   const {L} = fresh(); L.load(build(), 'excel', 'a.xlsx');
   const r1 = L.load(build('missingCol'), 'excel', 'b.xlsx');
-  assert.strictEqual(r1.ok, false); assert.match(r1.errors[0], /ToaDoRung_QC.*DienTich_m2/);
-  const r2 = L.load(build('missingTab'), 'google', 'sheet'); assert.match(r2.errors[0], /Thiếu tab "ToaDoRung_QC"/);
+  assert.strictEqual(r1.ok, false); assert.match(r1.errors[0], /Tab “ToaDoRung”.*thiếu cột.*DienTich_m2/);
+  const r2 = L.load(build('missingTab'), 'google', 'sheet'); assert.match(r2.errors[0], /Thiếu tab “ToaDoRung”/);
   const st = L.status(); assert.strictEqual(st.active.detail, 'a.xlsx'); assert.strictEqual(st.last.ok, false);
   assert.strictEqual(L.search('', '').total, 20);
   const r3 = L.load(Buffer.from('không phải excel'), 'google', 'x'); assert.strictEqual(r3.ok, false); assert.strictEqual(L.status().active.detail, 'a.xlsx');
@@ -164,7 +164,7 @@ test('hồi quy bộ lọc: kết hợp nhiều bộ lọc, báo cảnh báo khi
 
 test('hồi quy: phiếu thiếu ngày, ngày không có thật (31/02/2026), hoặc hai đơn vị chênh nhau được đánh dấu cần kiểm tra, không chọn được', () => {
   const XLSX = require('xlsx'); const wb = XLSX.read(build(), {type: 'buffer', cellDates: true, cellNF: true});
-  const ws = wb.Sheets['HoSoKeo_QC']; const head = XLSX.utils.sheet_to_json(ws, {header: 1})[0]; const col = XLSX.utils.encode_col(head.indexOf('Ngày nhập'));
+  const ws = wb.Sheets['HoSoKeo']; const head = XLSX.utils.sheet_to_json(ws, {header: 1})[0]; const col = XLSX.utils.encode_col(head.indexOf('Ngày nhập'));
   delete ws[col + '2'];                                                       // dòng 2 (phiếu 1001) mất ngày cân
   ws[col + '3'] = {t: 's', v: '31/02/2026'};                                  // dòng 3 (phiếu 1002) ngày không có thật
   ws[col + '4'] = {t: 's', v: '29/02/2028'};                                  // dòng 4 (phiếu 1003) ngày có thật (năm nhuận) dạng chữ
@@ -206,22 +206,90 @@ test('cha–con: gom kết quả theo hợp đồng (CCCD + mã hợp đồng), 
   assert.strictEqual(L.search('', '', {group: 'contract', limit: 2}).groups.length, 2);
 });
 
-test('bảng tính khác (sao chép, đổi tên tab) nhưng cấu trúc cột giống: đọc được và ghi chú tab được nhận', () => {
-  // khác chữ hoa/thường, khoảng trắng, dấu gạch
-  const a = fresh().L.load(build('names:hosokeo_qc |HoSoRung-QC|ToaDoRung QC'), 'google', 'sheet khac');
-  assert.ok(a.ok, JSON.stringify(a.errors)); assert.deepStrictEqual(a.counts, {HoSoKeo_QC: 8, HoSoRung_QC: 5, ToaDoRung_QC: 7});
-  assert.strictEqual(a.notes.length, 3); assert.match(a.notes[0], /được nhận là “HoSoKeo_QC”/);
-  // tên khác hẳn nhưng đủ cột bắt buộc
-  const L = fresh().L, b = L.load(build('names:Sheet1|Sheet2|Sheet3'), 'google', 'sheet khac');
-  assert.ok(b.ok, JSON.stringify(b.errors)); assert.deepStrictEqual(b.counts, {HoSoKeo_QC: 8, HoSoRung_QC: 5, ToaDoRung_QC: 7});
-  assert.ok(b.notes.every(n => /đủ các cột bắt buộc/.test(n)), JSON.stringify(b.notes));
-  assert.strictEqual(L.status().last.ok, true); assert.strictEqual(L.status().last.notes.length, 3);
-  assert.strictEqual(L.search('', '').total, 20, 'dữ liệu đọc đúng như bản gốc');
-  // đúng tên: không có ghi chú
-  assert.deepStrictEqual(fresh().L.load(build(), 'excel', 'x').notes, []);
+const COUNTS = {HoSoKeo_QC: 8, HoSoRung_QC: 5, ToaDoRung_QC: 7};
+test('tên tab chuẩn mới HoSoKeo/HoSoRung/ToaDoRung và tên cũ _QC đều đọc được, không cần ghi chú', () => {
+  for (const v of [undefined, 'legacy']) {
+    const r = fresh().L.load(build(v), 'excel', 'x');
+    assert.ok(r.ok, JSON.stringify(r.errors)); assert.deepStrictEqual(r.counts, COUNTS); assert.deepStrictEqual(r.notes, []);
+  }
+});
+test('tên tab khác chữ hoa/thường, khoảng trắng, dấu gạch (cả bộ mới lẫn _QC): nhận tự động và ghi chú', () => {
+  for (const nm of ['HOsokeo |hosorung |  TOADORUNG', 'hosokeo_qc |HoSoRung-QC|ToaDoRung QC']) {
+    const a = fresh().L.load(build('names:' + nm), 'google', 'sheet khac');
+    assert.ok(a.ok, JSON.stringify(a.errors)); assert.deepStrictEqual(a.counts, COUNTS); assert.strictEqual(a.notes.length, 3); assert.match(a.notes[0], /được nhận là “HoSoKeo”/);
+  }
+});
+test('đổi thứ tự cột và có thêm cột: nhận theo tiêu đề, dữ liệu đọc đúng như bản gốc', () => {
+  const {L} = fresh(), r = L.load(build('order'), 'excel', 'x');
+  assert.ok(r.ok, JSON.stringify(r.errors)); assert.deepStrictEqual(r.counts, COUNTS);
+  const base = fresh().L; base.load(build(), 'excel', 'x');
+  assert.deepStrictEqual(L.search('', '').total, base.search('', '').total);
+  assert.strictEqual(L.rows("tab='HoSoRung_QC' AND k_hd='401'", [])[0]['Mã KH_CCCD'], '049000000004');
+});
+test('tên tab khác hẳn nhưng đủ cột: CHỈ ĐỀ XUẤT, chờ người dùng xác nhận; chưa xác nhận thì không đổi bản đang dùng', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'goc.xlsx');
+  const before = JSON.stringify(L.status());
+  const r = L.load(build('names:Sheet1|Sheet2|Sheet3'), 'google', 'sheet khac', {sheetKey: 'google:S1'});
+  assert.strictEqual(r.ok, false); assert.ok(r.pending && !r.errors);
+  assert.deepStrictEqual(Object.fromEntries(Object.entries(r.pending).map(([k, v]) => [k, [v.kind, v.proposed]])), {HoSoKeo_QC: ['confirm', 'Sheet1'], HoSoRung_QC: ['confirm', 'Sheet2'], ToaDoRung_QC: ['confirm', 'Sheet3']});
+  assert.strictEqual(JSON.stringify(L.status()), before, 'đề xuất chưa xác nhận không đổi bản tra cứu hay mốc cập nhật');
+  assert.strictEqual(L.search('', '').total, 20);
+});
+test('xác nhận tab khác tên: nạp được, ghi nhớ ánh xạ theo ID bảng tính; lần sau không hỏi lại; bảng tính khác không dùng ánh xạ này', () => {
+  const {L} = fresh(), buf = build('names:Sheet1|Sheet2|Sheet3');
+  const ok1 = L.load(buf, 'google', 'x', {sheetKey: 'google:S1', choices: {HoSoKeo_QC: 'Sheet1', HoSoRung_QC: 'Sheet2', ToaDoRung_QC: 'Sheet3'}});
+  assert.ok(ok1.ok, JSON.stringify(ok1.errors)); assert.deepStrictEqual(ok1.counts, COUNTS); assert.deepStrictEqual(ok1.picks, {HoSoKeo_QC: 'Sheet1', HoSoRung_QC: 'Sheet2', ToaDoRung_QC: 'Sheet3'});
+  const again = L.load(buf, 'google', 'x', {sheetKey: 'google:S1'});
+  assert.ok(again.ok && again.counts.HoSoKeo_QC === 8, 'đã nhớ ánh xạ nên không hỏi lại');
+  const other = L.load(buf, 'google', 'x', {sheetKey: 'google:KHAC'}); assert.ok(other.pending, 'bảng tính khác ID phải xác nhận lại');
+});
+test('người dùng chọn tab thiếu cột: từ chối, nêu tên tab và cột thiếu, không ghi nhận ánh xạ', () => {
+  const {L} = fresh(), buf = build('names:Sheet1|Sheet2|Sheet3');
+  const r = L.load(buf, 'google', 'x', {sheetKey: 'google:S1', choices: {HoSoKeo_QC: 'Sheet2', HoSoRung_QC: 'Sheet2', ToaDoRung_QC: 'Sheet3'}});
+  assert.strictEqual(r.ok, false); assert.match(r.errors.join(' '), /Tab “Sheet2” \(chọn làm “HoSoKeo”\) thiếu cột/);
+  assert.strictEqual(L.getMeta('tabmap'), null); assert.strictEqual(L.status().active, null);
+});
+test('có đồng thời tên mới và tên _QC: hiển thị danh sách để chọn (đề xuất tên chuẩn); chọn xong nạp được', () => {
+  const {L} = fresh(), buf = build('both');
+  const r = L.load(buf, 'google', 'x', {sheetKey: 'google:S2'});
+  assert.ok(r.pending); for (const role of Object.keys(COUNTS)) { const p = r.pending[role]; assert.strictEqual(p.kind, 'choose'); assert.strictEqual(p.candidates.length, 2); assert.strictEqual(p.proposed, { HoSoKeo_QC: 'HoSoKeo', HoSoRung_QC: 'HoSoRung', ToaDoRung_QC: 'ToaDoRung' }[role]); }
+  const ok1 = L.load(buf, 'google', 'x', {sheetKey: 'google:S2', choices: {HoSoKeo_QC: 'HoSoKeo_QC', HoSoRung_QC: 'HoSoRung', ToaDoRung_QC: 'ToaDoRung_QC'}});
+  assert.ok(ok1.ok, JSON.stringify(ok1.errors)); assert.deepStrictEqual(ok1.picks, {HoSoKeo_QC: 'HoSoKeo_QC', HoSoRung_QC: 'HoSoRung', ToaDoRung_QC: 'ToaDoRung_QC'});
+  assert.ok(L.load(buf, 'google', 'x', {sheetKey: 'google:S2'}).ok, 'lần sau theo ánh xạ đã chọn');
+});
+test('hai tab tên tùy ý có cùng cấu trúc: không tự chọn, cho người dùng chọn', () => {
+  const r = fresh().L.load(build('twin'), 'google', 'x', {sheetKey: 'google:S3'});
+  assert.ok(r.pending); assert.strictEqual(r.pending.HoSoKeo_QC.kind, 'choose'); assert.deepStrictEqual(r.pending.HoSoKeo_QC.candidates.sort(), ['Sheet1', 'Sheet4']);
+  assert.strictEqual(r.pending.HoSoRung_QC.kind, 'confirm');
+});
+test('đổi tên tab sau khi đã ánh xạ: nhận diện lại theo cấu trúc và hỏi xác nhận; trả lại tên chuẩn thì tự nhận', () => {
+  const {L} = fresh();
+  assert.ok(L.load(build('names:Sheet1|Sheet2|Sheet3'), 'google', 'x', {sheetKey: 'google:S4', choices: {HoSoKeo_QC: 'Sheet1', HoSoRung_QC: 'Sheet2', ToaDoRung_QC: 'Sheet3'}}).ok);
+  const renamed = L.load(build('names:Phieu can|Chu rung|Toa do'), 'google', 'x', {sheetKey: 'google:S4'});
+  assert.ok(renamed.pending && renamed.pending.HoSoKeo_QC.proposed === 'Phieu can', 'tab đã nhớ không còn: đề xuất theo cấu trúc, chưa tự ghi');
+  assert.strictEqual(L.search('', '').total, 20, 'bản đang dùng không đổi trong lúc chờ xác nhận');
+  const back = L.load(build(), 'google', 'x', {sheetKey: 'google:S4'}); assert.ok(back.ok && back.notes.length === 0);
+});
+test('thiếu cột bắt buộc khi tên tab đúng chuẩn: báo tên tab và tên cột, giữ bản cũ', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'a.xlsx');
+  const r = L.load(build('missingCol'), 'excel', 'b.xlsx');
+  assert.strictEqual(r.ok, false); assert.match(r.errors[0], /Tab “ToaDoRung” \(vai trò “ToaDoRung”\) thiếu cột: “DienTich_m2”/);
+  assert.strictEqual(L.status().active.detail, 'a.xlsx');
 });
 test('thiếu tab thật sự: báo rõ file đang có những tab nào', () => {
   const r = fresh().L.load(build('missingTab'), 'google', 'x');
-  assert.strictEqual(r.ok, false); assert.match(r.errors[0], /Thiếu tab "ToaDoRung_QC"/); assert.ok(r.errors.some(e => /File đang có các tab: “HoSoKeo_QC”, “HoSoRung_QC”/.test(e)), JSON.stringify(r.errors));
+  assert.strictEqual(r.ok, false); assert.match(r.errors[0], /Thiếu tab “ToaDoRung”/); assert.ok(r.errors.some(e => /File đang có các tab: “HoSoKeo”, “HoSoRung”/.test(e)), JSON.stringify(r.errors));
   const w = fresh().L.load(build('names:Sheet1|Sheet2|Sheet3').constructor === Buffer ? Buffer.from('x') : Buffer.from('x'), 'google', 'x'); assert.strictEqual(w.ok, false);
+});
+
+test('file mẫu tra cứu: ba tab tên chuẩn, đủ cột bắt buộc, nạp được (rỗng) và cột mã/CCCD định dạng văn bản', () => {
+  const XLSX = require('xlsx'), {buildTemplate, TABS, TAB_NAMES, STD} = require('../src/lookup');
+  const buf = buildTemplate('9.9.9'), wb = XLSX.read(buf, {type: 'buffer', cellNF: true});
+  assert.deepStrictEqual(wb.SheetNames, ['HUONG_DAN', 'HoSoKeo', 'HoSoRung', 'ToaDoRung']);
+  for (const r of TAB_NAMES) assert.deepStrictEqual(XLSX.utils.sheet_to_json(wb.Sheets[STD[r]], {header: 1})[0], TABS[r].req);
+  const guide = XLSX.utils.sheet_to_json(wb.Sheets.HUONG_DAN, {header: 1}).map(x => x.join(' ')).join('\n');
+  assert.ok(/9\.9\.9/.test(guide) && /_QC/.test(guide) && /xác nhận/.test(guide));
+  const ws = wb.Sheets.HoSoRung, col = XLSX.utils.encode_col(TABS.HoSoRung_QC.req.indexOf('Mã KH_CCCD'));
+  assert.strictEqual(ws[col + '2'].z, '@', 'cột CCCD là văn bản để giữ số 0 đầu');
+  const r = fresh().L.load(buf, 'excel', 'mau.xlsx'); assert.ok(r.ok, JSON.stringify(r.errors)); assert.deepStrictEqual(r.counts, {HoSoKeo_QC: 0, HoSoRung_QC: 0, ToaDoRung_QC: 0});
 });
