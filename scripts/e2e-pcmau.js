@@ -15,13 +15,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 1. file mẫu do phần mềm tạo có đủ cột mới
   const tpl = await M.build('pc', JSZip, {version: '9'}); const wbT = XLSX.read(tpl, {type: 'buffer'});
   const heads = XLSX.utils.sheet_to_json(wbT.Sheets.PHIEU_CAN, {header: 1})[0];
-  ok('file mẫu phiếu cân có các cột Giờ cân 1/2, Cân lần 1/2 (kg), Khối lượng (kg), Khách hàng', ['Giờ cân 1', 'Giờ cân 2', 'Cân lần 1 (kg)', 'Cân lần 2 (kg)', 'Khối lượng (kg)', 'Khách hàng'].every(h => heads.includes(h)), heads.join('|'));
+  ok('file mẫu phiếu cân có các cột Giờ cân 1/2, Cân lần 1/2 (kg), Khối lượng (kg), Khách hàng', ['Giờ cân 1', 'Giờ cân 2', 'Cân lần 1 (kg)', 'Cân lần 2 (kg)', 'Khối lượng (kg)', 'Khách hàng', 'Đơn giá (đồng/tấn)', 'Thành tiền (đồng)'].every(h => heads.includes(h)), heads.join('|'));
   // 2. file điền dữ liệu (giờ dạng ô giờ Excel; dòng 3 chỉ có kg; dòng 4 kg và tấn lệch)
   const rows = [heads,
-    [1, '05/10/2026', 8 / 24 + 15 / 1440, 9 / 24 + 40 / 1440, '92C-12345', 'PC001', 40400, 15000, 25400, 25.4, 'NGUYỄN VĂN AN', 'KCN Điện Nam, Quảng Nam', ''],
-    [2, '06/10/2026', '08:30', '10:05', '92C-67890', 'PC002', 39600, 15000, 24600, 24.6, 'NGUYỄN VĂN AN', 'KCN Điện Nam, Quảng Nam', ''],
-    [3, '07/10/2026', '', '', '92C-12345', 'PC003', '', '', 20000, '', 'TRẦN THỊ BÌNH', 'KCN Điện Nam, Quảng Nam', 'chỉ có kg'],
-    [4, '08/10/2026', '', '', '92C-67890', 'PC004', '', '', 30000, 31, '', 'KCN Điện Nam, Quảng Nam', 'kg lệch tấn']];
+    [1, '05/10/2026', 8 / 24 + 15 / 1440, 9 / 24 + 40 / 1440, '92C-12345', 'PC001', 40400, 15000, 25400, 25.4, 'NGUYỄN VĂN AN', 1250000, 31750000, 'KCN Điện Nam, Quảng Nam', ''],
+    [2, '06/10/2026', '08:30', '10:05', '92C-67890', 'PC002', 39600, 15000, 24600, 24.6, 'NGUYỄN VĂN AN', '1.250.000', '', 'KCN Điện Nam, Quảng Nam', ''],
+    [3, '07/10/2026', '', '', '92C-12345', 'PC003', '', '', 20000, '', 'TRẦN THỊ BÌNH', '', '', 'KCN Điện Nam, Quảng Nam', 'chỉ có kg'],
+    [4, '08/10/2026', '', '', '92C-67890', 'PC004', '', '', 30000, 31, '', '', '', 'KCN Điện Nam, Quảng Nam', 'kg lệch tấn']];
   const f1 = path.join(dir, 'pc_moi.xlsx'), wb1 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb1, XLSX.utils.aoa_to_sheet(rows), 'PHIEU_CAN'); XLSX.writeFile(wb1, f1);
   // file cũ: chỉ các cột cũ
   const old = [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Khối lượng (tấn)', 'Nơi giao (nhà máy)', 'Ghi chú'], [1, '05/10/2026', '92C-12345', 'OLD1', 10, 'KCN', '']];
@@ -35,6 +35,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const db = () => w.evaluate(() => window.hak.loadSync().db); let d = await db(); const pc = Object.values(d.rs.own1.forests)[0].pc, by = n => pc.find(p => p.soPhieu === n);
   ok('nạp 4 phiếu', pc.length === 4, JSON.stringify(pc.map(p => p.soPhieu)));
   ok('PC001: giờ cân từ ô giờ Excel (08:15:00, 09:40:00), cân lần 1/2, kg, tấn, khách hàng', !!by('PC001') && by('PC001').gioCan1 === '08:15:00' && by('PC001').gioCan2 === '09:40:00' && by('PC001').can1 === 40400 && by('PC001').can2 === 15000 && by('PC001').klKg === 25400 && by('PC001').kl === 25.4 && by('PC001').khachHang === 'NGUYỄN VĂN AN', JSON.stringify(by('PC001')));
+  ok('PC001 có đơn giá 1.250.000 và thành tiền 31.750.000; PC003 không có giá thì để trống', by('PC001').donGia === 1250000 && by('PC001').thanhTien === 31750000 && by('PC003').donGia == null, JSON.stringify([by('PC001'), by('PC003')]));
   ok('PC002: giờ dạng chữ giữ nguyên', !!by('PC002') && by('PC002').gioCan1 === '08:30' && by('PC002').gioCan2 === '10:05');
   ok('PC003: chỉ có kg (20.000) → tấn = 20', !!by('PC003') && by('PC003').kl === 20 && by('PC003').klKg === 20000, JSON.stringify(by('PC003')));
   const txt = await w.innerText('#main');

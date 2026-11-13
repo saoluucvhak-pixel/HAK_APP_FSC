@@ -945,19 +945,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
  * bằng chính ô chọn file Excel của công cụ (tạo một bảng tính có đúng các cột công cụ yêu cầu), nên cách đọc dữ liệu, xem trước, in và tải PDF giống hệt bản gốc.
  * Hàm thuần: dùng ở giao diện (tạo bảng) và ở tiến trình chính (tạo mã nạp dữ liệu). */
 (function (root) {
-  const HEAD = ['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Ngày cân 2', 'Giờ cân 2', 'Biển số 1', 'Cân 1', 'Cân 2', 'KL', 'Khách hàng', 'Địa chỉ', 'Đơn giá_TC', 'Thành tiền'];
+  const HEAD = ['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Ngày cân 2', 'Giờ cân 2', 'Biển số 1', 'Cân 1', 'Cân 2', 'KL', 'Khách hàng', 'Địa chỉ', 'ĐG_AD', 'Thành tiền'];
   const kgOf = p => (typeof p.klKg === 'number' && p.klKg > 0) ? p.klKg : (typeof p.kl === 'number' && p.kl > 0 ? Math.round(p.kl * 1000) : '');
   /* Bảng dữ liệu: dòng tiêu đề + mỗi phiếu cân một dòng. KL tính bằng kg; Địa chỉ = địa điểm rừng (in ở dòng “Địa chỉ rừng”); khách hàng trống thì lấy chủ rừng.
-   * Đơn giá và Thành tiền để trống (phiếu in “0”): hồ sơ khai thác chưa quản lý giá mua; cần giá thì nạp file Excel có cột giá ngay trong công cụ. */
+   * Đơn giá (đồng/tấn; dưới 100.000 là đồng/kg) và Thành tiền lấy từ phiếu cân (file nhập hoặc Google Sheets); thiếu thành tiền thì công cụ tự tính = khối lượng × đơn giá làm tròn xuống nghìn đồng; thiếu giá thì in 0. */
   function aoa(rec) {
     const info = rec.info || {}, owner = String(info.ten || '').trim();
     return [HEAD.slice()].concat((rec.pc || []).map(p => [String(p.soPhieu || ''), p.ngay || '', p.gioCan1 || '', p.ngay || '', p.gioCan2 || '', p.bienSo || '', typeof p.can1 === 'number' ? p.can1 : '', typeof p.can2 === 'number' ? p.can2 : '', kgOf(p),
-      p.khachHang || owner, info.diaDiem || '', '', '']));
+      p.khachHang || owner, info.diaDiem || '', typeof p.donGia === 'number' && p.donGia > 0 ? p.donGia : '', typeof p.thanhTien === 'number' && p.thanhTien > 0 ? p.thanhTien : '']));
   }
   /* Một khung nhìn chuẩn của phiếu cân để in, DÙNG CHUNG cho mọi nguồn (nhập file ở rừng, đưa từ Google Sheets, cập nhật biển số): chỉ đọc các trường chuẩn
    * soPhieu, ngay, gioCan1/2, bienSo, can1/2, klKg (hoặc kl tấn), khachHang. Phiếu thiếu trường nào vẫn in được (phần đó để trống) nhưng được báo để bổ sung. */
-  const FIELDS = [['soPhieu', 'số phiếu'], ['ngay', 'ngày cân'], ['bienSo', 'biển số xe'], ['can1', 'cân lần 1'], ['can2', 'cân lần 2'], ['kl', 'khối lượng'], ['gioCan1', 'giờ cân 1'], ['gioCan2', 'giờ cân 2'], ['khachHang', 'khách hàng']];
-  const has = (p, k) => k === 'kl' ? kgOf(p) !== '' : k === 'can1' || k === 'can2' ? typeof p[k] === 'number' : String(p[k] == null ? '' : p[k]).trim() !== '';
+  const FIELDS = [['soPhieu', 'số phiếu'], ['ngay', 'ngày cân'], ['bienSo', 'biển số xe'], ['can1', 'cân lần 1'], ['can2', 'cân lần 2'], ['kl', 'khối lượng'], ['gioCan1', 'giờ cân 1'], ['gioCan2', 'giờ cân 2'], ['khachHang', 'khách hàng'], ['donGia', 'đơn giá'], ['thanhTien', 'thành tiền']];
+  const has = (p, k) => k === 'thanhTien' ? ((typeof p.thanhTien === 'number' && p.thanhTien > 0) || (typeof p.donGia === 'number' && p.donGia > 0 && kgOf(p) !== '')) : k === 'donGia' ? (typeof p.donGia === 'number' && p.donGia > 0) : k === 'kl' ? kgOf(p) !== '' : k === 'can1' || k === 'can2' ? typeof p[k] === 'number' : String(p[k] == null ? '' : p[k]).trim() !== '';
   function gaps(pc) {
     const list = pc || [], by = {}, issues = [];
     list.forEach(p => { const miss = FIELDS.filter(([k]) => !has(p, k)).map(([, l]) => l); if (miss.length) { issues.push({soPhieu: String(p.soPhieu || '(chưa có số phiếu)'), missing: miss}); miss.forEach(m => { by[m] = (by[m] || 0) + 1; }); } });
@@ -1729,6 +1729,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         {n: 'Khối lượng (kg)', req: K, fmt: 'Số kg không âm', ex: '25400', note: 'Khối lượng hàng (kg). Nếu cột tấn để trống thì tấn = kg ÷ 1000; nếu có cả hai mà lệch nhau sẽ có cảnh báo.'},
         {n: 'Khối lượng (tấn)', req: A, fmt: 'Số lớn hơn 0', ex: '25,4', note: 'Tính bằng tấn, dùng dấu phẩy hoặc dấu chấm thập phân. Khối lượng giao tại nhà máy là căn cứ tính tiền vận chuyển.'},
         {n: 'Khách hàng', req: K, fmt: 'Văn bản', ex: 'NGUYỄN VĂN AN', note: 'Tên khách hàng trên phiếu cân (thường là chủ rừng); có thể bỏ trống.'},
+        {n: 'Đơn giá (đồng/tấn)', req: K, fmt: 'Số lớn hơn 0', ex: '1250000', note: 'Giá mua trên phiếu cân (đồng/tấn; số dưới 100.000 được hiểu là đồng/kg). Dùng để in phiếu cân; có thể bỏ trống (phiếu in 0).'},
+        {n: 'Thành tiền (đồng)', req: K, fmt: 'Số lớn hơn 0', ex: '31750000', note: 'Thành tiền trên phiếu cân. Bỏ trống thì khi in phiếu cân tự tính = khối lượng × đơn giá, làm tròn xuống nghìn đồng.'},
         {n: 'Nơi giao (nhà máy)', req: K, fmt: 'Văn bản', ex: 'Nhà máy dăm A', note: 'Ghi đúng như trên phiếu của nhà máy; phần mềm giữ nguyên và chỉ cảnh báo nếu khác địa chỉ giao hàng đã chốt của lô.'},
         {n: 'Ghi chú', req: K, fmt: 'Văn bản', ex: '', note: 'Ghi chú tùy ý.'}],
       rules: ['Biển số có trong danh sách xe (tab Vận chuyển).', 'Ngày cân là ngày có thật theo lịch (có tính năm nhuận).', 'Số phiếu cân không trùng; khối lượng là số lớn hơn 0.',
@@ -1736,7 +1738,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       errors: [['Biển … chưa có trong danh sách xe', 'Thêm xe vào file đội xe, nạp lại đội xe rồi nạp phiếu cân.'], ['Ngày … không có thật / thiếu ngày cân', 'Sửa ngày đúng dd/mm/yyyy với ngày có thật (ví dụ 28/02/2026) rồi nạp lại.'],
         ['Số phiếu cân … trùng với dòng n', 'Kiểm tra phiếu nhập hai lần; xóa hoặc sửa số phiếu.'], ['Khối lượng không hợp lệ / thiếu khối lượng', 'Nhập số tấn lớn hơn 0 (25,4).'],
         ['Mã rừng "…" khác lô đang mở', 'Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng.'], ['File thiếu cột: ...', 'Dùng đúng file mẫu, không sửa dòng tiêu đề.']],
-      example: [['1', '05/10/2026', '08:15:00', '09:40:00', '92C-123.45', 'PC001', '40400', '15000', '25400', '25,4', 'NGUYỄN VĂN AN', 'Nhà máy dăm A', ''], ['2', '06/10/2026', '08:30:00', '10:05:00', '92C-678.90', 'PC002', '39600', '15000', '24600', '24,6', 'NGUYỄN VĂN AN', 'Nhà máy dăm A', ''], ['3', '29/02/2028', '', '', '92C-123.45', 'PC003', '', '', '', '26,1', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ']]
+      example: [['1', '05/10/2026', '08:15:00', '09:40:00', '92C-123.45', 'PC001', '40400', '15000', '25400', '25,4', 'NGUYỄN VĂN AN', '1250000', '31750000', 'Nhà máy dăm A', ''], ['2', '06/10/2026', '08:30:00', '10:05:00', '92C-678.90', 'PC002', '39600', '15000', '24600', '24,6', 'NGUYỄN VĂN AN', '1250000', '', 'Nhà máy dăm A', ''], ['3', '29/02/2028', '', '', '92C-123.45', 'PC003', '', '', '', '26,1', '', '', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ']]
     }
   };
 
@@ -2299,7 +2301,7 @@ const H_DX = {'STT':'stt','Chủ xe (bên vận chuyển)':'chuXe','Ngày sinh c
   'Tên tài xế':'taiXe','Ngày sinh tài xế':'ngaySinhTx','CCCD tài xế':'cccdTx','Ngày cấp CCCD tài xế':'ngayCapTx','Nơi cấp CCCD tài xế':'noiCapTx','Thường trú tài xế':'diaChiTx',
   'Số GPLX':'gplx','Ngày đến hạn GPLX':'hanGplx','Ngày đến hạn bảo hiểm':'hanBH','Kiểm định từ ngày':'kdTu','Kiểm định đến ngày':'kdDen','SĐT':'sdt'};
 const DX_REQ = ['Chủ xe (bên vận chuyển)','Biển kiểm soát','Người ký HĐ vận chuyển'];
-const H_PC = {'STT':'stt','Ngày cân':'ngay','Giờ cân 1':'gioCan1','Giờ cân 2':'gioCan2','Biển kiểm soát':'bienSo','Số phiếu cân':'soPhieu','Cân lần 1 (kg)':'can1','Cân lần 2 (kg)':'can2','Khối lượng (kg)':'klKg','Khối lượng (tấn)':'kl','Khách hàng':'khachHang','Nơi giao (nhà máy)':'noiGiao','Ghi chú':'ghiChu'};
+const H_PC = {'STT':'stt','Ngày cân':'ngay','Giờ cân 1':'gioCan1','Giờ cân 2':'gioCan2','Biển kiểm soát':'bienSo','Số phiếu cân':'soPhieu','Cân lần 1 (kg)':'can1','Cân lần 2 (kg)':'can2','Khối lượng (kg)':'klKg','Khối lượng (tấn)':'kl','Khách hàng':'khachHang','Đơn giá (đồng/tấn)':'donGia','Thành tiền (đồng)':'thanhTien','Nơi giao (nhà máy)':'noiGiao','Ghi chú':'ghiChu'};
 const PC_REQ = ['Ngày cân','Biển kiểm soát','Số phiếu cân','Khối lượng (tấn)'];
 /* Cột “Mã rừng” KHÔNG còn trong file mẫu và không bắt buộc: dữ liệu luôn nạp vào lô đang mở. File cũ vẫn có thể có cột này (nếu điền thì phải khớp lô, dùng để chặn nạp nhầm file của lô khác; để trống thì tự lấy mã lô đang mở). */
 const H_LEGACY = {'Mã rừng': 'maRung'};
@@ -2544,7 +2546,7 @@ const normPC = o => {
   return {
     _row: o._row, maRung: trim(o.maRung), stt: trim(o.stt), ngay: normDate(o.ngay), gioCan1: timeCell(o.gioCan1), gioCan2: timeCell(o.gioCan2), bienSo: trim(o.bienSo).toUpperCase(),
     soPhieu: typeof o.soPhieu === 'number' ? String(Math.round(o.soPhieu)) : trim(o.soPhieu), can1: toDec(o.can1), can2: toDec(o.can2), klKg,
-    kl, khachHang: trim(o.khachHang), noiGiao: trim(o.noiGiao), ghiChu: trim(o.ghiChu)
+    kl, khachHang: trim(o.khachHang), donGia: toDec(o.donGia), thanhTien: toDec(o.thanhTien), noiGiao: trim(o.noiGiao), ghiChu: trim(o.ghiChu)
   };
 };
 
@@ -4476,13 +4478,13 @@ function panelPhieuCan(rec) {
   const head = panelImport('pc', rec);
   if (!pc.length) return head + '<div class="empty">Chưa có phiếu cân. Bấm “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
   return head + issuesBox(c.errs, c.warns) +
-    '<div class="wrap"><table><thead><tr><th>Dòng</th><th>Ngày cân</th><th>Giờ cân 1</th><th>Giờ cân 2</th><th>Biển kiểm soát</th><th>Số phiếu cân</th><th style="text-align:right">Cân lần 1 (kg)</th><th style="text-align:right">Cân lần 2 (kg)</th><th style="text-align:right">Khối lượng (kg)</th><th style="text-align:right">Khối lượng (tấn)</th><th>Khách hàng</th><th>Nơi giao</th></tr></thead><tbody>' +
+    '<div class="wrap"><table><thead><tr><th>Dòng</th><th>Ngày cân</th><th>Giờ cân 1</th><th>Giờ cân 2</th><th>Biển kiểm soát</th><th>Số phiếu cân</th><th style="text-align:right">Cân lần 1 (kg)</th><th style="text-align:right">Cân lần 2 (kg)</th><th style="text-align:right">Khối lượng (kg)</th><th style="text-align:right">Khối lượng (tấn)</th><th>Khách hàng</th><th style="text-align:right">Đơn giá</th><th style="text-align:right">Thành tiền</th><th>Nơi giao</th></tr></thead><tbody>' +
     pc.map(r => '<tr class="' + (c.state[r._row] === 'err' ? 'rerr' : c.state[r._row] === 'warn' ? 'rwarn' : '') + '"><td>' + r._row + '</td><td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay)
         : '<input data-pcfix="' + esc(r._row) + '" value="' + esc(r.ngay) + '" size="11" aria-label="Sửa ngày cân phiếu ' + esc(r.soPhieu) + '" placeholder="dd/mm/yyyy"> <button class="btn sm" data-act="pcFixDate" data-row="' + esc(r._row) + '">Sửa ngày</button><br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + '</small>') + '</td><td>' + esc(r.gioCan1 || '') + '</td><td>' + esc(r.gioCan2 || '') + '</td><td>' + esc(r.bienSo) +
       '</td><td>' + esc(r.soPhieu) + '</td><td style="text-align:right">' + (typeof r.can1 === 'number' ? fmt(r.can1) : '') + '</td><td style="text-align:right">' + (typeof r.can2 === 'number' ? fmt(r.can2) : '') +
       '</td><td style="text-align:right">' + (typeof r.klKg === 'number' ? fmt(r.klKg) : (typeof r.kl === 'number' ? fmt(Math.round(r.kl * 1000)) : '')) + '</td><td style="text-align:right">' + (typeof r.kl === 'number' ? fmtT(Math.round(r.kl * 1000)) : esc(r.kl)) +
-      '</td><td>' + esc(r.khachHang || '') + '</td><td>' + esc(r.noiGiao) + '</td></tr>').join('') +
-    '</tbody><tfoot><tr><td colspan="9"><b>Tổng ' + pc.length + ' chuyến</b></td><td style="text-align:right"><b>' + fmtT(totalKg(pc)) + '</b></td><td colspan="2"></td></tr></tfoot></table></div>';
+      '</td><td>' + esc(r.khachHang || '') + '</td><td style="text-align:right">' + (typeof r.donGia === 'number' ? fmt(r.donGia) : '') + '</td><td style="text-align:right">' + (typeof r.thanhTien === 'number' ? fmt(r.thanhTien) : '') + '</td><td>' + esc(r.noiGiao) + '</td></tr>').join('') +
+    '</tbody><tfoot><tr><td colspan="9"><b>Tổng ' + pc.length + ' chuyến</b></td><td style="text-align:right"><b>' + fmtT(totalKg(pc)) + '</b></td><td colspan="4"></td></tr></tfoot></table></div>';
 }
 
 function issuesBox(errs, warns) {
@@ -5649,8 +5651,8 @@ function lkPhieuRows() {
     else if (ex && ex.ngay === p.ngay && bienKey(ex.bienSo) === bienKey(bien) && Math.abs((ex.kl || 0) - p.kl) < 1e-9) { st = 'same'; note = 'Đã có trong hồ sơ — bỏ qua'; }
     else if (ex) { st = 'upd'; note = 'Đã có số phiếu này nhưng khác dữ liệu — chọn để cập nhật'; }
     const warn = [!p.assignable ? 'hợp đồng có nhiều rừng' : '', bien && !keys.has(bienKey(bien)) ? 'biển chưa có trong danh sách xe của rừng' : ''].filter(Boolean).join('; ');
-    const thieuThem = !!(ex && !p.issue && ((!ex.gioCan1 && p.gioCan1) || (!ex.gioCan2 && p.gioCan2) || (ex.can1 == null && p.can1 != null) || (ex.can2 == null && p.can2 != null) || (ex.klKg == null && p.klKg != null) || (!ex.khachHang && p.khachHang)));
-    if (st === 'same' && thieuThem) { st = 'upd'; note = 'Bổ sung giờ cân, cân lần 1, cân lần 2, khối lượng kg, khách hàng từ bảng tính'; }
+    const thieuThem = !!(ex && !p.issue && ((!ex.gioCan1 && p.gioCan1) || (!ex.gioCan2 && p.gioCan2) || (ex.can1 == null && p.can1 != null) || (ex.can2 == null && p.can2 != null) || (ex.klKg == null && p.klKg != null) || (!ex.khachHang && p.khachHang) || (ex.donGia == null && p.donGia != null) || (ex.thanhTien == null && p.thanhTien != null)));
+    if (st === 'same' && thieuThem) { st = 'upd'; note = 'Bổ sung giờ cân, cân lần 1, cân lần 2, khối lượng kg, khách hàng, đơn giá, thành tiền từ bảng tính'; }
     const bienDoi = !!(ex && bien && !p.issue && bienKey(ex.bienSo) !== bienKey(bien));
     if (bienDoi && st === 'upd') note = 'Biển số khác: ' + (ex.bienSo || '(chưa có)') + ' → ' + bien + (ex.ngay === p.ngay && Math.abs((ex.kl || 0) - p.kl) < 1e-9 ? ' (chỉ khác biển số)' : '');
     return {...p, bien, st, note, warn, ex: !!ex, exBien: ex ? ex.bienSo : '', bienDoi};
@@ -5771,7 +5773,7 @@ async function lkApply() {
       f.pc = f.pc || [];
       let next = f.pc.reduce((m, p) => Math.max(m, +p._row || 0), 1);
       chosen.forEach(p => {
-        const rec = {maRung: f.info.maRung, stt: '', ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', ghiChu: '', gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: p.can1, can2: p.can2, klKg: p.klKg, klTan: p.klTan, khachHang: p.khachHang || '', maKhachHang: p.maKhachHang || '', _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}};
+        const rec = {maRung: f.info.maRung, stt: '', ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', ghiChu: '', gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: p.can1, can2: p.can2, klKg: p.klKg, klTan: p.klTan, khachHang: p.khachHang || '', maKhachHang: p.maKhachHang || '', donGia: p.donGia ?? null, thanhTien: p.thanhTien ?? null, _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}};
         const i = f.pc.findIndex(x => String(x.soPhieu).toUpperCase() === p.soPhieu.toUpperCase());
         if (i >= 0) { if (p.bien && bienKey(f.pc[i].bienSo) !== bienKey(p.bien)) (f.bienLog = f.bienLog || []).push({soPhieu: f.pc[i].soPhieu, ngay: p.ngay, kl: p.kl, cu: f.pc[i].bienSo || '', moi: p.bien, at, nguon: 'Google Sheets'}); f.pc[i] = {...rec, _row: f.pc[i]._row, stt: f.pc[i].stt}; }
         else { rec._row = ++next; rec.stt = String(f.pc.length + 1); f.pc.push(rec); }

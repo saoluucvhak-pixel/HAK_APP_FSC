@@ -337,3 +337,17 @@ test('phiếu cân lấy thêm giờ cân 1/2, cân lần 1/2 (kg), khối lư�
   const h2 = L2.search('1001/2026', 'HoSoKeo_QC').rows[0], q = L2.candidates(h2.tab, h2.row).forests.flatMap(f => f.phieu).find(x => x.soPhieu === '1001/2026/NK');
   assert.strictEqual(q.klKg, 2840, 'chỉ có cột tấn: kg = tấn × 1000'); assert.strictEqual(q.klTan, 2.84);
 });
+
+test('số tiền trong bảng tính: số thật, chữ có dấu chấm nghìn, dấu phẩy thập phân; không phải số dương thì không có', () => {
+  const {moneyOf} = require('../src/lookup');
+  assert.strictEqual(moneyOf(1250000), 1250000); assert.strictEqual(moneyOf('1.250.000'), 1250000); assert.strictEqual(moneyOf('1,250,000'), 1250000); assert.strictEqual(moneyOf('1.250.000,5'), 1250000.5);
+  assert.strictEqual(moneyOf('1250 đ'), 1250); assert.strictEqual(moneyOf(0), null); assert.strictEqual(moneyOf(-5), null); assert.strictEqual(moneyOf(''), null); assert.strictEqual(moneyOf('Đã thanh toán'), null); assert.strictEqual(moneyOf(undefined), null);
+});
+
+test('phiếu cân từ Google Sheets có đơn giá và thành tiền (cột “Đơn giá”, “Thanh toán”) để in phiếu cân', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  const c = L.candidates('HoSoKeo_QC', L.search('1001/2026', '').rows[0].row), f = c.forests[0], p = f.phieu.find(x => x.soPhieu === '1001/2026/NK');
+  assert.strictEqual(p.donGia, 1500000); assert.strictEqual(p.thanhTien, 4260000);   // 2.840 kg × 1.500.000 đ/tấn
+  assert.ok(f.phieu.every(x => x.donGia === null || typeof x.donGia === 'number') && f.phieu.every(x => x.thanhTien === null || typeof x.thanhTien === 'number'));
+});
+

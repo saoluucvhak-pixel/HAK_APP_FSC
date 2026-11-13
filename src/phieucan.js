@@ -3,19 +3,19 @@
  * bằng chính ô chọn file Excel của công cụ (tạo một bảng tính có đúng các cột công cụ yêu cầu), nên cách đọc dữ liệu, xem trước, in và tải PDF giống hệt bản gốc.
  * Hàm thuần: dùng ở giao diện (tạo bảng) và ở tiến trình chính (tạo mã nạp dữ liệu). */
 (function (root) {
-  const HEAD = ['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Ngày cân 2', 'Giờ cân 2', 'Biển số 1', 'Cân 1', 'Cân 2', 'KL', 'Khách hàng', 'Địa chỉ', 'Đơn giá_TC', 'Thành tiền'];
+  const HEAD = ['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Ngày cân 2', 'Giờ cân 2', 'Biển số 1', 'Cân 1', 'Cân 2', 'KL', 'Khách hàng', 'Địa chỉ', 'ĐG_AD', 'Thành tiền'];
   const kgOf = p => (typeof p.klKg === 'number' && p.klKg > 0) ? p.klKg : (typeof p.kl === 'number' && p.kl > 0 ? Math.round(p.kl * 1000) : '');
   /* Bảng dữ liệu: dòng tiêu đề + mỗi phiếu cân một dòng. KL tính bằng kg; Địa chỉ = địa điểm rừng (in ở dòng “Địa chỉ rừng”); khách hàng trống thì lấy chủ rừng.
-   * Đơn giá và Thành tiền để trống (phiếu in “0”): hồ sơ khai thác chưa quản lý giá mua; cần giá thì nạp file Excel có cột giá ngay trong công cụ. */
+   * Đơn giá (đồng/tấn; dưới 100.000 là đồng/kg) và Thành tiền lấy từ phiếu cân (file nhập hoặc Google Sheets); thiếu thành tiền thì công cụ tự tính = khối lượng × đơn giá làm tròn xuống nghìn đồng; thiếu giá thì in 0. */
   function aoa(rec) {
     const info = rec.info || {}, owner = String(info.ten || '').trim();
     return [HEAD.slice()].concat((rec.pc || []).map(p => [String(p.soPhieu || ''), p.ngay || '', p.gioCan1 || '', p.ngay || '', p.gioCan2 || '', p.bienSo || '', typeof p.can1 === 'number' ? p.can1 : '', typeof p.can2 === 'number' ? p.can2 : '', kgOf(p),
-      p.khachHang || owner, info.diaDiem || '', '', '']));
+      p.khachHang || owner, info.diaDiem || '', typeof p.donGia === 'number' && p.donGia > 0 ? p.donGia : '', typeof p.thanhTien === 'number' && p.thanhTien > 0 ? p.thanhTien : '']));
   }
   /* Một khung nhìn chuẩn của phiếu cân để in, DÙNG CHUNG cho mọi nguồn (nhập file ở rừng, đưa từ Google Sheets, cập nhật biển số): chỉ đọc các trường chuẩn
    * soPhieu, ngay, gioCan1/2, bienSo, can1/2, klKg (hoặc kl tấn), khachHang. Phiếu thiếu trường nào vẫn in được (phần đó để trống) nhưng được báo để bổ sung. */
-  const FIELDS = [['soPhieu', 'số phiếu'], ['ngay', 'ngày cân'], ['bienSo', 'biển số xe'], ['can1', 'cân lần 1'], ['can2', 'cân lần 2'], ['kl', 'khối lượng'], ['gioCan1', 'giờ cân 1'], ['gioCan2', 'giờ cân 2'], ['khachHang', 'khách hàng']];
-  const has = (p, k) => k === 'kl' ? kgOf(p) !== '' : k === 'can1' || k === 'can2' ? typeof p[k] === 'number' : String(p[k] == null ? '' : p[k]).trim() !== '';
+  const FIELDS = [['soPhieu', 'số phiếu'], ['ngay', 'ngày cân'], ['bienSo', 'biển số xe'], ['can1', 'cân lần 1'], ['can2', 'cân lần 2'], ['kl', 'khối lượng'], ['gioCan1', 'giờ cân 1'], ['gioCan2', 'giờ cân 2'], ['khachHang', 'khách hàng'], ['donGia', 'đơn giá'], ['thanhTien', 'thành tiền']];
+  const has = (p, k) => k === 'thanhTien' ? ((typeof p.thanhTien === 'number' && p.thanhTien > 0) || (typeof p.donGia === 'number' && p.donGia > 0 && kgOf(p) !== '')) : k === 'donGia' ? (typeof p.donGia === 'number' && p.donGia > 0) : k === 'kl' ? kgOf(p) !== '' : k === 'can1' || k === 'can2' ? typeof p[k] === 'number' : String(p[k] == null ? '' : p[k]).trim() !== '';
   function gaps(pc) {
     const list = pc || [], by = {}, issues = [];
     list.forEach(p => { const miss = FIELDS.filter(([k]) => !has(p, k)).map(([, l]) => l); if (miss.length) { issues.push({soPhieu: String(p.soPhieu || '(chưa có số phiếu)'), missing: miss}); miss.forEach(m => { by[m] = (by[m] || 0) + 1; }); } });

@@ -11,7 +11,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const mm = pt => Math.round(pt / 72 * 25.4 * 10) / 10;
 const box = buf => [...buf.toString('latin1').matchAll(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/g)].map(x => [mm(+x[1]), mm(+x[2])]);
 const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f)); };
-const P = (stt, so, bien, c1, c2, kg, kh, g1, g2) => ({_row: stt + 1, maRung: 'R-A', stt: String(stt), ngay: '0' + (4 + stt) + '/10/2026', gioCan1: g1, gioCan2: g2, bienSo: bien, soPhieu: so, can1: c1, can2: c2, klKg: kg, kl: kg / 1000, khachHang: kh, noiGiao: 'KCN Điện Nam', ghiChu: ''});
+const P = (stt, so, bien, c1, c2, kg, kh, g1, g2, gia, tien) => ({donGia: gia === undefined ? 1250000 : gia, thanhTien: tien === undefined ? Math.floor(kg * 1250 / 1000) * 1000 : tien, _row: stt + 1, maRung: 'R-A', stt: String(stt), ngay: '0' + (4 + stt) + '/10/2026', gioCan1: g1, gioCan2: g2, bienSo: bien, soPhieu: so, can1: c1, can2: c2, klKg: kg, kl: kg / 1000, khachHang: kh, noiGiao: 'KCN Điện Nam', ghiChu: ''});
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'p.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
@@ -35,7 +35,7 @@ const P = (stt, so, bien, c1, c2, kg, kh, g1, g2) => ({_row: stt + 1, maRung: 'R
   if (process.env.SHOTS) { await pw.setViewportSize({width: 1280, height: 860}); await pw.waitForTimeout(400); await pw.screenshot({path: path.join(process.env.SHOTS, 'phieucan_cong_cu.png')}); }   // ảnh để xem khi cần
   const txt = await pw.$eval('#render', r => r.innerText);
   ok('nội dung phiếu: tên công ty, “PHIẾU CÂN”, số phiếu, biển số, cân lần 1/2 (kg), khối lượng, giờ cân, địa chỉ rừng, khách hàng', /CÔNG TY TNHH MẪU PHÁT/.test(txt) && /PHIẾU CÂN/.test(txt) && /PA1/.test(txt) && /92C-12345/.test(txt) && /40\.400/.test(txt) && /15\.000/.test(txt) && /25\.400/.test(txt) && /05\/10\/2026 08:15:00/.test(txt) && /Thôn A/.test(txt) && /NGUYỄN VĂN AN/.test(txt), txt.slice(0, 500));
-  ok('phiếu không khách hàng lấy tên chủ rừng; không giá mua thì in 0', /NGUYỄN VĂN MỘT/.test(txt) && /Giá mua\s*:\s*0/.test(txt), txt.slice(0, 600));
+  ok('phiếu không khách hàng lấy tên chủ rừng; giá mua 1.250 đ/kg (đơn giá 1.250.000 đ/tấn) và thành tiền 31.750.000 lấy từ phiếu cân', /NGUYỄN VĂN MỘT/.test(txt) && /Giá mua\s*:\s*1\.250\s*đ\/kg/.test(txt) && /31\.750\.000\s*\(vnđ\)/.test(txt), txt.slice(0, 700));
 
   // 2. PDF in ra đúng khổ giấy
   const pdfOf = async () => Buffer.from(await app.evaluate(async ({BrowserWindow}) => { const t = BrowserWindow.getAllWindows().find(x => x.getTitle() === 'PhieuCan'); return (await t.webContents.printToPDF({preferCSSPageSize: true, printBackground: true})).toString('base64'); }), 'base64');
@@ -59,16 +59,16 @@ const P = (stt, so, bien, c1, c2, kg, kh, g1, g2) => ({_row: stt + 1, maRung: 'R
   const imp = P(1, 'IM1', '92C-11111', 30000, 10000, 20000, 'KH A', '08:00:00', '09:00:00');                                  // như nhập file ở rừng
   const goo = {...P(2, 'GS1', '92C-22222', 31000, 11000, 20000, 'KH B', '10:00:00', '11:00:00'), klTan: 20, maKhachHang: 'K01', noiGiao: '', _src: {tab: 'HoSoKeo_QC', row: 5}};   // như đưa từ Google Sheets
   const upd = {...P(3, 'UP1', '92C-33333', 32000, 12000, 20000, 'KH C', '12:00:00', '13:00:00'), _src: {tab: 'HoSoKeo_QC', row: 6}};   // sau khi cập nhật biển số xe
-  const thieu = {...P(4, 'TH1', '92C-44444', null, null, null, '', '', ''), kl: 15, klKg: null};                                 // thiếu giờ cân, cân 1/2, khách hàng
+  const thieu = {...P(4, 'TH1', '92C-44444', null, null, null, '', '', '', null, null), kl: 15, klKg: null};                                 // thiếu giờ cân, cân 1/2, khách hàng
   const D2 = seed([lot('fa', 'R-A', {exp: {}, pc: [imp, goo, upd, thieu]})]); D2.congTy = D.congTy;
   await w.waitForTimeout(700); await w.evaluate(d => window.hak.save(d), D2); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
   const card = await w.innerText('#pcPrintCard');
-  ok('báo rõ phiếu còn thiếu: 3 phiếu đủ thông tin, 1 phiếu thiếu cân lần 1/2, giờ cân, khách hàng; chỉ cách bổ sung', /4 phiếu cân của rừng này/.test(card) && /3 phiếu đủ thông tin/.test(card) && /cân lần 1 \(1 phiếu\)/.test(card) && /giờ cân 1 \(1 phiếu\)/.test(card) && /khách hàng \(1 phiếu\)/.test(card) && /Tra cứu Google Sheets/.test(card), card);
+  ok('báo rõ phiếu còn thiếu: 3 phiếu đủ thông tin, 1 phiếu thiếu cân lần 1/2, giờ cân, khách hàng; chỉ cách bổ sung', /4 phiếu cân của rừng này/.test(card) && /3 phiếu đủ thông tin/.test(card) && /cân lần 1 \(1 phiếu\)/.test(card) && /giờ cân 1 \(1 phiếu\)/.test(card) && /khách hàng \(1 phiếu\)/.test(card) && /đơn giá \(1 phiếu\)/.test(card) && /Tra cứu Google Sheets/.test(card), card);
   const pw3 = await tool(() => w.$eval('#pcPrintCard [data-act=pcPrint]', b => b.click()));
   await pw3.waitForFunction(() => document.querySelectorAll('#tb tr.row').length === 4, null, {timeout: 15000});
   const t3 = await pw3.$eval('#render', r => r.innerText);
-  ok('4 phiếu từ các nguồn khác nhau cùng in được, đủ trường: số phiếu, biển số, cân, khách hàng; phiếu thiếu thì để trống phần thiếu', ['IM1', 'GS1', 'UP1', 'TH1', '92C-11111', '92C-22222', '92C-33333', '92C-44444', 'KH A', 'KH B', 'KH C'].every(x => t3.includes(x)) && /30\.000/.test(t3) && /31\.000/.test(t3) && /32\.000/.test(t3), t3.slice(0, 300));
+  ok('4 phiếu từ các nguồn khác nhau cùng in được, đủ trường: số phiếu, biển số, cân, khách hàng; phiếu thiếu thì để trống phần thiếu', ['IM1', 'GS1', 'UP1', 'TH1', '92C-11111', '92C-22222', '92C-33333', '92C-44444', 'KH A', 'KH B', 'KH C'].every(x => t3.includes(x)) && /30\.000/.test(t3) && /31\.000/.test(t3) && /32\.000/.test(t3) && /25\.000\.000\s*\(vnđ\)/.test(t3) && /Giá mua\s*:\s*0/.test(t3), t3.slice(0, 300));   // IM1 20.000 kg × 1.250 = 25.000.000; TH1 không giá thì in 0
   await pw3.close();
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);

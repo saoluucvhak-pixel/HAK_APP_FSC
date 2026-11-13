@@ -101,6 +101,8 @@
         {n: 'Khối lượng (kg)', req: K, fmt: 'Số kg không âm', ex: '25400', note: 'Khối lượng hàng (kg). Nếu cột tấn để trống thì tấn = kg ÷ 1000; nếu có cả hai mà lệch nhau sẽ có cảnh báo.'},
         {n: 'Khối lượng (tấn)', req: A, fmt: 'Số lớn hơn 0', ex: '25,4', note: 'Tính bằng tấn, dùng dấu phẩy hoặc dấu chấm thập phân. Khối lượng giao tại nhà máy là căn cứ tính tiền vận chuyển.'},
         {n: 'Khách hàng', req: K, fmt: 'Văn bản', ex: 'NGUYỄN VĂN AN', note: 'Tên khách hàng trên phiếu cân (thường là chủ rừng); có thể bỏ trống.'},
+        {n: 'Đơn giá (đồng/tấn)', req: K, fmt: 'Số lớn hơn 0', ex: '1250000', note: 'Giá mua trên phiếu cân (đồng/tấn; số dưới 100.000 được hiểu là đồng/kg). Dùng để in phiếu cân; có thể bỏ trống (phiếu in 0).'},
+        {n: 'Thành tiền (đồng)', req: K, fmt: 'Số lớn hơn 0', ex: '31750000', note: 'Thành tiền trên phiếu cân. Bỏ trống thì khi in phiếu cân tự tính = khối lượng × đơn giá, làm tròn xuống nghìn đồng.'},
         {n: 'Nơi giao (nhà máy)', req: K, fmt: 'Văn bản', ex: 'Nhà máy dăm A', note: 'Ghi đúng như trên phiếu của nhà máy; phần mềm giữ nguyên và chỉ cảnh báo nếu khác địa chỉ giao hàng đã chốt của lô.'},
         {n: 'Ghi chú', req: K, fmt: 'Văn bản', ex: '', note: 'Ghi chú tùy ý.'}],
       rules: ['Biển số có trong danh sách xe (tab Vận chuyển).', 'Ngày cân là ngày có thật theo lịch (có tính năm nhuận).', 'Số phiếu cân không trùng; khối lượng là số lớn hơn 0.',
@@ -108,7 +110,7 @@
       errors: [['Biển … chưa có trong danh sách xe', 'Thêm xe vào file đội xe, nạp lại đội xe rồi nạp phiếu cân.'], ['Ngày … không có thật / thiếu ngày cân', 'Sửa ngày đúng dd/mm/yyyy với ngày có thật (ví dụ 28/02/2026) rồi nạp lại.'],
         ['Số phiếu cân … trùng với dòng n', 'Kiểm tra phiếu nhập hai lần; xóa hoặc sửa số phiếu.'], ['Khối lượng không hợp lệ / thiếu khối lượng', 'Nhập số tấn lớn hơn 0 (25,4).'],
         ['Mã rừng "…" khác lô đang mở', 'Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng.'], ['File thiếu cột: ...', 'Dùng đúng file mẫu, không sửa dòng tiêu đề.']],
-      example: [['1', '05/10/2026', '08:15:00', '09:40:00', '92C-123.45', 'PC001', '40400', '15000', '25400', '25,4', 'NGUYỄN VĂN AN', 'Nhà máy dăm A', ''], ['2', '06/10/2026', '08:30:00', '10:05:00', '92C-678.90', 'PC002', '39600', '15000', '24600', '24,6', 'NGUYỄN VĂN AN', 'Nhà máy dăm A', ''], ['3', '29/02/2028', '', '', '92C-123.45', 'PC003', '', '', '', '26,1', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ']]
+      example: [['1', '05/10/2026', '08:15:00', '09:40:00', '92C-123.45', 'PC001', '40400', '15000', '25400', '25,4', 'NGUYỄN VĂN AN', '1250000', '31750000', 'Nhà máy dăm A', ''], ['2', '06/10/2026', '08:30:00', '10:05:00', '92C-678.90', 'PC002', '39600', '15000', '24600', '24,6', 'NGUYỄN VĂN AN', '1250000', '', 'Nhà máy dăm A', ''], ['3', '29/02/2028', '', '', '92C-123.45', 'PC003', '', '', '', '26,1', '', '', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ']]
     }
   };
 

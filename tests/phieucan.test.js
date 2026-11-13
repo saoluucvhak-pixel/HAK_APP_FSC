@@ -17,7 +17,7 @@ test('bảng nạp vào công cụ: đủ cột công cụ yêu cầu, KL tính 
     {soPhieu: 'PA1', ngay: '05/10/2026', gioCan1: '08:15:00', gioCan2: '09:40:00', bienSo: '92C-12345', can1: 40400, can2: 15000, klKg: 25400, kl: 25.4, khachHang: 'NGUYỄN VĂN AN'},
     {soPhieu: 'PA2', ngay: '06/10/2026', gioCan1: '', gioCan2: '', bienSo: '92C-67890', can1: null, can2: null, klKg: null, kl: 9.25, khachHang: ''}]};
   const a = PC.aoa(rec);
-  assert.deepStrictEqual(a[0].slice(0, 11), ['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Ngày cân 2', 'Giờ cân 2', 'Biển số 1', 'Cân 1', 'Cân 2', 'KL', 'Khách hàng', 'Địa chỉ']);
+  assert.deepStrictEqual(a[0].slice(0, 13), ['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Ngày cân 2', 'Giờ cân 2', 'Biển số 1', 'Cân 1', 'Cân 2', 'KL', 'Khách hàng', 'Địa chỉ', 'ĐG_AD', 'Thành tiền']);
   assert.strictEqual(a.length, 3); assert.ok(a.every(r => r.length === PC.HEAD.length));
   assert.deepStrictEqual(a[1].slice(0, 11), ['PA1', '05/10/2026', '08:15:00', '05/10/2026', '09:40:00', '92C-12345', 40400, 15000, 25400, 'NGUYỄN VĂN AN', 'Thôn A, Xã B']);
   assert.strictEqual(a[2][8], 9250); assert.strictEqual(a[2][9], 'NGUYỄN VĂN MỘT'); assert.strictEqual(a[2][6], '');
@@ -36,15 +36,15 @@ test('thông tin công ty điền vào tiêu đề phiếu; chưa khai công ty 
   assert.ok(!PC.inject([], {}).includes('"coName"'));
 });
 test('cùng một khung nhìn cho phiếu từ file nhập ở rừng, Google Sheets và cập nhật biển số: cùng dòng dữ liệu, thiếu gì thì báo', () => {
-  const base = {ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', can1: 40000, can2: 15000, klKg: 25000, kl: 25, khachHang: 'KH'};
+  const base = {ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', can1: 40000, can2: 15000, klKg: 25000, kl: 25, khachHang: 'KH', donGia: 1250000, thanhTien: 31250000};
   const imp = {_row: 2, soPhieu: 'A1', bienSo: '92C-1', ...base, noiGiao: 'KCN'};
   const goo = {_row: 3, soPhieu: 'A1', bienSo: '92C-1', ...base, klTan: 25, maKhachHang: 'K1', noiGiao: '', _src: {tab: 'HoSoKeo_QC', row: 9}};
   const upd = {...imp, bienSo: '92C-1', _src: {tab: 'HoSoKeo_QC', row: 9}};
   const rec = pc => ({info: {ten: 'CHỦ', diaDiem: 'Thôn A'}, pc: [pc]});
-  assert.deepStrictEqual(PC.aoa(rec(imp)), PC.aoa(rec(goo))); assert.deepStrictEqual(PC.aoa(rec(imp)), PC.aoa(rec(upd)));
+  assert.deepStrictEqual(PC.aoa(rec(imp)), PC.aoa(rec(goo))); assert.strictEqual(PC.aoa(rec(imp))[1][11], 1250000); assert.strictEqual(PC.aoa(rec(imp))[1][12], 31250000); assert.deepStrictEqual(PC.aoa(rec(imp)), PC.aoa(rec(upd)));
   for (const p of [imp, goo, upd]) { const g = PC.gaps([p]); assert.strictEqual(g.full, 1); assert.deepStrictEqual(g.issues, []); }
   const g = PC.gaps([imp, {soPhieu: 'B2', ngay: '', bienSo: '92C-2', can1: null, can2: undefined, kl: 0, gioCan1: '', gioCan2: '', khachHang: ''}]);
-  assert.strictEqual(g.total, 2); assert.strictEqual(g.full, 1); assert.deepStrictEqual(g.issues[0].missing, ['ngày cân', 'cân lần 1', 'cân lần 2', 'khối lượng', 'giờ cân 1', 'giờ cân 2', 'khách hàng']); assert.strictEqual(g.by['cân lần 1'], 1);
+  assert.strictEqual(g.total, 2); assert.strictEqual(g.full, 1); assert.deepStrictEqual(g.issues[0].missing, ['ngày cân', 'cân lần 1', 'cân lần 2', 'khối lượng', 'giờ cân 1', 'giờ cân 2', 'khách hàng', 'đơn giá', 'thành tiền']); assert.strictEqual(g.by['cân lần 1'], 1);
   assert.deepStrictEqual(PC.gaps([]), {total: 0, full: 0, issues: [], by: {}});
   const kgOnly = PC.gaps([{...imp, klKg: null, kl: 25}]); assert.strictEqual(kgOnly.full, 1);   // chỉ có tấn: vẫn đủ khối lượng
 });
@@ -53,3 +53,10 @@ test('giao diện gọn: ẩn phần Excel, công ty, cột Số CT / đơn giá
   assert.ok(!/\.sheet|\.slip|@page/.test(PC.SIMPLE_CSS));
 });
 
+
+test('thành tiền: có thì dùng; thiếu mà có đơn giá và khối lượng thì tự tính nên không coi là thiếu; thiếu đơn giá thì báo', () => {
+  const p = {soPhieu: 'X', ngay: '05/10/2026', gioCan1: '1', gioCan2: '2', bienSo: 'B', can1: 5, can2: 2, klKg: 3000, khachHang: 'K'};
+  assert.deepStrictEqual(PC.gaps([{...p, donGia: 1000000}]).issues, []);
+  assert.deepStrictEqual(PC.gaps([{...p, thanhTien: 3000000}]).issues[0].missing, ['đơn giá']);
+  assert.deepStrictEqual(PC.gaps([p]).issues[0].missing, ['đơn giá', 'thành tiền']);
+});
