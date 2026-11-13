@@ -213,11 +213,41 @@ const HAKReports = (function () {
         rows, levels, foot: ['TỔNG CỘNG', '', '', '', round(tot.ha, 3), tot.n, round(tot.t, 3), '']}], notes};
   }
 
+  /* ---- 6. Phiếu cân đã cập nhật biển số xe, theo từng lô rừng ---- */
+  const isoVN = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(iso || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : String(iso || ''); };
+  function bienSoDoi(recs, o) {
+    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung));
+    const inP = e => D.isValid(e.ngay) && inRange(e.ngay, o.from, o.to);
+    const per = sorted.map(r => ({r, log: (r.bienLog || []).filter(inP), tong: pcOf(r, o)}));
+    const rows = [], det = [];
+    per.forEach(x => {
+      const so = new Set(x.log.map(e => String(e.soPhieu).toUpperCase())), kl = round(x.log.reduce((s, e) => s + num(e.kl), 0), 3);
+      rows.push([rows.length + 1, x.r.maRung, x.r.chuRung, x.tong.length, so.size, x.tong.length ? round(so.size / x.tong.length * 100, 1) : 0, kl]);
+      x.log.slice().sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay) || String(a.soPhieu).localeCompare(String(b.soPhieu)) || String(a.at).localeCompare(String(b.at)))
+        .forEach(e => det.push([det.length + 1, x.r.maRung, x.r.chuRung, e.soPhieu, e.ngay, e.cu || '(chưa có)', e.moi, num(e.kl), isoVN(e.at), e.nguon || '']));
+    });
+    const nLo = per.filter(x => x.log.length).length, nPh = per.reduce((s, x) => s + new Set(x.log.map(e => String(e.soPhieu).toUpperCase())).size, 0);
+    const tot = per.reduce((s, x) => s + x.tong.length, 0), klAll = round(per.reduce((s, x) => s + x.log.reduce((t, e) => t + num(e.kl), 0), 0), 3);
+    const notes = []; if (rangeNote(o)) notes.push(rangeNote(o));
+    if (!det.length) notes.push('Chưa có phiếu cân nào được cập nhật biển số xe trong kỳ. Biển số được cập nhật ở màn Tra cứu Google Sheets (nút “Chỉ cập nhật biển số xe”) hoặc khi ghi lại phiếu cân đã có với biển số mới.');
+    const multi = per.filter(x => { const c = {}; x.log.forEach(e => { const k = String(e.soPhieu).toUpperCase(); c[k] = (c[k] || 0) + 1; }); return Object.values(c).some(n => n > 1); }).map(x => x.r.maRung);
+    if (multi.length) notes.push('Có phiếu cân được đổi biển số nhiều lần (xem đủ các dòng theo thời điểm cập nhật): lô ' + multi.join(', ') + '.');
+    return {id: 'bienso', title: 'BÁO CÁO PHIẾU CÂN ĐÃ CẬP NHẬT BIỂN SỐ XE THEO LÔ RỪNG', orient: 'landscape', period: periodText(o.from, o.to),
+      kpis: [{label: 'Số lô có phiếu cập nhật biển', value: nLo, f: 'n0'}, {label: 'Số phiếu đã cập nhật biển', value: nPh, f: 'n0'}, {label: 'Tổng số phiếu cân trong kỳ', value: tot, f: 'n0'}, {label: 'Khối lượng phiếu đã cập nhật (tấn)', value: klAll, f: 'n3'}],
+      sections: [
+        {heading: 'I. Tổng hợp theo lô rừng', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 16}, {h: 'Chủ rừng', w: 28}, {h: 'Số phiếu cân', w: 12, al: 'right', f: 'n0'}, {h: 'Đã cập nhật biển', w: 14, al: 'right', f: 'n0'}, {h: 'Tỷ lệ', w: 10, al: 'right', f: 'pct'}, {h: 'Khối lượng đã cập nhật (tấn)', w: 18, al: 'right', f: 'n3'}],
+          rows, foot: ['', 'TỔNG CỘNG', '', tot, nPh, tot ? round(nPh / tot * 100, 1) : 0, klAll]},
+        {heading: 'II. Chi tiết phiếu cân đã cập nhật biển số xe (theo lô, ngày cân)', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 12}, {h: 'Chủ rừng', w: 18}, {h: 'Số phiếu cân', w: 14}, {h: 'Ngày cân', w: 10, f: 'date'}, {h: 'Biển số cũ', w: 12, al: 'center'}, {h: 'Biển số mới', w: 12, al: 'center'}, {h: 'Khối lượng (tấn)', w: 10, al: 'right', f: 'n3'}, {h: 'Thời điểm cập nhật', w: 14}, {h: 'Nguồn', w: 12}],
+          rows: det, foot: ['', 'CỘNG', '', '', '', '', '', round(det.reduce((s, r) => s + r[7], 0), 3), '', '']}],
+      notes};
+  }
+
   const REPORTS = [
     {id: 'dieuhanh', name: 'Tổng hợp điều hành', desc: 'Một trang cho lãnh đạo: số liệu chính theo chủ rừng và các vấn đề cần xử lý.', build: withUnit(dieuHanh, 'Đơn vị tính: diện tích ha; khối lượng tấn; tiến độ %')},
     {id: 'sanluong', name: 'Sản lượng khai thác theo rừng', desc: 'Diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân; cảnh báo vượt định mức.', build: withUnit(sanLuong, 'Đơn vị tính: diện tích ha; định mức tấn/ha; sản lượng tấn')},
     {id: 'phieucan', name: 'Sổ theo dõi phiếu cân – vận chuyển', desc: 'Danh sách phiếu cân theo kỳ, tổng hợp theo rừng, biển số, ngày; phát hiện trùng phiếu.', build: withUnit(soPhieuCan, 'Đơn vị tính: khối lượng tấn (làm tròn 3 chữ số, theo phiếu cân ghi kg)')},
     {id: 'chacon', name: 'Bảng cha–con: chủ rừng – rừng – phiếu cân', desc: 'Chủ rừng (cha) là tổng các rừng (con), rừng là tổng các phiếu cân; có thể kèm từng phiếu.', build: withUnit(chaCon, 'Đơn vị tính: diện tích ha; khối lượng tấn')},
+    {id: 'bienso', name: 'Phiếu cân đã cập nhật biển số xe', desc: 'Theo từng lô rừng: phiếu cân nào đã được cập nhật biển số xe mới (biển cũ, biển mới, thời điểm, nguồn).', build: withUnit(bienSoDoi, 'Đơn vị tính: khối lượng tấn; tỷ lệ %')},
     {id: 'tiendo', name: 'Tiến độ hồ sơ và checklist FSC', desc: 'Tiến độ từng rừng và danh sách hạng mục còn thiếu để hoàn thiện hồ sơ.', build: withUnit(tienDo, 'Đơn vị tính: tiến độ %; số lượng theo từng cột')}
   ];
 

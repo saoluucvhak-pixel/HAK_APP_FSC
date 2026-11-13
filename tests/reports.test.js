@@ -52,3 +52,20 @@ test('mọi báo cáo dựng được với dữ liệu rỗng và xuất bảng
   const a = R.toAoa(R.sanLuong(recs, {}), {org: 'HAK', today: '12/11/2026'});
   assert.strictEqual(a[1][0], 'BÁO CÁO SẢN LƯỢNG KHAI THÁC THEO RỪNG');
 });
+
+test('báo cáo phiếu cân đã cập nhật biển số xe: theo lô, biển cũ/mới, lọc kỳ theo ngày cân, tổng hợp theo lô', () => {
+  const rs = JSON.parse(JSON.stringify(recs));
+  rs[0].bienLog = [{soPhieu: 'P1', ngay: '05/01/2026', kl: 12.5, cu: '92C-11111', moi: '92C-99999', at: '2026-04-01T08:30:00.000Z', nguon: 'Google Sheets'},
+    {soPhieu: 'P2', ngay: '20/02/2026', kl: 9.25, cu: '92C-22222', moi: '92C-88888', at: '2026-04-01T08:30:00.000Z', nguon: 'Google Sheets'},
+    {soPhieu: 'P1', ngay: '05/01/2026', kl: 12.5, cu: '92C-99999', moi: '92C-77777', at: '2026-05-02T09:00:00.000Z', nguon: 'Google Sheets'}];
+  const rep = R.REPORTS.find(x => x.id === 'bienso'); assert.ok(rep, 'có báo cáo bienso');
+  const m = rep.build(rs, {from: '', to: '', today: '01/06/2026'});
+  assert.strictEqual(m.id, 'bienso'); const det = m.sections[1].rows;
+  assert.strictEqual(det.length, 3); assert.deepStrictEqual(det[0].slice(1, 7), ['R1', 'NGUYỄN VĂN AN', 'P1', '05/01/2026', '92C-11111', '92C-99999']);
+  assert.ok(det.some(r => r[3] === 'P1' && r[5] === '92C-99999' && r[6] === '92C-77777'), 'đổi biển nhiều lần: giữ đủ các dòng');
+  assert.strictEqual(m.sections[0].rows.length, 2, 'mỗi lô một dòng tổng hợp'); assert.strictEqual(m.sections[0].rows[0][4], 2, '2 phiếu khác nhau đã cập nhật (P1, P2)');
+  assert.ok(m.notes.join(' ').includes('nhiều lần'), 'ghi chú đổi nhiều lần');
+  const k = rep.build(rs, {from: '01/02/2026', to: '28/02/2026', today: '01/06/2026'}); assert.strictEqual(k.sections[1].rows.length, 1, 'chỉ phiếu cân ngày trong kỳ'); assert.strictEqual(k.sections[1].rows[0][3], 'P2');
+  const none = rep.build(recs, {from: '', to: '', today: '01/06/2026'}); assert.strictEqual(none.sections[1].rows.length, 0); assert.ok(none.notes.join(' ').includes('Chưa có phiếu cân nào được cập nhật biển số'));
+  assert.ok(R.toAoa(m, {org: 'HAK GROUP', today: '01/06/2026', stamp: 'x', scope: ''}).length > 5, 'xuất được ra bảng Excel');
+});

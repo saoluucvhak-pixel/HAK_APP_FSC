@@ -272,7 +272,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <p>HAKQN Desktop lập hồ sơ khai thác và vận chuyển gỗ keo theo chuẩn FSC. Dữ liệu lưu ngay trên máy (SQLite); nhập liệu, kiểm tra, xuất hồ sơ, sao lưu và khôi phục <b>không cần mạng</b>. Chỉ đồng bộ Google Sheets mới cần mạng. Bản đầy đủ có hình thức trình bày chi tiết hơn: tệp <code>docs/HUONG_DAN.md</code>.</p>
 <h3>1. Quy trình 8 bước</h3>
 <ol>
-<li>Khai <b>Công ty mua hàng</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
+<li>Khai <b>Công ty mua hàng</b> ở <b>Cài đặt → Công ty</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
 <li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số điện thoại</b>, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
 <li>Tạo <b>Lô rừng</b>: mã lô, địa điểm, tọa độ, diện tích, thời gian khai thác, giấy tờ pháp lý.</li>
 <li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo chức danh, rồi nạp Excel nhân công.</li>
@@ -335,7 +335,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <p><b>In hai đợt khi chưa xong rừng</b>: ở tab Xuất hồ sơ → Tất cả, <i>Đợt 1</i> gồm hồ sơ làm ngay (trừ BM-08, BM-09, BM-10, BM-14); khi rừng xong, nạp phiếu cân, nhập khối lượng thực tế rồi tải <i>Đợt 2</i> chỉ gồm BM-08, BM-09, BM-10, BM-14 để bổ sung vào bộ đã in.</p>
 <p><b>In mẫu đợt 2 để trống số rồi in đè số</b>: ở tab Xuất hồ sơ → Tất cả, <i>Bước 1 – Mẫu trống</i> in sẵn BM-08, BM-09, BM-10, BM-14 với phần số để chấm; khi có số liệu, <i>Bước 2 – Chỉ phần số</i> in lên đúng tờ đã in (chữ cố định và đường kẻ được ẩn). In cùng khổ A4, tỉ lệ 100%, cùng lề, cùng máy in, cùng giá trị “Số dòng chuyến”; in thử một tờ nháp trước.</p>
 <p><b>Số hợp đồng trên biểu mẫu</b>: nhập số đầy đủ (ví dụ <code>015/2025-KT</code>) thì được giữ nguyên; chỉ nhập phần số (<code>015</code>) thì phần mềm ghép năm lấy từ <b>ngày ký của chính hợp đồng đó</b>; thiếu ngày ký thì năm để trống và khung <i>Số hợp đồng đầy đủ sẽ in</i> ở tab Xuất hồ sơ nêu cần bổ sung ngày nào. BM-01, BM-14, BM-20 luôn cùng một số hợp đồng khai thác.</p>
-<p><b>Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (5 mẫu: điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
+<p><b>Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (6 mẫu: điều hành, sản lượng theo rừng, sổ phiếu cân, phiếu cân đã cập nhật biển số xe, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
 <h3>9. Sao lưu và khôi phục</h3>
 <ul>
 <li>Phần mềm tự sao lưu cơ sở dữ liệu vào thư mục <code>backups</code> trước mỗi lần nâng cấp và khôi phục; ghi trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.</li>
@@ -733,7 +733,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     klThucTe: {text: 'chưa nhập khối lượng khai thác thực tế (đang tính theo sản lượng dự kiến)', where: 'Thông tin rừng → Khối lượng thực tế (tấn)'},
     ntNgay: {text: 'chưa nhập ngày lập biên bản nghiệm thu', where: 'tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập'},
     pcNgay: {text: 'chưa nhập ngày lập biên bản xác nhận khối lượng', where: 'tab Xuất hồ sơ → Xác nhận khối lượng, thanh toán: ngày lập'},
-    nguoiMua: {text: 'chưa khai đơn vị nhận (Công ty mua hàng) nên dòng “Kính gửi” để chấm', where: 'nút 🏢 Công ty mua hàng, hoặc tab Xuất hồ sơ → đơn vị nhận'}
+    nguoiMua: {text: 'chưa khai đơn vị nhận (Công ty mua hàng) nên dòng “Kính gửi” để chấm', where: 'Cài đặt → Công ty, hoặc tab Xuất hồ sơ → đơn vị nhận'}
   };
   /* điều kiện chính thức của từng biểu mẫu (mã hai chữ số của BM-xx); mẫu không liệt kê không có điều kiện riêng */
   const FORMS = {
@@ -1952,11 +1952,41 @@ const HAKReports = (function () {
         rows, levels, foot: ['TỔNG CỘNG', '', '', '', round(tot.ha, 3), tot.n, round(tot.t, 3), '']}], notes};
   }
 
+  /* ---- 6. Phiếu cân đã cập nhật biển số xe, theo từng lô rừng ---- */
+  const isoVN = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(iso || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : String(iso || ''); };
+  function bienSoDoi(recs, o) {
+    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung));
+    const inP = e => D.isValid(e.ngay) && inRange(e.ngay, o.from, o.to);
+    const per = sorted.map(r => ({r, log: (r.bienLog || []).filter(inP), tong: pcOf(r, o)}));
+    const rows = [], det = [];
+    per.forEach(x => {
+      const so = new Set(x.log.map(e => String(e.soPhieu).toUpperCase())), kl = round(x.log.reduce((s, e) => s + num(e.kl), 0), 3);
+      rows.push([rows.length + 1, x.r.maRung, x.r.chuRung, x.tong.length, so.size, x.tong.length ? round(so.size / x.tong.length * 100, 1) : 0, kl]);
+      x.log.slice().sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay) || String(a.soPhieu).localeCompare(String(b.soPhieu)) || String(a.at).localeCompare(String(b.at)))
+        .forEach(e => det.push([det.length + 1, x.r.maRung, x.r.chuRung, e.soPhieu, e.ngay, e.cu || '(chưa có)', e.moi, num(e.kl), isoVN(e.at), e.nguon || '']));
+    });
+    const nLo = per.filter(x => x.log.length).length, nPh = per.reduce((s, x) => s + new Set(x.log.map(e => String(e.soPhieu).toUpperCase())).size, 0);
+    const tot = per.reduce((s, x) => s + x.tong.length, 0), klAll = round(per.reduce((s, x) => s + x.log.reduce((t, e) => t + num(e.kl), 0), 0), 3);
+    const notes = []; if (rangeNote(o)) notes.push(rangeNote(o));
+    if (!det.length) notes.push('Chưa có phiếu cân nào được cập nhật biển số xe trong kỳ. Biển số được cập nhật ở màn Tra cứu Google Sheets (nút “Chỉ cập nhật biển số xe”) hoặc khi ghi lại phiếu cân đã có với biển số mới.');
+    const multi = per.filter(x => { const c = {}; x.log.forEach(e => { const k = String(e.soPhieu).toUpperCase(); c[k] = (c[k] || 0) + 1; }); return Object.values(c).some(n => n > 1); }).map(x => x.r.maRung);
+    if (multi.length) notes.push('Có phiếu cân được đổi biển số nhiều lần (xem đủ các dòng theo thời điểm cập nhật): lô ' + multi.join(', ') + '.');
+    return {id: 'bienso', title: 'BÁO CÁO PHIẾU CÂN ĐÃ CẬP NHẬT BIỂN SỐ XE THEO LÔ RỪNG', orient: 'landscape', period: periodText(o.from, o.to),
+      kpis: [{label: 'Số lô có phiếu cập nhật biển', value: nLo, f: 'n0'}, {label: 'Số phiếu đã cập nhật biển', value: nPh, f: 'n0'}, {label: 'Tổng số phiếu cân trong kỳ', value: tot, f: 'n0'}, {label: 'Khối lượng phiếu đã cập nhật (tấn)', value: klAll, f: 'n3'}],
+      sections: [
+        {heading: 'I. Tổng hợp theo lô rừng', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 16}, {h: 'Chủ rừng', w: 28}, {h: 'Số phiếu cân', w: 12, al: 'right', f: 'n0'}, {h: 'Đã cập nhật biển', w: 14, al: 'right', f: 'n0'}, {h: 'Tỷ lệ', w: 10, al: 'right', f: 'pct'}, {h: 'Khối lượng đã cập nhật (tấn)', w: 18, al: 'right', f: 'n3'}],
+          rows, foot: ['', 'TỔNG CỘNG', '', tot, nPh, tot ? round(nPh / tot * 100, 1) : 0, klAll]},
+        {heading: 'II. Chi tiết phiếu cân đã cập nhật biển số xe (theo lô, ngày cân)', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 12}, {h: 'Chủ rừng', w: 18}, {h: 'Số phiếu cân', w: 14}, {h: 'Ngày cân', w: 10, f: 'date'}, {h: 'Biển số cũ', w: 12, al: 'center'}, {h: 'Biển số mới', w: 12, al: 'center'}, {h: 'Khối lượng (tấn)', w: 10, al: 'right', f: 'n3'}, {h: 'Thời điểm cập nhật', w: 14}, {h: 'Nguồn', w: 12}],
+          rows: det, foot: ['', 'CỘNG', '', '', '', '', '', round(det.reduce((s, r) => s + r[7], 0), 3), '', '']}],
+      notes};
+  }
+
   const REPORTS = [
     {id: 'dieuhanh', name: 'Tổng hợp điều hành', desc: 'Một trang cho lãnh đạo: số liệu chính theo chủ rừng và các vấn đề cần xử lý.', build: withUnit(dieuHanh, 'Đơn vị tính: diện tích ha; khối lượng tấn; tiến độ %')},
     {id: 'sanluong', name: 'Sản lượng khai thác theo rừng', desc: 'Diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân; cảnh báo vượt định mức.', build: withUnit(sanLuong, 'Đơn vị tính: diện tích ha; định mức tấn/ha; sản lượng tấn')},
     {id: 'phieucan', name: 'Sổ theo dõi phiếu cân – vận chuyển', desc: 'Danh sách phiếu cân theo kỳ, tổng hợp theo rừng, biển số, ngày; phát hiện trùng phiếu.', build: withUnit(soPhieuCan, 'Đơn vị tính: khối lượng tấn (làm tròn 3 chữ số, theo phiếu cân ghi kg)')},
     {id: 'chacon', name: 'Bảng cha–con: chủ rừng – rừng – phiếu cân', desc: 'Chủ rừng (cha) là tổng các rừng (con), rừng là tổng các phiếu cân; có thể kèm từng phiếu.', build: withUnit(chaCon, 'Đơn vị tính: diện tích ha; khối lượng tấn')},
+    {id: 'bienso', name: 'Phiếu cân đã cập nhật biển số xe', desc: 'Theo từng lô rừng: phiếu cân nào đã được cập nhật biển số xe mới (biển cũ, biển mới, thời điểm, nguồn).', build: withUnit(bienSoDoi, 'Đơn vị tính: khối lượng tấn; tỷ lệ %')},
     {id: 'tiendo', name: 'Tiến độ hồ sơ và checklist FSC', desc: 'Tiến độ từng rừng và danh sách hạng mục còn thiếu để hoàn thiện hồ sơ.', build: withUnit(tienDo, 'Đơn vị tính: tiến độ %; số lượng theo từng cột')}
   ];
 
@@ -3625,7 +3655,7 @@ function exportNotes(rec, g, kind) {
     if (!ex.ntNgay) n.push('BM-14: chưa nhập ngày lập biên bản nghiệm thu (ô “Nghiệm thu, thanh lý: ngày lập”), ngày và năm trong số biên bản để trống.');
     if (g.canPC && !ex.pcNgay) n.push('BM-09, BM-10: chưa nhập ngày lập biên bản xác nhận khối lượng, ngày và năm trong số biên bản để trống.');
   }
-  if (head && !ex.ckNhan && !buyerName(rec)) n.push('BM-11 (cam kết nguồn gốc): dòng “Kính gửi” để chấm vì chưa khai Công ty mua hàng (nút Công ty mua hàng) và chưa nhập “đơn vị nhận”.');
+  if (head && !ex.ckNhan && !buyerName(rec)) n.push('BM-11 (cam kết nguồn gốc): dòng “Kính gửi” để chấm vì chưa khai Công ty mua hàng (Cài đặt → Công ty) và chưa nhập “đơn vị nhận”.');
   if (head && !destOf(rec).text) n.push('BM-04, BM-09, BM-10: chưa chọn địa chỉ giao hàng nên dòng điểm đến để chấm (tab Vận chuyển → Chọn địa chỉ giao hàng).');
   if (head) { const cb = HAKHopDong.canBoSung(ex).filter(c => /BM-01|BM-04/.test(c.label)); if (cb.length) n.push('Số hợp đồng chưa có năm (' + cb.map(c => c.label.replace(/ \(.*\)/, '')).join('; ') + '): nhập “Ngày ký hợp đồng”.'); }
   return n;
@@ -4090,7 +4120,7 @@ function panelMua(rec) {
   }
   const ddBox = '<label style="margin-top:8px"><span>Địa điểm vận chuyển đến (tự điền từ địa chỉ giao đã chọn)</span><input id="mhDiemDen" readonly value="' + esc(dd.diaChi) + '" placeholder="Chưa có: chọn địa chỉ giao hàng"></label>';
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Địa chỉ giao hàng và điểm đến vận chuyển</h3>' + (co ? '<button class="btn' + (m ? ' ghost' : '') + '" data-act="mhOpen">' + (m ? 'Đổi địa chỉ giao' : 'Chọn địa chỉ giao hàng') + '</button>' : '') + '</div>' +
-    '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở nút <b>Công ty mua hàng</b> trên thanh trên; mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
+    '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở <b>Cài đặt → Công ty</b> (menu ngang trên cùng); mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
     (msg ? '<div class="msg ' + msg.kind + '">' + esc(msg.text) + '</div>' : '') + cur + ddBox + drift + misBox + pick + '</div>';
 }
 function panelDX(rec) {
@@ -4789,7 +4819,7 @@ function rpRecords(ownerFilter = rp.owner) {
       out.push({oid: o.id, fid: f.id, chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
         dienTich: i.dienTich, dinhMuc: i.dinhMucTanHa, khoiLuongTT: i.khoiLuong, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
         diemDen: destOf(jobView(o, f)),
-        pc: (f.pc || []).map(p => ({ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao})),
+        pc: (f.pc || []).map(p => ({ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao})), bienLog: (f.bienLog || []).map(e => ({...e})),
         nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu});
     });
   });
@@ -5136,7 +5166,9 @@ function lkPhieuRows() {
     else if (ex && ex.ngay === p.ngay && bienKey(ex.bienSo) === bienKey(bien) && Math.abs((ex.kl || 0) - p.kl) < 1e-9) { st = 'same'; note = 'Đã có trong hồ sơ — bỏ qua'; }
     else if (ex) { st = 'upd'; note = 'Đã có số phiếu này nhưng khác dữ liệu — chọn để cập nhật'; }
     const warn = [!p.assignable ? 'hợp đồng có nhiều rừng' : '', bien && !keys.has(bienKey(bien)) ? 'biển chưa có trong danh sách xe của rừng' : ''].filter(Boolean).join('; ');
-    return {...p, bien, st, note, warn, ex: !!ex};
+    const bienDoi = !!(ex && bien && !p.issue && bienKey(ex.bienSo) !== bienKey(bien));
+    if (bienDoi && st === 'upd') note = 'Biển số khác: ' + (ex.bienSo || '(chưa có)') + ' → ' + bien + (ex.ngay === p.ngay && Math.abs((ex.kl || 0) - p.kl) < 1e-9 ? ' (chỉ khác biển số)' : '');
+    return {...p, bien, st, note, warn, ex: !!ex, exBien: ex ? ex.bienSo : '', bienDoi};
   });
 }
 function lkPhieuDefaults() {
@@ -5177,6 +5209,9 @@ function lkPreviewHtml() {
     '<h3>Phiếu cân (' + P.length + ') — đã chọn ' + chosen.length + ' phiếu, ' + formatNumber(tan, 3) + ' tấn</h3>' +
     (names.length ? '<div class="card"><b>Ghép tên xe với biển số (lưu một lần, lần sau tự dùng)</b><datalist id="lkPlates">' + plates.map(p => '<option value="' + esc(p) + '">').join('') + '</datalist>' +
       names.map(n => '<div class="row" style="margin-top:4px"><span style="min-width:180px">' + esc(n) + '</span> → <input list="lkPlates" data-lkalias="' + esc(foldVi(n)) + '" value="' + esc(lkAliasOf(n)) + '" placeholder="Biển số, vd 92C-123.45"></div>').join('') + '</div>' : '') +
+    (P.some(p => p.bienDoi) ? '<div class="card" id="lkBienDoi"><b>Biển số xe khác với hồ sơ: ' + P.filter(p => p.bienDoi).length + ' phiếu cân</b><div class="mut">Bảng tính có biển số mới của các phiếu cân đã có trong hồ sơ. Có thể chỉ cập nhật biển số xe (giữ nguyên ngày, khối lượng và các dữ liệu khác); thay đổi được ghi lại để xem ở Báo cáo “Phiếu cân đã cập nhật biển số xe”.</div>' +
+      P.filter(p => p.bienDoi).map(p => '<div style="margin:2px 0"><b>' + esc(p.soPhieu) + '</b> · ' + esc(p.ngay) + ' · ' + esc(p.exBien || '(chưa có)') + ' → <b>' + esc(p.bien) + '</b></div>').join('') +
+      '<div class="row" style="margin-top:8px"><button class="btn sm" data-act="lkPlateOnly"' + (lk.busy ? ' disabled' : '') + '>Chỉ cập nhật biển số xe (' + P.filter(p => p.bienDoi).length + ' phiếu)</button></div></div>' : '') +
     '<div class="row" style="margin:6px 0"><button class="btn ghost sm" data-act="lkPcAll">Chọn mọi phiếu ghi được</button><button class="btn ghost sm" data-act="lkPcNone">Bỏ chọn tất cả</button></div>' +
     '<div class="wrap" style="max-height:40vh"><table><tr><th></th><th>Số phiếu</th><th>Ngày cân</th><th>Biển số</th><th style="text-align:right">Tấn</th><th style="text-align:right">Đơn giá (tham chiếu)</th><th style="text-align:right">Thanh toán (tham chiếu)</th><th>Trạng thái</th><th>Nguồn</th></tr>' +
     P.map(p => '<tr class="' + (p.st === 'issue' || p.st === 'alias' ? 'rerr' : p.warn ? 'rwarn' : '') + '"><td><input type="checkbox" data-lkpc="' + esc(p.soPhieu) + '"' + (s.phieu[p.soPhieu] && (p.st === 'new' || p.st === 'upd') ? ' checked' : '') + (p.st === 'new' || p.st === 'upd' ? '' : ' disabled') + '></td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bien || p.bienRaw) + (p.bien && !p.isPlate ? ' <span class="mut">(từ “' + esc(p.bienRaw) + '”)</span>' : '') + '</td><td style="text-align:right">' + numTxt(p.kl) + '</td><td style="text-align:right">' + numTxt(p.donGia) + '</td><td style="text-align:right">' + numTxt(p.thanhToan) + '</td><td>' +
@@ -5194,6 +5229,29 @@ function lkRender() {
 }
 
 /* ----- Ghi vào hồ sơ: kiểm tra đủ lựa chọn, áp dụng một lần, lưu trong một giao dịch ----- */
+/* Chỉ cập nhật biển số xe của các phiếu cân đã có (khác biển số trong bảng tính): giữ nguyên ngày, khối lượng, nơi giao; ghi nhật ký đổi biển số (f.bienLog) cho báo cáo */
+async function lkApplyPlates() {
+  const T = lkTarget(), f = T && T.f; if (!f) return;
+  const rows = lkPhieuRows().filter(p => p.bienDoi); if (!rows.length) { lk.msg = {kind: 'warn', text: 'Không có phiếu cân nào khác biển số.'}; return lkRender(); }
+  const at = new Date().toISOString(), set = lk.st && lk.st.active ? lk.st.active.loadedAt : '', snapshot = JSON.stringify(db);
+  try {
+    if (lk.alias) db.bienAlias = Object.assign(db.bienAlias || {}, lk.alias);
+    f.bienLog = f.bienLog || [];
+    let n = 0;
+    rows.forEach(p => {
+      const i = (f.pc || []).findIndex(x => String(x.soPhieu).toUpperCase() === p.soPhieu.toUpperCase()); if (i < 0) return;
+      const old = f.pc[i];
+      f.bienLog.push({soPhieu: old.soPhieu, ngay: old.ngay, kl: old.kl, cu: old.bienSo || '', moi: p.bien, at, nguon: 'Google Sheets'});
+      f.pc[i] = {...old, bienSo: p.bien, _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}}; n++;
+    });
+    f.pcAt = stamp();
+    const r = await persistNow(); if (!r.ok) throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error);
+    lk.msg = {kind: 'ok', text: 'Đã cập nhật biển số xe của ' + n + ' phiếu cân (ngày, khối lượng giữ nguyên). Xem ở Báo cáo → Phiếu cân đã cập nhật biển số xe.'}; render(); lkRender();
+  } catch (e) {
+    db = withDefaults(JSON.parse(snapshot)); if (HB) { const back = HB.loadSync(); if (back && back.ok) db = withDefaults(back.db); }
+    lk.msg = {kind: 'err', text: 'Không lưu, hồ sơ giữ nguyên: ' + e.message}; lkRender();
+  }
+}
 async function lkApply() {
   const c = lk.cand, F = c.forests[lk.fi], s = lk.sel, errs = [];
   Object.entries(s.owner).forEach(([k, v]) => { if (v == null) errs.push('Chủ rừng: chọn giữ hay thay “' + c.owner.fields.find(x => x.key === k).label + '”'); });
@@ -5230,7 +5288,7 @@ async function lkApply() {
       chosen.forEach(p => {
         const rec = {maRung: f.info.maRung, stt: '', ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', ghiChu: '', _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}};
         const i = f.pc.findIndex(x => String(x.soPhieu).toUpperCase() === p.soPhieu.toUpperCase());
-        if (i >= 0) f.pc[i] = {...rec, _row: f.pc[i]._row, stt: f.pc[i].stt};
+        if (i >= 0) { if (p.bien && bienKey(f.pc[i].bienSo) !== bienKey(p.bien)) (f.bienLog = f.bienLog || []).push({soPhieu: f.pc[i].soPhieu, ngay: p.ngay, kl: p.kl, cu: f.pc[i].bienSo || '', moi: p.bien, at, nguon: 'Google Sheets'}); f.pc[i] = {...rec, _row: f.pc[i]._row, stt: f.pc[i].stt}; }
         else { rec._row = ++next; rec.stt = String(f.pc.length + 1); f.pc.push(rec); }
       });
       if (!f.pcFile) { f.pcFile = 'Tra cứu Google Sheets'; } f.pcAt = stamp();
@@ -5306,6 +5364,7 @@ document.addEventListener('click', async e => {
   if (a === 'lkPcAll') { lkPhieuRows().forEach(p => { lk.sel.phieu[p.soPhieu] = p.st === 'new' || p.st === 'upd'; }); return lkRender(); }
   if (a === 'lkPcNone') { Object.keys(lk.sel.phieu).forEach(k => { lk.sel.phieu[k] = false; }); return lkRender(); }
   if (a === 'lkApply') return lkApply();
+  if (a === 'lkPlateOnly') return lkApplyPlates();
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!t.closest || !t.closest('#lkBox')) return;

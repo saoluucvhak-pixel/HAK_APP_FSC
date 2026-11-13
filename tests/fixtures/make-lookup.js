@@ -1,7 +1,7 @@
 'use strict';
 /* Tạo file Excel GIẢ LẬP cùng cấu trúc HoSoKeo_QC.xlsx (3 tab) để kiểm thử. Không chứa dữ liệu thật.
  * Tên tab mặc định là bộ chuẩn HoSoKeo, HoSoRung, ToaDoRung. variant: 'legacy' (hậu tố _QC), 'names:a|b|c' (tên tùy ý), 'order' (đổi thứ tự cột + thêm cột),
- * 'both' (có cả tên chuẩn lẫn _QC), 'twin' (tên tùy ý + một tab thứ tư cùng cấu trúc với tab phiếu cân), 'missingCol', 'missingTab', 'kgOnly', 'tanOnly', 'noWeight'. */
+ * 'both' (có cả tên chuẩn lẫn _QC), 'twin' (tên tùy ý + một tab thứ tư cùng cấu trúc với tab phiếu cân), 'missingCol', 'missingTab', 'kgOnly', 'tanOnly', 'noWeight', 'newplate' (đổi biển 92C-12345 → 92C-54321). */
 const XLSX = require('xlsx');
 const path = require('path');
 const D = (y, m, d) => new Date(Date.UTC(y, m - 1, d));
@@ -40,6 +40,7 @@ function build(variant) {
   if (variant === 'kgOnly') drop(['Khối lượng (Tấn)']);          // chỉ có cột KG
   if (variant === 'tanOnly') drop(['KL hàng (KG)']);              // chỉ có cột Tấn (dòng 8 không có tấn → dòng thiếu khối lượng)
   if (variant === 'noWeight') drop(['KL hàng (KG)', 'Khối lượng (Tấn)']);
+  if (variant === 'newplate') K.forEach((r, i) => { if (i > 0 && r[6] === '92C-12345') { r[6] = '92C-54321'; r[11] = '92C-54321'; } });   // biển số mới của các phiếu xe 92C-12345
   if (variant === 'missingCol') T[0] = T[0].map(h => h === 'DienTich_m2' ? 'DienTich' : h);
   const reorder = aoa => aoa.map((r, i) => [...r.slice().reverse(), i === 0 ? 'Cột thêm' : 'ghi chú ' + i]);   // đổi thứ tự cột (đảo ngược) và thêm một cột
   const [K2, R2, T2] = variant === 'order' ? [reorder(K), reorder(R), reorder(T)] : [K, R, T];

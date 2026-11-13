@@ -202,7 +202,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 - **Thiếu hoặc sai ngày ký**: năm để trống (`015/……-KT`), không tự điền năm cố định; khung “Số hợp đồng đầy đủ sẽ in (xem trước)” ở tab Xuất hồ sơ nêu rõ cần bổ sung ngày nào. Các dòng ngày để trống in “ngày ….. tháng ….. năm …….”.
 - BM-01, BM-14 và BM-20 của cùng hồ sơ giao khoán luôn tham chiếu **cùng một số** hợp đồng khai thác.
 
-**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Năm mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
+**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Sáu mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
 
 ## 10. Sao lưu và khôi phục
 Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.
@@ -256,6 +256,11 @@ Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
 - **Mặc định cho rừng**: rừng lấy định mức có hiệu lực theo **ngày bắt đầu khai thác** của rừng (chưa có ngày thì dùng bản mới nhất). Ô “Định mức (tấn/ha)” ở Thông tin rừng để trống là dùng mặc định (gợi ý ngay trong ô); **tự điền số** thì rừng dùng số riêng; nút **Dùng mặc định** xóa số riêng. Sản lượng dự kiến tự tính theo định mức đang dùng.
 - **Từ ngày / đến ngày**: nút **Lấy ngày cân nhỏ nhất** và **Lấy ngày cân lớn nhất** (từ phiếu cân của rừng) điền vào ô; vẫn tự điền hoặc sửa được.
 - **Khối lượng thực tế**: nút **Lấy tổng từ phiếu cân** điền tổng khối lượng phiếu cân; vẫn tự điền số. Các nút chỉ điền vào ô, bấm **Lưu thông tin rừng** để ghi nhận.
+
+## Cập nhật biển số xe từ bảng tính tra cứu, và báo cáo theo lô
+- **Cập nhật biển số xe**: khi mở bảng tra cứu và chọn **Điền vào rừng đang mở**, nếu phiếu cân đã có trong hồ sơ nhưng bảng tính có **biển số khác**, màn hình xem trước hiện khung **“Biển số xe khác với hồ sơ”** (số phiếu, biển cũ → biển mới) và nút **Chỉ cập nhật biển số xe**. Nút này chỉ đổi biển số, **giữ nguyên** ngày cân, khối lượng, nơi giao. Cách khác: chọn phiếu (trạng thái “cập nhật”) rồi **Lưu vào hồ sơ** để cập nhật cả phiếu; biển số đổi cũng được ghi lại.
+- **Nhật ký đổi biển số** lưu trong lô rừng: số phiếu, biển cũ, biển mới, thời điểm, nguồn (Google Sheets). Phiếu đổi nhiều lần giữ đủ các dòng.
+- **Báo cáo “Phiếu cân đã cập nhật biển số xe”** (nút Báo cáo): theo **từng lô rừng**, có bảng tổng hợp theo lô (số phiếu cân, số phiếu đã cập nhật biển, tỷ lệ, khối lượng) và bảng chi tiết (số phiếu, ngày cân, biển cũ, biển mới, thời điểm cập nhật). Lọc theo kỳ (ngày cân), xuất Word hoặc Excel.
 
 ## 13. Xử lý sự cố
 | Hiện tượng | Cách xử lý |
