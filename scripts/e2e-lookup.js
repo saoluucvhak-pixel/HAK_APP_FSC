@@ -42,7 +42,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   ok('xem trước: có tab · dòng · cột nguồn', /HoSoRung · dòng 2 · cột “Họ và tên chủ rừng”/.test(pv));
   ok('xem trước: điểm GPS độ-phút-giây được quy đổi và gắn nhãn', /đã quy đổi từ/.test(pv));
   ok('xem trước: cần ghép tên xe với biển số', /XE CN NAM/.test(pv) && /cần ghép biển/.test(pv));
-  ok('xem trước: phiếu lệch tấn/kg cần kiểm tra', /cần kiểm tra — Khối lượng lệch/.test(pv));
+  ok('xem trước: phiếu lệch tấn/kg cần kiểm tra', /cần kiểm tra — Phiếu cân 1003\/2026\/NK: khối lượng lệch, cột Tấn = 4.9 và cột KG = 5000/.test(pv));
   await w.fill('[data-lkalias]', '92C-99999'); await w.dispatchEvent('[data-lkalias]', 'change'); await w.waitForTimeout(100);
   await w.click('[data-act=lkPcAll]');
   await w.check('[data-lkkl]');

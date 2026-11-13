@@ -805,6 +805,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!f.inDot2 || typeof f.inDot2 !== 'object' || typeof f.inDot2.items !== 'object' || !f.inDot2.items) f.inDot2 = emptyState();
     return f.inDot2;
   }
+  /* Chỉ đọc (không tạo trường mới trong dữ liệu của lô): dùng khi chỉ hiển thị */
+  const peek = f => (f && f.inDot2 && typeof f.inDot2.items === 'object' && f.inDot2.items ? f.inDot2 : emptyState());
   /* Xác nhận đã in nền: ghi chữ ký bố cục hiện tại. it = mục từ app: {key, sig, info} */
   function confirm(st, it, now) { st.items[it.key] = {at: now, sig: it.sig, info: it.info || null, legacy: false}; return st.items[it.key]; }
   /* Tờ nền in từ trước khi có chức năng này: chưa biết bố cục, bắt buộc đối chiếu trước khi in đè */
@@ -849,7 +851,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   /* Có đủ cả bốn mẫu (mỗi mẫu ít nhất một mục) không: BM-09/10 cần ít nhất một nhóm vận chuyển */
   const coverage = list => ORDER.filter(c => !list.some(x => x.code === c));
 
-  const api = {ORDER, FORMS, TEMPLATE_VER, keyOf, splitKey, hash, signature, layoutDiff, INFO_LABEL, emptyState, stateOf, confirm, confirmLegacy, crossChecked, unconfirm, evaluate, plan, coverage};
+  const api = {ORDER, FORMS, TEMPLATE_VER, keyOf, splitKey, hash, signature, layoutDiff, INFO_LABEL, emptyState, stateOf, peek, confirm, confirmLegacy, crossChecked, unconfirm, evaluate, plan, coverage};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKInAn2 = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -3318,7 +3320,7 @@ function d2Items(rec) {
 }
 const FORMS_D2 = Object.fromEntries(Object.entries(HAKInAn2.FORMS).map(([k, v]) => [k, v.label]));
 function d2Eval(rec, f) {
-  const st = HAKInAn2.stateOf(f || curForest() || {}), list = d2Items(rec).map(it => HAKInAn2.evaluate(it, st));
+  const st = HAKInAn2.peek(f || curForest()), list = d2Items(rec).map(it => HAKInAn2.evaluate(it, st));
   return {list, plan: HAKInAn2.plan(list), absent: HAKInAn2.coverage(list), state: st};
 }
 const D2_PKG = {trang: ['dot2_IN_GIAY_TRANG', '', 'In đầy đủ đợt 2 – giấy trắng'], nen: ['dot2_MAU_NEN_in_truoc', '_MAU_NEN', 'Mẫu nền đợt 2'], de: ['dot2_IN_DE_phan_bo_sung', '_IN_DE', 'Phần bổ sung in đè đợt 2']};

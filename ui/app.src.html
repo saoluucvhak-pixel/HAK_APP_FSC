@@ -1773,7 +1773,7 @@ function d2Items(rec) {
 }
 const FORMS_D2 = Object.fromEntries(Object.entries(HAKInAn2.FORMS).map(([k, v]) => [k, v.label]));
 function d2Eval(rec, f) {
-  const st = HAKInAn2.stateOf(f || curForest() || {}), list = d2Items(rec).map(it => HAKInAn2.evaluate(it, st));
+  const st = HAKInAn2.peek(f || curForest()), list = d2Items(rec).map(it => HAKInAn2.evaluate(it, st));
   return {list, plan: HAKInAn2.plan(list), absent: HAKInAn2.coverage(list), state: st};
 }
 const D2_PKG = {trang: ['dot2_IN_GIAY_TRANG', '', 'In đầy đủ đợt 2 – giấy trắng'], nen: ['dot2_MAU_NEN_in_truoc', '_MAU_NEN', 'Mẫu nền đợt 2'], de: ['dot2_IN_DE_phan_bo_sung', '_IN_DE', 'Phần bổ sung in đè đợt 2']};

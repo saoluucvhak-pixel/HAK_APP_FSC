@@ -48,6 +48,8 @@
     if (!f.inDot2 || typeof f.inDot2 !== 'object' || typeof f.inDot2.items !== 'object' || !f.inDot2.items) f.inDot2 = emptyState();
     return f.inDot2;
   }
+  /* Chỉ đọc (không tạo trường mới trong dữ liệu của lô): dùng khi chỉ hiển thị */
+  const peek = f => (f && f.inDot2 && typeof f.inDot2.items === 'object' && f.inDot2.items ? f.inDot2 : emptyState());
   /* Xác nhận đã in nền: ghi chữ ký bố cục hiện tại. it = mục từ app: {key, sig, info} */
   function confirm(st, it, now) { st.items[it.key] = {at: now, sig: it.sig, info: it.info || null, legacy: false}; return st.items[it.key]; }
   /* Tờ nền in từ trước khi có chức năng này: chưa biết bố cục, bắt buộc đối chiếu trước khi in đè */
@@ -92,6 +94,6 @@
   /* Có đủ cả bốn mẫu (mỗi mẫu ít nhất một mục) không: BM-09/10 cần ít nhất một nhóm vận chuyển */
   const coverage = list => ORDER.filter(c => !list.some(x => x.code === c));
 
-  const api = {ORDER, FORMS, TEMPLATE_VER, keyOf, splitKey, hash, signature, layoutDiff, INFO_LABEL, emptyState, stateOf, confirm, confirmLegacy, crossChecked, unconfirm, evaluate, plan, coverage};
+  const api = {ORDER, FORMS, TEMPLATE_VER, keyOf, splitKey, hash, signature, layoutDiff, INFO_LABEL, emptyState, stateOf, peek, confirm, confirmLegacy, crossChecked, unconfirm, evaluate, plan, coverage};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKInAn2 = api;
 })(typeof self !== 'undefined' ? self : this);

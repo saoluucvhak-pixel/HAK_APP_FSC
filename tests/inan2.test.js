@@ -63,3 +63,6 @@ test('chữ ký bố cục: ổn định, khác khi khổ giấy/lề/chân tran
   assert.strictEqual(IA.signature(base).sig, IA.signature(Object.assign({}, base)).sig);
   for (const ch of [{land: false}, {tight: true}, {footer: 'g'}, {xml: '<y/>'}]) assert.notStrictEqual(IA.signature(Object.assign({}, base, ch)).sig, IA.signature(base).sig);
 });
+test('peek: chỉ đọc, không tạo trường inDot2 trong dữ liệu của lô', () => {
+  const f = {a: 1}; assert.deepStrictEqual(IA.peek(f).items, {}); assert.deepStrictEqual(Object.keys(f), ['a']); assert.deepStrictEqual(IA.peek(null).items, {});
+});
