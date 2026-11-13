@@ -9,7 +9,7 @@
     klThucTe: {text: 'chưa nhập khối lượng khai thác thực tế (đang tính theo sản lượng dự kiến)', where: 'Thông tin rừng → Khối lượng thực tế (tấn)'},
     ntNgay: {text: 'chưa nhập ngày lập biên bản nghiệm thu', where: 'tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập'},
     pcNgay: {text: 'chưa nhập ngày lập biên bản xác nhận khối lượng', where: 'tab Xuất hồ sơ → Xác nhận khối lượng, thanh toán: ngày lập'},
-    nguoiMua: {text: 'chưa khai đơn vị nhận (Công ty mua hàng) nên dòng “Kính gửi” để chấm', where: 'nút 🏢 Công ty mua hàng, hoặc tab Xuất hồ sơ → đơn vị nhận'}
+    nguoiMua: {text: 'chưa khai đơn vị nhận (Công ty mua hàng) nên dòng “Kính gửi” để chấm', where: 'Cài đặt → Công ty, hoặc tab Xuất hồ sơ → đơn vị nhận'}
   };
   /* điều kiện chính thức của từng biểu mẫu (mã hai chữ số của BM-xx); mẫu không liệt kê không có điều kiện riêng */
   const FORMS = {

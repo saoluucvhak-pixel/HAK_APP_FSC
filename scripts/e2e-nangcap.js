@@ -30,7 +30,7 @@ const openForest = async (w, fid, ftab) => { await w.click('[data-open=own1]'); 
   // địa chỉ cũ còn hiển thị; chỉ đổi sau khi xác nhận
   await openForest(w, 'f1', 'dx'); let main = await w.innerText('#main');
   ok('lô R-CU1: địa chỉ nhập tay cũ còn hiển thị, báo chưa chọn địa chỉ công ty', /Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc/.test(main) && /nhập tay/.test(main), main.slice(main.indexOf('Địa chỉ giao hàng'), main.indexOf('Địa chỉ giao hàng') + 400));
-  await w.click('#navCty'); await w.waitForSelector('#ctyForm');
+  await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
   await w.fill('#ctyForm [name=ten]', 'CÔNG TY TNHH DĂM AN PHÁT'); await w.fill('#ctyForm [name=diaChi]', 'KCN Điện Nam – Điện Ngọc, Điện Bàn, Quảng Nam'); await w.click('#ctyForm button[type=submit]'); await w.waitForTimeout(700);
   await openForest(w, 'f1', 'dx'); await w.click('[data-act=mhOpen]'); main = await w.innerText('#main');
   ok('chọn địa chỉ giao: hiện giá trị nhập tay cũ cạnh địa chỉ đề xuất', /Giá trị nhập tay cũ/.test(main) && /Nhà máy dăm Quảng Nam/.test(main) && /KCN Điện Nam – Điện Ngọc, Điện Bàn/.test(main));

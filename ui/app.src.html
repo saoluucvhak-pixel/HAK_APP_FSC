@@ -164,8 +164,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
     <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
-    <button class="nb" data-act="openCty" id="navCty">Công ty mua hàng</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức BHLĐ</button>
+    <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
   <button class="hbtn" data-act="theme" id="themeBtn">Chế độ tối</button>
   <details class="menu" id="moreMenu"><summary class="hbtn">⋯ Thêm</summary><div class="pop">
@@ -193,7 +193,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <p>HAKQN Desktop lập hồ sơ khai thác và vận chuyển gỗ keo theo chuẩn FSC. Dữ liệu lưu ngay trên máy (SQLite); nhập liệu, kiểm tra, xuất hồ sơ, sao lưu và khôi phục <b>không cần mạng</b>. Chỉ đồng bộ Google Sheets mới cần mạng. Bản đầy đủ có hình thức trình bày chi tiết hơn: tệp <code>docs/HUONG_DAN.md</code>.</p>
 <h3>1. Quy trình 8 bước</h3>
 <ol>
-<li>Khai <b>Công ty mua hàng</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
+<li>Khai <b>Công ty mua hàng</b> ở <b>Cài đặt → Công ty</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
 <li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số điện thoại</b>, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
 <li>Tạo <b>Lô rừng</b>: mã lô, địa điểm, tọa độ, diện tích, thời gian khai thác, giấy tờ pháp lý.</li>
 <li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo chức danh, rồi nạp Excel nhân công.</li>
@@ -340,7 +340,12 @@ function formatNumber(v, maxD = 2, minD = 0) {
   return (_nf[k] || (_nf[k] = new Intl.NumberFormat('vi-VN', {useGrouping: true, minimumFractionDigits: minD, maximumFractionDigits: maxD}))).format(v);
 }
 const formatVND = v => formatNumber(v, 0);
-const fmt = n => (n == null || n === '' ? '' : typeof n === 'number' && Number.isInteger(n) ? formatVND(n) : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+/* Kiểu hiển thị số theo Cài đặt → Hiển thị số: 'vi' = 1.234.567,5 (mặc định) | 'en' = 1,234,567.5. Chỉ áp dụng trên màn hình; biểu mẫu Word luôn dùng kiểu Việt Nam (viNum). Ngày luôn là dd/mm/yyyy. */
+let numStyle = 'vi';
+const numSwap = t => (numStyle === 'en' ? String(t).replace(/[.,]/g, c => (c === '.' ? ',' : '.')) : t);
+const viNum = fn => { const o = numStyle; numStyle = 'vi'; try { return fn(); } finally { numStyle = o; } };
+const fmtRaw = n => (n == null || n === '' ? '' : typeof n === 'number' && Number.isInteger(n) ? formatVND(n) : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+const fmt = n => numSwap(fmtRaw(n));
 const toNum = v => {
   if (typeof v === 'number') return isFinite(v) ? Math.round(v) : null;
   const s = trim(v).replace(/[.,\s]/g, '');
@@ -555,7 +560,7 @@ const bienKey = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
 /* Quy tắc ngày lịch dùng chung (src/dates.js): 31/02/2026 và 29/02/2026 không có thật, 29/02/2028 có thật; ngày không có thật → 0 */
 const dateKey = v => HAKDates.key(v);
 const totalKg = rows => rows.reduce((a, r) => a + (typeof r.kl === 'number' ? Math.round(r.kl * 1000) : 0), 0);
-const fmtT = kg => { const [i, d] = (kg / 1000).toFixed(3).split('.'); return fmt(i) + ',' + d; };
+const fmtT = kg => { const [i, d] = (kg / 1000).toFixed(3).split('.'); return numSwap(fmtRaw(i) + ',' + d); };
 const VN_D = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
 function words3(n, full) {
   const tr = Math.floor(n / 100), ch = Math.floor(n % 100 / 10), dv = n % 10;
@@ -771,7 +776,7 @@ const volumeOf = i => {
   const y = forestYield(i);
   return y > 0 ? {v: y, src: 'dự kiến'} : null;
 };
-const fmtTan = n => n.toLocaleString('vi-VN', {maximumFractionDigits: 3});
+const fmtTan = n => numSwap(n.toLocaleString('vi-VN', {maximumFractionDigits: 3}));
 const workDays = (a, b) => { let n = 0; for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) if (d.getDay() !== 0) n++; return n; };
 function payrollPlan(rec, ex) {
   const rs = rec.info, basis = rs.hinhThucLuong === 'ngaycong' ? 'ngaycong' : rs.hinhThucLuong === 'ha' ? 'ha' : 'sanluong', ngc = basis === 'ngaycong', issues = [];
@@ -1735,7 +1740,8 @@ function exOf(rec, mode) {
 }
 /* In đợt 2 (BM-08, BM-09, BM-10, BM-14) ở một chế độ ('day' đầy đủ | 'trong' mẫu nền | 'de' chỉ phần bổ sung) cho các mục có khóa trong keys (không truyền = tất cả).
  * Mỗi file mang key (khóa mục) để lọc và để ghi chữ ký bố cục. Phải gọi khi docMode đã đặt đúng chế độ. */
-function dot2Files(rec, mode, keys) {
+const dot2Files = (rec, mode, keys) => viNum(() => dot2Files0(rec, mode, keys));
+function dot2Files0(rec, mode, keys) {
   const ex = exOf(rec, mode), s = slug(rec.info.ten), IA = HAKInAn2, files = [], used = new Set();
   const want = k => !keys || keys.includes(k);
   const push = f => { let q = f.path, n = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + n++ + '.docx'); used.add(q); f.path = q; files.push(f); };
@@ -1745,7 +1751,8 @@ function dot2Files(rec, mode, keys) {
   groupsDX(rec).forEach(g => { const k = IA.keyOf('10', g.cccd || g.ten); if (want(k)) push({key: k, path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}); });
   return files;
 }
-function buildFilesRaw(rec, kind) {
+const buildFilesRaw = (rec, kind) => viNum(() => buildFilesRaw0(rec, kind));
+function buildFilesRaw0(rec, kind) {
   const ex = exOf(rec, 'day');
   const s = slug(rec.info.ten);
   const files = [], used = new Set();
@@ -1927,7 +1934,7 @@ function exportNotes(rec, g, kind) {
     if (!ex.ntNgay) n.push('BM-14: chưa nhập ngày lập biên bản nghiệm thu (ô “Nghiệm thu, thanh lý: ngày lập”), ngày và năm trong số biên bản để trống.');
     if (g.canPC && !ex.pcNgay) n.push('BM-09, BM-10: chưa nhập ngày lập biên bản xác nhận khối lượng, ngày và năm trong số biên bản để trống.');
   }
-  if (head && !ex.ckNhan && !buyerName(rec)) n.push('BM-11 (cam kết nguồn gốc): dòng “Kính gửi” để chấm vì chưa khai Công ty mua hàng (nút Công ty mua hàng) và chưa nhập “đơn vị nhận”.');
+  if (head && !ex.ckNhan && !buyerName(rec)) n.push('BM-11 (cam kết nguồn gốc): dòng “Kính gửi” để chấm vì chưa khai Công ty mua hàng (Cài đặt → Công ty) và chưa nhập “đơn vị nhận”.');
   if (head && !destOf(rec).text) n.push('BM-04, BM-09, BM-10: chưa chọn địa chỉ giao hàng nên dòng điểm đến để chấm (tab Vận chuyển → Chọn địa chỉ giao hàng).');
   if (head) { const cb = HAKHopDong.canBoSung(ex).filter(c => /BM-01|BM-04/.test(c.label)); if (cb.length) n.push('Số hợp đồng chưa có năm (' + cb.map(c => c.label.replace(/ \(.*\)/, '')).join('; ') + '): nhập “Ngày ký hợp đồng”.'); }
   return n;
@@ -2004,8 +2011,10 @@ function renderMsgs() {
 
 function renderMain() {
   if (view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
-  if (view === 'cty') { $('#main').innerHTML = renderMsgs() + panelCty(); return; }
-  if (view === 'settings') { $('#main').innerHTML = renderMsgs() + panelSettings(); settingsLoad(); return; }
+  if (view === 'cty') { $('#main').innerHTML = renderMsgs() + settingsFrame('cty', panelCty()); return; }
+  if (view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
+  if (view === 'setgs') { $('#main').innerHTML = renderMsgs() + settingsFrame('setgs', panelSetGs()); return; }
+  if (view === 'setfmt') { $('#main').innerHTML = renderMsgs() + settingsFrame('setfmt', panelSetFmt()); return; }
   const own = curOwner();
   if (!own) {
     $('#main').innerHTML = renderMsgs() + panelHome();
@@ -2390,7 +2399,7 @@ function panelMua(rec) {
   }
   const ddBox = '<label style="margin-top:8px"><span>Địa điểm vận chuyển đến (tự điền từ địa chỉ giao đã chọn)</span><input id="mhDiemDen" readonly value="' + esc(dd.diaChi) + '" placeholder="Chưa có: chọn địa chỉ giao hàng"></label>';
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Địa chỉ giao hàng và điểm đến vận chuyển</h3>' + (co ? '<button class="btn' + (m ? ' ghost' : '') + '" data-act="mhOpen">' + (m ? 'Đổi địa chỉ giao' : 'Chọn địa chỉ giao hàng') + '</button>' : '') + '</div>' +
-    '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở nút <b>Công ty mua hàng</b> trên thanh trên; mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
+    '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở <b>Cài đặt → Công ty</b> (menu ngang trên cùng); mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
     (msg ? '<div class="msg ' + msg.kind + '">' + esc(msg.text) + '</div>' : '') + cur + ddBox + drift + misBox + pick + '</div>';
 }
 function panelDX(rec) {
@@ -2565,8 +2574,8 @@ function panelXuat(rec) {
 
 function renderCtx() {
   const o = curOwner(), f = curForest();
-  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && view !== 'norm' && view !== 'cty');
-  const nc = document.getElementById('navCty'); if (nc) nc.classList.toggle('on', view === 'cty');
+  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && view !== 'norm' && !['settings', 'setgs', 'setfmt', 'cty'].includes(view));
+  const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', ['settings', 'setgs', 'setfmt', 'cty'].includes(view));
   const nn = document.getElementById('navNorm'); if (nn) nn.classList.toggle('on', view === 'norm');
   $('#ctxOwner').innerHTML = 'Chủ rừng: <b>' + esc(o ? (o.info.ten || '(chưa đặt tên)') : 'chưa mở') + '</b>';
   $('#ctxForest').innerHTML = 'Rừng: <b>' + esc(f ? ((f.info.maRung || '(chưa có mã)') + (f.info.tenRung ? ' · ' + f.info.tenRung : '')) : 'chưa mở') + '</b>';
@@ -2575,6 +2584,7 @@ function renderCtx() {
 }
 function render() {
   if (dataIssueUi) return renderIssue();
+  numStyle = (db && db.dinhDangSo === 'en') ? 'en' : 'vi';
   renderSide();
   renderMain();
   renderCtx();
@@ -2940,6 +2950,28 @@ async function issueAct(kind) {
 }
 
 /* ===== Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu (bản cài trên máy; xử lý ở src/main.js, src/settings.js) ===== */
+/* Cài đặt: Hệ thống (thư mục dữ liệu, sao lưu) · Google Sheets (địa chỉ bảng tính) · Công ty (công ty mua hàng) · Hiển thị số */
+const SET_TABS = [['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets', 'openSetGs'], ['cty', 'Công ty', 'openCty'], ['setfmt', 'Hiển thị số', 'openSetFmt']];
+function settingsFrame(active, inner) {
+  return '<h2>Cài đặt</h2><div class="tabs">' + SET_TABS.map(([v, l, a]) => '<button class="' + (active === v ? 'on' : '') + '" data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') + '</div>' + inner;
+}
+const setgs = {st: null, msg: null};
+function panelSetGs() {
+  if (!HB) return '<div class="card"><div class="msg warn">Địa chỉ Google Sheets chỉ có ở bản cài trên Windows.</div></div>';
+  const st = setgs.st || {};
+  return '<div class="card"><h3 style="margin-top:0">Địa chỉ bảng tính Google Sheets</h3>' +
+    '<p class="mut" style="margin-top:0">Bảng tính (chỉ đọc) dùng cho màn <b>Tra cứu Google Sheets</b>: tab HoSoKeo (phiếu cân), HoSoRung, ToaDoRung. Bảng tính để chế độ “Ai có liên kết đều xem được”; nếu bị giới hạn quyền, đăng nhập Google ở màn Tra cứu.</p>' +
+    (setgs.msg ? '<div class="msg ' + setgs.msg.kind + '" id="setGsMsg">' + esc(setgs.msg.text) + '</div>' : '') +
+    '<div class="row"><input id="setGsLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '" placeholder="https://docs.google.com/spreadsheets/d/…"><button class="btn" data-act="setGsSave">Lưu địa chỉ</button></div>' +
+    '<p class="mut" style="margin-bottom:0">Việc đồng bộ dữ liệu làm ở màn Tra cứu Google Sheets.</p></div>';
+}
+function panelSetFmt() {
+  const row = (v, label, ex) => '<label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink)"><input type="radio" name="numStyle" value="' + v + '"' + ((db.dinhDangSo === 'en' ? 'en' : 'vi') === v ? ' checked' : '') + ' data-act="setNumStyle"> <span><b>' + label + '</b> · ví dụ ' + ex + '</span></label>';
+  const sample = n => { const t = n.toLocaleString('vi-VN', {maximumFractionDigits: 3}); return t; };
+  return '<div class="card"><h3 style="margin-top:0">Hiển thị số</h3>' +
+    '<p class="mut" style="margin-top:0">Chọn cách hiển thị số trên màn hình (tiền, khối lượng, diện tích). Ngày luôn là <b>dd/mm/yyyy</b> (ví dụ 05/10/2026) cho nhập liệu, kiểm tra và biểu mẫu. Biểu mẫu Word và file in luôn dùng kiểu Việt Nam.</p>' +
+    row('vi', 'Kiểu Việt Nam', sample(1234567.5)) + row('en', 'Kiểu quốc tế', sample(1234567.5).replace(/[.,]/g, c => (c === '.' ? ',' : '.'))) + '</div>';
+}
 const setg = {s: null, msg: null};
 function panelSettings() {
   if (!HB) return '<div class="card"><h2>Cài đặt hệ thống</h2><div class="msg warn">Cài đặt thư mục dữ liệu và sao lưu chỉ có ở bản cài trên Windows.</div></div>';
@@ -3225,7 +3257,7 @@ function lkStatusHtml() {
     '<br><span class="mut">Kết nối: ' + (online ? 'có mạng' : 'đang ngoại tuyến (vẫn tra cứu được bản đã lưu)') +
     (l ? ' · Lần cập nhật gần nhất (' + fmtDT(l.at) + '): ' + (l.ok ? 'thành công' + ((l.notes || []).length ? ' <span style="color:var(--warn,#a16207)">· ' + l.notes.map(esc).join('; ') + '</span>' : '') : '<span style="color:var(--err)">lỗi — ' + esc(l.error) + '</span>') : '') + '</span></div>' +
     '<div class="row"><button class="btn sm" data-act="lkSync"' + (lk.busy ? ' disabled' : '') + '>⟳ Đồng bộ ngay</button><button class="btn ghost sm" data-act="lkExcel"' + (lk.busy ? ' disabled' : '') + '>Nhập bản Excel</button><button class="btn ghost sm" data-act="lkTemplate">Tải file mẫu (3 tab chuẩn)</button></div></div>' +
-    lkGoogleHtml() + '<details style="margin-top:6px"><summary class="mut">Liên kết Google Sheets (chỉ đọc, bảng tính để “Ai có liên kết đều xem được”)</summary><div class="row" style="margin-top:6px"><input id="lkLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '"><button class="btn ghost sm" data-act="lkSetLink">Lưu liên kết</button></div></details>' +
+    lkGoogleHtml() + '<div class="mut" style="margin-top:6px">Địa chỉ bảng tính: <code>' + esc((st.sheetUrl || 'chưa có').slice(0, 80)) + '</code> · <button type="button" class="linkbtn" data-act="lkToSettings">Đổi trong Cài đặt</button></div>' +
     lkPendHtml() + (lk.busy ? '<div class="msg warn">' + esc(lk.busy) + '</div>' : '') + (lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + '</div>';
 }
 
@@ -3574,7 +3606,7 @@ document.addEventListener('click', async e => {
   }
   if (a === 'lkSync') return lkLoad('sync');
   if (a === 'lkExcel') return lkLoad('excel');
-  if (a === 'lkSetLink') { const r = await HB.lookup.setSheet($('#lkLink').value.trim()); lk.msg = r.ok ? {kind: 'ok', text: 'Đã lưu liên kết.'} : {kind: 'err', text: r.error}; lk.st = await HB.lookup.status(); return lkRender(); }
+  if (a === 'lkToSettings') { lkClose(); cur = null; curF = null; view = 'setgs'; setgs.msg = null; setgs.st = await HB.lookup.status(); return render(); }
   if (a === 'lkBack') { lk.view = 'search'; lk.msg = null; return lkRender(); }
   if (a === 'lkBackCand') { lk.view = 'cand'; lk.msg = null; return lkRender(); }
   if (a === 'lkModeFill') { lk.mode = 'fill'; lk.alias = {}; lkInitSel(); lk.view = 'preview'; lk.msg = null; return lkRender(); }
@@ -3659,6 +3691,10 @@ document.addEventListener('click', async e => {
     const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persist(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
   }
   if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
+  if (act === 'openSetGs') { cur = null; curF = null; view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
+  if (act === 'openSetFmt') { cur = null; curF = null; view = 'setfmt'; return render(); }
+  if (act === 'setGsSave') { const r = await HB.lookup.setSheet(($('#setGsLink') || {}).value.trim()); setgs.msg = r.ok ? {kind: 'ok', text: 'Đã lưu địa chỉ bảng tính.'} : {kind: 'err', text: r.error}; setgs.st = await HB.lookup.status(); return render(); }
+  if (act === 'setNumStyle') { db.dinhDangSo = el.value === 'en' ? 'en' : 'vi'; persist(); return render(); }
   if (act === 'ctyAddAddr') { const c = ctyReadForm(); c.diaChiGiao.push({id: newId('a'), nhan: '', diaChi: ''}); cty.edit = c; render(); const rows = document.querySelectorAll('.ctyAddr [name=a_nhan]'); if (rows.length) rows[rows.length - 1].focus(); return; }
   if (act === 'ctyDelAddr') { el.closest('.ctyAddr').remove(); ctyShowMsg(); return; }
   if (act === 'mhOpen') { const f = curForest(), m = f && f.info.muaHang; mh.open = true; mh.addrId = m ? m.diaChiId : ''; return render(); }

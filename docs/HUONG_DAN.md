@@ -73,7 +73,7 @@ Tiền vận chuyển tính theo **tấn giao tại nhà máy** (theo phiếu c�
 **Phiếu cân**: nạp bằng Excel, **mỗi chuyến một dòng**. Nạp **đội xe trước**, vì phiếu cân chỉ nhận biển số có trong danh sách xe (so khớp bỏ dấu chấm, gạch, khoảng trắng). Phiếu **trùng số** vẫn được cộng vào tổng nhưng bị đánh dấu để kiểm tra.
 
 **Công ty mua hàng và địa chỉ giao** (tên công ty cũng tự điền vào dòng “Kính gửi” của BM-11 cam kết nguồn gốc: ưu tiên ô “Cam kết: đơn vị nhận” nếu có nhập, rồi công ty đã chốt cho lô, rồi hồ sơ Công ty mua hàng)
-- Phần mềm dùng cho **một công ty**: khai **một hồ sơ** ở nút **Công ty mua hàng** (tên pháp lý và địa chỉ bắt buộc; MST, người đại diện, chức vụ, SĐT, email; có thể thêm nhiều **địa chỉ giao hàng** như kho, nhà máy).
+- Phần mềm dùng cho **một công ty**: khai **một hồ sơ** ở **Cài đặt → Công ty** (menu ngang trên cùng) (tên pháp lý và địa chỉ bắt buộc; MST, người đại diện, chức vụ, SĐT, email; có thể thêm nhiều **địa chỉ giao hàng** như kho, nhà máy).
 - Ở tab Vận chuyển của từng lô: **Chọn địa chỉ giao hàng** → chọn một địa chỉ → xem bảng so sánh “hiện tại / mới” → **Xác nhận**. Địa chỉ được lưu cùng hồ sơ lô và tự điền vào “Địa điểm vận chuyển đến”; dùng ở **BM-04, BM-09, BM-10 và Sổ phiếu cân**.
 - Sửa tên hoặc địa chỉ trong hồ sơ công ty **không tự đổi** các lô đã chọn: lô giữ địa chỉ đã lưu và hiện thông báo, bấm **Xem và cập nhật** để áp dụng.
 - Hồ sơ cũ nhập tay điểm đến vẫn giữ nguyên; lần đầu chọn địa chỉ sẽ thấy giá trị cũ cạnh địa chỉ đề xuất.
@@ -243,6 +243,19 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 | Điểm đến vận chuyển | Địa chỉ giao hàng đã xác nhận theo từng lô; “Nơi giao” trên phiếu giữ nguyên dữ liệu nguồn |
 | Cước | Chỉ hai cách: cố định (đồng/tấn) hoặc tấn/km; tính theo tấn giao tại nhà máy |
 | Tiền công | Tổng theo từng chức danh (phần chia đều × đơn giá chức danh), gồm cả Tổ trưởng |
+
+## Cài đặt: Hệ thống, Google Sheets, Công ty, Hiển thị số
+Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
+- **Hệ thống**: thư mục dữ liệu, thư mục sao lưu, nhắc sao lưu.
+- **Google Sheets**: **địa chỉ bảng tính** dùng cho màn Tra cứu (chỉ đọc). Màn Tra cứu không còn ô nhập địa chỉ; chỉ ghi địa chỉ đang dùng và nút “Đổi trong Cài đặt”.
+- **Công ty**: thông tin **Công ty mua hàng** (một hồ sơ cho cả phần mềm, các địa chỉ giao hàng). Nút Công ty mua hàng không còn ở menu ngang.
+- **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
+
+## Định mức gỗ keo (1 ha = ? tấn) và nút điền nhanh ở Thông tin rừng
+- **Định mức gỗ keo**: ở màn **Định mức BHLĐ**, mục “Định mức gỗ keo: 1 ha = ? tấn”, mỗi dòng có **hiệu lực từ ngày**. Dòng cuối để thêm định mức mới; ngày phải có thật và không trùng.
+- **Mặc định cho rừng**: rừng lấy định mức có hiệu lực theo **ngày bắt đầu khai thác** của rừng (chưa có ngày thì dùng bản mới nhất). Ô “Định mức (tấn/ha)” ở Thông tin rừng để trống là dùng mặc định (gợi ý ngay trong ô); **tự điền số** thì rừng dùng số riêng; nút **Dùng mặc định** xóa số riêng. Sản lượng dự kiến tự tính theo định mức đang dùng.
+- **Từ ngày / đến ngày**: nút **Lấy ngày cân nhỏ nhất** và **Lấy ngày cân lớn nhất** (từ phiếu cân của rừng) điền vào ô; vẫn tự điền hoặc sửa được.
+- **Khối lượng thực tế**: nút **Lấy tổng từ phiếu cân** điền tổng khối lượng phiếu cân; vẫn tự điền số. Các nút chỉ điền vào ô, bấm **Lưu thông tin rừng** để ghi nhận.
 
 ## 13. Xử lý sự cố
 | Hiện tượng | Cách xử lý |
