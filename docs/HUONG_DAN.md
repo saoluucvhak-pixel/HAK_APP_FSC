@@ -275,6 +275,9 @@ Hai mẫu trong nút **Báo cáo**, xuất **Word** hoặc **Excel**:
 - **Sổ phiếu cân**: tìm theo số phiếu, biển số, khách hàng, nơi giao.
 Mỗi điều kiện hiện thành **chip** (bấm × để bỏ, “Xóa hết” để bỏ tất cả). Có thể **lưu bộ lọc** theo tên cho từng mẫu và mở lại sau. Bộ lọc áp dụng **trước khi lập báo cáo** nên KPI, tổng cộng, file Word và Excel đều khớp phần đã lọc; dòng “phạm vi lọc” dưới tiêu đề ghi rõ các điều kiện đã dùng.
 
+## Quy trình hồ sơ theo đợt
+Tab **Xuất hồ sơ** có bảng **Quy trình hồ sơ theo đợt** ở đầu: năm bước (Chuẩn bị, In đợt 1, Khai thác và cân, In đợt 2, Hoàn tất), một dòng **Việc nên làm tiếp**, và danh sách mẫu của đợt 1 và đợt 2 với trạng thái **Dữ liệu** (Đủ, Bản nháp, Chưa đủ) và **In ấn** (Chưa in, Đã in còn khớp, Đã in nhưng dữ liệu đã đổi). Bấm **Đánh dấu đã in** sau khi in (từng mẫu hoặc cả đợt); nếu sau đó dữ liệu của mẫu đổi, mẫu hiện **“in lại”**. Đợt 1 chỉ dùng dữ liệu có trước khi khai thác nên bản in đợt 1 **không đổi** khi nhập phiếu cân hoặc khối lượng thực tế. Đầy đủ quy tắc và kết quả rà soát: `docs/QUY_TRINH_HO_SO.md`.
+
 ## 13. Xử lý sự cố
 | Hiện tượng | Cách xử lý |
 | --- | --- |

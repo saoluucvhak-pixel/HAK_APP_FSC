@@ -186,6 +186,8 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 .issues{margin:6px 0 0 18px;padding:0;font-size:13px}
 .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:550;background:var(--accSoft);color:var(--acc)}
 .pill.err{background:var(--errBg);color:var(--err)}.pill.ok{background:var(--okBg);color:var(--ok)}
+.qtSteps{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.qtStep{flex:1;min-width:130px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--rs);display:flex;flex-direction:column;gap:2px}.qtStep small{color:var(--mut-aa)}.qtStep.ok{border-color:var(--ok);background:var(--okSoft,transparent)}.qtStep.warn{border-color:var(--brand)}
+.qtTbl td{vertical-align:middle;padding:4px 9px}.qtTbl .btn.sm{padding:3px 10px}
 .linkbtn{background:none;border:0;padding:0;color:var(--brand);cursor:pointer;font:inherit;text-decoration:underline}
 .normTbl{table-layout:fixed;min-width:760px}.normTbl th:first-child,.normTbl td:first-child{width:200px}.normTbl td input{width:100%;min-width:0;box-sizing:border-box}
 .d2btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -1008,6 +1010,85 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
   const api = {keoItems, keoPick, keoAdd, keoSetAll, BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDinhMuc = api;
+})(typeof self !== 'undefined' ? self : this);
+</script>
+<script>/* Quy trình tạo và in hồ sơ theo ĐỢT. Hàm thuần (không đọc giao diện), dùng chung cho màn hình “Quy trình hồ sơ” và kiểm thử.
+ *
+ * Mô hình:
+ *  - Danh mục mẫu: mỗi biểu mẫu thuộc đúng MỘT đợt. Đợt 1 = hồ sơ làm được trước khi khai thác (chỉ cần dữ liệu đợt 1: chủ rừng, rừng, nhân công, đội xe, đơn giá,
+ *    ngày ký, địa chỉ giao, định mức). Đợt 2 = BM-08, BM-09, BM-10, BM-14 (cần phiếu cân, khối lượng thực tế, ngày lập biên bản, tiền).
+ *  - BẤT BIẾN (kiểm thử `scripts/e2e-batbien.js`): file đợt 1 giống hệt nhau dù đợt 2 chưa hay đã có dữ liệu, nên bản in lại sau này không lệch bản đã in.
+ *  - Mỗi mẫu có 3 trạng thái độc lập: DỮ LIỆU (du | nhap | thieu), IN ẤN (chua | da | doi) và, riêng đợt 2, hướng in (giấy trắng / nền + in đè: src/inan2.js).
+ *  - IN ẤN: người dùng xác nhận “đã in”; phần mềm ghi chữ ký nội dung (băm file sẽ in). Sau đó dữ liệu đổi → chữ ký đổi → “đã in nhưng dữ liệu đã đổi, cần in lại”. */
+(function (root) {
+  /* kind = mã nút xuất lẻ trong tab Xuất hồ sơ; only = chỉ áp dụng cho hình thức hợp đồng đó */
+  const FORMS = [
+    {code: '01', name: 'Hợp đồng khai thác (giao khoán)', dot: 1, kind: 'gk', only: 'giaokhoan'},
+    {code: '20', name: 'Giấy ủy quyền', dot: 1, kind: 'uq', only: 'giaokhoan'},
+    {code: '03', name: 'Hợp đồng lao động', dot: 1, kind: 'hdld', only: 'tructiep'},
+    {code: '02', name: 'Cấp phát bảo hộ lao động', dot: 1, kind: 'bhld'},
+    {code: '04', name: 'Hợp đồng vận chuyển', dot: 1, kind: 'hdvc'},
+    {code: '05', name: 'Bảng chấm công', dot: 1, kind: 'cc'},
+    {code: '06', name: 'Danh sách đội khai thác', dot: 1, kind: 'dsd'},
+    {code: '07', name: 'Xác nhận đào tạo ATLĐ', dot: 1, kind: 'xn'},
+    {code: '11', name: 'Cam kết nguồn gốc', dot: 1, kind: 'ckng'},
+    {code: '12', name: 'Cam kết lao động', dot: 1, kind: 'cklc'},
+    {code: '13', name: 'Kiểm tra hiện trường', dot: 1, kind: 'kthn'},
+    {code: '15', name: 'Sổ theo dõi tai nạn, sự cố', dot: 1, kind: 'stai'},
+    {code: '16', name: 'Kiểm tra, bảo dưỡng thiết bị', dot: 1, kind: 'tbi'},
+    {code: '17', name: 'Thẩm định chủ rừng và rừng', dot: 1, kind: 'tdcr'},
+    {code: '18', name: 'Nhật ký khai thác', dot: 1, kind: 'nkkt'},
+    {code: '19', name: 'Phổ biến chính sách FSC', dot: 1, kind: 'fsc'},
+    {code: '08', name: 'Bảng thanh toán tiền công', dot: 2, kind: 'tc'},
+    {code: '09', name: 'Xác nhận khối lượng vận chuyển', dot: 2, kind: 'xnvc'},
+    {code: '10', name: 'Thanh toán tiền vận chuyển', dot: 2, kind: 'ttvc'},
+    {code: '14', name: 'Nghiệm thu, thanh lý khai thác', dot: 2, kind: 'nttl'}
+  ];
+  const byCode = c => FORMS.find(f => f.code === c) || null;
+  /* mẫu áp dụng cho hình thức hợp đồng mo ('giaokhoan' | 'tructiep'), theo thứ tự: đợt 1 rồi đợt 2 */
+  const applicable = mo => FORMS.filter(f => !f.only || f.only === mo).sort((a, b) => a.dot - b.dot);
+
+  const emptyState = () => ({v: 1, items: {}});
+  const peek = f => (f && f.inAn && typeof f.inAn.items === 'object' && f.inAn.items ? f.inAn : emptyState());
+  function stateOf(f) { if (!f.inAn || typeof f.inAn.items !== 'object' || !f.inAn.items) f.inAn = emptyState(); return f.inAn; }
+  const mark = (st, code, sig, now) => { st.items[code] = {at: now, sig}; return st.items[code]; };
+  const unmark = (st, code) => { const had = !!st.items[code]; delete st.items[code]; return had; };
+
+  /* items: [{code, ready: 'du'|'nhap'|'thieu', sig}] → thêm printed: 'chua' | 'da' | 'doi', at */
+  function evaluate(items, st) {
+    return items.map(it => {
+      const r = st && st.items ? st.items[it.code] : null;
+      const printed = !r ? 'chua' : (r.sig === it.sig ? 'da' : 'doi');
+      return Object.assign({}, it, {printed, at: r ? r.at : '', form: byCode(it.code)});
+    });
+  }
+  /* tổng hợp từng đợt: số mẫu, đủ dữ liệu, đã in và còn khớp, đã in nhưng dữ liệu đổi, bản nháp */
+  function summary(list) {
+    const out = {};
+    [1, 2].forEach(d => {
+      const L = list.filter(x => x.form && x.form.dot === d);
+      out['dot' + d] = {total: L.length, du: L.filter(x => x.ready === 'du').length, nhap: L.filter(x => x.ready === 'nhap').length, thieu: L.filter(x => x.ready === 'thieu').length,
+        daIn: L.filter(x => x.printed === 'da').length, doi: L.filter(x => x.printed === 'doi').length, chuaIn: L.filter(x => x.printed === 'chua').length,
+        xong: L.length > 0 && L.every(x => x.printed === 'da' && x.ready === 'du')};
+    });
+    return out;
+  }
+  /* việc nên làm tiếp theo (một câu), theo thứ tự quy trình */
+  function next(sum, o) {
+    o = o || {};
+    if (o.chuaChuanBi) return {step: 'chuanbi', text: 'Hoàn tất bước chuẩn bị: ' + o.chuaChuanBi};
+    const a = sum.dot1;
+    if (a.thieu) return {step: 'dot1', text: 'Đợt 1 còn ' + a.thieu + ' mẫu chưa đủ dữ liệu để xuất.'};
+    if (a.doi) return {step: 'dot1', text: 'Đợt 1: ' + a.doi + ' mẫu đã in nhưng dữ liệu đã đổi, cần in lại.'};
+    if (a.chuaIn || a.nhap) return {step: 'dot1', text: 'In đợt 1: còn ' + a.chuaIn + ' mẫu chưa in' + (a.nhap ? ', ' + a.nhap + ' mẫu đang là bản nháp' : '') + '.'};
+    if (!o.coPhieuCan) return {step: 'khaithac', text: 'Đợt 1 đã in xong. Chờ khai thác và cân: nạp phiếu cân, nhập khối lượng thực tế.'};
+    const b = sum.dot2;
+    if (b.doi) return {step: 'dot2', text: 'Đợt 2: ' + b.doi + ' mẫu đã in nhưng dữ liệu đã đổi, cần in lại.'};
+    if (b.chuaIn || b.nhap || b.thieu) return {step: 'dot2', text: 'In đợt 2: còn ' + (b.chuaIn) + ' mẫu chưa in (xem hướng in giấy trắng hoặc nền + in đè).'};
+    return {step: 'xong', text: 'Hồ sơ đã in xong cả hai đợt và còn khớp dữ liệu hiện tại.'};
+  }
+  const api = {FORMS, byCode, applicable, emptyState, peek, stateOf, mark, unmark, evaluate, summary, next};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKQuyTrinh = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
 <script>/* Rà mâu thuẫn và chồng lấn khi nhập liệu của một lô: ngày ở nhiều ô khác nhau, khoảng ngày đảo, ngày phiếu cân ngoài thời gian khai thác…
@@ -2582,6 +2663,8 @@ const volumeOf = i => {
   const y = forestYield(i);
   return y > 0 ? {v: y, src: 'dự kiến'} : null;
 };
+/* Khối lượng DỰ KIẾN (diện tích × định mức): dùng cho các biểu mẫu đợt 1 (hợp đồng, thẩm định, cam kết…) để bản in không đổi khi sau này nhập khối lượng thực tế */
+const forecastVol = i => { const y = forestYield(i); return y > 0 ? {v: y, src: 'dự kiến'} : null; };
 const fmtTan = n => numSwap(n.toLocaleString('vi-VN', {maximumFractionDigits: 3}));
 const workDays = (a, b) => { let n = 0; for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) if (d.getDay() !== 0) n++; return n; };
 function payrollPlan(rec, ex) {
@@ -2597,7 +2680,7 @@ function payrollPlan(rec, ex) {
     vol = (typeof rs.dienTich === 'number' && rs.dienTich > 0) ? {v: rs.dienTich, src: 'diện tích rừng'} : null;
     if (!vol) issues.push('thiếu diện tích của rừng (ha)');
   } else {
-    vol = volumeOf(rs);
+    vol = (ex && ex._forecast) ? forecastVol(rs) : volumeOf(rs);
     if (!vol) issues.push('thiếu khối lượng (nhập khối lượng thực tế, hoặc diện tích và định mức của rừng)');
   }
   return {ngc, basis, tu, den, cong, vol, issues};
@@ -2842,7 +2925,7 @@ function signTable(l, r) {
 }
 
 function docGiaoKhoan(rec, ex) {
-  const rs = rec.info, tt = rec.nc.find(isTT), ttName = personName(tt.danhXung, tt.ten), pr = payRows(rec, ex), bs = basisOf(rs);
+  const rs = rec.info, tt = rec.nc.find(isTT), ttName = personName(tt.danhXung, tt.ten), pr = payRows(rec, Object.assign({}, ex, {_forecast: true})), bs = basisOf(rs);   // hợp đồng ký trước khai thác: tổng khoán theo sản lượng DỰ KIẾN, không đổi khi nhập khối lượng thực tế
   const rsName = personName(rs.danhXung, rs.ten);
   return [
     ...TITLE_HEAD(),
@@ -3000,7 +3083,7 @@ function listDays(tu, den, max) {
 }
 
 function docThamDinh(rec, ex) {
-  const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), vol = volumeOf(rs), box = '☐ Đạt   ☐ Không đạt';
+  const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), vol = forecastVol(rs), box = '☐ Đạt   ☐ Không đạt';   // thẩm định trước khai thác: chỉ dùng khối lượng dự kiến
   const giay = (rs.giayTo || []).map(x => (x.loai === 'Khác' && x.ten ? x.ten : x.loai) + (x.so ? ' số ' + x.so : '') + (x.ngayCap ? ', ngày cấp ' + x.ngayCap : '') + (x.coQuan ? ', ' + x.coQuan : '')).join('; ');
   const yieldMax = forestYield(rs);
   const items = [
@@ -3037,7 +3120,7 @@ function docThamDinh(rec, ex) {
 function docNhatKy(rec, ex) {
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tt = rec.nc.find(isTT), ttName = personName(tt.danhXung, tt.ten);
   const days = listDays(rs.tuNgay, rs.denNgay, 62);
-  const n = days.length || 31, vol = volumeOf(rs);
+  const n = days.length || 31, vol = volumeOf(rs), dot1 = ex._kind !== 'all';   // dòng đối chiếu cuối đợt do người dùng ghi tay khi kết thúc: để TRỐNG ở gói đợt 1 và khi xuất lẻ (bản in không đổi khi có số liệu đợt 2); chỉ điền khi in một lần trọn bộ (“Tải toàn bộ hồ sơ”)
   const rows = Array.from({length: n}, (_, i) => [String(i + 1), days[i] || '', '', '', '', '', '', '']);
   return [
     P('**NHẬT KÝ KHAI THÁC HẰNG NGÀY**', {al: 'center', sz: 28, before: 60, after: 40}),
@@ -3048,7 +3131,7 @@ function docNhatKy(rec, ex) {
       [['STT', 'NGÀY', 'SỐ NGƯỜI LÀM VIỆC', 'KHU VỰC, LÔ KHAI THÁC', 'KHỐI LƯỢNG KHAI THÁC (TẤN)', 'THIẾT BỊ SỬ DỤNG', 'GHI CHÚ, SỰ CỐ', 'TỔ TRƯỞNG KÝ'], ...rows,
         [{v: '**Tổng cộng**', span: 4}, '', '', '', '']],
       {head: true, borders: true, sz: 18, rowH: 380, pad: 15, alignCols: ['center', 'center', 'center', 'left', 'center', 'left', 'left', 'center']}),
-    P('**Đối chiếu cuối đợt:** khối lượng khai thác theo nhật ký: ……… tấn · khối lượng nghiệm thu: ' + (vol ? fmtT(Math.round(vol.v * 1000)) : '………') + ' tấn · khối lượng vận chuyển theo phiếu cân: ' + ((rec.pc || []).length ? fmtT(totalKg(rec.pc)) : '………') + ' tấn.', {al: 'left', before: 100, after: 80, keep: true}),
+    P('**Đối chiếu cuối đợt:** khối lượng khai thác theo nhật ký: ……… tấn · khối lượng nghiệm thu: ' + (!dot1 && vol && vol.src === 'thực tế' ? fmtT(Math.round(vol.v * 1000)) : '………') + ' tấn · khối lượng vận chuyển theo phiếu cân: ' + (!dot1 && (rec.pc || []).length ? fmtT(totalKg(rec.pc)) : '………') + ' tấn.', {al: 'left', before: 100, after: 80, keep: true}),
     T([5045, 5046, 5046], [
       ['**ĐẠI DIỆN TỔ KHAI THÁC**', '**CHỦ RỪNG**', '**NGƯỜI GIÁM SÁT**'],
       [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, ghi rõ họ tên)', i: true}],
@@ -3191,7 +3274,7 @@ function docNghiemThu(rec, ex) {
 }
 
 function docCamKetNguonGoc(rec, ex) {
-  const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), vol = volumeOf(rs);
+  const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), vol = forecastVol(rs);   // “khối lượng dự kiến”: không lấy số thực tế
   return [
     ...TITLE_HEAD(),
     P('**BẢN CAM KẾT NGUỒN GỐC GỖ RỪNG TRỒNG**', {al: 'center', sz: 28, before: 120, after: 60}),
@@ -3559,7 +3642,7 @@ function dot2Files0(rec, mode, keys) {
 }
 const buildFilesRaw = (rec, kind) => viNum(() => buildFilesRaw0(rec, kind));
 function buildFilesRaw0(rec, kind) {
-  const ex = exOf(rec, 'day');
+  const ex = exOf(rec, 'day'); ex._kind = kind;
   const s = slug(rec.info.ten);
   const files = [], used = new Set();
   /* Hai người ký trùng tên (khác CCCD) không được ghi đè file của nhau trong ZIP: thêm hậu tố _2, _3… */
@@ -3745,11 +3828,13 @@ function exportNotes(rec, g, kind) {
   if (head) { const cb = HAKHopDong.canBoSung(ex).filter(c => /BM-01|BM-04/.test(c.label)); if (cb.length) n.push('Số hợp đồng chưa có năm (' + cb.map(c => c.label.replace(/ \(.*\)/, '')).join('; ') + '): nhập “Ngày ký hợp đồng”.'); }
   return n;
 }
+/* Điều kiện đủ dữ liệu để xuất từng mẫu (dùng chung cho nút tải và bảng Quy trình hồ sơ) */
+const kindOk = g => ({gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD});
 async function exportKind(kind, idx) {
   const rec = curRec();
   if (!rec) return;
   const g = gate(rec);
-  const ok = {gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD}[kind];
+  const ok = kindOk(g)[kind];
   if (!ok) { note('Hồ sơ còn lỗi hoặc thiếu dữ liệu, chưa xuất. Xem tab Xuất hồ sơ.', 'err'); return; }
   docMode = 'day';
   try {
@@ -4289,6 +4374,54 @@ function d2Panel(rec) {
     (plan.doibocuc.length ? '<div class="msg warn" id="d2Dirty">' + plan.doibocuc.length + ' mục đã đổi bố cục sau khi in nền: không dùng phần in đè cho các mục này.</div>' : '') +
     '<table class="tbl" id="d2Table" style="width:100%;margin-top:8px"><thead><tr><th>Biểu mẫu</th><th>Dữ liệu</th><th>Mẫu nền</th>' + (same ? '' : '<th>Nên dùng</th>') + '<th>Thao tác</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
+/* ========== Quy trình hồ sơ theo đợt (src/quytrinh.js): trạng thái dữ liệu, in ấn và phát hiện dữ liệu đổi sau khi in ========== */
+const QT_DATA = {du: ['ok', 'Đủ dữ liệu'], nhap: ['warn', 'Bản nháp'], thieu: ['err', 'Chưa đủ']};
+const QT_IN = {chua: ['', 'Chưa in'], da: ['ok', 'Đã in, còn khớp'], doi: ['err', 'Đã in nhưng dữ liệu đã đổi: in lại']};
+/* chữ ký nội dung của một mẫu: băm các file sẽ in (phần thân, chân trang, nhãn BẢN NHÁP) — đổi dữ liệu thì đổi chữ ký */
+function qtSig(rec, kind) {
+  const files = buildFiles(rec, kind), IA = HAKInAn2; let acc = '';
+  files.forEach(f => { const o = docOpts(f, rec); acc += f.path + '\u0001' + o.footer + '\u0001' + (o.landscape ? 'L' : 'P') + '\u0001' + (f.draft ? 'N' : '') + '\u0001' + withMode('day', () => bodyXml(tidySign(f.blocks))) + '\u0002'; });
+  return IA.hash(acc);
+}
+function qtItems(rec) {
+  const g = gate(rec), ok = kindOk(g), c = draftCtx(rec), Q = HAKQuyTrinh;
+  return Q.applicable(isDirect(rec.info) ? 'tructiep' : 'giaokhoan').map(f => {
+    const iss = HAKBanNhap.issues(f.code, c), ready = !ok[f.kind] ? 'thieu' : iss.length ? 'nhap' : 'du';
+    let sig = ''; if (ok[f.kind]) { try { sig = qtSig(rec, f.kind); } catch (e) { sig = 'loi:' + e.message; } }
+    return {code: f.code, ready, sig, why: iss.map(x => x.text).join('; ')};
+  });
+}
+function qtEval(rec, f) { const L = HAKQuyTrinh.evaluate(qtItems(rec), HAKQuyTrinh.peek(f || curForest())); return {list: L, sum: HAKQuyTrinh.summary(L)}; }
+function qtPrep(rec) {
+  const g = gate(rec), miss = [];
+  if (!(theCompany() || {}).ten) miss.push('chưa khai Công ty mua hàng (Cài đặt → Công ty)');
+  if (g.info.length) miss.push('thông tin chủ rừng, rừng còn thiếu hoặc lỗi (' + g.info.length + ' mục)');
+  if (g.normErrs.length) miss.push('định mức BHLĐ chưa đủ');
+  return miss;
+}
+function qtPanel(rec) {
+  const {list, sum} = qtEval(rec), Q = HAKQuyTrinh, prep = qtPrep(rec), nx = Q.next(sum, {chuaChuanBi: prep.join('; '), coPhieuCan: (rec.pc || []).length > 0});
+  const stepCls = (done, cur) => done ? 'ok' : cur ? 'warn' : '';
+  const d1 = sum.dot1, d2 = sum.dot2;
+  const steps = [['chuanbi', '1. Chuẩn bị', prep.length ? prep.length + ' việc còn thiếu' : 'Đủ'], ['dot1', '2. In đợt 1', d1.xong ? 'Xong' : d1.daIn + '/' + d1.total + ' đã in'], ['khaithac', '3. Khai thác, cân', (rec.pc || []).length ? (rec.pc.length + ' phiếu cân') : 'Chờ phiếu cân'], ['dot2', '4. In đợt 2', d2.xong ? 'Xong' : d2.daIn + '/' + d2.total + ' đã in'], ['xong', '5. Hoàn tất', nx.step === 'xong' ? 'Đã khớp' : 'Chưa']];
+  const cur = nx.step, order = ['chuanbi', 'dot1', 'khaithac', 'dot2', 'xong'];
+  const tbl = dot => '<table class="qtTbl" id="qtDot' + dot + '"><thead><tr><th>Mẫu</th><th>Dữ liệu</th><th>In ấn</th><th></th></tr></thead><tbody>' + list.filter(x => x.form.dot === dot).map(x => {
+    const dd = QT_DATA[x.ready], ii = QT_IN[x.printed];
+    return '<tr data-qt="' + x.code + '" data-ready="' + x.ready + '" data-printed="' + x.printed + '"><td><b>BM-' + x.code + '</b> ' + esc(x.form.name) + '</td><td class="' + dd[0] + '" title="' + esc(x.why || '') + '">' + dd[1] + (x.ready === 'nhap' && x.why ? ' <span class="mut">(' + esc(x.why.slice(0, 60)) + (x.why.length > 60 ? '…' : '') + ')</span>' : '') + '</td><td class="' + ii[0] + '">' + ii[1] + (x.at ? ' <span class="mut">' + esc(x.at.slice(0, 10).split('-').reverse().join('/')) + '</span>' : '') + '</td><td class="d2act">' +
+      (x.ready !== 'thieu' ? '<button class="btn sm ghost" data-act="qtMark" data-codes="' + x.code + '"' + (x.printed === 'da' ? ' disabled' : '') + '>Đánh dấu đã in</button>' : '') + (x.printed !== 'chua' ? ' <button class="btn sm ghost" data-act="qtUnmark" data-codes="' + x.code + '">Bỏ</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>';
+  const bulk = dot => { const codes = list.filter(x => x.form.dot === dot && x.ready !== 'thieu' && x.printed !== 'da').map(x => x.code); return '<button class="btn sm" data-act="qtMark" data-codes="' + codes.join(',') + '"' + (codes.length ? '' : ' disabled') + '>Đánh dấu cả đợt ' + dot + ' đã in (' + codes.length + ' mẫu)</button>'; };
+  return '<div class="card" id="qtCard"><h3 style="margin-top:0">Quy trình hồ sơ theo đợt</h3>' +
+    '<div class="qtSteps">' + steps.map(([k, l, st]) => '<div class="qtStep ' + stepCls(order.indexOf(k) < order.indexOf(cur), k === cur) + '"><b>' + l + '</b><small>' + esc(st) + '</small></div>').join('') + '</div>' +
+    '<div class="msg ' + (nx.step === 'xong' ? 'ok' : 'warn') + '" id="qtNext"><b>Việc nên làm tiếp:</b> ' + esc(nx.text) + '</div>' +
+    '<p class="mut" style="margin:6px 0">Mỗi mẫu thuộc đúng một đợt. <b>Đợt 1</b> chỉ dùng dữ liệu có trước khi khai thác (bản in đợt 1 không đổi khi sau này nhập phiếu cân, khối lượng thực tế); <b>đợt 2</b> cần phiếu cân, khối lượng thực tế, ngày lập biên bản. “Đã in” do bạn xác nhận; nếu sau đó dữ liệu đổi, mẫu hiện <b>“dữ liệu đã đổi: in lại”</b>.</p>' +
+    '<div class="row" style="justify-content:space-between;align-items:center"><h4 style="margin:8px 0 4px">Đợt 1 – làm trước khi khai thác</h4>' + bulk(1) + '</div>' + tbl(1) +
+    '<div class="row" style="justify-content:space-between;align-items:center"><h4 style="margin:12px 0 4px">Đợt 2 – sau khi khai thác, cân (hướng in: mục “In hồ sơ đợt 2” bên dưới)</h4>' + bulk(2) + '</div>' + tbl(2) + '</div>';
+}
+function qtMarkAct(codes, on) {
+  const f = curForest(), rec = curRec(); if (!f || !rec) return; const st = HAKQuyTrinh.stateOf(f), now = new Date().toISOString(), all = qtItems(rec);
+  codes.forEach(c => { if (!on) HAKQuyTrinh.unmark(st, c); else { const it = all.find(x => x.code === c); if (it && it.ready !== 'thieu') HAKQuyTrinh.mark(st, c, it.sig, now); } });
+  persist();
+}
 function panelXuat(rec) {
   const g = gate(rec);
   const ex = rec.exp || {};
@@ -4369,7 +4502,7 @@ function panelXuat(rec) {
     vc: 'Hợp đồng vận chuyển theo người ký; xác nhận khối lượng và thanh toán lấy từ phiếu cân.', fsc: 'Thẩm định, cam kết, phổ biến, kiểm tra hiện trường, nhật ký khai thác phục vụ giám sát FSC.', all: 'Hiển thị toàn bộ thông số và mẫu của cả 4 nhóm.'};
   const dl = draftList(rec).filter(x => x.issues.length);
   const draftCard = '<div class="card" id="draftCard"><h3 style="margin-top:0">Bản chính thức hay bản nháp</h3>' + (dl.length ? '<p class="mut" style="margin:0 0 6px">Các mẫu dưới đây vẫn tải được để soạn trước nhưng mang nhãn <b>BẢN NHÁP</b> (tên file, đầu tài liệu, tên gói). Bổ sung dữ liệu rồi tải lại để có bản chính thức.</p>' + dl.map(x => '<div style="margin:4px 0"><b>' + esc(x.label) + '</b>: ' + x.issues.map(i => esc(i.text) + ' <span class="mut">→ ' + esc(i.where) + '</span>').join('; ') + '</div>').join('') : '<div class="msg ok" style="margin:0">Mọi biểu mẫu có điều kiện riêng (BM-01, 04, 08, 09, 10, 11, 14, 20) đã đủ để in bản chính thức.</div>') + '</div>';
-  return (why.length ? '<div class="msg err">Chưa xuất được:<br>' + esc(why.join(' · ')) + '</div>' : '<div class="msg ok">Hồ sơ đủ dữ liệu để xuất.</div>') + draftCard +
+  return (why.length ? '<div class="msg err">Chưa xuất được:<br>' + esc(why.join(' · ')) + '</div>' : '<div class="msg ok">Hồ sơ đủ dữ liệu để xuất.</div>') + qtPanel(rec) + draftCard +
     '<div class="tabs" style="margin-top:6px">' + TABS.map(([k, l]) => '<button class="' + (cur === k ? 'on' : '') + '" data-xtab="' + k + '">' + l + '</button>').join('') + '</div>' +
     '<p class="mut" style="margin:0 0 10px">' + INTRO[cur] + '</p>' +
     (cur === 'all' ? S.hd + S.ld + S.vc + S.fsc : S[cur]) +
@@ -5646,6 +5779,7 @@ document.addEventListener('click', async e => {
     else { f.dx = []; f.dxFile = ''; f.dxAt = ''; }
     persist(); note('Đã xóa dữ liệu.'); return;
   }
+  if (act === 'qtMark' || act === 'qtUnmark') { qtMarkAct((el.dataset.codes || '').split(',').filter(Boolean), act === 'qtMark'); return render(); }
   if (act === 'd2dl' || act === 'd2confirm' || act === 'd2legacy' || act === 'd2undo') { const dt = el.closest('details.d2more'); if (dt) dt.open = false; }
   if (act === 'd2dl') {
     let keys = (el.dataset.keys || '').split('|').filter(Boolean); const mode = el.dataset.mode;
