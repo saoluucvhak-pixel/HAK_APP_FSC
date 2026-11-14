@@ -39,7 +39,7 @@
       rows.push({chucDanh: cd, soNguoi: n, kiemNhiem: km, nhiemVu: nv});
     }
     const tt = rows.filter(r => r.chucDanh.toLowerCase() === TO_TRUONG.toLowerCase());
-    if (tt.length !== 1 || tt[0].soNguoi !== 1) return {ok: false, error: 'Định mức phải có đúng một vị trí “' + TO_TRUONG + '” và chỉ 1 người (mỗi lô cần đúng 1 tổ trưởng)'};
+    if (tt.length !== 1 || tt[0].soNguoi !== 1) return {ok: false, error: 'Định mức phải có đúng một vị trí “' + TO_TRUONG + '” và chỉ 1 người (mỗi đội có đúng 1 tổ trưởng; định mức này tính cho MỘT đội)'};
     const bad = rows.find(r => r.kiemNhiem && !rows.some(x => x.chucDanh.toLowerCase() === r.kiemNhiem.toLowerCase()));
     if (bad) return {ok: false, error: '“' + bad.chucDanh + '” kiêm “' + bad.kiemNhiem + '” nhưng vị trí này không có trong định mức'};
     return {ok: true, rows};

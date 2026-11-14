@@ -15,6 +15,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const two = [p(1, 'Tổ trưởng', 'TRẦN ĐỘI MỘT', 'Tổ trưởng', 'Đội 1'), p(2, 'Công nhân', 'LÊ A', 'Công nhân khai thác', 'Đội 1'), p(3, 'Công nhân', 'LÊ B', 'Công nhân khai thác', 'Đội 1'),
     p(4, 'Tổ trưởng', 'NGUYỄN ĐỘI HAI', 'Tổ trưởng', 'Đội 2'), p(5, 'Công nhân', 'PHẠM C', 'Công nhân khai thác', 'Đội 2')];
   const A = lot('fa', 'R-A', {exp: {soKT: '015', ngayKy: '02/10/2026'}, pc: [], nc: two, kl: 10}), B = lot('fb', 'R-B', {exp: {soKT: '016', ngayKy: '02/10/2026'}, pc: [], kl: 10});
+  A.info.dienTich = 2; A.info.dinhMucNgayHa = 5; A.info.tuNgay = '05/10/2026'; A.info.denNgay = '';
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = B.dx.map(r => ({...r, maRung: 'R-B'}));
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');
   const open = async fid => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300); };
@@ -22,6 +23,10 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await open('fa'); const t = await w.innerText('#doiPanel');
   ok('tab Nhân công: bảng “2 đội, 2 hợp đồng giao khoán” với tên đội, tổ trưởng, số người (3 và 2)', /2 đội, 2 hợp đồng/.test(t) && /Đội 1/.test(t) && /TRẦN ĐỘI MỘT/.test(t) && /Đội 2/.test(t) && /NGUYỄN ĐỘI HAI/.test(t));
   ok('sản lượng 10 tấn chia theo số người: 6 tấn và 4 tấn', /\b6\b/.test(t) && /\b4\b/.test(t), t);
+  // 1b. định mức thời gian là của MỘT đội: 2 ha × 5 ngày/ha = 10 ngày, 2 đội song song = 5 ngày
+  await w.click('[data-ftab=finfo]'); await w.waitForTimeout(300); const tg = await w.innerText('#tgNote');
+  ok('thời gian dự kiến chia cho 2 đội: 5 ngày, ghi rõ “÷ 2 đội làm song song”', /dự kiến: 5 ngày/.test(tg) && /÷ 2 đội làm song song/.test(tg), tg);
+  await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
   // 2. hồ sơ: mỗi đội một hợp đồng giao khoán riêng (xuất ZIP thật)
   const out = path.join(dir, 'out'); fs.mkdirSync(out, {recursive: true}); const JSZip = require('jszip');
   const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('');
