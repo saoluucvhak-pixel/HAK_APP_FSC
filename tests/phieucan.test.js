@@ -62,3 +62,33 @@ test('thành tiền: có thì dùng; thiếu mà có đơn giá và khối lư�
   assert.deepStrictEqual(PC.gaps([{...p, thanhTien: 3000000}]).issues[0].missing, ['đơn giá']);
   assert.deepStrictEqual(PC.gaps([p]).issues[0].missing, ['đơn giá', 'thành tiền']);
 });
+
+test('ngày cân 2 suy ra từ ngày cân 1 và giờ cân: giờ cân 2 sớm hơn giờ cân 1 = qua nửa đêm (+1 ngày), còn lại cùng ngày', () => {
+  const P = require('../src/phieucan');
+  assert.strictEqual(P.suyNgay2('05/10/2026', '08:15:00', '09:40:00'), '05/10/2026');
+  assert.strictEqual(P.suyNgay2('05/10/2026', '08:15', '08:15'), '05/10/2026');
+  assert.strictEqual(P.suyNgay2('05/10/2026', '23:50:00', '00:20:00'), '06/10/2026');
+  assert.strictEqual(P.suyNgay2('31/12/2026', '23:00', '01:00'), '01/01/2027');
+  assert.strictEqual(P.suyNgay2('28/02/2028', '22:00', '02:00'), '29/02/2028');   // năm nhuận
+  assert.strictEqual(P.suyNgay2('28/02/2027', '22:00', '02:00'), '01/03/2027');
+  assert.strictEqual(P.suyNgay2('31/02/2026', '22:00', '02:00'), '');            // ngày không có thật
+  assert.strictEqual(P.suyNgay2('05/10/2026', '', '09:00'), ''); assert.strictEqual(P.suyNgay2('05/10/2026', '25:00', '09:00'), '');
+});
+test('ngay2Of: ngày cân 2 nhập thật thì giữ đúng; không có thì suy ra; thiếu giờ thì theo ngày cân 1; in phiếu dùng đúng ngày này', () => {
+  const P = require('../src/phieucan');
+  assert.deepStrictEqual(P.ngay2Of({ngay: '05/10/2026', ngay2: '7/10/2026', gioCan1: '08:00', gioCan2: '09:00'}), {ngay: '07/10/2026', nguon: 'nhập'});
+  assert.deepStrictEqual(P.ngay2Of({ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00'}), {ngay: '06/10/2026', nguon: 'suy ra'});
+  assert.deepStrictEqual(P.ngay2Of({ngay: '05/10/2026'}), {ngay: '05/10/2026', nguon: 'theo ngày cân 1'});
+  assert.deepStrictEqual(P.ngay2Of({}), {ngay: '', nguon: ''});
+  const rows = P.aoa({info: {ten: 'A'}, pc: [{soPhieu: 'X1', ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', bienSo: '92C-1', kl: 1}]});
+  assert.strictEqual(rows[1][1], '05/10/2026'); assert.strictEqual(rows[1][3], '06/10/2026');   // cột Ngày cân 2 của công cụ in
+});
+test('ngay2Warn: chỉ cảnh báo khi ngày cân 2 nhập thật mâu thuẫn với ngày cân 1 và giờ cân', () => {
+  const P = require('../src/phieucan');
+  assert.strictEqual(P.ngay2Warn({ngay: '05/10/2026', gioCan1: '23:50', gioCan2: '00:20'}).length, 0);   // chưa nhập ngày cân 2: không cảnh báo (sẽ suy ra)
+  assert.ok(/trước ngày cân 1/.test(P.ngay2Warn({ngay: '05/10/2026', ngay2: '03/10/2026'})[0]));
+  assert.ok(/cách ngày cân 1 .* 3 ngày/.test(P.ngay2Warn({ngay: '05/10/2026', ngay2: '08/10/2026'})[0]));
+  assert.ok(/qua nửa đêm.*06\/10\/2026/.test(P.ngay2Warn({ngay: '05/10/2026', ngay2: '05/10/2026', gioCan1: '23:50', gioCan2: '00:20'})[0]));
+  assert.ok(/hơn 24 giờ/.test(P.ngay2Warn({ngay: '05/10/2026', ngay2: '06/10/2026', gioCan1: '08:00', gioCan2: '10:00'})[0]));
+  assert.strictEqual(P.ngay2Warn({ngay: '05/10/2026', ngay2: '06/10/2026', gioCan1: '23:50', gioCan2: '00:20'}).length, 0);
+});

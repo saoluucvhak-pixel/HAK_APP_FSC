@@ -217,7 +217,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 #lkBox{z-index:55}#rpBox{z-index:56}#impBox{z-index:60}
 #guideBox.on,#lkBox.on,#rpBox.on,#impBox.on,#stBox.on{display:flex}
 .gd{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;width:100%;padding:18px 24px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
-#guideBox .gd{max-width:880px}#lkBox .gd{max-width:1280px}#rpBox .gd{max-width:1180px}#impBox .gd{max-width:660px}#stBox .gd{max-width:980px}.stInfo{margin-bottom:6px;color:var(--mut-aa)}.stBarCard{padding:12px 14px}.stDirty{margin:10px 0 0}tr.stGone td{text-decoration:line-through;color:var(--mut-aa)}.stAct{white-space:nowrap}
+#guideBox .gd{max-width:880px}#lkBox .gd{max-width:1280px}#rpBox .gd{max-width:1180px}#impBox .gd{max-width:660px}#stBox .gd{max-width:980px}.stAct{white-space:nowrap;min-width:92px}.stAct .btn{display:block;width:100%;margin:0 0 4px}.stInfo{margin-bottom:6px;color:var(--mut-aa)}.stBarCard{padding:12px 14px}.stDirty{margin:10px 0 0}tr.stGone td{text-decoration:line-through;color:var(--mut-aa)}.stAct{white-space:nowrap}
 .gh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:sticky;top:-22px;background:var(--card);padding:4px 0 8px;z-index:3}
 .gh h2{font-size:19px}
 #guideBox h2{margin:0 0 4px;font-size:21px}#guideBox h3{margin:20px 0 6px;font-size:15px;color:var(--acc)}
@@ -1236,12 +1236,41 @@ https://github.com/nodeca/pako/blob/main/LICENSE
  * Hàm thuần: dùng ở giao diện (tạo bảng) và ở tiến trình chính (tạo mã nạp dữ liệu). */
 (function (root) {
   const HEAD = ['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Ngày cân 2', 'Giờ cân 2', 'Biển số 1', 'Cân 1', 'Cân 2', 'KL', 'Khách hàng', 'Địa chỉ', 'ĐG_AD', 'Thành tiền', 'Trạng thái'];
+  /* ===== Ngày cân 2 =====
+   * Nguồn nhập (Excel, Google Sheets) thường chỉ có ngày cân 1 cùng giờ cân 1, giờ cân 2. Ngày cân 2 được SUY RA: giờ cân 2 sớm hơn giờ cân 1 nghĩa là cân qua nửa đêm
+   * (ngày cân 2 = ngày cân 1 + 1), ngược lại cùng ngày. Có ngày cân 2 nhập thật thì dùng đúng số đã nhập. Thiếu giờ thì không suy ra được: lấy theo ngày cân 1 (như trước). */
+  const pad2 = n => String(n).padStart(2, '0');
+  const parseD = v => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(v == null ? '' : v).trim()); if (!m) return null; const d = new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])); return d.getUTCFullYear() === +m[3] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[1] ? d : null; };
+  const fmtD = d => pad2(d.getUTCDate()) + '/' + pad2(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear();
+  const secOf = v => { const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(String(v == null ? '' : v).trim()); if (!m || +m[1] > 23 || +m[2] > 59 || (m[3] != null && +m[3] > 59)) return null; return +m[1] * 3600 + +m[2] * 60 + (m[3] ? +m[3] : 0); };
+  function suyNgay2(ngay1, gio1, gio2) {
+    const d = parseD(ngay1), a = secOf(gio1), b = secOf(gio2); if (!d || a == null || b == null) return '';
+    return fmtD(new Date(d.getTime() + (b < a ? 864e5 : 0)));
+  }
+  /* {ngay, nguon}: nguon = 'nhập' (có ngày cân 2 thật), 'suy ra' (từ ngày cân 1 và giờ cân), 'theo ngày cân 1' (thiếu giờ) hoặc '' (không có ngày nào) */
+  function ngay2Of(p) {
+    p = p || {}; const e = parseD(p.ngay2); if (e) return {ngay: fmtD(e), nguon: 'nhập'};
+    const s = suyNgay2(p.ngay, p.gioCan1, p.gioCan2); if (s) return {ngay: s, nguon: 'suy ra'};
+    return p.ngay ? {ngay: String(p.ngay), nguon: 'theo ngày cân 1'} : {ngay: '', nguon: ''};
+  }
+  /* Cảnh báo khi ngày cân 2 NHẬP THẬT mâu thuẫn với ngày cân 1 và giờ cân (không chặn lưu) */
+  function ngay2Warn(p) {
+    p = p || {}; const e = parseD(p.ngay2), d = parseD(p.ngay); if (!e || !d) return [];
+    const a = secOf(p.gioCan1), b = secOf(p.gioCan2), days = Math.round((e - d) / 864e5), w = [];
+    if (days < 0) w.push('ngày cân 2 (' + fmtD(e) + ') trước ngày cân 1 (' + fmtD(d) + ')');
+    else if (days > 1) w.push('ngày cân 2 (' + fmtD(e) + ') cách ngày cân 1 (' + fmtD(d) + ') ' + days + ' ngày');
+    else if (a != null && b != null) {
+      if (days === 0 && b < a) w.push('giờ cân 2 (' + p.gioCan2 + ') sớm hơn giờ cân 1 (' + p.gioCan1 + ') mà ngày cân 2 vẫn là ngày cân 1: cân qua nửa đêm thì ngày cân 2 phải là ' + fmtD(new Date(d.getTime() + 864e5)));
+      if (days === 1 && b >= a) w.push('ngày cân 2 là ngày hôm sau nhưng giờ cân 2 (' + p.gioCan2 + ') không sớm hơn giờ cân 1 (' + p.gioCan1 + '): hai lần cân cách hơn 24 giờ');
+    }
+    return w;
+  }
   const kgOf = p => (typeof p.klKg === 'number' && p.klKg > 0) ? p.klKg : (typeof p.kl === 'number' && p.kl > 0 ? Math.round(p.kl * 1000) : '');
   /* Bảng dữ liệu: dòng tiêu đề + mỗi phiếu cân một dòng. KL tính bằng kg; Địa chỉ = địa điểm rừng (in ở dòng “Địa chỉ rừng”); khách hàng trống thì lấy chủ rừng.
    * Đơn giá (đồng/tấn; dưới 100.000 là đồng/kg) và Thành tiền lấy từ phiếu cân (file nhập hoặc Google Sheets); thiếu thành tiền thì công cụ tự tính = khối lượng × đơn giá làm tròn xuống nghìn đồng; thiếu giá thì in 0. */
   function aoa(rec) {
     const info = rec.info || {}, owner = String(info.ten || '').trim();
-    return [HEAD.slice()].concat((rec.pc || []).map(p => [String(p.soPhieu || ''), p.ngay || '', p.gioCan1 || '', p.ngay2 || p.ngay || '', p.gioCan2 || '', p.bienSo || '', typeof p.can1 === 'number' ? p.can1 : '', typeof p.can2 === 'number' ? p.can2 : '', kgOf(p),
+    return [HEAD.slice()].concat((rec.pc || []).map(p => [String(p.soPhieu || ''), p.ngay || '', p.gioCan1 || '', ngay2Of(p).ngay, p.gioCan2 || '', p.bienSo || '', typeof p.can1 === 'number' ? p.can1 : '', typeof p.can2 === 'number' ? p.can2 : '', kgOf(p),
       p.khachHang || owner, p.diaChi || info.diaDiem || '', typeof p.donGia === 'number' && p.donGia > 0 ? p.donGia : '', typeof p.thanhTien === 'number' && p.thanhTien > 0 ? p.thanhTien : '', p.trangThai || '']));
   }
   /* Một khung nhìn chuẩn của phiếu cân để in, DÙNG CHUNG cho mọi nguồn (nhập file ở rừng, đưa từ Google Sheets, cập nhật biển số): chỉ đọc các trường chuẩn
@@ -1266,8 +1295,61 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return '(function(){try{' + SIMPLE_JS + fill + (rows && rows.length > 1 ? 'var a=' + JSON.stringify(rows).replace(/\u2028|\u2029/g, '') + ';var ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"PHIEU_CAN");' +
       'var buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});var f=new File([buf],"PhieuCan_HAKQN.xlsx",{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});var dt=new DataTransfer();dt.items.add(f);var i=document.getElementById("file");i.files=dt.files;i.dispatchEvent(new Event("change",{bubbles:true}));' : '') + 'return true}catch(e){return String(e&&e.message||e)}})()';
   }
-  const api = {HEAD, aoa, inject, company, gaps, FIELDS, SIMPLE_CSS};
+  const api = {HEAD, aoa, inject, company, gaps, FIELDS, SIMPLE_CSS, suyNgay2, ngay2Of, ngay2Warn};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKPhieuCan = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* Cự ly vận chuyển: mặc định TỰ TÍNH từ tọa độ rừng khai thác đến tọa độ nơi giao hàng (công ty mua hàng); người dùng có thể ghi cự ly thủ công và số đó luôn được ưu tiên.
+ * Cự ly tự tính là KHOẢNG CÁCH ĐƯỜNG CHIM BAY (công thức haversine, làm tròn 0,1 km), KHÔNG phải quãng đường xe chạy: ở những nơi đường vòng thì quãng đường thực tế dài hơn.
+ * Hàm thuần, không phụ thuộc giao diện, dùng chung ở giao diện (nhúng khi build) và kiểm thử Node. */
+(function (root) {
+  const R_KM = 6371.0088;
+  const rad = d => d * Math.PI / 180;
+  const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
+  /* khoảng cách đường chim bay giữa hai điểm WGS84, km */
+  function haversine(lat1, lng1, lat2, lng2) {
+    const dLat = rad(lat2 - lat1), dLng = rad(lng2 - lng1), a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R_KM * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+  /* “15.912345, 108.123456” (dán từ Google Maps) hoặc “15,912345; 108,123456” / “15,912345 108,123456” (dấu phẩy thập phân). Sai dạng thì null. */
+  function parseToaDo(text) {
+    const s = String(text == null ? '' : text).trim(); if (!s) return null;
+    let m = /^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/.exec(s) || /^(-?\d+(?:,\d+)?)\s*[;\s]\s*(-?\d+(?:,\d+)?)$/.exec(s);
+    if (!m) return null;
+    const lat = parseFloat(m[1].replace(',', '.')), lng = parseFloat(m[2].replace(',', '.'));
+    return why(lat, lng) ? null : {lat, lng};
+  }
+  /* lỗi của một cặp tọa độ ('' nếu hợp lệ về miền giá trị) */
+  function why(lat, lng) {
+    if (num(lat) == null || num(lng) == null) return 'thiếu vĩ độ hoặc kinh độ';
+    if (lat < -90 || lat > 90) return 'vĩ độ phải từ -90 đến 90';
+    if (lng < -180 || lng > 180) return 'kinh độ phải từ -180 đến 180';
+    return '';
+  }
+  /* ngoài lãnh thổ Việt Nam (khoảng gần đúng): chỉ cảnh báo, hay nhầm vĩ độ với kinh độ */
+  const inVN = (lat, lng) => lat >= 8 && lat <= 24 && lng >= 102 && lng <= 110;
+  const fmtToaDo = (lat, lng) => num(lat) != null && num(lng) != null ? lat + ', ' + lng : '';
+  /* điểm rừng và điểm giao của hồ sơ rừng: info.lat/lng và bản chụp công ty info.muaHang.lat/lng */
+  function points(info) {
+    const i = info || {}, m = i.muaHang || {};
+    return {from: num(i.lat) != null && num(i.lng) != null ? {lat: i.lat, lng: i.lng} : null, to: num(m.lat) != null && num(m.lng) != null ? {lat: m.lat, lng: m.lng} : null};
+  }
+  /* cự ly tự tính (km, làm tròn 0,1) hoặc null nếu thiếu tọa độ */
+  function auto(info) {
+    const p = points(info); if (!p.from || !p.to || why(p.from.lat, p.from.lng) || why(p.to.lat, p.to.lng)) return null;
+    const km = Math.round(haversine(p.from.lat, p.from.lng, p.to.lat, p.to.lng) * 10) / 10;
+    return km > 0 ? km : null;
+  }
+  /* cự ly hiệu lực: nhập tay (>0) được ưu tiên; không có thì tự tính. nguon: 'nhập tay' | 'tự tính' | ''. thieu: lý do chưa có (khi nguon === '') */
+  function eff(info) {
+    const i = info || {}, a = auto(i);
+    if (typeof i.cuLy === 'number' && i.cuLy > 0) return {km: i.cuLy, nguon: 'nhập tay', auto: a, thieu: ''};
+    if (a != null) return {km: a, nguon: 'tự tính', auto: a, thieu: ''};
+    const p = points(i), miss = [!p.from ? 'tọa độ rừng (Thông tin rừng → Vĩ độ, Kinh độ)' : '', !p.to ? 'tọa độ nơi giao (Cài đặt → Công ty mua hàng, chọn địa chỉ giao ở tab Vận chuyển)' : ''].filter(Boolean);
+    return {km: null, nguon: '', auto: null, thieu: miss.length ? 'chưa có ' + miss.join(' và ') + ', hoặc nhập cự ly thủ công' : 'hai điểm trùng nhau: nhập cự ly thủ công'};
+  }
+  const api = {haversine, parseToaDo, why, inVN, fmtToaDo, points, auto, eff};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKCuLy = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>/* Định mức BHLĐ theo vị trí (chức danh) có HIỆU LỰC TỪ NGÀY, và danh sách vị trí có thể thêm. Hàm thuần, thao tác trên đối tượng db.
@@ -1554,7 +1636,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 /* Danh mục "Công ty mua hàng" và điểm đến vận chuyển. Thuần dữ liệu, không phụ thuộc DOM/Electron: dùng ở giao diện (nhúng khi build) và kiểm thử Node.
  *
  * Công ty (db.congTy[id]):
- *   {id, ten, mst, diaChi, nguoiDaiDien, chucVu, sdt, fax, noiLap, email, diaChiGiao: [{id, nhan, diaChi}], ghiChu}
+ *   {id, ten, mst, diaChi, lat, lng, nguoiDaiDien, chucVu, sdt, fax, noiLap, email, diaChiGiao: [{id, nhan, diaChi, lat, lng}], ghiChu}
+ *   - lat, lng (WGS84, tùy chọn) của trụ sở và của từng địa chỉ giao: dùng để TỰ TÍNH cự ly vận chuyển từ rừng đến nơi giao (src/culy.js); bản chụp theo rừng giữ cả tọa độ.
  *   - ten (tên pháp lý) và diaChi (địa chỉ công ty/trụ sở) BẮT BUỘC; các trường còn lại tùy chọn.
  *   - diaChiGiao: các địa chỉ giao hàng khác của công ty (kho, nhà máy…); địa chỉ công ty luôn là lựa chọn đầu tiên.
  * Công ty mua hàng là một VAI TRÒ riêng, chọn theo từng rừng; hồ sơ rừng lưu BẢN CHỤP (info.muaHang) tên + địa chỉ đã xác nhận:
@@ -1571,15 +1654,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const mstValid = v => { const m = normMst(v); return m === '' || /^\d{10}$/.test(m) || /^\d{13}$/.test(m); };
   const mstShow = v => { const m = normMst(v); return m.length === 13 ? m.slice(0, 10) + '-' + m.slice(10) : m; };
 
-  function newCompany() { return {id: '', ten: '', mst: '', diaChi: '', nguoiDaiDien: '', chucVu: '', sdt: '', fax: '', noiLap: '', email: '', diaChiGiao: [], ghiChu: ''}; }
+  function newCompany() { return {id: '', ten: '', mst: '', diaChi: '', lat: null, lng: null, nguoiDaiDien: '', chucVu: '', sdt: '', fax: '', noiLap: '', email: '', diaChiGiao: [], ghiChu: ''}; }
 
+  const geo = v => (typeof v === 'number' && isFinite(v)) ? v : (v == null || v === '' ? null : (isFinite(parseFloat(String(v).replace(',', '.'))) ? parseFloat(String(v).replace(',', '.')) : null));
+  const geoWhy = (lat, lng) => { if (lat == null && lng == null) return ''; if (lat == null || lng == null) return 'thiếu vĩ độ hoặc kinh độ'; if (lat < -90 || lat > 90) return 'vĩ độ phải từ -90 đến 90'; if (lng < -180 || lng > 180) return 'kinh độ phải từ -180 đến 180'; return ''; };
+  const geoVN = (lat, lng) => lat == null || lng == null || (lat >= 8 && lat <= 24 && lng >= 102 && lng <= 110);
   /* Chuẩn hóa dữ liệu nhập (không đổi ý nghĩa): cắt khoảng trắng, MST chuẩn hóa, bỏ địa chỉ giao rỗng, giữ id địa chỉ */
   function clean(o, newId) {
     const c = Object.assign(newCompany(), o || {});
     ['ten', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'email', 'ghiChu'].forEach(k => { c[k] = trim(c[k]); });
-    c.mst = mstShow(c.mst);
+    c.mst = mstShow(c.mst); c.lat = geo(c.lat); c.lng = geo(c.lng);
     let n = 0;
-    c.diaChiGiao = (Array.isArray(c.diaChiGiao) ? c.diaChiGiao : []).map(a => ({id: trim(a && a.id) || (newId ? newId('a') : 'a' + (++n)), nhan: trim(a && a.nhan), diaChi: trim(a && a.diaChi)})).filter(a => a.diaChi || a.nhan);
+    c.diaChiGiao = (Array.isArray(c.diaChiGiao) ? c.diaChiGiao : []).map(a => ({id: trim(a && a.id) || (newId ? newId('a') : 'a' + (++n)), nhan: trim(a && a.nhan), diaChi: trim(a && a.diaChi), lat: geo(a && a.lat), lng: geo(a && a.lng)})).filter(a => a.diaChi || a.nhan);
     return c;
   }
 
@@ -1589,6 +1675,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!c.ten) errors.push('Thiếu tên pháp lý của công ty');
     if (!c.diaChi) errors.push('Thiếu địa chỉ công ty');
     (c.diaChiGiao || []).forEach((a, i) => { if (!a.diaChi) errors.push('Địa chỉ giao hàng thứ ' + (i + 1) + (a.nhan ? ' (' + a.nhan + ')' : '') + ' chưa có địa chỉ'); });
+    const gw = geoWhy(c.lat, c.lng); if (gw) errors.push('Tọa độ trụ sở: ' + gw); else if (!geoVN(c.lat, c.lng)) warnings.push('Tọa độ trụ sở (' + c.lat + ', ' + c.lng + ') nằm ngoài Việt Nam: kiểm tra có đảo vĩ độ với kinh độ không');
+    (c.diaChiGiao || []).forEach((a, i) => { const w = geoWhy(a.lat, a.lng); const nm = 'địa chỉ giao thứ ' + (i + 1) + (a.nhan ? ' (' + a.nhan + ')' : ''); if (w) errors.push('Tọa độ ' + nm + ': ' + w); else if (!geoVN(a.lat, a.lng)) warnings.push('Tọa độ ' + nm + ' (' + a.lat + ', ' + a.lng + ') nằm ngoài Việt Nam: kiểm tra có đảo vĩ độ với kinh độ không'); });
     if (c.mst && !mstValid(c.mst)) warnings.push('Mã số thuế “' + c.mst + '” không đúng dạng (10 hoặc 13 chữ số)');
     const dup = c.mst ? mstDuplicates(c.mst, all, selfId) : [];
     if (dup.length) warnings.push('Mã số thuế ' + c.mst + ' đã có ở công ty: ' + dup.map(d => d.ten || '(chưa đặt tên)').join('; ') + '. Kiểm tra có nhập trùng không (vẫn lưu được).');
@@ -1607,7 +1695,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   /* Các địa chỉ có thể chọn để giao hàng: địa chỉ công ty trước, rồi các địa chỉ giao khác */
   function addressesOf(c) {
     if (!c) return [];
-    return [{id: MAIN, nhan: 'Địa chỉ công ty', diaChi: c.diaChi}, ...(c.diaChiGiao || []).map(a => ({id: a.id, nhan: a.nhan || 'Địa chỉ giao hàng', diaChi: a.diaChi}))];
+    return [{id: MAIN, nhan: 'Địa chỉ công ty', diaChi: c.diaChi, lat: geo(c.lat), lng: geo(c.lng)}, ...(c.diaChiGiao || []).map(a => ({id: a.id, nhan: a.nhan || 'Địa chỉ giao hàng', diaChi: a.diaChi, lat: geo(a.lat), lng: geo(a.lng)}))];
   }
   const addressOf = (c, id) => addressesOf(c).find(a => a.id === (id || MAIN)) || null;
 
@@ -1615,13 +1703,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function snapshot(c, diaChiId, now) {
     const a = addressOf(c, diaChiId);
     if (!c || !a || !trim(a.diaChi)) return null;
-    return {congTyId: c.id, ten: c.ten, mst: c.mst, diaChiId: a.id, diaChiNhan: a.nhan, diaChi: a.diaChi, nguoiDaiDien: c.nguoiDaiDien, chucVu: c.chucVu, sdt: c.sdt, xacNhan: now || new Date().toISOString()};
+    return {congTyId: c.id, ten: c.ten, mst: c.mst, diaChiId: a.id, diaChiNhan: a.nhan, diaChi: a.diaChi, lat: geo(a.lat), lng: geo(a.lng), nguoiDaiDien: c.nguoiDaiDien, chucVu: c.chucVu, sdt: c.sdt, xacNhan: now || new Date().toISOString()};
   }
 
   /* Điểm đến hiệu lực của rừng. info.muaHang (bản chụp đã xác nhận) → công ty; không có thì điểm đến nhập tay cũ (exp.vcDiemDen) */
   function diemDen(info, ex) {
     const m = (info || {}).muaHang;
-    if (m && trim(m.diaChi)) return {src: 'congty', ten: trim(m.ten), diaChi: trim(m.diaChi), nhan: m.diaChiNhan || '', text: [trim(m.ten), trim(m.diaChi)].filter(Boolean).join(' – ')};
+    if (m && trim(m.diaChi)) return {src: 'congty', ten: trim(m.ten), diaChi: trim(m.diaChi), nhan: m.diaChiNhan || '', lat: geo(m.lat), lng: geo(m.lng), text: [trim(m.ten), trim(m.diaChi)].filter(Boolean).join(' – ')};
     const t = trim((ex || {}).vcDiemDen);
     if (t) return {src: 'thucong', ten: '', diaChi: t, nhan: '', text: t};
     return {src: '', ten: '', diaChi: '', nhan: '', text: ''};
@@ -1637,6 +1725,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const changed = [];
     if (trim(c.ten) !== trim(m.ten)) changed.push('tên');
     if (trim(a.diaChi) !== trim(m.diaChi)) changed.push('địa chỉ');
+    if (geo(a.lat) !== geo(m.lat) || geo(a.lng) !== geo(m.lng)) changed.push('tọa độ');
     return changed.length ? {state: 'thaydoi', saved: m, current: {ten: c.ten, diaChi: a.diaChi, nhan: a.nhan}, why: changed.join(' và ') + ' trong danh mục đã đổi'} : {state: 'ok', saved: m};
   }
 
@@ -1652,7 +1741,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return (pc || []).filter(p => !noiGiaoKhop(p.noiGiao, dd));
   }
 
-  const api = {MAIN, trim, fold, normMst, mstValid, mstShow, newCompany, clean, validate, mstDuplicates, addressesOf, addressOf, snapshot, diemDen, drift, noiGiaoKhop, mismatches};
+  const api = {geo, MAIN, trim, fold, normMst, mstValid, mstShow, newCompany, clean, validate, mstDuplicates, addressesOf, addressOf, snapshot, diemDen, drift, noiGiaoKhop, mismatches};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKMuaHang = api;
 })(typeof self !== 'undefined' ? self : this);
 </script>
@@ -2925,6 +3014,8 @@ function checkPC(rec) {
     if (r.maRung && r.maRung !== rec.info.maRung) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
     if (!HAKDates.isValid(r.ngay)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(r.ngay).replace(/^thiếu ngày$/, 'thiếu ngày cân'));
     if (!r.bienSo) mark(r, 'err', 'Thiếu biển kiểm soát'); else if (!keys.has(bienKey(r.bienSo))) mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)');
+    if (trim(r.ngay2) && !HAKDates.isValid(r.ngay2)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ngày cân 2 ' + HAKDates.why(r.ngay2));
+    else HAKPhieuCan.ngay2Warn(r).forEach(m => mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + m));
     if (!r.soPhieu) mark(r, 'err', 'Thiếu số phiếu cân');
     else { const k = r.soPhieu.toUpperCase(); if (seen[k]) mark(r, 'err', 'Số phiếu cân ' + r.soPhieu + ' trùng với dòng ' + seen[k]); else seen[k] = r._row; }
     if (r.kl == null) mark(r, 'err', 'Thiếu khối lượng'); else if (r.kl === 'x' || !(r.kl > 0)) mark(r, 'err', 'Khối lượng không hợp lệ');
@@ -3092,9 +3183,10 @@ function transportPrice(i) {
   const v = i.vanChuyen || {}, mode = v.mode || 'tanKm';
   if (mode === 'coDinh') return v.coDinh > 0 ? {gia: v.coDinh, text: 'cố định ' + fmt(v.coDinh) + ' đồng/tấn'} : {loi: 'thiếu đơn giá cố định vận chuyển'};
   if (mode !== 'tanKm') return {loi: 'cách tính vận chuyển “theo bậc cự ly” không còn áp dụng: chọn Cố định hoặc Tấn/km ở tab Vận chuyển'};
-  if (!(i.cuLy > 0)) return {loi: 'thiếu cự ly vận chuyển (km)'};
+  const ck = HAKCuLy.eff(i);   // cự ly nhập tay được ưu tiên; không có thì tự tính từ tọa độ rừng đến tọa độ nơi giao (đường chim bay)
+  if (!(ck.km > 0)) return {loi: 'thiếu cự ly vận chuyển (km): ' + ck.thieu};
   if (!(v.donGiaKm > 0)) return {loi: 'thiếu đơn giá vận chuyển (đ/tấn/km)'};
-  return {gia: Math.round(v.donGiaKm * i.cuLy), text: fmt(v.donGiaKm) + ' đồng/tấn/km × ' + i.cuLy + ' km'};
+  return {gia: Math.round(v.donGiaKm * ck.km), text: fmt(v.donGiaKm) + ' đồng/tấn/km × ' + String(ck.km).replace('.', ',') + ' km' + (ck.nguon === 'tự tính' ? ' (cự ly tự tính từ tọa độ, đường chim bay)' : '')};
 }
 // Đơn giá lương của một người: đ/công nếu theo ngày công, đ/tấn nếu theo sản lượng
 function rateOf(i, r) {
@@ -3930,7 +4022,7 @@ function docHDVC(rec, ex, g) {
     P('**Điều 1: Nội dung**', {keep: true}),
     P('Bên B đồng ý nhận và bên A đồng ý thuê vận chuyển gỗ Keo Lai rừng trồng có kiểm soát tại địa chỉ: ' + rs.diaDiem + rungText(rs) + '.'),
     ...(rungRef(rs) ? [P('- ' + rungRef(rs) + '.', {ind: 360})] : []),
-    P('- Địa điểm nhận hàng: tại rừng nêu trên. Địa điểm giao hàng: ' + dot(ex.vcDiemDen, 10) + '. Cự ly vận chuyển: ' + (rs.cuLy ? rs.cuLy + ' km' : '……') + '.', {ind: 360}),
+    P('- Địa điểm nhận hàng: tại rừng nêu trên. Địa điểm giao hàng: ' + dot(ex.vcDiemDen, 10) + '. Cự ly vận chuyển: ' + (HAKCuLy.eff(rs).km ? String(HAKCuLy.eff(rs).km).replace('.', ',') + ' km' : '……') + '.', {ind: 360}),
     P('- Danh sách phương tiện, người điều khiển và giấy tờ kèm theo được nêu tại Phụ lục của hợp đồng này.' + (g.vaiTro === 'Tài xế' ? ' Bên B cam kết đã được chủ xe của các phương tiện nêu tại Phụ lục đồng ý cho thực hiện hợp đồng này.' : ''), {ind: 360}),
     P('**Điều 2: Giá cả và phương thức thanh toán**', {keep: true}),
     P('2.1. Giá thanh toán: ' + fmt(g.donGia) + ' đồng/tấn (' + transportPrice(rs).text + ').', {ind: 360}),
@@ -4520,7 +4612,7 @@ function exportCheck(job) {
   else if (dd.src === 'thucong') add('doi', 'Địa chỉ giao hàng', 'Đang dùng điểm đến nhập tay cũ “' + dd.text + '”. Chọn địa chỉ giao của công ty để thay (chỉ đổi sau khi bạn xác nhận).', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
-  if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || typeof i.cuLy !== 'number')) add('doi', 'Cự ly vận chuyển', typeof i.cuLy !== 'number' ? 'Cước tấn/km cần cự ly nhưng chưa nhập.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + i.cuLy + ' km). Phần mềm không tự sửa cự ly hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
   HAKNhapLieu.kiemTra(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));
   // các mục checklist FSC còn lại chưa được xét ở trên
@@ -4568,13 +4660,20 @@ function dmField(i) {
   const note = own ? 'Đang dùng số riêng của rừng. <button type="button" class="linkbtn" data-act="dmDefault">Dùng mặc định</button>'
     : k.found ? 'Đang dùng định mức gỗ keo mặc định <b>' + fmtTan(k.item.tanHa) + ' tấn/ha</b> (hiệu lực từ ' + (k.item.tuNgay || '…') + '). Tự điền số khác nếu rừng khác định mức.'
     : 'Chưa có định mức mặc định: khai ở <b>Định mức BHLĐ → Định mức gỗ keo</b>, hoặc tự điền số cho rừng.';
-  return '<label><span>Định mức (tấn/ha)</span><input name="dinhMucTanHa" value="' + esc(i.dinhMucTanHa ?? '') + '" placeholder="' + esc(ph) + '"><small class="mut" id="dmNote">' + note + '</small></label>';
+  return '<label><span>Định mức (tấn/ha)</span><input name="dinhMucTanHa" value="' + esc(typeof i.dinhMucTanHa === 'number' ? String(i.dinhMucTanHa).replace('.', ',') : (i.dinhMucTanHa ?? '')) + '" placeholder="' + esc(ph) + '"><small class="mut" id="dmNote">' + note + '</small></label>';
 }
 const fillBtn = (act, label) => '<small class="mut"><button type="button" class="linkbtn" data-act="' + act + '">' + label + '</button></small>';
+/* ghi chú dưới ô cự ly: đang dùng số nào, từ đâu, và vì sao chưa có */
+function cuLyNote(i) {
+  const e = HAKCuLy.eff(i), k = v => String(v).replace('.', ',') + ' km';
+  if (e.nguon === 'nhập tay') return 'Đang dùng cự ly <b>nhập tay ' + k(e.km) + '</b>.' + (e.auto != null ? ' Tự tính từ tọa độ: ' + k(e.auto) + ' (đường chim bay). Xóa ô để dùng số tự tính.' : '');
+  if (e.nguon === 'tự tính') return 'Đang dùng cự ly <b>tự tính ' + k(e.km) + '</b>: khoảng cách <b>đường chim bay</b> từ tọa độ rừng đến tọa độ nơi giao, chưa phải quãng đường xe chạy (thường dài hơn). Nhập số km thực tế vào ô trên nếu khác.';
+  return 'Chưa có cự ly: ' + e.thieu + '.';
+}
 function panelForest(f) {
   const i = f.info || {};
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
-    '<input name="' + k + '" value="' + esc(i[k] ?? '') + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
+    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['khoiLuong', 'dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
   return '<div class="card"><h3 style="margin-top:0">Thông tin khai thác của rừng</h3>' +
     '<form id="forestForm" class="grid">' +
@@ -4583,7 +4682,7 @@ function panelForest(f) {
     inp('dienTich', 'Diện tích (ha)') + dmField(i) +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến', btn: fillBtn('fillKl', 'Lấy tổng từ phiếu cân')}) +
-    inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: 'VD: 45. Chỉ cần khi tính cước tấn/km'}) +
+    inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p>' +
     '<label><span>Đơn giá giao khoán Tổ trưởng (đồng/tấn)</span><input name="donGia" inputmode="numeric" style="text-align:right" value="' + esc(i.donGia > 0 ? fmt(i.donGia) : '') + '" placeholder="để trống: tự suy"><small class="mut">Để trống thì giao khoán tự suy đơn giá từ định biên nhân sự.</small></label>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
@@ -4619,12 +4718,12 @@ function panelVc(rec) {
   const i = rec.info, vc = i.vanChuyen || {}, tp = transportPrice(i), cur = vc.mode || 'tanKm';
   const show = m => cur === m ? '' : 'display:none';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng vận chuyển (chủ rừng trả bên vận chuyển)</h3>' +
-    '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> (nhập ở tab Thông tin rừng, chỉ cần khi tính theo tấn/km).</p>' +
+    '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + ')' : 'chưa có') + '</b> (mặc định tự tính từ tọa độ rừng đến nơi giao, hoặc nhập tay ở tab Thông tin rừng; chỉ cần khi tính theo tấn/km).</p>' +
     '<form id="vcForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Cách tính đơn giá vận chuyển</span><select name="vcMode">' + vcOptions(cur) + '</select></label>' +
     '<label data-vcgrp="coDinh" style="' + show('coDinh') + '"><span>Đơn giá cố định (đồng/tấn)</span><input name="vcCoDinh" value="' + esc(vc.coDinh ?? '') + '"></label>' +
     '<label data-vcgrp="tanKm" style="' + show('tanKm') + '"><span>Đơn giá tấn/km (đồng/tấn/km)</span><input name="vcKm" value="' + esc(vc.donGiaKm ?? '') + '"></label>' +
-    '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (typeof i.cuLy === 'number' ? fmt(i.cuLy) + ' km' : 'chưa nhập') + '</b> · nhập ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;}">tab Thông tin rừng → Cự ly vận chuyển (km)</button></div>' +
+    '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + (HAKCuLy.eff(i).nguon === 'tự tính' ? ', đường chim bay' : '') + ')' : 'chưa có') + '</b> · xem và sửa ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;}">tab Thông tin rừng → Cự ly vận chuyển (km)</button></div>' +
     '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số vận chuyển</button></div></form></div>';
@@ -4879,7 +4978,7 @@ const ST_FIELDS = {
   nc: [['vaiTro', 'Vai trò', ['Tổ trưởng', 'Công nhân']], ['stt', 'STT'], ['danhXung', 'Danh xưng', ['Ông', 'Bà']], ['ten', 'Họ và tên'], ['ngaySinh', 'Ngày sinh (dd/mm/yyyy)'], ['cccd', 'CCCD (12 số)'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Địa chỉ thường trú'], ['chucDanh', 'Chức danh', () => chucDanhAll()]],
   dx: [['stt', 'STT'], ['bienSo', 'Biển kiểm soát'], ['loaiXe', 'Loại xe'], ['chuXe', 'Chủ xe'], ['ngaySinh', 'Ngày sinh chủ xe'], ['cccd', 'CCCD chủ xe'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Thường trú chủ xe'], ['cavet', 'Ngày cấp cà vẹt'], ['sdt', 'Số điện thoại'], ['nguoiKy', 'Người ký HĐ vận chuyển', ['Chủ xe', 'Tài xế']],
     ['taiXe', 'Tên tài xế'], ['ngaySinhTx', 'Ngày sinh tài xế'], ['cccdTx', 'CCCD tài xế'], ['ngayCapTx', 'Ngày cấp CCCD tài xế'], ['noiCapTx', 'Nơi cấp CCCD tài xế'], ['diaChiTx', 'Thường trú tài xế'], ['gplx', 'Số GPLX'], ['hanGplx', 'Ngày đến hạn GPLX'], ['hanBH', 'Ngày đến hạn bảo hiểm'], ['kdTu', 'Kiểm định từ ngày'], ['kdDen', 'Kiểm định đến ngày']],
-  pc: [['soPhieu', 'Số phiếu'], ['ngay', 'Ngày cân (dd/mm/yyyy)'], ['bienSo', 'Xe (biển số)', 'XE'], ['gioCan1', 'Giờ cân 1'], ['gioCan2', 'Giờ cân 2'], ['can1', 'Cân lần 1 (kg)'], ['can2', 'Cân lần 2 (kg)'], ['klKg', 'Khối lượng (kg)'], ['kl', 'Khối lượng (tấn)'], ['khachHang', 'Khách hàng'], ['diaChi', 'Địa chỉ rừng trên phiếu'], ['donGia', 'Đơn giá (đồng/tấn)'], ['thanhTien', 'Thành tiền (đồng)'], ['nguonGoc', 'Nguồn gốc'], ['soCT', 'Số chứng từ'], ['trangThai', 'Trạng thái (OK hoặc trống = in)'], ['noiGiao', 'Nơi giao (nhà máy)'], ['ghiChu', 'Ghi chú']]
+  pc: [['soPhieu', 'Số phiếu'], ['ngay', 'Ngày cân 1 (dd/mm/yyyy)'], ['bienSo', 'Xe (biển số)', 'XE'], ['gioCan1', 'Giờ cân 1'], ['ngay2', 'Ngày cân 2 (dd/mm/yyyy; để trống = tự suy ra từ giờ cân)'], ['gioCan2', 'Giờ cân 2'], ['can1', 'Cân lần 1 (kg)'], ['can2', 'Cân lần 2 (kg)'], ['klKg', 'Khối lượng (kg)'], ['kl', 'Khối lượng (tấn)'], ['khachHang', 'Khách hàng'], ['diaChi', 'Địa chỉ rừng trên phiếu'], ['donGia', 'Đơn giá (đồng/tấn)'], ['thanhTien', 'Thành tiền (đồng)'], ['nguonGoc', 'Nguồn gốc'], ['soCT', 'Số chứng từ'], ['trangThai', 'Trạng thái (OK hoặc trống = in)'], ['noiGiao', 'Nơi giao (nhà máy)'], ['ghiChu', 'Ghi chú']]
 };
 const ST_NORM = {nc: normNC, dx: normDX, pc: normPC};
 const stm = {kind: '', id: null, vals: {}, parent: null, errs: []};   // trạng thái hộp thoại đang mở (parent: hộp thoại phiếu cân chờ quay lại sau khi thêm xe)
@@ -5024,7 +5123,7 @@ const cty = {edit: null, tried: false, msg: null};                           // 
 const mh = {fid: '', open: false, addrId: '', msg: null};                    // chọn địa chỉ giao ở tab Vận chuyển (theo rừng đang mở)
 /* Hồ sơ công ty duy nhất lưu ở db.congTy (bảng companies); nếu dữ liệu cũ có nhiều bản thì dùng bản đầu theo tên. Mọi lô dùng chung hồ sơ này. */
 const theCompany = () => Object.values(db.congTy || {}).sort((a, b) => (a.ten || '').localeCompare(b.ten || '', 'vi'))[0] || null;
-const addrRowHtml = a => '<div class="ctyAddr row" style="margin-top:6px" data-aid="' + esc(a.id) + '"><input name="a_nhan" placeholder="Nhãn (vd: Kho cảng)" value="' + esc(a.nhan) + '" style="flex:1 1 160px"><input name="a_dia" placeholder="Địa chỉ giao hàng" value="' + esc(a.diaChi) + '" style="flex:3 1 280px"><button type="button" class="btn danger sm" data-act="ctyDelAddr">Xóa</button></div>';
+const addrRowHtml = a => '<div class="ctyAddr row" style="margin-top:6px" data-aid="' + esc(a.id) + '"><input name="a_nhan" placeholder="Nhãn (vd: Kho cảng)" value="' + esc(a.nhan) + '" style="flex:1 1 160px"><input name="a_dia" placeholder="Địa chỉ giao hàng" value="' + esc(a.diaChi) + '" style="flex:3 1 280px"><input name="a_toado" placeholder="Tọa độ: vĩ độ, kinh độ" title="Dán từ Google Maps, vd 15.912345, 108.123456; dùng để tự tính cự ly vận chuyển" value="' + esc(HAKCuLy.fmtToaDo(a.lat, a.lng)) + '" style="flex:1 1 170px"><button type="button" class="btn danger sm" data-act="ctyDelAddr">Xóa</button></div>';
 function ctyForestsUsing() { const c = theCompany(); return c ? Object.values(db.rs).reduce((n, o) => n + forestList(o).filter(f => f.info.muaHang && f.info.muaHang.congTyId === c.id).length, 0) : 0; }
 function panelCty() {
   const c = cty.edit || theCompany() || MH.newCompany(), m = cty.msg; cty.msg = null; cty.edit = c;
@@ -5033,6 +5132,7 @@ function panelCty() {
     (theCompany() ? ' ' + ctyForestsUsing() + ' rừng đã chọn địa chỉ giao.' : '') + '</p></div></div>' + (m ? '<div class="msg ' + m.kind + '">' + esc(m.text) + '</div>' : '') +
     '<div class="card" id="ctyCard"><form id="ctyForm" class="grid">' +
     f('ten', 'Tên pháp lý', {req: true, wide: true}) + f('mst', 'Mã số thuế', {ph: '10 hoặc 13 chữ số'}) + f('diaChi', 'Địa chỉ công ty', {req: true, wide: true}) +
+    '<label><span>Tọa độ trụ sở (vĩ độ, kinh độ)</span><input name="toaDo" value="' + esc(HAKCuLy.fmtToaDo(c.lat, c.lng)) + '" placeholder="VD: 15.912345, 108.123456 (dán từ Google Maps)"><small class="mut">Tùy chọn. Có tọa độ nơi giao thì phần mềm tự tính cự ly vận chuyển từ rừng đến đây.</small></label>' +
     f('nguoiDaiDien', 'Người đại diện') + f('chucVu', 'Chức vụ') + f('sdt', 'Số điện thoại') + f('fax', 'Fax', {ph: 'tùy chọn; in ở tiêu đề phiếu cân'}) + f('noiLap', 'Nơi lập chứng từ', {ph: 'VD: Đà Nẵng; in trước ngày tháng năm trên phiếu cân'}) + f('email', 'Email') +
     '<div style="grid-column:1/-1"><div class="mut">Địa chỉ giao hàng khác (kho, nhà máy…). Khi chọn điểm đến cho rừng, địa chỉ công ty luôn là lựa chọn đầu tiên, sau đó là các địa chỉ này.</div><div id="ctyAddrs">' + (c.diaChiGiao || []).map(addrRowHtml).join('') + '</div>' +
       '<button type="button" class="btn ghost sm" style="margin-top:6px" data-act="ctyAddAddr">+ Thêm địa chỉ giao hàng</button></div>' +
@@ -5041,19 +5141,22 @@ function panelCty() {
 function ctyReadForm() {
   const form = $('#ctyForm'), fd = new FormData(form), c = {...(cty.edit || MH.newCompany())};
   ['ten', 'mst', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'email'].forEach(k => { c[k] = fd.get(k) ?? ''; });
-  c.diaChiGiao = [...form.querySelectorAll('.ctyAddr')].map(r => ({id: r.dataset.aid || '', nhan: r.querySelector('[name=a_nhan]').value, diaChi: r.querySelector('[name=a_dia]').value}));
+  const td = HAKCuLy.parseToaDo(fd.get('toaDo')); c.lat = td ? td.lat : null; c.lng = td ? td.lng : null; c.toaDoSai = String(fd.get('toaDo') || '').trim() && !td ? String(fd.get('toaDo')).trim() : '';
+  c.diaChiGiao = [...form.querySelectorAll('.ctyAddr')].map(r => { const raw = r.querySelector('[name=a_toado]').value, t = HAKCuLy.parseToaDo(raw); return {id: r.dataset.aid || '', nhan: r.querySelector('[name=a_nhan]').value, diaChi: r.querySelector('[name=a_dia]').value, lat: t ? t.lat : null, lng: t ? t.lng : null, toaDoSai: raw.trim() && !t ? raw.trim() : ''}; });
   return MH.clean(c, newId);
 }
+/* tọa độ gõ sai dạng không được lặng lẽ bỏ: báo như lỗi chặn lưu */
+function ctyGeoErrors(c) { const e = []; if (c.toaDoSai) e.push('Tọa độ trụ sở “' + c.toaDoSai + '” sai dạng (vd 15.912345, 108.123456; vĩ độ trước, kinh độ sau)'); (c.diaChiGiao || []).forEach((a, i) => { if (a.toaDoSai) e.push('Tọa độ địa chỉ giao thứ ' + (i + 1) + ' “' + a.toaDoSai + '” sai dạng (vd 15.912345, 108.123456)'); }); return e; }
 function ctyShowMsg() {
   const box = $('#ctyMsg'); if (!box || !$('#ctyForm')) return;
-  const c = ctyReadForm(), v = MH.validate(c, {}, c.id);
+  const c = ctyReadForm(), v = MH.validate(c, {}, c.id); v.errors.push(...ctyGeoErrors(c));
   box.innerHTML = (cty.tried && v.errors.length ? '<div class="msg err">Chưa lưu: ' + v.errors.map(esc).join('; ') + '</div>' : '') + (v.warnings.length ? '<div class="msg warn">' + v.warnings.map(esc).join('<br>') + '</div>' : '');
   return v;
 }
 function ctySave() {
   const c = ctyReadForm(); c.id = c.id || (theCompany() || {}).id || newId('c');
-  const v = MH.validate(c, {}, c.id);
-  if (v.errors.length) { cty.tried = true; ctyShowMsg(); return; }
+  const v = MH.validate(c, {}, c.id), ge = ctyGeoErrors(c); delete c.toaDoSai;
+  if (v.errors.length || ge.length) { cty.tried = true; ctyShowMsg(); return; }
   db.congTy = {[c.id]: c}; persist();                       // một hồ sơ duy nhất
   cty.edit = null;
   cty.msg = {kind: v.warnings.length ? 'warn' : 'ok', text: 'Đã lưu thông tin công ty “' + c.ten + '”.' + (v.warnings.length ? ' Lưu ý: ' + v.warnings.join('; ') : '') + (ctyForestsUsing() ? ' Các rừng đã chọn địa chỉ GIỮ địa chỉ đã lưu cho đến khi bạn xác nhận cập nhật ở tab Vận chuyển của từng rừng.' : '')};
@@ -5104,17 +5207,22 @@ function panelDX(rec) {
     r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c);
 }
 
+/* Ngày cân 2: số đã nhập thì hiện nguyên; không có thì suy từ ngày cân 1 và giờ cân (giờ cân 2 sớm hơn giờ cân 1 = qua nửa đêm, +1 ngày) và ghi “suy ra” */
+function ngay2Cell(r) {
+  const n = HAKPhieuCan.ngay2Of(r); if (!n.ngay) return '';
+  return esc(n.ngay) + (n.nguon === 'suy ra' ? '<br><small class="mut" title="Phiếu chưa có ngày cân 2: suy ra từ ngày cân 1 và giờ cân 1, giờ cân 2">suy ra</small>' : n.nguon === 'theo ngày cân 1' ? '<br><small class="mut" title="Thiếu giờ cân nên lấy theo ngày cân 1">theo ngày cân 1</small>' : '');
+}
 function panelPhieuCan(rec) {
   const c = checkPC(rec), pc = rec.pc || [];
   const head = panelImport('pc', rec) + stBar('pc', rec);
   if (!pc.length && !stCur()) return head + '<div class="empty">Chưa có phiếu cân. Bấm “+ Thêm phiếu cân”, hoặc “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
   const R = '<span style="display:block;text-align:right">', num = (v, f) => typeof v === 'number' ? fmt(v) : '';
-  const t = stTable('pc', rec, ['Ngày cân', 'Giờ cân 1', 'Giờ cân 2', 'Biển kiểm soát', 'Số phiếu cân', R + 'Cân lần 1 (kg)</span>', R + 'Cân lần 2 (kg)</span>', R + 'Khối lượng (kg)</span>', R + 'Khối lượng (tấn)</span>', 'Khách hàng', R + 'Đơn giá</span>', R + 'Thành tiền</span>', 'Nơi giao'],
-    r => '<td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay) : esc(r.ngay) + '<br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + ' (bấm Sửa)</small>') + '</td><td>' + esc(r.gioCan1 || '') + '</td><td>' + esc(r.gioCan2 || '') + '</td><td>' + esc(r.bienSo) +
+  const t = stTable('pc', rec, ['Cân lần 1 (ngày, giờ)', 'Cân lần 2 (ngày, giờ)', 'Biển kiểm soát', 'Số phiếu cân', R + 'Cân lần 1 (kg)</span>', R + 'Cân lần 2 (kg)</span>', R + 'Khối lượng (kg)</span>', R + 'Khối lượng (tấn)</span>', 'Khách hàng', R + 'Đơn giá</span>', R + 'Thành tiền</span>', 'Nơi giao'],
+    r => '<td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay) : esc(r.ngay) + '<br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + ' (bấm Sửa)</small>') + '<br><span class="mut">' + esc(r.gioCan1 || '') + '</span></td><td>' + ngay2Cell(r) + '<br><span class="mut">' + esc(r.gioCan2 || '') + '</span></td><td>' + esc(r.bienSo) +
       '</td><td>' + esc(r.soPhieu) + '</td><td style="text-align:right">' + num(r.can1) + '</td><td style="text-align:right">' + num(r.can2) +
       '</td><td style="text-align:right">' + (typeof r.klKg === 'number' ? fmt(r.klKg) : (typeof r.kl === 'number' ? fmt(Math.round(r.kl * 1000)) : '')) + '</td><td style="text-align:right">' + (typeof r.kl === 'number' ? fmtT(Math.round(r.kl * 1000)) : esc(r.kl)) +
       '</td><td>' + esc(r.khachHang || '') + '</td><td style="text-align:right">' + num(r.donGia) + '</td><td style="text-align:right">' + num(r.thanhTien) + '</td><td>' + esc(r.noiGiao) + '</td>', c);
-  return head + issuesBox(c.errs, c.warns) + t.replace('</tbody></table></div>', '</tbody><tfoot><tr><td colspan="10"><b>Tổng ' + pc.length + ' chuyến (bản ' + (stCur() ? 'nháp' : 'đã lưu') + ')</b></td><td style="text-align:right"><b>' + fmtT(totalKg(pc)) + ' tấn</b></td><td colspan="5"></td></tr></tfoot></table></div>');
+  return head + issuesBox(c.errs, c.warns) + t.replace('</tbody></table></div>', '</tbody><tfoot><tr><td colspan="9"><b>Tổng ' + pc.length + ' chuyến (bản ' + (stCur() ? 'nháp' : 'đã lưu') + ')</b></td><td style="text-align:right"><b>' + fmtT(totalKg(pc)) + ' tấn</b></td><td colspan="5"></td></tr></tfoot></table></div>');
 }
 
 function issuesBox(errs, warns) {
