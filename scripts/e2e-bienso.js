@@ -56,7 +56,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   ok('phiếu cân lấy giờ cân 1/2, cân lần 1/2 (kg), khối lượng kg và tấn, khách hàng', p1.gioCan1 === '08:15:00' && p1.gioCan2 === '09:40:00' && p1.can1 === 6840 && p1.can2 === 4000 && p1.klKg === 2840 && p1.kl === 2.84 && p1.khachHang === 'NGUYỄN VĂN AN' && p1.maKhachHang === '049000000001', JSON.stringify(p1));
   ok('phiếu cân từ Google Sheets mang đơn giá và thành tiền (1.500.000 đ/tấn × 2,84 tấn = 4.260.000 đ) để in phiếu cân', p1.donGia === 1500000 && p1.thanhTien === 4260000, JSON.stringify(p1));
   await w.click('[data-ftab=dx]'); const dxTxt = await w.innerText('#main');
-  ok('danh sách phiếu cân (tab Vận chuyển) hiện các cột giờ cân, cân lần 1/2, khối lượng kg và tấn, khách hàng', ['Giờ cân 1', 'Giờ cân 2', 'Cân lần 1 (kg)', 'Cân lần 2 (kg)', 'Khối lượng (kg)', 'Khối lượng (tấn)', 'Khách hàng'].every(h => dxTxt.includes(h)) && /08:15:00/.test(dxTxt) && /NGUYỄN VĂN AN/.test(dxTxt) && /6\.840/.test(dxTxt));
+  ok('danh sách phiếu cân (tab Vận chuyển) hiện các cột giờ cân, cân lần 1/2, khối lượng kg và tấn, khách hàng', ['Cân lần 1 (ngày, giờ)', 'Cân lần 2 (ngày, giờ)', 'Cân lần 1 (kg)', 'Cân lần 2 (kg)', 'Khối lượng (kg)', 'Khối lượng (tấn)', 'Khách hàng'].every(h => dxTxt.includes(h)) && /08:15:00/.test(dxTxt) && /NGUYỄN VĂN AN/.test(dxTxt) && /6\.840/.test(dxTxt));
   const kl0 = pc1().kl, ngay0 = pc1().ngay;
   // 2. bảng tính cập nhật biển số xe mới
   ok('nhập bảng tính có biển số mới (92C-12345 → 92C-54321)', (await w.evaluate(p => window.hak.lookup.importExcel(p), wf('moi.xlsx', 'newplate'))).ok);

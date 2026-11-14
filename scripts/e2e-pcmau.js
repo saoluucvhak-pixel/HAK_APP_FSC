@@ -43,7 +43,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('PC003: chỉ có kg (20.000) → tấn = 20', !!by('PC003') && by('PC003').kl === 20 && by('PC003').klKg === 20000, JSON.stringify(by('PC003')));
   const txt = await w.innerText('#main');
   ok('PC004: kg (30.000) và tấn (31) lệch nhau → cảnh báo, vẫn nạp', !!by('PC004') && /không khớp nhau/.test(txt));
-  ok('danh sách phiếu cân hiện các cột mới', ['Giờ cân 1', 'Giờ cân 2', 'Cân lần 1 (kg)', 'Khách hàng'].every(h => txt.includes(h)) && /08:15:00/.test(txt));
+  ok('danh sách phiếu cân hiện các cột mới', ['Cân lần 1 (ngày, giờ)', 'Cân lần 2 (ngày, giờ)', 'Cân lần 1 (kg)', 'Khách hàng'].every(h => txt.includes(h)) && /08:15:00/.test(txt));
   ok('PC005: chỉ có Cân 1 và Cân 2 → KL tự tính 20.500 kg (20,5 tấn); Đơn giá_TC dùng khi ĐG_AD trống; Trạng thái HỦY được giữ', by('PC005').klKg === 20500 && by('PC005').kl === 20.5 && by('PC005').donGia === 1300000 && by('PC005').trangThai === 'HỦY', JSON.stringify(by('PC005')));
   ok('PC002: đơn giá dạng chữ “1.250.000” đọc thành số', by('PC002').donGia === 1250000, JSON.stringify(by('PC002')));
   // in phiếu cân dùng chính dữ liệu này; phiếu trạng thái HỦY mặc định không chọn
