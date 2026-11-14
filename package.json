@@ -64,5 +64,13 @@
       "artifactName": "HAKQN-HoSoKhaiThac-Setup-${version}.exe"
     },
     "npmRebuild": false
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "minimatch": "^11.0.8"
+    },
+    "@electron/universal": {
+      "minimatch": "^11.0.8"
+    }
   }
 }

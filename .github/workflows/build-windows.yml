@@ -26,10 +26,10 @@ jobs:
     env:
       HAKQ_SHA: b78d9b2f30d63f29f59c5ade94e6d968ae4805d4   # ghim đúng commit của công cụ; đổi có chủ đích khi nâng cấp
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1   # v7.1.0
         with: { node-version: 22 }
       - name: Tải công cụ kiểm tra (chỉ đọc, chạy offline)
         run: |
@@ -44,20 +44,50 @@ jobs:
           npm audit --omit=dev --json > reports/npm-audit-prod.json || true
           npm audit --audit-level=moderate || echo "::warning::Có lỗ hổng trong thư viện dùng để build/kiểm thử (không đóng gói vào ứng dụng); xem reports/npm-audit-all.json"
           npm audit --omit=dev --audit-level=high
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2
         if: always()
         with:
           name: quality-report-${{ github.event.pull_request.head.sha || github.sha }}
           path: reports
           if-no-files-found: error
+  e2e-pdf:
+    name: Kiểm thử bố cục biểu mẫu Word qua PDF (LibreOffice, Ubuntu)
+    # Các bộ e2e dựng .docx ra PDF bằng LibreOffice để đếm trang, so ảnh, đọc dòng chữ ký. Runner Windows không có LibreOffice nên
+    # các phần đó bị bỏ qua ở job build; job này chạy đủ, và --no-skip coi bộ nào còn phần bỏ qua (thiếu công cụ) là không đạt.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1   # v7.1.0
+        with: { node-version: 22, cache: npm }
+      - name: Cài LibreOffice, poppler, font Liberation (thay Times New Roman) và thư viện chạy Electron
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libreoffice-writer-nogui poppler-utils fonts-liberation fonts-liberation2 fonts-dejavu-core xvfb xauth libnss3 libgbm1 libasound2t64 libgtk-3-0t64 libxss1
+          soffice --version
+      - run: npm ci
+      - run: npm run build:html
+      - name: Bốn bộ e2e có kiểm tra PDF (số hợp đồng, in đè, BM-08, chữ ký)
+        run: node scripts/e2e-all.js sohd inde bm08 chuky --no-skip --out reports/e2e-pdf
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2
+        if: always()
+        with:
+          name: e2e-pdf-report-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/e2e-pdf
+          if-no-files-found: warn
+      - name: Ghi bảng kết quả vào trang tóm tắt của lượt chạy
+        if: always()
+        run: test -f reports/e2e-pdf/summary.md && cat reports/e2e-pdf/summary.md >> "$GITHUB_STEP_SUMMARY" || true
   build:
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1   # v7.1.0
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run build:html
@@ -67,7 +97,7 @@ jobs:
         run: npm run test:e2e
       - name: Tải báo cáo kiểm thử đầu-cuối (tổng hợp từng bộ và nhật ký)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2
         with:
           name: e2e-report-${{ github.event.pull_request.head.sha || github.sha }}
           path: reports/e2e
@@ -259,12 +289,12 @@ jobs:
         run: ./scripts/ci-collect-diag.ps1
       - name: Tải chẩn đoán cài đặt lên artifact (mã thoát, phiên bản, commit, nhật ký sự cố Windows)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2
         with:
           name: install-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}-run${{ github.run_id }}
           path: diag/
           if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2
         with:
           name: HAKQN-Setup-${{ github.event.pull_request.head.sha || github.sha }}
           path: |

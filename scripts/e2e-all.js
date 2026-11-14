@@ -3,9 +3,10 @@
  * - chạy LẦN LƯỢT từng bộ theo SUITES (thứ tự cũ), không dừng ở bộ lỗi đầu tiên (trừ --bail), mỗi bộ có giới hạn thời gian;
  * - đọc dòng "ĐẠT  ..." / "LỖI  ..." của từng bộ, mã thoát 0 = đạt, 1 = có kiểm tra lỗi, 2 = lỗi chạy (ngoại lệ);
  * - in bảng tổng hợp và ghi báo cáo reports/e2e/summary.{json,md} + nhật ký từng bộ reports/e2e/logs/<bộ>.log;
- * - mã thoát 1 nếu có bộ không đạt; báo lỗi nếu có file scripts/e2e-*.js chưa khai báo trong SUITES (tránh quên chạy).
+ * - mã thoát 1 nếu có bộ không đạt; báo lỗi nếu có file scripts/e2e-*.js chưa khai báo trong SUITES (tránh quên chạy);
+ * - đếm dòng "BỎ QUA  ..." (phần kiểm tra cần công cụ ngoài, ví dụ LibreOffice dựng PDF): hiện trong bảng tổng; --no-skip coi bộ có phần bỏ qua là không đạt.
  * Linux không có màn hình (DISPLAY trống) thì tự chạy qua xvfb-run nếu có.
- * Dùng: node scripts/e2e-all.js [tên bộ ...] [--bail] [--list] [--out <thư mục>] [--timeout <giây>]
+ * Dùng: node scripts/e2e-all.js [tên bộ ...] [--bail] [--no-skip] [--list] [--out <thư mục>] [--timeout <giây>]
  *   ví dụ: node scripts/e2e-all.js lorung malo   (chỉ chạy e2e-lorung và e2e-malo) */
 const {spawn, spawnSync} = require('child_process');
 const fs = require('fs'), path = require('path');
@@ -20,10 +21,11 @@ const NOT_SUITES = ['e2e-all'];   // file e2e-*.js không phải bộ kiểm th�
 
 const root = path.join(__dirname, '..');
 function parseArgs(argv) {
-  const o = {names: [], bail: false, list: false, out: path.join(root, 'reports', 'e2e'), timeout: 600};
+  const o = {names: [], bail: false, noSkip: false, list: false, out: path.join(root, 'reports', 'e2e'), timeout: 600};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--bail') o.bail = true;
+    else if (a === '--no-skip') o.noSkip = true;
     else if (a === '--list') o.list = true;
     else if (a === '--out') o.out = path.resolve(argv[++i]);
     else if (a === '--timeout') o.timeout = Math.max(10, +argv[++i] || 600);
@@ -32,11 +34,13 @@ function parseArgs(argv) {
   return o;
 }
 /* Kết quả một bộ từ nội dung in ra và mã thoát */
-function summarize(name, text, code, ms, timedOut) {
+function summarize(name, text, code, ms, timedOut, noSkip) {
   const lines = text.split(/\r?\n/);
   const pass = lines.filter(l => l.startsWith('ĐẠT')).length, failed = lines.filter(l => l.startsWith('LỖI')).map(l => l.replace(/^LỖI\s+/, ''));
-  const status = timedOut ? 'quá giờ' : code === 0 && !failed.length ? 'đạt' : code === 2 || (code !== 0 && code !== 1) ? 'lỗi chạy' : 'không đạt';
-  return {name, status, ok: status === 'đạt', exitCode: code, pass, fail: failed.length, failed: failed.slice(0, 50), seconds: Math.round(ms / 100) / 10,
+  const skipped = lines.filter(l => l.startsWith('BỎ QUA')).map(l => l.replace(/^BỎ QUA\s+/, ''));
+  let status = timedOut ? 'quá giờ' : code === 0 && !failed.length ? 'đạt' : code === 2 || (code !== 0 && code !== 1) ? 'lỗi chạy' : 'không đạt';
+  if (status === 'đạt' && noSkip && skipped.length) status = 'thiếu công cụ';
+  return {name, status, ok: status === 'đạt', exitCode: code, pass, fail: failed.length, failed: failed.slice(0, 50), skip: skipped.length, skipped: skipped.slice(0, 20), seconds: Math.round(ms / 100) / 10,
     tail: status === 'đạt' ? [] : lines.filter(Boolean).slice(-15)};
 }
 function unknownSuites() {
@@ -56,16 +60,16 @@ function runOne(name, o, logDir, cmd) {
     ch.on('close', code => {
       clearTimeout(timer);
       fs.writeFileSync(path.join(logDir, name + '.log'), text);
-      resolve(summarize(name, text, code, Date.now() - t0, timedOut));
+      resolve(summarize(name, text, code, Date.now() - t0, timedOut, o.noSkip));
     });
     ch.on('error', e => { clearTimeout(timer); text += '\n' + e.message; });
   });
 }
 function markdown(rep) {
-  const t = rep.totals, row = r => '| ' + [r.name, r.ok ? 'đạt' : '**' + r.status + '**', r.pass, r.fail, r.seconds + ' s'].join(' | ') + ' |';
+  const t = rep.totals, row = r => '| ' + [r.name, r.ok ? 'đạt' : '**' + r.status + '**', r.pass, r.fail, r.skip ? r.skip + ': ' + r.skipped.join('; ') : '', r.seconds + ' s'].join(' | ') + ' |';
   return ['# Kết quả kiểm thử đầu-cuối (Electron)', '', 'Thời điểm: ' + rep.startedAt + ' · Electron ' + rep.electron + ' · ' + rep.platform, '',
-    '**' + t.suitesOk + '/' + t.suites + ' bộ đạt · ' + t.pass + ' kiểm tra đạt · ' + t.fail + ' kiểm tra lỗi · ' + t.seconds + ' s**' + (rep.skipped.length ? ' · bỏ qua (--bail): ' + rep.skipped.length + ' bộ' : ''), '',
-    '| Bộ | Kết quả | Đạt | Lỗi | Thời gian |', '| --- | --- | --- | --- | --- |', ...rep.results.map(row), '',
+    '**' + t.suitesOk + '/' + t.suites + ' bộ đạt · ' + t.pass + ' kiểm tra đạt · ' + t.fail + ' kiểm tra lỗi · ' + t.skip + ' phần bỏ qua · ' + t.seconds + ' s**' + (rep.skipped.length ? ' · bỏ qua (--bail): ' + rep.skipped.length + ' bộ' : ''), '',
+    '| Bộ | Kết quả | Đạt | Lỗi | Bỏ qua (thiếu công cụ) | Thời gian |', '| --- | --- | --- | --- | --- | --- |', ...rep.results.map(row), '',
     ...rep.results.filter(r => !r.ok).flatMap(r => ['## ' + r.name + ' — ' + r.status, '', ...r.failed.map(f => '- ' + f), '', '```', ...r.tail, '```', ''])].join('\n');
 }
 
@@ -82,16 +86,17 @@ async function main() {
   for (let i = 0; i < want.length; i++) {
     if (o.bail && results.some(r => !r.ok)) { skipped.push(want[i]); continue; }
     const r = await runOne(want[i], o, logDir, cmd); results.push(r);
-    console.log((r.ok ? 'ĐẠT ' : 'LỖI ') + ' [' + (i + 1) + '/' + want.length + '] ' + r.name.padEnd(16) + ' ' + String(r.pass).padStart(4) + ' đạt' + (r.fail ? ', ' + r.fail + ' lỗi' : '') + (r.ok ? '' : ' (' + r.status + ', mã thoát ' + r.exitCode + ')') + '  ' + r.seconds + ' s');
+    console.log((r.ok ? 'ĐẠT ' : 'LỖI ') + ' [' + (i + 1) + '/' + want.length + '] ' + r.name.padEnd(16) + ' ' + String(r.pass).padStart(4) + ' đạt' + (r.fail ? ', ' + r.fail + ' lỗi' : '') + (r.skip ? ', bỏ qua ' + r.skip + ' phần' : '') + (r.ok ? '' : ' (' + r.status + ', mã thoát ' + r.exitCode + ')') + '  ' + r.seconds + ' s');
+    r.skipped.forEach(x => console.log('       ~ bỏ qua: ' + x));
     if (!r.ok) { r.failed.slice(0, 10).forEach(f => console.log('       · ' + f)); if (!r.failed.length) r.tail.slice(-5).forEach(l => console.log('       | ' + l)); }
   }
   const sum = k => results.reduce((a, r) => a + r[k], 0);
   const rep = {startedAt: new Date(t0).toISOString(), platform: process.platform + '-' + process.arch, electron, results, skipped,
-    totals: {suites: results.length, suitesOk: results.filter(r => r.ok).length, pass: sum('pass'), fail: sum('fail'), seconds: Math.round((Date.now() - t0) / 1000)}};
+    totals: {suites: results.length, suitesOk: results.filter(r => r.ok).length, pass: sum('pass'), fail: sum('fail'), skip: sum('skip'), seconds: Math.round((Date.now() - t0) / 1000)}};
   fs.writeFileSync(path.join(o.out, 'summary.json'), JSON.stringify(rep, null, 2));
   fs.writeFileSync(path.join(o.out, 'summary.md'), markdown(rep));
   const t = rep.totals;
-  console.log('\nTổng: ' + t.suitesOk + '/' + t.suites + ' bộ đạt, ' + t.pass + ' kiểm tra đạt, ' + t.fail + ' kiểm tra lỗi, ' + t.seconds + ' s' + (skipped.length ? ', bỏ qua ' + skipped.length + ' bộ (--bail)' : '') + '. Báo cáo: ' + path.relative(root, path.join(o.out, 'summary.md')));
+  console.log('\nTổng: ' + t.suitesOk + '/' + t.suites + ' bộ đạt, ' + t.pass + ' kiểm tra đạt, ' + t.fail + ' kiểm tra lỗi, ' + t.skip + ' phần bỏ qua (thiếu công cụ), ' + t.seconds + ' s' + (skipped.length ? ', bỏ qua ' + skipped.length + ' bộ (--bail)' : '') + '. Báo cáo: ' + path.relative(root, path.join(o.out, 'summary.md')));
   process.exit(t.suitesOk === t.suites && !skipped.length ? 0 : 1);
 }
 

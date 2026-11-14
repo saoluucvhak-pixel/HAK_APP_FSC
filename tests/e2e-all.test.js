@@ -21,3 +21,12 @@ test('bộ chạy e2e: mọi scripts/e2e-*.js đều được khai báo, không 
   const o = R.parseArgs(['lorung', 'scripts/e2e-malo.js', '--bail', '--timeout', '30']);
   assert.deepStrictEqual([o.names, o.bail, o.timeout], [['lorung', 'e2e-malo'], true, 30]);
 });
+
+test('bộ chạy e2e: đếm phần BỎ QUA (thiếu công cụ ngoài); --no-skip coi là không đạt', () => {
+  const txt = 'ĐẠT  a\nBỎ QUA  không có LibreOffice để đếm trang\nTẤT CẢ ĐẠT\n';
+  const r = R.summarize('e2e-x', txt, 0, 10, false, false);
+  assert.deepStrictEqual([r.ok, r.skip, r.skipped[0]], [true, 1, 'không có LibreOffice để đếm trang']);
+  const s = R.summarize('e2e-x', txt, 0, 10, false, true);
+  assert.deepStrictEqual([s.ok, s.status], [false, 'thiếu công cụ']);
+  assert.strictEqual(R.parseArgs(['--no-skip']).noSkip, true);
+});

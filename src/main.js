@@ -1,5 +1,5 @@
 'use strict';
-const {app, BrowserWindow, ipcMain, dialog, Menu, shell, net, safeStorage} = require('electron');
+const {app, BrowserWindow, ipcMain, dialog, Menu, shell, net, safeStorage, session} = require('electron');
 const path = require('path');
 const fs = require('fs');
 const {Store, SCHEMA_VERSION} = require('./store');
@@ -479,6 +479,31 @@ async function smoke() {
   app.exit(r.ok ? 0 : 3);
 }
 
+/* CSP cho cửa sổ in phiếu cân: renderer/PhieuCan.html được giữ NGUYÊN BẢN (kiểm thử mã băm tests/phieucan.sha256) nên không chèn thẻ meta;
+ * thay vào đó bộ xử lý giao thức file:// của phiên mặc định thêm header Content-Security-Policy cho ĐÚNG file đó (script chỉ chạy theo mã băm
+ * tính từ chính file, không tải tài nguyên ngoài). Mọi file khác đi qua nguyên vẹn. Giữ phiên mặc định để công cụ còn đọc được cài đặt
+ * đã lưu trong localStorage. HAKQN_PC_CSP_EXTRA (chỉ khi chạy từ mã nguồn): JSON bổ sung chỉ thị, dùng khi rà vi phạm CSP. */
+const PC_FILE = path.join(__dirname, '..', 'renderer', 'PhieuCan.html');
+let pcCsp = null;
+function phieuCanCsp() {
+  if (pcCsp) return pcCsp;
+  const CSP = require('./csp');
+  let extra = {}; if (!app.isPackaged && process.env.HAKQN_PC_CSP_EXTRA) { try { extra = JSON.parse(process.env.HAKQN_PC_CSP_EXTRA); } catch (e) { /* bỏ qua */ } }
+  pcCsp = CSP.policy(CSP.scriptHashes(fs.readFileSync(PC_FILE, 'utf8')), extra);   // cùng chính sách chặt như giao diện chính (đã chạy đủ in, tải PDF, khổ giấy: không vi phạm)
+  return pcCsp;
+}
+const samePath = (a, b) => process.platform === 'win32' ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase() : path.resolve(a) === path.resolve(b);
+function installFileCsp() {
+  const {fileURLToPath} = require('url');
+  session.defaultSession.protocol.handle('file', async req => {
+    const res = await net.fetch(req, {bypassCustomProtocolHandlers: true});
+    let p = ''; try { p = fileURLToPath(req.url.split(/[?#]/)[0]); } catch (e) { return res; }
+    if (!samePath(p, PC_FILE)) return res;
+    const h = new Headers(res.headers); h.set('Content-Security-Policy', phieuCanCsp());
+    return new Response(res.body, {status: res.status, statusText: res.statusText, headers: h});
+  });
+}
+
 /* In phiếu cân: mở NGUYÊN BẢN công cụ renderer/PhieuCan.html (không sửa file) trong cửa sổ riêng, nạp sẵn phiếu cân của rừng bằng ô chọn file của chính công cụ (src/phieucan.js) */
 let pcWin = null;
 async function openPhieuCan(rows, company) {
@@ -544,6 +569,7 @@ else {
       {label: 'Tệp', submenu: [{label: 'Mở thư mục dữ liệu', click: () => shell.showItemInFolder(loc.dbFile)}, {type: 'separator'}, {role: 'quit', label: 'Thoát'}]},
       {label: 'Xem', submenu: [{role: 'zoomIn', label: 'Phóng to'}, {role: 'zoomOut', label: 'Thu nhỏ'}, {role: 'resetZoom', label: 'Cỡ chữ mặc định'}, {role: 'togglefullscreen', label: 'Toàn màn hình'}]}
     ]));
+    try { installFileCsp(); } catch (e) { log('ERROR', 'Không đặt được CSP cho cửa sổ in phiếu cân: ' + e.message); }
     registerIpc(); createWindow();
     if (process.env.HAKQN_SMOKE) setTimeout(() => smoke().catch(() => app.exit(4)), 1500);
   });

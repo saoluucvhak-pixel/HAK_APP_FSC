@@ -38,3 +38,20 @@ test('CSP: nguồn có CRLF (checkout trên Windows) cho cùng mã băm như LF 
   assert.ok(lf.includes(h('\nvar a = 1;\nvar b = 2;\n')), 'mã băm tính trên nội dung LF');
   assert.ok(!/\r/.test(B.render()), 'renderer/index.html không còn ký tự CR');
 });
+
+test('src/csp.js: băm khối script nội tuyến (bỏ qua script có src, chuỗi "<script" nằm trong script), chuẩn hóa CRLF', () => {
+  const C = require('../src/csp');
+  const html = '<script src="a.js"></script><script>var t = "<script src=x><\\/script>";\r\nvar u=1;</script><script >b()</script>';
+  const h = C.scriptHashes(html);
+  assert.strictEqual(h.length, 2);
+  assert.strictEqual(h[0], C.hashOf('var t = "<script src=x><\\/script>";\nvar u=1;'));
+  assert.strictEqual(h[1], C.hashOf('b()'));
+  assert.match(C.policy(h), /^default-src 'none'; script-src 'sha256-[^;]+ 'sha256-[^;]+; style-src 'unsafe-inline';/);
+  assert.match(C.policy([], {'connect-src': 'blob:'}), /connect-src blob:/);
+});
+
+test('CSP cửa sổ in phiếu cân: tính được mã băm cho mọi script nội tuyến của renderer/PhieuCan.html (file gốc không đổi)', () => {
+  const C = require('../src/csp'), html = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'PhieuCan.html'), 'utf8');
+  const inline = (html.match(/<script(\s[^>]*)?>/gi) || []).length;
+  assert.ok(C.scriptHashes(html).length >= 4 && C.scriptHashes(html).length <= inline);
+});

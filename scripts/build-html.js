@@ -22,13 +22,11 @@ const lib = p => fs.readFileSync(path.join(root, 'node_modules', p), 'utf8');
 function withCsp(html) {
   /* Trình phân tích HTML đổi CRLF / CR thành LF TRƯỚC khi tính mã băm script. Nguồn checkout trên Windows (git core.autocrlf=true) có CRLF:
    * nếu băm nguyên văn thì mã băm lệch và CSP chặn MỌI script. Chuẩn hóa cả file về LF (cùng ngữ nghĩa với trình duyệt) rồi mới băm. */
-  html = html.replace(/\r\n?/g, '\n');
-  const hashes = [];
-  html.replace(/<script>([\s\S]*?)<\/script>/g, (m, body) => { hashes.push("'sha256-" + require('crypto').createHash('sha256').update(body, 'utf8').digest('base64') + "'"); return m; });
+  const CSP = require('../src/csp');
+  html = CSP.lf(html);
   if (/<script\s+[^>]/.test(html)) throw new Error('build-html: chỉ hỗ trợ thẻ <script> không thuộc tính (CSP theo mã băm)');
   if (/\son[a-z]+\s*=\s*["']/i.test(html.replace(/<script>[\s\S]*?<\/script>/g, '').replace(/<style>[\s\S]*?<\/style>/g, ''))) throw new Error('build-html: có thuộc tính sự kiện nội tuyến (onclick=...) sẽ bị CSP chặn');
-  const csp = ["default-src 'none'", 'script-src ' + hashes.join(' '), "style-src 'unsafe-inline'", "img-src 'self' data: blob:", "font-src 'self' data:",
-    "connect-src 'none'", "object-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-src 'none'", "worker-src 'none'"].join('; ');
+  const csp = CSP.policy(CSP.scriptHashes(html));   // src/csp.js: dùng chung với CSP của cửa sổ in phiếu cân (src/main.js)
   return html.replace('<meta charset="utf-8">', () => '<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="' + csp + '">');
 }
 const OUT = path.join(root, 'renderer', 'index.html');
