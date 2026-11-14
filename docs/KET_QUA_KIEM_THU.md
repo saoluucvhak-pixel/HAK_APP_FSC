@@ -289,3 +289,7 @@ Chi tiết ở `docs/QUY_TRINH_HO_SO.md`. Bất biến “đợt 1 độc lập 
 - `tests/lookup.test.js` (+2): kết quả trên bảng tính giả lập (CCCD 049000000003 có vĩ độ sai; phiếu 9001 hợp đồng 999 không có hồ sơ), xóa dòng để tạo từng loại phát hiện, chưa có bản tra cứu. `scripts/e2e-doichieu.js` (10 kiểm tra, Electron thật): xem trước, chỉ số, tìm nhanh, lọc, xuất Excel và Word, chưa có bản tra cứu.
 - **Chưa kiểm được**: bảng Google Sheet thật của người dùng (chỉ kiểm bằng bảng tính giả lập đúng tên tab và cột).
 
+## 43. Màn hình Tổng quan bổ sung (bản 1.4.30)
+- Thêm chỉ số sản lượng dự kiến, tỷ lệ đã cân so với dự kiến, lao động, số xe; thẻ **Cần chú ý ở các rừng** (gom theo rừng, bấm mở đúng rừng), **Sản lượng theo tháng** (6 tháng), **Hệ thống** (bản tra cứu, sao lưu, lối tắt gồm Báo cáo đối chiếu).
+- `scripts/e2e-tongquan.js` (12 kiểm tra, Electron thật): chỉ số, từng loại cảnh báo (dưới 18 tuổi, xe sắp hết hạn, thiếu tọa độ, chưa có phiếu cân), tên rừng, biểu đồ, hệ thống khi chưa và đã có bản tra cứu, bấm rừng mở đúng hồ sơ, bấm Báo cáo đối chiếu mở thẳng mẫu có số liệu.
+

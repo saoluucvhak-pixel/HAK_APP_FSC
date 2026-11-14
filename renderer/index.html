@@ -150,6 +150,9 @@ h4{font-size:13.5px}
 .kpi>div.acc{border-color:var(--acc);background:var(--accSoft)}.kpi>div.acc b{color:var(--acc)}
 .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:4px}
 .hero p{margin:2px 0 0}
+.alr{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line2,var(--line))}.alr:last-child{border-bottom:0}.alrN{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px}.alrN .lnk{padding:0;font-size:12.5px;border:0;background:none;color:var(--acc);text-decoration:underline;cursor:pointer;text-align:left}
+.mbars{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:150px}.mb{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;font-size:11.5px;color:var(--mut-aa)}.mb b{color:var(--ink);font-size:12px}.mb>span{flex:1;width:100%;display:flex;align-items:flex-end;border-bottom:1px solid var(--line);overflow:hidden;min-height:8px;max-height:96px}.mb>span i{display:block;width:100%;background:var(--acc);border-radius:6px 6px 0 0}
+.sysl{display:flex;flex-direction:column;gap:4px;font-size:13px}.warnTxt{color:var(--warn)}
 .grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
 .dlist{display:flex;flex-direction:column;gap:2px}
 .drow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-radius:var(--rs);padding:9px 10px;cursor:pointer;font:inherit;color:inherit}
@@ -186,7 +189,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 .msg.err{background:var(--errBg);color:var(--err)}.msg.warn{background:var(--warnBg);color:var(--warn)}.msg.ok{background:var(--okBg);color:var(--ok)}
 .issues{margin:6px 0 0 18px;padding:0;font-size:13px}
 .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:550;background:var(--accSoft);color:var(--acc)}
-.pill.err{background:var(--errBg);color:var(--err)}.pill.ok{background:var(--okBg);color:var(--ok)}
+.pill.err{background:var(--errBg);color:var(--err)}.pill.warn{background:var(--warnBg,#faf3e3);color:var(--warnFg,#6b4a10)}.pill.ok{background:var(--okBg);color:var(--ok)}
 .qtSteps{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.qtStep{flex:1;min-width:130px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--rs);display:flex;flex-direction:column;gap:2px}.qtStep small{color:var(--mut-aa)}.qtStep.ok{border-color:var(--ok);background:var(--okSoft,transparent)}.qtStep.warn{border-color:var(--brand)}
 .qtTbl td{vertical-align:middle;padding:4px 9px}.qtTbl .btn.sm{padding:3px 10px}
 .linkbtn{background:none;border:0;padding:0;color:var(--brand);cursor:pointer;font:inherit;text-decoration:underline}
@@ -273,6 +276,14 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <div id="guideBox" data-act="guideBg"><div class="gd">
 <div class="gh"><h2>Hướng dẫn sử dụng</h2><button class="btn ghost sm" data-act="guideClose">✕ Đóng</button></div>
 <p>HAKQN Desktop lập hồ sơ khai thác và vận chuyển gỗ keo theo chuẩn FSC. Dữ liệu lưu ngay trên máy (SQLite); nhập liệu, kiểm tra, xuất hồ sơ, sao lưu và khôi phục <b>không cần mạng</b>. Chỉ đồng bộ Google Sheets mới cần mạng. Bản đầy đủ có hình thức trình bày chi tiết hơn: tệp <code>docs/HUONG_DAN.md</code>.</p>
+<h3>0. Màn hình Tổng quan</h3>
+<ul>
+<li><b>Chỉ số</b>: số chủ rừng, số rừng, diện tích, <b>sản lượng dự kiến</b> (diện tích × định mức), khối lượng đã cân và <b>tỷ lệ đã cân so với dự kiến</b>, số chuyến, lao động, số xe, tiến độ hồ sơ trung bình.</li>
+<li><b>Hồ sơ cần hoàn thiện</b> và <b>Phiếu cân gần đây</b>: bấm một rừng để mở thẳng hồ sơ rừng đó.</li>
+<li><b>Cần chú ý ở các rừng</b>: gom theo rừng các việc cần xử lý: lao động dưới 18 tuổi, phiếu cân sai ngày, xe hết hạn hoặc sắp hết hạn giấy tờ (30 ngày), rừng chưa có tọa độ, chưa chọn địa chỉ giao hàng, chưa có phiếu cân. Bấm tên rừng để mở.</li>
+<li><b>Sản lượng theo tháng</b>: khối lượng phiếu cân 6 tháng gần nhất.</li>
+<li><b>Hệ thống</b>: bản tra cứu đang dùng (nguồn, thời điểm nạp, số dòng), lần sao lưu toàn bộ gần nhất, và lối tắt Tra cứu Google Sheets, <b>Báo cáo đối chiếu</b>, Sao lưu toàn bộ, Cài đặt.</li>
+</ul>
 <h3>1. Quy trình 8 bước</h3>
 <ol>
 <li>Khai <b>Công ty mua hàng</b> ở <b>Cài đặt → Công ty</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
@@ -4053,6 +4064,48 @@ async function exportKind(kind, idx) {
 }
 
 /* ========== Trang tổng quan ========== */
+/* Cảnh báo gom theo rừng cho màn Tổng quan: mỗi mục là danh sách rừng bị ảnh hưởng (bấm để mở rừng) */
+const HOME_ALERTS = [['minors', 'err', 'Rừng có lao động dưới 18 tuổi'], ['badDate', 'err', 'Rừng có phiếu cân sai ngày (không tính vào báo cáo)'], ['xeHan', 'warn', 'Rừng có xe hết hạn hoặc sắp hết hạn giấy tờ (trong 30 ngày)'],
+  ['noCoord', 'warn', 'Rừng chưa có tọa độ'], ['noDest', 'warn', 'Rừng chưa chọn địa chỉ giao hàng'], ['noPc', '', 'Rừng chưa có phiếu cân']];
+function homeData() {
+  const today = parseVN(todayStr()), A = {noPc: [], noCoord: [], noDest: [], xeHan: [], minors: [], badDate: []}, months = {}, T = {du: 0, nc: 0, dx: 0};
+  Object.values(db.rs).forEach(o => forestList(o).forEach(f => {
+    const rec = jobView(o, f), i = rec.info, ref = {oid: o.id, fid: f.id, name: (i.tenRung || i.maRung || '(rừng chưa đặt tên)') + ' · ' + (o.info.ten || '')};
+    const y = forestYield(i); if (y) T.du += y; T.nc += (rec.nc || []).length; T.dx += (rec.dx || []).length;
+    if (!(rec.pc || []).length) A.noPc.push(ref);
+    if (!(typeof i.lat === 'number' && typeof i.lng === 'number')) A.noCoord.push(ref);
+    if (!destOf(rec).text) A.noDest.push(ref);
+    if ((rec.dx || []).some(d => [d.hanBH, d.hanGplx].some(v => { const t = parseVN(v); return t && today && (t - today) / 864e5 <= 30; }))) A.xeHan.push(ref);
+    const refDay = parseVN(i.tuNgay) ? i.tuNgay : todayStr();
+    if ((rec.nc || []).some(n => { const a = ageAt(n.ngaySinh, refDay); return a != null && a < 18; })) A.minors.push(ref);
+    if ((rec.pc || []).some(p => !HAKDates.isValid(p.ngay))) A.badDate.push(ref);
+    (rec.pc || []).forEach(p => { const d = HAKDates.parse(p.ngay); if (d && +p.kl > 0) { const k = d.y + '-' + pad2(d.m); months[k] = (months[k] || 0) + +p.kl; } });
+  }));
+  return {A, months, T};
+}
+function homeAlertsHtml(A) {
+  const rows = HOME_ALERTS.filter(([k]) => A[k].length).map(([k, tone, label]) => '<div class="alr"><span class="pill ' + tone + '">' + A[k].length + '</span><div><b>' + esc(label) + '</b><div class="alrN">' +
+    A[k].slice(0, 3).map(r => '<button class="lnk" data-dash="' + esc(r.oid + '|' + r.fid) + '">' + esc(r.name) + '</button>').join('') + (A[k].length > 3 ? '<span class="mut">… và ' + (A[k].length - 3) + ' rừng khác</span>' : '') + '</div></div></div>').join('');
+  return rows || '<p class="mut">Không có cảnh báo: tọa độ, địa chỉ giao, phiếu cân, giấy tờ xe và lao động đều ổn ở mọi rừng.</p>';
+}
+function homeMonthsHtml(months) {
+  const now = new Date(), list = []; for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); list.push([d.getFullYear() + '-' + pad2(d.getMonth() + 1), pad2(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2)]); }
+  const max = Math.max(0, ...list.map(([k]) => months[k] || 0));
+  if (!max) return '<p class="mut">Chưa có phiếu cân trong 6 tháng gần đây.</p>';
+  return '<div class="mbars">' + list.map(([k, l]) => '<div class="mb" title="' + esc(l) + ': ' + esc(HAKReports.fmtCell(Math.round((months[k] || 0) * 1000) / 1000, 'n3')) + ' tấn"><b>' + esc(HAKReports.fmtCell(Math.round((months[k] || 0) * 10) / 10, 'n1')) + '</b><span><i style="height:' + Math.round((months[k] || 0) / max * 100) + '%"></i></span><small>' + esc(l) + '</small></div>').join('') + '</div><p class="mut" style="margin:6px 0 0">Khối lượng phiếu cân theo tháng (tấn), 6 tháng gần nhất.</p>';
+}
+/* Tình trạng hệ thống: bản tra cứu và sao lưu (đọc từ tiến trình chính nên điền sau khi vẽ xong) */
+function homeSysFill() {
+  const box = document.getElementById('homeSys'); if (!box || !HB) return;
+  Promise.all([HB.lookup.status(), HB.settings.get()]).then(([lk0, st]) => {
+    if (!document.getElementById('homeSys')) return;
+    const a = lk0 && lk0.active, rm = st && st.settings && st.settings.remind;
+    const lkTxt = a ? 'Bản tra cứu: <b>' + esc(a.detail || a.source) + '</b>, nạp ' + esc(String(a.loadedAt || '').replace('T', ' ').slice(0, 16)) + ' (' + Object.values(a.counts || {}).reduce((x, y) => x + y, 0) + ' dòng)' : 'Chưa có bản tra cứu: bấm <b>Đồng bộ ngay</b> ở Tra cứu Google Sheets.';
+    const bk = !rm ? '' : rm.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào.' : 'Sao lưu toàn bộ gần nhất cách đây <b>' + rm.days + ' ngày</b>' + (rm.due ? ' (đã đến hạn nhắc).' : '.');
+    box.innerHTML = '<h3>Hệ thống</h3><div class="sysl"><div>' + lkTxt + '</div><div class="' + (rm && rm.due ? 'warnTxt' : '') + '">' + bk + '</div></div>' +
+      '<div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="lkOpen">Tra cứu Google Sheets</button><button class="btn ghost sm" data-act="rpDoiChieu"' + (a ? '' : ' disabled') + '>Báo cáo đối chiếu</button><button class="btn ghost sm" data-act="backup">Sao lưu toàn bộ</button><button class="btn ghost sm" data-act="openSettings">Cài đặt</button></div>';
+  }).catch(() => {});
+}
 function panelHome() {
   const recs = rpRecords(''), F = HAKReports.fmtCell, n = Object.keys(db.rs).length;
   if (!n) {
@@ -4067,12 +4120,15 @@ function panelHome() {
   const recent = [];
   recs.forEach(r => (r.pc || []).forEach(p => recent.push(Object.assign({}, p, {rung: r.maRung, chu: r.chuRung, k: HAKReports.dateKey(p.ngay)}))));
   recent.sort((a, b) => b.k - a.k).splice(8);
+  const H = homeData();
   const kp = (v, l, f, acc) => '<div' + (acc ? ' class="acc"' : '') + '><b>' + esc(F(v, f)) + '</b>' + esc(l) + '</div>';
   return '<div class="hero"><div><h2>Tổng quan</h2><p class="mut">' + todayStr() + ' · dữ liệu lưu ' + (HB ? 'trong SQLite trên máy' : 'trong trình duyệt') + '</p></div>' +
     '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Tra cứu</button>' : '') + '</div></div>' +
-    '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)', 'n3') + kp(tot.n, 'Số chuyến', 'n0') + kp(avg, 'Tiến độ hồ sơ TB', 'pct', true) + '</div>' +
+    '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(H.T.du * 10) / 10, 'Sản lượng dự kiến (tấn)', 'n1') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)', 'n3') + kp(H.T.du ? Math.round(tot.t / H.T.du * 1000) / 10 : 0, 'Đã cân so với dự kiến', 'pct') + kp(tot.n, 'Số chuyến', 'n0') + kp(H.T.nc, 'Lao động', 'n0') + kp(H.T.dx, 'Số xe', 'n0') + kp(avg, 'Tiến độ hồ sơ TB', 'pct', true) + '</div>' +
     '<div class="grid2"><div class="card"><h3>Hồ sơ cần hoàn thiện</h3>' + (todo.length ? '<div class="dlist">' + todo.map(r => '<button class="drow" data-dash="' + esc(r.oid + '|' + r.fid) + '"><span><b>' + esc(r.tenRung || r.maRung || '(rừng chưa đặt tên)') + '</b> <span class="mut">· ' + esc(r.chuRung) + '</span><small>' + esc((r.thieu || []).slice(0, 2).map(x => x.label).join('; ') || '') + ((r.thieu || []).length > 2 ? ' và ' + ((r.thieu || []).length - 2) + ' mục khác' : '') + '</small></span><span class="ring ' + ringCls(r.pct) + '" style="--p:' + r.pct + '"><i>' + Math.round(r.pct) + '%</i></span></button>').join('') + '</div>' : '<p class="mut">Tất cả hồ sơ đã đạt 100%.</p>') + '</div>' +
-    '<div class="card"><h3>Phiếu cân gần đây</h3>' + (recent.length ? '<div class="wrap" style="max-height:none"><table><tr><th>Ngày</th><th>Số phiếu</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th></tr>' + recent.map(p => '<tr><td>' + esc(p.ngay) + '</td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + esc(F(+p.kl || 0, 'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Tra cứu Google Sheets' : '') + '.</p>') + '</div></div>';
+    '<div class="card"><h3>Phiếu cân gần đây</h3>' + (recent.length ? '<div class="wrap" style="max-height:none"><table><tr><th>Ngày</th><th>Số phiếu</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th></tr>' + recent.map(p => '<tr><td>' + esc(p.ngay) + '</td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + esc(F(+p.kl || 0, 'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Tra cứu Google Sheets' : '') + '.</p>') + '</div></div>' +
+    '<div class="grid2" style="margin-top:16px"><div class="card"><h3>Cần chú ý ở các rừng</h3>' + homeAlertsHtml(H.A) + '</div><div class="card"><h3>Sản lượng theo tháng</h3>' + homeMonthsHtml(H.months) + '</div></div>' +
+    '<div class="card" id="homeSys" style="margin-top:16px"><h3>Hệ thống</h3><p class="mut">' + (HB ? 'Đang kiểm tra bản tra cứu và sao lưu…' : 'Bản chạy trong trình duyệt: dữ liệu lưu trong trình duyệt, hãy sao lưu thường xuyên.') + '</p></div>' + (setTimeout(homeSysFill, 0), '');
 }
 
 /* ========== Giao diện ========== */
@@ -5457,6 +5513,7 @@ function rpReadParams() {
 }
 document.addEventListener('click', async e => {
   const t = e.target; if (!t.closest) return;
+  if (t.closest('[data-act=rpDoiChieu]')) { rpOpen(); rp.id = 'doichieu'; rp.one = {}; rp.flag = {}; rp.q = ''; rpLoadAudit(); return rpRender(); }
   if (t.closest('[data-act=rpOpen]')) return rpOpen();
   if (!t.closest('#rpBox')) return;
   const fold = t.closest('[data-rpfold]'); if (fold) { const k = fold.dataset.rpfold; rp.folded[k] = !rp.folded[k]; return rpRender(); }

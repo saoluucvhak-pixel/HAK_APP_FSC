@@ -49,6 +49,13 @@ Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa c
 - **Đổi mã lô**: các dòng nhân công, xe, phiếu cân mang mã cũ được **đổi theo mã mới** để dữ liệu vẫn thuộc đúng lô; dòng mang một mã khác được báo, không tự đổi.
 - Thanh **Tiến độ hồ sơ · checklist FSC** ở đầu lô cho biết % hoàn thành và từng mục còn thiếu.
 
+## 3a. Màn hình Tổng quan
+- **Chỉ số**: số chủ rừng, số rừng, tổng diện tích, **sản lượng dự kiến** (diện tích × định mức), khối lượng đã cân và **tỷ lệ đã cân so với dự kiến**, số chuyến, số lao động, số xe, tiến độ hồ sơ trung bình.
+- **Hồ sơ cần hoàn thiện** và **Phiếu cân gần đây**: bấm một rừng để mở thẳng hồ sơ rừng đó.
+- **Cần chú ý ở các rừng**: gom theo rừng các việc cần xử lý: lao động dưới 18 tuổi, phiếu cân sai ngày, xe hết hạn hoặc sắp hết hạn giấy tờ (trong 30 ngày), rừng chưa có tọa độ, chưa chọn địa chỉ giao hàng, chưa có phiếu cân. Bấm tên rừng để mở.
+- **Sản lượng theo tháng**: khối lượng phiếu cân 6 tháng gần nhất.
+- **Hệ thống**: bản tra cứu đang dùng (nguồn, thời điểm nạp, số dòng), lần sao lưu toàn bộ gần nhất (nhắc khi đến hạn), và lối tắt: Tra cứu Google Sheets, **Báo cáo đối chiếu** (dùng được khi đã có bản tra cứu), Sao lưu toàn bộ, Cài đặt.
+
 ## 3b. In phiếu cân (giấy lỗ 240 × 279 mm)
 In phiếu cân **theo rừng**, giống xuất hồ sơ: vào lô → tab **Xuất hồ sơ** → thẻ **In phiếu cân** → bấm **In phiếu cân**.
 - **Dùng nguyên bản công cụ PhieuCan**: file `renderer/PhieuCan.html` giữ nguyên từng byte (bố cục tính theo mm, giấy lỗ 240 × 279 mm, đường xé giữa, chỉnh lề, 2 phiếu hoặc 2 liên một trang, tải PDF). Phần mềm không vẽ lại phiếu nên bản in giống hệt công cụ gốc. Công cụ mở trong cửa sổ riêng, đã có sẵn phiếu cân của rừng; phần chọn file Excel, thông tin công ty bị ẩn vì dữ liệu đã có trong phần mềm.
