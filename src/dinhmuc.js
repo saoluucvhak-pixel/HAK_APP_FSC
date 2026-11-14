@@ -154,6 +154,23 @@
   }
   /* năng suất: 1 ngày khai thác = ? tấn (= tấn/ha ÷ ngày/ha), làm tròn 2 chữ số; thiếu số thì null */
   const nangSuat = (tanHa, ngayHa) => (typeof tanHa === 'number' && tanHa > 0 && typeof ngayHa === 'number' && ngayHa > 0) ? Math.round(tanHa / ngayHa * 100) / 100 : null;
-  const api = {keoItems, keoPick, keoAdd, keoSetAll, tgItems, tgPick, tgAdd, tgSetAll, soNgay, ngayKetThuc, nangSuat, BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
+  /* số ngày khai thác thực tế từ tuNgay đến denNgay (tính cả hai đầu, KHÔNG tính Chủ nhật); sai ngày hoặc đến ngày trước từ ngày → null */
+  function demNgay(tuNgay, denNgay) {
+    const a = D.parse(trim(tuNgay)), b = D.parse(trim(denNgay)); if (!a || !b) return null;
+    let t = Date.UTC(a.y, a.m - 1, a.d); const e = Date.UTC(b.y, b.m - 1, b.d); if (e < t || (e - t) / 864e5 > 3650) return null;
+    let n = 0; for (; t <= e; t += 864e5) if (new Date(t).getUTCDay() !== 0) n++;
+    return n;
+  }
+  /* Thời gian khai thác thực tế so với dự kiến. Cảnh báo khi lệch quá max(3 ngày, 20% số ngày dự kiến) (cả dài hơn lẫn ngắn hơn).
+   * Trả {thucTe, duKien, lech, tyLe (%), nguong, canhBao} hoặc {loi} khi đến ngày trước từ ngày hoặc ngày sai. */
+  const NGUONG_NGAY = 3, NGUONG_TYLE = 0.2;
+  function lechThoiGian(tuNgay, denNgay, duKien) {
+    if (!(duKien >= 1)) return null;
+    const a = D.parse(trim(tuNgay)), b = D.parse(trim(denNgay)); if (!a || !b) return null;
+    const tt = demNgay(tuNgay, denNgay); if (tt == null) return {loi: 'ngày kết thúc trước ngày bắt đầu'};
+    const lech = tt - duKien, nguong = Math.max(NGUONG_NGAY, Math.ceil(duKien * NGUONG_TYLE));
+    return {thucTe: tt, duKien, lech, tyLe: Math.round(lech / duKien * 1000) / 10, nguong, canhBao: Math.abs(lech) > nguong};
+  }
+  const api = {demNgay, lechThoiGian, NGUONG_NGAY, NGUONG_TYLE, keoItems, keoPick, keoAdd, keoSetAll, tgItems, tgPick, tgAdd, tgSetAll, soNgay, ngayKetThuc, nangSuat, BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDinhMuc = api;
 })(typeof self !== 'undefined' ? self : this);

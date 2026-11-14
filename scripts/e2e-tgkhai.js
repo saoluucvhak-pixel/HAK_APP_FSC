@@ -63,6 +63,25 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('bắt đầu khai thác 04/10/2026 ≥ 01/07/2026: dùng bản 4 ngày/ha → 2,5 × 4 = 10 ngày', /10 ngày/.test(n) && /2,5 ha × 4 ngày\/ha/.test(n), n);
   await w.fill('#forestForm [name=tuNgay]', '01/03/2026'); await w.waitForTimeout(250);
   ok('đổi ngày bắt đầu về 01/03/2026 (trước 01/07/2026): quay lại bản 5 ngày/ha → 13 ngày', /13 ngày/.test(await note()));
+  // 8. cảnh báo khi ngày kết thúc thực tế lệch nhiều so với dự kiến (định mức hiện hành 4 ngày/ha → 2,5 ha = 10 ngày khai thác)
+  await openInfo(); await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '31/10/2026'); await w.waitForTimeout(300);
+  let lech = await w.innerText('#tgLech').catch(() => '');
+  ok('đến ngày 31/10/2026: hiện ngay cảnh báo nêu thực tế 27 ngày (01–31/10 bỏ 4 Chủ nhật), dự kiến 10 ngày, +17 ngày, ngưỡng 3 ngày', /Cảnh báo: Thời gian khai thác thực tế 27 ngày/.test(lech) && /DÀI hơn dự kiến 10 ngày: \+17 ngày/.test(lech) && /lệch quá 3 ngày/.test(lech), lech);
+  await w.fill('#forestForm [name=denNgay]', '13/10/2026'); await w.waitForTimeout(300);
+  ok('đến ngày 13/10/2026 (11 ngày, lệch +1 trong ngưỡng 3): không còn cảnh báo', !(await w.$('#tgLech')));
+  await w.fill('#forestForm [name=denNgay]', '07/10/2026'); await w.waitForTimeout(300); lech = await w.innerText('#tgLech').catch(() => '');
+  ok('đến ngày 07/10/2026 (6 ngày, ngắn hơn 4): cũng cảnh báo “NGẮN hơn”', /NGẮN hơn dự kiến 10 ngày: -4 ngày/.test(lech), lech);
+  await w.fill('#forestForm [name=denNgay]', '31/10/2026'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  await w.click('[data-ftab=kt]'); await w.waitForTimeout(400); const kt = await w.innerText('#main');
+  ok('Kiểm tra trước khi xuất: có mục “Thời gian khai thác” (cần đối chiếu) nêu độ lệch; không chặn xuất hồ sơ', /Thời gian khai thác/.test(kt) && /thực tế 27 ngày/.test(kt) && /dự kiến 10 ngày/.test(kt));
+  await w.click('#navHome'); await w.waitForSelector('#homeSys'); await w.waitForTimeout(500); const home = await w.innerText('#main');
+  ok('Tổng quan: cảnh báo “Rừng có thời gian khai thác thực tế lệch nhiều so với dự kiến” nêu rừng và số ngày', /Rừng có thời gian khai thác thực tế lệch nhiều so với dự kiến/.test(home) && /thực tế 27 ngày, dự kiến 10 ngày \(\+17\)/.test(home), home.slice(0, 400));
+  await openInfo(); await w.fill('#forestForm [name=denNgay]', ''); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  ok('xóa ô đến ngày, chưa có phiếu cân: không có gì để so, không cảnh báo', !(await w.$('#tgLech')));
+  // chưa có ngày kết thúc nhưng đã có phiếu cân: so với ngày cân cuối cùng
+  { const d0 = await db(); d0.rs.own1.forests.fa.pc = [{_row: 2, maRung: 'R-A', stt: '1', ngay: '30/10/2026', bienSo: '92C-12345', soPhieu: 'Z1', kl: 5, noiGiao: 'KCN', ghiChu: ''}, {_row: 3, maRung: 'R-A', stt: '2', ngay: '31/10/2026', bienSo: '92C-12345', soPhieu: 'Z2', kl: 5, noiGiao: 'KCN', ghiChu: ''}]; await w.evaluate(x => window.hak.save(x), d0); await w.reload(); await w.waitForSelector('#side'); }
+  await openInfo(); lech = await w.innerText('#tgLech').catch(() => '');
+  ok('ô đến ngày trống nhưng đã có phiếu cân (cuối cùng 31/10/2026): cảnh báo so với “ngày cân cuối cùng”', /theo ngày cân cuối cùng/.test(lech) && /thực tế 27 ngày/.test(lech), lech);
   // xóa một dòng định mức: bấm Xóa rồi Lưu mới ghi
   await w.click('#navNorm'); await w.waitForSelector('#tgForm'); await w.click('#tgForm tr[data-tg="1"] [data-act=keoDel]'); ok('bấm Xóa: dòng ẩn nhưng chưa ghi vào SQLite cho đến khi bấm Lưu', ((await db()).dinhMucNgay || []).length === 2);
   await w.click('#tgForm button[type=submit]'); await w.waitForTimeout(300); ok('Lưu sau khi Xóa: chỉ còn bản 5 ngày/ha từ 01/01/2025', JSON.stringify((await db()).dinhMucNgay) === JSON.stringify([{tuNgay: '01/01/2025', ngayHa: 5}]));

@@ -76,3 +76,19 @@ test('thời gian khai thác dự kiến = diện tích × ngày/ha làm tròn l
   assert.strictEqual(DM.ngayKetThuc('31/02/2026', 3), ''); assert.strictEqual(DM.ngayKetThuc('01/10/2026', 0), ''); assert.strictEqual(DM.ngayKetThuc('', 3), '');
   assert.strictEqual(DM.nangSuat(80, 5), 16); assert.strictEqual(DM.nangSuat(80, 3), 26.67); assert.strictEqual(DM.nangSuat(null, 5), null); assert.strictEqual(DM.nangSuat(80, 0), null);
 });
+
+test('cảnh báo thời gian khai thác thực tế lệch dự kiến: đếm ngày không tính Chủ nhật, ngưỡng max(3 ngày, 20%), cả dài hơn lẫn ngắn hơn', () => {
+  // 01/10/2026 (T5) → 15/10/2026: 13 ngày khai thác (bỏ CN 04 và 11)
+  assert.strictEqual(DM.demNgay('01/10/2026', '15/10/2026'), 13); assert.strictEqual(DM.demNgay('04/10/2026', '04/10/2026'), 0); assert.strictEqual(DM.demNgay('15/10/2026', '01/10/2026'), null);
+  assert.strictEqual(DM.demNgay('31/02/2026', '15/10/2026'), null);
+  const ok13 = DM.lechThoiGian('01/10/2026', '15/10/2026', 13); assert.deepStrictEqual([ok13.thucTe, ok13.lech, ok13.canhBao], [13, 0, false]);
+  // dự kiến 10 ngày: ngưỡng = max(3, 2) = 3 → lệch 3 chưa cảnh báo, lệch 4 cảnh báo
+  assert.strictEqual(DM.lechThoiGian('01/10/2026', '13/10/2026', 10).nguong, 3);                                  // 01-13/10 = 11 ngày: lệch +1
+  assert.strictEqual(DM.lechThoiGian('01/10/2026', '13/10/2026', 10).canhBao, false);
+  const l3 = DM.lechThoiGian('01/10/2026', '16/10/2026', 10); assert.deepStrictEqual([l3.thucTe, l3.lech, l3.canhBao], [14, 4, true]);   // 01-16/10: 14 ngày, +4 > 3
+  // dự kiến 100 ngày: ngưỡng 20 ngày
+  assert.strictEqual(DM.lechThoiGian('01/01/2026', '30/04/2026', 100).nguong, 20);
+  const ngan = DM.lechThoiGian('01/10/2026', '07/10/2026', 13); assert.deepStrictEqual([ngan.thucTe, ngan.lech, ngan.canhBao, ngan.tyLe], [6, -7, true, -53.8]);   // ngắn hơn nhiều cũng cảnh báo
+  assert.deepStrictEqual(DM.lechThoiGian('15/10/2026', '01/10/2026', 13), {loi: 'ngày kết thúc trước ngày bắt đầu'});
+  assert.strictEqual(DM.lechThoiGian('01/10/2026', '', 13), null); assert.strictEqual(DM.lechThoiGian('01/10/2026', '15/10/2026', null), null);
+});
