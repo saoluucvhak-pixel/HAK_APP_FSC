@@ -9,6 +9,7 @@ const TABS = {
     req: ['Mã khách hàng', 'Mã hợp đồng', 'SỐ PHIẾU CÂN', 'Ngày nhập', 'SỐ XE', 'Biển số 1', 'Đơn giá', 'Thanh toán', 'Họ và tên chủ rừng', 'ĐỊA CHỈ RỪNG'],
     anyOf: [['KL hàng (KG)', 'Khối lượng (Tấn)']],   // cần ít nhất một trong hai cột khối lượng
     text: ['Mã khách hàng', 'Mã hợp đồng', 'SỐ PHIẾU CÂN', 'SỐ PHIẾU CHI', 'SỐ XE', 'Biển số 1', 'Số BKLS'],
+    time: ['Giờ cân 1', 'Giờ cân 2'],
     cccd: ['Mã khách hàng'],
     search: ['Mã khách hàng', 'Mã hợp đồng', 'SỐ PHIẾU CÂN', 'SỐ XE', 'Biển số 1', 'Họ và tên chủ rừng', 'ĐỊA CHỈ RỪNG']
   },
@@ -35,9 +36,15 @@ const stripSuffix = v => clean(v).replace(/_\d+$/, '');
 
 /* Đọc 1 ô: ngày -> dd/mm/yyyy; cột văn bản -> chuỗi (giữ số 0 đầu; CCCD dạng số thì bù đủ 12 chữ số) */
 /* giờ cân: ô giờ (phần ngày của Excel 0..1) → HH:MM:SS; chuỗi giữ nguyên */
-const timeText = v => { if (typeof v === 'number' && v >= 0 && v < 1) { const t = Math.round(v * 86400); return pad2(Math.floor(t / 3600)) + ':' + pad2(Math.floor(t % 3600 / 60)) + ':' + pad2(t % 60); } return clean(v); };
-function cellValue(cell, isText, isCccd) {
+/* Giờ cân: chỉ lấy PHẦN GIỜ. Ô giờ của Google Sheets/Excel có thể là số giờ (0..1), ngày-giờ (46300,35 định dạng dd/mm/yyyy hh:mm:ss) hoặc chữ “05/10/2026 08:25:30”; không bao giờ hiện ngày vào cột giờ. Ô chỉ có ngày thì không có giờ. */
+const hms = sec => { const t = Math.round(sec) % 86400; return pad2(Math.floor(t / 3600)) + ':' + pad2(Math.floor(t % 3600 / 60)) + ':' + pad2(t % 60); };
+const timeText = v => {
+  if (typeof v === 'number') { const f = v - Math.floor(v); return f < 1e-9 || !isFinite(v) ? '' : hms(f * 86400); }
+  const t = clean(v), m = /(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(t); return m ? pad2(+m[1]) + ':' + m[2] + (m[3] ? ':' + m[3] : '') : /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(t) ? '' : t;
+};
+function cellValue(cell, isText, isCccd, isTime) {
   if (!cell || cell.v == null || cell.v === '') return '';
+  if (isTime) { if (cell.t === 'd') { const d = cell.v; return hms(d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()); } if (cell.t === 'n') return cell.v; }   // ô giờ: giữ số để timeText lấy phần giờ, kể cả khi ô có định dạng ngày
   if (cell.t === 'd' || (cell.t === 'n' && cell.z && XLSX.SSF.is_date(cell.z))) {
     if (cell.t === 'd') { const d = cell.v; return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear(); }
     const p = XLSX.SSF.parse_date_code(cell.v); if (!p) return '';
@@ -154,12 +161,13 @@ function parseWorkbook(buf, o = {}) {
     const sheet = r0.pick[name], ws = wb.Sheets[sheet];
     if (!ws['!ref']) { errors.push('Tab “' + sheet + '” (' + roleLabel(name) + ') trống'); return; }
     const rg = XLSX.utils.decode_range(ws['!ref']), head = headerRow(ws);
-    const T = new Set(TABS[name].text), C = new Set(TABS[name].cccd), rows = [];
+    const T = new Set(TABS[name].text), C = new Set(TABS[name].cccd), TM = new Set(TABS[name].time || []), rows = [];
     for (let r = rg.s.r + 1; r <= rg.e.r; r++) {
       const o2 = {}; let any = false;
       head.forEach((h, i) => {
         if (!h) return;
-        const v = cellValue(ws[XLSX.utils.encode_cell({r, c: rg.s.c + i})], T.has(h), C.has(h));
+        let v = cellValue(ws[XLSX.utils.encode_cell({r, c: rg.s.c + i})], T.has(h), C.has(h), TM.has(h));
+        if (TM.has(h)) v = timeText(v);   // cột giờ chỉ giữ phần giờ
         if (v !== '') any = true;
         o2[h] = v;
       });

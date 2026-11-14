@@ -614,7 +614,10 @@ const normDX = o => {
 };
 
 /* giờ cân: ô giờ của Excel (phần ngày 0..1) → HH:MM:SS; chuỗi giữ nguyên */
-const timeCell = v => { if (typeof v === 'number' && v >= 0 && v < 1) { const t = Math.round(v * 86400); return pad2(Math.floor(t / 3600)) + ':' + pad2(Math.floor(t % 3600 / 60)) + ':' + pad2(t % 60); } return trim(v); };
+const timeCell = v => {   // chỉ lấy PHẦN GIỜ: số giờ (0..1), ngày-giờ (46300,35) hoặc chữ “05/10/2026 08:25:30”; ô chỉ có ngày thì không có giờ
+  if (typeof v === 'number') { const f = v - Math.floor(v); if (f < 1e-9 || !isFinite(v)) return ''; const t = Math.round(f * 86400) % 86400; return pad2(Math.floor(t / 3600)) + ':' + pad2(Math.floor(t % 3600 / 60)) + ':' + pad2(t % 60); }
+  const t = trim(v), m = /(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(t); return m ? pad2(+m[1]) + ':' + m[2] + (m[3] ? ':' + m[3] : '') : /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(t) ? '' : t;
+};
 /* Số tiền trong ô: bộ đọc chặt chẽ chung (src/money.js). Trống → null; số dương hợp lệ → số; còn lại → null kèm lý do ở giaLoi (không tự đoán) */
 const moneyCell = v => HAKMoney.positive(v);
 const normPC = o => {
