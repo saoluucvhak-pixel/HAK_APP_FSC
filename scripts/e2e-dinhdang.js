@@ -50,7 +50,7 @@ const BAD = [[/\bNaN\b/, 'NaN'], [/\bundefined\b/, 'undefined'], [/\bnull\b/, 'n
   for (const k of await w.$$eval('[data-rpsel]', b => b.map(e => e.dataset.rpsel))) { await w.$eval('[data-rpsel=' + k + ']', b => b.click()); await check('Báo cáo · ' + k); }
   await w.click('[data-act=rpClose]'); await w.waitForTimeout(300);
   await w.click('header [data-act=lkOpen]', {timeout: 5000}).catch(() => {}); if (await w.$('#lkBox.on')) { await check('Tra cứu Google Sheets', '#lkBox'); await w.click('[data-act=lkClose]'); }
-  await w.click('[data-act=openNorm]').catch(() => {}); await check('Định mức BHLĐ');
+  await w.click('[data-act=openNorm]').catch(() => {}); await check('Định mức');
   await w.click('#navSet'); await check('Cài đặt');
   for (const id of await w.$$eval('[id^=setTab_]', b => b.map(e => e.id))) { await w.click('#' + id); await check('Cài đặt · ' + id.replace('setTab_', '')); }
   ok('đã rà ' + seen.length + ' màn hình', seen.length >= 25, seen.join(', '));

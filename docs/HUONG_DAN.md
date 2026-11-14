@@ -128,7 +128,7 @@ Vào lô → tab **Nhân công** → mục **Thông số hợp đồng và đơn
 3. **Sản lượng chia đều**: tấn (hoặc ha, hoặc số công) chia đều cho **mọi người trong tổ, kể cả Tổ trưởng**; tiền mỗi người = phần chia × đơn giá chức danh của người đó.
 4. **Ngày bắt đầu** dùng cho hợp đồng, chấm công và kiểm tra **đủ 18 tuổi**. Người dưới 18 tuổi bị cảnh báo và **không xuất được Giấy ủy quyền**.
 5. **Chấm công thực tế** (chỉ khi cơ sở tính là **ngày công**, cả giao khoán lẫn trực tiếp): thẻ **Chấm công thực tế** ngay dưới thông số ở tab Nhân công. Chọn tháng, nhập số công từng ngày cho từng người (**1** đủ công, **0,5** nửa công, **0** hoặc trống là nghỉ; tối đa 3 mỗi ngày), hoặc bấm **Điền đủ công (trừ Chủ nhật)** rồi sửa các ngày nghỉ. Tổng tháng và cả đợt hiện ngay. Quy tắc: **chưa chấm công** thì BM-08 tính mọi người bằng số công theo thời gian khai thác (trừ Chủ nhật); **đã chấm công** thì BM-08 dùng tổng công của từng người (người chưa chấm là 0 công). Hợp đồng (BM-01, BM-03, BM-20) luôn dùng số công dự tính nên không đổi khi chấm công. Nút **In bảng chấm công đã nhập** tải BM-05 của tháng đang chọn có sẵn số công; BM-05 trong các gói hồ sơ vẫn là mẫu trống để chấm tay.
-6. **Định mức BHLĐ** theo chức danh (nút **Định mức BHLĐ** ở cột bên trái) dùng cho sổ cấp phát.
+6. **Định mức BHLĐ** theo chức danh (nút **Định mức** ở menu ngang trên cùng) dùng cho sổ cấp phát.
 6. Nạp danh sách người bằng file Excel mẫu (xem mục 6). Mỗi lô cần **đúng một Tổ trưởng**.
 
 ## 5. Vận chuyển: xe, phiếu cân, cước, địa chỉ giao
@@ -262,7 +262,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 
 **Giao khoán: đơn giá khoán của tổ.** Nếu **Thông tin rừng không có đơn giá Tổ trưởng**, phần mềm suy ra đơn giá khoán của tổ từ định biên nhân sự: tổng (số người từng vị trí ở sheet nhân công × đơn giá vị trí) ÷ tổng số người. Hợp đồng khoán (BM-01) ghi rõ cơ sở tính giá trung bình, chi tiết giá từng vị trí và **tổng giá trị khoán = tổng thanh toán cho tất cả mọi người, kể cả Tổ trưởng**; Giấy ủy quyền (BM-20) ghi đơn giá ký tương ứng; BM-08 ghi đơn giá khoán và tổng. Nếu **có nhập “Đơn giá giao khoán Tổ trưởng (đồng/tấn)” ở Thông tin rừng** thì làm như cũ (không có phần suy ra). Ô này **tùy chọn**: để trống thì app tự suy từ định biên.
 
-**Định mức BHLĐ có hiệu lực từ ngày, và thêm vị trí mới.** Nút **Định mức BHLĐ** ở menu ngang trên cùng (cạnh Công ty mua hàng) mở màn hình định mức theo vị trí (chức danh).
+**Định mức BHLĐ có hiệu lực từ ngày, và thêm vị trí mới.** Nút **Định mức** ở menu ngang trên cùng mở màn hình định mức: định mức BHLĐ theo vị trí (chức danh) và định mức gỗ keo.
 - **Hiệu lực từ ngày**: mỗi bản định mức có ngày hiệu lực. Bản gốc (dữ liệu cũ) để trống ngày thì áp dụng từ trước đến nay; nên điền ngày cho rõ. **Thêm bản mới** (ô “Thêm bản mới, hiệu lực từ ngày”) sao chép bản đang chọn để sửa tiếp; ngày phải có thật (dd/mm/yyyy) và không trùng bản khác. Chọn bản ở ô “Bản định mức”, sửa rồi **Lưu bản định mức này**; bản không phải gốc có thể xóa.
 - **Biểu mẫu dùng bản nào**: bản có ngày hiệu lực lớn nhất không vượt quá ngày của biểu mẫu. Danh sách cấp phát BHLĐ (BM-02) theo **ngày cấp phát** (không nhập thì theo ngày bắt đầu khai thác của rừng) và ghi rõ “Định mức theo bản có hiệu lực từ ngày …”; hợp đồng lao động theo ngày bắt đầu hợp đồng, ngày ký hoặc ngày bắt đầu khai thác. Ngày cấp phát **trước mọi bản** thì chặn xuất BM-02 và báo chưa có bản định mức hiệu lực.
 - **Thêm vị trí mới** (ô “Thêm vị trí mới”, ví dụ “Công nhân phụ”): vị trí hiện thêm một dòng trong mọi bản định mức, thêm ô đơn giá ở tab Nhân công (mục Thông số hợp đồng và đơn giá), được chọn trong cột **Chức danh** khi nạp nhân công và có trong file Excel mẫu nhân công tải sau đó. Vị trí có người giữ trong giao khoán nằm trong chi tiết đơn giá và công thức đơn giá bình quân. Chỉ **Tổ trưởng** có vai trò riêng; tên vị trí mới không được bắt đầu bằng “Tổ trưởng”. Xóa vị trí chỉ khi chưa còn nhân công nào giữ.
@@ -325,7 +325,7 @@ Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
 - **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
 
 ## Định mức gỗ keo (1 ha = ? tấn) và nút điền nhanh ở Thông tin rừng
-- **Định mức gỗ keo**: ở màn **Định mức BHLĐ**, mục “Định mức gỗ keo: 1 ha = ? tấn”, mỗi dòng có **hiệu lực từ ngày**. Dòng cuối để thêm định mức mới; ngày phải có thật và không trùng.
+- **Định mức gỗ keo**: ở màn **Định mức**, mục “Định mức gỗ keo: 1 ha = ? tấn”, mỗi dòng có **hiệu lực từ ngày**. Dòng cuối để thêm định mức mới; ngày phải có thật và không trùng.
 - **Mặc định cho rừng**: rừng lấy định mức có hiệu lực theo **ngày bắt đầu khai thác** của rừng (chưa có ngày thì dùng bản mới nhất). Ô “Định mức (tấn/ha)” ở Thông tin rừng để trống là dùng mặc định (gợi ý ngay trong ô); **tự điền số** thì rừng dùng số riêng; nút **Dùng mặc định** xóa số riêng. Sản lượng dự kiến tự tính theo định mức đang dùng.
 - **Từ ngày / đến ngày**: nút **Lấy ngày cân nhỏ nhất** và **Lấy ngày cân lớn nhất** (từ phiếu cân của rừng) điền vào ô; vẫn tự điền hoặc sửa được.
 - **Khối lượng thực tế**: nút **Lấy tổng từ phiếu cân** điền tổng khối lượng phiếu cân; vẫn tự điền số. Các nút chỉ điền vào ô, bấm **Lưu thông tin rừng** để ghi nhận.
