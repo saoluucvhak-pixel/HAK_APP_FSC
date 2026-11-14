@@ -2465,7 +2465,7 @@ const HAKReports = (function () {
     const nLo = per.filter(x => x.log.length).length, nPh = per.reduce((s, x) => s + new Set(x.log.map(e => String(e.soPhieu).toUpperCase())).size, 0);
     const tot = per.reduce((s, x) => s + x.tong.length, 0), klAll = round(per.reduce((s, x) => s + x.log.reduce((t, e) => t + kt(e), 0), 0), 3);
     const notes = []; if (rangeNote(o)) notes.push(rangeNote(o));
-    if (!det.length) notes.push('Chưa có phiếu cân nào được cập nhật biển số xe trong kỳ. Biển số được cập nhật ở màn Tra cứu Google Sheets (nút “Chỉ cập nhật biển số xe”) hoặc khi ghi lại phiếu cân đã có với biển số mới.');
+    if (!det.length) notes.push('Chưa có phiếu cân nào được cập nhật biển số xe trong kỳ. Biển số được cập nhật ở màn Tra cứu Google Sheets (phiếu đổi biển được tích sẵn, giữ ô “Chỉ đổi biển số”, rồi Lưu vào hồ sơ) hoặc khi ghi lại phiếu cân đã có với biển số mới.');
     const multi = per.filter(x => { const c = {}; x.log.forEach(e => { const k = String(e.soPhieu).toUpperCase(); c[k] = (c[k] || 0) + 1; }); return Object.values(c).some(n => n > 1); }).map(x => x.r.maRung);
     if (multi.length) notes.push('Có phiếu cân được đổi biển số nhiều lần (xem đủ các dòng theo thời điểm cập nhật): lô ' + multi.join(', ') + '.');
     return {id: 'bienso', title: 'BÁO CÁO PHIẾU CÂN ĐÃ CẬP NHẬT BIỂN SỐ XE THEO LÔ RỪNG', orient: 'landscape', period: periodText(o.from, o.to),
