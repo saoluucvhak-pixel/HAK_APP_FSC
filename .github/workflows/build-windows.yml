@@ -37,6 +37,13 @@ jobs:
           git fetch -q --depth 1 origin "$HAKQ_SHA" && git checkout -q FETCH_HEAD && npm ci --silent
       - name: Quét mã (chặn khi có lỗi mức error theo .hakquality.json)
         run: node ../hakq/bin/hak-quality.js . --out reports
+      - name: Kiểm tra lỗ hổng thư viện (npm audit) — chặn khi thư viện chạy trong ứng dụng có lỗ hổng mức cao trở lên
+        run: |
+          mkdir -p reports
+          npm audit --json > reports/npm-audit-all.json || true                     # toàn bộ (kể cả công cụ build/kiểm thử): chỉ báo cáo
+          npm audit --omit=dev --json > reports/npm-audit-prod.json || true
+          npm audit --audit-level=moderate || echo "::warning::Có lỗ hổng trong thư viện dùng để build/kiểm thử (không đóng gói vào ứng dụng); xem reports/npm-audit-all.json"
+          npm audit --omit=dev --audit-level=high
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -58,6 +65,17 @@ jobs:
         run: npm test
       - name: Kiểm thử đầu-cuối (Electron)
         run: npm run test:e2e
+      - name: Tải báo cáo kiểm thử đầu-cuối (tổng hợp từng bộ và nhật ký)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/e2e
+          if-no-files-found: warn
+      - name: Ghi bảng kết quả kiểm thử đầu-cuối vào trang tóm tắt của lượt chạy
+        if: always()
+        shell: pwsh
+        run: if (Test-Path reports/e2e/summary.md) { Get-Content reports/e2e/summary.md -Raw | Add-Content $env:GITHUB_STEP_SUMMARY }
       - name: Đóng gói bộ cài
         run: npm run dist
       - name: Kiểm tra có file .exe và ghi thông tin bản dựng

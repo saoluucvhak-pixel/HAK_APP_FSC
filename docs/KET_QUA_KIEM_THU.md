@@ -343,3 +343,16 @@ Rà soát theo các skill `hak-code-auditor`, `hak-electron-security`, `hak-data
 
 **Kết quả (Linux, màn hình ảo):** `npm test` 287/288 đạt (1 bỏ qua như trước); `npm run test:e2e` **56/56 bộ, 1.312 kiểm tra đạt, 0 lỗi**; quét chất lượng 0 lỗi, 2 cảnh báo file dài; bản đóng gói Linux qua kiểm tra khói `create`, `verify`, `upgrade` (từ 1.0.0), `upgrade14`.
 **Chưa chạy:** bộ cài Windows (cần chạy workflow “Build Windows installer”) và cài trên máy người dùng.
+
+## 9. Bản 1.4.35: tự sao lưu hằng ngày, tách module giao diện, bộ chạy e2e chung, npm audit trong CI (14/11/2026)
+
+| Hạng mục | Nội dung | Kiểm thử |
+| --- | --- | --- |
+| Tự sao lưu hằng ngày (`src/autobackup.js`) | Khi mở cơ sở dữ liệu (lần đầu trong ngày, đã có hồ sơ): sao lưu trực tuyến SQLite ra `tu-dong-YYYY-MM-DD.sqlite` trong thư mục sao lưu, qua file tạm, chuyển về một file độc lập, `quick_check` rồi mới giữ; xoay vòng giữ N bản (mặc định 7; 0 = tắt) ở **Cài đặt hệ thống → Tự sao lưu hằng ngày**; không xóa bản sao lưu loại khác; chạy nền, lỗi chỉ ghi nhật ký và hiện ở Cài đặt | `tests/autobackup.test.js` (4), `scripts/e2e-tusaoluu.js` (13); bản đóng gói: pha `verify` tạo bản của hôm nay |
+| Tách `ui/app.src.html` | Còn 370 dòng (khung HTML + CSS); phần thân script tách thành 18 module `ui/app/NN-*.js` (87–637 dòng), `build:html` ghép theo thứ tự số vào cùng một khối script trong cùng hàm bao `'use strict'` | Bản dựng sau khi tách **trùng từng byte** với bản dựng từ mã trước khi tách; `tests/build-html.test.js`: mỗi module đọc được cú pháp riêng lẻ, `renderer/index.html` đã commit khớp mã nguồn và thư viện hiện tại; công cụ quét không còn cảnh báo file dài ở giao diện |
+| Bộ chạy e2e chung (`scripts/e2e-all.js`) | `npm run test:e2e` chạy lần lượt 57 bộ, không dừng ở bộ lỗi đầu (trừ `--bail`), giới hạn thời gian từng bộ, đọc dòng ĐẠT/LỖI, in bảng tổng và ghi `reports/e2e/summary.{json,md}` + nhật ký từng bộ; báo lỗi nếu có `scripts/e2e-*.js` chưa khai báo; Linux không màn hình tự dùng `xvfb-run`; CI tải báo cáo lên artifact và trang tóm tắt lượt chạy | `tests/e2e-all.test.js`; lượt chạy thật đã phát hiện đúng 1 bộ lỗi (`e2e-dulieu` đếm cả bản tự sao lưu) và nêu tên kiểm tra lỗi |
+| `npm audit` trong CI | Job quét chất lượng: chặn khi thư viện chạy trong ứng dụng có lỗ hổng mức cao trở lên; lỗ hổng ở công cụ build/kiểm thử chỉ cảnh báo; lưu `reports/npm-audit-*.json`; lệnh `npm run audit` | `npm run audit`: 0 lỗ hổng |
+
+**Sửa kèm:** commit `6fe2e88` đã commit `renderer/index.html` dựng **trước** khi nâng thư viện nên giao diện trong commit đó còn nhúng SheetJS 0.18.5 (tiến trình chính đã dùng 0.20.3; CI luôn dựng lại giao diện trước khi đóng gói nên bộ cài từ CI không bị ảnh hưởng). Bản này dựng lại với SheetJS 0.20.3 và có bài kiểm thử chặn lỗi này.
+
+**Kết quả (Linux, Electron 45.3.2):** `npm test` 296/297 đạt (1 bỏ qua như trước); `npm run test:e2e` **57/57 bộ, 1.325 kiểm tra đạt, 0 lỗi**; quét chất lượng 0 lỗi, 1 cảnh báo (`package-lock.json` dài); bản đóng gói Linux qua kiểm tra khói `create`, `verify`, `upgrade`, `upgrade14`, `relocate`. **Chưa chạy:** workflow Windows.

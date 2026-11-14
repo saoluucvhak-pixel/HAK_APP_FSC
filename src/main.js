@@ -8,6 +8,7 @@ const LoRung = require('./lorung');
 const Settings = require('./settings');
 const DM = require('./datamove');
 const Backup = require('./backup');
+const AutoBackup = require('./autobackup');
 const {GoogleAuth, fileIdOf} = require('./google-auth');
 
 /* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
@@ -102,7 +103,21 @@ function openStore() {
     log('ERROR', 'Không mở được cơ sở dữ liệu: ' + e.message); return false;
   }
   loc.missing.forEach(m => log('WARN', 'Thư mục sao lưu đã chọn không còn: ' + m + ', dùng mặc định'));
+  runAutoBackup();
   return true;
+}
+
+/* Tự sao lưu xoay vòng hằng ngày khi mở cơ sở dữ liệu (src/autobackup.js): chạy nền, không chặn khởi động; lỗi chỉ ghi nhật ký và hiện ở Cài đặt hệ thống */
+let autoBk = null;   // kết quả lần chạy gần nhất trong phiên
+function runAutoBackup() {
+  let st; try { st = Settings.load(app.getPath('userData')); } catch (e) { return; }
+  if (!st.autoKeep) { autoBk = {ok: true, skipped: true, reason: 'off'}; return; }
+  const s = store, dir = loc.backupDir;
+  AutoBackup.daily(s, {keep: st.autoKeep, dir}).then(r => {
+    autoBk = {...r, at: new Date().toISOString()};
+    if (!r.ok) log('ERROR', 'Tự sao lưu hằng ngày không được: ' + r.error);
+    else if (!r.skipped) log('INFO', 'Tự sao lưu hằng ngày: ' + path.basename(r.file) + (r.removed.length ? ' (xóa ' + r.removed.length + ' bản cũ)' : ''));
+  }, e => { autoBk = {ok: false, error: e.message}; });
 }
 
 const NO_STORE = () => 'Chưa mở được cơ sở dữ liệu' + (dataIssue ? ': ' + dataIssue.reason + ' (' + dataIssue.path + ')' : '') + '. Hãy xử lý ở màn hình thông báo trước.';
@@ -215,7 +230,8 @@ function registerIpc() {
   /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
   const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
   const dbInfo = () => { try { const st = fs.statSync(loc.dbFile); return {size: st.size, mtime: st.mtime.toISOString(), version: store ? store.db.pragma('user_version', {simple: true}) : null, open: !!store}; } catch (e) { return {size: 0, mtime: null, version: null, open: !!store}; } };
-  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
+  const autoView = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } const ls = AutoBackup.list(loc.backupDir); return {keep: st.autoKeep, count: ls.length, last: ls[0] ? {name: ls[0].name, day: ls[0].day, size: ls[0].size} : null, result: autoBk}; };
+  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), auto: autoView(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
   const pickFolder = async title => {
     if (process.env.HAKQN_PICK_DIR) return process.env.HAKQN_PICK_DIR;
     const r = await dialog.showOpenDialog(win, {title, properties: ['openDirectory', 'createDirectory']});
@@ -223,6 +239,7 @@ function registerIpc() {
   };
   ipcMain.handle('settings:get', () => wrap(() => ({settings: setView()}), true)());
   ipcMain.handle('settings:setRemind', (e, days) => wrap(() => { const ud = app.getPath('userData'); const d = Math.max(0, Math.min(365, parseInt(days, 10) || 0)); Settings.save(ud, {...Settings.load(ud), remindDays: d}); return {settings: setView()}; })());
+  ipcMain.handle('settings:setAutoKeep', (e, n) => wrap(() => { const ud = app.getPath('userData'); const k = Math.max(0, Math.min(60, parseInt(n, 10) || 0)); Settings.save(ud, {...Settings.load(ud), autoKeep: k}); if (k) runAutoBackup(); return {settings: setView()}; })());
   ipcMain.handle('settings:openBackup', () => { try { fs.mkdirSync(loc.backupDir, {recursive: true}); shell.openPath(loc.backupDir); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
   ipcMain.handle('settings:setBackup', async (e, reset) => {
     try {
