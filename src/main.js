@@ -109,11 +109,12 @@ function openStore() {
 
 /* Tự sao lưu xoay vòng hằng ngày khi mở cơ sở dữ liệu (src/autobackup.js): chạy nền, không chặn khởi động; lỗi chỉ ghi nhật ký và hiện ở Cài đặt hệ thống */
 let autoBk = null;   // kết quả lần chạy gần nhất trong phiên
+let autoBkP = null;  // Promise của lần chạy đang dở (kiểm tra khói chờ xong rồi mới thoát)
 function runAutoBackup() {
   let st; try { st = Settings.load(app.getPath('userData')); } catch (e) { return; }
   if (!st.autoKeep) { autoBk = {ok: true, skipped: true, reason: 'off'}; return; }
   const s = store, dir = loc.backupDir;
-  AutoBackup.daily(s, {keep: st.autoKeep, dir}).then(r => {
+  autoBkP = AutoBackup.daily(s, {keep: st.autoKeep, dir}).then(r => {
     autoBk = {...r, at: new Date().toISOString()};
     if (!r.ok) log('ERROR', 'Tự sao lưu hằng ngày không được: ' + r.error);
     else if (!r.skipped) log('INFO', 'Tự sao lưu hằng ngày: ' + path.basename(r.file) + (r.removed.length ? ' (xóa ' + r.removed.length + ' bản cũ)' : ''));
@@ -471,6 +472,8 @@ async function smoke() {
     if (phase === 'upgrade') r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('CHỦ RỪNG CŨ')"); // giao diện hiện lại chủ rừng cũ
     if (phase === 'verify') r.checks.ownerInUi = r.dom.ownerShown; // sau khi đóng và mở lại, giao diện phải hiện lại chủ rừng đã lưu
   } catch (e) { r.error = e.message; }
+  if (autoBkP) { try { await autoBkP; } catch (e) { /* đã ghi vào autoBk */ } }   // không thoát giữa lúc đang tự sao lưu
+  r.autoBackup = autoBk;
   r.ok = !r.error && Object.values(r.checks).every(Boolean);
   fs.writeFileSync(out, JSON.stringify(r, null, 2));
   app.exit(r.ok ? 0 : 3);

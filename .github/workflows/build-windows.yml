@@ -207,6 +207,52 @@ jobs:
           Get-Content $out -Raw
           if ($pr.ExitCode -ne 0) { throw "Nâng cấp 1.4.0: kiểm tra dữ liệu thất bại (mã thoát $($pr.ExitCode))" }
           Copy-Item $out dist/smoke-upgrade14.json
+      - name: Nâng cấp từ bộ cài THẬT v1.4.33 (bản phát hành gần nhất, Electron 33) — dữ liệu do chính bản cũ tạo, cài đè bản mới, kiểm tra dữ liệu và giao diện
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          . ./scripts/ci-install.ps1
+          $old = Join-Path $env:RUNNER_TEMP 'old-release-1433'; New-Item -ItemType Directory $old | Out-Null
+          gh release download v1.4.33 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-1.4.33.exe' -D $old
+          $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-1.4.33.exe'
+          if (-not (Test-Path $oldSetup)) { Write-Host "::warning::Bản phát hành v1.4.33 không còn trên GitHub Releases nên bỏ qua bước nâng cấp từ bộ cài thật của bản này. Hãy cập nhật bước này sang bản phát hành gần nhất còn trên Releases."; exit 0 }
+          $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
+          if ($h -ne '15DC58545276FED4C0CE8565B36D9D6856010E4E066E8AAEE91078DA2F68E6AD') { throw "Bộ cài v1.4.33 tải về không khớp mã băm công bố: $h" }
+          $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade1433'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade1433-userdata'
+          $ec = Install-Setup -Setup $oldSetup -Dir $dir -Tag 'upgrade-v1433-old'
+          if ($ec -ne 0) { throw "Cài v1.4.33 lỗi, mã thoát $ec" }
+          $oldApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          if (-not $oldApp) { throw 'Không thấy file chạy của v1.4.33 sau khi cài' }
+          # chính bản v1.4.33 đã cài ghi dữ liệu (kiểm tra khói pha create của bản đó: 1 chủ rừng, 2 lô, phiếu cân) rồi tự thoát
+          $env:HAKQN_USERDATA = $ud; $env:HAKQN_SMOKE = Join-Path $env:RUNNER_TEMP 'smoke-v1433-old.json'; $env:HAKQN_SMOKE_PHASE = 'create'
+          $pr = Start-Process -FilePath $oldApp.FullName -PassThru
+          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'v1.4.33: ứng dụng không tự thoát sau 120 giây' }
+          Get-Content $env:HAKQN_SMOKE -Raw
+          if ($pr.ExitCode -ne 0) { throw "v1.4.33 không tạo được dữ liệu thử (mã thoát $($pr.ExitCode))" }
+          $oldRes = Get-Content $env:HAKQN_SMOKE -Raw | ConvertFrom-Json
+          if ($oldRes.version -ne '1.4.33') { throw "Bản cũ chạy không đúng phiên bản: $($oldRes.version)" }
+          # cài đè bản mới lên đúng thư mục đã cài v1.4.33
+          $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
+          $ec = Install-Setup -Setup $setup -Dir $dir -Tag 'upgrade-v1433-new'
+          if ($ec -ne 0) { throw "Cài đè bản mới lên v1.4.33 lỗi, mã thoát $ec" }
+          $newApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          $out = Join-Path $env:RUNNER_TEMP 'smoke-upgrade1433.json'
+          $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = 'verify'
+          $pr = Start-Process -FilePath $newApp.FullName -PassThru
+          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'Nâng cấp 1.4.33: ứng dụng không tự thoát sau 120 giây' }
+          if (-not (Test-Path $out)) { throw "Nâng cấp 1.4.33: không có file kết quả (mã thoát $($pr.ExitCode))" }
+          Get-Content $out -Raw
+          if ($pr.ExitCode -ne 0) { throw "Nâng cấp 1.4.33: kiểm tra dữ liệu thất bại (mã thoát $($pr.ExitCode))" }
+          $r = Get-Content $out -Raw | ConvertFrom-Json
+          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($r.version -ne $ver) { throw "Sau khi cài đè vẫn chạy phiên bản $($r.version), mong đợi $ver" }
+          # bản mới tự sao lưu hằng ngày ngay lần mở đầu sau nâng cấp (dữ liệu đã có hồ sơ)
+          $bk = Join-Path $ud 'backups'
+          $auto = Get-ChildItem $bk -Filter 'tu-dong-*.sqlite' -ErrorAction SilentlyContinue
+          if (-not $auto) { throw "Sau nâng cấp không có bản tự sao lưu hằng ngày trong $bk" }
+          Write-Host "Bản tự sao lưu: $($auto.Name -join ', ')"
+          Copy-Item $out dist/smoke-upgrade1433.json
       - name: Thu thập chẩn đoán cài đặt (chỉ khi một bước ở trên thất bại)
         if: failure()
         shell: pwsh
