@@ -3327,8 +3327,8 @@ async function importFile(kind, file) {
     const o1 = db.rs[tgt.o], f1 = o1 && o1.forests && o1.forests[tgt.f];
     if (tgt.epoch !== dbEpoch || !f1) { pushNote('Đã dừng nạp file ' + file.name + ': lô ' + tgt.ma + ' không còn như lúc chọn file (đã bị xóa hoặc dữ liệu vừa được khôi phục). Không có gì được đưa vào bản nháp.', 'err'); return; }
     const ma = f1.info.maRung, other = [...new Set(r.rows.map(x => x.maRung).filter(x => x && x !== ma))];   // file mang mã lô khác lô đích: KHÔNG tự chuyển lô, báo lỗi ở bản nháp
-    r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; if (kind === 'pc') HAKPhieuCan.chuanHoaNgay2(x); });   // file không có hoặc để trống ngày cân 2: suy ra và đánh dấu
-    stErrList = null; const st = stGetFor(tgt.o, tgt.f, true), rep = HAKStage.merge(st, kind, r.rows, {source: 'Excel: ' + file.name});
+    r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; if (kind === 'pc') { const co = !!String(x.ngay2 || '').trim(); HAKPhieuCan.chuanHoaNgay2(x); if (!co && x.ngay2) x._ngay2Suy = true; } });   // file không có hoặc để trống ngày cân 2: suy ra (cờ tạm _ngay2Suy chỉ dùng khi gộp, không lưu)
+    stErrList = null; const st = stGetFor(tgt.o, tgt.f, true), rep = HAKStage.merge(st, kind, r.rows, {source: 'Excel: ' + file.name, suyNgay2: HAKPhieuCan.suyNgay2});
     const here = cur === tgt.o && curF === tgt.f;
     const msg = 'Đã đưa ' + r.rows.length + ' dòng ' + ST_LABEL[kind] + ' từ ' + file.name + ' vào BẢN NHÁP của lô ' + ma + ' (chưa lưu): thêm ' + rep.add + ', cập nhật ' + rep.upd + ', giữ nguyên ' + rep.same + (rep.kept ? ', giữ ' + rep.kept + ' bản ghi đã lưu không có trong file' : '') + (rep.pending ? ', CẦN ĐỐI CHIẾU ' + rep.pending + ' dòng trùng số phiếu nhưng khác dữ liệu (chưa áp dụng)' : '') + (rep.errors ? ', ' + rep.errors + ' ô sai định dạng (giữ giá trị cũ, xem chi tiết)' : '') + (other.length ? '. Cảnh báo: file có mã rừng khác lô này (' + other.join(', ') + ') nên các dòng đó báo lỗi' : '') + '. Xem trước, chỉnh sửa rồi bấm “Lưu dữ liệu vào lô”.';
     if (!here) { pushNote('Lô ' + ma + ' có dữ liệu chờ xem trước (' + ST_LABEL[kind] + ' từ ' + file.name + '). Bạn đang xem lô khác nên màn hình giữ nguyên; mở lại lô ' + ma + ' để xem trước và lưu.', 'warn'); return; }
@@ -4163,11 +4163,11 @@ async function lkApply() {
     const chosen = lkChosenPhieu();
     if (chosen.length) {   // phiếu cân đi vào BẢN NHÁP của lô; chỉ thành dữ liệu của lô sau khi bấm “Lưu dữ liệu vào lô”
       const k0 = stKeyOf(o.id, f.id); if (!stages[k0]) { stages[k0] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); lkNewStages.push(k0); }
-      const rows = chosen.map(p => Object.assign(HAKPhieuCan.chuanHoaNgay2(normPC({maRung: f.info.maRung, ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', gioCan1: p.gioCan1, gioCan2: p.gioCan2, can1: p.can1, can2: p.can2, klKg: p.klKg, khachHang: p.khachHang, diaChi: p.diaChi, nguonGoc: p.nguonGoc, donGia: p.donGia, thanhTien: p.thanhTien})), {maKhachHang: p.maKhachHang || '', _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}}));
+      const rows = chosen.map(p => Object.assign(HAKPhieuCan.chuanHoaNgay2(normPC({maRung: f.info.maRung, ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', gioCan1: p.gioCan1, gioCan2: p.gioCan2, can1: p.can1, can2: p.can2, klKg: p.klKg, khachHang: p.khachHang, diaChi: p.diaChi, nguonGoc: p.nguonGoc, donGia: p.donGia, thanhTien: p.thanhTien})), {_ngay2Suy: true, _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}}));
       // phiếu đã có mà bảng tính có biển khác, chọn “chỉ đổi biển số”: người dùng đã chọn đúng phiếu → coi là cùng chuyến, chỉ đổi biển số
       const isPlate = (p, i) => s.plateOnly && p.bienDoi;
       const plateRows = rows.filter((r, i) => isPlate(chosen[i], i)).map(r => ({soPhieu: r.soPhieu, bienSo: r.bienSo, _src: r._src})), restRows = rows.filter((r, i) => !isPlate(chosen[i], i));
-      lkRep = HAKStage.merge(stages[k0], 'pc', restRows, {source: 'Google Sheets', plateSource: 'Google Sheets'});
+      lkRep = HAKStage.merge(stages[k0], 'pc', restRows, {source: 'Google Sheets', plateSource: 'Google Sheets', suyNgay2: HAKPhieuCan.suyNgay2});
       if (plateRows.length) { const pr = HAKStage.merge(stages[k0], 'pc', plateRows, {source: 'Google Sheets (đổi biển số)', plateSource: 'Google Sheets', sameTrip: true}); lkRep.upd += pr.upd; lkRep.same += pr.same; lkRep.pending += pr.pending; }
     }
     if (s.kl) { f.info.khoiLuong = Math.round(chosen.reduce((a, p) => a + p.kl, 0) * 1000) / 1000; mark(f, 'khoiLuong', {tab: 'HoSoKeo_QC', row: 0, col: 'Tổng Khối lượng (Tấn) của ' + chosen.length + ' phiếu đã chọn'}); }

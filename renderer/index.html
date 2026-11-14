@@ -1068,7 +1068,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return false;
   }
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const SKIP = {_id: 1, _row: 1, _srcRow: 1, _tay: 1};
+  const SKIP = {_id: 1, _row: 1, _srcRow: 1, _tay: 1, _ngay2Suy: 1};
   /* trường nhận diện chuyến cân: khác nhau ở một trong các trường này (bên nhập có giá trị) nghĩa là chưa chắc cùng một chuyến */
   const IDENT = [['ngay', 'Ngày cân'], ['bienSo', 'Biển số'], ['noiCan', 'Nơi cân'], ['kl', 'Khối lượng (tấn)']];
   const identEq = (f, a, b) => f === 'bienSo' ? bienKey(a) === bienKey(b) : f === 'noiCan' ? fold(a) === fold(b) : f === 'kl' ? Math.round((+a || 0) * 1000) === Math.round((+b || 0) * 1000) : String(a == null ? '' : a).trim() === String(b == null ? '' : b).trim();
@@ -1076,13 +1076,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   /* áp dụng dòng nhập lên dòng đang có theo quy tắc trên; trả về danh sách thay đổi từng trường */
   function applyInto(kind, old, inc, opt) {
     const next = clone(old), fields = [], errs = [], tay = old._tay || [];
-    // ngày cân 2 do phần mềm suy ra không được ghi đè ngày cân 2 NHẬP THẬT đã có
-    const khongGhiNgay2 = kind === 'pc' && inc.ngay2Nguon === 'suy ra' && !isBlank(old.ngay2) && old.ngay2Nguon !== 'suy ra';
+    // ngày cân 2 do phần mềm suy ra từ nguồn (opt.suy) không được ghi đè ngày cân 2 NHẬP THẬT đã có (khác số suy ra của chính phiếu cũ)
+    const khongGhiNgay2 = kind === 'pc' && opt.suy && opt.suyFn && !isBlank(old.ngay2) && old.ngay2 !== opt.suyFn(old.ngay, old.gioCan1, old.gioCan2);
     Object.keys(inc).forEach(f => {
       if (SKIP[f] || f === 'giaLoi') return;
-      if (khongGhiNgay2 && (f === 'ngay2' || f === 'ngay2Nguon')) return;
+      if (khongGhiNgay2 && f === 'ngay2') return;
       const v = inc[f];
-      if (f === 'ngay2Nguon') { if (!same(old[f], v)) next[f] = clone(v); return; }   // nhãn nguồn của ngày cân 2: áp dụng lặng lẽ (không liệt kê như một trường dữ liệu)
       if (f[0] === '_') { if (!isBlank(v)) next[f] = clone(v); return; }
       if (invalid(kind, f, v)) { errs.push({f, label: labelOf(kind, f), v}); fields.push({f, label: labelOf(kind, f), cu: old[f], moi: v === 'x' ? '(không hợp lệ)' : v, act: 'loi'}); return; }
       if (isBlank(v)) { if (!isBlank(old[f])) fields.push({f, label: labelOf(kind, f), cu: old[f], moi: '', act: 'giu-trong'}); return; }
@@ -1099,7 +1098,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     opt = opt || {}; const list = st.cur[kind], key = KEY[kind], rep = {add: 0, upd: 0, same: 0, kept: 0, ids: [], dupInFile: [], changes: [], pending: 0, errors: 0};
     const seenInFile = new Map(), touched = new Set(); st.pending = st.pending || [];
     rows.forEach(r0 => {
-      const r = clone(r0), k = key(r); if (opt.source) r._nguon = opt.source;
+      const r = clone(r0), k = key(r), suy = !!r._ngay2Suy; delete r._ngay2Suy; if (opt.source) r._nguon = opt.source;
       if (k) { if (seenInFile.has(k)) rep.dupInFile.push(k); seenInFile.set(k, (seenInFile.get(k) || 0) + 1); }
       const dup2 = k && seenInFile.get(k) > 1;
       const matches = k && !dup2 ? list.filter(x => key(x) === k) : [];
@@ -1111,12 +1110,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         if (equal.length) target = equal[0];
         else {   // chưa đủ căn cứ là cùng chuyến: để chờ đối chiếu, không đổi gì
           const diffs = identDiffs(matches[0], r), sig0 = sig(r);
-          if (!st.pending.some(p => p.kind === kind && p.key === k && p.sig === sig0)) st.pending.push({pid: 'q' + (++st.seq) + '_' + st.pending.length, kind, key: k, source: opt.source || '', incoming: r, sig: sig0, candidates: matches.map(m => m._id), diffs});
+          if (!st.pending.some(p => p.kind === kind && p.key === k && p.sig === sig0)) st.pending.push({pid: 'q' + (++st.seq) + '_' + st.pending.length, kind, key: k, source: opt.source || '', incoming: r, sig: sig0, suy, candidates: matches.map(m => m._id), diffs});
           rep.pending++; return;
         }
       } else target = matches.find(m => !identDiffs(m, r).length) || matches[0];
       touched.add(target._id);
-      const {next, fields} = applyInto(kind, target, r, opt);
+      const {next, fields} = applyInto(kind, target, r, Object.assign({}, opt, {suy, suyFn: opt.suyNgay2}));
       // trường tạo nên khóa chỉ khác cách viết (hoa/thường, dấu chấm, số 0 đầu) thì giữ cách viết đã lưu: không coi là thay đổi
       const kf = kind === 'pc' ? 'soPhieu' : kind === 'dx' ? 'bienSo' : (cccd(r.cccd) ? 'cccd' : 'ten'); if (target[kf] !== undefined && target[kf] !== '') next[kf] = target[kf];
       if (kind === 'pc' && bienKey(target.bienSo) !== bienKey(next.bienSo) && next.bienSo) next._plateSrc = opt.plateSource || opt.source || 'Nhập';
@@ -1127,7 +1126,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       list[list.findIndex(x => x._id === target._id)] = next; rep.upd++; rep.ids.push(next._id);
     });
     rep.kept = list.filter(x => !touched.has(x._id) && !rep.ids.includes(x._id) && st.base[kind].some(b => b._id === x._id)).length;
-    st.src[kind] = opt.source || st.src[kind];
+    st.src[kind] = opt.source || st.src[kind]; if (opt.suyNgay2) st.suyNgay2 = opt.suyNgay2;
     st.report = st.report || {}; st.report[kind] = rep;
     return rep;
   }
@@ -1141,7 +1140,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (action === 'update') {
       const cands = p.candidates.filter(id => list.some(x => x._id === id)); const tid = opt.targetId || (cands.length === 1 ? cands[0] : null);
       if (!tid || !cands.includes(tid)) return {ok: false, error: cands.length > 1 ? 'Có nhiều bản ghi cùng số phiếu: chọn bản cần cập nhật.' : 'Bản ghi cần cập nhật không còn.'};
-      const old = list.find(x => x._id === tid), {next} = applyInto(p.kind, old, p.incoming, {source: p.source}); next._id = tid; next._row = old._row;
+      const old = list.find(x => x._id === tid), {next} = applyInto(p.kind, old, p.incoming, {source: p.source, suy: p.suy, suyFn: st.suyNgay2}); next._id = tid; next._row = old._row;
       if (p.kind === 'pc' && bienKey(old.bienSo) !== bienKey(next.bienSo) && next.bienSo) next._plateSrc = p.source || 'Nhập';
       list[list.findIndex(x => x._id === tid)] = next; st.pending.splice(i, 1); return {ok: true, id: tid};
     }
@@ -1254,25 +1253,25 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const d = parseD(ngay1), a = secOf(gio1), b = secOf(gio2); if (!d || a == null || b == null) return '';
     return fmtD(new Date(d.getTime() + (b < a ? 864e5 : 0)));
   }
-  /* Ghi ngày cân 2 vào CHÍNH phiếu cân khi nạp (Excel, Google Sheets) hoặc sửa tay: có ngày cân 2 nhập thật thì giữ (ngay2Nguon bỏ); để trống thì suy ra từ ngày cân 1 và giờ cân và đánh dấu ngay2Nguon = 'suy ra'
-   * (suy lại mỗi lần lưu nên đổi giờ cân thì ngày cân 2 đổi theo). old: phiếu trước khi sửa; ô ngày cân 2 vẫn là số đã suy ra từ trước thì không bị coi là người dùng nhập. */
+  /* Ghi ngày cân 2 vào CHÍNH phiếu cân khi nạp (Excel, Google Sheets) hoặc sửa tay, KHÔNG thêm trường nào khác: cấu trúc dữ liệu giữ y như file Excel nhập phiếu cân (cột ngay2).
+   * Có ngày cân 2 thì giữ (nhập thật); để trống thì suy ra từ ngày cân 1 và giờ cân. old: phiếu trước khi sửa; ô ngày cân 2 vẫn đúng bằng số suy ra của phiếu cũ thì suy lại theo giờ mới
+   * (đổi giờ cân thì ngày cân 2 đổi theo); người dùng gõ số khác thì giữ số đó. */
   function chuanHoaNgay2(p, old) {
     if (!p) return p;
-    const cur = String(p.ngay2 == null ? '' : p.ngay2).trim(), daSuy = (p.ngay2Nguon === 'suy ra' && cur) || (old && old.ngay2Nguon === 'suy ra' && cur && cur === String(old.ngay2 || '').trim());
-    if (cur && !daSuy) { delete p.ngay2Nguon; return p; }
-    const s = suyNgay2(p.ngay, p.gioCan1, p.gioCan2);
-    if (s) { p.ngay2 = s; p.ngay2Nguon = 'suy ra'; } else { p.ngay2 = ''; delete p.ngay2Nguon; }
+    const cur = String(p.ngay2 == null ? '' : p.ngay2).trim(), oldSuy = old ? suyNgay2(old.ngay, old.gioCan1, old.gioCan2) : '';
+    if (cur && !(old && cur === String(old.ngay2 || '').trim() && cur === oldSuy)) return p;   // nhập thật: giữ
+    p.ngay2 = suyNgay2(p.ngay, p.gioCan1, p.gioCan2);
     return p;
   }
   /* {ngay, nguon}: nguon = 'nhập' (có ngày cân 2 thật), 'suy ra' (từ ngày cân 1 và giờ cân), 'theo ngày cân 1' (thiếu giờ) hoặc '' (không có ngày nào) */
   function ngay2Of(p) {
-    p = p || {}; const e = parseD(p.ngay2); if (e) return {ngay: fmtD(e), nguon: p.ngay2Nguon === 'suy ra' ? 'suy ra' : 'nhập'};
+    p = p || {}; const e = parseD(p.ngay2); if (e) return {ngay: fmtD(e), nguon: 'nhập'};
     const s = suyNgay2(p.ngay, p.gioCan1, p.gioCan2); if (s) return {ngay: s, nguon: 'suy ra'};
     return p.ngay ? {ngay: String(p.ngay), nguon: 'theo ngày cân 1'} : {ngay: '', nguon: ''};
   }
   /* Cảnh báo khi ngày cân 2 NHẬP THẬT mâu thuẫn với ngày cân 1 và giờ cân (không chặn lưu) */
   function ngay2Warn(p) {
-    p = p || {}; const e = parseD(p.ngay2), d = parseD(p.ngay); if (!e || !d || p.ngay2Nguon === 'suy ra') return [];   // ngày đã suy ra thì luôn khớp với giờ cân
+    p = p || {}; const e = parseD(p.ngay2), d = parseD(p.ngay); if (!e || !d) return [];
     const a = secOf(p.gioCan1), b = secOf(p.gioCan2), days = Math.round((e - d) / 864e5), w = [];
     if (days < 0) w.push('ngày cân 2 (' + fmtD(e) + ') trước ngày cân 1 (' + fmtD(d) + ')');
     else if (days > 1) w.push('ngày cân 2 (' + fmtD(e) + ') cách ngày cân 1 (' + fmtD(d) + ') ' + days + ' ngày');
@@ -5689,8 +5688,8 @@ async function importFile(kind, file) {
     const o1 = db.rs[tgt.o], f1 = o1 && o1.forests && o1.forests[tgt.f];
     if (tgt.epoch !== dbEpoch || !f1) { pushNote('Đã dừng nạp file ' + file.name + ': lô ' + tgt.ma + ' không còn như lúc chọn file (đã bị xóa hoặc dữ liệu vừa được khôi phục). Không có gì được đưa vào bản nháp.', 'err'); return; }
     const ma = f1.info.maRung, other = [...new Set(r.rows.map(x => x.maRung).filter(x => x && x !== ma))];   // file mang mã lô khác lô đích: KHÔNG tự chuyển lô, báo lỗi ở bản nháp
-    r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; if (kind === 'pc') HAKPhieuCan.chuanHoaNgay2(x); });   // file không có hoặc để trống ngày cân 2: suy ra và đánh dấu
-    stErrList = null; const st = stGetFor(tgt.o, tgt.f, true), rep = HAKStage.merge(st, kind, r.rows, {source: 'Excel: ' + file.name});
+    r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; if (kind === 'pc') { const co = !!String(x.ngay2 || '').trim(); HAKPhieuCan.chuanHoaNgay2(x); if (!co && x.ngay2) x._ngay2Suy = true; } });   // file không có hoặc để trống ngày cân 2: suy ra (cờ tạm _ngay2Suy chỉ dùng khi gộp, không lưu)
+    stErrList = null; const st = stGetFor(tgt.o, tgt.f, true), rep = HAKStage.merge(st, kind, r.rows, {source: 'Excel: ' + file.name, suyNgay2: HAKPhieuCan.suyNgay2});
     const here = cur === tgt.o && curF === tgt.f;
     const msg = 'Đã đưa ' + r.rows.length + ' dòng ' + ST_LABEL[kind] + ' từ ' + file.name + ' vào BẢN NHÁP của lô ' + ma + ' (chưa lưu): thêm ' + rep.add + ', cập nhật ' + rep.upd + ', giữ nguyên ' + rep.same + (rep.kept ? ', giữ ' + rep.kept + ' bản ghi đã lưu không có trong file' : '') + (rep.pending ? ', CẦN ĐỐI CHIẾU ' + rep.pending + ' dòng trùng số phiếu nhưng khác dữ liệu (chưa áp dụng)' : '') + (rep.errors ? ', ' + rep.errors + ' ô sai định dạng (giữ giá trị cũ, xem chi tiết)' : '') + (other.length ? '. Cảnh báo: file có mã rừng khác lô này (' + other.join(', ') + ') nên các dòng đó báo lỗi' : '') + '. Xem trước, chỉnh sửa rồi bấm “Lưu dữ liệu vào lô”.';
     if (!here) { pushNote('Lô ' + ma + ' có dữ liệu chờ xem trước (' + ST_LABEL[kind] + ' từ ' + file.name + '). Bạn đang xem lô khác nên màn hình giữ nguyên; mở lại lô ' + ma + ' để xem trước và lưu.', 'warn'); return; }
@@ -6525,11 +6524,11 @@ async function lkApply() {
     const chosen = lkChosenPhieu();
     if (chosen.length) {   // phiếu cân đi vào BẢN NHÁP của lô; chỉ thành dữ liệu của lô sau khi bấm “Lưu dữ liệu vào lô”
       const k0 = stKeyOf(o.id, f.id); if (!stages[k0]) { stages[k0] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); lkNewStages.push(k0); }
-      const rows = chosen.map(p => Object.assign(HAKPhieuCan.chuanHoaNgay2(normPC({maRung: f.info.maRung, ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', gioCan1: p.gioCan1, gioCan2: p.gioCan2, can1: p.can1, can2: p.can2, klKg: p.klKg, khachHang: p.khachHang, diaChi: p.diaChi, nguonGoc: p.nguonGoc, donGia: p.donGia, thanhTien: p.thanhTien})), {maKhachHang: p.maKhachHang || '', _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}}));
+      const rows = chosen.map(p => Object.assign(HAKPhieuCan.chuanHoaNgay2(normPC({maRung: f.info.maRung, ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', gioCan1: p.gioCan1, gioCan2: p.gioCan2, can1: p.can1, can2: p.can2, klKg: p.klKg, khachHang: p.khachHang, diaChi: p.diaChi, nguonGoc: p.nguonGoc, donGia: p.donGia, thanhTien: p.thanhTien})), {_ngay2Suy: true, _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}}));
       // phiếu đã có mà bảng tính có biển khác, chọn “chỉ đổi biển số”: người dùng đã chọn đúng phiếu → coi là cùng chuyến, chỉ đổi biển số
       const isPlate = (p, i) => s.plateOnly && p.bienDoi;
       const plateRows = rows.filter((r, i) => isPlate(chosen[i], i)).map(r => ({soPhieu: r.soPhieu, bienSo: r.bienSo, _src: r._src})), restRows = rows.filter((r, i) => !isPlate(chosen[i], i));
-      lkRep = HAKStage.merge(stages[k0], 'pc', restRows, {source: 'Google Sheets', plateSource: 'Google Sheets'});
+      lkRep = HAKStage.merge(stages[k0], 'pc', restRows, {source: 'Google Sheets', plateSource: 'Google Sheets', suyNgay2: HAKPhieuCan.suyNgay2});
       if (plateRows.length) { const pr = HAKStage.merge(stages[k0], 'pc', plateRows, {source: 'Google Sheets (đổi biển số)', plateSource: 'Google Sheets', sameTrip: true}); lkRep.upd += pr.upd; lkRep.same += pr.same; lkRep.pending += pr.pending; }
     }
     if (s.kl) { f.info.khoiLuong = Math.round(chosen.reduce((a, p) => a + p.kl, 0) * 1000) / 1000; mark(f, 'khoiLuong', {tab: 'HoSoKeo_QC', row: 0, col: 'Tổng Khối lượng (Tấn) của ' + chosen.length + ' phiếu đã chọn'}); }

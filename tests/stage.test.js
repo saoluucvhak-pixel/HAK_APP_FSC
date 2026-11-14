@@ -198,12 +198,15 @@ test('nhân công và xe: ô trống không xóa giá trị đã có', () => {
   assert.deepStrictEqual([st.cur.nc[0].diaChi, st.cur.nc[0].chucDanh, st.cur.dx[0].chuXe, st.cur.dx[0].sdt], ['Đà Nẵng', 'Công nhân', 'X', '0905']); assert.strictEqual(S.dirty(st), false);
 });
 
-test('ngày cân 2 suy ra từ nguồn không ghi đè ngày cân 2 nhập thật đã có; nhãn nguồn áp dụng lặng lẽ; lưu chuẩn hóa mọi phiếu', () => {
-  const st = S.create({nc: [], dx: [], pc: [{soPhieu: 'P1', ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', ngay2: '07/10/2026', kl: 1}, {soPhieu: 'P2', ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', kl: 2}]});
-  const rep = S.merge(st, 'pc', [{soPhieu: 'P1', ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', ngay2: '05/10/2026', ngay2Nguon: 'suy ra', kl: 1}, {soPhieu: 'P2', ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', ngay2: '06/10/2026', ngay2Nguon: 'suy ra', kl: 2}], {source: 'Google Sheets'});
-  assert.strictEqual(st.cur.pc[0].ngay2, '07/10/2026'); assert.strictEqual(st.cur.pc[0].ngay2Nguon, undefined);   // giữ số nhập thật
-  assert.deepStrictEqual([st.cur.pc[1].ngay2, st.cur.pc[1].ngay2Nguon], ['06/10/2026', 'suy ra']);               // phiếu chưa có thì nhận
-  assert.ok(!(rep.changes || []).some(c => c.fields.some(f => f.f === 'ngay2Nguon')), 'nhãn nguồn không được liệt kê như trường dữ liệu');
-  const P = require('../src/phieucan'), out = S.commit(st, r => P.chuanHoaNgay2(r, null)).lists.pc;
-  assert.deepStrictEqual(out.map(r => r.ngay2), ['07/10/2026', '06/10/2026']);
+test('ngày cân 2 suy ra từ nguồn (Google Sheets, Excel) không ghi đè ngày cân 2 nhập thật; không có trường phụ nào bị lưu; lưu chuẩn hóa mọi phiếu', () => {
+  const P = require('../src/phieucan');
+  const st = S.create({nc: [], dx: [], pc: [{soPhieu: 'P1', ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', ngay2: '07/10/2026', kl: 1}, {soPhieu: 'P2', ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', kl: 2}, {soPhieu: 'P3', ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', ngay2: '05/10/2026', kl: 3}]});
+  const inc = (so, g1, g2, n2, kl) => ({soPhieu: so, ngay: '05/10/2026', gioCan1: g1, gioCan2: g2, ngay2: n2, _ngay2Suy: true, kl});
+  const rep = S.merge(st, 'pc', [inc('P1', '08:00:00', '09:00:00', '05/10/2026', 1), inc('P2', '23:50:00', '00:20:00', '06/10/2026', 2), inc('P3', '08:00:00', '22:00:00', '05/10/2026', 3)], {source: 'Google Sheets', suyNgay2: P.suyNgay2});
+  assert.strictEqual(st.cur.pc[0].ngay2, '07/10/2026');                      // nhập thật: giữ
+  assert.strictEqual(st.cur.pc[1].ngay2, '06/10/2026');                      // phiếu chưa có: nhận số suy ra
+  assert.strictEqual(st.cur.pc[2].ngay2, '05/10/2026');                      // ngày cân 2 cũ đúng bằng số suy ra của chính phiếu cũ: được cập nhật theo giờ mới (vẫn 05/10)
+  assert.ok(st.cur.pc.every(r => !('_ngay2Suy' in r) && !('ngay2Nguon' in r)), 'không lưu trường phụ');
+  const out = S.commit(st, r => P.chuanHoaNgay2(r, null)).lists.pc; assert.deepStrictEqual(out.map(r => r.ngay2), ['07/10/2026', '06/10/2026', '05/10/2026']);
+  assert.ok(rep.upd >= 1);
 });

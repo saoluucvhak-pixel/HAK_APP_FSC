@@ -15,25 +15,25 @@
     const d = parseD(ngay1), a = secOf(gio1), b = secOf(gio2); if (!d || a == null || b == null) return '';
     return fmtD(new Date(d.getTime() + (b < a ? 864e5 : 0)));
   }
-  /* Ghi ngày cân 2 vào CHÍNH phiếu cân khi nạp (Excel, Google Sheets) hoặc sửa tay: có ngày cân 2 nhập thật thì giữ (ngay2Nguon bỏ); để trống thì suy ra từ ngày cân 1 và giờ cân và đánh dấu ngay2Nguon = 'suy ra'
-   * (suy lại mỗi lần lưu nên đổi giờ cân thì ngày cân 2 đổi theo). old: phiếu trước khi sửa; ô ngày cân 2 vẫn là số đã suy ra từ trước thì không bị coi là người dùng nhập. */
+  /* Ghi ngày cân 2 vào CHÍNH phiếu cân khi nạp (Excel, Google Sheets) hoặc sửa tay, KHÔNG thêm trường nào khác: cấu trúc dữ liệu giữ y như file Excel nhập phiếu cân (cột ngay2).
+   * Có ngày cân 2 thì giữ (nhập thật); để trống thì suy ra từ ngày cân 1 và giờ cân. old: phiếu trước khi sửa; ô ngày cân 2 vẫn đúng bằng số suy ra của phiếu cũ thì suy lại theo giờ mới
+   * (đổi giờ cân thì ngày cân 2 đổi theo); người dùng gõ số khác thì giữ số đó. */
   function chuanHoaNgay2(p, old) {
     if (!p) return p;
-    const cur = String(p.ngay2 == null ? '' : p.ngay2).trim(), daSuy = (p.ngay2Nguon === 'suy ra' && cur) || (old && old.ngay2Nguon === 'suy ra' && cur && cur === String(old.ngay2 || '').trim());
-    if (cur && !daSuy) { delete p.ngay2Nguon; return p; }
-    const s = suyNgay2(p.ngay, p.gioCan1, p.gioCan2);
-    if (s) { p.ngay2 = s; p.ngay2Nguon = 'suy ra'; } else { p.ngay2 = ''; delete p.ngay2Nguon; }
+    const cur = String(p.ngay2 == null ? '' : p.ngay2).trim(), oldSuy = old ? suyNgay2(old.ngay, old.gioCan1, old.gioCan2) : '';
+    if (cur && !(old && cur === String(old.ngay2 || '').trim() && cur === oldSuy)) return p;   // nhập thật: giữ
+    p.ngay2 = suyNgay2(p.ngay, p.gioCan1, p.gioCan2);
     return p;
   }
   /* {ngay, nguon}: nguon = 'nhập' (có ngày cân 2 thật), 'suy ra' (từ ngày cân 1 và giờ cân), 'theo ngày cân 1' (thiếu giờ) hoặc '' (không có ngày nào) */
   function ngay2Of(p) {
-    p = p || {}; const e = parseD(p.ngay2); if (e) return {ngay: fmtD(e), nguon: p.ngay2Nguon === 'suy ra' ? 'suy ra' : 'nhập'};
+    p = p || {}; const e = parseD(p.ngay2); if (e) return {ngay: fmtD(e), nguon: 'nhập'};
     const s = suyNgay2(p.ngay, p.gioCan1, p.gioCan2); if (s) return {ngay: s, nguon: 'suy ra'};
     return p.ngay ? {ngay: String(p.ngay), nguon: 'theo ngày cân 1'} : {ngay: '', nguon: ''};
   }
   /* Cảnh báo khi ngày cân 2 NHẬP THẬT mâu thuẫn với ngày cân 1 và giờ cân (không chặn lưu) */
   function ngay2Warn(p) {
-    p = p || {}; const e = parseD(p.ngay2), d = parseD(p.ngay); if (!e || !d || p.ngay2Nguon === 'suy ra') return [];   // ngày đã suy ra thì luôn khớp với giờ cân
+    p = p || {}; const e = parseD(p.ngay2), d = parseD(p.ngay); if (!e || !d) return [];
     const a = secOf(p.gioCan1), b = secOf(p.gioCan2), days = Math.round((e - d) / 864e5), w = [];
     if (days < 0) w.push('ngày cân 2 (' + fmtD(e) + ') trước ngày cân 1 (' + fmtD(d) + ')');
     else if (days > 1) w.push('ngày cân 2 (' + fmtD(e) + ') cách ngày cân 1 (' + fmtD(d) + ') ' + days + ' ngày');

@@ -53,11 +53,14 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   const pc1 = () => forest().pc.find(p => p.soPhieu === '1001/2026/NK');
   ok('phiếu 1001 đã vào hồ sơ với biển 92C-12345, chưa có nhật ký đổi biển', !!pc1() && pc1().bienSo === '92C-12345' && !(forest().bienLog || []).length);
   const p1 = pc1();
-  ok('phiếu cân lấy giờ cân 1/2, cân lần 1/2 (kg), khối lượng kg và tấn, khách hàng', p1.gioCan1 === '08:15:00' && p1.gioCan2 === '09:40:00' && p1.can1 === 6840 && p1.can2 === 4000 && p1.klKg === 2840 && p1.kl === 2.84 && p1.khachHang === 'NGUYỄN VĂN AN' && p1.maKhachHang === '049000000001', JSON.stringify(p1));
+  ok('phiếu cân lấy giờ cân 1/2, cân lần 1/2 (kg), khối lượng kg và tấn, khách hàng', p1.gioCan1 === '08:15:00' && p1.gioCan2 === '09:40:00' && p1.can1 === 6840 && p1.can2 === 4000 && p1.klKg === 2840 && p1.kl === 2.84 && p1.khachHang === 'NGUYỄN VĂN AN', JSON.stringify(p1));
   ok('phiếu cân từ Google Sheets mang đơn giá và thành tiền (1.500.000 đ/tấn × 2,84 tấn = 4.260.000 đ) để in phiếu cân', p1.donGia === 1500000 && p1.thanhTien === 4260000, JSON.stringify(p1));
   await w.click('[data-ftab=dx]'); const dxTxt = await w.innerText('#main');
   ok('danh sách phiếu cân (tab Vận chuyển) hiện các cột giờ cân, cân lần 1/2, khối lượng kg và tấn, khách hàng', ['Cân lần 1 (ngày, giờ)', 'Cân lần 2 (ngày, giờ)', 'Cân lần 1 (kg)', 'Cân lần 2 (kg)', 'Khối lượng (kg)', 'Khối lượng (tấn)', 'Khách hàng'].every(h => dxTxt.includes(h)) && /08:15:00/.test(dxTxt) && /NGUYỄN VĂN AN/.test(dxTxt) && /6\.840/.test(dxTxt));
-  ok('phiếu từ Google Sheets không có cột Ngày cân 2: khi lưu vào hồ sơ rừng có cột ngày cân 2 = ngày cân 1 (giờ cân 2 sau giờ cân 1), đánh dấu “suy ra”', pc1().ngay2 === pc1().ngay && pc1().ngay2Nguon === 'suy ra' && /suy ra/.test(await w.innerText('#main')), JSON.stringify([pc1().ngay, pc1().ngay2, pc1().ngay2Nguon]));
+  ok('phiếu từ Google Sheets không có cột Ngày cân 2: khi lưu vào hồ sơ rừng có cột ngày cân 2 = ngày cân 1 (giờ cân 2 sau giờ cân 1), cấu trúc dữ liệu như file Excel (không trường phụ)', pc1().ngay2 === pc1().ngay && !('ngay2Nguon' in pc1()) && !('_ngay2Suy' in pc1()), JSON.stringify(pc1()));
+  const COT_EXCEL = ['_row', 'maRung', 'stt', 'ngay', 'ngay2', 'gioCan1', 'gioCan2', 'bienSo', 'soPhieu', 'can1', 'can2', 'klKg', 'kl', 'khachHang', 'diaChi', 'nguonGoc', 'soCT', 'trangThai', 'donGia', 'thanhTien', 'giaLoi', 'noiGiao', 'ghiChu'];
+  ok('phiếu từ Google Sheets có ĐỦ mọi cột của dữ liệu nhập từ file Excel phiếu cân (bổ sung cột còn thiếu); ngoài ra chỉ còn _id và _src (nguồn gốc dòng), không thêm cột dữ liệu nào', COT_EXCEL.every(k => k in pc1()) && Object.keys(pc1()).filter(k => !COT_EXCEL.includes(k)).sort().join() === '_id,_src', 'thiếu: ' + COT_EXCEL.filter(k => !(k in pc1())).join(',') + ' | thừa: ' + Object.keys(pc1()).filter(k => !COT_EXCEL.includes(k)).join(','));
+  console.log('   · cột thêm so với Excel (thông tin nguồn từ Google Sheets):', Object.keys(pc1()).filter(k => !COT_EXCEL.includes(k)).join(', ') || '(không)');
   const kl0 = pc1().kl, ngay0 = pc1().ngay;
   // 2. bảng tính cập nhật biển số xe mới
   ok('nhập bảng tính có biển số mới (92C-12345 → 92C-54321)', (await w.evaluate(p => window.hak.lookup.importExcel(p), wf('moi.xlsx', 'newplate'))).ok);

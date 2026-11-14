@@ -52,11 +52,11 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   // Excel không có cột Ngày cân 2: ngày cân 2 được suy ra khi hiển thị
   const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet([['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Giờ cân 2', 'Biển số 1', 'KL'], ['X1', '20/10/2026', '23:40:00', '00:10:00', '92C-12345', 5000]]); XLSX.utils.book_append_sheet(wb, ws, 'PHIEU_CAN');
   const fx = path.join(dir, 'x.xlsx'); XLSX.writeFile(wb, fx); await w.setInputFiles('input[data-file="pc"]', fx); await w.waitForTimeout(900);
-  ok('nạp Excel không có cột Ngày cân 2: phiếu X1 hiện ngày cân 2 = 21/10/2026 suy ra', /20\/10\/2026 23:40:00 21\/10\/2026 suy ra 00:10:00/.test(await w.evaluate(() => [...document.querySelectorAll('#main tr')].filter(r => /X1/.test(r.innerText)).map(r => r.innerText.replace(/\s+/g, ' ')).join('|'))));
+  ok('nạp Excel không có cột Ngày cân 2: phiếu X1 có ngày cân 2 = 21/10/2026 ngay trong bản nháp (cột ngày cân 2 như file Excel)', /20\/10\/2026 23:40:00 21\/10\/2026 00:10:00/.test(await w.evaluate(() => [...document.querySelectorAll('#main tr')].filter(r => /X1/.test(r.innerText)).map(r => r.innerText.replace(/\s+/g, ' ')).join('|'))));
   await saveStageNow();
   const x1 = (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'X1');
-  ok('lưu vào hồ sơ rừng: phiếu X1 có cột ngày cân 2 = 21/10/2026, đánh dấu “suy ra” (lưu trong SQLite); phiếu cũ chưa có ngày cân 2 cũng được ghi khi lưu', !!x1 && x1.ngay2 === '21/10/2026' && x1.ngay2Nguon === 'suy ra' && (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N2').ngay2 === '06/10/2026', JSON.stringify(x1));
-  ok('ngày cân 2 nhập thật (N6 = 11/10/2026) giữ nguyên sau khi lưu, không bị đánh dấu “suy ra”', (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N6').ngay2 === '11/10/2026' && !(await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N6').ngay2Nguon);
+  ok('lưu vào hồ sơ rừng: phiếu X1 có cột ngày cân 2 = 21/10/2026 (lưu trong SQLite, không thêm trường phụ nào); phiếu cũ chưa có ngày cân 2 cũng được ghi khi lưu', !!x1 && x1.ngay2 === '21/10/2026' && !('ngay2Nguon' in x1) && !('_ngay2Suy' in x1) && (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N2').ngay2 === '06/10/2026', JSON.stringify(x1));
+  ok('ngày cân 2 nhập thật (N6 = 11/10/2026) giữ nguyên sau khi lưu', (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N6').ngay2 === '11/10/2026');
 
   // ===== 2. cự ly tự tính =====
   await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');

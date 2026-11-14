@@ -93,20 +93,16 @@ test('ngay2Warn: chỉ cảnh báo khi ngày cân 2 nhập thật mâu thuẫn v
   assert.strictEqual(P.ngay2Warn({ngay: '05/10/2026', ngay2: '06/10/2026', gioCan1: '23:50', gioCan2: '00:20'}).length, 0);
 });
 
-test('chuanHoaNgay2: phiếu từ Google Sheets/Excel không có ngày cân 2 thì ghi ngày cân 2 suy ra và đánh dấu; nhập thật thì giữ; đổi giờ cân thì suy lại', () => {
+test('chuanHoaNgay2: ghi ngày cân 2 vào đúng cột ngay2 (KHÔNG thêm trường nào khác, cấu trúc như file Excel); nhập thật thì giữ; đổi giờ cân thì suy lại', () => {
   const P = require('../src/phieucan');
   const a = P.chuanHoaNgay2({ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', ngay2: ''});
-  assert.deepStrictEqual([a.ngay2, a.ngay2Nguon], ['06/10/2026', 'suy ra']);
-  const b = P.chuanHoaNgay2({ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', ngay2: '05/10/2026'});   // nhập thật (trùng số suy ra) vẫn là “nhập”
-  assert.deepStrictEqual([b.ngay2, b.ngay2Nguon], ['05/10/2026', undefined]);
-  const c = P.chuanHoaNgay2({ngay: '05/10/2026'}); assert.deepStrictEqual([c.ngay2, c.ngay2Nguon], ['', undefined]);   // thiếu giờ: không suy ra được
-  // sửa tay: ô ngày cân 2 vẫn là số đã suy ra từ trước thì không bị coi là người dùng nhập; đổi giờ cân thì ngày cân 2 đổi theo
-  const old = {ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', ngay2: '06/10/2026', ngay2Nguon: 'suy ra'};
-  const e1 = P.chuanHoaNgay2({ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '23:59:00', ngay2: '06/10/2026'}, old);
-  assert.deepStrictEqual([e1.ngay2, e1.ngay2Nguon], ['05/10/2026', 'suy ra']);
-  const e2 = P.chuanHoaNgay2({ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', ngay2: '07/10/2026'}, old);   // người dùng gõ số khác
-  assert.deepStrictEqual([e2.ngay2, e2.ngay2Nguon], ['07/10/2026', undefined]);
-  assert.strictEqual(P.ngay2Of(a).nguon, 'suy ra'); assert.strictEqual(P.ngay2Of(e2).nguon, 'nhập');
-  assert.strictEqual(P.ngay2Warn(a).length, 0);   // ngày đã suy ra không bao giờ mâu thuẫn
+  assert.strictEqual(a.ngay2, '06/10/2026'); assert.deepStrictEqual(Object.keys(a).sort(), ['gioCan1', 'gioCan2', 'ngay', 'ngay2']);   // không có trường phụ
+  assert.strictEqual(P.chuanHoaNgay2({ngay: '05/10/2026', gioCan1: '08:00:00', gioCan2: '09:00:00', ngay2: '07/10/2026'}).ngay2, '07/10/2026');   // nhập thật (khác số suy ra): giữ
+  assert.strictEqual(P.chuanHoaNgay2({ngay: '05/10/2026'}).ngay2, '');   // thiếu giờ: không suy ra được
+  // sửa tay: ô ngày cân 2 vẫn đúng bằng số suy ra của phiếu cũ thì suy lại theo giờ mới; gõ số khác thì giữ số đó
+  const old = {ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', ngay2: '06/10/2026'};
+  assert.strictEqual(P.chuanHoaNgay2({ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '23:59:00', ngay2: '06/10/2026'}, old).ngay2, '05/10/2026');
+  assert.strictEqual(P.chuanHoaNgay2({ngay: '05/10/2026', gioCan1: '23:50:00', gioCan2: '00:20:00', ngay2: '07/10/2026'}, old).ngay2, '07/10/2026');
+  assert.strictEqual(P.ngay2Warn(a).length, 0);   // đã suy ra thì khớp với giờ cân
   assert.ok(P.ngay2Warn({ngay: '05/10/2026', gioCan1: '23:50', gioCan2: '00:20', ngay2: '05/10/2026'}).length === 1);
 });
