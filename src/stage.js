@@ -18,12 +18,27 @@
   const KINDS = ['nc', 'dx', 'pc'];
   const sig = r => JSON.stringify(Object.keys(r).filter(k => k[0] !== '_').sort().map(k => [k, r[k]]));
   const clone = x => JSON.parse(JSON.stringify(x));
+  /* _id nội bộ: duy nhất trong TOÀN BỘ lô (nhân công, xe, phiếu cân; bản đã lưu lẫn bản nháp, kể cả dòng chờ xóa có thể hoàn tác).
+   * Chuẩn hóa dữ liệu cũ khi tạo bản nháp: giữ _id hợp lệ đầu tiên, dòng thiếu hoặc trùng _id được cấp _id mới; không đổi nội dung, thứ tự hay liên kết xe–phiếu. */
+  const usedIds = st => { const u = new Set(); KINDS.forEach(k => { (st.base[k] || []).forEach(r => r._id && u.add(r._id)); (st.cur[k] || []).forEach(r => r._id && u.add(r._id)); }); return u; };
+  function newId(st) { const u = usedIds(st); let id; do { id = 'n' + (++st.seq); } while (u.has(id)); return id; }
   function create(saved) {
-    const st = {seq: 0, base: {}, cur: {}, src: {}};
-    KINDS.forEach(k => { const list = (saved && saved[k] || []).map(r => { const c = clone(r); if (!c._id) c._id = 's' + (++st.seq); return c; }); st.base[k] = list; st.cur[k] = clone(list); st.src[k] = ''; });
+    const st = {seq: 0, base: {}, cur: {}, src: {}}, seen = new Set(), todo = [];
+    KINDS.forEach(k => { st.base[k] = (saved && saved[k] || []).map(r => { const c = clone(r); if (typeof c._id === 'string' && c._id && !seen.has(c._id)) seen.add(c._id); else todo.push(c); return c; }); });
+    st.cur = {}; KINDS.forEach(k => { st.base[k].forEach(r => { if (todo.includes(r)) delete r._id; }); });
+    KINDS.forEach(k => { st.cur[k] = clone(st.base[k]); st.src[k] = ''; });   // tạm: để newId thấy các _id đang dùng
+    KINDS.forEach(k => st.base[k].forEach((r, i) => { if (!r._id) { r._id = newId(st); st.cur[k][i]._id = r._id; } }));
     return st;
   }
-  const newId = st => 'n' + (++st.seq);
+  /* kiểm tra trước khi ghi: _id thiếu hoặc trùng trong danh sách sẽ ghi (nháp). Trả về nhóm và các dòng bị ảnh hưởng. */
+  const GROUP = {nc: 'nhân công', dx: 'xe', pc: 'phiếu cân'};
+  function idConflicts(st) {
+    const at = new Map(), out = [];
+    KINDS.forEach(k => st.cur[k].forEach((r, i) => { const id = r._id; if (!id) { out.push({kind: k, group: GROUP[k], id: '', rows: [rowLabel(k, r, i)]}); return; } if (!at.has(id)) at.set(id, []); at.get(id).push({k, r, i}); }));
+    at.forEach((l, id) => { if (l.length > 1) { const g = [...new Set(l.map(x => GROUP[x.k]))]; out.push({kind: l[0].k, group: g.join(' / '), id, rows: l.map(x => (g.length > 1 ? GROUP[x.k] + ' ' : '') + rowLabel(x.k, x.r, x.i))}); } });
+    return out;
+  }
+  const rowLabel = (k, r, i) => 'dòng ' + (r._row || i + 1) + ' (' + (k === 'pc' ? 'phiếu ' + (r.soPhieu || '?') : k === 'dx' ? 'xe ' + (r.bienSo || '?') : (r.ten || r.cccd || '?')) + ')';
   /* số dòng hiển thị: dòng mới nhận số lớn hơn mọi dòng hiện có (thông báo lỗi “Dòng n” không nhầm giữa các nguồn); số dòng của file nhập được giữ ở _srcRow */
   const nextRow = list => list.reduce((m, r) => Math.max(m, +r._row || 0), 1) + 1;
   /* gộp các dòng nhập (đã chuẩn hóa) vào bản nháp. opt.keepBlank: ô trống của dòng nhập không xóa giá trị đang có (dùng cho bản tra cứu). opt.source: nhãn nguồn. */
@@ -84,6 +99,6 @@
     st.cur.pc.forEach(r => { const b = baseById.get(r._id); if (b && bienKey(b.bienSo) !== bienKey(r.bienSo)) bienLog.push({soPhieu: r.soPhieu, ngay: r.ngay, kl: typeof r.kl === 'number' ? r.kl : 0, cu: b.bienSo || '', moi: r.bienSo, at, nguon: r._plateSrc || 'Sửa tay'}); });
     return {lists: out, bienLog};
   }
-  const api = {KEY, KINDS, create, merge, addRow, updateRow, removeRow, restoreRow, linkedPc, diff, counts, dirty, dirtyKinds, commit, sig, bienKey};
+  const api = {KEY, KINDS, create, merge, addRow, updateRow, removeRow, restoreRow, linkedPc, diff, counts, dirty, dirtyKinds, commit, sig, bienKey, idConflicts};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKStage = api;
 })(typeof window !== 'undefined' ? window : globalThis);

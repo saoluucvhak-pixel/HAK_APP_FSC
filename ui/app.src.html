@@ -2660,6 +2660,8 @@ async function stSave(opt) {
   const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
   if (stSaving) return {ok: false, error: 'đang lưu'};
   const o = db.rs[cur], f = o && o.forests && o.forests[curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
+  const idc = HAKStage.idConflicts(st);   // _id nội bộ phải duy nhất trước khi ghi SQLite; xung đột thì chặn, giữ dữ liệu đã lưu và bản nháp
+  if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: 'trùng _id', idc}; }
   const rec = Object.assign(jobView(o, f), {nc: st.cur.nc, dx: st.cur.dx, pc: st.cur.pc}), errs = [];
   let errTab = null, cfgWarn = 0;
   const dkv = HAKStage.dirtyKinds(st);   // chỉ kiểm phần có thay đổi; phiếu cân luôn kiểm cùng xe (quan hệ biển số)
