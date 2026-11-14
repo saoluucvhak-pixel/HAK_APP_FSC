@@ -16,7 +16,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const clone = o => JSON.parse(JSON.stringify(o));
 
-const xe = (bien, ma) => ({_row: 2, maRung: ma, stt: '1', chuXe: 'CHỦ XE ' + bien, ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', bienSo: bien, loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'});
+const xe = (bien, ma) => ({_row: 2, maRung: ma, stt: '1', chuXe: 'CHỦ XE ' + bien, ngaySinh: '01/01/1980', cccd: bien === '92C-12345' ? '049000000077' : '049000000078', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', bienSo: bien, loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'});
 const P = (stt, ngay, bien, so, kl) => ({_row: stt + 1, stt: String(stt), ngay, bienSo: bien, soPhieu: so, kl, noiGiao: 'Cảng dăm Kỳ Hà', ghiChu: ''});
 const forest = (id, ma, ten, pc) => ({id, info: {hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', donGiaTan: {'Tổ trưởng': 420000, 'Công nhân khai thác': 330000, 'Công nhân cưa': 380000}, khoiLuong: 21.75, maRung: ma, tenRung: ten, diaDiem: 'Thôn ' + ma, lat: 15.6, lng: 108.1, dienTich: 2, dinhMucTanHa: 80, cuLy: 45, tuNgay: '01/10/2026', denNgay: '30/11/2026', donGia: 340000, giayTo: [], vanChuyen: {mode: 'coDinh', coDinh: 52000, bac: []},
   muaHang: {congTyId: 'cX', ten: 'CÔNG TY TNHH DĂM AN PHÁT', mst: '0401234567', diaChiId: '', diaChiNhan: 'Địa chỉ công ty', diaChi: 'KCN Điện Nam – Điện Ngọc, Quảng Nam', nguoiDaiDien: '', chucVu: '', sdt: '', xacNhan: '2026-10-01T00:00:00.000Z'}},
