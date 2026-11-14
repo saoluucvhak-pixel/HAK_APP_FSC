@@ -45,7 +45,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   const box = await w.innerText('#lkBienDoi').catch(() => '');
   ok('khung “Biển số xe khác với hồ sơ” nêu phiếu 1001: 92C-12345 → 92C-54321', /Biển số xe khác với hồ sơ/.test(box) && /1001\/2026\/NK/.test(box) && /92C-12345/.test(box) && /92C-54321/.test(box), box.slice(0, 300));
   ok('dòng phiếu ghi rõ “Biển số khác … (chỉ khác biển số)”', /Biển số khác: 92C-12345 → 92C-54321 \(chỉ khác biển số\)/.test(await w.innerText('#lkBody')));
-  await w.click('[data-act=lkPlateOnly]'); await w.waitForTimeout(900); d = await db();
+  await w.click('[data-act=lkApply]'); await w.waitForTimeout(900); d = await db();
   ok('chỉ cập nhật biển số chỉ vào BẢN NHÁP: chưa lưu, phiếu đã lưu vẫn 92C-12345 và chưa có nhật ký đổi biển', !!(await w.$('#stDirty')) && pc1().bienSo === '92C-12345' && !(forest().bienLog || []).length);
   await addXe(w, '92C-54321'); await stSave(w); d = await db();
   ok('chỉ cập nhật biển số: biển mới 92C-54321, ngày và khối lượng giữ nguyên', pc1().bienSo === '92C-54321' && pc1().kl === kl0 && pc1().ngay === ngay0, JSON.stringify(pc1()));

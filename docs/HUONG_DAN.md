@@ -98,10 +98,13 @@ Hai thời điểm sửa, cùng một kết quả.
 3. Gõ biển đúng vào ô của phiếu cần đổi (tự viết hoa, hiện nhãn *đã đổi từ …*). Phiếu ghi bằng tên xe thì dùng khung **Ghép tên xe với biển số** (lưu một lần). Xóa nội dung ô để trả lại biển gốc.
 4. **Chọn mọi phiếu ghi được** (hoặc tích từng phiếu) → **Lưu vào hồ sơ**. Phiếu vào rừng mang biển đã đổi cùng đủ giờ cân, cân 1/2, khối lượng, khách hàng, địa chỉ, đơn giá, thành tiền.
 
-**Cách 2 – đã đưa qua rồi mới đổi xe:**
+**Cách 2 – đã đưa qua rồi mới đổi xe (cùng một màn hình, không có nút riêng):**
 1. Khi bảng tính tra cứu đã có biển mới: mở rừng → **Tra cứu Google Sheets** → tab HoSoKeo → tìm số phiếu → **Chọn** → **Điền vào rừng đang mở**.
-2. Khung **Biển số xe khác với hồ sơ** liệt kê biển cũ → biển mới của từng phiếu.
-3. Bấm **Chỉ cập nhật biển số xe (n phiếu)**: ngày, khối lượng và các trường in giữ nguyên; việc đổi được ghi lại.
+2. Trong bảng **Phiếu cân**, phiếu đã có trong hồ sơ mà biển khác được **tích sẵn**, dòng ghi “Biển số khác: biển cũ → biển mới”. Khung **Biển số xe khác với hồ sơ** tóm tắt các phiếu này. Sửa biển ở ô **Biển số** của dòng nếu cần, bỏ tích phiếu không muốn đổi.
+3. Giữ tích **Chỉ đổi biển số** (mặc định): ngày, khối lượng, nơi giao, tiền và các trường in giữ nguyên; bỏ tích thì phiếu được cập nhật theo toàn bộ bảng tính (phiếu khác ngày, khối lượng hoặc biển sẽ vào mục **Cần đối chiếu**).
+4. Bấm **Lưu vào hồ sơ**: phiếu vào **bản nháp tab Vận chuyển**; kiểm tra rồi bấm **Lưu dữ liệu vào lô**. Việc đổi được ghi lại.
+
+**Đổi tay:** tab **Vận chuyển** → **Sửa** ở xe → đổi **Biển kiểm soát** thì mọi phiếu của xe đó đổi theo (một lượt); hoặc **Sửa** một phiếu để đổi riêng biển của phiếu đó.
 
 Xem lại các phiếu đã đổi: **Báo cáo → Phiếu cân đã cập nhật biển số xe**. Biển mới phải có trong đội xe của rừng, nếu chưa có thì thêm xe ở tab Vận chuyển.
 

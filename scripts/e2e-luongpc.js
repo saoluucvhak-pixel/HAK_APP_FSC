@@ -51,7 +51,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   await w.click('[data-lktab="HoSoKeo_QC"]'); await w.fill('#lkQ', '1001/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.waitForSelector('[data-act=lkApply]');
   ok('khung “Biển số xe khác với hồ sơ” nêu 92C-77777 → 92C-54321', /Biển số xe khác với hồ sơ/.test(await w.innerText('#lkBienDoi').catch(() => '')) && /92C-77777/.test(await w.innerText('#lkBienDoi').catch(() => '')) && /92C-54321/.test(await w.innerText('#lkBienDoi').catch(() => '')));
-  await w.click('[data-act=lkPlateOnly]'); await w.waitForTimeout(900); await addXe(w, '92C-54321'); await stSave(w);
+  await w.click('[data-act=lkApply]'); await w.waitForTimeout(900); await addXe(w, '92C-54321'); await stSave(w);
   p1 = await pcOf('1001/2026/NK');
   ok('cập nhật biển số: 1001 thành 92C-54321, các trường in (cân, khối lượng, khách hàng, giá) giữ nguyên', p1.bienSo === '92C-54321' && p1.can1 === 6840 && p1.klKg === 2840 && p1.khachHang === 'NGUYỄN VĂN AN' && p1.donGia === 1500000 && p1.thanhTien === 4260000, JSON.stringify(p1));
   pr = await printText(2);
