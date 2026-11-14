@@ -54,3 +54,25 @@ test('định mức gỗ keo: kiểm tra ngày, số lớn hơn 0, không trùng
   const r = DM.keoSetAll(db, [{tuNgay: '01/01/2026', tanHa: 80}, {tuNgay: '01/01/2026', tanHa: 90}]); assert.strictEqual(r.ok, false); assert.strictEqual(db.dinhMucKeo.length, 1, 'không ghi khi có lỗi');
   assert.ok(DM.keoSetAll(db, [{tuNgay: '01/03/2026', tanHa: 85}, {tuNgay: '01/01/2026', tanHa: 80}]).ok); assert.deepStrictEqual(DM.keoItems(db).map(x => x.tuNgay), ['01/01/2026', '01/03/2026']);
 });
+
+test('định mức thời gian khai thác 1 ha = ? ngày: hiệu lực từ ngày, kiểm tra đầu vào, chọn theo ngày bắt đầu', () => {
+  const db = {};
+  assert.ok(DM.tgAdd(db, '01/01/2025', '5').ok); assert.ok(DM.tgAdd(db, '01/07/2026', '4,5').ok);
+  assert.deepStrictEqual(DM.tgItems(db).map(x => [x.tuNgay, x.ngayHa]), [['01/01/2025', 5], ['01/07/2026', 4.5]]);
+  assert.strictEqual(DM.tgPick(db, '15/03/2026').item.ngayHa, 5); assert.strictEqual(DM.tgPick(db, '01/10/2026').item.ngayHa, 4.5);
+  assert.strictEqual(DM.tgPick(db, '').item.ngayHa, 4.5);                                  // chưa có ngày: bản mới nhất
+  assert.strictEqual(DM.tgPick(db, '01/01/2024').found, false);                            // trước mọi bản
+  assert.ok(!DM.tgAdd(db, '01/01/2025', '6').ok);                                          // trùng ngày hiệu lực
+  assert.ok(!DM.tgAdd(db, '31/02/2026', '5').ok); assert.ok(!DM.tgAdd(db, '01/02/2026', '0').ok); assert.ok(!DM.tgAdd(db, '01/02/2026', 'abc').ok); assert.ok(!DM.tgAdd(db, '01/02/2026', '400').ok);
+  const before = JSON.stringify(db.dinhMucNgay); assert.ok(!DM.tgSetAll(db, [{tuNgay: '01/01/2025', ngayHa: '5'}, {tuNgay: '01/01/2025', ngayHa: '6'}]).ok); assert.strictEqual(JSON.stringify(db.dinhMucNgay), before);
+});
+test('thời gian khai thác dự kiến = diện tích × ngày/ha làm tròn lên; ngày kết thúc bỏ qua Chủ nhật; năng suất 1 ngày = ? tấn', () => {
+  assert.strictEqual(DM.soNgay(2, 5), 10); assert.strictEqual(DM.soNgay(2.5, 5), 13); assert.strictEqual(DM.soNgay(0.1, 5), 1);   // 2,5 × 5 = 12,5 → 13; tối thiểu 1
+  assert.strictEqual(DM.soNgay(null, 5), null); assert.strictEqual(DM.soNgay(2, 0), null); assert.strictEqual(DM.soNgay(2, 'x'), null);
+  // 01/10/2026 là thứ Năm: 6 ngày khai thác = T5,T6,T7,(CN bỏ),T2,T3,T4 → kết thúc thứ Tư 07/10/2026
+  assert.strictEqual(DM.ngayKetThuc('01/10/2026', 1), '01/10/2026'); assert.strictEqual(DM.ngayKetThuc('01/10/2026', 3), '03/10/2026'); assert.strictEqual(DM.ngayKetThuc('01/10/2026', 4), '05/10/2026'); assert.strictEqual(DM.ngayKetThuc('01/10/2026', 6), '07/10/2026');
+  assert.strictEqual(DM.ngayKetThuc('04/10/2026', 1), '05/10/2026');   // bắt đầu Chủ nhật: ngày khai thác đầu là thứ Hai
+  assert.strictEqual(DM.ngayKetThuc('29/12/2026', 4), '01/01/2027');   // qua năm: T3 29, T4 30, T5 31, T6 01/01 là ngày thứ 4
+  assert.strictEqual(DM.ngayKetThuc('31/02/2026', 3), ''); assert.strictEqual(DM.ngayKetThuc('01/10/2026', 0), ''); assert.strictEqual(DM.ngayKetThuc('', 3), '');
+  assert.strictEqual(DM.nangSuat(80, 5), 16); assert.strictEqual(DM.nangSuat(80, 3), 26.67); assert.strictEqual(DM.nangSuat(null, 5), null); assert.strictEqual(DM.nangSuat(80, 0), null);
+});

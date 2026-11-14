@@ -236,7 +236,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li><b>Giao khoán</b>: tổ trưởng ký hợp đồng khoán (BM-01), công nhân ký <b>một Giấy ủy quyền (BM-20)</b> cho tổ trưởng; tính theo <b>tấn, ha hoặc ngày công</b> (khoán trả theo ngày công: Tổ trưởng nhận thay cả tổ rồi chi trả từng người). <b>Trực tiếp</b>: mỗi người ký hợp đồng lao động (BM-03); tính theo <b>tấn hoặc ngày công</b>.</li>
 <li><b>Đơn giá theo từng chức danh</b> (Tổ trưởng, Công nhân khai thác, Công nhân cưa). Sản lượng chia đều cho mọi người trong tổ, kể cả tổ trưởng; tiền mỗi người = phần chia × đơn giá chức danh.</li>
 <li><b>Ngày bắt đầu</b> dùng cho hợp đồng, chấm công và kiểm tra đủ 18 tuổi (dưới 18 tuổi không xuất được Giấy ủy quyền). Mỗi lô cần <b>đúng một tổ trưởng</b>.</li>
-<li><b>Định mức</b> (nút trên menu ngang): định mức BHLĐ theo chức danh để in sổ cấp phát, và định mức gỗ keo (tấn/ha) có hiệu lực từ ngày.</li>
+<li><b>Định mức</b> (nút trên menu ngang): định mức BHLĐ theo chức danh để in sổ cấp phát, định mức gỗ keo (tấn/ha) và định mức thời gian khai thác (1 ha = ? ngày), đều có hiệu lực từ ngày; từ đó Thông tin rừng tính thời gian khai thác dự kiến và ngày kết thúc dự kiến.</li>
 <li><b>Chấm công thực tế</b> (khi cơ sở tính là <b>ngày công</b>, cả giao khoán lẫn trực tiếp): thẻ ngay dưới thông số. Chọn tháng, nhập số công mỗi ngày cho từng người (<b>1</b> đủ công, <b>0,5</b> nửa công, <b>0</b> hoặc trống là nghỉ; tối đa 3), hoặc bấm <b>Điền đủ công (trừ Chủ nhật)</b>. Đã chấm thì <b>BM-08 dùng tổng công từng người</b>; chưa chấm thì mọi người bằng số công theo thời gian khai thác. Hợp đồng (BM-01, BM-03, BM-20) luôn dùng số công dự tính. Nút <b>In bảng chấm công đã nhập</b> tải BM-05 có sẵn số công của tháng; BM-05 trong các gói hồ sơ vẫn là mẫu trống để chấm tay.</li>
 </ul>
 <h3>4. Tab Vận chuyển</h3>
@@ -461,7 +461,7 @@ function migrateV1(o) {
     forests[fid] = {
       id: fid,
       info: {maRung: (old.ma || 'CR') + '-R1', tenRung: 'Rừng 1', diaDiem: old.diaDiem || '', lat: null, lng: null,
-        dienTich: null, dinhMucTanHa: null, cuLy: null, tuNgay: old.tuNgay || '', denNgay: old.denNgay || '',
+        dienTich: null, dinhMucTanHa: null, dinhMucNgayHa: null, cuLy: null, tuNgay: old.tuNgay || '', denNgay: old.denNgay || '',
         donGia: old.donGia ?? null, giayTo: []},
       nc: r.nc || [], dx: r.dx || [], exp: r.exp || {},
       ncFile: r.ncFile || '', ncAt: r.ncAt || '', dxFile: r.dxFile || '', dxAt: r.dxAt || ''
@@ -548,6 +548,12 @@ const dinhMucEff = i => {
   if (typeof i.dinhMucTanHa === 'number' && i.dinhMucTanHa > 0) return {v: i.dinhMucTanHa, src: 'rừng'};
   const k = HAKDinhMuc.keoPick(db, i.tuNgay || ''); return k.found ? {v: k.item.tanHa, src: 'mặc định', tu: k.item.tuNgay} : null;
 };
+/* Định mức thời gian khai thác (ngày/ha) của rừng: số rừng tự điền, hoặc mặc định theo ngày bắt đầu (Định mức → Định mức thời gian khai thác) */
+const ngayHaEff = i => {
+  if (typeof i.dinhMucNgayHa === 'number' && i.dinhMucNgayHa > 0) return {v: i.dinhMucNgayHa, src: 'rừng'};
+  const k = HAKDinhMuc.tgPick(db, i.tuNgay || ''); return k.found ? {v: k.item.ngayHa, src: 'mặc định', tu: k.item.tuNgay} : null;
+};
+const forestDays = i => { const d = ngayHaEff(i); return d ? HAKDinhMuc.soNgay(i.dienTich, d.v) : null; };
 const forestYield = i => { const d = dinhMucEff(i); return (typeof i.dienTich === 'number' && d) ? i.dienTich * d.v : null; };
 const toDec = v => { const s = trim(v).replace(',', '.'); if (!s) return null; const n = Number(s); return isFinite(n) ? n : 'x'; };
 const GIAY_LOAI = ['Giấy chứng nhận QSDĐ', 'Giấy xác nhận', 'Khác'];
@@ -724,6 +730,7 @@ function forestErrors(info, fid) {
   if (info.lng === 'x') e.push('Kinh độ không phải là số');
   if (info.dienTich === 'x') e.push('Diện tích không phải là số');
   if (info.dinhMucTanHa === 'x') e.push('Định mức không phải là số');
+  if (info.dinhMucNgayHa === 'x') e.push('Định mức thời gian khai thác (ngày/ha) không phải là số');
   if (info.cuLy === 'x') e.push('Cự ly không phải là số');
   if (info.khoiLuong === 'x') e.push('Khối lượng thực tế không phải là số');
   if (typeof info.khoiLuong === 'number' && info.khoiLuong < 0) e.push('Khối lượng thực tế không được âm');
@@ -732,6 +739,7 @@ function forestErrors(info, fid) {
   if (typeof info.lng === 'number' && Math.abs(info.lng) > 180) e.push('Kinh độ phải nằm trong khoảng -180 đến 180');
   if (typeof info.dienTich === 'number' && info.dienTich < 0) e.push('Diện tích không được âm');
   if (typeof info.dinhMucTanHa === 'number' && info.dinhMucTanHa < 0) e.push('Định mức không được âm');
+  if (typeof info.dinhMucNgayHa === 'number' && (info.dinhMucNgayHa < 0 || info.dinhMucNgayHa > 365)) e.push('Định mức thời gian khai thác (ngày/ha) phải từ 0 đến 365');
   if (typeof info.cuLy === 'number' && info.cuLy < 0) e.push('Cự ly không được âm');
   const vc = info.vanChuyen || {};
   if (vc.donGiaKm === 'x') e.push('Đơn giá vận chuyển (đ/tấn/km) không phải là số');
@@ -2317,6 +2325,23 @@ function dmField(i) {
     : 'Chưa có định mức mặc định: khai ở <b>Định mức → Định mức gỗ keo</b>, hoặc tự điền số cho rừng.';
   return '<label><span>Định mức (tấn/ha)</span><input name="dinhMucTanHa" value="' + esc(typeof i.dinhMucTanHa === 'number' ? String(i.dinhMucTanHa).replace('.', ',') : (i.dinhMucTanHa ?? '')) + '" placeholder="' + esc(ph) + '"><small class="mut" id="dmNote">' + note + '</small></label>';
 }
+/* Ô Định mức thời gian khai thác (ngày/ha) của rừng: để trống thì dùng định mức mặc định (hiệu lực theo ngày bắt đầu khai thác) */
+function dmTgField(i) {
+  const own = typeof i.dinhMucNgayHa === 'number' && i.dinhMucNgayHa > 0, k = HAKDinhMuc.tgPick(db, i.tuNgay || '');
+  const ph = k.found ? 'mặc định ' + fmtTan(k.item.ngayHa) + ' ngày/ha' : 'chưa có định mức mặc định';
+  const note = own ? 'Đang dùng số riêng của rừng. <button type="button" class="linkbtn" data-act="tgDefault">Dùng mặc định</button>'
+    : k.found ? 'Đang dùng định mức mặc định <b>' + fmtTan(k.item.ngayHa) + ' ngày/ha</b> (hiệu lực từ ' + (k.item.tuNgay || '…') + ').' : 'Chưa có định mức mặc định: khai ở <b>Định mức → Định mức thời gian khai thác</b>, hoặc tự điền số cho rừng.';
+  return '<label><span>Định mức thời gian khai thác (ngày/ha)</span><input name="dinhMucNgayHa" value="' + esc(typeof i.dinhMucNgayHa === 'number' ? String(i.dinhMucNgayHa).replace('.', ',') : (i.dinhMucNgayHa ?? '')) + '" placeholder="' + esc(ph) + '"><small class="mut" id="tgDmNote">' + note + '</small></label>';
+}
+/* Thời gian khai thác dự kiến của rừng = diện tích × ngày/ha; có ngày bắt đầu thì hiện ngày kết thúc dự kiến (không tính Chủ nhật) */
+function tgDuKienHtml(i) {
+  const d = ngayHaEff(i), n = d ? HAKDinhMuc.soNgay(i.dienTich, d.v) : null, tan = dinhMucEff(i), ns = d && tan ? HAKDinhMuc.nangSuat(tan.v, d.v) : null;
+  if (n == null) return 'Chưa tính được thời gian khai thác dự kiến: cần <b>diện tích</b> và <b>định mức thời gian khai thác (ngày/ha)</b>.';
+  const kt = i.tuNgay && HAKDates.isValid(i.tuNgay) ? HAKDinhMuc.ngayKetThuc(i.tuNgay, n) : '';
+  const han = trim(i.denNgay || '');
+  return 'Thời gian khai thác dự kiến: <b>' + n + ' ngày</b> (' + String(i.dienTich).replace('.', ',') + ' ha × ' + String(d.v).replace('.', ',') + ' ngày/ha, không tính Chủ nhật' + (ns ? '; năng suất 1 ngày ≈ ' + String(ns).replace('.', ',') + ' tấn' : '') + ').' +
+    (kt ? ' Bắt đầu ' + esc(i.tuNgay) + ' → <b>kết thúc dự kiến ' + esc(kt) + '</b>' + (han && han !== kt ? ' (ô “đến ngày” đang là ' + esc(han) + ')' : '') + '. <button type="button" class="linkbtn" data-act="fillDenDk">Điền ngày kết thúc dự kiến</button>' : ' Nhập <b>từ ngày</b> để tính ngày kết thúc dự kiến.');
+}
 const fillBtn = (act, label) => '<small class="mut"><button type="button" class="linkbtn" data-act="' + act + '">' + label + '</button></small>';
 /* ghi chú dưới ô cự ly: đang dùng số nào, từ đâu, và vì sao chưa có */
 function cuLyNote(i) {
@@ -2335,6 +2360,7 @@ function panelForest(f) {
     inp('maRung', 'Mã rừng', {req: true}) + inp('tenRung', 'Tên rừng / lô') + inp('diaDiem', 'Địa điểm khai thác (rừng)', {req: true, wide: true}) +
     inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +
     inp('dienTich', 'Diện tích (ha)') + dmField(i) +
+    dmTgField(i) + '<p class="mut" id="tgNote" style="grid-column:1/-1;margin:0">' + tgDuKienHtml(i) + '</p>' +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến', btn: fillBtn('fillKl', 'Lấy tổng từ phiếu cân')}) +
     inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p>' +
@@ -2421,7 +2447,7 @@ function panelNorm() {
     '<div class="wrap" style="margin-top:8px"><table class="normTbl"><thead><tr><th>Vị trí (chức danh)</th>' + BHLD_ITEMS.map(x => '<th>' + x[1] + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu bản định mức này</button></div></form>' +
     '<div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm bản mới, hiệu lực từ ngày</span><input id="normNewDate" placeholder="dd/mm/yyyy" style="width:160px"></label><button class="btn ghost" type="button" data-act="normAddVer">Thêm bản mới (sao chép bản đang chọn)</button></div>' +
-    '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm vị trí mới (áp dụng cho mọi bản)</span><input id="normNewPos" placeholder="VD: Công nhân phụ" style="width:260px"></label><button class="btn ghost" type="button" data-act="normAddPos">Thêm vị trí</button></div></div>' + keoCard();
+    '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm vị trí mới (áp dụng cho mọi bản)</span><input id="normNewPos" placeholder="VD: Công nhân phụ" style="width:260px"></label><button class="btn ghost" type="button" data-act="normAddPos">Thêm vị trí</button></div></div>' + keoCard() + tgCard();
 }
 /* Định mức gỗ keo: 1 ha = ? tấn, có hiệu lực từ ngày. Rừng lấy làm mặc định theo ngày bắt đầu khai thác; rừng tự điền số khác thì dùng số riêng */
 function keoCard() {
@@ -2431,6 +2457,20 @@ function keoCard() {
     '<p class="mut" style="margin-top:0">Mỗi định mức có <b>hiệu lực từ ngày</b>. Rừng lấy định mức này làm <b>mặc định</b> theo ngày bắt đầu khai thác của rừng (chưa có ngày thì dùng bản mới nhất). Rừng có định mức khác thì tự điền ở Thông tin rừng.</p>' +
     '<table class="normTbl" style="min-width:0;table-layout:auto;max-width:560px"><thead><tr><th>Hiệu lực từ ngày</th><th>1 ha = … tấn</th><th></th></tr></thead><tbody>' + items.map(row).join('') + row({tuNgay: '', tanHa: null}, 'new') + '</tbody></table>' +
     '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu định mức gỗ keo</button><span class="mut">Dòng cuối để thêm định mức mới.</span></div></form></div>';
+}
+/* Định mức thời gian khai thác: 1 ha = ? ngày, hiệu lực từ ngày; kèm năng suất 1 ngày = ? tấn suy ra từ định mức gỗ keo */
+function tgCard() {
+  const items = HAKDinhMuc.tgItems(db);
+  const row = (x, n) => '<tr data-tg="' + n + '"><td><input name="t_tu" value="' + esc(x.tuNgay) + '" placeholder="dd/mm/yyyy" style="width:150px"></td><td><input name="t_ngay" value="' + esc(x.ngayHa == null ? '' : String(x.ngayHa).replace('.', ',')) + '" placeholder="VD: 5" style="width:130px;text-align:right"></td><td class="mut">' + (typeof x.ngayHa === 'number' ? (() => { const k = HAKDinhMuc.keoPick(db, x.tuNgay), ns = k.found ? HAKDinhMuc.nangSuat(k.item.tanHa, x.ngayHa) : null; return ns ? '1 ngày ≈ ' + String(ns).replace('.', ',') + ' tấn' : ''; })() : '') + '</td><td>' + (x.tuNgay ? '<button class="btn ghost sm" type="button" data-act="keoDel">Xóa</button>' : '') + '</td></tr>';
+  return '<h2 style="margin-top:24px">Định mức thời gian khai thác: 1 ha = ? ngày</h2><div class="card"><form id="tgForm">' +
+    '<p class="mut" style="margin-top:0">Căn cứ <b>1 ha = … ngày</b> để suy ra <b>thời gian khai thác dự kiến</b> của từng rừng (diện tích × ngày/ha, làm tròn lên) và <b>ngày kết thúc dự kiến</b> từ ngày bắt đầu (không tính Chủ nhật). Mỗi định mức có <b>hiệu lực từ ngày</b>, rừng lấy theo ngày bắt đầu khai thác (chưa có ngày thì dùng bản mới nhất). Cột cuối là <b>năng suất 1 ngày = ? tấn</b> = định mức gỗ keo (tấn/ha) ÷ ngày/ha. Rừng có định mức khác thì tự điền ở Thông tin rừng.</p>' +
+    '<table class="normTbl" style="min-width:0;table-layout:auto;max-width:620px"><thead><tr><th>Hiệu lực từ ngày</th><th>1 ha = … ngày</th><th>Năng suất</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' + items.map(row).join('') + row({tuNgay: '', ngayHa: null}, 'new') + '</tbody></table>' +
+    '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu định mức thời gian khai thác</button><span class="mut">Dòng cuối để thêm định mức mới.</span></div></form></div>';
+}
+function saveTg(form) {
+  const rows = [...form.querySelectorAll('tr[data-tg]')].map(tr => ({tuNgay: trim(tr.querySelector('[name=t_tu]').value), ngayHa: trim(tr.querySelector('[name=t_ngay]').value)})).filter(r => r.tuNgay || r.ngayHa);
+  const r = HAKDinhMuc.tgSetAll(db, rows); if (!r.ok) { note('Chưa lưu định mức thời gian khai thác: ' + r.error, 'err'); return; }
+  persist(); note('Đã lưu định mức thời gian khai thác.');
 }
 function saveKeo(form) {
   const rows = [...form.querySelectorAll('tr[data-keo]')].map(tr => ({tuNgay: trim(tr.querySelector('[name=k_tu]').value), tanHa: trim(tr.querySelector('[name=k_tan]').value)})).filter(r => r.tuNgay || r.tanHa);
@@ -3143,7 +3183,7 @@ function readForest(form) {
   return {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
     lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: toDec(fd.get('dienTich')),
-    dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), cuLy: toDec(fd.get('cuLy')),
+    dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), dinhMucNgayHa: toDec(fd.get('dinhMucNgayHa')), cuLy: toDec(fd.get('cuLy')),
     tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay')), khoiLuong: toDec(fd.get('khoiLuong')),
     donGia: toNum(fd.get('donGia'))   // để trống = null: giao khoán tự suy đơn giá khoán của tổ từ định biên nhân sự
   };
@@ -3185,6 +3225,8 @@ function forestFill(act, el) {
   const setv = (name, v) => { const inp = form.elements[name]; inp.value = v; inp.dispatchEvent(new Event('input', {bubbles: true})); };
   const hint = t => { let h = document.getElementById('forestHint'); if (!h) { h = document.createElement('div'); h.id = 'forestHint'; h.className = 'msg warn'; h.style.gridColumn = '1/-1'; form.prepend(h); } h.textContent = t; };
   const pcs = (f.pc || []);
+  if (act === 'tgDefault') { setv('dinhMucNgayHa', ''); const k = HAKDinhMuc.tgPick(db, trim(form.elements.tuNgay.value)); document.getElementById('tgDmNote').textContent = k.found ? 'Sẽ dùng định mức mặc định ' + fmtTan(k.item.ngayHa) + ' ngày/ha sau khi lưu.' : 'Chưa có định mức mặc định.'; return; }
+  if (act === 'fillDenDk') { const ii = readForest(form), d = ngayHaEff(ii), n = d ? HAKDinhMuc.soNgay(ii.dienTich, d.v) : null, kt = n && HAKDates.isValid(ii.tuNgay) ? HAKDinhMuc.ngayKetThuc(ii.tuNgay, n) : ''; if (!kt) return hint('Chưa tính được ngày kết thúc: cần diện tích, định mức thời gian khai thác và ngày bắt đầu hợp lệ.'); setv('denNgay', kt); return hint('Đã điền ngày kết thúc dự kiến ' + kt + ' (' + n + ' ngày khai thác, không tính Chủ nhật). Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa ngày.'); }
   if (act === 'dmDefault') { setv('dinhMucTanHa', ''); const k = HAKDinhMuc.keoPick(db, trim(form.elements.tuNgay.value)); document.getElementById('dmNote').textContent = k.found ? 'Sẽ dùng định mức gỗ keo mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha sau khi lưu.' : 'Chưa có định mức mặc định.'; return; }
   if (act === 'fillKl') {
     const nums = pcs.map(p => p.kl).filter(x => typeof x === 'number' && x > 0); if (!nums.length) return hint('Chưa có phiếu cân nào của rừng này để lấy khối lượng.');
@@ -4151,7 +4193,7 @@ async function lkApply() {
         mark(o, 'ma', (c.owner.fields.find(x => x.key === 'cccd') || c.owner.fields[0] || {}).src || {tab: 'HoSoRung_QC', row: 0, col: 'Mã KH_CCCD'});
       }
       const fid = newId('f'), n = forestList(o).length + 1;
-      f = o.forests[fid] = {id: fid, info: {maRung: '', tenRung: 'Rừng ' + n, diaDiem: '', lat: null, lng: null, dienTich: null, dinhMucTanHa: null, cuLy: null, tuNgay: '', denNgay: '', donGia: null, giayTo: []},
+      f = o.forests[fid] = {id: fid, info: {maRung: '', tenRung: 'Rừng ' + n, diaDiem: '', lat: null, lng: null, dienTich: null, dinhMucTanHa: null, dinhMucNgayHa: null, cuLy: null, tuNgay: '', denNgay: '', donGia: null, giayTo: []},
         nc: [], dx: [], pc: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
       if (!fv) { let k = n, code = (o.info.ma || 'CR') + '-R' + k; while (findForestByMa(code)) code = (o.info.ma || 'CR') + '-R' + (++k); f.info.maRung = code; }
     }
@@ -4322,7 +4364,7 @@ document.addEventListener('click', async e => {
   if (act === 'setOpenData') return HB.openDataFolder();
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
-  if (/^(fillTu|fillDen|fillKl|dmDefault)$/.test(act)) return forestFill(act, el);
+  if (/^(fillTu|fillDen|fillKl|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
   if (act === 'pcPrint') { if (stBlockNote()) return; const rec = curRec(); if (!rec) return; const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(HAKPhieuCan.aoa(rec), HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
@@ -4411,6 +4453,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
   if (e.target.id === 'normForm') { e.preventDefault(); saveNorm(e.target); }
   if (e.target.id === 'keoForm') { e.preventDefault(); saveKeo(e.target); }
+  if (e.target.id === 'tgForm') { e.preventDefault(); saveTg(e.target); }
 });
 
 document.addEventListener('change', e => {
@@ -4475,6 +4518,9 @@ document.addEventListener('input', e => {
     const rec = curRec(), exo = Object.assign({}, rec.exp, {[t.dataset.exp]: trim(t.value)});
     const a = document.getElementById('soPreviewHd'), b = document.getElementById('soPreviewVc');
     if (a) a.innerHTML = soPreviewHtml(rec, exo, 'hd'); if (b) b.innerHTML = soPreviewHtml(rec, exo, 'vc');
+  }
+  if (t.form && t.form.id === 'forestForm' && ['dienTich', 'dinhMucNgayHa', 'tuNgay', 'denNgay', 'dinhMucTanHa'].includes(t.name)) {   // thời gian khai thác dự kiến và ngày kết thúc hiện ngay khi gõ
+    const nt = document.getElementById('tgNote'); if (nt) nt.innerHTML = tgDuKienHtml(readForest(t.form));
   }
   if (t.form && t.form.id === 'forestForm' && (t.name === 'dienTich' || t.name === 'dinhMucTanHa')) {   // sản lượng dự kiến tự nhảy ngay khi gõ, không cần bấm Lưu
     const dt = toDec(t.form.elements.dienTich.value); let dm = toDec(t.form.elements.dinhMucTanHa.value), out = document.getElementById('slDuKien');
