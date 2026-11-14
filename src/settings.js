@@ -10,13 +10,14 @@ function load(userDir) {
   try {
     const j = JSON.parse(fs.readFileSync(file(userDir), 'utf8'));
     return {dataDir: typeof j.dataDir === 'string' ? j.dataDir : '', backupDir: typeof j.backupDir === 'string' ? j.backupDir : '',
-      lastBackup: typeof j.lastBackup === 'string' ? j.lastBackup : '', remindDays: Number.isInteger(j.remindDays) && j.remindDays >= 0 && j.remindDays <= 365 ? j.remindDays : 7};
-  } catch (e) { return {dataDir: '', backupDir: '', lastBackup: '', remindDays: 7}; }
+      lastBackup: typeof j.lastBackup === 'string' ? j.lastBackup : '', remindDays: Number.isInteger(j.remindDays) && j.remindDays >= 0 && j.remindDays <= 365 ? j.remindDays : 7,
+      autoKeep: Number.isInteger(j.autoKeep) && j.autoKeep >= 0 && j.autoKeep <= 60 ? j.autoKeep : 7};   // số bản tự sao lưu hằng ngày được giữ; 0 = tắt
+  } catch (e) { return {dataDir: '', backupDir: '', lastBackup: '', remindDays: 7, autoKeep: 7}; }
 }
 function save(userDir, s) {
   fs.mkdirSync(userDir, {recursive: true});
   const tmp = file(userDir) + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify({dataDir: s.dataDir || '', backupDir: s.backupDir || '', lastBackup: s.lastBackup || '', remindDays: s.remindDays == null ? 7 : s.remindDays}, null, 2));
+  fs.writeFileSync(tmp, JSON.stringify({dataDir: s.dataDir || '', backupDir: s.backupDir || '', lastBackup: s.lastBackup || '', remindDays: s.remindDays == null ? 7 : s.remindDays, autoKeep: s.autoKeep == null ? 7 : s.autoKeep}, null, 2));
   fs.renameSync(tmp, file(userDir));   // ghi trọn vẹn rồi mới thay, tránh file cài đặt dở dang
 }
 /* Đã đến lúc nhắc sao lưu toàn bộ chưa. remindDays 0 = tắt. Chưa từng sao lưu: tính từ lần đầu cài (firstSeen) để không nhắc ngay ngày đầu. Trả {due, days} (days = số ngày từ lần sao lưu cuối, null nếu chưa từng). */

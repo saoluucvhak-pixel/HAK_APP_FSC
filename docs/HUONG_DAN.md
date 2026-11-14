@@ -278,7 +278,9 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 **Báo cáo đối chiếu bản tra cứu** (mẫu “Đối chiếu bản tra cứu: tọa độ, hồ sơ rừng, phiếu cân”): đọc bản Google Sheets/Excel đang dùng ở Tra cứu và đối chiếu ba tab HoSoRung, ToaDoRung, HoSoKeo theo **CCCD và mã hợp đồng**. Liệt kê: **I.** rừng ở HoSoRung thiếu dòng tọa độ ở ToaDoRung hoặc tọa độ không dùng được (ghi lý do, dòng nguồn); **II.** phiếu cân ở HoSoKeo thiếu hồ sơ rừng ở HoSoRung (gộp theo chủ rừng và hợp đồng: số phiếu, khối lượng, từ ngày – đến ngày, ví dụ số phiếu, gợi ý nếu cùng CCCD có hợp đồng khác); **III.** dòng tọa độ thiếu hồ sơ rừng; **IV.** rừng chưa có phiếu cân. Có tìm nhanh (tên, CCCD, hợp đồng, số phiếu), lọc “chỉ rừng thiếu tọa độ” và “chỉ phiếu cân thiếu hồ sơ rừng”, xuất Word và Excel. Chưa có bản tra cứu thì báo rõ. Cần sửa thì sửa trên bảng tính gốc rồi **Đồng bộ ngay** lại.
 
 ## 10. Sao lưu và khôi phục
-Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.
+Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên. Lần lưu nào có **xóa chủ rừng hoặc lô rừng** cũng tự sao lưu trước (`truoc-xoa-…`, giữ 20 bản gần nhất); mỗi lần lưu chỉ xóa được một chủ rừng (muốn thay toàn bộ dữ liệu thì dùng Khôi phục → Thay toàn bộ).
+
+**Tự sao lưu hằng ngày**: mỗi ngày, lần đầu mở phần mềm (khi đã có hồ sơ) sẽ tự lưu một bản `tu-dong-năm-tháng-ngày.sqlite` vào thư mục sao lưu và chỉ giữ số bản gần nhất (mặc định 7; đổi hoặc tắt ở **Cài đặt hệ thống → Tự sao lưu hằng ngày**). Bản sao được kiểm tra mở được trước khi giữ lại; các bản sao lưu khác không bị xóa. Bản này nằm trên cùng máy nên **không thay cho Sao lưu toàn bộ ra ổ khác/USB**. Khôi phục từ bản tự động: đóng phần mềm, chép file đó thành `hakqn.sqlite` trong thư mục dữ liệu (giữ lại file cũ), hoặc chọn thư mục chứa nó ở màn hình thông báo lỗi dữ liệu.
 
 **Sao lưu toàn bộ**: **⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json)** → chọn thư mục → tạo 2 file cùng tên `.json` và `.sqlite`.
 
@@ -379,7 +381,7 @@ Tab **Xuất hồ sơ** có bảng **Quy trình hồ sơ theo đợt** ở đầ
 ## Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu
 Mở **⋯ Thêm → Cài đặt hệ thống**.
 - **Thư mục dữ liệu**: nơi lưu cơ sở dữ liệu (`hakqn.sqlite`). Bấm *Chọn thư mục…* để đổi: phần mềm sao chép toàn bộ dữ liệu sang thư mục mới rồi dùng từ đó; **bản cũ không bị xóa** (xóa tay khi chắc chắn không cần). Nếu thư mục mới đã có dữ liệu HAKQN, phần mềm hỏi: dùng dữ liệu có sẵn đó, ghi đè bằng dữ liệu đang dùng (bản có sẵn được lưu lại trước), hoặc hủy. *Về mặc định* đưa dữ liệu về thư mục của ứng dụng.
-- **Thư mục sao lưu**: bản sao lưu tự động trước khi nâng cấp dữ liệu, **Sao lưu toàn bộ dữ liệu** (lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc USB.
+- **Thư mục sao lưu**: bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu hằng ngày, **Sao lưu toàn bộ dữ liệu** (lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc USB.
 - Thư mục phải có sẵn và ghi được, nếu không phần mềm báo lỗi và giữ cài đặt cũ. Nếu thư mục đã chọn bị xóa hoặc ổ không còn, phần mềm dùng vị trí mặc định và nêu rõ trong màn Cài đặt.
 - Không nên đặt dữ liệu trên ổ mạng hoặc thư mục đang đồng bộ đám mây (OneDrive, Google Drive): cơ sở dữ liệu có thể hỏng.
 

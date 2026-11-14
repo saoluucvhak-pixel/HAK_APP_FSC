@@ -1,3 +1,5 @@
+# Mã nguồn luôn checkout với LF trên mọi hệ điều hành (CSP của renderer băm nội dung script; build-html cũng tự chuẩn hóa)
+* text=auto eol=lf
 renderer/PhieuCan.html -text
 tests/fixtures/*.xlsx binary
 tests/fixtures/*.sqlite binary

@@ -323,3 +323,50 @@ Mốc rà soát trước: commit 72813a1 (Release v1.4.30). Bảng số liệu t
 - **Giao khoán nhiều đội** (`src/doi.js`, `tests/doi.test.js`, `scripts/e2e-nhieudoi.js`): mỗi tổ trưởng một đội; sản lượng chia theo số người, tổng khớp; mỗi đội một bộ BM-01/20/05/06/07/08/14, số hợp đồng riêng (.1, .2); thời gian dự kiến chia theo số đội làm song song (ô Số đội ở Thông tin rừng); lỗi thiếu tên đội, đội mồ côi; hình thức trực tiếp không chia đội; lô một tổ trưởng không đổi.
 - Toàn bộ 56 kịch bản e2e và 282 kiểm thử đơn vị đạt trên bản build cuối.
 - Chưa kiểm được: Google Sheets thật, Microsoft Office, máy in, hộp thoại đóng ứng dụng gốc của Windows, bản cài exe cài tay.
+
+## 8. Bản 1.4.34: rà soát lỗi, bảo mật và toàn vẹn dữ liệu (14/11/2026)
+
+Rà soát theo các skill `hak-code-auditor`, `hak-electron-security`, `hak-data-integrity` (HAK_AI_SKILLS) và công cụ quét `hak_code_quality_test`. Dữ liệu thử là dữ liệu giả lập.
+
+| # | Lỗi / rủi ro | Sửa | Kiểm thử |
+| --- | --- | --- | --- |
+| 1 | `Store.save({})` (thiếu `rs`) xóa sạch mọi chủ rừng; lần lưu thường không có bản sao lưu | Từ chối dữ liệu thiếu danh sách chủ rừng; chặn xóa từ 2 chủ rừng trở lên trong một lần lưu (`BULK_DELETE`, trừ khôi phục “Thay toàn bộ”); lần lưu nào có xóa chủ/lô đều tự sao lưu `backups/truoc-xoa-*.sqlite` (giữ 20 bản gần nhất) | `tests/store.test.js` (4 bài hồi quy) |
+| 2 | Hai chủ rừng có lô trùng mã nội bộ: lô của chủ trước bị ghi đè mất, không báo | Phát hiện trùng mã chủ/lô trước khi ghi, báo `DUP_ID`, không ghi gì | `tests/store.test.js` |
+| 3 | `xlsx` 0.18.5: 2 lỗ hổng mức cao (GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9) khi đọc file Excel/Google Sheets | SheetJS 0.20.3 (nguồn chính thức cdn.sheetjs.com) | `npm audit --omit=dev`: 0 lỗ hổng; toàn bộ test nhập/xuất Excel đạt |
+| 4 | Electron 33 hết hỗ trợ bảo mật | Electron 45.3.2, electron-builder 26, better-sqlite3 13.2 (có sẵn bản build N-API cho mọi nền tảng nên bỏ bước biên dịch lại: bỏ `postinstall`, `build.npmRebuild: false`) | Đơn vị + 56 bộ e2e + đóng gói thử và kiểm tra khói bản đã đóng gói |
+| 5 | `lot:open`, `lookup:importExcel` đọc đường dẫn bất kỳ do giao diện gửi | Bản cài luôn hỏi qua hộp thoại; đường dẫn từ giao diện chỉ nhận khi chạy từ mã nguồn (kiểm thử) | e2e |
+| 6 | Biến môi trường kiểm thử (`HAKQN_SHEET_URL`, `HAKQN_CONFIRM_DEFAULT`, `HAKQN_FAIL_SAVE`…) có hiệu lực trong bản cài | Bị xóa khi `app.isPackaged`; kiểm tra khói có thêm `testEnvOff` | Kiểm tra khói bản đóng gói đặt sẵn các biến này: đạt |
+| 7 | Chưa có Content-Security-Policy | `build-html` thêm CSP: script chỉ chạy theo mã băm SHA-256 của các khối có sẵn, không tải tài nguyên ngoài, không gọi mạng từ giao diện | Electron thật: chèn `<img onerror>` vào trang bị CSP chặn; mã chèn vào 18 trường dữ liệu không chạy |
+| 8 | `settings:setBackup` ghi cấu hình rồi mới lỗi khi chưa mở được dữ liệu | Kiểm tra trước khi ghi | — |
+| 9 | Cửa sổ in phiếu cân dùng lại tích lũy listener `did-fail-load` | Gỡ cả hai listener khi có kết quả | e2e phiếu cân |
+| 10 | Giao diện treo thì không đóng được ứng dụng | Hỏi giao diện có thời hạn (3 giây; lưu trước khi đóng 15 giây) | e2e đóng app |
+
+**Kết quả (Linux, màn hình ảo):** `npm test` 287/288 đạt (1 bỏ qua như trước); `npm run test:e2e` **56/56 bộ, 1.312 kiểm tra đạt, 0 lỗi**; quét chất lượng 0 lỗi, 2 cảnh báo file dài; bản đóng gói Linux qua kiểm tra khói `create`, `verify`, `upgrade` (từ 1.0.0), `upgrade14`.
+**Chưa chạy:** bộ cài Windows (cần chạy workflow “Build Windows installer”) và cài trên máy người dùng.
+
+## 9. Bản 1.4.35: tự sao lưu hằng ngày, tách module giao diện, bộ chạy e2e chung, npm audit trong CI (14/11/2026)
+
+| Hạng mục | Nội dung | Kiểm thử |
+| --- | --- | --- |
+| Tự sao lưu hằng ngày (`src/autobackup.js`) | Khi mở cơ sở dữ liệu (lần đầu trong ngày, đã có hồ sơ): sao lưu trực tuyến SQLite ra `tu-dong-YYYY-MM-DD.sqlite` trong thư mục sao lưu, qua file tạm, chuyển về một file độc lập, `quick_check` rồi mới giữ; xoay vòng giữ N bản (mặc định 7; 0 = tắt) ở **Cài đặt hệ thống → Tự sao lưu hằng ngày**; không xóa bản sao lưu loại khác; chạy nền, lỗi chỉ ghi nhật ký và hiện ở Cài đặt | `tests/autobackup.test.js` (4), `scripts/e2e-tusaoluu.js` (13); bản đóng gói: pha `verify` tạo bản của hôm nay |
+| Tách `ui/app.src.html` | Còn 370 dòng (khung HTML + CSS); phần thân script tách thành 18 module `ui/app/NN-*.js` (87–637 dòng), `build:html` ghép theo thứ tự số vào cùng một khối script trong cùng hàm bao `'use strict'` | Bản dựng sau khi tách **trùng từng byte** với bản dựng từ mã trước khi tách; `tests/build-html.test.js`: mỗi module đọc được cú pháp riêng lẻ, `renderer/index.html` đã commit khớp mã nguồn và thư viện hiện tại; công cụ quét không còn cảnh báo file dài ở giao diện |
+| Bộ chạy e2e chung (`scripts/e2e-all.js`) | `npm run test:e2e` chạy lần lượt 57 bộ, không dừng ở bộ lỗi đầu (trừ `--bail`), giới hạn thời gian từng bộ, đọc dòng ĐẠT/LỖI, in bảng tổng và ghi `reports/e2e/summary.{json,md}` + nhật ký từng bộ; báo lỗi nếu có `scripts/e2e-*.js` chưa khai báo; Linux không màn hình tự dùng `xvfb-run`; CI tải báo cáo lên artifact và trang tóm tắt lượt chạy | `tests/e2e-all.test.js`; lượt chạy thật đã phát hiện đúng 1 bộ lỗi (`e2e-dulieu` đếm cả bản tự sao lưu) và nêu tên kiểm tra lỗi |
+| `npm audit` trong CI | Job quét chất lượng: chặn khi thư viện chạy trong ứng dụng có lỗ hổng mức cao trở lên; lỗ hổng ở công cụ build/kiểm thử chỉ cảnh báo; lưu `reports/npm-audit-*.json`; lệnh `npm run audit` | `npm run audit`: 0 lỗ hổng |
+
+**Sửa kèm:** commit `6fe2e88` đã commit `renderer/index.html` dựng **trước** khi nâng thư viện nên giao diện trong commit đó còn nhúng SheetJS 0.18.5 (tiến trình chính đã dùng 0.20.3; CI luôn dựng lại giao diện trước khi đóng gói nên bộ cài từ CI không bị ảnh hưởng). Bản này dựng lại với SheetJS 0.20.3 và có bài kiểm thử chặn lỗi này.
+
+**Kết quả (Linux, Electron 45.3.2):** `npm test` 296/297 đạt (1 bỏ qua như trước); `npm run test:e2e` **57/57 bộ, 1.325 kiểm tra đạt, 0 lỗi**; quét chất lượng 0 lỗi, 1 cảnh báo (`package-lock.json` dài); bản đóng gói Linux qua kiểm tra khói `create`, `verify`, `upgrade`, `upgrade14`, `relocate`. **Chưa chạy:** workflow Windows.
+
+**Sửa sau lượt CI Windows đầu tiên của PR #10 (run 43608486047):** 0/57 bộ e2e đạt trên Windows vì git của runner checkout nguồn với CRLF (`core.autocrlf=true`); `build-html` băm nội dung script còn `\r` trong khi trình duyệt chuẩn hóa CRLF → LF trước khi băm, nên CSP chặn mọi script. Tái hiện trên Linux bằng nguồn đổi sang CRLF (`e2e.js` dừng ở “thanh trạng thái hiển thị SQLite”, đúng như CI). Sửa: `build-html` chuẩn hóa về LF trước khi băm và ghi (bản dựng từ nguồn CRLF trùng từng byte bản từ LF; 6 bộ e2e chạy trên nguồn CRLF đều đạt), thêm `.gitattributes` `* text=auto eol=lf` và bài kiểm thử CRLF trong `tests/build-html.test.js`.
+
+**Nâng cấp từ bộ cài thật:** v1.0.0 và v1.4.0 đã bị xóa khỏi GitHub Releases nên hai bước cũ tự bỏ qua (chỉ cảnh báo; vẫn chạy lại nếu đưa bộ cài lên). Thêm bước **nâng cấp từ bộ cài thật v1.4.33** (bản phát hành gần nhất, Electron 33; mã băm `15DC5854…E6AD`): cài v1.4.33, chính bản đó ghi dữ liệu thử (pha `create` của nó), cài đè bản mới, pha `verify` kiểm tra dữ liệu, giao diện, đúng phiên bản mới và có bản tự sao lưu hằng ngày. Kiểm tra khói chờ tự sao lưu xong rồi mới thoát (không thoát giữa lúc ghi).
+
+## 10. Đợt sửa tiếp theo trong PR #10: GitHub Actions, CSP cửa sổ in, hiệu năng, lỗ hổng công cụ build, kiểm tra PDF (14/11/2026)
+
+| # | Hạng mục | Nội dung | Bằng chứng |
+| --- | --- | --- | --- |
+| 3 | GitHub Actions | `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0, `actions/upload-artifact` v7.0.2 (chạy Node 24, hết cảnh báo Node 20 bị khai tử); **ghim theo mã commit** thay cho nhãn phiên bản (chống đổi nhãn) | workflow |
+| 4 | CSP cửa sổ in phiếu cân | `renderer/PhieuCan.html` giữ nguyên bản (mã băm `tests/phieucan.sha256`); `src/main.js` xử lý `file://` của phiên mặc định và thêm header CSP cho đúng file đó: script chỉ theo mã băm tính từ chính file, không tải tài nguyên ngoài, không mạng (giữ phiên mặc định để còn cài đặt đã lưu trong localStorage). Hàm băm dùng chung `src/csp.js` với `build-html` (bản dựng giao diện không đổi byte) | `e2e-phieucan`: mã chèn không chạy, dùng công cụ (nạp, in, tải PDF, khổ giấy) không có vi phạm CSP; bản đóng gói (file trong `app.asar`): 0 vi phạm khi mở, mã chèn bị chặn |
+| 5 | Hiệu năng lưu | Đo bằng `scripts/perf-luu.js`: 10.000 phiếu (2,4 MB) lưu đổi 1 phiếu ~22 ms, nạp ~9 ms, sao chép IPC ~19 ms; 120.000 phiếu (28 MB) ~285 ms + ~394 ms sao chép; 600.000 phiếu (140 MB) ~1,5 s + ~1,4 s. Lưu đã gom 250 ms và chạy nền; SQLite chỉ ghi đúng dòng đổi. Phần tốn là tuần tự hóa/băm toàn bộ trạng thái, chỉ giảm được bằng đổi kiến trúc sang lưu theo phần thay đổi (36 chỗ gọi `persist()`, rủi ro toàn vẹn dữ liệu) — **chưa làm**, đề xuất khi dữ liệu vượt ~100.000 phiếu. Thêm `tests/store-perf.test.js` chặn hồi quy thuật toán | `npm test` |
+| 6 | Lỗ hổng công cụ build | `minimatch` 9.0.9/10.2.6 (GHSA-g3hv-75wg-m249, mức trung bình, kéo theo electron-builder) → `overrides` 11.0.8 cho `app-builder-lib` và `@electron/universal` | `npm audit` (toàn bộ): 0 lỗ hổng; đóng gói và kiểm tra khói đạt |
+| 7 | Chênh lệch số kiểm tra e2e Windows/Linux | 33 kiểm tra chênh lệch nằm ở `sohd`, `inde`, `bm08`, `chuky`: dựng .docx ra PDF bằng LibreOffice (đếm trang, so ảnh, dòng chữ ký) — Windows CI không có LibreOffice nên bỏ qua mà vẫn tính đạt. Sửa: bộ chạy đếm dòng `BỎ QUA` (hiện trong bảng tổng), `--no-skip` coi là không đạt; `e2e-chuky` in `BỎ QUA` thay vì đạt ngầm khi thiếu LibreOffice/pdftotext; job CI mới **e2e-pdf** (Ubuntu 24.04 + LibreOffice + font Liberation) chạy 4 bộ này với `--no-skip` | thiếu LibreOffice (giả lập): 2 bộ báo “thiếu công cụ”; có LibreOffice: đạt đủ |

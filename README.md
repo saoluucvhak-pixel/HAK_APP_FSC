@@ -19,7 +19,8 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 - Menu **Báo cáo**: 4 mẫu (điều hành, sản lượng theo rừng, sổ phiếu cân, tiến độ FSC) xuất Word và Excel.
 
 - Tra cứu dạng **cha–con** (master–detail: hợp đồng → rừng → phiếu cân), chip điều kiện và bộ lọc đã lưu (HAK Smart Filter); giao diện theo HAK Enterprise Design System với 4 bảng màu (luxe navy, classic xanh ngọc, neutral, champagne) × sáng/tối; báo cáo cha–con và định dạng theo HAK Accounting & Reporting Standard.
-- CI: kiểm thử, đóng gói, cài thử bộ `.exe` và quét chất lượng mã bằng `hak_code_quality_test` (cấu hình `.hakquality.json`).
+- CI: kiểm thử, đóng gói, cài thử bộ `.exe`, quét chất lượng mã bằng `hak_code_quality_test` (cấu hình `.hakquality.json`) và `npm audit` (chặn lỗ hổng mức cao trong thư viện của ứng dụng); báo cáo e2e tổng hợp tải lên artifact và trang tóm tắt lượt chạy.
+- Tự sao lưu hằng ngày khi mở ứng dụng (xoay vòng, mặc định giữ 7 bản).
 
 ## Mã nguồn
 | Đường dẫn | Nội dung |
@@ -32,20 +33,24 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 | `src/store.js` | Lớp SQLite hồ sơ: lưu/đọc, nâng cấp cấu trúc, nhập/khôi phục, sao lưu |
 | `src/bannhap.js` | Điều kiện bản chính thức riêng từng biểu mẫu; nhãn BẢN NHÁP cho xuất lẻ và theo gói |
 | `src/lookup.js` | Bản tra cứu: đọc/kiểm tra 3 tab, tìm kiếm, ghép CCCD + hợp đồng, tọa độ, biển số |
-| `ui/app.src.html` | Giao diện + nghiệp vụ (từ bản HTML) |
+| `ui/app.src.html` | Khung giao diện (HTML + CSS) và chỗ ghép các module |
+| `ui/app/NN-*.js` | Nghiệp vụ và giao diện tách theo phần (cấu hình, lưu trữ, kiểm tra dữ liệu, hợp đồng, biểu mẫu, chấm công, công ty, quy trình, thao tác, cài đặt và sao lưu, báo cáo, tra cứu, sự kiện); `build:html` ghép theo thứ tự số vào cùng một khối script nên dùng chung phạm vi biến |
+| `src/autobackup.js` | Tự sao lưu xoay vòng hằng ngày khi mở ứng dụng |
 | `src/google-auth.js` | Đăng nhập Google OAuth (PKCE, chỉ đọc), tải .xlsx qua Drive API |
 | `ui/vendor/` | Bản sao nguyên văn các thư viện HAK dùng chung (design system, smart filter, chuẩn báo cáo), ghi nguồn và commit trong `ui/vendor/README.md` |
 | `ui/skins.css` | Hai bảng màu bổ sung (neutral, champagne) dùng cùng token với luxe; classic = token gốc của design system |
 | `ui/reports.js` | Mô hình dữ liệu các mẫu báo cáo (dùng chung Word, Excel, kiểm thử) |
 | `tests/` | Kiểm thử đơn vị, dữ liệu giả lập (`fixtures/make-lookup.js`) |
-| `scripts/` | Ghép HTML, chạy kiểm thử, kiểm thử Electron đầu-cuối |
+| `scripts/` | Ghép HTML (kèm CSP theo mã băm), chạy kiểm thử, kiểm thử Electron đầu-cuối; `scripts/e2e-all.js` là bộ chạy chung có báo cáo tổng |
 
 ## Lệnh
 ```
-npm ci              # cài thư viện, tự build SQLite cho Electron
+npm ci              # cài thư viện (better-sqlite3 13 có sẵn bản build N-API cho Windows/Linux/macOS, không cần biên dịch lại)
 npm run build:html  # ghép ui/app.src.html + thư viện thành renderer/index.html
 npm test            # kiểm thử đơn vị (Node của Electron)
-npm run test:e2e    # kiểm thử Electron thật (Linux: xvfb-run npm run test:e2e)
+npm run test:e2e    # kiểm thử Electron thật: chạy mọi bộ, báo cáo reports/e2e/summary.md (Linux không màn hình tự dùng xvfb-run)
+node scripts/e2e-all.js lorung malo   # chỉ chạy vài bộ; --bail dừng ở bộ lỗi đầu, --list xem danh sách
+npm run audit       # kiểm tra lỗ hổng thư viện chạy trong ứng dụng (CI chặn khi mức cao trở lên)
 npm start           # chạy thử
 npm run dist        # tạo bộ cài .exe (chạy trên Windows hoặc GitHub Actions)
 ```

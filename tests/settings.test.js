@@ -12,7 +12,7 @@ test('lưu rồi đọc lại; file hỏng hoặc thiếu thì về mặc địn
   const u = tmp(), d = tmp(), b = tmp();
   S.save(u, {dataDir: d, backupDir: b});
   const r = S.resolve(u); assert.equal(r.dbFile, path.join(d, 'hakqn.sqlite')); assert.equal(r.backupDir, b); assert.ok(r.customData && r.customBackup);
-  fs.writeFileSync(S.file(u), '{hỏng'); assert.deepEqual(S.load(u), {dataDir: '', backupDir: '', lastBackup: '', remindDays: 7});
+  fs.writeFileSync(S.file(u), '{hỏng'); assert.deepEqual(S.load(u), {dataDir: '', backupDir: '', lastBackup: '', remindDays: 7, autoKeep: 7});
 });
 test('thư mục dữ liệu đã cấu hình bị mất: KHÔNG tự quay về mặc định (giữ đường dẫn, báo không truy cập được); thư mục sao lưu mất thì dùng mặc định và báo', () => {
   const u = tmp(), d = path.join(tmp(), 'khong-co'), b = path.join(tmp(), 'khong-co-bk'); S.save(u, {dataDir: d, backupDir: b});
