@@ -236,7 +236,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li><b>Giao khoán</b>: tổ trưởng ký hợp đồng khoán (BM-01), công nhân ký <b>một Giấy ủy quyền (BM-20)</b> cho tổ trưởng; tính theo <b>tấn, ha hoặc ngày công</b> (khoán trả theo ngày công: Tổ trưởng nhận thay cả tổ rồi chi trả từng người). <b>Trực tiếp</b>: mỗi người ký hợp đồng lao động (BM-03); tính theo <b>tấn hoặc ngày công</b>.</li>
 <li><b>Đơn giá theo từng chức danh</b> (Tổ trưởng, Công nhân khai thác, Công nhân cưa). Sản lượng chia đều cho mọi người trong tổ, kể cả tổ trưởng; tiền mỗi người = phần chia × đơn giá chức danh.</li>
 <li><b>Ngày bắt đầu</b> dùng cho hợp đồng, chấm công và kiểm tra đủ 18 tuổi (dưới 18 tuổi không xuất được Giấy ủy quyền). Mỗi lô cần <b>đúng một tổ trưởng</b>.</li>
-<li><b>Định mức</b> (nút trên menu ngang): định mức BHLĐ theo chức danh để in sổ cấp phát, định mức gỗ keo (tấn/ha) và định mức thời gian khai thác (1 ha = ? ngày), đều có hiệu lực từ ngày; từ đó Thông tin rừng tính thời gian khai thác dự kiến và ngày kết thúc dự kiến.</li>
+<li><b>Định mức</b> (nút trên menu ngang): định mức BHLĐ theo chức danh để in sổ cấp phát, định mức gỗ keo (tấn/ha) định mức thời gian khai thác (1 ha = ? ngày), đều có hiệu lực từ ngày, và định mức nhân công (đội 8 người, nhiệm vụ từng vị trí); từ đó Thông tin rừng tính thời gian khai thác dự kiến và ngày kết thúc dự kiến.</li>
 <li><b>Chấm công thực tế</b> (khi cơ sở tính là <b>ngày công</b>, cả giao khoán lẫn trực tiếp): thẻ ngay dưới thông số. Chọn tháng, nhập số công mỗi ngày cho từng người (<b>1</b> đủ công, <b>0,5</b> nửa công, <b>0</b> hoặc trống là nghỉ; tối đa 3), hoặc bấm <b>Điền đủ công (trừ Chủ nhật)</b>. Đã chấm thì <b>BM-08 dùng tổng công từng người</b>; chưa chấm thì mọi người bằng số công theo thời gian khai thác. Hợp đồng (BM-01, BM-03, BM-20) luôn dùng số công dự tính. Nút <b>In bảng chấm công đã nhập</b> tải BM-05 có sẵn số công của tháng; BM-05 trong các gói hồ sơ vẫn là mẫu trống để chấm tay.</li>
 </ul>
 <h3>4. Tab Vận chuyển</h3>
@@ -348,6 +348,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@CHAMCONG@@*/</script>
 <script>/*@@PHIEUCAN@@*/</script>
 <script>/*@@CULY@@*/</script>
+<script>/*@@DINHBIEN@@*/</script>
 <script>/*@@DINHMUC@@*/</script>
 <script>/*@@QUYTRINH@@*/</script>
 <script>/*@@NHAPLIEU@@*/</script>
@@ -1782,8 +1783,17 @@ function docDSDoi(rec, ex) {
       [['STT', 'HỌ TÊN', 'CHỨC DANH CÔNG VIỆC', 'ĐỊA CHỈ', 'NGÀY SINH', 'SỐ CCCD', 'NGÀY CẤP', 'NƠI CẤP', 'GHI CHÚ'], ...rows],
       {head: true, borders: true, sz: 18, rowH: 380,
        alignCols: ['center', 'left', 'left', 'left', 'center', 'center', 'center', 'left', 'left']}),
+    ...nhiemVuBlocks(rec),
     ...footerSign('Đại diện Tổ khai thác', tt.ten)
   ];
+}
+/* Phân công nhiệm vụ theo vị trí (định mức nhân công): chỉ in khi đã lưu định mức nhân công, nên hồ sơ cũ không đổi */
+function nhiemVuBlocks(rec) {
+  const g = HAKDinhBien.get(db); if (!g.saved) return [];
+  const sc = HAKDinhBien.soSanh(g.rows, rec.nc || []);
+  return [P('**PHÂN CÔNG NHIỆM VỤ THEO VỊ TRÍ**', {al: 'center', sz: 22, before: 200, after: 80, keep: true}),
+    T([2600, 1200, 1200, 9900], [['VỊ TRÍ', 'ĐỊNH BIÊN', 'THỰC TẾ', 'NHIỆM VỤ'], ...sc.vt.map((v, i) => [v.chucDanh + (v.kiemNhiem ? ' (kiêm ' + v.kiemNhiem.toLowerCase() + ')' : ''), String(v.can), String(v.co), g.rows[i].nhiemVu])],
+      {head: true, borders: true, sz: 18, rowH: 380, alignCols: ['left', 'center', 'center', 'left']})];
 }
 function docXNDaoTao(rec, ex) {
   const rs = rec.info, tt = rec.nc.find(isTT);
@@ -2285,6 +2295,7 @@ function exportCheck(job) {
   if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  { const sc = HAKDinhBien.soSanh(HAKDinhBien.get(db).rows, job.nc || []); if ((job.nc || []).length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}); }
   { const L = tgLechOf(i, job.pc); if (L && L.canhBao) add('doi', 'Thời gian khai thác', tgLechText(i, L), 'Thời gian khai thác', {ftab: 'finfo'}); }
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
   HAKNhapLieu.kiemTra(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));
@@ -2457,7 +2468,7 @@ function panelNorm() {
     '<div class="wrap" style="margin-top:8px"><table class="normTbl"><thead><tr><th>Vị trí (chức danh)</th>' + BHLD_ITEMS.map(x => '<th>' + x[1] + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu bản định mức này</button></div></form>' +
     '<div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm bản mới, hiệu lực từ ngày</span><input id="normNewDate" placeholder="dd/mm/yyyy" style="width:160px"></label><button class="btn ghost" type="button" data-act="normAddVer">Thêm bản mới (sao chép bản đang chọn)</button></div>' +
-    '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm vị trí mới (áp dụng cho mọi bản)</span><input id="normNewPos" placeholder="VD: Công nhân phụ" style="width:260px"></label><button class="btn ghost" type="button" data-act="normAddPos">Thêm vị trí</button></div></div>' + keoCard() + tgCard();
+    '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm vị trí mới (áp dụng cho mọi bản)</span><input id="normNewPos" placeholder="VD: Công nhân phụ" style="width:260px"></label><button class="btn ghost" type="button" data-act="normAddPos">Thêm vị trí</button></div></div>' + dbCard() + keoCard() + tgCard();
 }
 /* Định mức gỗ keo: 1 ha = ? tấn, có hiệu lực từ ngày. Rừng lấy làm mặc định theo ngày bắt đầu khai thác; rừng tự điền số khác thì dùng số riêng */
 function keoCard() {
@@ -2467,6 +2478,25 @@ function keoCard() {
     '<p class="mut" style="margin-top:0">Mỗi định mức có <b>hiệu lực từ ngày</b>. Rừng lấy định mức này làm <b>mặc định</b> theo ngày bắt đầu khai thác của rừng (chưa có ngày thì dùng bản mới nhất). Rừng có định mức khác thì tự điền ở Thông tin rừng.</p>' +
     '<table class="normTbl" style="min-width:0;table-layout:auto;max-width:560px"><thead><tr><th>Hiệu lực từ ngày</th><th>1 ha = … tấn</th><th></th></tr></thead><tbody>' + items.map(row).join('') + row({tuNgay: '', tanHa: null}, 'new') + '</tbody></table>' +
     '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu định mức gỗ keo</button><span class="mut">Dòng cuối để thêm định mức mới.</span></div></form></div>';
+}
+/* Định mức nhân công: định biên một đội khai thác, số người và NHIỆM VỤ từng vị trí (src/dinhbien.js) */
+function dbCard() {
+  const g = HAKDinhBien.get(db), tong = HAKDinhBien.tong(g.rows);
+  const row = (r, n) => '<tr data-db="' + n + '"><td><input name="b_cd" value="' + esc(r.chucDanh) + '" placeholder="VD: Công nhân bóc vỏ" style="width:190px"' + (r.chucDanh === HAKDinhBien.TO_TRUONG ? ' readonly title="Vị trí Tổ trưởng cố định: 1 người"' : '') + '></td>' +
+    '<td><input name="b_so" value="' + esc(r.soNguoi == null ? '' : r.soNguoi) + '" placeholder="VD: 3" style="width:70px;text-align:right"' + (r.chucDanh === HAKDinhBien.TO_TRUONG ? ' readonly' : '') + '></td>' +
+    '<td><input name="b_km" value="' + esc(r.kiemNhiem || '') + '" placeholder="(không)" style="width:170px" list="dbPos"></td>' +
+    '<td><textarea name="b_nv" rows="4" placeholder="Nhiệm vụ của vị trí" style="width:100%;min-width:320px">' + esc(r.nhiemVu || '') + '</textarea></td>' +
+    '<td>' + (r.chucDanh && r.chucDanh !== HAKDinhBien.TO_TRUONG ? '<button class="btn ghost sm" type="button" data-act="dbDel">Xóa</button>' : '') + '</td></tr>';
+  return '<h2 style="margin-top:24px">Định mức nhân công: 1 đội = ' + tong + ' người</h2><div class="card"><form id="dbForm">' +
+    '<p class="mut" style="margin-top:0">Định biên một đội khai thác và <b>nhiệm vụ từng vị trí</b>. Người <b>kiêm nhiệm</b> là một trong số người của vị trí gốc (ví dụ Tổ trưởng kiêm bốc xếp thì tổ bốc xếp có ' + (g.rows.find(r => r.chucDanh === 'Công nhân bốc xếp') ? g.rows.find(r => r.chucDanh === 'Công nhân bốc xếp').soNguoi + 1 : 'thêm 1') + ' người gồm cả Tổ trưởng). Vị trí mới được tự thêm vào danh sách chức danh ở tab Nhân công; <b>định mức BHLĐ và đơn giá của vị trí mới cần khai</b> ở các mục tương ứng. Tab Nhân công so sánh số người thực tế với định mức này (thiếu, thừa chỉ cảnh báo).' + (g.saved ? '' : ' <b>Đang hiển thị định mức mặc định, bấm Lưu để dùng.</b>') + '</p>' +
+    '<div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Số người</th><th>Kiêm nhiệm</th><th>Nhiệm vụ</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' + g.rows.map(row).join('') + row({chucDanh: '', soNguoi: null, kiemNhiem: '', nhiemVu: ''}, 'new') + '</tbody></table></div>' +
+    '<datalist id="dbPos">' + HAKDinhMuc.allPositions(db).map(x => '<option value="' + esc(x) + '">').join('') + '</datalist>' +
+    '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn" type="submit">Lưu định mức nhân công</button><button class="btn ghost" type="button" data-act="dbReset">Dùng định mức mặc định</button><span class="mut">Dòng cuối để thêm vị trí mới.</span></div></form></div>';
+}
+function saveDb(form) {
+  const rows = [...form.querySelectorAll('tr[data-db]')].map(tr => ({chucDanh: trim(tr.querySelector('[name=b_cd]').value), soNguoi: trim(tr.querySelector('[name=b_so]').value), kiemNhiem: trim(tr.querySelector('[name=b_km]').value), nhiemVu: trim(tr.querySelector('[name=b_nv]').value)}));
+  const r = HAKDinhBien.set(db, rows, HAKDinhMuc); if (!r.ok) { note('Chưa lưu định mức nhân công: ' + r.error, 'err'); return; }
+  persist(); note('Đã lưu định mức nhân công: 1 đội ' + HAKDinhBien.tong(db.dinhBien) + ' người.' + (r.them.length ? ' Đã thêm vị trí vào danh sách chức danh: ' + r.them.join(', ') + '. Khai định mức BHLĐ và đơn giá cho các vị trí này.' : ''), r.them.length ? 'warn' : 'ok');
 }
 /* Định mức thời gian khai thác: 1 ha = ? ngày, hiệu lực từ ngày; kèm năng suất 1 ngày = ? tấn suy ra từ định mức gỗ keo */
 function tgCard() {
@@ -2815,9 +2845,16 @@ document.addEventListener('click', e => {
   stGuard(() => { const el = document.querySelector(sel) || nav; stBypass = true; try { el.click(); } finally { stBypass = false; } });
 }, true);
 
+/* So sánh số người thực tế (bản đang xem, kể cả bản nháp) với định mức nhân công; liệt kê nhiệm vụ từng vị trí */
+function dinhBienPanel(rec) {
+  const g = HAKDinhBien.get(db), sc = HAKDinhBien.soSanh(g.rows, rec.nc || []), lt = HAKDinhBien.lechText(sc);
+  const st = !(rec.nc || []).length ? '' : lt ? '<div class="msg warn" id="dbLech"><b>Lệch định mức nhân công (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '):</b> ' + esc(lt) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok" id="dbLech">Đúng định mức nhân công: ' + sc.co + ' người.</div>';
+  return '<details class="card" id="dbPanel"><summary><b>Định mức nhân công và nhiệm vụ từng vị trí</b> — 1 đội ' + sc.can + ' người' + (g.saved ? '' : ' (mặc định)') + '</summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Định mức</th><th>Hiện có</th><th>Nhiệm vụ</th></tr></thead><tbody>' +
+    sc.vt.map((v, i) => '<tr><td><b>' + esc(v.chucDanh) + '</b>' + (v.kiemNhiem ? '<br><small class="mut">kiêm ' + esc(v.kiemNhiem) + '</small>' : '') + '</td><td style="text-align:center">' + v.can + '</td><td style="text-align:center">' + (v.lech === 0 ? v.co : '<b style="color:var(--warn)">' + v.co + '</b>') + '</td><td>' + esc(g.rows[i].nhiemVu) + '</td></tr>').join('') + '</tbody></table></div></details>' + st;
+}
 function panelNC(rec) {
   const c = checkNC(rec);
-  const head = panelLuong(rec) + panelImport('nc', rec) + panelChamCong(rec) + stBar('nc', rec) + stErrBox();
+  const head = panelLuong(rec) + dinhBienPanel(rec) + panelImport('nc', rec) + panelChamCong(rec) + stBar('nc', rec) + stErrBox();
   if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có danh sách nhân công. Bấm “+ Thêm nhân công”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>';
   return head + issuesBox(c.errs, c.warns) + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', 'Đơn giá'],
     r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + fmt(rateOf(rec.info, r)) + '</td>', c);
@@ -4378,6 +4415,8 @@ document.addEventListener('click', async e => {
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
   if (act === 'pcPrint') { if (stBlockNote()) return; const rec = curRec(); if (!rec) return; const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(HAKPhieuCan.aoa(rec), HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
+  if (act === 'dbDel') { const tr = el.closest('tr'); tr.querySelectorAll('input,textarea').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
+  if (act === 'dbReset') { delete db.dinhBien; persist(); note('Đã quay về định mức nhân công mặc định (chưa lưu thành định mức riêng; bấm Lưu để dùng).', 'warn'); return render(); }
   if (act === 'keoDel') { const tr = el.closest('tr'); tr.querySelectorAll('input').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'pcFixDate') {   // sửa ngày phiếu cũ bị sai: chỉ nhận ngày có thật; giữ nguyên mọi dữ liệu khác của phiếu
@@ -4464,6 +4503,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'normForm') { e.preventDefault(); saveNorm(e.target); }
   if (e.target.id === 'keoForm') { e.preventDefault(); saveKeo(e.target); }
   if (e.target.id === 'tgForm') { e.preventDefault(); saveTg(e.target); }
+  if (e.target.id === 'dbForm') { e.preventDefault(); saveDb(e.target); }
 });
 
 document.addEventListener('change', e => {
