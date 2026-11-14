@@ -32,12 +32,13 @@ const HAKReports = (function () {
   function pcOf(r, o) { return (r.pc || []).filter(p => D.isValid(p.ngay) && inRange(p.ngay, o.from, o.to)); }
   function badPc(recs) {
     const out = [];
-    recs.forEach(r => (r.pc || []).forEach(p => { if (!D.isValid(p.ngay)) out.push({rung: r.maRung, chu: r.chuRung, soPhieu: p.soPhieu || '(không số)', ngay: p.ngay || '', ly: D.why(p.ngay), kl: num(p.kl)}); }));
+    recs.forEach(r => (r.pc || []).forEach(p => { if (!D.isValid(p.ngay)) out.push({rung: r.maRung, chu: r.chuRung, soPhieu: p.soPhieu || '(không số)', ngay: p.ngay || '', ly: D.why(p.ngay), kl: kt(p)}); }));
     return out;
   }
   const badNote = bad => bad.length ? bad.length + ' phiếu cân có ngày không hợp lệ bị loại khỏi tổng (' + bad.slice(0, 6).map(b => b.soPhieu + ': ' + b.ly).join('; ') + (bad.length > 6 ? '; …' : '') + '). Dữ liệu phiếu được giữ nguyên; sửa ngày ở tab Vận chuyển để tính lại.' : '';
   const rangeNote = o => D.range(o.from, o.to).problem;
-  const sumKl = list => round(list.reduce((s, p) => s + num(p.kl), 0), 3);
+  const kt = p => Math.round(num(p.kl) * 1000) / 1000;   // khối lượng một phiếu làm tròn đến kg (cùng quy tắc với biểu mẫu), để mọi tổng khớp nhau
+  const sumKl = list => round(list.reduce((s, p) => s + kt(p), 0), 3);
   const yieldOf = r => (typeof r.dienTich === 'number' && typeof r.dinhMuc === 'number') ? round(r.dienTich * r.dinhMuc, 3) : null;
   const byName = (a, b) => String(a).localeCompare(String(b), 'vi');
   const nameOf = r => r.tenRung || r.maRung || '(chưa đặt tên)';
@@ -47,7 +48,7 @@ const HAKReports = (function () {
     const seen = {}, dupKeys = {};
     recs.forEach(r => pcOf(r, o).forEach(p => { const k = String(p.soPhieu || '').trim().toUpperCase(); if (!k) return; seen[k] = (seen[k] || 0) + 1; if (seen[k] > 1) dupKeys[k] = true; }));
     let extra = 0, tons = 0; const first = {};
-    recs.forEach(r => pcOf(r, o).forEach(p => { const k = String(p.soPhieu || '').trim().toUpperCase(); if (!dupKeys[k]) return; if (first[k]) { extra++; tons += num(p.kl); } else first[k] = true; }));
+    recs.forEach(r => pcOf(r, o).forEach(p => { const k = String(p.soPhieu || '').trim().toUpperCase(); if (!dupKeys[k]) return; if (first[k]) { extra++; tons += kt(p); } else first[k] = true; }));
     return {keys: Object.keys(dupKeys), extra, tons: round(tons, 3)};
   }
   const dupNote = d => 'Cách tính: phiếu trùng số vẫn được cộng vào tổng (hệ thống không tự xóa phiếu). Có ' + d.extra + ' phiếu trùng, tương ứng ' + fmtNum(d.tons, 3) + ' tấn; nếu xác minh là nhập trùng thì tổng thực tế giảm tương ứng.';
@@ -92,14 +93,14 @@ const HAKReports = (function () {
     const lech = p => p.dd && p.dd.src === 'congty' && !MH.noiGiaoKhop(p.noiGiao, p.dd);
     const dpi = dupInfo(recs, o), isDup = {}; dpi.keys.forEach(k => { isDup[k] = true; });
     const nz = v => (typeof v === 'number' && isFinite(v) ? v : '');
-    const rows = all.map((p, i) => [i + 1, p.ngay, p.gioCan1 || '', p.gioCan2 || '', p.soPhieu, p.bienSo, p.khachHang || p.chu, p.rung, nz(p.can1), nz(p.can2), nz(p.klKg) !== '' ? p.klKg : Math.round(num(p.kl) * 1000), num(p.kl), p.noiGiao || '', isDup[String(p.soPhieu || '').trim().toUpperCase()] ? 'Trùng số phiếu' : '', (p.dd && p.dd.text) || '', lech(p) ? 'Khác điểm đến theo hồ sơ' : '']);
+    const rows = all.map((p, i) => [i + 1, p.ngay, p.gioCan1 || '', p.gioCan2 || '', p.soPhieu, p.bienSo, p.khachHang || p.chu, p.rung, nz(p.can1), nz(p.can2), nz(p.klKg) !== '' ? p.klKg : Math.round(kt(p) * 1000), kt(p), p.noiGiao || '', isDup[String(p.soPhieu || '').trim().toUpperCase()] ? 'Trùng số phiếu' : '', (p.dd && p.dd.text) || '', lech(p) ? 'Khác điểm đến theo hồ sơ' : '']);
     const total = sumKl(all);
     const byPlate = {}, byDay = {}, byForest = {};
     all.forEach(p => {
       const k = String(p.bienSo || '(không có biển số)').toUpperCase();
-      (byPlate[k] = byPlate[k] || {n: 0, t: 0}).n++; byPlate[k].t += num(p.kl);
-      const d = p.ngay || '(không có ngày)'; (byDay[d] = byDay[d] || {n: 0, t: 0}).n++; byDay[d].t += num(p.kl);
-      const f = p.rung || '(không có mã rừng)'; (byForest[f] = byForest[f] || {n: 0, t: 0}).n++; byForest[f].t += num(p.kl);
+      (byPlate[k] = byPlate[k] || {n: 0, t: 0}).n++; byPlate[k].t += kt(p);
+      const d = p.ngay || '(không có ngày)'; (byDay[d] = byDay[d] || {n: 0, t: 0}).n++; byDay[d].t += kt(p);
+      const f = p.rung || '(không có mã rừng)'; (byForest[f] = byForest[f] || {n: 0, t: 0}).n++; byForest[f].t += kt(p);
     });
     const tbl = (obj, label, keyCmp) => {
       const ks = Object.keys(obj).sort(keyCmp), tn = ks.reduce((s, k) => s + obj[k].n, 0), tt = round(ks.reduce((s, k) => s + obj[k].t, 0), 3);
@@ -202,7 +203,7 @@ const HAKReports = (function () {
       rows.push([ow.ten, ow.ma || '', fs.length + ' rừng', '', oh, on, ot, round(fs.reduce((x, r) => x + r.pct, 0) / fs.length, 1)]); levels.push(0);
       sums.forEach(x => {
         rows.push(['└ ' + nameOf(x.r), x.r.maRung, x.r.diaDiem || '', '', typeof x.r.dienTich === 'number' ? x.r.dienTich : '', x.pcs.length, x.t, x.r.pct]); levels.push(1);
-        if (o.detail) x.pcs.slice().sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay)).forEach(p => { rows.push(['• Phiếu ' + (p.soPhieu || '(không số)'), p.soPhieu || '', p.bienSo || '', p.ngay || '', '', 1, num(p.kl), '']); levels.push(2); });
+        if (o.detail) x.pcs.slice().sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay)).forEach(p => { rows.push(['• Phiếu ' + (p.soPhieu || '(không số)'), p.soPhieu || '', p.bienSo || '', p.ngay || '', '', 1, kt(p), '']); levels.push(2); });
       });
     });
     const dp = dupInfo(recs, o), notes = [], bad = badPc(recs);
@@ -223,13 +224,13 @@ const HAKReports = (function () {
     const per = sorted.map(r => ({r, log: (r.bienLog || []).filter(inP), tong: pcOf(r, o)}));
     const rows = [], det = [];
     per.forEach(x => {
-      const so = new Set(x.log.map(e => String(e.soPhieu).toUpperCase())), kl = round(x.log.reduce((s, e) => s + num(e.kl), 0), 3);
+      const so = new Set(x.log.map(e => String(e.soPhieu).toUpperCase())), kl = round(x.log.reduce((s, e) => s + kt(e), 0), 3);
       rows.push([rows.length + 1, x.r.maRung, x.r.chuRung, x.tong.length, so.size, x.tong.length ? round(so.size / x.tong.length * 100, 1) : 0, kl]);
       x.log.slice().sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay) || String(a.soPhieu).localeCompare(String(b.soPhieu)) || String(a.at).localeCompare(String(b.at)))
-        .forEach(e => det.push([det.length + 1, x.r.maRung, x.r.chuRung, e.soPhieu, e.ngay, e.cu || '(chưa có)', e.moi, num(e.kl), isoVN(e.at), e.nguon || '']));
+        .forEach(e => det.push([det.length + 1, x.r.maRung, x.r.chuRung, e.soPhieu, e.ngay, e.cu || '(chưa có)', e.moi, kt(e), isoVN(e.at), e.nguon || '']));
     });
     const nLo = per.filter(x => x.log.length).length, nPh = per.reduce((s, x) => s + new Set(x.log.map(e => String(e.soPhieu).toUpperCase())).size, 0);
-    const tot = per.reduce((s, x) => s + x.tong.length, 0), klAll = round(per.reduce((s, x) => s + x.log.reduce((t, e) => t + num(e.kl), 0), 0), 3);
+    const tot = per.reduce((s, x) => s + x.tong.length, 0), klAll = round(per.reduce((s, x) => s + x.log.reduce((t, e) => t + kt(e), 0), 0), 3);
     const notes = []; if (rangeNote(o)) notes.push(rangeNote(o));
     if (!det.length) notes.push('Chưa có phiếu cân nào được cập nhật biển số xe trong kỳ. Biển số được cập nhật ở màn Tra cứu Google Sheets (nút “Chỉ cập nhật biển số xe”) hoặc khi ghi lại phiếu cân đã có với biển số mới.');
     const multi = per.filter(x => { const c = {}; x.log.forEach(e => { const k = String(e.soPhieu).toUpperCase(); c[k] = (c[k] || 0) + 1; }); return Object.values(c).some(n => n > 1); }).map(x => x.r.maRung);
@@ -283,7 +284,7 @@ const HAKReports = (function () {
     const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung));
     const det = [], sum = [], unknown = [];
     sorted.forEach(r => {
-      const pcs = pcOf(r, o), by = {}; pcs.forEach(p => { const k = plateKey(p.bienSo); (by[k] = by[k] || {n: 0, t: 0}).n++; by[k].t += num(p.kl); });
+      const pcs = pcOf(r, o), by = {}; pcs.forEach(p => { const k = plateKey(p.bienSo); (by[k] = by[k] || {n: 0, t: 0}).n++; by[k].t += kt(p); });
       const X = (r.dxList || []).slice().sort((a, b) => byName(a.bienSo, b.bienSo)); const known = new Set(X.map(x => plateKey(x.bienSo)));
       let nT = 0, tT = 0;
       X.forEach(x => {
@@ -317,22 +318,25 @@ const HAKReports = (function () {
     const keep = row => !words.length || words.every(w => fold(row.join(' ')).includes(w));
     const none = !a || !a.ok, G = x => (a && a.ok ? a[x] : []);
     const rowsOf = (list, fn) => list.map(fn).filter(keep).map((r, i) => [i + 1, ...r]);
-    const t1 = fl.onlyPhieu ? [] : rowsOf(G('rungThieuToaDo'), x => [x.ten, x.cccd, x.hd, x.diaChi, x.dong, x.soDongToaDo, x.lyDo]);
+    const KIND = {thieu: 'Thiếu tọa độ', sai: 'Tọa độ sai', thieuMa: 'Thiếu mã rừng'};
+    const t1 = fl.onlyPhieu ? [] : rowsOf(G('rungThieuToaDo'), x => [x.ten, x.cccd, x.hd, x.maRung || '(chưa xác định)', KIND[x.kind] || '', x.diaChi, x.dong, x.soDongToaDo, x.lyDo]);
+    const t5 = fl.onlyToaDo ? [] : rowsOf(G('phieuChuaXacDinhLo'), x => [x.ten, x.cccd, x.hd, x.loCoThe, 'HoSoKeo', x.dongKeo, x.soPhieu, x.tan, x.vd, x.lyDo]);
     const t2 = fl.onlyToaDo ? [] : rowsOf(G('phieuThieuHoSoRung'), x => [x.ten, x.cccd || '(trống)', x.hd || '(trống)', x.soPhieu, x.tan, x.tuNgay, x.denNgay, x.vd, x.goiY]);
     const t3 = fl.onlyPhieu || fl.onlyToaDo ? [] : rowsOf(G('toaDoThieuHoSoRung'), x => [x.ten, x.cccd, x.hd, x.maRung, x.soDongToaDo, x.goiY]);
-    const t4 = fl.onlyPhieu || fl.onlyToaDo ? [] : rowsOf(G('rungChuaCoPhieu'), x => [x.ten, x.cccd, x.hd, x.diaChi, x.tinhTrang]);
+    const t4 = fl.onlyPhieu || fl.onlyToaDo ? [] : rowsOf(G('rungChuaCoPhieu'), x => [x.ten, x.cccd, x.hd, x.maRung || '', x.diaChi, x.tinhTrang]);
     const phieu = G('phieuThieuHoSoRung').reduce((n, x) => n + x.soPhieu, 0), tan = round(G('phieuThieuHoSoRung').reduce((n, x) => n + x.tan, 0), 3);
     const notes = [];
     if (none) notes.push(a && a.noData ? 'Chưa có bản tra cứu. Vào Tra cứu Google Sheets, bấm Đồng bộ ngay hoặc nạp file Excel, rồi mở lại báo cáo này.' : 'Đang đọc bản tra cứu…');
     else { notes.push('Đối chiếu theo CCCD và mã hợp đồng giữa ba tab HoSoRung, ToaDoRung, HoSoKeo của bản tra cứu đang dùng (nạp lúc ' + (a.loadedAt ? a.loadedAt.replace('T', ' ').slice(0, 16) : '…') + '). Dữ liệu trên bảng tính gốc cần được sửa rồi đồng bộ lại.');
       if (words.length || fl.onlyPhieu || fl.onlyToaDo) notes.push('Báo cáo đang lọc theo từ khóa hoặc điều kiện riêng nên chỉ hiện phần khớp; KPI là toàn bộ bản tra cứu.'); }
     return {id: 'doichieu', title: 'BÁO CÁO ĐỐI CHIẾU BẢN TRA CỨU: TỌA ĐỘ – HỒ SƠ RỪNG – PHIẾU CÂN', orient: 'landscape', period: none ? '' : 'Bản tra cứu: ' + a.counts.HoSoRung + ' dòng HoSoRung, ' + a.counts.ToaDoRung + ' dòng ToaDoRung, ' + a.counts.HoSoKeo + ' dòng HoSoKeo',
-      kpis: [{label: 'Rừng thiếu tọa độ', value: G('rungThieuToaDo').length, f: 'n0'}, {label: 'Phiếu cân thiếu hồ sơ rừng', value: phieu, f: 'n0'}, {label: 'Khối lượng phiếu thiếu hồ sơ (tấn)', value: tan, f: 'n3'}, {label: 'Rừng chưa có phiếu cân', value: G('rungChuaCoPhieu').length, f: 'n0'}],
+      kpis: [{label: 'Rừng thiếu tọa độ', value: G('rungThieuToaDo').length, f: 'n0'}, {label: 'Phiếu cân thiếu hồ sơ rừng', value: phieu, f: 'n0'}, {label: 'Khối lượng phiếu thiếu hồ sơ (tấn)', value: tan, f: 'n3'}, {label: 'Rừng chưa có phiếu cân', value: G('rungChuaCoPhieu').length, f: 'n0'}, {label: 'Phiếu chưa xác định được lô', value: G('phieuChuaXacDinhLo').reduce((n, x) => n + x.soPhieu, 0), f: 'n0'}],
       sections: [
-        {heading: 'I. Rừng (HoSoRung) thiếu tọa độ ở ToaDoRung hoặc tọa độ không dùng được', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Địa chỉ rừng', w: 28}, {h: 'Dòng HoSoRung', w: 10, f: 'n0'}, {h: 'Số dòng ToaDoRung', w: 10, f: 'n0'}, {h: 'Lý do', w: 36}], rows: t1},
+        {heading: 'I. Rừng (HoSoRung) thiếu tọa độ ở ToaDoRung hoặc tọa độ không dùng được', note: 'Hợp đồng có nhiều lô được kiểm tra từng lô (Mã rừng); lô có tọa độ không bị báo vì lô khác của cùng hợp đồng thiếu.', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 22}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 11}, {h: 'Mã lô (Mã rừng)', w: 15}, {h: 'Loại lỗi', w: 12}, {h: 'Địa chỉ rừng', w: 24}, {h: 'Dòng HoSoRung', w: 9, f: 'n0'}, {h: 'Số dòng ToaDoRung', w: 9, f: 'n0'}, {h: 'Lý do', w: 34}], rows: t1},
         {heading: 'II. Phiếu cân (HoSoKeo) thiếu hồ sơ rừng ở HoSoRung', note: 'Gộp theo chủ rừng và mã hợp đồng ghi trên phiếu.', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 22}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Số phiếu cân', w: 9, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 11, f: 'n3'}, {h: 'Từ ngày', w: 11}, {h: 'Đến ngày', w: 11}, {h: 'Ví dụ số phiếu', w: 24}, {h: 'Gợi ý', w: 32}], rows: t2},
-        {heading: 'III. Dòng tọa độ (ToaDoRung) thiếu hồ sơ rừng ở HoSoRung', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Mã rừng', w: 20}, {h: 'Số dòng ToaDoRung', w: 10, f: 'n0'}, {h: 'Gợi ý', w: 34}], rows: t3},
-        {heading: 'IV. Rừng (HoSoRung) chưa có phiếu cân nào ở HoSoKeo', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Địa chỉ rừng', w: 34}, {h: 'Tình trạng hợp đồng', w: 18}], rows: t4}],
+        {heading: 'III. Phiếu cân chưa xác định được lô', note: 'Hợp đồng có từ 2 lô trở lên mà phiếu cân không ghi mã lô: phần mềm không tự gán lô. Cần ghi mã lô trên bảng tính hoặc chọn lô khi đưa phiếu vào hồ sơ.', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 20}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 11}, {h: 'Các lô có thể', w: 22}, {h: 'Tab', w: 9}, {h: 'Dòng HoSoKeo', w: 14}, {h: 'Số phiếu cân', w: 9, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 11, f: 'n3'}, {h: 'Ví dụ số phiếu', w: 22}, {h: 'Lý do', w: 30}], rows: t5},
+        {heading: 'IV. Dòng tọa độ (ToaDoRung) thiếu hồ sơ rừng ở HoSoRung', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Mã rừng', w: 20}, {h: 'Số dòng ToaDoRung', w: 10, f: 'n0'}, {h: 'Gợi ý', w: 34}], rows: t3},
+        {heading: 'V. Lô (HoSoRung) chưa có phiếu cân nào ở HoSoKeo', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 22}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Mã lô', w: 16}, {h: 'Địa chỉ rừng', w: 28}, {h: 'Tình trạng hợp đồng', w: 16}], rows: t4}],
       notes};
   }
 

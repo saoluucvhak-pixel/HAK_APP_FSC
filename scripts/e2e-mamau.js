@@ -1,6 +1,7 @@
 'use strict';
 /* Cột “Mã rừng” không còn bắt buộc (Electron thật): file mẫu không có cột này mà vẫn nạp vào lô đang mở; file cũ có cột để trống / khớp / lệch. Chạy: xvfb-run -a node scripts/e2e-mamau.js */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const XLSX = require('xlsx'), JSZip = require('jszip');
 const root = path.join(__dirname, '..');
@@ -18,7 +19,7 @@ const build = (kind, mode) => {   // mode: 'khong' (như mẫu mới) | 'trong' 
   const f = path.join(dir, kind + '_' + mode + '.xlsx'); XLSX.writeFile(wb, f); return f;
 };
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'm.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'm.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');
   const forest = () => w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.f1);
@@ -27,7 +28,7 @@ const build = (kind, mode) => {   // mode: 'khong' (như mẫu mới) | 'trong' 
   for (const [kind, , sheet, nExpect, tabSel] of KINDS) {
     await w.click(tabSel);
     for (const [mode, label] of [['khong', 'file mẫu mới (không có cột Mã rừng)'], ['trong', 'file cũ, cột Mã rừng để trống'], ['khop', 'file cũ, Mã rừng khớp lô đang mở']]) {
-      await w.setInputFiles(`input[data-file="${kind}"]`, build(kind, mode)); await w.waitForTimeout(900);
+      await w.setInputFiles(`input[data-file="${kind}"]`, build(kind, mode)); await w.waitForTimeout(900); await stSave(w);
       const f = await forest(), rows = f[kind];
       ok(kind + ' — ' + label + ': nạp ' + nExpect + ' dòng vào lô đang mở, không báo thiếu cột/mã', rows.length === nExpect && !/File thiếu cột|thiếu Mã rừng/.test(await w.innerText('body')), 'có ' + rows.length + ' dòng; ' + (await w.innerText('#main')).slice(0, 160));
       ok(kind + ' — ' + label + ': mọi bản ghi mang mã lô đang mở (CR-001-R1)', rows.every(r => r.maRung === 'CR-001-R1'), JSON.stringify(rows.map(r => r.maRung)));
@@ -36,7 +37,8 @@ const build = (kind, mode) => {   // mode: 'khong' (như mẫu mới) | 'trong' 
     await w.setInputFiles(`input[data-file="${kind}"]`, build(kind, 'lech')); await w.waitForTimeout(900);
     const t = await w.innerText('#main'), f = await forest();
     ok(kind + ' — file cũ có Mã rừng lệch lô: báo lỗi nêu rõ cách xử lý (để trống ô hoặc sửa cho đúng)', /khác lô đang mở/.test(t) && /để trống ô Mã rừng hoặc sửa cho đúng lô/.test(t), t.slice(0, 300));
-    await w.setInputFiles(`input[data-file="${kind}"]`, build(kind, 'khong')); await w.waitForTimeout(900);   // trả về dữ liệu sạch cho các mẫu sau
+    await w.evaluate(() => document.querySelector('[data-act=stDiscard]') && document.querySelector('[data-act=stDiscard]').click()); await w.waitForTimeout(300);   // bỏ bản nháp lệch lô (không ghi gì)
+    await w.setInputFiles(`input[data-file="${kind}"]`, build(kind, 'khong')); await w.waitForTimeout(900); await stSave(w);   // trả về dữ liệu sạch cho các mẫu sau
   }
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);

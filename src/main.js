@@ -108,7 +108,8 @@ function registerIpc() {
     try { e.returnValue = {ok: true, db: store.load(), file: store.file, schema: SCHEMA_VERSION, version: app.getVersion(), notice}; notice = null; }
     catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, error: err.message}; }
   });
-  ipcMain.handle('db:save', afterReloc((e, db) => wrap(() => store.save(db))()));
+  /* HAKQN_FAIL_SAVE=<đường dẫn file>: khi file đó tồn tại thì lần lưu giả lập thất bại (chỉ dùng để kiểm thử “lưu lỗi”) */
+  ipcMain.handle('db:save', afterReloc((e, db) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : wrap(() => store.save(db))()));
   ipcMain.handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, opts))()));
   ipcMain.handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))()));
   ipcMain.handle('backup:to', afterReloc(async () => {
@@ -479,6 +480,20 @@ function createWindow() {
   });
   win.webContents.setWindowOpenHandler(() => ({action: 'deny'}));
   win.on('page-title-updated', e => e.preventDefault());
+  /* Đóng ứng dụng khi lô còn thay đổi chưa lưu: Lưu và đóng / Bỏ thay đổi và đóng / Quay lại chỉnh sửa. HAKQN_CLOSE=save|discard|back trả lời sẵn (kiểm thử tự động). */
+  let closing = false;
+  win.on('close', async e => {
+    if (closing) return; e.preventDefault();
+    let n = 0; try { n = await win.webContents.executeJavaScript('window.__stDirty ? window.__stDirty().length : 0'); } catch (err) { n = 0; }
+    let pick = 1;   // 0 = lưu và đóng, 1 = bỏ thay đổi và đóng (không có gì để hỏi), 2 = quay lại
+    if (n > 0) {
+      const auto = {save: 0, discard: 1, back: 2}[process.env.HAKQN_CLOSE];
+      pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Lô đang mở có nhân công, xe hoặc phiếu cân chưa lưu. Dữ liệu chưa lưu sẽ mất nếu đóng ngay.', buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
+      if (pick === 0) { let r = null; try { r = await win.webContents.executeJavaScript('window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true}'); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
+    }
+    if (pick === 2) return;
+    closing = true; win.close();
+  });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 }
 

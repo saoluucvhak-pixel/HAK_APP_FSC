@@ -4,6 +4,7 @@
  *  2. Trực tiếp: chủ rừng ký hợp đồng lao động (BM-03) với tất cả nhân công; tính theo tấn hoặc ngày công.
  *  Đơn giá theo từng vai trò; sản lượng (tấn, ha) hoặc số công chia đều cho mọi người. Kiểm tra số liệu trong BM-01, BM-08, BM-14, BM-20. */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip'), XLSX = require('xlsx');
 const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixtures');
@@ -24,7 +25,7 @@ async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(f
 async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync(file)); const xml = await z.file('word/document.xml').async('string'); return (xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) || []).map(t => (t.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g) || []).length); }
 
 (async () => {
-  const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'hd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'hd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   const clear = () => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); };
@@ -41,10 +42,10 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   await w.fill('#forestForm [name=diaDiem]', 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng'); await w.fill('#forestForm [name=cuLy]', '45');
   await w.fill('#forestForm [name=lat]', '15.9'); await w.fill('#forestForm [name=lng]', '108.1'); await w.fill('#forestForm [name=dienTich]', '2,5'); await w.fill('#forestForm [name=dinhMucTanHa]', '80');
   await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026'); await w.click('#forestForm button[type=submit]');
-  await w.click('[data-ftab=nc]'); await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(500);
+  await w.click('[data-ftab=nc]'); await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(500); await stSave(w);
   await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.click('#vcForm button[type=submit]');   // vận chuyển: để gói “tải tất cả” đủ điều kiện
-  await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400);
-  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400);
+  await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
+  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.click('[data-ftab=nc]');
 
   // ===== GIAO KHOÁN =====

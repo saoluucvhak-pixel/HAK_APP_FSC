@@ -14,7 +14,7 @@ const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN'
   f1: forest('f1', 'R1', 2, [{stt: 1, ngay: '05/01/2026', bienSo: '92C-11111', soPhieu: 'P1', kl: 12.5, noiGiao: 'NM'}]), f2: forest('f2', 'R2', 1.5, [])}}}};
 
 (async () => {
-  const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(tmp, 'skin.sqlite'), HAKQN_USERDATA: path.join(tmp, 'userdata'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(tmp, 'skin.sqlite'), HAKQN_USERDATA: path.join(tmp, 'userdata'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');

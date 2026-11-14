@@ -2,12 +2,13 @@
 /* Kiểm thử tra cứu offline và luồng ghi vào hồ sơ (Electron thật, dữ liệu giả lập): nhập Excel không cần mạng, kg → tấn khi cột tấn trống,
  * dòng thiếu CCCD, chỉ ghi trường và phiếu đã chọn, nhập lại cùng nguồn không sinh phiếu trùng, mở lại app vẫn tra cứu được. */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const root = path.join(__dirname, '..');
 const FIX = path.join(root, 'tests', 'fixtures');
 const dbFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-lk2-')), 'lk2.sqlite');
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
-const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: dbFile, HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
 const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lktab="' + tab + '"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200); };
 
 (async () => {
@@ -31,7 +32,7 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   await w.click('[data-act=lkPcAll]');
   const pv = await w.innerText('#lkBody');
   ok('xem trước: phiếu 4001 lấy 2 tấn từ 2.000 kg, CCCD 049000000004 (bù số 0 đầu)', /4001/.test(pv) && /049000000004/.test(pv) && /đã chọn 1 phiếu, 2 tấn/.test(pv), pv.slice(pv.indexOf('Phiếu cân'), pv.indexOf('Phiếu cân') + 120));
-  await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'});
+  await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   await w.click('[data-ftab=dx]');
   ok('đã ghi phiếu 4001 vào rừng mới', /4001/.test(await w.innerText('#main')) && /LÊ VĂN ĐÔNG/.test(await w.innerText('#side')));
 
@@ -42,7 +43,7 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   await w.click('[data-act=lkPcAll]');
   ok('phiếu có tấn/kg lệch: không chọn sẵn và không cho chọn', !(await w.isChecked('[data-lkpc="1003/2026/NK"]')) && await w.isDisabled('[data-lkpc="1003/2026/NK"]'));
   await w.uncheck('[data-lkpc="1001/2026/NK"]'); await w.uncheck('[data-lksel="forest|diaDiem"]');
-  await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'});
+  await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   const f = await w.$eval('#forestForm', x => Object.fromEntries(new FormData(x)));
   ok('trường bỏ chọn (địa điểm khai thác) không được ghi', f.diaDiem === '', JSON.stringify(f));
   await w.click('[data-ftab=dx]'); let main = await w.innerText('#main');
@@ -53,7 +54,7 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   await w.click('[data-lktab="HoSoKeo_QC"]'); await w.fill('#lkQ', '1002/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.waitForSelector('[data-act=lkApply]');
   ok('phiếu đã có hiện “bỏ qua”, ô chọn bị khóa', /bỏ qua/.test(await w.innerText('#lkBody')) && await w.isDisabled('[data-lkpc="1002/2026/NK"]'));
-  await w.click('[data-act=lkApply]'); await w.waitForTimeout(300);
+  await w.click('[data-act=lkApply]'); await w.waitForTimeout(300); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   if (await w.isVisible('#lkBox.on')) await w.click('[data-act=lkClose]');
   await w.click('[data-ftab=dx]'); main = await w.innerText('#main');
   ok('nhập lại không tạo phiếu trùng (đúng 1 dòng 1002)', (main.match(/1002\/2026\/NK/g) || []).length === 1);

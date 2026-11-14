@@ -10,7 +10,7 @@ const root = path.join(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-qt-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
-  let app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'q.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  let app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'q.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   let w = await app.firstWindow(); const errs = []; const hook = () => { w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); }; hook(); await w.waitForSelector('#side');
   const mk = (o = {}) => { const L = lot('fa', 'R-A', {exp: o.exp || {...EXP0}, pc: o.pc || [], kl: o.kl == null ? null : o.kl, nc: o.nc}); L.info.donGia = null; return L; };
   const open = async () => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.waitForSelector('#qtCard'); };
@@ -35,7 +35,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   let r1 = await rows(); const d1 = ['01', '20', '02', '04', '05', '06', '07', '11', '12', '13', '15', '16', '17', '18', '19'];
   ok('đánh dấu cả đợt 1: mọi mẫu đợt 1 “đã in”', d1.every(c => r1[c] && r1[c].startsWith('da/')), JSON.stringify(r1));
   ok('việc nên làm tiếp: đợt 1 đã in xong, chờ khai thác và cân', /Đợt 1 đã in xong/.test(await w.innerText('#qtNext')), await w.innerText('#qtNext'));
-  await waitSave(); await app.close(); app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'q.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}}); w = await app.firstWindow(); hook(); await w.waitForSelector('#side');
+  await waitSave(); await app.close(); app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'q.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}}); w = await app.firstWindow(); hook(); await w.waitForSelector('#side');
   await open(); r1 = await rows(); ok('đóng và mở lại ứng dụng: trạng thái “đã in” vẫn còn', d1.every(c => r1[c].startsWith('da/')));
   // 2b. IN ĐÈ trong quy trình: hướng in đợt 2 của từng mẫu, in nền → xác nhận → chờ dữ liệu
   let rt = await routes(); ok('đợt 2 chưa có phiếu cân: cột “Hướng in đợt 2” của cả bốn mẫu là “in mẫu nền trước”', Object.values(rt).every(v => v === 'nen'), JSON.stringify(rt));

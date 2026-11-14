@@ -13,7 +13,7 @@ const SEED = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01', ten: 'NGUYỄN V
 const many = n => Array.from({length: n}, (_, i) => nv(i + 1, i ? 'Công nhân' : 'Tổ trưởng', (i ? 'LÊ THỊ CÔNG NHÂN KHAI THÁC SỐ ' : 'TRẦN NGUYỄN HOÀNG ANH TỔ TRƯỞNG ') + (i + 1), i ? 'Công nhân khai thác' : 'Tổ trưởng', '0490850' + String(10000 + i)));
 const soffice = ['soffice', 'libreoffice'].find(c => { try { cp.execSync('command -v ' + c, {stdio: 'ignore'}); return true; } catch (e) { return false; } });
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 's.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 's.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   for (const n of [3, 5, 6, 7, 8, 9, 10, 12, 13, 14, 16, 17, 18, 20]) {
     const seed = JSON.parse(JSON.stringify(SEED)); seed.rs.own1.forests.fa.nc = many(n);

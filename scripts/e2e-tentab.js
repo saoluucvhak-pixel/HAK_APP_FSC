@@ -15,7 +15,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
 (async () => {
   await new Promise(r => srv.listen(0, '127.0.0.1', r));
   const url = 'http://127.0.0.1:' + srv.address().port + '/export.xlsx';
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: dbFile, HAKQN_SHEET_URL: url, HAKQN_DOWNLOAD_DIR: out}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_SHEET_URL: url, HAKQN_DOWNLOAD_DIR: out}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   const pick = p => app.evaluate(({dialog}, p) => { dialog.showOpenDialog = async () => ({canceled: false, filePaths: [p]}); }, p);
   const txt = () => w.innerText('#lkBody'), status = () => w.evaluate(() => window.hak.lookup.status());

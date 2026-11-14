@@ -3,6 +3,7 @@
  * Tải mẫu bằng nút “Tải file mẫu (có hướng dẫn)” → kiểm tra file → chép dòng ví dụ sang trang dữ liệu → nạp vào phần mềm → bản ghi vào đúng lô.
  * Chạy: xvfb-run -a node scripts/e2e-mau.js */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const XLSX = require('xlsx'), JSZip = require('jszip');
 const root = path.join(__dirname, '..');
@@ -13,7 +14,7 @@ const SEED = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-001', ten: 'NGUYỄN 
 const KINDS = [['nc', 'HAK_Mau_NhanCong.xlsx', 'NHAN_CONG', 3, '[data-ftab=nc]'], ['dx', 'HAK_Mau_DoiXe.xlsx', 'DOI_XE', 2, '[data-ftab=dx]'], ['pc', 'HAK_Mau_PhieuCan.xlsx', 'PHIEU_CAN', 3, '[data-ftab=dx]']];
 
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'm.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'm.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');
   const dbOf = () => w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.f1);
@@ -33,7 +34,7 @@ const KINDS = [['nc', 'HAK_Mau_NhanCong.xlsx', 'NHAN_CONG', 3, '[data-ftab=nc]']
     // chép dòng ví dụ sang trang dữ liệu rồi nạp vào phần mềm
     const ex = XLSX.utils.sheet_to_json(wb.Sheets.VI_DU, {header: 1, defval: ''}).slice(1);          // [tiêu đề, ...ví dụ]
     wb.Sheets[sheet] = XLSX.utils.aoa_to_sheet(ex); const filled = path.join(dir, 'dien_' + fileName); XLSX.writeFile(wb, filled);
-    await w.setInputFiles(`input[data-file="${kind}"]`, filled); await w.waitForTimeout(900);
+    await w.setInputFiles(`input[data-file="${kind}"]`, filled); await w.waitForTimeout(900); await stSave(w);
     const f = await dbOf(), n = f[kind].length;
     ok('mẫu ' + kind + ': nạp dòng ví dụ thành công (' + nExpect + ' dòng) vào đúng lô', n === nExpect, 'có ' + n + ' dòng; ' + (await w.innerText('#main')).slice(0, 200));
     ok('mẫu ' + kind + ': không báo thiếu cột hay sai tiêu đề', !/File thiếu cột/.test(await w.innerText('body')));

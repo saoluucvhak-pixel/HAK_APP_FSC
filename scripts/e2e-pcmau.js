@@ -3,6 +3,7 @@
  * chỉ có kg thì tấn = kg ÷ 1000, cảnh báo kg/tấn lệch, file cũ không có các cột mới vẫn nạp được.
  * Chạy: xvfb-run -a node scripts/e2e-pcmau.js */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave, addXe} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const XLSX = require('xlsx'), JSZip = require('jszip');
 const M = require('../src/xlsxmau');
@@ -29,11 +30,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const old = [['STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Khối lượng (tấn)', 'Nơi giao (nhà máy)', 'Ghi chú'], [1, '05/10/2026', '92C-12345', 'OLD1', 10, 'KCN', '']];   // tên cột của file mẫu cũ
   const f2 = path.join(dir, 'pc_cu.xlsx'), wb2 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(old), 'PHIEU_CAN'); XLSX.writeFile(wb2, f2);
 
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'p.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'p.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), seed([lot('fa', 'R-A', {exp: {}, pc: []})])); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]');
-  await w.setInputFiles('input[data-file="pc"]', f1); await w.waitForTimeout(900);
+  await w.setInputFiles('input[data-file="pc"]', f1); await w.waitForTimeout(900); await stSave(w);
   const db = () => w.evaluate(() => window.hak.loadSync().db); let d = await db(); const pc = Object.values(d.rs.own1.forests)[0].pc, by = n => pc.find(p => p.soPhieu === n);
   ok('nạp 5 phiếu', pc.length === 5, JSON.stringify(pc.map(p => p.soPhieu)));
   ok('PC001: giờ cân từ ô giờ Excel (08:15:00, 09:40:00), cân lần 1/2, kg, tấn, khách hàng', !!by('PC001') && by('PC001').gioCan1 === '08:15:00' && by('PC001').gioCan2 === '09:40:00' && by('PC001').can1 === 40400 && by('PC001').can2 === 15000 && by('PC001').klKg === 25400 && by('PC001').kl === 25.4 && by('PC001').khachHang === 'NGUYỄN VĂN AN', JSON.stringify(by('PC001')));
@@ -54,13 +55,17 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('phiếu in có giờ cân, cân lần 1/2, khối lượng, khách hàng, địa chỉ rừng, giá mua và thành tiền từ file', /08:15:00/.test(pt) && /40\.400/.test(pt) && /25\.400/.test(pt) && /Thôn A, xã B/.test(pt) && /Giá mua\s*:\s*1\.250\s*đ\/kg/.test(pt) && /31\.750\.000\s*\(vnđ\)/.test(pt), pt.slice(0, 500));
   await pw.close(); await w.click('[data-ftab=dx]');
   // file cũ vẫn nạp
-  await w.setInputFiles('input[data-file="pc"]', f2); await w.waitForTimeout(900);
+  await w.setInputFiles('input[data-file="pc"]', f2); await w.waitForTimeout(900); await stSave(w);
   d = await db(); const pc2 = Object.values(d.rs.own1.forests)[0].pc;
-  ok('file cũ (không có cột mới) vẫn nạp được', pc2.length === 1 && pc2[0].soPhieu === 'OLD1' && pc2[0].kl === 10 && pc2[0].gioCan1 === '', JSON.stringify(pc2));
+  const old1 = pc2.find(p => p.soPhieu === 'OLD1');
+  ok('file cũ (không có cột mới) vẫn nạp được; nạp thêm KHÔNG xóa các phiếu đã lưu (5 phiếu trước + OLD1 = 6)', pc2.length === 6 && !!old1 && old1.kl === 10 && old1.gioCan1 === '', JSON.stringify(pc2.map(p => p.soPhieu)));
   // file mẫu của chính công cụ PhieuCan (tiêu đề ở dòng 4, KL để trống, trang tính tên PhieuCan) nạp thẳng vào Vận chuyển
   await w.setInputFiles('input[data-file="pc"]', path.join(root, 'tests', 'fixtures', 'MauPhieuCan_cong_cu.xlsx')); await w.waitForTimeout(900);
+  ok('phiếu có biển chưa thuộc đội xe của lô: báo “Thêm xe …” và chưa lưu được', !!(await w.$('#stMissXe')) && /92C-25941/.test(await w.innerText('#stMissXe')));
+  for (const b of ['92C-25941', '92C-15844', '92C-11918']) await addXe(w, b);
+  await stSave(w);
   d = await db(); const pc3 = Object.values(d.rs.own1.forests)[0].pc, t1 = pc3.find(p => p.soPhieu === '101');
-  ok('file mẫu của công cụ in phiếu cân (tiêu đề dòng 4) nạp được: 3 phiếu, giờ cân, Cân 1/2, KL tự tính, khách hàng, địa chỉ, đơn giá, trạng thái', pc3.length === 3 && !!t1 && t1.bienSo === '92C-25941' && /^06:15/.test(t1.gioCan1) && t1.can1 === 15900 && t1.can2 === 5460 && t1.klKg === 10440 && t1.kl === 10.44 && t1.khachHang === 'TRẦN ANH LAN' && /Thu Bồn/.test(t1.diaChi) && t1.donGia === 1710000 && t1.trangThai === 'OK' && /^\d\d\/\d\d\/\d{4}$/.test(t1.ngay), JSON.stringify(t1));
+  ok('file mẫu của công cụ in phiếu cân (tiêu đề dòng 4) nạp được: 3 phiếu, giờ cân, Cân 1/2, KL tự tính, khách hàng, địa chỉ, đơn giá, trạng thái', pc3.length === 9 && !!t1 && t1.bienSo === '92C-25941' && /^06:15/.test(t1.gioCan1) && t1.can1 === 15900 && t1.can2 === 5460 && t1.klKg === 10440 && t1.kl === 10.44 && t1.khachHang === 'TRẦN ANH LAN' && /Thu Bồn/.test(t1.diaChi) && t1.donGia === 1710000 && t1.trangThai === 'OK' && /^\d\d\/\d\d\/\d{4}$/.test(t1.ngay), JSON.stringify(t1));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

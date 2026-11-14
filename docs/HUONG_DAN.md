@@ -49,6 +49,27 @@ Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa c
 - **Đổi mã lô**: các dòng nhân công, xe, phiếu cân mang mã cũ được **đổi theo mã mới** để dữ liệu vẫn thuộc đúng lô; dòng mang một mã khác được báo, không tự đổi.
 - Thanh **Tiến độ hồ sơ · checklist FSC** ở đầu lô cho biết % hoàn thành và từng mục còn thiếu.
 
+## 3e. Nhập, sửa, lưu nhân công, xe và phiếu cân
+Luồng thống nhất cho ba cách nhập (thêm tay, nạp Excel, đưa từ Tra cứu Google Sheets): **Nhập → Xem trước và chỉnh sửa → Lưu dữ liệu vào lô → Tạo, xuất, in hồ sơ**.
+1. **Nhập**: nút **+ Thêm nhân công / + Thêm xe / + Thêm phiếu cân** ở đúng tab (Nhân công, Vận chuyển); hoặc **Tải file mẫu** rồi nạp Excel; hoặc Tra cứu Google Sheets → chọn dữ liệu → đưa vào lô. Thanh phía trên bảng ghi **chủ rừng, mã lô** và **nguồn** của lượt nhập.
+2. **Xem trước (Chưa lưu)**: mọi nguồn chỉ đổi **bản nháp**, không đổi dữ liệu đã lưu và không đổi lô khác. Mỗi dòng có trạng thái **Thêm mới**, **Sửa** (rê chuột để xem giá trị cũ → mới), **Sẽ xóa**, **Đã lưu**. Nạp Excel theo khóa nghiệp vụ (nhân công: CCCD hoặc họ tên; xe: biển số đã chuẩn hóa; phiếu: số phiếu); bản ghi đã lưu mà file không có vẫn được giữ; nạp lại cùng file không tính trùng. File mang mã lô khác lô đang mở báo lỗi, không tự chuyển lô.
+3. **Sửa, xóa**: **Sửa** mở hộp thoại; **Bỏ dòng** chỉ bỏ dòng mới khỏi lượt nhập; **Xóa đã lưu** xóa bản ghi đã lưu khi bấm Lưu (có hỏi, có **Hoàn tác**).
+4. **Phiếu cân và xe**: ô **Xe** chỉ chọn xe của lô; chưa có xe thì chọn **+ Thêm xe mới…** ngay trong phiếu (thông tin đã nhập được giữ) hoặc bấm nút **+ Thêm xe …** ở thanh nhắc biển còn thiếu. Sửa biển số xe có phiếu liên kết: hộp xác nhận liệt kê các phiếu; số chuyến, khối lượng, tiền không đổi. Xóa xe còn phiếu liên kết bị chặn (nêu số phiếu).
+5. **Lưu dữ liệu vào lô**: kiểm tra lại lô đích, quan hệ xe–phiếu và lỗi dữ liệu rồi ghi một lần vào SQLite. Còn lỗi thì không ghi và nêu từng lỗi; lưu thất bại thì dữ liệu đã lưu và bản nháp đều giữ nguyên để thử lại. Phiếu trùng số với lô khác cần xác nhận đối chiếu. Chưa khai đơn giá chức danh không chặn lưu nhưng vẫn chặn xuất hồ sơ.
+6. **Tạo, xuất, in hồ sơ** chỉ dùng dữ liệu đã lưu: còn bản nháp thì mọi nút tải, xuất, in (kể cả Tải toàn bộ, in đợt 2, in phiếu cân) bị khóa, nêu lý do và có nút quay lại mục đang chỉnh. Sau khi lưu, số chuyến, tổng tấn, tiền công và cước được tính lại từ dữ liệu đã lưu.
+7. **Chuyển lô, đổi chủ rừng, đóng ứng dụng** khi còn bản nháp: hỏi **Lưu và tiếp tục**, **Bỏ thay đổi** hoặc **Quay lại chỉnh sửa**. Sao lưu lô rừng chỉ gồm dữ liệu đã lưu (có nhắc nếu còn bản nháp). Mọi bước hoạt động khi không có mạng.
+
+**Gộp dữ liệu khi nạp Excel hoặc Google Sheets vào bản nháp** (cùng một quy tắc cho hai nguồn, áp dụng cho nhân công, xe, phiếu cân):
+- **Ô nguồn trống hoặc cột vắng mặt thì giữ giá trị đang có**, không bao giờ xóa trường qua nhập file. Muốn xóa một trường được phép để trống, bấm **Sửa** và xóa trong hộp thoại rồi lưu.
+- **Giá trị 0** là giá trị thật nếu trường cho phép (Cân lần 1/2, Khối lượng kg). Khối lượng tấn và tiền phải lớn hơn 0: giá trị 0 hoặc **sai định dạng** không được áp dụng, giữ giá trị cũ và báo rõ **dòng của file và cột**; chưa sửa thì chưa lưu được.
+- **Giá trị bạn đã sửa tay trong bản nháp** không bị file ghi đè.
+- Bảng **Chi tiết lần nạp gần nhất** hiện giá trị hiện có, giá trị mới, nguồn và kết quả từng trường (đổi, giữ vì ô nguồn trống, giữ vì sửa tay, lỗi). Bản ghi đã lưu mà file không có vẫn được giữ.
+- **Phiếu cân cùng số nhưng khác ngày cân, biển số, nơi cân hoặc khối lượng** vào mục **Cần đối chiếu**: hai bản ghi hiện cạnh nhau, phiếu cũ giữ nguyên và chưa lưu được cho đến khi bạn chọn **Giữ bản hiện có**, **Cập nhật phiếu (đã xác nhận cùng chuyến)**, **Là chuyến khác** (bắt buộc nhập số phiếu mới chưa dùng) hoặc **Bỏ dòng nguồn**. Có nhiều phiếu cùng số thì chọn đúng bản cần cập nhật. Nạp lại phiếu giống hệt thì được nhận là đã có.
+- **Đổi biển số từ Google Sheets**: các phiếu bạn đã chọn được coi là đúng chuyến, chỉ đổi biển số (giữ ngày, khối lượng, nơi giao, tiền, số chuyến); nhật ký đổi biển ghi sau khi lưu.
+- **Lô đích được chốt lúc chọn file** (hoặc lúc bấm Điền vào rừng này): chuyển sang lô khác trong lúc đọc file thì dữ liệu vẫn vào bản nháp của lô đã chọn, màn hình giữ nguyên và có thông báo; lô bị xóa hoặc dữ liệu vừa khôi phục thì dừng, không ghi gì.
+
+**Tiền và khối lượng**: ô tiền đọc chặt chẽ: số thật, 1250000, 1250,5, 1.250.000, 1.250.000,5, 1,250,000, kèm đ/vnđ/đồng; **từ chối** số âm, ký hiệu mũ (1e6), chữ lẫn số, dấu liền nhau và định dạng mơ hồ như 1.250 (có thể là 1.250 hoặc 1 250). Ô trống, số 0 và lỗi được phân biệt; lỗi nêu số phiếu, dòng, giá trị gốc, và khi cập nhật lỗi thì giữ giá trị đã lưu. Khối lượng một phiếu làm tròn đến kg (3 số lẻ tấn) ở mọi nơi nên Tổng quan, báo cáo và biểu mẫu cộng ra cùng một số.
+
 ## 3a. Màn hình Tổng quan
 - **Chỉ số**: số chủ rừng, số rừng, tổng diện tích, **sản lượng dự kiến** (diện tích × định mức), khối lượng đã cân và **tỷ lệ đã cân so với dự kiến**, số chuyến, số lao động, số xe, tiến độ hồ sơ trung bình.
 - **Hồ sơ cần hoàn thiện** và **Phiếu cân gần đây**: bấm một rừng để mở thẳng hồ sơ rừng đó.
@@ -142,7 +163,7 @@ Trong trang dữ liệu: tiêu đề **màu đỏ sẫm = cột bắt buộc**, 
 - Ngày nhập dạng **dd/mm/yyyy** và phải là **ngày có thật** (31/02 là sai, 29/02/2028 hợp lệ).
 - **Không cần điền Mã rừng**: file mẫu không có cột này, dữ liệu luôn được nạp vào lô đang mở và mỗi bản ghi tự mang mã lô đó. File cũ còn cột “Mã rừng” vẫn nạp được: để trống thì tự lấy mã lô đang mở; điền thì phải đúng lô (để chặn nạp nhầm file của lô khác).
 - Khối lượng phiếu cân tính bằng **tấn**, dùng dấu phẩy hoặc dấu chấm thập phân.
-- Sau khi nạp, phần mềm báo số dòng hợp lệ, dòng lỗi (kèm số dòng) và hỏi trước khi ghi. **Nạp lại file sẽ thay toàn bộ danh sách** của lô; phần mềm cho biết số bản ghi thêm, cập nhật, giữ, bỏ.
+- Sau khi nạp, phần mềm báo số dòng hợp lệ, dòng lỗi (kèm số dòng) và hỏi trước khi ghi. Dữ liệu nạp từ file chỉ vào **bản nháp “Chưa lưu”** (xem mục 3e): dòng mới được thêm, dòng đã có được cập nhật, bản ghi đã lưu mà file không có vẫn được **giữ**.
 - File thật chứa thông tin cá nhân (họ tên, CCCD, địa chỉ): chỉ lưu và gửi nội bộ.
 
 **Lỗi thường gặp khi nạp**

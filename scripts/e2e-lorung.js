@@ -7,6 +7,7 @@
  *  5. Phiếu cũ sai ngày (31/02/2026) hiện số phiếu và lý do, sửa được ngay.
  * Chạy: xvfb-run -a node scripts/e2e-lorung.js */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os'), crypto = require('crypto');
 const JSZip = require('jszip'), XLSX = require('xlsx');
 const root = path.join(__dirname, '..'), L = require(path.join(root, 'src', 'lorung.js'));
@@ -29,7 +30,7 @@ const SEED = {v: 2, congTy: {}, rs: {
 
 const launch = async (env, name) => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'],
-    env: {...process.env, HAKQN_DB: path.join(dir, name + '.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud-' + name), HAKQN_DOWNLOAD_DIR: out, HAKQN_LOT_DIR: lotDir, ELECTRON_DISABLE_SECURITY_WARNINGS: '1', ...env}});
+    env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, name + '.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud-' + name), HAKQN_DOWNLOAD_DIR: out, HAKQN_LOT_DIR: lotDir, ELECTRON_DISABLE_SECURITY_WARNINGS: '1', ...env}});
   const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w};
 };
 const dbOf = w => w.evaluate(() => window.hak.loadSync().db);
@@ -158,17 +159,20 @@ const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
   // ===== 5. Phiếu cũ sai ngày: giữ phiếu, nêu số phiếu và lý do, sửa được =====
   await openForest(w, 'own2', 'fc', 'dx'); const pt = await w.innerText('#main');
   ok('phiếu cũ sai ngày: giữ lại, nêu số phiếu và lý do', /PC-SAI/.test(pt) && /không có thật/.test(pt), pt.slice(pt.indexOf('PC-SAI') - 50, pt.indexOf('PC-SAI') + 250));
-  await w.fill('[data-pcfix]', '29/02/2026'); await w.click('[data-act=pcFixDate]'); await w.waitForTimeout(300);
-  ok('sửa sang 29/02/2026 (không có thật) bị từ chối', /Chưa sửa phiếu PC-SAI/.test(await w.innerText('body')) && (await dbOf(w)).rs.own2.forests.fc.pc[0].ngay === '31/02/2026');
-  await w.fill('[data-pcfix]', '29/02/2028'); await w.click('[data-act=pcFixDate]'); await w.waitForTimeout(400);
-  ok('sửa sang 29/02/2028 (có thật) được nhận', (await dbOf(w)).rs.own2.forests.fc.pc[0].ngay === '29/02/2028');
+  const stFill = async (k, v) => w.fill('#stForm input[name=' + k + ']', v);
+  await w.click('tr:has-text("PC-SAI") [data-act=stEdit]'); await w.waitForSelector('#stForm'); await stFill('ngay', '29/02/2026'); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
+  ok('sửa sang 29/02/2026 (không có thật) bị từ chối ngay trong hộp thoại; dữ liệu đã lưu không đổi', /không có thật/.test(await w.innerText('#stBody')) && (await dbOf(w)).rs.own2.forests.fc.pc[0].ngay === '31/02/2026');
+  await stFill('ngay', '29/02/2028'); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300); const svx = await w.evaluate(async () => (window.__stDirty().length ? await window.__stSaveCurrent() : null)); await w.waitForTimeout(400);
+  ok('sửa sang 29/02/2028 (có thật) và Lưu dữ liệu vào lô: được nhận', (await dbOf(w)).rs.own2.forests.fc.pc[0].ngay === '29/02/2028', JSON.stringify(svx).slice(0, 400));
   // nhập Excel phiếu cân: 31/02/2026 bị chặn cả file (nêu số phiếu và lý do); 29/02/2028 được nhận
   const mkXlsx = (name, ngay) => { const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Mã rừng', 'STT', 'Ngày cân', 'Biển kiểm soát', 'Số phiếu cân', 'Khối lượng (tấn)', 'Nơi giao (nhà máy)', 'Ghi chú'], ['R-A', 1, ngay, '92C-123.45', 'PX-NGAY', 6, 'Cảng dăm Kỳ Hà', '']]), 'PHIEU_CAN'); const f = path.join(dir, name); XLSX.writeFile(wb, f); return f; };
   await openForest(w, 'own1', 'fa', 'dx'); const nBefore = (await dbOf(w)).rs.own1.forests.fa.pc.length; let alertMsg = '';
   w.removeAllListeners('dialog'); w.on('dialog', async dlg => { alertMsg = dlg.message(); await dlg.accept(); });
   await w.setInputFiles('input[data-file="pc"]', mkXlsx('pc_sai.xlsx', '31/02/2026')); await w.waitForTimeout(700);
-  ok('nhập Excel có ngày 31/02/2026: bị chặn, nêu số phiếu và lý do', /PX-NGAY/.test(alertMsg) && /không có thật/.test(alertMsg) && (await dbOf(w)).rs.own1.forests.fa.pc.length === nBefore, alertMsg.slice(0, 250));
-  alertMsg = ''; await w.setInputFiles('input[data-file="pc"]', mkXlsx('pc_dung.xlsx', '29/02/2028')); await w.waitForTimeout(700);
+  const blk = await w.evaluate(async () => (window.__stDirty().length ? await window.__stSaveCurrent() : null));
+  ok('nhập Excel có ngày 31/02/2026: không lưu được, nêu số phiếu và lý do; dữ liệu đã lưu giữ nguyên', !!blk && blk.ok === false && /PX-NGAY/.test((blk.errs || []).join(' ')) && /không có thật/.test((blk.errs || []).join(' ')) && (await dbOf(w)).rs.own1.forests.fa.pc.length === nBefore, JSON.stringify(blk).slice(0, 250));
+  await w.evaluate(() => document.querySelector('[data-act=stDiscard]') && document.querySelector('[data-act=stDiscard]').click()); await w.waitForTimeout(300);
+  alertMsg = ''; await w.setInputFiles('input[data-file="pc"]', mkXlsx('pc_dung.xlsx', '29/02/2028')); await w.waitForTimeout(700); await stSave(w);
   ok('nhập Excel có ngày 29/02/2028: được nhận', (await dbOf(w)).rs.own1.forests.fa.pc.some(x => x.soPhieu === 'PX-NGAY' && x.ngay === '29/02/2028'), alertMsg.slice(0, 250));
   ok('không lỗi script giao diện', w.errs.length === 0, w.errs.join('|'));
   await app.close();

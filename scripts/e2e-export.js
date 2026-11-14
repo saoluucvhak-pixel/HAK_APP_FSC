@@ -1,13 +1,14 @@
 'use strict';
 /* Kiểm thử xuất biểu mẫu Word BM-01..BM-19 và ZIP trong Electron thật (xvfb-run node scripts/e2e-export.js) */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip');
 const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixtures');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-ex-')), out = process.env.OUT || path.join(dir, 'out');
 let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + n); if (!c) fail++; };
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'ex.sqlite'), HAKQN_DOWNLOAD_DIR: out}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'ex.sqlite'), HAKQN_DOWNLOAD_DIR: out}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   await w.click('text=+ Chủ rừng mới');
@@ -20,9 +21,9 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   await w.click('#forestForm button[type=submit]');
   await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.click('#vcForm button[type=submit]');
   await w.click('[data-ftab=nc]'); await w.fill('#luongForm [name=dt_0]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(150);
-  await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(400);
-  await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400);
-  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400);
+  await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(400); await stSave(w);
+  await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
+  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   for (const [k, v] of [['soKT', '07'], ['soVC', '09'], ['ngayKy', '01/10/2026']]) { if (await w.$(`[data-exp=${k}]`)) { await w.fill(`[data-exp=${k}]`, v); await w.dispatchEvent(`[data-exp=${k}]`, 'change'); } }
   const btns = await w.$$('button[data-act=dl]'); let done = 0; const disabled = [];
