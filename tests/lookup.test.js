@@ -389,3 +389,15 @@ test('đối chiếu cấp lô: hợp đồng có hai lô mà chỉ một lô c�
   L.db.prepare("UPDATE lookup_rows SET data=? WHERE tab='ToaDoRung_QC' AND row_no=?").run(JSON.stringify(e), t2._row);
   assert.ok(L.audit().rungThieuToaDo.some(x => x.hd === '201' && x.kind === 'thieuMa' && /không ghi Mã rừng/.test(x.lyDo)));
 });
+
+test('Giờ cân từ Google Sheets/Excel: chỉ lấy phần giờ, không bao giờ hiện ngày dd/mm/yyyy (ô giờ, ô ngày-giờ, chữ ngày-giờ, ô chỉ có ngày)', () => {
+  const XLSX = require('xlsx'); const wb = XLSX.read(build(), {type: 'buffer', cellNF: true}); const ws = wb.Sheets[wb.SheetNames[0]];
+  const rg = XLSX.utils.decode_range(ws['!ref']), col = {}; for (let c = rg.s.c; c <= rg.e.c; c++) { const h = ws[XLSX.utils.encode_cell({r: 0, c})]; if (h) col[h.v] = c; }
+  const put = (r, h, cell) => { ws[XLSX.utils.encode_cell({r, c: col[h]})] = cell; };
+  put(1, 'Giờ cân 1', {t: 'n', v: 0.350694444, z: 'h:mm:ss'}); put(2, 'Giờ cân 1', {t: 'n', v: 46300.350694444, z: 'dd/mm/yyyy hh:mm:ss'});
+  put(3, 'Giờ cân 1', {t: 's', v: '05/10/2026 08:25:30'}); put(4, 'Giờ cân 1', {t: 'n', v: 46300, z: 'dd/mm/yyyy'}); put(5, 'Giờ cân 1', {t: 'n', v: 0.350694444, z: 'dd/mm/yyyy'}); put(6, 'Giờ cân 2', {t: 's', v: '08:25'});
+  const {L} = fresh(), r = L.load(XLSX.write(wb, {type: 'buffer', bookType: 'xlsx'}), 'excel', 'gio.xlsx'); assert.ok(r.ok);
+  const g1 = L.rows("tab='HoSoKeo_QC'", []).map(x => x['Giờ cân 1']);
+  assert.deepStrictEqual(g1.slice(0, 5), ['08:25:00', '08:25:00', '08:25:30', '', '08:25:00']); assert.strictEqual(L.rows("tab='HoSoKeo_QC'", []).map(x => x['Giờ cân 2'])[5], '08:25');
+  assert.ok(g1.every(v => !/\d{1,2}\/\d{1,2}\/\d{2,4}/.test(v)));
+});

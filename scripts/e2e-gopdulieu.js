@@ -102,6 +102,15 @@ const mkP = (so, ngay, bien, klTan, giao, dg) => ({_row: 2, maRung: 'R-A', stt: 
   await openLot('fa'); await w.setInputFiles('input[data-file="pc"]', xlsx('d3.xlsx', [['P1', '09/10/2026', '92C-67890', 4000, 'Kho B', 1300], ['P1-B', '10/10/2026', '92C-12345', 2000, 'Kho C', 1300]]));
   await w.waitForTimeout(900); ok('nạp lại phiếu giống hệt (cùng số, ngày, biển, khối lượng): nhận là đã có, không “Chưa lưu”, không cần đối chiếu', !(await w.$('#stDirty')) && !(await w.$('#stPend')));
 
+  // giờ cân từ Excel: ô ngày-giờ, số giờ, chữ ngày-giờ chỉ lấy phần giờ (không hiện dd/mm/yyyy)
+  await openLot('fa');
+  { const wbg = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet([['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Biển số 1', 'KL'], ['PG1', '11/10/2026', 46300.350694444, '92C-12345', 1000], ['PG2', '11/10/2026', 0.5, '92C-12345', 1000], ['PG3', '11/10/2026', '11/10/2026 14:05:09', '92C-12345', 1000]]);
+    ws.C2.z = 'dd/mm/yyyy hh:mm:ss'; ws.C3.z = 'h:mm:ss'; XLSX.utils.book_append_sheet(wbg, ws, 'PHIEU_CAN'); const fg = path.join(dir, 'gio.xlsx'); XLSX.writeFile(wbg, fg);
+    await w.setInputFiles('input[data-file="pc"]', fg); await w.waitForTimeout(900);
+    const gi = await w.evaluate(() => [...document.querySelectorAll('#main tr')].filter(r => /PG[123]/.test(r.innerText)).map(r => r.innerText.replace(/\s+/g, ' ')));
+    ok('giờ cân từ Excel: PG1 08:25:00, PG2 12:00:00, PG3 14:05:09; cột giờ không hiện ngày dd/mm/yyyy', gi.length >= 3 && gi.some(r => /11\/10\/2026 08:25:00 .*PG1/.test(r)) && gi.some(r => /11\/10\/2026 12:00:00 .*PG2/.test(r)) && gi.some(r => /11\/10\/2026 14:05:09 .*PG3/.test(r)) && !gi.some(r => /PG\d \d\d\/10\/2026 \d\d\/\d\d\/\d{4}/.test(r)), JSON.stringify(gi));
+    await w.click('[data-act=stDiscard]'); }
+
   // ===== 4. đối chiếu số liệu sau lưu và mở lại: BM-09/BM-10 =====
   await openLot('fa', 'xuat'); await w.click('[data-xtab=all]'); await w.waitForSelector('#d2Table');
   for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f));

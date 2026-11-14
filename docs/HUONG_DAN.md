@@ -95,13 +95,17 @@ Hai thời điểm sửa, cùng một kết quả.
 **Cách 1 – đổi biển rồi mới đưa qua rừng (phiếu từ Google Sheets):**
 1. Mở rừng cần nhận phiếu (hoặc chọn **Xem trước để tạo rừng mới**). **Tra cứu Google Sheets** → tab **HoSoKeo (phiếu cân)** → gõ số phiếu, CCCD hoặc tên chủ rừng → **Tìm** → **Chọn**.
 2. Bấm **Điền vào rừng đang mở**. Bảng **Phiếu cân** hiện từng phiếu với ô **Biển số** sửa được (gợi ý biển trong đội xe của rừng).
+2b. **Đổi hàng loạt**: khung **Đổi biển số hàng loạt** phía trên bảng. Chọn nhóm (**Các phiếu đang tích** hoặc **Mọi phiếu đang ghi biển X**), gõ **biển số mới** một lần, bấm **Áp dụng**; biển mới hiện ở cột Biển số của từng dòng và vẫn sửa riêng được. **Trả lại biển gốc cho nhóm này** để hoàn lại.
 3. Gõ biển đúng vào ô của phiếu cần đổi (tự viết hoa, hiện nhãn *đã đổi từ …*). Phiếu ghi bằng tên xe thì dùng khung **Ghép tên xe với biển số** (lưu một lần). Xóa nội dung ô để trả lại biển gốc.
 4. **Chọn mọi phiếu ghi được** (hoặc tích từng phiếu) → **Lưu vào hồ sơ**. Phiếu vào rừng mang biển đã đổi cùng đủ giờ cân, cân 1/2, khối lượng, khách hàng, địa chỉ, đơn giá, thành tiền.
 
-**Cách 2 – đã đưa qua rồi mới đổi xe:**
+**Cách 2 – đã đưa qua rồi mới đổi xe (cùng một màn hình, không có nút riêng):**
 1. Khi bảng tính tra cứu đã có biển mới: mở rừng → **Tra cứu Google Sheets** → tab HoSoKeo → tìm số phiếu → **Chọn** → **Điền vào rừng đang mở**.
-2. Khung **Biển số xe khác với hồ sơ** liệt kê biển cũ → biển mới của từng phiếu.
-3. Bấm **Chỉ cập nhật biển số xe (n phiếu)**: ngày, khối lượng và các trường in giữ nguyên; việc đổi được ghi lại.
+2. Trong bảng **Phiếu cân**, phiếu đã có trong hồ sơ mà biển khác được **tích sẵn**, dòng ghi “Biển số khác: biển cũ → biển mới”. Khung **Biển số xe khác với hồ sơ** tóm tắt các phiếu này. Sửa biển ở ô **Biển số** của dòng nếu cần, bỏ tích phiếu không muốn đổi.
+3. Giữ tích **Chỉ đổi biển số** (mặc định): ngày, khối lượng, nơi giao, tiền và các trường in giữ nguyên; bỏ tích thì phiếu được cập nhật theo toàn bộ bảng tính (phiếu khác ngày, khối lượng hoặc biển sẽ vào mục **Cần đối chiếu**).
+4. Bấm **Lưu vào hồ sơ**: phiếu vào **bản nháp tab Vận chuyển**; kiểm tra rồi bấm **Lưu dữ liệu vào lô**. Việc đổi được ghi lại.
+
+**Đổi tay:** tab **Vận chuyển** → **Sửa** ở xe → đổi **Biển kiểm soát** thì mọi phiếu của xe đó đổi theo (một lượt); hoặc **Sửa** một phiếu để đổi riêng biển của phiếu đó.
 
 Xem lại các phiếu đã đổi: **Báo cáo → Phiếu cân đã cập nhật biển số xe**. Biển mới phải có trong đội xe của rừng, nếu chưa có thì thêm xe ở tab Vận chuyển.
 
@@ -327,7 +331,7 @@ Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
 - **Khối lượng thực tế**: nút **Lấy tổng từ phiếu cân** điền tổng khối lượng phiếu cân; vẫn tự điền số. Các nút chỉ điền vào ô, bấm **Lưu thông tin rừng** để ghi nhận.
 
 ## Cập nhật biển số xe từ bảng tính tra cứu, và báo cáo theo lô
-- **Cập nhật biển số xe**: khi mở bảng tra cứu và chọn **Điền vào rừng đang mở**, nếu phiếu cân đã có trong hồ sơ nhưng bảng tính có **biển số khác**, màn hình xem trước hiện khung **“Biển số xe khác với hồ sơ”** (số phiếu, biển cũ → biển mới) và nút **Chỉ cập nhật biển số xe**. Nút này chỉ đổi biển số, **giữ nguyên** ngày cân, khối lượng, nơi giao. Cách khác: chọn phiếu (trạng thái “cập nhật”) rồi **Lưu vào hồ sơ** để cập nhật cả phiếu; biển số đổi cũng được ghi lại.
+- **Cập nhật biển số xe**: khi mở bảng tra cứu và chọn **Điền vào rừng đang mở**, nếu phiếu cân đã có trong hồ sơ nhưng bảng tính có **biển số khác**, màn hình xem trước hiện khung **“Biển số xe khác với hồ sơ”** (số phiếu, biển cũ → biển mới) và phiếu đó được **tích sẵn** trong bảng; giữ ô **Chỉ đổi biển số** rồi bấm **Lưu vào hồ sơ**. Cách này chỉ đổi biển số, **giữ nguyên** ngày cân, khối lượng, nơi giao. Cách khác: chọn phiếu (trạng thái “cập nhật”) rồi **Lưu vào hồ sơ** để cập nhật cả phiếu; biển số đổi cũng được ghi lại.
 - **Thông tin cân lấy từ bảng tính**: khi ghi phiếu cân từ tra cứu, ngoài số phiếu, ngày cân, biển số và khối lượng, phần mềm lấy thêm **giờ cân 1, giờ cân 2, cân lần 1 (kg), cân lần 2 (kg), khối lượng (kg), khối lượng (tấn) và khách hàng** (tên khách hàng ở cột “Họ và tên chủ rừng”, mã ở cột “Mã khách hàng”). Màn xem trước và danh sách phiếu cân ở tab Vận chuyển hiện đủ các cột này. Chỉ có cột tấn thì kg = tấn × 1000; chỉ có cột kg thì tấn = kg ÷ 1000. **Phiếu cân đã có trong hồ sơ nhưng thiếu các thông tin này** hiện trạng thái “cập nhật” với ghi chú “Bổ sung giờ cân, cân lần 1, cân lần 2…”: chọn rồi Lưu vào hồ sơ để bổ sung. Cột giờ cân trong bảng tính có thể là ô giờ hoặc chữ.
 - **Sổ theo dõi phiếu cân và file Excel mẫu phiếu cân** có thêm các cột **Giờ cân 1, Giờ cân 2, Cân lần 1 (kg), Cân lần 2 (kg), Khối lượng (kg), Khối lượng (tấn), Khách hàng**. File Excel mẫu: các cột mới là tùy chọn; file cũ không có các cột này vẫn nạp được. Giờ cân nhập dạng ô giờ hoặc chữ (08:15). Chỉ điền kg thì tấn = kg ÷ 1000; kg và tấn lệch nhau, hoặc kg khác chênh lệch hai lần cân quá 1 kg, thì có cảnh báo (không chặn nạp). Báo cáo Sổ theo dõi phiếu cân (Word, Excel) có đủ các cột, kể cả tổng kg và tổng tấn.
 - **Nhật ký đổi biển số** lưu trong lô rừng: số phiếu, biển cũ, biển mới, thời điểm, nguồn (Google Sheets). Phiếu đổi nhiều lần giữ đủ các dòng.

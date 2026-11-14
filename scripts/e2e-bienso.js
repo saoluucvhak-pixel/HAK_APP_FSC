@@ -26,6 +26,27 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   ok('sửa biển số trước khi đưa qua: hiện “đã đổi từ 92C-12345”, biển mới viết hoa 92C-77777', (await w.inputValue(ov)) === '92C-77777' && /đã đổi từ 92C-12345/.test(await w.innerText('#lkBody')));
   await w.fill(ov, '92C-12345'); await w.dispatchEvent(ov, 'change'); await w.waitForTimeout(200);
   ok('trả lại biển gốc: không còn nhãn “đã đổi”', !/đã đổi từ/.test(await w.innerText('#lkBody')));
+  // đổi biển hàng loạt ngay lúc tra cứu: các phiếu đang tích đổi một lượt, rồi trả lại
+  const ov2 = '[data-lkov="1002/2026/NK"]', nTick = await w.$$eval('input[data-lkpc]:checked', b => b.length);
+  await w.fill('#lkBulkNew', '92c-88888'); await w.click('[data-act=lkBulk]'); await w.waitForTimeout(300);
+  ok('đổi hàng loạt: mọi phiếu đang tích (' + nTick + ') đổi sang 92C-88888 ở cột Biển số, có nhãn “đã đổi từ”, có thông báo; chưa ghi vào hồ sơ', nTick >= 2 && (await w.inputValue(ov)) === '92C-88888' && (await w.inputValue(ov2)) === '92C-88888' && (await w.innerText('#lkBody').then(t => (t.match(/đã đổi từ/g) || []).length)) >= 2 && /Đã đổi biển \d+ phiếu thành 92C-88888/.test(await w.innerText('#lkBody')) && !Object.values((await db()).rs).length);
+  await w.click('[data-act=lkBulkUndo]'); await w.waitForTimeout(300);
+  ok('trả lại biển gốc hàng loạt: các phiếu về 92C-12345 và 92C-99999, hết nhãn “đã đổi”', (await w.inputValue(ov)) === '92C-12345' && (await w.inputValue(ov2)) === '92C-99999' && !/đã đổi từ/.test(await w.innerText('#lkBody')));
+  await w.fill('#lkBulkNew', ''); await w.selectOption('#lkBulkSrc', {label: await w.$eval('#lkBulkSrc option:nth-child(3)', o => o.textContent)}); await w.fill('#lkBulkNew', '92C-77777'); await w.click('[data-act=lkBulk]'); await w.waitForTimeout(300);
+  ok('đổi hàng loạt theo nhóm biển (mọi phiếu đang ghi cùng một biển): chỉ nhóm đó đổi', (await w.inputValue(ov)) === '92C-77777' && (await w.inputValue(ov2)) === '92C-99999');
+  await w.click('[data-act=lkBulkUndo]'); await w.waitForTimeout(200);
+  // lọc vài biển số để tích rồi đổi
+  await w.fill('#lkPcFilter', '92c-99999, 1001/2026'); await w.click('[data-act=lkPcFilter]'); await w.waitForTimeout(250);
+  ok('lọc nhiều từ khóa (92c-99999 và số phiếu 1001): hiện 2 phiếu 1001 và 1002 trên tổng số, ô lọc còn nguyên', (await w.$$('[data-lkov]')).length === 2 && /Đang hiện 2\//.test(await w.innerText('#lkFilter')) && (await w.inputValue('#lkPcFilter')) === '92c-99999, 1001/2026');
+  await w.fill('#lkPcFilter', '92C-99999'); await w.click('[data-act=lkPcFilter]'); await w.waitForTimeout(250);
+  ok('lọc một biển (92C-99999, gõ khác dấu): chỉ hiện phiếu 1002', (await w.$$('[data-lkov]')).length === 1 && !!(await w.$(ov2)) && !(await w.$(ov)));
+  await w.click('[data-act=lkPcNone]'); await w.fill('#lkPcFilter', '92C-99999'); await w.click('[data-act=lkPcFilterTick]'); await w.waitForTimeout(250);
+  ok('Tích các phiếu đang lọc: chỉ phiếu 1002 được tích, phiếu 1001 (đang ẩn) vẫn không tích', (await w.$$eval('input[data-lkpc]:checked', b => b.map(x => x.dataset.lkpc).join(','))) === '1002/2026/NK');
+  await w.selectOption('#lkBulkSrc', '#F'); await w.fill('#lkBulkNew', '92C-66666'); await w.click('[data-act=lkBulk]'); await w.waitForTimeout(300);
+  ok('đổi cho các phiếu đang lọc: 1002 thành 92C-66666', (await w.inputValue(ov2)) === '92C-66666');
+  await w.click('[data-act=lkPcFilterClear]'); await w.waitForTimeout(250);
+  ok('bỏ lọc: hiện lại mọi phiếu; 1001 giữ 92C-12345, 1002 là 92C-66666', (await w.inputValue(ov)) === '92C-12345' && (await w.inputValue(ov2)) === '92C-66666');
+  await w.fill('#lkBulkNew', ''); await w.selectOption('#lkBulkSrc', '*'); await w.click('[data-act=lkPcAll]'); await w.click('[data-act=lkBulkUndo]'); await w.waitForTimeout(250);
   ok('lần nạp đầu không có phiếu nào đổi biển (chưa hiện khung cập nhật biển số)', !(await w.$('#lkBienDoi')));
   await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await w.waitForTimeout(500); await addXe(w, '92C-12345'); await addXe(w, '92C-99999'); await stSave(w);
   let d = await db(); const forest = () => Object.values(Object.values(d.rs)[0].forests)[0];
@@ -45,7 +66,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   const box = await w.innerText('#lkBienDoi').catch(() => '');
   ok('khung “Biển số xe khác với hồ sơ” nêu phiếu 1001: 92C-12345 → 92C-54321', /Biển số xe khác với hồ sơ/.test(box) && /1001\/2026\/NK/.test(box) && /92C-12345/.test(box) && /92C-54321/.test(box), box.slice(0, 300));
   ok('dòng phiếu ghi rõ “Biển số khác … (chỉ khác biển số)”', /Biển số khác: 92C-12345 → 92C-54321 \(chỉ khác biển số\)/.test(await w.innerText('#lkBody')));
-  await w.click('[data-act=lkPlateOnly]'); await w.waitForTimeout(900); d = await db();
+  await w.click('[data-act=lkApply]'); await w.waitForTimeout(900); d = await db();
   ok('chỉ cập nhật biển số chỉ vào BẢN NHÁP: chưa lưu, phiếu đã lưu vẫn 92C-12345 và chưa có nhật ký đổi biển', !!(await w.$('#stDirty')) && pc1().bienSo === '92C-12345' && !(forest().bienLog || []).length);
   await addXe(w, '92C-54321'); await stSave(w); d = await db();
   ok('chỉ cập nhật biển số: biển mới 92C-54321, ngày và khối lượng giữ nguyên', pc1().bienSo === '92C-54321' && pc1().kl === kl0 && pc1().ngay === ngay0, JSON.stringify(pc1()));

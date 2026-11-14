@@ -310,3 +310,9 @@ Mốc rà soát trước: commit 72813a1 (Release v1.4.30). Bảng số liệu t
 - **Ô trống ghi đè** (trước sửa: P1 Kho A, đơn giá 1.250 nạp lại với hai ô trống → mất cả hai); **phiếu trùng số** (trước sửa: P1 1 tấn Kho A nạp P1 4 tấn Kho B bị gộp thẳng vào phiếu cũ); **lô đích khi đọc file** (trước sửa: dữ liệu theo lô đang mở lúc đọc xong). Sau sửa: quy tắc gộp chung, mục Cần đối chiếu, lô đích chốt theo ID.
 - Kịch bản `scripts/e2e-gopdulieu.js` (Electron, SQLite thật): chuyển lô A→B khi đọc file; lô bị xóa và Khôi phục sao lưu thật trong lúc đọc; ô trống, giá trị sai; xem trước, lưu, mở lại, xóa chủ động bằng Sửa; phiếu trùng số (giữ, cập nhật, chuyến khác với số phiếu mới, trùng số bị từ chối); nạp lại phiếu giống hệt; BM-09/BM-10 sau khi lưu và mở lại khớp tính tay (số chuyến, tổng tấn, cước).
 - **Chưa kiểm được**: Google Sheets thật (luồng Google Sheets kiểm bằng nguồn giả lập và kiểm thử đơn vị dùng chung hàm gộp), Microsoft Office, in ra giấy, hộp thoại đóng ứng dụng gốc của Windows.
+
+## 46. Bản 1.4.32: người ký hợp đồng, giờ cân, đổi biển số
+- **Người ký hợp đồng vận chuyển** (`scripts/e2e-nguoiky.js`): hai người ký khác họ tên mà cùng số CCCD trước đây bị gộp thành MỘT hợp đồng và phần mềm vẫn báo “Không có lỗi”; nay báo lỗi nêu số CCCD và hai dòng, không xuất hồ sơ, không lưu. Một người ký cho hai xe vẫn ra một hợp đồng; hai CCCD khác nhau ra hai hợp đồng.
+- **Giờ cân từ Google Sheets/Excel** (`tests/lookup.test.js`, `scripts/e2e-gopdulieu.js`): ô giờ có định dạng ngày hoặc ngày-giờ trước đây hiện dd/mm/yyyy (hoặc 00/01/1900) ở cột Giờ cân; nay chỉ lấy phần giờ.
+- **Đổi biển số khi tra cứu** (`scripts/e2e-bienso.js`, `e2e-luongpc.js`): bỏ nút riêng, phiếu đổi biển tích sẵn, ô Chỉ đổi biển số; đổi hàng loạt; lọc nhiều biển số để tích rồi đổi.
+- Chưa kiểm được: Google Sheets thật, Microsoft Office, máy in, hộp thoại đóng ứng dụng gốc của Windows.
