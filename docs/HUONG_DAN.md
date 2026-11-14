@@ -59,6 +59,15 @@ Luồng thống nhất cho ba cách nhập (thêm tay, nạp Excel, đưa từ T
 6. **Tạo, xuất, in hồ sơ** chỉ dùng dữ liệu đã lưu: còn bản nháp thì mọi nút tải, xuất, in (kể cả Tải toàn bộ, in đợt 2, in phiếu cân) bị khóa, nêu lý do và có nút quay lại mục đang chỉnh. Sau khi lưu, số chuyến, tổng tấn, tiền công và cước được tính lại từ dữ liệu đã lưu.
 7. **Chuyển lô, đổi chủ rừng, đóng ứng dụng** khi còn bản nháp: hỏi **Lưu và tiếp tục**, **Bỏ thay đổi** hoặc **Quay lại chỉnh sửa**. Sao lưu lô rừng chỉ gồm dữ liệu đã lưu (có nhắc nếu còn bản nháp). Mọi bước hoạt động khi không có mạng.
 
+**Gộp dữ liệu khi nạp Excel hoặc Google Sheets vào bản nháp** (cùng một quy tắc cho hai nguồn, áp dụng cho nhân công, xe, phiếu cân):
+- **Ô nguồn trống hoặc cột vắng mặt thì giữ giá trị đang có**, không bao giờ xóa trường qua nhập file. Muốn xóa một trường được phép để trống, bấm **Sửa** và xóa trong hộp thoại rồi lưu.
+- **Giá trị 0** là giá trị thật nếu trường cho phép (Cân lần 1/2, Khối lượng kg). Khối lượng tấn và tiền phải lớn hơn 0: giá trị 0 hoặc **sai định dạng** không được áp dụng, giữ giá trị cũ và báo rõ **dòng của file và cột**; chưa sửa thì chưa lưu được.
+- **Giá trị bạn đã sửa tay trong bản nháp** không bị file ghi đè.
+- Bảng **Chi tiết lần nạp gần nhất** hiện giá trị hiện có, giá trị mới, nguồn và kết quả từng trường (đổi, giữ vì ô nguồn trống, giữ vì sửa tay, lỗi). Bản ghi đã lưu mà file không có vẫn được giữ.
+- **Phiếu cân cùng số nhưng khác ngày cân, biển số, nơi cân hoặc khối lượng** vào mục **Cần đối chiếu**: hai bản ghi hiện cạnh nhau, phiếu cũ giữ nguyên và chưa lưu được cho đến khi bạn chọn **Giữ bản hiện có**, **Cập nhật phiếu (đã xác nhận cùng chuyến)**, **Là chuyến khác** (bắt buộc nhập số phiếu mới chưa dùng) hoặc **Bỏ dòng nguồn**. Có nhiều phiếu cùng số thì chọn đúng bản cần cập nhật. Nạp lại phiếu giống hệt thì được nhận là đã có.
+- **Đổi biển số từ Google Sheets**: các phiếu bạn đã chọn được coi là đúng chuyến, chỉ đổi biển số (giữ ngày, khối lượng, nơi giao, tiền, số chuyến); nhật ký đổi biển ghi sau khi lưu.
+- **Lô đích được chốt lúc chọn file** (hoặc lúc bấm Điền vào rừng này): chuyển sang lô khác trong lúc đọc file thì dữ liệu vẫn vào bản nháp của lô đã chọn, màn hình giữ nguyên và có thông báo; lô bị xóa hoặc dữ liệu vừa khôi phục thì dừng, không ghi gì.
+
 **Tiền và khối lượng**: ô tiền đọc chặt chẽ: số thật, 1250000, 1250,5, 1.250.000, 1.250.000,5, 1,250,000, kèm đ/vnđ/đồng; **từ chối** số âm, ký hiệu mũ (1e6), chữ lẫn số, dấu liền nhau và định dạng mơ hồ như 1.250 (có thể là 1.250 hoặc 1 250). Ô trống, số 0 và lỗi được phân biệt; lỗi nêu số phiếu, dòng, giá trị gốc, và khi cập nhật lỗi thì giữ giá trị đã lưu. Khối lượng một phiếu làm tròn đến kg (3 số lẻ tấn) ở mọi nơi nên Tổng quan, báo cáo và biểu mẫu cộng ra cùng một số.
 
 ## 3a. Màn hình Tổng quan

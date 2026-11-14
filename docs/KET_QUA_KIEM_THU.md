@@ -304,3 +304,9 @@ Mốc rà soát trước: commit 72813a1 (Release v1.4.30). Bảng số liệu t
 - Các kịch bản e2e cũ được cập nhật theo luồng mới (bấm Lưu dữ liệu vào lô; thêm xe thiếu trước khi lưu phiếu).
 - **Chưa kiểm được**: Google Sheets thật, Microsoft Word/Office, in ra giấy bằng máy in; đóng ứng dụng có bản nháp được kiểm cả ba lựa chọn (`scripts/e2e-dongapp.js`) nhưng với câu trả lời đặt sẵn, chưa bấm hộp thoại gốc của Windows.
 
+
+## 45. Sửa lỗi _id trùng, gộp dữ liệu và ghi nhầm lô (bản 1.4.31)
+- **_id nội bộ trùng** (`src/stage.js`): trước sửa, lô trống → thêm P1 → lưu → mở lại → thêm P2 cho cả hai `_id` `n1`, Sửa P2 đổi nhầm P1. Sau sửa: `_id` duy nhất toàn lô (cả ba nhóm, cả dòng chờ xóa), dữ liệu cũ thiếu hoặc trùng `_id` được chuẩn hóa khi tạo bản nháp, kiểm tra `idConflicts` trước khi ghi. Kịch bản `scripts/e2e-idtrung.js` (SQLite thật).
+- **Ô trống ghi đè** (trước sửa: P1 Kho A, đơn giá 1.250 nạp lại với hai ô trống → mất cả hai); **phiếu trùng số** (trước sửa: P1 1 tấn Kho A nạp P1 4 tấn Kho B bị gộp thẳng vào phiếu cũ); **lô đích khi đọc file** (trước sửa: dữ liệu theo lô đang mở lúc đọc xong). Sau sửa: quy tắc gộp chung, mục Cần đối chiếu, lô đích chốt theo ID.
+- Kịch bản `scripts/e2e-gopdulieu.js` (Electron, SQLite thật): chuyển lô A→B khi đọc file; lô bị xóa và Khôi phục sao lưu thật trong lúc đọc; ô trống, giá trị sai; xem trước, lưu, mở lại, xóa chủ động bằng Sửa; phiếu trùng số (giữ, cập nhật, chuyến khác với số phiếu mới, trùng số bị từ chối); nạp lại phiếu giống hệt; BM-09/BM-10 sau khi lưu và mở lại khớp tính tay (số chuyến, tổng tấn, cước).
+- **Chưa kiểm được**: Google Sheets thật (luồng Google Sheets kiểm bằng nguồn giả lập và kiểm thử đơn vị dùng chung hàm gộp), Microsoft Office, in ra giấy, hộp thoại đóng ứng dụng gốc của Windows.
