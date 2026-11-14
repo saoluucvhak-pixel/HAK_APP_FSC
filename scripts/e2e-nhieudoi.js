@@ -26,6 +26,15 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 1b. định mức thời gian là của MỘT đội: 2 ha × 5 ngày/ha = 10 ngày, 2 đội song song = 5 ngày
   await w.click('[data-ftab=finfo]'); await w.waitForTimeout(300); const tg = await w.innerText('#tgNote');
   ok('thời gian dự kiến chia cho 2 đội: 5 ngày, ghi rõ “÷ 2 đội làm song song”', /dự kiến: 5 ngày/.test(tg) && /÷ 2 đội làm song song/.test(tg), tg);
+  ok('Thông tin rừng có ô “Số đội khai thác”, để trống thì gợi ý theo nhân công (2)', /theo nhân công: 2/.test(await w.getAttribute('[name=soDoi]', 'placeholder')));
+  await w.fill('[name=soDoi]', '1'); await w.waitForTimeout(300); const tg1 = await w.innerText('#tgNote'), sn = await w.innerText('#soDoiNote');
+  ok('khai 1 đội: thời gian dự kiến 10 ngày (không chia), nhắc tab Nhân công có 2 Tổ trưởng', /dự kiến: 10 ngày/.test(tg1) && !/song song/.test(tg1) && /đang có 2 Tổ trưởng/.test(sn), tg1 + ' | ' + sn);
+  await w.fill('[name=soDoi]', '2'); await w.waitForTimeout(300); const tg2 = await w.innerText('#tgNote');
+  ok('khai 2 đội: 5 ngày, ghi “÷ 2 đội làm song song”', /dự kiến: 5 ngày/.test(tg2) && /÷ 2 đội làm song song/.test(tg2), tg2);
+  await w.fill('[name=soDoi]', '0'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(300);
+  ok('số đội 0 bị từ chối, nêu rõ 1 đến 20', /Số đội khai thác phải là số nguyên từ 1 đến 20/.test(await w.innerText('#main')));
+  await w.fill('[name=soDoi]', '2'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  ok('lưu số đội 2 vào SQLite', (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fa.info.soDoi === 2);
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
   // 2. hồ sơ: mỗi đội một hợp đồng giao khoán riêng (xuất ZIP thật)
   const out = path.join(dir, 'out'); fs.mkdirSync(out, {recursive: true}); const JSZip = require('jszip');
