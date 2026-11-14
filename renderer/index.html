@@ -3073,6 +3073,10 @@ function checkDX(rec) {
     if (parseVN(r.kdTu) && parseVN(r.kdDen) && parseVN(r.kdDen) < parseVN(r.kdTu)) w.push('kiểm định đến ngày trước từ ngày');
     if (w.length) { warns.push(at + w.join('; ')); if (!state[r._row]) state[r._row] = 'warn'; }
   });
+  // hai người ký khác tên mà cùng số CCCD sẽ bị gộp thành MỘT hợp đồng (mỗi người ký một hợp đồng): chặn và nêu rõ các dòng
+  const bySigner = {};
+  rec.dx.forEach(r => { const tx = driverSigns(r), c = signerKey(tx ? r.cccdTx : r.cccd), nm = tx ? r.taiXe : r.chuXe; if (!c || !trim(nm)) return; (bySigner[c] = bySigner[c] || []).push({row: r._row, nm: trim(nm), w: tx ? 'tài xế' : 'chủ xe'}); });
+  Object.entries(bySigner).forEach(([c, l]) => { const names = [...new Set(l.map(x => keyName(x.nm)))]; if (names.length > 1) { const msg = 'CCCD ' + c + ' của ' + l.map(x => x.w + ' “' + x.nm + '” (dòng ' + x.row + ')').join(' và ') + ' trùng nhau nhưng khác họ tên: hai người ký phải có CCCD riêng, nếu không chỉ ra MỘT hợp đồng. Sửa CCCD hoặc họ tên cho đúng người'; errs.push(msg); l.forEach(x => { state[x.row] = 'err'; }); } });
   return {errs, warns, state};
 }
 
@@ -4046,10 +4050,12 @@ function docXNDaoTao(rec, ex) {
 }
 
 /* ========== Gom các tệp cần xuất ========== */
+/* khóa người ký: chỉ lấy chữ số CCCD (viết 049… hay 49… có dấu cách vẫn là một người) */
+const signerKey = c => String(c == null ? '' : c).replace(/\D/g, '');
 function groupsDX(rec) {
   const out = [], by = {}, price = transportPrice(rec.info).gia;
   rec.dx.forEach(r => {
-    const tx = driverSigns(r), key = tx ? r.cccdTx : r.cccd;
+    const tx = driverSigns(r), key = signerKey(tx ? r.cccdTx : r.cccd) || (tx ? r.cccdTx : r.cccd);
     if (!by[key]) {
       by[key] = tx
         ? {cccd: r.cccdTx, ten: r.taiXe, ngaySinh: r.ngaySinhTx, ngayCap: r.ngayCapTx, noiCap: r.noiCapTx, diaChi: r.diaChiTx, vaiTro: 'Tài xế', donGia: price, xe: []}
