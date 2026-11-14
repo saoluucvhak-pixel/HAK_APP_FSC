@@ -169,7 +169,7 @@ h4{font-size:13.5px}
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:14px 0 16px;overflow:auto;flex-wrap:nowrap}
 .tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:9px 14px;font:inherit;cursor:pointer;color:var(--mut-aa);white-space:nowrap;border-radius:var(--rs) var(--rs) 0 0}
 .tabs button:hover{color:var(--ink);background:var(--accSoft)}
-.tabs button.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:650}
+.tabs button.on{color:color-mix(in srgb,var(--acc) 72%,#000);border-bottom-color:var(--acc);font-weight:650}:root[data-theme=dark] .tabs button.on{color:color-mix(in srgb,var(--acc) 70%,#fff)}
 /* Biểu mẫu */
 form.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px 16px}
 label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mut-aa);font-weight:550}
@@ -252,7 +252,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
     <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
-    <button class="nb" data-act="openNorm" id="navNorm">Định mức BHLĐ</button>
+    <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
   <button class="hbtn" data-act="theme" id="themeBtn">Chế độ tối</button>
@@ -318,7 +318,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li><b>Giao khoán</b>: tổ trưởng ký hợp đồng khoán (BM-01), công nhân ký <b>một Giấy ủy quyền (BM-20)</b> cho tổ trưởng; tính theo <b>tấn, ha hoặc ngày công</b> (khoán trả theo ngày công: Tổ trưởng nhận thay cả tổ rồi chi trả từng người). <b>Trực tiếp</b>: mỗi người ký hợp đồng lao động (BM-03); tính theo <b>tấn hoặc ngày công</b>.</li>
 <li><b>Đơn giá theo từng chức danh</b> (Tổ trưởng, Công nhân khai thác, Công nhân cưa). Sản lượng chia đều cho mọi người trong tổ, kể cả tổ trưởng; tiền mỗi người = phần chia × đơn giá chức danh.</li>
 <li><b>Ngày bắt đầu</b> dùng cho hợp đồng, chấm công và kiểm tra đủ 18 tuổi (dưới 18 tuổi không xuất được Giấy ủy quyền). Mỗi lô cần <b>đúng một tổ trưởng</b>.</li>
-<li><b>Định mức BHLĐ</b> khai theo chức danh để in sổ cấp phát.</li>
+<li><b>Định mức</b> (nút trên menu ngang): định mức BHLĐ theo chức danh để in sổ cấp phát, và định mức gỗ keo (tấn/ha) có hiệu lực từ ngày.</li>
 <li><b>Chấm công thực tế</b> (khi cơ sở tính là <b>ngày công</b>, cả giao khoán lẫn trực tiếp): thẻ ngay dưới thông số. Chọn tháng, nhập số công mỗi ngày cho từng người (<b>1</b> đủ công, <b>0,5</b> nửa công, <b>0</b> hoặc trống là nghỉ; tối đa 3), hoặc bấm <b>Điền đủ công (trừ Chủ nhật)</b>. Đã chấm thì <b>BM-08 dùng tổng công từng người</b>; chưa chấm thì mọi người bằng số công theo thời gian khai thác. Hợp đồng (BM-01, BM-03, BM-20) luôn dùng số công dự tính. Nút <b>In bảng chấm công đã nhập</b> tải BM-05 có sẵn số công của tháng; BM-05 trong các gói hồ sơ vẫn là mẫu trống để chấm tay.</li>
 </ul>
 <h3>4. Tab Vận chuyển</h3>
@@ -2742,7 +2742,7 @@ const H_LEGACY = {'Mã rừng': 'maRung'};
 const PC_HEAD = Object.keys(H_PC);
 const NC_HEAD = Object.keys(H_NC);
 const DX_HEAD = Object.keys(H_DX);
-// Định mức BHLĐ (tạm thời) theo chức danh, sửa được trong app ở mục "Định mức BHLĐ"
+// Định mức BHLĐ (tạm thời) theo chức danh, sửa được trong app ở mục "Định mức"
 const BHLD_ITEMS = [['qa', 'Quần áo', 'quần áo'], ['giay', 'Giày/ủng', 'giày'], ['mu', 'Mũ', 'mũ'], ['gang', 'Găng tay', 'găng tay'], ['nut', 'Nút chống ồn', 'nút chống ồn'], ['kinh', 'Kính bảo hộ', 'kính bảo hộ']];
 function dinhMucMacDinh() {
   const base = {qa: '1 bộ', giay: '1 đôi', mu: '1 cái', gang: '3 đôi', nut: '', kinh: ''};
@@ -4675,7 +4675,7 @@ function dmField(i) {
   const ph = k.found ? 'mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha' : 'chưa có định mức mặc định';
   const note = own ? 'Đang dùng số riêng của rừng. <button type="button" class="linkbtn" data-act="dmDefault">Dùng mặc định</button>'
     : k.found ? 'Đang dùng định mức gỗ keo mặc định <b>' + fmtTan(k.item.tanHa) + ' tấn/ha</b> (hiệu lực từ ' + (k.item.tuNgay || '…') + '). Tự điền số khác nếu rừng khác định mức.'
-    : 'Chưa có định mức mặc định: khai ở <b>Định mức BHLĐ → Định mức gỗ keo</b>, hoặc tự điền số cho rừng.';
+    : 'Chưa có định mức mặc định: khai ở <b>Định mức → Định mức gỗ keo</b>, hoặc tự điền số cho rừng.';
   return '<label><span>Định mức (tấn/ha)</span><input name="dinhMucTanHa" value="' + esc(typeof i.dinhMucTanHa === 'number' ? String(i.dinhMucTanHa).replace('.', ',') : (i.dinhMucTanHa ?? '')) + '" placeholder="' + esc(ph) + '"><small class="mut" id="dmNote">' + note + '</small></label>';
 }
 const fillBtn = (act, label) => '<small class="mut"><button type="button" class="linkbtn" data-act="' + act + '">' + label + '</button></small>';
@@ -4774,7 +4774,7 @@ function panelNorm() {
       BHLD_ITEMS.map(([key]) => '<td><input name="n_' + k + '_' + key + '" value="' + esc(n[key] || '') + '"></td>').join('') + '</tr>';
   }).join('');
   const label = v => (v.tuNgay ? 'Hiệu lực từ ' + v.tuNgay : 'Bản gốc (chưa đặt ngày hiệu lực)');
-  return '<h2>Định mức BHLĐ theo vị trí</h2><div class="card">' +
+  return '<h2>Định mức</h2><div class="card"><h3 style="margin-top:0">Định mức BHLĐ theo vị trí</h3>' +
     '<p class="mut" style="margin-top:0">Mỗi bản định mức có <b>hiệu lực từ ngày</b>. Biểu mẫu dùng bản có ngày hiệu lực lớn nhất không vượt quá ngày của biểu mẫu: danh sách cấp phát BHLĐ (BM-02) theo <b>ngày cấp phát</b> (không nhập thì theo ngày bắt đầu khai thác), hợp đồng lao động theo ngày bắt đầu hợp đồng hoặc ngày ký. Ghi số lượng kèm đơn vị, ví dụ “1 bộ”; để trống nếu vị trí không được cấp mục đó.</p>' +
     '<div class="row" style="gap:12px;align-items:flex-end;flex-wrap:wrap"><label style="min-width:260px"><span>Bản định mức</span><select id="normVer">' + vs.map(v => '<option value="' + v.id + '"' + (v.id === normSel ? ' selected' : '') + '>' + esc(label(v)) + '</option>').join('') + '</select></label>' +
     '<button class="btn ghost sm" type="button" data-act="normDelVer"' + (cur.base ? ' disabled' : '') + '>Xóa bản này</button></div>' +
