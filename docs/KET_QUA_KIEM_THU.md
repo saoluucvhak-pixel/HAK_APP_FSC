@@ -316,3 +316,10 @@ Mốc rà soát trước: commit 72813a1 (Release v1.4.30). Bảng số liệu t
 - **Giờ cân từ Google Sheets/Excel** (`tests/lookup.test.js`, `scripts/e2e-gopdulieu.js`): ô giờ có định dạng ngày hoặc ngày-giờ trước đây hiện dd/mm/yyyy (hoặc 00/01/1900) ở cột Giờ cân; nay chỉ lấy phần giờ.
 - **Đổi biển số khi tra cứu** (`scripts/e2e-bienso.js`, `e2e-luongpc.js`): bỏ nút riêng, phiếu đổi biển tích sẵn, ô Chỉ đổi biển số; đổi hàng loạt; lọc nhiều biển số để tích rồi đổi.
 - Chưa kiểm được: Google Sheets thật, Microsoft Office, máy in, hộp thoại đóng ứng dụng gốc của Windows.
+
+## 47. Bản 1.4.33: định mức, giao khoán nhiều đội
+- **Ngày cân 2, cự ly tự tính, chế độ tối**: ngày cân 2 suy ra từ ngày cân 1 và giờ cân, lưu đúng cột `ngay2` (không đổi cấu trúc dữ liệu so với Excel); cự ly tính từ tọa độ rừng đến nơi giao; rà soát độ tương phản 4 giao diện sáng/tối.
+- **Định mức**: định mức thời gian khai thác (ngày/ha), ngày kết thúc dự kiến, cảnh báo lệch (quá 20%, tối thiểu 3 ngày), định mức nhân công (đội 8 người, nhiệm vụ từng vị trí) (`tests/dinhmuc.test.js`, `tests/dinhbien.test.js`, `scripts/e2e-tgkhai.js`, `e2e-dinhbien.js`).
+- **Giao khoán nhiều đội** (`src/doi.js`, `tests/doi.test.js`, `scripts/e2e-nhieudoi.js`): mỗi tổ trưởng một đội; sản lượng chia theo số người, tổng khớp; mỗi đội một bộ BM-01/20/05/06/07/08/14, số hợp đồng riêng (.1, .2); thời gian dự kiến chia theo số đội làm song song (ô Số đội ở Thông tin rừng); lỗi thiếu tên đội, đội mồ côi; hình thức trực tiếp không chia đội; lô một tổ trưởng không đổi.
+- Toàn bộ 56 kịch bản e2e và 282 kiểm thử đơn vị đạt trên bản build cuối.
+- Chưa kiểm được: Google Sheets thật, Microsoft Office, máy in, hộp thoại đóng ứng dụng gốc của Windows, bản cài exe cài tay.

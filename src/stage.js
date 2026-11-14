@@ -51,7 +51,7 @@
   const LABEL = {
     pc: {ngay: 'Ngày cân', ngay2: 'Ngày cân 2', gioCan1: 'Giờ cân 1', gioCan2: 'Giờ cân 2', bienSo: 'Biển số', soPhieu: 'Số phiếu', can1: 'Cân lần 1 (kg)', can2: 'Cân lần 2 (kg)', klKg: 'Khối lượng (kg)', kl: 'Khối lượng (tấn)', khachHang: 'Khách hàng', diaChi: 'Địa chỉ rừng', nguonGoc: 'Nguồn gốc', soCT: 'Số chứng từ', trangThai: 'Trạng thái', donGia: 'Đơn giá', thanhTien: 'Thành tiền', noiGiao: 'Nơi giao', noiCan: 'Nơi cân', ghiChu: 'Ghi chú', maRung: 'Mã rừng', stt: 'STT'},
     dx: {bienSo: 'Biển số', chuXe: 'Chủ xe', ngaySinh: 'Ngày sinh', cccd: 'CCCD', ngayCap: 'Ngày cấp', noiCap: 'Nơi cấp', diaChi: 'Địa chỉ', loaiXe: 'Loại xe', nguoiKy: 'Người ký', taiXe: 'Tài xế', sdt: 'Điện thoại', maRung: 'Mã rừng', stt: 'STT'},
-    nc: {ten: 'Họ tên', vaiTro: 'Vai trò', danhXung: 'Danh xưng', ngaySinh: 'Ngày sinh', cccd: 'CCCD', ngayCap: 'Ngày cấp', noiCap: 'Nơi cấp', diaChi: 'Địa chỉ', chucDanh: 'Chức danh', maRung: 'Mã rừng', stt: 'STT'}
+    nc: {ten: 'Họ tên', vaiTro: 'Vai trò', danhXung: 'Danh xưng', ngaySinh: 'Ngày sinh', cccd: 'CCCD', ngayCap: 'Ngày cấp', noiCap: 'Nơi cấp', diaChi: 'Địa chỉ', chucDanh: 'Chức danh', doi: 'Đội', maRung: 'Mã rừng', stt: 'STT'}
   };
   const labelOf = (kind, f) => (LABEL[kind] && LABEL[kind][f]) || f;
   /* giá trị không hợp lệ theo quy tắc của trường: 'x' là dấu bộ đọc đặt cho số sai; khối lượng tấn phải > 0; cân/kg không âm */
@@ -61,7 +61,7 @@
     return false;
   }
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const SKIP = {_id: 1, _row: 1, _srcRow: 1, _tay: 1};
+  const SKIP = {_id: 1, _row: 1, _srcRow: 1, _tay: 1, _ngay2Suy: 1};
   /* trường nhận diện chuyến cân: khác nhau ở một trong các trường này (bên nhập có giá trị) nghĩa là chưa chắc cùng một chuyến */
   const IDENT = [['ngay', 'Ngày cân'], ['bienSo', 'Biển số'], ['noiCan', 'Nơi cân'], ['kl', 'Khối lượng (tấn)']];
   const identEq = (f, a, b) => f === 'bienSo' ? bienKey(a) === bienKey(b) : f === 'noiCan' ? fold(a) === fold(b) : f === 'kl' ? Math.round((+a || 0) * 1000) === Math.round((+b || 0) * 1000) : String(a == null ? '' : a).trim() === String(b == null ? '' : b).trim();
@@ -69,8 +69,11 @@
   /* áp dụng dòng nhập lên dòng đang có theo quy tắc trên; trả về danh sách thay đổi từng trường */
   function applyInto(kind, old, inc, opt) {
     const next = clone(old), fields = [], errs = [], tay = old._tay || [];
+    // ngày cân 2 do phần mềm suy ra từ nguồn (opt.suy) không được ghi đè ngày cân 2 NHẬP THẬT đã có (khác số suy ra của chính phiếu cũ)
+    const khongGhiNgay2 = kind === 'pc' && opt.suy && opt.suyFn && !isBlank(old.ngay2) && old.ngay2 !== opt.suyFn(old.ngay, old.gioCan1, old.gioCan2);
     Object.keys(inc).forEach(f => {
       if (SKIP[f] || f === 'giaLoi') return;
+      if (khongGhiNgay2 && f === 'ngay2') return;
       const v = inc[f];
       if (f[0] === '_') { if (!isBlank(v)) next[f] = clone(v); return; }
       if (invalid(kind, f, v)) { errs.push({f, label: labelOf(kind, f), v}); fields.push({f, label: labelOf(kind, f), cu: old[f], moi: v === 'x' ? '(không hợp lệ)' : v, act: 'loi'}); return; }
@@ -88,7 +91,7 @@
     opt = opt || {}; const list = st.cur[kind], key = KEY[kind], rep = {add: 0, upd: 0, same: 0, kept: 0, ids: [], dupInFile: [], changes: [], pending: 0, errors: 0};
     const seenInFile = new Map(), touched = new Set(); st.pending = st.pending || [];
     rows.forEach(r0 => {
-      const r = clone(r0), k = key(r); if (opt.source) r._nguon = opt.source;
+      const r = clone(r0), k = key(r), suy = !!r._ngay2Suy; delete r._ngay2Suy; if (opt.source) r._nguon = opt.source;
       if (k) { if (seenInFile.has(k)) rep.dupInFile.push(k); seenInFile.set(k, (seenInFile.get(k) || 0) + 1); }
       const dup2 = k && seenInFile.get(k) > 1;
       const matches = k && !dup2 ? list.filter(x => key(x) === k) : [];
@@ -100,12 +103,12 @@
         if (equal.length) target = equal[0];
         else {   // chưa đủ căn cứ là cùng chuyến: để chờ đối chiếu, không đổi gì
           const diffs = identDiffs(matches[0], r), sig0 = sig(r);
-          if (!st.pending.some(p => p.kind === kind && p.key === k && p.sig === sig0)) st.pending.push({pid: 'q' + (++st.seq) + '_' + st.pending.length, kind, key: k, source: opt.source || '', incoming: r, sig: sig0, candidates: matches.map(m => m._id), diffs});
+          if (!st.pending.some(p => p.kind === kind && p.key === k && p.sig === sig0)) st.pending.push({pid: 'q' + (++st.seq) + '_' + st.pending.length, kind, key: k, source: opt.source || '', incoming: r, sig: sig0, suy, candidates: matches.map(m => m._id), diffs});
           rep.pending++; return;
         }
       } else target = matches.find(m => !identDiffs(m, r).length) || matches[0];
       touched.add(target._id);
-      const {next, fields} = applyInto(kind, target, r, opt);
+      const {next, fields} = applyInto(kind, target, r, Object.assign({}, opt, {suy, suyFn: opt.suyNgay2}));
       // trường tạo nên khóa chỉ khác cách viết (hoa/thường, dấu chấm, số 0 đầu) thì giữ cách viết đã lưu: không coi là thay đổi
       const kf = kind === 'pc' ? 'soPhieu' : kind === 'dx' ? 'bienSo' : (cccd(r.cccd) ? 'cccd' : 'ten'); if (target[kf] !== undefined && target[kf] !== '') next[kf] = target[kf];
       if (kind === 'pc' && bienKey(target.bienSo) !== bienKey(next.bienSo) && next.bienSo) next._plateSrc = opt.plateSource || opt.source || 'Nhập';
@@ -116,7 +119,7 @@
       list[list.findIndex(x => x._id === target._id)] = next; rep.upd++; rep.ids.push(next._id);
     });
     rep.kept = list.filter(x => !touched.has(x._id) && !rep.ids.includes(x._id) && st.base[kind].some(b => b._id === x._id)).length;
-    st.src[kind] = opt.source || st.src[kind];
+    st.src[kind] = opt.source || st.src[kind]; if (opt.suyNgay2) st.suyNgay2 = opt.suyNgay2;
     st.report = st.report || {}; st.report[kind] = rep;
     return rep;
   }
@@ -130,7 +133,7 @@
     if (action === 'update') {
       const cands = p.candidates.filter(id => list.some(x => x._id === id)); const tid = opt.targetId || (cands.length === 1 ? cands[0] : null);
       if (!tid || !cands.includes(tid)) return {ok: false, error: cands.length > 1 ? 'Có nhiều bản ghi cùng số phiếu: chọn bản cần cập nhật.' : 'Bản ghi cần cập nhật không còn.'};
-      const old = list.find(x => x._id === tid), {next} = applyInto(p.kind, old, p.incoming, {source: p.source}); next._id = tid; next._row = old._row;
+      const old = list.find(x => x._id === tid), {next} = applyInto(p.kind, old, p.incoming, {source: p.source, suy: p.suy, suyFn: st.suyNgay2}); next._id = tid; next._row = old._row;
       if (p.kind === 'pc' && bienKey(old.bienSo) !== bienKey(next.bienSo) && next.bienSo) next._plateSrc = p.source || 'Nhập';
       list[list.findIndex(x => x._id === tid)] = next; st.pending.splice(i, 1); return {ok: true, id: tid};
     }
@@ -172,9 +175,9 @@
   const dirty = (st, kind) => !st ? false : (kind ? KINDS.filter(k => k === kind) : KINDS).some(k => { const c = counts(st, k); return c.new + c.changed + c.removed > 0 || pendingOf(st, k).length > 0; });
   const dirtyKinds = st => st ? KINDS.filter(k => dirty(st, k)) : [];
   /* danh sách để ghi vào lô + nhật ký đổi biển số (phiếu đã lưu mà biển số đổi so với bản đã lưu) */
-  function commit(st) {
+  function commit(st, fixPc) {
     const out = {}, bienLog = [], at = new Date().toISOString(), baseById = new Map(st.base.pc.map(r => [r._id, r]));
-    KINDS.forEach(k => { out[k] = st.cur[k].map(r => { const c = clone(r); delete c._plateSrc; delete c._renamedFrom; delete c._nguon; delete c._tay; return c; }); });
+    KINDS.forEach(k => { out[k] = st.cur[k].map(r => { const c = clone(r); if (k === 'pc' && fixPc) fixPc(c); delete c._plateSrc; delete c._renamedFrom; delete c._nguon; delete c._tay; return c; }); });
     st.cur.pc.forEach(r => { const b = baseById.get(r._id); if (b && bienKey(b.bienSo) !== bienKey(r.bienSo)) bienLog.push({soPhieu: r.soPhieu, ngay: r.ngay, kl: typeof r.kl === 'number' ? r.kl : 0, cu: b.bienSo || '', moi: r.bienSo, at, nguon: r._plateSrc || 'Sửa tay'}); });
     return {lists: out, bienLog};
   }

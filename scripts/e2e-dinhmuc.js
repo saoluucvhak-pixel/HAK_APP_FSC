@@ -22,12 +22,12 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   const getText = async kind => { clearOut(); await w.click('button[data-act=dl][data-kind=' + kind + ']'); let f = null; for (let i = 0; i < 80 && !f; i++) { f = fs.readdirSync(out).find(x => /\.docx$/.test(x)); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(200); return plain(await (await JSZip.loadAsync(fs.readFileSync(path.join(out, f)))).file('word/document.xml').async('string')); };
 
   // 0. nút Định mức BHLĐ ở menu ngang trên cùng, không còn ở cột trái
-  ok('Định mức BHLĐ nằm ở menu ngang trên cùng, không còn ở cột trái', !!(await w.$('header.top .nav [data-act=openNorm]')) && !(await w.$('aside [data-act=openNorm]')));
+  ok('nút “Định mức” (không còn chữ BHLĐ) nằm ở menu ngang trên cùng, không còn ở cột trái', (await w.innerText('#navNorm')).trim() === 'Định mức' && !!(await w.$('header.top .nav [data-act=openNorm]')) && !(await w.$('aside [data-act=openNorm]')));
   // 1. màn hình định mức
   await w.click('header.top .nav [data-act=openNorm]'); await w.waitForSelector('#normForm');
-  ok('mở từ menu ngang: nút được tô sáng (đang ở màn Định mức BHLĐ)', await w.evaluate(() => document.getElementById('navNorm').classList.contains('on')));
+  ok('mở từ menu ngang: nút được tô sáng (đang ở màn Định mức)', await w.evaluate(() => document.getElementById('navNorm').classList.contains('on')));
   await openNorm();
-  ok('màn Định mức BHLĐ có ô “Hiệu lực từ ngày”, nút thêm bản mới và thêm vị trí mới', !!(await w.$('#normForm input[name=tuNgay]')) && !!(await w.$('[data-act=normAddVer]')) && !!(await w.$('[data-act=normAddPos]')) && /Hiệu lực từ ngày/.test(await w.innerText('#normForm')));
+  ok('màn Định mức (tiêu đề “Định mức”, mục Định mức BHLĐ theo vị trí) có ô “Hiệu lực từ ngày”, nút thêm bản mới và thêm vị trí mới', (await w.innerText('#main h2')).trim() === 'Định mức' && !!(await w.$('#normForm input[name=tuNgay]')) && !!(await w.$('[data-act=normAddVer]')) && !!(await w.$('[data-act=normAddPos]')) && /Hiệu lực từ ngày/.test(await w.innerText('#normForm')));
   // 2. thêm vị trí mới
   await w.fill('#normNewPos', 'Công nhân phụ'); await w.click('[data-act=normAddPos]'); await w.waitForSelector('tr[data-pos="Công nhân phụ"]');
   ok('thêm vị trí “Công nhân phụ”: hiện thêm một dòng trong bảng định mức', !!(await w.$('tr[data-pos="Công nhân phụ"]')));

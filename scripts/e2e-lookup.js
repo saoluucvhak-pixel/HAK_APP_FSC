@@ -51,8 +51,8 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   ok('đã tạo chủ rừng mới từ kết quả', (await w.innerText('#side')).includes('NGUYỄN VĂN AN'));
   ok('thanh ngữ cảnh: mã rừng 20260110_001', /20260110_001/.test(await w.innerText('#ctxForest')));
   const finfo = await w.$eval('#forestForm', f => Object.fromEntries(new FormData(f)));
-  ok('diện tích 2,5 ha; tọa độ chỉ điền khi người dùng chọn', +finfo.dienTich === 2.5 && finfo.lat === '');
-  ok('khối lượng thực tế = tổng 2 phiếu đã chọn (2,84 + 4,44 = 7,28)', +finfo.khoiLuong === 7.28);
+  ok('diện tích 2,5 ha; tọa độ chỉ điền khi người dùng chọn', finfo.dienTich === '2,5' && finfo.lat === '');
+  ok('khối lượng thực tế = tổng 2 phiếu đã chọn (2,84 + 4,44 = 7,28)', finfo.khoiLuong === '7,28');
   await w.click('[data-ftab=dx]'); const vc = await w.innerText('#main');
   ok('2 phiếu cân ghi vào rừng, biển ghép từ tên xe', /1001\/2026\/NK/.test(vc) && /1002\/2026\/NK/.test(vc) && /92C-99999/.test(vc) && !/1003\/2026\/NK/.test(vc));
   // Nhập lại cùng nguồn vào rừng đang mở: không tạo bản trùng
