@@ -10,6 +10,14 @@ const DM = require('./datamove');
 const Backup = require('./backup');
 const {GoogleAuth, fileIdOf} = require('./google-auth');
 
+/* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
+ * để không tiến trình nào trên máy đặt được chúng nhằm bỏ qua hộp thoại xác nhận hay đổi nguồn dữ liệu. HAKQN_USERDATA/HAKQN_DB/HAKQN_SMOKE* vẫn dùng cho kiểm tra khói bản cài. */
+const TEST_ONLY_ENV = ['HAKQN_FAIL_SAVE', 'HAKQN_SHEET_URL', 'HAKQN_TEST_BACKUP_FAIL', 'HAKQN_LOT_DIR', 'HAKQN_LOT_FILE', 'HAKQN_PICK_DIR', 'HAKQN_PICK_CHOICE',
+  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE'];
+if (app.isPackaged) TEST_ONLY_ENV.forEach(k => { delete process.env[k]; });
+/* Đường dẫn file do giao diện gửi lên (thay hộp thoại chọn file) chỉ nhận khi chạy từ mã nguồn (kiểm thử); bản cài luôn hỏi qua hộp thoại của hệ điều hành */
+const rendererPath = p => (!app.isPackaged && typeof p === 'string' && p) ? p : null;
+
 // Kiểm thử/ chạy thử có thể đặt thư mục dữ liệu riêng, không đụng dữ liệu thật
 if (process.env.HAKQN_USERDATA) app.setPath('userData', process.env.HAKQN_USERDATA);
 
@@ -109,7 +117,7 @@ function registerIpc() {
     catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, error: err.message}; }
   });
   /* HAKQN_FAIL_SAVE=<đường dẫn file>: khi file đó tồn tại thì lần lưu giả lập thất bại (chỉ dùng để kiểm thử “lưu lỗi”) */
-  ipcMain.handle('db:save', afterReloc((e, db) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : wrap(() => store.save(db))()));
+  ipcMain.handle('db:save', afterReloc((e, db, opts) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : wrap(() => store.save(db, {allowBulkDelete: !!(opts && opts.allowBulkDelete)}))()));
   ipcMain.handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, opts))()));
   ipcMain.handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))()));
   ipcMain.handle('backup:to', afterReloc(async () => {
@@ -157,7 +165,7 @@ function registerIpc() {
     try {
       if (!store) throw new Error(NO_STORE());
       if (relocating) await relocating.catch(() => {});
-      let p = filePath || process.env.HAKQN_LOT_FILE;
+      let p = rendererPath(filePath) || process.env.HAKQN_LOT_FILE;
       if (!p) {
         const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu lô rừng', filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}], properties: ['openFile']});
         if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
@@ -178,7 +186,7 @@ function registerIpc() {
   ipcMain.handle('lookup:sync', afterReloc(async () => { try { return await syncSheets(); } catch (e) { log('ERROR', e.message); return {ok: false, errors: [e.message]}; } }));
   ipcMain.handle('lookup:importExcel', afterReloc(async (e, filePath) => {
     try {
-      let p = filePath;
+      let p = rendererPath(filePath);
       if (!p) {
         const r = await dialog.showOpenDialog(win, {title: 'Chọn file Excel tra cứu (HoSoKeo_QC.xlsx)', filters: [{name: 'Excel', extensions: ['xlsx', 'xlsm', 'xls']}], properties: ['openFile']});
         if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
@@ -219,9 +227,10 @@ function registerIpc() {
   ipcMain.handle('settings:setBackup', async (e, reset) => {
     try {
       let dir = '';
+      if (!store) throw new Error(NO_STORE());   // chưa mở được dữ liệu: không ghi cấu hình rồi mới báo lỗi
       if (!reset) { dir = await pickFolder('Chọn thư mục lưu bản sao lưu'); if (!dir) return {ok: true, canceled: true}; dir = Settings.checkFolder(dir); }
       const cur = Settings.load(app.getPath('userData')); Settings.save(app.getPath('userData'), {...cur, backupDir: dir});
-      loc = Settings.resolve(app.getPath('userData'), process.env); store.backupDir = loc.backupDir;
+      loc = Settings.resolve(app.getPath('userData'), process.env); if (store) store.backupDir = loc.backupDir;
       log('INFO', 'Đổi thư mục sao lưu: ' + (reset ? 'mặc định' : 'thư mục riêng'));
       return {ok: true, settings: setView()};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
@@ -440,6 +449,7 @@ async function smoke() {
     r.dom = await win.webContents.executeJavaScript(`(async()=>({title: document.title, reportMenu: !!document.querySelector('[data-act=rpOpen]'), lookupMenu: !!document.querySelector('[data-act=lkOpen]'), sideFilter: !!document.getElementById('sideQ'),
       reports: typeof HAKReports === 'object' && HAKReports.REPORTS.length, ownerShown: document.getElementById('side').innerText.includes('CHỦ RỪNG THỬ NGHIỆM'),
       filter: await window.hak.lookup.search('', '', {onlyIssues: true, from: '2026-01-01', sort: 'tan'}).then(x => x.ok && !!x.facets).catch(() => false)}))()`);
+    if (app.isPackaged) r.checks.testEnvOff = TEST_ONLY_ENV.every(k => !(k in process.env));   // bản cài: biến môi trường kiểm thử đã bị xóa
     r.checks.reportMenu = r.dom.reportMenu && r.dom.reports >= 5; r.checks.smartFilter = r.dom.sideFilter && r.dom.filter === true; r.checks.lookupMenu = r.dom.lookupMenu === true;
     if (phase === 'upgrade') r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('CHỦ RỪNG CŨ')"); // giao diện hiện lại chủ rừng cũ
     if (phase === 'verify') r.checks.ownerInUi = r.dom.ownerShown; // sau khi đóng và mở lại, giao diện phải hiện lại chủ rừng đã lưu
@@ -460,7 +470,13 @@ async function openPhieuCan(rows, company) {
     pcWin.on('closed', () => { pcWin = null; });
   } else { if (pcWin.isMinimized()) pcWin.restore(); pcWin.focus(); }
   const w = pcWin;
-  await new Promise((res, rej) => { w.webContents.once('did-finish-load', res); w.webContents.once('did-fail-load', (e, c, d) => rej(new Error(d))); w.loadFile(path.join(__dirname, '..', 'renderer', 'PhieuCan.html')); });
+  // gỡ cả hai bộ lắng nghe sau khi có kết quả: cửa sổ dùng lại nhiều lần không tích lũy listener (MaxListenersExceededWarning)
+  await new Promise((res, rej) => {
+    const wc = w.webContents, done = () => { wc.removeListener('did-finish-load', okL); wc.removeListener('did-fail-load', failL); };
+    const okL = () => { done(); res(); }, failL = (e, c, d) => { done(); rej(new Error(d)); };
+    wc.on('did-finish-load', okL); wc.on('did-fail-load', failL);
+    w.loadFile(path.join(__dirname, '..', 'renderer', 'PhieuCan.html')).catch(() => { /* lỗi đã báo qua did-fail-load */ });
+  });
   await w.webContents.insertCSS(require('./phieucan').SIMPLE_CSS);
   const co = company && typeof company === 'object' ? Object.fromEntries(['coName', 'coAddr', 'coPhone', 'coFax', 'place'].map(k => [k, typeof company[k] === 'string' ? company[k] : ''])) : {};
   { const r = await w.webContents.executeJavaScript(require('./phieucan').inject(list, co)); if (r !== true) throw new Error('Không nạp được dữ liệu vào công cụ in phiếu cân: ' + r); }
@@ -484,12 +500,14 @@ function createWindow() {
   let closing = false;
   win.on('close', async e => {
     if (closing) return; e.preventDefault();
-    let n = 0; try { n = await win.webContents.executeJavaScript('window.__stDirty ? window.__stDirty().length : 0'); } catch (err) { n = 0; }
+    // giao diện treo/không trả lời trong 3 giây: vẫn cho đóng (không kẹt cửa sổ), coi như không có thay đổi để hỏi
+    const ask = (js, fallback) => Promise.race([win.webContents.executeJavaScript(js), new Promise(r => setTimeout(() => r(fallback), 3000))]).catch(() => fallback);
+    let n = 0; try { n = (await ask('window.__stDirty ? window.__stDirty().length : 0', 0)) || 0; } catch (err) { n = 0; }
     let pick = 1;   // 0 = lưu và đóng, 1 = bỏ thay đổi và đóng (không có gì để hỏi), 2 = quay lại
     if (n > 0) {
       const auto = {save: 0, discard: 1, back: 2}[process.env.HAKQN_CLOSE];
       pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Lô đang mở có nhân công, xe hoặc phiếu cân chưa lưu. Dữ liệu chưa lưu sẽ mất nếu đóng ngay.', buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
-      if (pick === 0) { let r = null; try { r = await win.webContents.executeJavaScript('window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true}'); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
+      if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true}'), new Promise(res => setTimeout(() => res(null), 15000))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
     }
     if (pick === 2) return;
     closing = true; win.close();

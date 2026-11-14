@@ -66,12 +66,18 @@ class Store {
     run();
   }
 
-  snapshotFile(tag) {
+  /* opts.keep: chỉ giữ N bản gần nhất cùng tiền tố tag (bản tự động trước khi xóa), không đụng các bản khác */
+  snapshotFile(tag, opts = {}) {
     if (this.file === ':memory:') return null;
     fs.mkdirSync(this.backupDir, {recursive: true});
     const out = path.join(this.backupDir, tag + '-' + now().replace(/[:.]/g, '-') + '.sqlite');
     this.db.pragma('wal_checkpoint(TRUNCATE)');
     fs.copyFileSync(this.file, out);
+    if (opts.keep > 0) {
+      const re = new RegExp('^' + tag + '-\\d{4}-.*\\.sqlite$');
+      const old = fs.readdirSync(this.backupDir).filter(n => re.test(n)).sort();
+      old.slice(0, Math.max(0, old.length - opts.keep)).forEach(n => { try { fs.unlinkSync(path.join(this.backupDir, n)); } catch (e) { /* bỏ qua */ } });
+    }
     return out;
   }
 
@@ -88,11 +94,19 @@ class Store {
 
   isEmpty() { return this.db.prepare('SELECT COUNT(*) c FROM owners').get().c === 0; }
 
-  /* Ghi đối tượng db của giao diện: chỉ ghi các dòng đã đổi, trong một giao dịch. Lỗi thì không đổi gì. */
-  save(db) {
+  /* Ghi đối tượng db của giao diện: chỉ ghi các dòng đã đổi, trong một giao dịch. Lỗi thì không đổi gì.
+   * Bảo vệ chống mất dữ liệu: db phải có rs là đối tượng (không nhận {} / null); xóa từ 2 chủ rừng trở lên trong MỘT lần lưu bị từ chối
+   * trừ khi opts.allowBulkDelete (khôi phục 'replace'); lần lưu nào có xóa chủ rừng hoặc lô rừng đều sao lưu file trước khi ghi. */
+  save(db, opts = {}) {
+    if (!db || typeof db !== 'object' || !db.rs || typeof db.rs !== 'object' || Array.isArray(db.rs)) throw new Error('Dữ liệu lưu không hợp lệ (thiếu danh sách chủ rừng). Không ghi gì để tránh mất dữ liệu.');
     const rows = this.explode(db);
     const have = new Map(this.db.prepare('SELECT id, hash FROM owners').all().map(r => [r.id, r.hash]));
     const haveF = new Map(this.db.prepare('SELECT id, hash FROM forests').all().map(r => [r.id, r.hash]));
+    { const keepO = new Set(rows.owners.map(o => o.id)), keepF = new Set(rows.forests.map(f => f.id));
+      const goneO = [...have.keys()].filter(id => !keepO.has(id)), goneF = [...haveF.keys()].filter(id => !keepF.has(id));
+      if (goneO.length >= 2 && !opts.allowBulkDelete) throw Object.assign(new Error('Lần lưu này sẽ xóa ' + goneO.length + ' hồ sơ chủ rừng cùng lúc nên đã bị chặn để tránh mất dữ liệu. Xóa từng chủ rừng, hoặc dùng Khôi phục toàn bộ nếu muốn thay toàn bộ dữ liệu.'), {code: 'BULK_DELETE'});
+      if (goneO.length || goneF.length) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
+    }
     const upO = this.db.prepare(`INSERT INTO owners(id,ma,ten,cccd,data,hash,updated_at) VALUES(@id,@ma,@ten,@cccd,@data,@hash,@t)
       ON CONFLICT(id) DO UPDATE SET ma=@ma,ten=@ten,cccd=@cccd,data=@data,hash=@hash,updated_at=@t`);
     const upF = this.db.prepare(`INSERT INTO forests(id,owner_id,ma_rung,ten_rung,data,hash,updated_at) VALUES(@id,@owner_id,@ma_rung,@ten_rung,@data,@hash,@t)
@@ -118,17 +132,22 @@ class Store {
     return {changed, at: t};
   }
 
+  /* Mã nội bộ (id) chủ rừng và lô rừng là khóa chính: trùng thì bản sau ghi đè bản trước trong SQLite → dừng và báo, không ghi gì */
   explode(db) {
-    const owners = [], forests = [];
+    const owners = [], forests = [], seenO = new Map(), seenF = new Map(), dups = [];
     Object.entries(db.rs || {}).forEach(([id, o]) => {
+      if (!o || typeof o !== 'object') throw new Error('Hồ sơ chủ rừng "' + id + '" không hợp lệ. Không ghi gì.');
       const {forests: fs_, ...rest} = o; rest.id = rest.id || id;
+      if (seenO.has(rest.id)) dups.push('chủ rừng ' + rest.id); seenO.set(rest.id, true);
       const data = JSON.stringify(rest), info = rest.info || {};
       owners.push({id: rest.id, ma: String(info.ma || ''), ten: String(info.ten || ''), cccd: String(info.cccd || ''), data, hash: sha(data)});
       Object.entries(fs_ || {}).forEach(([fid, f]) => {
-        const fd = JSON.stringify(f), fi = f.info || {};
-        forests.push({id: f.id || fid, owner_id: rest.id, ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: fd, hash: sha(fd)});
+        const fd = JSON.stringify(f), fi = f.info || {}, idF = f.id || fid;
+        if (seenF.has(idF)) dups.push('lô ' + idF + ' (' + (fi.maRung || '') + ') ở chủ ' + seenF.get(idF) + ' và ' + rest.id); seenF.set(idF, rest.id);
+        forests.push({id: idF, owner_id: rest.id, ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: fd, hash: sha(fd)});
       });
     });
+    if (dups.length) throw Object.assign(new Error('Trùng mã nội bộ: ' + dups.slice(0, 5).join('; ') + (dups.length > 5 ? '…' : '') + '. Không ghi gì để tránh mất hồ sơ; hãy khôi phục lại với lựa chọn "Giữ cả hai" để cấp mã mới.'), {code: 'DUP_ID'});
     return {owners, forests};
   }
 
@@ -173,7 +192,7 @@ class Store {
       Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
     }
     const backup = this.snapshotFile('truoc-khoi-phuc');
-    this.save(next);
+    this.save(next, {allowBulkDelete: strategy === 'replace'});
     return {backup, counts: Store.counts(this.load())};
   }
 

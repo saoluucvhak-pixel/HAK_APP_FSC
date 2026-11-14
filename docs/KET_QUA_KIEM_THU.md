@@ -323,3 +323,23 @@ Mốc rà soát trước: commit 72813a1 (Release v1.4.30). Bảng số liệu t
 - **Giao khoán nhiều đội** (`src/doi.js`, `tests/doi.test.js`, `scripts/e2e-nhieudoi.js`): mỗi tổ trưởng một đội; sản lượng chia theo số người, tổng khớp; mỗi đội một bộ BM-01/20/05/06/07/08/14, số hợp đồng riêng (.1, .2); thời gian dự kiến chia theo số đội làm song song (ô Số đội ở Thông tin rừng); lỗi thiếu tên đội, đội mồ côi; hình thức trực tiếp không chia đội; lô một tổ trưởng không đổi.
 - Toàn bộ 56 kịch bản e2e và 282 kiểm thử đơn vị đạt trên bản build cuối.
 - Chưa kiểm được: Google Sheets thật, Microsoft Office, máy in, hộp thoại đóng ứng dụng gốc của Windows, bản cài exe cài tay.
+
+## 8. Bản 1.4.34: rà soát lỗi, bảo mật và toàn vẹn dữ liệu (14/11/2026)
+
+Rà soát theo các skill `hak-code-auditor`, `hak-electron-security`, `hak-data-integrity` (HAK_AI_SKILLS) và công cụ quét `hak_code_quality_test`. Dữ liệu thử là dữ liệu giả lập.
+
+| # | Lỗi / rủi ro | Sửa | Kiểm thử |
+| --- | --- | --- | --- |
+| 1 | `Store.save({})` (thiếu `rs`) xóa sạch mọi chủ rừng; lần lưu thường không có bản sao lưu | Từ chối dữ liệu thiếu danh sách chủ rừng; chặn xóa từ 2 chủ rừng trở lên trong một lần lưu (`BULK_DELETE`, trừ khôi phục “Thay toàn bộ”); lần lưu nào có xóa chủ/lô đều tự sao lưu `backups/truoc-xoa-*.sqlite` (giữ 20 bản gần nhất) | `tests/store.test.js` (4 bài hồi quy) |
+| 2 | Hai chủ rừng có lô trùng mã nội bộ: lô của chủ trước bị ghi đè mất, không báo | Phát hiện trùng mã chủ/lô trước khi ghi, báo `DUP_ID`, không ghi gì | `tests/store.test.js` |
+| 3 | `xlsx` 0.18.5: 2 lỗ hổng mức cao (GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9) khi đọc file Excel/Google Sheets | SheetJS 0.20.3 (nguồn chính thức cdn.sheetjs.com) | `npm audit --omit=dev`: 0 lỗ hổng; toàn bộ test nhập/xuất Excel đạt |
+| 4 | Electron 33 hết hỗ trợ bảo mật | Electron 45.3.2, electron-builder 26, better-sqlite3 13.2 (có sẵn bản build N-API cho mọi nền tảng nên bỏ bước biên dịch lại: bỏ `postinstall`, `build.npmRebuild: false`) | Đơn vị + 56 bộ e2e + đóng gói thử và kiểm tra khói bản đã đóng gói |
+| 5 | `lot:open`, `lookup:importExcel` đọc đường dẫn bất kỳ do giao diện gửi | Bản cài luôn hỏi qua hộp thoại; đường dẫn từ giao diện chỉ nhận khi chạy từ mã nguồn (kiểm thử) | e2e |
+| 6 | Biến môi trường kiểm thử (`HAKQN_SHEET_URL`, `HAKQN_CONFIRM_DEFAULT`, `HAKQN_FAIL_SAVE`…) có hiệu lực trong bản cài | Bị xóa khi `app.isPackaged`; kiểm tra khói có thêm `testEnvOff` | Kiểm tra khói bản đóng gói đặt sẵn các biến này: đạt |
+| 7 | Chưa có Content-Security-Policy | `build-html` thêm CSP: script chỉ chạy theo mã băm SHA-256 của các khối có sẵn, không tải tài nguyên ngoài, không gọi mạng từ giao diện | Electron thật: chèn `<img onerror>` vào trang bị CSP chặn; mã chèn vào 18 trường dữ liệu không chạy |
+| 8 | `settings:setBackup` ghi cấu hình rồi mới lỗi khi chưa mở được dữ liệu | Kiểm tra trước khi ghi | — |
+| 9 | Cửa sổ in phiếu cân dùng lại tích lũy listener `did-fail-load` | Gỡ cả hai listener khi có kết quả | e2e phiếu cân |
+| 10 | Giao diện treo thì không đóng được ứng dụng | Hỏi giao diện có thời hạn (3 giây; lưu trước khi đóng 15 giây) | e2e đóng app |
+
+**Kết quả (Linux, màn hình ảo):** `npm test` 287/288 đạt (1 bỏ qua như trước); `npm run test:e2e` **56/56 bộ, 1.312 kiểm tra đạt, 0 lỗi**; quét chất lượng 0 lỗi, 2 cảnh báo file dài; bản đóng gói Linux qua kiểm tra khói `create`, `verify`, `upgrade` (từ 1.0.0), `upgrade14`.
+**Chưa chạy:** bộ cài Windows (cần chạy workflow “Build Windows installer”) và cài trên máy người dùng.

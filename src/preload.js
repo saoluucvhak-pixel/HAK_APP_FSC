@@ -3,7 +3,7 @@ const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('hak', {
   desktop: true,
   loadSync: () => ipcRenderer.sendSync('db:load'),
-  save: db => ipcRenderer.invoke('db:save', db),
+  save: (db, opts) => ipcRenderer.invoke('db:save', db, opts && typeof opts === 'object' ? {allowBulkDelete: !!opts.allowBulkDelete} : undefined),
   importPreview: (db, opts) => ipcRenderer.invoke('import:preview', db, opts),
   importApply: (db, strategy, opts) => ipcRenderer.invoke('import:apply', db, strategy, opts),
   backupTo: () => ipcRenderer.invoke('backup:to'),

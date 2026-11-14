@@ -42,7 +42,7 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 
 ## Lệnh
 ```
-npm ci              # cài thư viện, tự build SQLite cho Electron
+npm ci              # cài thư viện (better-sqlite3 13 có sẵn bản build N-API cho Windows/Linux/macOS, không cần biên dịch lại)
 npm run build:html  # ghép ui/app.src.html + thư viện thành renderer/index.html
 npm test            # kiểm thử đơn vị (Node của Electron)
 npm run test:e2e    # kiểm thử Electron thật (Linux: xvfb-run npm run test:e2e)
