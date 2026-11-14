@@ -176,7 +176,7 @@ Trong trang dữ liệu: tiêu đề **màu đỏ sẫm = cột bắt buộc**, 
 | File thiếu cột … | Dùng đúng file mẫu, không sửa dòng tiêu đề |
 | Mã rừng "…" khác lô đang mở | Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng |
 | CCCD phải đủ 12 chữ số | Nhập lại đủ 12 số, giữ số 0 đầu |
-| Cần đúng 1 tổ trưởng | Chỉ một dòng có Vai trò “Tổ trưởng” |
+| Cần ít nhất 1 tổ trưởng | Có ít nhất một dòng Vai trò “Tổ trưởng”. Lô có từ 2 tổ trưởng là lô nhiều đội: ghi tên đội ở cột **Đội** cho mọi dòng (xem mục Nhiều đội) |
 | Biển … chưa có trong danh sách xe | Thêm xe vào file đội xe, nạp lại xe rồi nạp phiếu cân |
 | Ngày … không có thật | Sửa ngày đúng dd/mm/yyyy (ví dụ 28/02/2026) |
 | Số phiếu cân … trùng | Kiểm tra phiếu nhập hai lần |
@@ -414,3 +414,15 @@ Mỗi biểu mẫu có **điều kiện in chính thức riêng**. Thiếu đi�
 | BM-14 Nghiệm thu, thanh lý | Ngày ký + khối lượng thực tế + ngày lập biên bản nghiệm thu | Tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập |
 
 Các mẫu còn lại không có điều kiện riêng nên luôn là bản chính thức (khi dữ liệu cơ bản đã đủ để xuất). **Mẫu trống / chỉ phần số** (in hai bước) là mẫu thiết kế để điền sau nên không gắn nhãn. Khi đã bổ sung đủ, tải lại để có bản chính thức.
+
+
+## Nhiều đội: mỗi tổ trưởng một hợp đồng giao khoán
+
+Một lô có thể giao khoán cho **nhiều đội**, mỗi tổ trưởng là một đội và ký hợp đồng giao khoán riêng (giống mỗi người ký hợp đồng vận chuyển một hợp đồng).
+
+- Tab **Nhân công**: thêm cột **Đội**. Lô chỉ có 1 tổ trưởng thì để trống, mọi thứ như cũ. Lô có từ 2 tổ trưởng thì mỗi tổ trưởng ghi một tên đội khác nhau và mỗi công nhân ghi tên đội của mình.
+- Sản lượng (tấn hoặc ha) của lô chia cho các đội theo số người; đội cuối nhận phần còn lại nên tổng luôn khớp.
+- Mỗi đội có bộ hồ sơ riêng: BM-01 hợp đồng giao khoán, BM-20 giấy ủy quyền (bỏ qua đội chỉ có tổ trưởng), BM-05 chấm công, BM-06 danh sách đội, BM-07 xác nhận đào tạo, BM-08 bảng thanh toán tiền công, BM-14 nghiệm thu. Gói hồ sơ xếp mỗi loại vào một thư mục con, mỗi đội một file tên theo đội. Hồ sơ dùng chung cả lô (BHLĐ, vận chuyển, FSC) vẫn một bộ.
+- In đợt 2: BM-08 và BM-14 có mục riêng cho từng đội.
+- Định mức nhân công được so sánh theo từng đội (1 đội 8 người).
+- Thiếu tên đội, hai tổ trưởng trùng tên đội hoặc công nhân thuộc đội không có tổ trưởng sẽ báo lỗi và chặn xuất.

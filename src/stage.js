@@ -51,7 +51,7 @@
   const LABEL = {
     pc: {ngay: 'Ngày cân', ngay2: 'Ngày cân 2', gioCan1: 'Giờ cân 1', gioCan2: 'Giờ cân 2', bienSo: 'Biển số', soPhieu: 'Số phiếu', can1: 'Cân lần 1 (kg)', can2: 'Cân lần 2 (kg)', klKg: 'Khối lượng (kg)', kl: 'Khối lượng (tấn)', khachHang: 'Khách hàng', diaChi: 'Địa chỉ rừng', nguonGoc: 'Nguồn gốc', soCT: 'Số chứng từ', trangThai: 'Trạng thái', donGia: 'Đơn giá', thanhTien: 'Thành tiền', noiGiao: 'Nơi giao', noiCan: 'Nơi cân', ghiChu: 'Ghi chú', maRung: 'Mã rừng', stt: 'STT'},
     dx: {bienSo: 'Biển số', chuXe: 'Chủ xe', ngaySinh: 'Ngày sinh', cccd: 'CCCD', ngayCap: 'Ngày cấp', noiCap: 'Nơi cấp', diaChi: 'Địa chỉ', loaiXe: 'Loại xe', nguoiKy: 'Người ký', taiXe: 'Tài xế', sdt: 'Điện thoại', maRung: 'Mã rừng', stt: 'STT'},
-    nc: {ten: 'Họ tên', vaiTro: 'Vai trò', danhXung: 'Danh xưng', ngaySinh: 'Ngày sinh', cccd: 'CCCD', ngayCap: 'Ngày cấp', noiCap: 'Nơi cấp', diaChi: 'Địa chỉ', chucDanh: 'Chức danh', maRung: 'Mã rừng', stt: 'STT'}
+    nc: {ten: 'Họ tên', vaiTro: 'Vai trò', danhXung: 'Danh xưng', ngaySinh: 'Ngày sinh', cccd: 'CCCD', ngayCap: 'Ngày cấp', noiCap: 'Nơi cấp', diaChi: 'Địa chỉ', chucDanh: 'Chức danh', doi: 'Đội', maRung: 'Mã rừng', stt: 'STT'}
   };
   const labelOf = (kind, f) => (LABEL[kind] && LABEL[kind][f]) || f;
   /* giá trị không hợp lệ theo quy tắc của trường: 'x' là dấu bộ đọc đặt cho số sai; khối lượng tấn phải > 0; cân/kg không âm */

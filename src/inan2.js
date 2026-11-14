@@ -15,7 +15,7 @@
   };
   /* Phiên bản mẫu đợt 2: tăng khi thay đổi cách dựng bố cục (mọi tờ nền cũ hết giá trị đối chiếu) */
   const TEMPLATE_VER = '1';
-  const keyOf = (code, gkey) => (FORMS[code] && FORMS[code].grouped ? code + ':' + String(gkey == null ? '' : gkey) : code);
+  const keyOf = (code, gkey) => (FORMS[code] && (FORMS[code].grouped || gkey) ? code + ':' + String(gkey == null ? '' : gkey) : code);   // 08, 14 theo lô; nếu lô có nhiều đội thì mỗi đội một khóa (gkey = khóa đội)
   const splitKey = k => { const i = String(k).indexOf(':'); return i < 0 ? {code: k, gkey: ''} : {code: k.slice(0, i), gkey: k.slice(i + 1)}; };
 
   /* băm 53 bit (cyrb53), đồng bộ, ổn định giữa máy */

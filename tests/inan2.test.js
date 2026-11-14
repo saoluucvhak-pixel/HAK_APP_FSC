@@ -5,7 +5,7 @@ const it = (code, gkey, o = {}) => Object.assign({key: IA.keyOf(code, gkey), cod
 const ALL = () => [it('08'), it('09', 'A'), it('09', 'B'), it('10', 'A'), it('10', 'B'), it('14')];
 
 test('khóa mục: BM-08 và BM-14 theo lô; BM-09/BM-10 theo mã nhóm vận chuyển ổn định', () => {
-  assert.strictEqual(IA.keyOf('08'), '08'); assert.strictEqual(IA.keyOf('14', 'x'), '14');
+  assert.strictEqual(IA.keyOf('08'), '08'); assert.strictEqual(IA.keyOf('14'), '14'); assert.strictEqual(IA.keyOf('14', 'x'), '14:x');   // lô nhiều đội: mỗi đội một khóa
   assert.strictEqual(IA.keyOf('09', '0490'), '09:0490'); assert.deepStrictEqual(IA.splitKey('10:0490'), {code: '10', gkey: '0490'}); assert.deepStrictEqual(IA.splitKey('08'), {code: '08', gkey: ''});
 });
 test('hai trạng thái độc lập: chưa in nền + đủ dữ liệu → giấy trắng; chưa đủ → nền hoặc thiếu', () => {

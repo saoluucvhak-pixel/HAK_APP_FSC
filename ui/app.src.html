@@ -349,6 +349,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@PHIEUCAN@@*/</script>
 <script>/*@@CULY@@*/</script>
 <script>/*@@DINHBIEN@@*/</script>
+<script>/*@@DOI@@*/</script>
 <script>/*@@DINHMUC@@*/</script>
 <script>/*@@QUYTRINH@@*/</script>
 <script>/*@@NHAPLIEU@@*/</script>
@@ -366,7 +367,7 @@ const KEY = 'hskt.v2';
 const KEY_OLD = 'hskt.v1';
 const CHUCDANH = ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa'];   // ba vị trí mặc định; danh sách đầy đủ (kể cả vị trí người dùng thêm) lấy từ chucDanhAll()
 const chucDanhAll = () => HAKDinhMuc.allPositions(db);
-const H_NC = {'Vai trò':'vaiTro','STT':'stt','Danh xưng':'danhXung','Họ và tên':'ten','Ngày sinh':'ngaySinh','CCCD':'cccd','Ngày cấp CCCD':'ngayCap','Nơi cấp CCCD':'noiCap','Địa chỉ thường trú':'diaChi','Chức danh':'chucDanh'};
+const H_NC = {'Vai trò':'vaiTro','STT':'stt','Danh xưng':'danhXung','Họ và tên':'ten','Ngày sinh':'ngaySinh','CCCD':'cccd','Ngày cấp CCCD':'ngayCap','Nơi cấp CCCD':'noiCap','Địa chỉ thường trú':'diaChi','Chức danh':'chucDanh','Đội':'doi'};
 const NC_REQ = ['Vai trò','Họ và tên','CCCD','Chức danh'];
 const H_DX = {'STT':'stt','Chủ xe (bên vận chuyển)':'chuXe','Ngày sinh chủ xe':'ngaySinh','CCCD chủ xe':'cccd','Ngày cấp CCCD chủ xe':'ngayCap','Nơi cấp CCCD chủ xe':'noiCap','Thường trú chủ xe':'diaChi',
   'Biển kiểm soát':'bienSo','Ngày cấp đăng ký xe (cà vẹt)':'cavet','Loại xe':'loaiXe','Người ký HĐ vận chuyển':'nguoiKy',
@@ -606,7 +607,7 @@ function parseSheet(file, sheetName, map, req, norm, alias) {
 const normNC = o => ({
   _row: o._row, maRung: trim(o.maRung), vaiTro: trim(o.vaiTro), stt: trim(o.stt), danhXung: trim(o.danhXung),
   ten: trim(o.ten), ngaySinh: normDate(o.ngaySinh), cccd: normCccd(o.cccd), ngayCap: normDate(o.ngayCap),
-  noiCap: trim(o.noiCap), diaChi: trim(o.diaChi), chucDanh: trim(o.chucDanh)
+  noiCap: trim(o.noiCap), diaChi: trim(o.diaChi), chucDanh: trim(o.chucDanh), doi: trim(o.doi)
 });
 const noneVal = v => /^(khong|khong co|n\/a|na|-+|x)$/.test(trim(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase()) ? '' : v;
 const keyName = v => trim(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase();
@@ -787,7 +788,8 @@ function checkNC(rec) {
       if (!(rate > 0)) bad('chưa có đơn giá ' + basisOf(rec.info).short + ' cho "' + r.chucDanh + '" trong mục Cơ sở tính đơn giá (tab Nhân công)');
     }
   });
-  if (tt !== 1) errs.push('Cần đúng 1 tổ trưởng (hiện có ' + tt + ')');
+  if (tt < 1) errs.push('Cần ít nhất 1 tổ trưởng (hiện có ' + tt + ')');
+  else if (tt > 1) HAKDoi.build(rec.nc, isTT).errs.forEach(e => { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; });   // nhiều tổ trưởng = nhiều đội, mỗi người phải thuộc đúng một đội
   return {errs, warns, state};
 }
 
@@ -878,6 +880,13 @@ const basisAllowed = (direct, b) => direct ? b !== 'ha' : true;   // giao khoán
 const giaErrors = i => basisAllowed(isDirect(i), i.hinhThucLuong || 'sanluong') ? []
   : ['Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công (không tính theo ha): chọn lại ở tab Nhân công'];
 const hdldList = rec => isDirect(rec.info) ? rec.nc : [];   // giao khoán: thay bằng một Giấy ủy quyền (BM-20)
+/* ===== Nhiều đội: mỗi Tổ trưởng là một đội, ký hợp đồng giao khoán riêng (src/doi.js) =====
+ * doiOf(rec): các đội cùng phần diện tích và khối lượng của lô chia theo số người. subRec(rec, d): hồ sơ của riêng đội d (nhân công của đội, diện tích và khối lượng phần của đội),
+ * dùng chung các hàm lập biểu mẫu hiện có nên mỗi đội ra một bộ BM-01, BM-20, BM-08, BM-14 riêng. Lô chỉ một đội: giữ nguyên hồ sơ, không đổi gì. */
+const doiOf = rec => { const b = HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi), kl = HAKDoi.chia(rec.info.khoiLuong, b.doi); b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kl[i]; }); return b; };
+const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {nc: [d.tt, ...d.members], info: Object.assign({}, rec.info, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
+const ncList = rec => { const tt = rec.nc.find(isTT); return tt ? [tt, ...rec.nc.filter(r => r !== tt)] : rec.nc.slice(); };   // tổ trưởng đầu danh sách, rồi mọi người còn lại (kể cả các tổ trưởng khác)
+const doiLabel = d => (d.ten ? d.ten + ' — ' : '') + d.tt.ten;
 const ucList = rec => rec.nc.filter(r => !isTT(r));         // người ủy quyền cho Tổ trưởng (hình thức giao khoán)
 // Khối lượng dùng cho bảng lương: thực tế nếu có, không thì dự kiến (diện tích × định mức)
 const volumeOf = i => {
@@ -910,7 +919,7 @@ function payrollPlan(rec, ex) {
 }
 /* Bảng tiền theo từng người: sản lượng (tấn/ha) hoặc số công chia đều; đơn giá theo vai trò. Dùng chung cho BM-01, BM-08, BM-14. */
 function payRows(rec, ex) {
-  const rs = rec.info, plan = payrollPlan(rec, ex), list = [rec.nc.find(isTT), ...rec.nc.filter(r => !isTT(r))].filter(Boolean), N = list.length;
+  const rs = rec.info, plan = payrollPlan(rec, ex), list = ncList(rec), N = list.length;
   const each = (!plan.ngc && plan.vol && N) ? plan.vol.v / N : null;
   let sum = 0;
   const actual = plan.ngc && !(ex && ex._forecast) && HAKChamCong.hasAny(rec.cc);   // đã chấm công thực tế: số công từng người; hợp đồng (đợt 1) luôn dùng số công dự tính
@@ -1871,10 +1880,11 @@ function exOf(rec, mode) {
 const dot2Files = (rec, mode, keys) => viNum(() => dot2Files0(rec, mode, keys));
 function dot2Files0(rec, mode, keys) {
   const ex = exOf(rec, mode), s = slug(rec.info.ten), IA = HAKInAn2, files = [], used = new Set();
-  const want = k => !keys || keys.includes(k);
+  const want = k => !keys || keys.includes(k), B = doiOf(rec);
   const push = f => { let q = f.path, n = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + n++ + '.docx'); used.add(q); f.path = q; files.push(f); };
-  if (want('08')) push({key: '08', path: '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(rec, ex), land: true});
-  if (want('14')) push({key: '14', path: '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(rec, ex)});
+  B.doi.forEach(d => { const sr = subRec(rec, B, d), k8 = IA.keyOf('08', B.multi ? d.key : ''), k14 = IA.keyOf('14', B.multi ? d.key : '');
+    if (want(k8)) push({key: k8, path: B.multi ? '08_Bang_thanh_toan_tien_cong/' + slug(d.ten) + '.docx' : '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(sr, ex), land: true});
+    if (want(k14)) push({key: k14, path: B.multi ? '14_BB_nghiem_thu_thanh_ly/' + slug(d.ten) + '.docx' : '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(sr, ex)}); });
   groupsDX(rec).forEach(g => { const k = IA.keyOf('09', g.cccd || g.ten); if (want(k)) push({key: k, path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}); });
   groupsDX(rec).forEach(g => { const k = IA.keyOf('10', g.cccd || g.ten); if (want(k)) push({key: k, path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}); });
   return files;
@@ -1882,14 +1892,16 @@ function dot2Files0(rec, mode, keys) {
 const buildFilesRaw = (rec, kind) => viNum(() => buildFilesRaw0(rec, kind));
 function buildFilesRaw0(rec, kind) {
   const ex = exOf(rec, 'day'); ex._kind = kind;
-  const s = slug(rec.info.ten);
+  const s = slug(rec.info.ten), B = doiOf(rec);
+  /* Mỗi đội (mỗi Tổ trưởng) một bộ riêng. Lô một đội: một file như cũ; nhiều đội: thư mục con, mỗi đội một file tên theo đội */
+  const perDoi = (dir, base, fn, o) => B.doi.forEach(d => { const sr = subRec(rec, B, d); if (o && o.skip && o.skip(d)) return; files.push(Object.assign({path: B.multi ? dir + '/' + slug(d.ten) + '.docx' : base + '_' + s + '.docx', blocks: fn(sr, ex)}, o && o.land ? {land: true} : {})); });
   const files = [], used = new Set();
   /* Hai người ký trùng tên (khác CCCD) không được ghi đè file của nhau trong ZIP: thêm hậu tố _2, _3… */
   files.push = f => { let q = f.path, k = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + k++ + '.docx'); used.add(q); f.path = q; return Array.prototype.push.call(files, f); };
   /* In làm HAI ĐỢT khi chưa xong khai thác: 'dau' = hồ sơ làm được ngay (hợp đồng, lao động, vận chuyển, FSC...), 'cuoi' = phần chỉ làm được khi xong rừng (tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10, nghiệm thu BM-14); 'all' = tất cả một lần */
   const PHAN_CUOI = ['tc', 'nttl', 'xnvc', 'ttvc'], dau = kind === 'all' || kind === 'dau';
-  if ((kind === 'gk' || dau) && !isDirect(rec.info)) files.push({path: '01_HD_Giao_khoan_' + s + '.docx', blocks: docGiaoKhoan(rec, ex)});
-  if ((kind === 'uq' || (dau && gate(rec).canUQ)) && !isDirect(rec.info)) files.push({path: '20_Giay_uy_quyen_' + s + '.docx', blocks: docUyQuyen(rec, ex)});
+  if ((kind === 'gk' || dau) && !isDirect(rec.info)) perDoi('01_HD_Giao_khoan', '01_HD_Giao_khoan', docGiaoKhoan);
+  if ((kind === 'uq' || (dau && gate(rec).canUQ)) && !isDirect(rec.info)) perDoi('20_Giay_uy_quyen', '20_Giay_uy_quyen', docUyQuyen, {skip: d => B.multi && !d.members.length});
   if (kind === 'bhld' || dau) files.push({path: '02_BHLD_' + s + '.docx', blocks: docBHLD(rec, ex)});
   if (kind === 'hdld' || dau) {
     hdldList(rec).forEach((cn, i) => {
@@ -1906,16 +1918,16 @@ function buildFilesRaw0(rec, kind) {
   if (want('fsc')) files.push({path: '19_BB_pho_bien_chinh_sach_FSC_' + s + '.docx', blocks: docPhoBienFSC(rec, ex)});
   if (want('stai')) files.push({path: '15_So_theo_doi_tai_nan_su_co_' + s + '.docx', blocks: docSoTaiNan(rec, ex), land: true});
   if (want('tbi')) files.push({path: '16_BB_kiem_tra_bao_duong_thiet_bi_' + s + '.docx', blocks: docKiemTraThietBi(rec, ex), land: true});
-  if (want('nttl')) files.push({path: '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(rec, ex)});
+  if (want('nttl')) perDoi('14_BB_nghiem_thu_thanh_ly', '14_BB_nghiem_thu_thanh_ly', docNghiemThu);
   if (want('ckng')) files.push({path: '11_Cam_ket_nguon_goc_' + s + '.docx', blocks: docCamKetNguonGoc(rec, ex)});
   if (want('cklc')) files.push({path: '12_Cam_ket_lao_dong_' + s + '.docx', blocks: docCamKetLaoDong(rec, ex)});
   if (want('kthn')) files.push({path: '13_BB_kiem_tra_hien_truong_' + s + '.docx', blocks: docKiemTraHienTruong(rec, ex), land: true});
   if (wantPC('xnvc')) groupsPC(rec).forEach(g => files.push({path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}));
   if (wantPC('ttvc')) groupsPC(rec).forEach(g => files.push({path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}));
-  if (want('cc')) files.push({path: '05_Bang_cham_cong_' + s + '.docx', blocks: docChamCong(rec, ex), land: true});
-  if (want('dsd')) files.push({path: '06_DS_doi_khai_thac_' + s + '.docx', blocks: docDSDoi(rec, ex), land: true});
-  if (want('xn')) files.push({path: '07_XN_dao_tao_ATLD_' + s + '.docx', blocks: docXNDaoTao(rec, ex), land: true});
-  if (want('tc')) files.push({path: '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(rec, ex), land: true});
+  if (want('cc')) perDoi('05_Bang_cham_cong', '05_Bang_cham_cong', docChamCong, {land: true});
+  if (want('dsd')) perDoi('06_DS_doi_khai_thac', '06_DS_doi_khai_thac', docDSDoi, {land: true});
+  if (want('xn')) perDoi('07_XN_dao_tao_ATLD', '07_XN_dao_tao_ATLD', docXNDaoTao, {land: true});
+  if (want('tc')) perDoi('08_Bang_thanh_toan_tien_cong', '08_Bang_thanh_toan_tien_cong', docTienCong, {land: true});
   return files;
 }
 /* ========== In hồ sơ đợt 2: trạng thái "đủ dữ liệu" / "đã in mẫu nền" (src/inan2.js) ========== */
@@ -1936,11 +1948,12 @@ function d2Items(rec) {
   const baseNC = g.canBHLD ? [] : [{text: 'chưa đủ thông tin chủ rừng hoặc nhân công: ' + [...g.info, ...g.nc.errs].slice(0, 3).join('; ') + (g.nc.errs.length + g.info.length > 3 ? '…' : ''), where: 'Thông tin rừng / Nhân công', go: {ftab: g.info.length ? 'finfo' : 'nc'}}];
   const baseVC = g.canHDVC ? [] : [{text: 'chưa đủ thông tin chủ rừng, đội xe hoặc đơn giá vận chuyển: ' + [...g.info, ...g.dx.errs, ...g.vc].slice(0, 3).join('; '), where: 'Vận chuyển', go: {ftab: g.info.length ? 'finfo' : 'dx'}}];
   const mk = (code, gkey, label, nen, full) => items.push({key: IA.keyOf(code, gkey), code, gkey: gkey || '', label, nenMissing: nen, fullMissing: [...nen, ...full], sig: '', info: null});
-  mk('08', '', FORMS_D2['08'], baseNC.concat(miss('08', D2_NEN_NEED['08'])), miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k))));
+  const BD = doiOf(rec), dk = d => BD.multi ? d.key : '', dl = d => BD.multi ? ' · ' + doiLabel(d) : '';
+  BD.doi.forEach(d => mk('08', dk(d), FORMS_D2['08'] + dl(d), baseNC.concat(miss('08', D2_NEN_NEED['08'])), miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k)))));
   groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = gr.cccd || gr.ten;
     const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : g.pc && g.pc.errs.length ? [{text: 'phiếu cân còn lỗi (' + g.pc.errs.length + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : [];
     ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + d2GroupLabel(rec, gr), baseVC.concat(miss(code, D2_NEN_NEED[code])), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))))); });
-  mk('14', '', FORMS_D2['14'], baseNC.concat(miss('14', D2_NEN_NEED['14'])), miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k))));
+  BD.doi.forEach(d => mk('14', dk(d), FORMS_D2['14'] + dl(d), baseNC.concat(miss('14', D2_NEN_NEED['14'])), miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k)))));
   items.sort((a, b) => IA.ORDER.indexOf(a.code) - IA.ORDER.indexOf(b.code));
   // chữ ký bố cục từ chính file mẫu nền sẽ in (chỉ khi dựng được mẫu)
   try {
@@ -2295,7 +2308,9 @@ function exportCheck(job) {
   if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
-  { const sc = HAKDinhBien.soSanh(HAKDinhBien.get(db).rows, job.nc || []); if ((job.nc || []).length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}); }
+  { const rows = HAKDinhBien.get(db).rows, bd = HAKDoi.build(job.nc || [], isTT);
+    (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
+      if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}); }); }
   { const L = tgLechOf(i, job.pc); if (L && L.canhBao) add('doi', 'Thời gian khai thác', tgLechText(i, L), 'Thời gian khai thác', {ftab: 'finfo'}); }
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
   HAKNhapLieu.kiemTra(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));
@@ -2583,7 +2598,7 @@ function ccMonths(rec) {
   Object.keys(rec.cc || {}).forEach(k => set.add(k)); return [...set].sort();
 }
 const ccCur = rec => { const m = ccMonths(rec); return m.includes(ccMonth) ? ccMonth : m[0] || ''; };
-const ccPersons = rec => [rec.nc.find(isTT), ...rec.nc.filter(r => !isTT(r))].filter(Boolean);
+const ccPersons = rec => ncList(rec);
 function panelChamCong(rec) {
   if (rec.info.hinhThucLuong !== 'ngaycong' || !rec.nc.length) return '';
   const CC = HAKChamCong, months = ccMonths(rec), has = CC.hasAny(rec.cc);
@@ -2710,7 +2725,7 @@ function stTable(kind, rec, heads, cells, c, align) {
 }
 /* ----- hộp thoại thêm / sửa một dòng ----- */
 const ST_FIELDS = {
-  nc: [['vaiTro', 'Vai trò', ['Tổ trưởng', 'Công nhân']], ['stt', 'STT'], ['danhXung', 'Danh xưng', ['Ông', 'Bà']], ['ten', 'Họ và tên'], ['ngaySinh', 'Ngày sinh (dd/mm/yyyy)'], ['cccd', 'CCCD (12 số)'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Địa chỉ thường trú'], ['chucDanh', 'Chức danh', () => chucDanhAll()]],
+  nc: [['vaiTro', 'Vai trò', ['Tổ trưởng', 'Công nhân']], ['stt', 'STT'], ['danhXung', 'Danh xưng', ['Ông', 'Bà']], ['ten', 'Họ và tên'], ['ngaySinh', 'Ngày sinh (dd/mm/yyyy)'], ['cccd', 'CCCD (12 số)'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Địa chỉ thường trú'], ['chucDanh', 'Chức danh', () => chucDanhAll()], ['doi', 'Đội (bắt buộc khi lô có từ 2 Tổ trưởng; mỗi Tổ trưởng một đội)']],
   dx: [['stt', 'STT'], ['bienSo', 'Biển kiểm soát'], ['loaiXe', 'Loại xe'], ['chuXe', 'Chủ xe'], ['ngaySinh', 'Ngày sinh chủ xe'], ['cccd', 'CCCD chủ xe'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Thường trú chủ xe'], ['cavet', 'Ngày cấp cà vẹt'], ['sdt', 'Số điện thoại'], ['nguoiKy', 'Người ký HĐ vận chuyển', ['Chủ xe', 'Tài xế']],
     ['taiXe', 'Tên tài xế'], ['ngaySinhTx', 'Ngày sinh tài xế'], ['cccdTx', 'CCCD tài xế'], ['ngayCapTx', 'Ngày cấp CCCD tài xế'], ['noiCapTx', 'Nơi cấp CCCD tài xế'], ['diaChiTx', 'Thường trú tài xế'], ['gplx', 'Số GPLX'], ['hanGplx', 'Ngày đến hạn GPLX'], ['hanBH', 'Ngày đến hạn bảo hiểm'], ['kdTu', 'Kiểm định từ ngày'], ['kdDen', 'Kiểm định đến ngày']],
   pc: [['soPhieu', 'Số phiếu'], ['ngay', 'Ngày cân 1 (dd/mm/yyyy)'], ['bienSo', 'Xe (biển số)', 'XE'], ['gioCan1', 'Giờ cân 1'], ['ngay2', 'Ngày cân 2 (dd/mm/yyyy; để trống = tự suy ra từ giờ cân)'], ['gioCan2', 'Giờ cân 2'], ['can1', 'Cân lần 1 (kg)'], ['can2', 'Cân lần 2 (kg)'], ['klKg', 'Khối lượng (kg)'], ['kl', 'Khối lượng (tấn)'], ['khachHang', 'Khách hàng'], ['diaChi', 'Địa chỉ rừng trên phiếu'], ['donGia', 'Đơn giá (đồng/tấn)'], ['thanhTien', 'Thành tiền (đồng)'], ['nguonGoc', 'Nguồn gốc'], ['soCT', 'Số chứng từ'], ['trangThai', 'Trạng thái (OK hoặc trống = in)'], ['noiGiao', 'Nơi giao (nhà máy)'], ['ghiChu', 'Ghi chú']]
@@ -2847,17 +2862,27 @@ document.addEventListener('click', e => {
 
 /* So sánh số người thực tế (bản đang xem, kể cả bản nháp) với định mức nhân công; liệt kê nhiệm vụ từng vị trí */
 function dinhBienPanel(rec) {
-  const g = HAKDinhBien.get(db), sc = HAKDinhBien.soSanh(g.rows, rec.nc || []), lt = HAKDinhBien.lechText(sc);
-  const st = !(rec.nc || []).length ? '' : lt ? '<div class="msg warn" id="dbLech"><b>Lệch định mức nhân công (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '):</b> ' + esc(lt) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok" id="dbLech">Đúng định mức nhân công: ' + sc.co + ' người.</div>';
+  const g = HAKDinhBien.get(db), bd = doiOf(rec), sc = HAKDinhBien.soSanh(g.rows, bd.multi ? [bd.doi[0].tt, ...bd.doi[0].members] : rec.nc || []), lt = HAKDinhBien.lechText(sc);
+  const stDoi = bd.multi ? bd.doi.map(d => { const x = HAKDinhBien.soSanh(g.rows, [d.tt, ...d.members]), t = HAKDinhBien.lechText(x); return t ? '<div class="msg warn dbLechDoi"><b>Đội “' + esc(d.ten) + '” — lệch định mức nhân công (1 đội ' + x.can + ' người, hiện có ' + x.co + '):</b> ' + esc(t) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok dbLechDoi">Đội “' + esc(d.ten) + '” đúng định mức nhân công: ' + x.co + ' người.</div>'; }).join('') : '';
+  const st = bd.multi ? stDoi : !(rec.nc || []).length ? '' : lt ? '<div class="msg warn" id="dbLech"><b>Lệch định mức nhân công (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '):</b> ' + esc(lt) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok" id="dbLech">Đúng định mức nhân công: ' + sc.co + ' người.</div>';
   return '<details class="card" id="dbPanel"><summary><b>Định mức nhân công và nhiệm vụ từng vị trí</b> — 1 đội ' + sc.can + ' người' + (g.saved ? '' : ' (mặc định)') + '</summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Định mức</th><th>Hiện có</th><th>Nhiệm vụ</th></tr></thead><tbody>' +
     sc.vt.map((v, i) => '<tr><td><b>' + esc(v.chucDanh) + '</b>' + (v.kiemNhiem ? '<br><small class="mut">kiêm ' + esc(v.kiemNhiem) + '</small>' : '') + '</td><td style="text-align:center">' + v.can + '</td><td style="text-align:center">' + (v.lech === 0 ? v.co : '<b style="color:var(--warn)">' + v.co + '</b>') + '</td><td>' + esc(g.rows[i].nhiemVu) + '</td></tr>').join('') + '</tbody></table></div></details>' + st;
 }
+/* Các đội của lô: mỗi Tổ trưởng một đội, mỗi đội một hợp đồng giao khoán, sản lượng chia theo số người */
+function doiPanel(rec) {
+  const b = doiOf(rec), tt = (rec.nc || []).filter(isTT).length;
+  if (!b.multi) return tt <= 1 && (rec.nc || []).length ? '<div class="mut" id="doiInfo" style="margin:6px 0">Lô có 1 đội (1 Tổ trưởng): ký 1 hợp đồng giao khoán. Muốn ký với nhiều đội, thêm Tổ trưởng và ghi tên đội ở cột <b>Đội</b>: mỗi Tổ trưởng là một đội.</div>' : '';
+  const bq = basisOf(rec.info).qty, bs = bq === 'ha' ? 'ha' : 'tan', unit = bq === 'ha' ? 'ha' : 'tấn', fmtV = v => v == null ? '—' : formatNumber(v, 3);
+  return '<details class="card" id="doiPanel" open><summary><b>Nhiều đội: ' + b.doi.length + ' đội, ' + b.doi.length + ' hợp đồng giao khoán</b></summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Đội</th><th>Tổ trưởng</th><th>Số người</th><th>Phần sản lượng (' + unit + ')</th></tr></thead><tbody>' +
+    b.doi.map(d => '<tr><td><b>' + esc(d.ten) + '</b></td><td>' + esc(d.tt.ten) + '</td><td style="text-align:center">' + d.n + '</td><td style="text-align:right">' + fmtV(bs === 'ha' ? d.dienTich : d.khoiLuong) + '</td></tr>').join('') +
+    '</tbody></table></div><p class="mut" style="margin:8px 0 0">Sản lượng của lô chia cho các đội theo số người. Mỗi đội có hợp đồng giao khoán (BM-01), giấy ủy quyền (BM-20), bảng chấm công, danh sách đội, bảng thanh toán tiền công và biên bản nghiệm thu riêng, xuất vào thư mục con theo tên đội.</p></details>';
+}
 function panelNC(rec) {
   const c = checkNC(rec);
-  const head = panelLuong(rec) + dinhBienPanel(rec) + panelImport('nc', rec) + panelChamCong(rec) + stBar('nc', rec) + stErrBox();
+  const head = panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec) + panelImport('nc', rec) + panelChamCong(rec) + stBar('nc', rec) + stErrBox();
   if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có danh sách nhân công. Bấm “+ Thêm nhân công”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>';
-  return head + issuesBox(c.errs, c.warns) + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', 'Đơn giá'],
-    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + fmt(rateOf(rec.info, r)) + '</td>', c);
+  return head + issuesBox(c.errs, c.warns) + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', 'Đội', 'Đơn giá'],
+    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + esc(r.doi || '') + '</td><td>' + fmt(rateOf(rec.info, r)) + '</td>', c);
 }
 
 /* ========== Công ty mua hàng: MỘT hồ sơ công ty (phần mềm dùng cho một công ty) + địa chỉ giao theo từng rừng (src/muahang.js) ========== */
