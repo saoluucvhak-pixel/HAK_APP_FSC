@@ -61,6 +61,32 @@ In phiếu cân **theo rừng**, giống xuất hồ sơ: vào lô → tab **Xu�
 - Trong công cụ: chọn phiếu, chỉnh **Khổ giấy** (mặc định giấy lỗ 240 × 279 mm), cách xếp, dịch lề, rồi **Tải PDF PhieuCan** hoặc **In / Lưu PDF bằng trình duyệt**; “Lưu cài đặt trên máy này” để nhớ lề đã canh.
 - Kiểm thử tự động xác nhận file công cụ không đổi (SHA-256 trong `tests/phieucan.sha256`) và PDF ra đúng 240 × 279 mm. In ra giấy thật phải bạn tự kiểm tra trên máy in của mình.
 
+## 3c. Đổi biển số xe của phiếu cân
+Hai thời điểm sửa, cùng một kết quả.
+
+**Cách 1 – đổi biển rồi mới đưa qua rừng (phiếu từ Google Sheets):**
+1. Mở rừng cần nhận phiếu (hoặc chọn **Xem trước để tạo rừng mới**). **Tra cứu Google Sheets** → tab **HoSoKeo (phiếu cân)** → gõ số phiếu, CCCD hoặc tên chủ rừng → **Tìm** → **Chọn**.
+2. Bấm **Điền vào rừng đang mở**. Bảng **Phiếu cân** hiện từng phiếu với ô **Biển số** sửa được (gợi ý biển trong đội xe của rừng).
+3. Gõ biển đúng vào ô của phiếu cần đổi (tự viết hoa, hiện nhãn *đã đổi từ …*). Phiếu ghi bằng tên xe thì dùng khung **Ghép tên xe với biển số** (lưu một lần). Xóa nội dung ô để trả lại biển gốc.
+4. **Chọn mọi phiếu ghi được** (hoặc tích từng phiếu) → **Lưu vào hồ sơ**. Phiếu vào rừng mang biển đã đổi cùng đủ giờ cân, cân 1/2, khối lượng, khách hàng, địa chỉ, đơn giá, thành tiền.
+
+**Cách 2 – đã đưa qua rồi mới đổi xe:**
+1. Khi bảng tính tra cứu đã có biển mới: mở rừng → **Tra cứu Google Sheets** → tab HoSoKeo → tìm số phiếu → **Chọn** → **Điền vào rừng đang mở**.
+2. Khung **Biển số xe khác với hồ sơ** liệt kê biển cũ → biển mới của từng phiếu.
+3. Bấm **Chỉ cập nhật biển số xe (n phiếu)**: ngày, khối lượng và các trường in giữ nguyên; việc đổi được ghi lại.
+
+Xem lại các phiếu đã đổi: **Báo cáo → Phiếu cân đã cập nhật biển số xe**. Biển mới phải có trong đội xe của rừng, nếu chưa có thì thêm xe ở tab Vận chuyển.
+
+## 3d. Các bước in phiếu cân
+1. Bảo đảm rừng đã có phiếu cân (nạp file Excel mẫu đầy đủ trường ở tab Vận chuyển, hoặc đưa từ Tra cứu Google Sheets, xem 3c). Khai **Cài đặt → Công ty** đủ tên, địa chỉ, điện thoại, Fax, Nơi lập chứng từ vì tiêu đề phiếu lấy từ đó.
+2. Tab **Xuất hồ sơ** → thẻ **In phiếu cân**: xem số phiếu và còn thiếu gì (cân, giờ, khách hàng, đơn giá…). Phiếu thiếu vẫn in được, phần thiếu để trống.
+3. Bấm **In phiếu cân**: cửa sổ công cụ PhieuCan mở, đã nạp sẵn phiếu của rừng; phiếu Trạng thái khác OK (ví dụ HỦY) không được chọn sẵn.
+4. Chọn phiếu (ô tìm, **Chọn tất cả**, **Bỏ chọn**), xem trước đúng bố cục sẽ in.
+5. Mở **Tuỳ chọn in** khi cần: **Khổ giấy** (mặc định giấy lỗ 240 × 279 mm), cách xếp (2 phiếu khác số một trang, 1 phiếu in 2 liên, 1 phiếu), dịch lề toàn phiếu hoặc riêng liên dưới theo mm, tên người cân, ghi chú. **Lưu cài đặt trên máy này** để lần sau giữ lề đã canh.
+6. **In / Lưu PDF bằng trình duyệt** để in ra máy in, hoặc **Tải PDF PhieuCan** để lấy file PDF đúng khổ giấy.
+
+Khi in: chọn đúng khổ giấy lỗ, tỉ lệ 100% (không “vừa trang”), không thêm lề; in thử một trang trước. Giá mua và thành tiền lấy từ phiếu cân (đơn giá dưới 100.000 hiểu là đồng/kg); thiếu đơn giá thì in 0.
+
 ## 4. Nhân công, hợp đồng và đơn giá
 Vào lô → tab **Nhân công** → mục **Thông số hợp đồng và đơn giá**:
 1. **Hình thức hợp đồng**
