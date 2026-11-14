@@ -17,7 +17,7 @@
         'Cột có tiêu đề màu đỏ sẫm là cột bắt buộc. Cột có mũi tên chọn (Vai trò, Danh xưng, Chức danh) chỉ chọn trong danh sách.',
         'Lưu file ở định dạng .xlsx (giữ nguyên tên trang tính). Không cần xóa hai trang HUONG_DAN và VI_DU.',
         'Trong phần mềm: tab “Nhân công” → “Nạp file Excel” → chọn file. Phần mềm báo số dòng hợp lệ, dòng lỗi (kèm số dòng) và hỏi trước khi ghi.',
-        'Có dòng lỗi: sửa trong Excel theo thông báo rồi nạp lại. Nạp lại file sẽ thay toàn bộ danh sách nhân công của lô (phần mềm cho biết số bản ghi thêm, cập nhật, bỏ).'],
+        'Có dòng lỗi: sửa trong Excel theo thông báo rồi nạp lại. Nạp file chỉ đưa dữ liệu vào BẢN NHÁP “Chưa lưu” của lô: dòng mới được thêm, dòng đã có (cùng CCCD hoặc họ tên) được cập nhật, bản ghi đã lưu mà file không có vẫn được GIỮ; xem trước và chỉnh sửa rồi bấm “Lưu dữ liệu vào lô” thì mới ghi.'],
       cols: [
         {n: 'Vai trò', req: A, fmt: 'Chọn: Tổ trưởng | Công nhân', ex: 'Tổ trưởng', note: 'Mỗi lô cần ĐÚNG 1 tổ trưởng; những người còn lại là “Công nhân”.', list: ['Tổ trưởng', 'Công nhân']},
         {n: 'STT', req: K, fmt: 'Số', ex: '1', note: 'Số thứ tự, có thể bỏ trống.'},
@@ -88,7 +88,7 @@
         'Ngày cân nhập dạng dd/mm/yyyy và phải là ngày có thật. Khối lượng nhập bằng cột KL (kg), cột tấn hoặc để phần mềm tự tính từ Cân 1 − Cân 2. Giờ cân, cân 1/2, khách hàng, địa chỉ, đơn giá, thành tiền là tùy chọn nhưng nên điền đủ để in phiếu cân đầy đủ.',
         'Lưu file .xlsx. Trong phần mềm: tab “Vận chuyển” → mục Phiếu cân → “Nạp file Excel”.',
         'Phiếu có ngày không có thật (ví dụ 31/02/2026) làm cả file bị từ chối kèm số phiếu và lý do: sửa ngày rồi nạp lại.',
-        'Nạp lại file sẽ thay danh sách phiếu cân của lô (kể cả phiếu lấy từ tra cứu); hộp xác nhận cho biết số phiếu bị bỏ.'],
+        'Nạp file chỉ đưa phiếu vào BẢN NHÁP “Chưa lưu” của lô: số phiếu mới được thêm, số phiếu đã có được cập nhật, phiếu đã lưu mà file không có vẫn được GIỮ (kể cả phiếu lấy từ tra cứu); xem trước rồi bấm “Lưu dữ liệu vào lô” thì mới ghi.'],
       cols: [
         {n: 'STT', req: K, fmt: 'Số', ex: '1', note: 'Số thứ tự, có thể bỏ trống.'},
         {n: 'Số phiếu', req: A, fmt: 'Văn bản hoặc số; không trùng', ex: 'PC001', note: 'Số phiếu cân, in ở góc phiếu. Mỗi phiếu một số; số phiếu trùng bị báo lỗi (bản ghi cũ đã lưu trùng số vẫn được tính vào tổng nhưng có đánh dấu).'},

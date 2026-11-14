@@ -369,3 +369,23 @@ test('đối chiếu bản tra cứu: rừng thiếu/không dùng được tọa
   const p = a.phieuThieuHoSoRung.find(x => x.hd === '201'); assert.ok(p && p.soPhieu === 1 && p.tan === 6 && p.vd === '2001/2026/NK' && p.tuNgay === '01/03/2026');
 });
 test('đối chiếu khi chưa có bản tra cứu', () => { const {L} = fresh(); assert.deepStrictEqual(L.audit(), {ok: false, noData: true}); });
+
+test('đối chiếu cấp lô: hợp đồng có hai lô mà chỉ một lô có tọa độ; phiếu cân không ghi mã lô thì “chưa xác định được lô”, không tự gán', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  const rows = L.rows("tab='ToaDoRung_QC' AND k_hd='101' AND k_cccd='049000000001'", []); assert.strictEqual(rows.length, 2);
+  const d = {...rows[1]}; delete d._tab; delete d._row; d['Mã rừng'] = 'HAKQN01B'; d['Latitude_Vĩ độ'] = 'abc';   // lô thứ hai của hợp đồng 101: tọa độ hỏng
+  L.db.prepare("UPDATE lookup_rows SET data=? WHERE tab='ToaDoRung_QC' AND row_no=?").run(JSON.stringify(d), rows[1]._row);
+  const a = L.audit(), lo = a.rungThieuToaDo.filter(x => x.hd === '101' && x.cccd === '049000000001');
+  assert.deepStrictEqual(lo.map(x => [x.maRung, x.kind]), [['HAKQN01B', 'sai']]);   // lô 20260110_001 có tọa độ nên không bị báo; chỉ lô HAKQN01B
+  assert.match(lo[0].lyDo, /Lô HAKQN01B/); assert.match(lo[0].lyDo, /tọa độ không dùng được/); assert.strictEqual(lo[0].soLo, 2);
+  const mo = a.phieuChuaXacDinhLo.find(x => x.hd === '101' && x.cccd === '049000000001');
+  assert.ok(mo); assert.strictEqual(mo.soPhieu, 3); assert.strictEqual(mo.tan, 12.18); assert.strictEqual(mo.loCoThe, '20260110_001, HAKQN01B'); assert.strictEqual(mo.tab, 'HoSoKeo_QC'); assert.match(mo.dongKeo, /\d/); assert.match(mo.lyDo, /Chưa xác định được lô/); assert.match(mo.vd, /1001\/2026\/NK/);
+  assert.ok(!a.rungChuaCoPhieu.some(x => x.hd === '101' && x.cccd === '049000000001'));
+  // hợp đồng chỉ một lô: phiếu gán rõ, không vào danh sách “chưa xác định”
+  assert.ok(a.phieuChuaXacDinhLo.some(x => x.hd === '201' && x.soLo === 2 && x.soPhieu === 1));   // hợp đồng 201 của dữ liệu thử cũng có hai lô
+  assert.ok(!a.phieuChuaXacDinhLo.some(x => x.hd === '401'));   // hợp đồng một lô: phiếu gán rõ ràng
+  // dòng tọa độ không ghi Mã rừng
+  const t2 = L.rows("tab='ToaDoRung_QC' AND k_hd='201'", [])[0], e = {...t2}; delete e._tab; delete e._row; e['Mã rừng'] = '';
+  L.db.prepare("UPDATE lookup_rows SET data=? WHERE tab='ToaDoRung_QC' AND row_no=?").run(JSON.stringify(e), t2._row);
+  assert.ok(L.audit().rungThieuToaDo.some(x => x.hd === '201' && x.kind === 'thieuMa' && /không ghi Mã rừng/.test(x.lyDo)));
+});

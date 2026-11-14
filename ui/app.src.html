@@ -206,6 +206,14 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li><b>Sản lượng theo tháng</b>: khối lượng phiếu cân 6 tháng gần nhất.</li>
 <li><b>Hệ thống</b>: bản tra cứu đang dùng (nguồn, thời điểm nạp, số dòng), lần sao lưu toàn bộ gần nhất, và lối tắt Tra cứu Google Sheets, <b>Báo cáo đối chiếu</b>, Sao lưu toàn bộ, Cài đặt.</li>
 </ul>
+<h3>0b. Nhập, sửa, lưu dữ liệu của lô (nhân công, xe, phiếu cân)</h3>
+<ol>
+<li><b>Nhập</b> bằng một trong ba cách: <b>thêm tay</b> (nút <b>+ Thêm nhân công / xe / phiếu cân</b> ở đúng tab), <b>nạp file Excel</b>, hoặc <b>đưa dữ liệu từ Tra cứu Google Sheets</b> sang lô. Thanh trên bảng luôn ghi rõ <b>chủ rừng, mã lô</b> và <b>nguồn</b> của lượt nhập.</li>
+<li><b>Xem trước và chỉnh sửa</b>: mọi nguồn chỉ tạo <b>bản nháp “Chưa lưu”</b>. Mỗi dòng có trạng thái <i>Thêm mới</i>, <i>Sửa</i>, <i>Sẽ xóa</i> hoặc <i>Đã lưu</i>, kèm nút <b>Sửa</b>, <b>Bỏ dòng</b> (dòng mới, chỉ bỏ khỏi lượt nhập) hoặc <b>Xóa đã lưu</b> (bản ghi đã lưu, có hỏi xác nhận và <b>Hoàn tác</b> được trước khi lưu). Bản ghi đã lưu mà file Excel không có vẫn được giữ.</li>
+<li><b>Phiếu cân và xe</b>: chọn xe thuộc lô; nếu chưa có thì chọn <b>+ Thêm xe mới…</b> ngay trong phiếu (thông tin đã nhập được giữ) hoặc bấm <b>+ Thêm xe</b> ở thanh nhắc biển số còn thiếu. Sửa biển số của xe đã có phiếu liên kết: phần mềm liệt kê các phiếu, đổi biển trên các phiếu đó và <b>không đổi</b> số chuyến, khối lượng hay tiền. Xe còn phiếu liên kết thì <b>không xóa được</b> cho đến khi xử lý các phiếu.</li>
+<li><b>Lưu dữ liệu vào lô</b>: phần mềm kiểm tra lại lô đích, quan hệ giữa các bản ghi và lỗi dữ liệu, rồi ghi một lần. Lỗi thì giữ nguyên dữ liệu đã lưu và bản nháp để bạn sửa hoặc thử lại. Phiếu có số trùng với lô khác phải đối chiếu mới được lưu.</li>
+<li><b>Tạo, xuất, in hồ sơ</b> chỉ dùng dữ liệu <b>đã lưu</b>: còn bản nháp thì các nút tải, xuất, in bị khóa kèm lý do và nút quay lại mục đang chỉnh. Chuyển lô, đổi chủ rừng hoặc đóng ứng dụng khi còn bản nháp sẽ hỏi <b>Lưu và tiếp tục</b>, <b>Bỏ thay đổi</b> hoặc <b>Quay lại chỉnh sửa</b>. Tất cả hoạt động khi không có mạng.</li>
+</ol>
 <h3>1. Quy trình 8 bước</h3>
 <ol>
 <li>Khai <b>Công ty mua hàng</b> ở <b>Cài đặt → Công ty</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
@@ -249,7 +257,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <ul>
 <li>Tiêu đề <b>màu đỏ sẫm = cột bắt buộc</b>, màu xanh = tùy chọn hoặc có điều kiện. Bấm vào một ô để xem gợi ý của cột; cột có mũi tên chỉ nhận giá trị trong danh sách. Cột là văn bản nên CCCD giữ số 0 đầu.</li>
 <li>Không sửa, xóa, đổi tên dòng tiêu đề hoặc tên trang tính dữ liệu; không thêm cột, không gộp ô, không để dòng trống giữa dữ liệu. Ngày dạng <b>dd/mm/yyyy</b>, phải là ngày có thật; mã rừng đúng lô đang mở; khối lượng tính bằng tấn.</li>
-<li>Nạp xong, phần mềm báo dòng hợp lệ, dòng lỗi (kèm số dòng) và hỏi trước khi ghi. Nạp lại file sẽ thay toàn bộ danh sách của lô.</li>
+<li>Nạp xong, dữ liệu chỉ vào <b>bản nháp “Chưa lưu”</b>: báo thêm, cập nhật, giữ nguyên; bản ghi đã lưu mà file không có vẫn được <b>giữ</b>. Xem trước, thêm tay, sửa hoặc bỏ dòng rồi bấm <b>Lưu dữ liệu vào lô</b>.</li>
 </ul>
 <h3>6. Tra cứu Google Sheets</h3>
 <ul>
@@ -614,6 +622,7 @@ const normPC = o => {
   if (klKg == null && typeof c1 === 'number' && typeof c2 === 'number' && c1 > c2) klKg = c1 - c2;   // KL để trống: KL = Cân 1 − Cân 2 (như file mẫu in phiếu cân)
   let kl = typeof o.kl === 'number' ? (isFinite(o.kl) ? o.kl : 'x') : toDec(o.kl);
   if (kl == null && typeof klKg === 'number' && klKg > 0) kl = Math.round(klKg) / 1000;   // chỉ điền kg: tấn = kg ÷ 1000
+  if (typeof kl === 'number' && isFinite(kl) && kl > 0) kl = Math.round(kl * 1000) / 1000;   // khối lượng lưu chính xác đến kg: mọi nơi cộng ra cùng một số
   const lbl = 'Phiếu ' + (trim(o.soPhieu) || '(không số)'), giaLoi = [['donGia', 'cột ĐG_AD / Đơn giá'], ['donGiaTC', 'cột Đơn giá_TC'], ['thanhTien', 'cột Thành tiền']].map(([k, n]) => HAKMoney.problem(lbl + ', ' + n, o[k])).filter(Boolean);
   let donGia = moneyCell(o.donGia); if (donGia == null) donGia = moneyCell(o.donGiaTC);   // ĐG_AD; trống thì dùng Đơn giá_TC
   return {
@@ -2024,10 +2033,31 @@ function exportNotes(rec, g, kind) {
 }
 /* Điều kiện đủ dữ liệu để xuất từng mẫu (dùng chung cho nút tải và bảng Quy trình hồ sơ) */
 const kindOk = g => ({gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD});
-async function exportKind(kind, idx) {
+/* Tải toàn bộ / Đợt 2 khi đã có tờ nền đợt 2 in sẵn: hỏi dùng phần in đè hay in lại đầy đủ trên giấy trắng, và tách gói để không nạp nhầm giấy */
+const ALLQ_TXT = {de: 'Đủ dữ liệu: in đè phần bổ sung', kiemtra: 'Nền in từ trước: đối chiếu rồi in đè', cho: 'Chờ đủ dữ liệu để in đè', doibocuc: 'Bố cục đã đổi: phải in lại', trang: 'Chưa in nền', nen: 'Chưa in nền', thieu: 'Chưa đủ dữ liệu'};
+function exportAllAsk(kind, printed, E) {
+  const list = E.list, canDe = list.filter(x => x.printed && (x.advice === 'de' || x.advice === 'kiemtra')), full = list.filter(x => !canDe.includes(x) && x.fullReady);
+  $('#stBody').innerHTML = '<div class="gh"><h2>Có tờ nền đợt 2 đã in</h2><button class="btn ghost sm" data-act="stClose">✕ Đóng</button></div>' +
+    '<p class="mut" style="margin:0 0 8px">Các mẫu dưới đây đã được xác nhận in nền. Chọn cách xuất để dùng đúng loại giấy; hai loại giấy được tách thành hai gói riêng, có tên khác nhau.</p>' +
+    '<div class="wrap"><table><thead><tr><th>Biểu mẫu / bộ vận chuyển</th><th>Đã in nền</th><th>Tình trạng</th><th>Sẽ xuất</th></tr></thead><tbody>' + list.map(x => '<tr data-allq="' + esc(x.key) + '"><td><b>' + esc(x.label) + '</b></td><td>' + (x.printed ? 'Đã in' : '—') + '</td><td>' + esc(ALLQ_TXT[x.advice] || '') + '</td><td>' + (canDe.includes(x) ? 'Phần in đè' : full.includes(x) ? 'Đầy đủ, giấy trắng' : '<span class="mut">chưa xuất được</span>') + '</td></tr>').join('') + '</tbody></table></div>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="allqDe"' + (canDe.length ? '' : ' disabled') + '>Theo tờ đã in: in đè ' + canDe.length + ' mẫu' + (full.length ? ', giấy trắng ' + full.length + ' mẫu' : '') + (kind === 'all' ? ' (kèm hồ sơ đợt 1)' : '') + '</button>' +
+    '<button class="btn ghost" id="allqFull">In lại đầy đủ đợt 2 trên giấy trắng</button><button class="btn ghost" id="allqCancel">Hủy</button></div>';
+  $('#stBox').classList.add('on');
+  $('#allqCancel').onclick = () => $('#stBox').classList.remove('on');
+  $('#allqFull').onclick = async () => { $('#stBox').classList.remove('on'); await exportKind(kind, null, {full: true}); };
+  $('#allqDe').onclick = async () => {
+    if (list.some(x => x.advice === 'kiemtra') && !confirm('Có mẫu nền in từ trước khi có chức năng này: chưa biết bố cục tờ nền. Đã đối chiếu tờ nền với mẫu hiện tại (khổ giấy, hướng, lề, chữ cố định, số dòng) chưa?')) return;
+    $('#stBox').classList.remove('on');
+    if (kind === 'all') await exportKind('dau', null, {full: true});
+    if (canDe.length) await exportDot2('de', canDe.map(x => x.key));
+    if (full.length) await exportDot2('trang', full.map(x => x.key));
+  };
+}
+async function exportKind(kind, idx, opt) {
   const rec = curRec();
   if (!rec) return;
   if (stBlockNote()) return;
+  if ((kind === 'all' || kind === 'cuoi') && !(opt && opt.full)) { const E = d2Eval(rec), pr = E.list.filter(x => x.printed); if (pr.length) return exportAllAsk(kind, pr, E); }
   const g = gate(rec);
   const ok = kindOk(g)[kind];
   if (!ok) { note('Hồ sơ còn lỗi hoặc thiếu dữ liệu, chưa xuất. Xem tab Xuất hồ sơ.', 'err'); return; }
@@ -2052,12 +2082,14 @@ async function exportKind(kind, idx) {
 /* ========== Trang tổng quan ========== */
 /* Cảnh báo gom theo rừng cho màn Tổng quan: mỗi mục là danh sách rừng bị ảnh hưởng (bấm để mở rừng) */
 const HOME_ALERTS = [['minors', 'err', 'Rừng có lao động dưới 18 tuổi'], ['badDate', 'err', 'Rừng có phiếu cân sai ngày (không tính vào báo cáo)'], ['xeHan', 'warn', 'Rừng có xe hết hạn hoặc sắp hết hạn giấy tờ (trong 30 ngày)'],
-  ['noCoord', 'warn', 'Rừng chưa có tọa độ'], ['noDest', 'warn', 'Rừng chưa chọn địa chỉ giao hàng'], ['noPc', '', 'Rừng chưa có phiếu cân']];
+  ['lechKl', 'warn', 'Rừng có khối lượng thực tế nhập tay lệch tổng phiếu cân (quá 1%)'], ['noCoord', 'warn', 'Rừng chưa có tọa độ'], ['noDest', 'warn', 'Rừng chưa chọn địa chỉ giao hàng'], ['noPc', '', 'Rừng chưa có phiếu cân']];
 function homeData() {
-  const today = parseVN(todayStr()), A = {noPc: [], noCoord: [], noDest: [], xeHan: [], minors: [], badDate: []}, months = {}, T = {du: 0, nc: 0, dx: 0};
+  const today = parseVN(todayStr()), A = {noPc: [], noCoord: [], noDest: [], xeHan: [], minors: [], badDate: [], lechKl: []}, months = {}, T = {du: 0, nc: 0, dx: 0, tt: 0};
   Object.values(db.rs).forEach(o => forestList(o).forEach(f => {
     const rec = jobView(o, f), i = rec.info, ref = {oid: o.id, fid: f.id, name: (i.tenRung || i.maRung || '(rừng chưa đặt tên)') + ' · ' + (o.info.ten || '')};
     const y = forestYield(i); if (y) T.du += y; T.nc += (rec.nc || []).length; T.dx += (rec.dx || []).length;
+    const pcT = Math.round((rec.pc || []).reduce((a, p) => a + (+p.kl > 0 ? Math.round(p.kl * 1000) : 0), 0)) / 1000;   // tổng phiếu cân (làm tròn từng phiếu theo kg như biểu mẫu)
+    if (typeof i.khoiLuong === 'number' && i.khoiLuong > 0) { T.tt += i.khoiLuong; if (pcT > 0 && Math.abs(i.khoiLuong - pcT) / pcT > 0.01) A.lechKl.push({oid: o.id, fid: f.id, name: (i.tenRung || i.maRung || '(rừng chưa đặt tên)') + ' · nhập tay ' + fmtTan(i.khoiLuong) + ' tấn, phiếu cân ' + fmtTan(pcT) + ' tấn'}); }
     if (!(rec.pc || []).length) A.noPc.push(ref);
     if (!(typeof i.lat === 'number' && typeof i.lng === 'number')) A.noCoord.push(ref);
     if (!destOf(rec).text) A.noDest.push(ref);
@@ -2099,7 +2131,7 @@ function panelHome() {
       '<div class="card"><h3>Bắt đầu trong 4 bước</h3><ol style="line-height:2;margin:0;padding-left:20px"><li><b>Chủ rừng</b>: tạo hồ sơ chủ rừng (hoặc lấy từ Tra cứu Google Sheets).</li><li><b>Rừng</b>: khai báo từng rừng, diện tích, tọa độ, giấy tờ pháp lý.</li><li><b>Nhân công và vận chuyển</b>: nạp file Excel nhân công, xe, phiếu cân.</li><li><b>Xuất hồ sơ</b>: kiểm tra checklist FSC rồi xuất BM-01…BM-19.</li></ol>' +
       '<div class="row" style="margin-top:14px"><button class="btn" data-act="newRs">+ Chủ rừng mới</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></div>';
   }
-  const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { a.t += +p.kl || 0; a.n++; }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
+  const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { a.t += +p.kl > 0 ? Math.round(p.kl * 1000) / 1000 : 0; a.n++; }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
   const avg = recs.length ? Math.round(tot.pct / recs.length * 10) / 10 : 0;
   const ringCls = p => p >= 80 ? 'hi' : p >= 50 ? 'mid' : 'lo';
   const todo = recs.filter(r => r.pct < 100).sort((a, b) => a.pct - b.pct).slice(0, 8);
@@ -2110,7 +2142,7 @@ function panelHome() {
   const kp = (v, l, f, acc) => '<div' + (acc ? ' class="acc"' : '') + '><b>' + esc(F(v, f)) + '</b>' + esc(l) + '</div>';
   return '<div class="hero"><div><h2>Tổng quan</h2><p class="mut">' + todayStr() + ' · dữ liệu lưu ' + (HB ? 'trong SQLite trên máy' : 'trong trình duyệt') + '</p></div>' +
     '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Tra cứu</button>' : '') + '</div></div>' +
-    '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(H.T.du * 10) / 10, 'Sản lượng dự kiến (tấn)', 'n1') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)', 'n3') + kp(H.T.du ? Math.round(tot.t / H.T.du * 1000) / 10 : 0, 'Đã cân so với dự kiến', 'pct') + kp(tot.n, 'Số chuyến', 'n0') + kp(H.T.nc, 'Lao động', 'n0') + kp(H.T.dx, 'Số xe', 'n0') + kp(avg, 'Tiến độ hồ sơ TB', 'pct', true) + '</div>' +
+    '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(H.T.du * 10) / 10, 'Sản lượng dự kiến (tấn)', 'n1') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)', 'n3') + kp(Math.round(H.T.tt * 1000) / 1000, 'Khối lượng thực tế nhập tay (tấn)', 'n3') + kp(H.T.du ? Math.round(tot.t / H.T.du * 1000) / 10 : 0, 'Đã cân so với dự kiến', 'pct') + kp(tot.n, 'Số chuyến', 'n0') + kp(H.T.nc, 'Lao động', 'n0') + kp(H.T.dx, 'Số xe', 'n0') + kp(avg, 'Tiến độ hồ sơ TB', 'pct', true) + '</div>' +
     '<div class="grid2"><div class="card"><h3>Hồ sơ cần hoàn thiện</h3>' + (todo.length ? '<div class="dlist">' + todo.map(r => '<button class="drow" data-dash="' + esc(r.oid + '|' + r.fid) + '"><span><b>' + esc(r.tenRung || r.maRung || '(rừng chưa đặt tên)') + '</b> <span class="mut">· ' + esc(r.chuRung) + '</span><small>' + esc((r.thieu || []).slice(0, 2).map(x => x.label).join('; ') || '') + ((r.thieu || []).length > 2 ? ' và ' + ((r.thieu || []).length - 2) + ' mục khác' : '') + '</small></span><span class="ring ' + ringCls(r.pct) + '" style="--p:' + r.pct + '"><i>' + Math.round(r.pct) + '%</i></span></button>').join('') + '</div>' : '<p class="mut">Tất cả hồ sơ đã đạt 100%.</p>') + '</div>' +
     '<div class="card"><h3>Phiếu cân gần đây</h3>' + (recent.length ? '<div class="wrap" style="max-height:none"><table><tr><th>Ngày</th><th>Số phiếu</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th></tr>' + recent.map(p => '<tr><td>' + esc(p.ngay) + '</td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + esc(F(+p.kl || 0, 'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Tra cứu Google Sheets' : '') + '.</p>') + '</div></div>' +
     '<div class="grid2" style="margin-top:16px"><div class="card"><h3>Cần chú ý ở các rừng</h3>' + homeAlertsHtml(H.A) + '</div><div class="card"><h3>Sản lượng theo tháng</h3>' + homeMonthsHtml(H.months) + '</div></div>' +
@@ -3319,7 +3351,7 @@ async function importGo() {
   const r = await HB.importApply(window.__imp, strat, opts);
   $('#impBox').classList.remove('on'); window.__imp = null; window.__plan = null;
   if (!r.ok) return note('Không nhập được, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
-  db = withDefaults(r.db); cur = null; curF = null;
+  db = withDefaults(r.db); Object.keys(stages).forEach(k => delete stages[k]); cur = null; curF = null;   // dữ liệu vừa được thay: bản nháp cũ không còn đích
   note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân. Bản sao lưu trước khi nhập: ' + r.backup);
 }
 
@@ -3428,6 +3460,7 @@ async function settingsBackup(reset) {
 async function lotBackup() {
   const f = curForest(), o = curOwner(); if (!f || !o) return note('Hãy mở một lô rừng trước khi sao lưu.', 'err');
   if (!HB) return note('Sao lưu lô rừng cần bản cài trên Windows.', 'err');
+  if (stDirtyCur() && !confirm('Lô này còn thay đổi chưa lưu. File sao lưu chỉ gồm dữ liệu ĐÃ LƯU (không gồm phần chưa lưu).\n\nTiếp tục sao lưu?')) return;
   let pkg; try { pkg = HAKLoRung.exportLot(db, o.id, f.id, {version: (dbInfo && dbInfo.version) || ''}); } catch (e) { return note('Không sao lưu được lô: ' + e.message, 'err'); }
   const r = await HB.lotSave(pkg);
   if (r.canceled) return;
@@ -3468,7 +3501,7 @@ async function lotGo() {
   const r = await HB.lotApply(window.__lot, act);
   $('#impBox').classList.remove('on'); window.__lot = null;
   if (!r.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
-  db = withDefaults(r.db);
+  db = withDefaults(r.db); Object.keys(stages).forEach(k => delete stages[k]);
   if (!r.doi) return note('Giữ bản hiện có của lô ' + r.plan.maLo + ': không có gì thay đổi.');
   cur = r.ownerId; curF = r.forestId; view = 'owner'; tab = 'rung'; ftab = 'finfo'; render();
   note('Đã khôi phục lô ' + r.plan.maLo + ' (' + lotCnt(r.plan.incoming) + '). Bản sao lưu trước khi ghi: ' + r.backup, 'ok');
@@ -3480,7 +3513,7 @@ async function restoreAll(file) {
     if (!o || typeof o !== 'object' || !o.rs) throw new Error('File không đúng định dạng sao lưu.');
     if (HB) return importWithPreview(withDefaults(o.v === 2 ? o : migrateV1(o)));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
-    db = withDefaults(o.v === 2 ? o : migrateV1(o)); persist(); cur = null; curF = null;
+    db = withDefaults(o.v === 2 ? o : migrateV1(o)); Object.keys(stages).forEach(k => delete stages[k]); persist(); cur = null; curF = null;
     note('Đã khôi phục ' + Object.keys(db.rs).length + ' hồ sơ chủ rừng.');
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
 }
