@@ -2,7 +2,7 @@
 /* Danh mục "Công ty mua hàng" và điểm đến vận chuyển. Thuần dữ liệu, không phụ thuộc DOM/Electron: dùng ở giao diện (nhúng khi build) và kiểm thử Node.
  *
  * Công ty (db.congTy[id]):
- *   {id, ten, mst, diaChi, nguoiDaiDien, chucVu, sdt, email, diaChiGiao: [{id, nhan, diaChi}], ghiChu}
+ *   {id, ten, mst, diaChi, nguoiDaiDien, chucVu, sdt, fax, noiLap, email, diaChiGiao: [{id, nhan, diaChi}], ghiChu}
  *   - ten (tên pháp lý) và diaChi (địa chỉ công ty/trụ sở) BẮT BUỘC; các trường còn lại tùy chọn.
  *   - diaChiGiao: các địa chỉ giao hàng khác của công ty (kho, nhà máy…); địa chỉ công ty luôn là lựa chọn đầu tiên.
  * Công ty mua hàng là một VAI TRÒ riêng, chọn theo từng rừng; hồ sơ rừng lưu BẢN CHỤP (info.muaHang) tên + địa chỉ đã xác nhận:
@@ -19,12 +19,12 @@
   const mstValid = v => { const m = normMst(v); return m === '' || /^\d{10}$/.test(m) || /^\d{13}$/.test(m); };
   const mstShow = v => { const m = normMst(v); return m.length === 13 ? m.slice(0, 10) + '-' + m.slice(10) : m; };
 
-  function newCompany() { return {id: '', ten: '', mst: '', diaChi: '', nguoiDaiDien: '', chucVu: '', sdt: '', email: '', diaChiGiao: [], ghiChu: ''}; }
+  function newCompany() { return {id: '', ten: '', mst: '', diaChi: '', nguoiDaiDien: '', chucVu: '', sdt: '', fax: '', noiLap: '', email: '', diaChiGiao: [], ghiChu: ''}; }
 
   /* Chuẩn hóa dữ liệu nhập (không đổi ý nghĩa): cắt khoảng trắng, MST chuẩn hóa, bỏ địa chỉ giao rỗng, giữ id địa chỉ */
   function clean(o, newId) {
     const c = Object.assign(newCompany(), o || {});
-    ['ten', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'email', 'ghiChu'].forEach(k => { c[k] = trim(c[k]); });
+    ['ten', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'email', 'ghiChu'].forEach(k => { c[k] = trim(c[k]); });
     c.mst = mstShow(c.mst);
     let n = 0;
     c.diaChiGiao = (Array.isArray(c.diaChiGiao) ? c.diaChiGiao : []).map(a => ({id: trim(a && a.id) || (newId ? newId('a') : 'a' + (++n)), nhan: trim(a && a.nhan), diaChi: trim(a && a.diaChi)})).filter(a => a.diaChi || a.nhan);

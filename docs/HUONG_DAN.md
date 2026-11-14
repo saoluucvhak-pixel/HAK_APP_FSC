@@ -49,15 +49,61 @@ Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa c
 - **Đổi mã lô**: các dòng nhân công, xe, phiếu cân mang mã cũ được **đổi theo mã mới** để dữ liệu vẫn thuộc đúng lô; dòng mang một mã khác được báo, không tự đổi.
 - Thanh **Tiến độ hồ sơ · checklist FSC** ở đầu lô cho biết % hoàn thành và từng mục còn thiếu.
 
+## 3a. Màn hình Tổng quan
+- **Chỉ số**: số chủ rừng, số rừng, tổng diện tích, **sản lượng dự kiến** (diện tích × định mức), khối lượng đã cân và **tỷ lệ đã cân so với dự kiến**, số chuyến, số lao động, số xe, tiến độ hồ sơ trung bình.
+- **Hồ sơ cần hoàn thiện** và **Phiếu cân gần đây**: bấm một rừng để mở thẳng hồ sơ rừng đó.
+- **Cần chú ý ở các rừng**: gom theo rừng các việc cần xử lý: lao động dưới 18 tuổi, phiếu cân sai ngày, xe hết hạn hoặc sắp hết hạn giấy tờ (trong 30 ngày), rừng chưa có tọa độ, chưa chọn địa chỉ giao hàng, chưa có phiếu cân. Bấm tên rừng để mở.
+- **Sản lượng theo tháng**: khối lượng phiếu cân 6 tháng gần nhất.
+- **Hệ thống**: bản tra cứu đang dùng (nguồn, thời điểm nạp, số dòng), lần sao lưu toàn bộ gần nhất (nhắc khi đến hạn), và lối tắt: Tra cứu Google Sheets, **Báo cáo đối chiếu** (dùng được khi đã có bản tra cứu), Sao lưu toàn bộ, Cài đặt.
+
+## 3b. In phiếu cân (giấy lỗ 240 × 279 mm)
+In phiếu cân **theo rừng**, giống xuất hồ sơ: vào lô → tab **Xuất hồ sơ** → thẻ **In phiếu cân** → bấm **In phiếu cân**.
+- **Dùng nguyên bản công cụ PhieuCan**: file `renderer/PhieuCan.html` giữ nguyên từng byte (bố cục tính theo mm, giấy lỗ 240 × 279 mm, đường xé giữa, chỉnh lề, 2 phiếu hoặc 2 liên một trang, tải PDF). Phần mềm không vẽ lại phiếu nên bản in giống hệt công cụ gốc. Công cụ mở trong cửa sổ riêng, đã có sẵn phiếu cân của rừng; phần chọn file Excel, thông tin công ty bị ẩn vì dữ liệu đã có trong phần mềm.
+- **Một nguồn dữ liệu cho mọi cách đưa phiếu cân vào rừng**: nhập file phiếu cân ở tab Vận chuyển, đưa từ **Tra cứu Google Sheets** sang rừng, hay **cập nhật biển số xe**, đều ghi cùng các trường (số phiếu, ngày và giờ cân 1/2, biển số, cân lần 1/2, khối lượng kg, khách hàng, đơn giá, thành tiền). Thẻ In phiếu cân đọc đúng các trường đó nên không cần file Excel riêng.
+- **Báo phiếu còn thiếu**: thẻ cho biết bao nhiêu phiếu đủ thông tin và còn thiếu gì (ví dụ cân lần 1, giờ cân, khách hàng). Phiếu thiếu vẫn in được, phần thiếu để trống. Bổ sung bằng Tra cứu Google Sheets (chọn các phiếu đã có để cập nhật) hoặc nhập lại file phiếu cân của rừng.
+- **Tiêu đề phiếu** (tên công ty, địa chỉ, điện thoại, fax, nơi lập) lấy từ **Cài đặt → Công ty**; có thêm hai ô **Fax** và **Nơi lập chứng từ** (ví dụ Đà Nẵng). Chưa khai công ty thì công cụ dùng tiêu đề mặc định; Fax trống thì không in FAX; Nơi lập trống thì giữ giá trị của công cụ. Khách hàng trống thì lấy tên chủ rừng; địa chỉ rừng lấy từ hồ sơ rừng.
+- **Một file mẫu Excel đầy đủ trường cho phiếu cân**: nút “Tải file mẫu” ở tab Vận chuyển cho file có đủ cột để in phiếu cân, **cùng tên cột với file mẫu của công cụ PhieuCan**: Số phiếu, Ngày cân 1, Giờ cân 1, Ngày cân 2, Giờ cân 2, Biển số 1, Cân 1, Cân 2, KL, Nguồn gốc, Khách hàng, Địa chỉ, ĐG_AD, So_CT, Đơn giá_TC, Trạng thái, Thành tiền (thêm Khối lượng (tấn), Nơi giao, Ghi chú). Cùng một dữ liệu phục vụ **Vận chuyển** (khối lượng, tiền cước, BM-09, BM-10, báo cáo) và **in phiếu cân**. KL để trống thì tự tính = Cân 1 − Cân 2; Trạng thái khác OK (ví dụ HỦY) thì phiếu không được chọn sẵn khi in. Nạp được cả file mẫu của chính công cụ PhieuCan (tiêu đề ở dòng 4) và file mẫu phiếu cân bản cũ (tên cột cũ như “Biển kiểm soát”, “Số phiếu cân”).
+- **Đưa phiếu cân từ Google Sheets**: Tra cứu mang theo đủ trường (giờ cân, cân 1/2, KL, khách hàng, địa chỉ rừng, nguồn gốc, đơn giá, thành tiền). Xe đã đổi thì sửa biển số ngay trong bảng xem trước (ô Biển số của từng phiếu, có gợi ý biển trong đội xe) rồi đưa qua; hoặc đưa qua luôn rồi cập nhật biển số sau. Hai cách cho cùng một dữ liệu.
+- **Đơn giá và thành tiền** in trên phiếu lấy từ chính phiếu cân: phiếu **đưa từ Google Sheets** mang sẵn cột “Đơn giá” và “Thanh toán” (thành tiền); phiếu **nhập file** dùng cột **ĐG_AD** (hoặc Đơn giá_TC) và **Thành tiền**, đọc cả số dạng chữ như 1.250.000. Đơn giá dưới 100.000 được hiểu là đồng/kg. Thiếu thành tiền mà có đơn giá thì công cụ tự tính = khối lượng × đơn giá, làm tròn xuống nghìn đồng; thiếu đơn giá thì in 0. Bảng phiếu cân ở tab Vận chuyển hiện hai cột giá.
+- Trong công cụ: chọn phiếu, chỉnh **Khổ giấy** (mặc định giấy lỗ 240 × 279 mm), cách xếp, dịch lề, rồi **Tải PDF PhieuCan** hoặc **In / Lưu PDF bằng trình duyệt**; “Lưu cài đặt trên máy này” để nhớ lề đã canh.
+- Kiểm thử tự động xác nhận file công cụ không đổi (SHA-256 trong `tests/phieucan.sha256`) và PDF ra đúng 240 × 279 mm. In ra giấy thật phải bạn tự kiểm tra trên máy in của mình.
+
+## 3c. Đổi biển số xe của phiếu cân
+Hai thời điểm sửa, cùng một kết quả.
+
+**Cách 1 – đổi biển rồi mới đưa qua rừng (phiếu từ Google Sheets):**
+1. Mở rừng cần nhận phiếu (hoặc chọn **Xem trước để tạo rừng mới**). **Tra cứu Google Sheets** → tab **HoSoKeo (phiếu cân)** → gõ số phiếu, CCCD hoặc tên chủ rừng → **Tìm** → **Chọn**.
+2. Bấm **Điền vào rừng đang mở**. Bảng **Phiếu cân** hiện từng phiếu với ô **Biển số** sửa được (gợi ý biển trong đội xe của rừng).
+3. Gõ biển đúng vào ô của phiếu cần đổi (tự viết hoa, hiện nhãn *đã đổi từ …*). Phiếu ghi bằng tên xe thì dùng khung **Ghép tên xe với biển số** (lưu một lần). Xóa nội dung ô để trả lại biển gốc.
+4. **Chọn mọi phiếu ghi được** (hoặc tích từng phiếu) → **Lưu vào hồ sơ**. Phiếu vào rừng mang biển đã đổi cùng đủ giờ cân, cân 1/2, khối lượng, khách hàng, địa chỉ, đơn giá, thành tiền.
+
+**Cách 2 – đã đưa qua rồi mới đổi xe:**
+1. Khi bảng tính tra cứu đã có biển mới: mở rừng → **Tra cứu Google Sheets** → tab HoSoKeo → tìm số phiếu → **Chọn** → **Điền vào rừng đang mở**.
+2. Khung **Biển số xe khác với hồ sơ** liệt kê biển cũ → biển mới của từng phiếu.
+3. Bấm **Chỉ cập nhật biển số xe (n phiếu)**: ngày, khối lượng và các trường in giữ nguyên; việc đổi được ghi lại.
+
+Xem lại các phiếu đã đổi: **Báo cáo → Phiếu cân đã cập nhật biển số xe**. Biển mới phải có trong đội xe của rừng, nếu chưa có thì thêm xe ở tab Vận chuyển.
+
+## 3d. Các bước in phiếu cân
+1. Bảo đảm rừng đã có phiếu cân (nạp file Excel mẫu đầy đủ trường ở tab Vận chuyển, hoặc đưa từ Tra cứu Google Sheets, xem 3c). Khai **Cài đặt → Công ty** đủ tên, địa chỉ, điện thoại, Fax, Nơi lập chứng từ vì tiêu đề phiếu lấy từ đó.
+2. Tab **Xuất hồ sơ** → thẻ **In phiếu cân**: xem số phiếu và còn thiếu gì (cân, giờ, khách hàng, đơn giá…). Phiếu thiếu vẫn in được, phần thiếu để trống.
+3. Bấm **In phiếu cân**: cửa sổ công cụ PhieuCan mở, đã nạp sẵn phiếu của rừng; phiếu Trạng thái khác OK (ví dụ HỦY) không được chọn sẵn.
+4. Chọn phiếu (ô tìm, **Chọn tất cả**, **Bỏ chọn**), xem trước đúng bố cục sẽ in.
+5. Mở **Tuỳ chọn in** khi cần: **Khổ giấy** (mặc định giấy lỗ 240 × 279 mm), cách xếp (2 phiếu khác số một trang, 1 phiếu in 2 liên, 1 phiếu), dịch lề toàn phiếu hoặc riêng liên dưới theo mm, tên người cân, ghi chú. **Lưu cài đặt trên máy này** để lần sau giữ lề đã canh.
+6. **In / Lưu PDF bằng trình duyệt** để in ra máy in, hoặc **Tải PDF PhieuCan** để lấy file PDF đúng khổ giấy.
+
+Khi in: chọn đúng khổ giấy lỗ, tỉ lệ 100% (không “vừa trang”), không thêm lề; in thử một trang trước. Giá mua và thành tiền lấy từ phiếu cân (đơn giá dưới 100.000 hiểu là đồng/kg); thiếu đơn giá thì in 0.
+
 ## 4. Nhân công, hợp đồng và đơn giá
 Vào lô → tab **Nhân công** → mục **Thông số hợp đồng và đơn giá**:
 1. **Hình thức hợp đồng**
-   - **Giao khoán**: chủ rừng ký hợp đồng khoán (BM-01) với **Tổ trưởng**; các công nhân ký **một Giấy ủy quyền (BM-20)** cho Tổ trưởng. Tính theo **tấn hoặc ha**.
+   - **Giao khoán**: chủ rừng ký hợp đồng khoán (BM-01) với **Tổ trưởng**; các công nhân ký **một Giấy ủy quyền (BM-20)** cho Tổ trưởng. Tính theo **tấn, ha hoặc ngày công**. Khi chọn **ngày công**, Tổ trưởng nhận thay cả tổ tổng tiền rồi chi trả lại từng người theo cột “Thực nhận” của BM-08.
    - **Trực tiếp**: chủ rừng ký hợp đồng lao động (BM-03) với **mọi nhân công**. Tính theo **tấn hoặc ngày công**.
 2. **Đơn giá theo từng chức danh** (Tổ trưởng, Công nhân khai thác, Công nhân cưa): ô đơn giá hiện theo cơ sở tính đã chọn (đồng/tấn, đồng/ha, đồng/công). Thiếu đơn giá của chức danh nào thì dòng nhân công đó báo lỗi.
 3. **Sản lượng chia đều**: tấn (hoặc ha, hoặc số công) chia đều cho **mọi người trong tổ, kể cả Tổ trưởng**; tiền mỗi người = phần chia × đơn giá chức danh của người đó.
 4. **Ngày bắt đầu** dùng cho hợp đồng, chấm công và kiểm tra **đủ 18 tuổi**. Người dưới 18 tuổi bị cảnh báo và **không xuất được Giấy ủy quyền**.
-5. **Định mức BHLĐ** theo chức danh (nút **Định mức BHLĐ** ở cột bên trái) dùng cho sổ cấp phát.
+5. **Chấm công thực tế** (chỉ khi cơ sở tính là **ngày công**, cả giao khoán lẫn trực tiếp): thẻ **Chấm công thực tế** ngay dưới thông số ở tab Nhân công. Chọn tháng, nhập số công từng ngày cho từng người (**1** đủ công, **0,5** nửa công, **0** hoặc trống là nghỉ; tối đa 3 mỗi ngày), hoặc bấm **Điền đủ công (trừ Chủ nhật)** rồi sửa các ngày nghỉ. Tổng tháng và cả đợt hiện ngay. Quy tắc: **chưa chấm công** thì BM-08 tính mọi người bằng số công theo thời gian khai thác (trừ Chủ nhật); **đã chấm công** thì BM-08 dùng tổng công của từng người (người chưa chấm là 0 công). Hợp đồng (BM-01, BM-03, BM-20) luôn dùng số công dự tính nên không đổi khi chấm công. Nút **In bảng chấm công đã nhập** tải BM-05 của tháng đang chọn có sẵn số công; BM-05 trong các gói hồ sơ vẫn là mẫu trống để chấm tay.
+6. **Định mức BHLĐ** theo chức danh (nút **Định mức BHLĐ** ở cột bên trái) dùng cho sổ cấp phát.
 6. Nạp danh sách người bằng file Excel mẫu (xem mục 6). Mỗi lô cần **đúng một Tổ trưởng**.
 
 ## 5. Vận chuyển: xe, phiếu cân, cước, địa chỉ giao
@@ -202,7 +248,9 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 - **Thiếu hoặc sai ngày ký**: năm để trống (`015/……-KT`), không tự điền năm cố định; khung “Số hợp đồng đầy đủ sẽ in (xem trước)” ở tab Xuất hồ sơ nêu rõ cần bổ sung ngày nào. Các dòng ngày để trống in “ngày ….. tháng ….. năm …….”.
 - BM-01, BM-14 và BM-20 của cùng hồ sơ giao khoán luôn tham chiếu **cùng một số** hợp đồng khai thác.
 
-**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Tám mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
+**Nút Báo cáo**: chọn kỳ (từ ngày – đến ngày theo **ngày cân**) và chủ rừng, xem trước rồi xuất **Word** hoặc **Excel**. Chín mẫu: tổng hợp điều hành, sản lượng theo rừng, **sổ theo dõi phiếu cân** (có cột điểm đến theo hồ sơ và đối chiếu nơi giao), tiến độ FSC, bảng cha–con chủ rừng – rừng – phiếu cân. Số liệu giữa xem trước, Word và Excel giống nhau. **Phiếu có ngày không có thật bị loại khỏi tổng của kỳ** và được liệt kê ở mục riêng kèm lý do. Phiếu trùng số vẫn được cộng vào tổng nhưng đánh dấu “Trùng số phiếu”.
+
+**Báo cáo đối chiếu bản tra cứu** (mẫu “Đối chiếu bản tra cứu: tọa độ, hồ sơ rừng, phiếu cân”): đọc bản Google Sheets/Excel đang dùng ở Tra cứu và đối chiếu ba tab HoSoRung, ToaDoRung, HoSoKeo theo **CCCD và mã hợp đồng**. Liệt kê: **I.** rừng ở HoSoRung thiếu dòng tọa độ ở ToaDoRung hoặc tọa độ không dùng được (ghi lý do, dòng nguồn); **II.** phiếu cân ở HoSoKeo thiếu hồ sơ rừng ở HoSoRung (gộp theo chủ rừng và hợp đồng: số phiếu, khối lượng, từ ngày – đến ngày, ví dụ số phiếu, gợi ý nếu cùng CCCD có hợp đồng khác); **III.** dòng tọa độ thiếu hồ sơ rừng; **IV.** rừng chưa có phiếu cân. Có tìm nhanh (tên, CCCD, hợp đồng, số phiếu), lọc “chỉ rừng thiếu tọa độ” và “chỉ phiếu cân thiếu hồ sơ rừng”, xuất Word và Excel. Chưa có bản tra cứu thì báo rõ. Cần sửa thì sửa trên bảng tính gốc rồi **Đồng bộ ngay** lại.
 
 ## 10. Sao lưu và khôi phục
 Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.

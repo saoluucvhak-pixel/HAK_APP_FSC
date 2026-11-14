@@ -1,0 +1,3 @@
+renderer/PhieuCan.html -text
+tests/fixtures/*.xlsx binary
+tests/fixtures/*.sqlite binary

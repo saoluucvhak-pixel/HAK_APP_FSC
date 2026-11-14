@@ -48,7 +48,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   await w.click('[data-ftab=nc]');
 
   // ===== GIAO KHOÁN =====
-  ok('giao khoán là hình thức mặc định; cơ sở tính chỉ có tấn và ha (không có ngày công)', JSON.stringify(await opts()) === '["sanluong","ha"]', JSON.stringify(await opts()));
+  ok('giao khoán là hình thức mặc định; cơ sở tính có tấn, ha và ngày công (Tổ trưởng nhận thay cả tổ)', JSON.stringify(await opts()) === '["sanluong","ha","ngaycong"]', JSON.stringify(await opts()));
   const TAN = [340000, 200000, 250000], HA = [8000000, 6000000, 7000000];
   await price('dt_', TAN); await save();
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
@@ -83,7 +83,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   f = await exp('all', '.zip'); let z = await JSZip.loadAsync(fs.readFileSync(f)); let names = Object.keys(z.files);
   ok('gói tất cả (giao khoán): có Giấy ủy quyền, không có thư mục 03_HDLD (hợp đồng lao động từng người)', names.some(n => /^20_Giay_uy_quyen/.test(n)) && !names.some(n => /^03_HDLD\//.test(n)), names.join(', '));
 
-  // Giao khoán không cho chọn ngày công; đổi sang trực tiếp thì ha bị đổi về tấn
+  // Giao khoán chọn được tấn, ha hoặc ngày công; đổi sang trực tiếp thì ha bị đổi về tấn
   await w.click('[data-ftab=nc]');
   await w.selectOption('#luongForm [name=moHinhKy]', 'tructiep');
   ok('đổi sang trực tiếp khi đang chọn “theo ha”: tự đổi về “theo tấn”; cơ sở tính còn tấn và ngày công', await w.inputValue('#luongForm [name=hinhThucLuong]') === 'sanluong' && JSON.stringify(await opts()) === '["sanluong","ngaycong"]', JSON.stringify(await opts()));
@@ -108,15 +108,15 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   const info = (extra) => ({maRung: 'R-X', tenRung: 'Rừng X', diaDiem: 'Thôn X', lat: null, lng: null, dienTich: 2, dinhMucTanHa: 10, cuLy: null, tuNgay: '01/10/2026', denNgay: '30/11/2026', giayTo: [], donGiaTan: {'Tổ trưởng': 1, 'Công nhân khai thác': 1, 'Công nhân cưa': 1}, ...extra});
   const mk = (id, ten, extra, nc) => ({id, info: {...OWNER, ten, danhXung: 'Ông'}, nc: [], dx: [], exp: {}, forests: {['f' + id]: {id: 'f' + id, info: info(extra), nc, dx: [], pc: [], exp: {}}}});
   const db = {v: 2, rs: {
-    a: {...mk('a', 'CHỦ CŨ', {moHinhKy: 'giaokhoan', hinhThucLuong: 'ngaycong', donGiaNgay: {'Tổ trưởng': 1, 'Công nhân khai thác': 1, 'Công nhân cưa': 1}}, [person('Tổ trưởng', 'Tổ trưởng', 'AAA TT', '01/01/1980'), person('Công nhân', 'Công nhân khai thác', 'BBB CN', '01/01/1985')]), info: {...OWNER, ma: 'CR-A', cccd: '049000000011', ten: 'CHỦ CŨ', danhXung: 'Ông'}},
+    a: {...mk('a', 'CHỦ CŨ', {moHinhKy: 'tructiep', hinhThucLuong: 'ha', donGiaHa: {'Tổ trưởng': 1, 'Công nhân khai thác': 1, 'Công nhân cưa': 1}}, [person('Tổ trưởng', 'Tổ trưởng', 'AAA TT', '01/01/1980'), person('Công nhân', 'Công nhân khai thác', 'BBB CN', '01/01/1985')]), info: {...OWNER, ma: 'CR-A', cccd: '049000000011', ten: 'CHỦ CŨ', danhXung: 'Ông'}},
     b: {...mk('b', 'CHỦ TRẺ', {maRung: 'R-Y', moHinhKy: 'giaokhoan', hinhThucLuong: 'sanluong'}, [person('Tổ trưởng', 'Tổ trưởng', 'CCC TT', '01/01/1980'), person('Công nhân', 'Công nhân khai thác', 'DDD CN', '01/01/2012')]), info: {...OWNER, ma: 'CR-B', cccd: '049000000022', ten: 'CHỦ TRẺ', danhXung: 'Ông'}}}};
   await w.evaluate(d => window.hak.save(d), db); await w.reload(); await w.waitForSelector('#side');
   const openForest = async name => { await w.click('#sideQ'); await w.fill('#sideQ', name); await w.click('[data-open]:has-text("' + name + '")'); await w.click('[data-sforest] >> nth=0'); };
   await openForest('CHỦ CŨ');
   const chk = () => w.innerText('.chk');
-  ok('hồ sơ cũ giao khoán + ngày công: checklist báo “Giao khoán chỉ tính theo tấn hoặc ha”', /Giao khoán chỉ tính theo tấn hoặc ha/.test(await chk()), (await chk()).slice(0, 300));
+  ok('hồ sơ cũ trực tiếp + theo ha: checklist báo “Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công”', /Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công/.test(await chk()), (await chk()).slice(0, 300));
   await w.click('[data-ftab=nc]');
-  ok('hồ sơ cũ: ô chọn hiển thị rõ lựa chọn không hợp lệ và các lựa chọn đúng', (await w.$$eval('#luongForm [name=hinhThucLuong] option', o => o.map(x => x.textContent))).some(x => /không áp dụng/.test(x)) && JSON.stringify(await opts()) === '["sanluong","ha","ngaycong"]', JSON.stringify(await opts()));
+  ok('hồ sơ cũ: ô chọn hiển thị rõ lựa chọn không hợp lệ và các lựa chọn đúng', (await w.$$eval('#luongForm [name=hinhThucLuong] option', o => o.map(x => x.textContent))).some(x => /không áp dụng/.test(x)) && JSON.stringify(await opts()) === '["sanluong","ngaycong","ha"]', JSON.stringify(await opts()));
   await openForest('CHỦ TRẺ'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   ok('có người dưới 18 tuổi: Giấy ủy quyền không xuất được và nói rõ lý do', await w.isDisabled('button[data-act=dl][data-kind=uq]') && /dưới 18 tuổi/.test(await w.innerText('#main')));
   ok('không có lỗi JavaScript sau khi mở lại', errs.length === 0, errs.join('; '));

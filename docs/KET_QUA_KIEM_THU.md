@@ -267,3 +267,29 @@ Rà bằng skill unslop (chế độ polish: giao diện đã dùng bảng màu 
 ## 39. Rà soát và hệ thống hóa quy trình theo đợt (bản 1.4.28)
 Chi tiết ở `docs/QUY_TRINH_HO_SO.md`. Bất biến “đợt 1 độc lập đợt 2” (`scripts/e2e-batbien.js`) **phát hiện bốn lỗi thật** ở BM-01, BM-11, BM-17, BM-18 (mẫu đợt 1 đọc dữ liệu đợt 2), đã sửa; kiểm tra chéo BM-08/09/10/14/01 không lệch. Bảng Quy trình hồ sơ theo đợt (`src/quytrinh.js`, `tests/quytrinh.test.js` 5 ca, `scripts/e2e-quytrinh.js`): trạng thái dữ liệu, đánh dấu đã in lưu bền (đóng/mở lại), phát hiện dữ liệu đổi sau khi in (chỉ các mẫu liên quan), nhập dữ liệu đợt 2 không làm đợt 1 “in lại”, việc nên làm tiếp theo thứ tự quy trình.
 
+## 40. Giao khoán trả theo ngày công và chấm công thực tế (bản 1.4.29)
+- **Quy tắc**: giao khoán chọn được tấn, ha hoặc ngày công; trực tiếp vẫn chỉ tấn hoặc ngày công. Giao khoán theo ngày công: BM-01 (mục 2.2 trả theo ngày công, dự tính số công), BM-08 (đoạn Tổ trưởng nhận thay cả tổ, có trong cả mẫu nền và in đè), BM-20 (chi trả theo số công thực tế).
+- **Chấm công** (`src/chamcong.js`, `tests/chamcong.test.js` 7 kiểm tra; `scripts/e2e-chamcong.js` 19 kiểm tra): thẻ Chấm công thực tế, điền đủ công trừ Chủ nhật, sửa ô (0,5 / 0 / 1,5), ô sai hoặc quá 3 công bị từ chối và giữ giá trị cũ, tổng tháng và cả đợt, lưu lại sau khi mở lại, BM-08 dùng công từng người (5,5 / 5 / 6,5 công ra 5.780.000 đồng), in BM-05 đã nhập, ký trực tiếp dùng chung số công.
+- **Bất biến giữ nguyên**: BM-01, BM-20 và BM-05 trong gói hồ sơ giống hệt trước và sau khi chấm công; BM-08 mẫu nền không in số công, số tiền.
+- `scripts/e2e-hopdong.js` đổi theo quy tắc mới (giao khoán có ngày công; trường hợp sai nay là trực tiếp + ha).
+- **Chưa kiểm được**: in giấy thật và mở bằng Microsoft Word.
+
+## 41. In phiếu cân bằng nguyên bản công cụ PhieuCan (bản 1.4.29)
+- File `renderer/PhieuCan.html` do người dùng cung cấp được giữ nguyên từng byte; `tests/phieucan.test.js` (4 kiểm tra) so dấu vân tay SHA-256, kiểm khổ giấy 240 × 279 mm và bố cục mm còn trong file, kiểm bảng dữ liệu nạp vào công cụ (`src/phieucan.js`).
+- `scripts/e2e-phieucan.js` (10 kiểm tra, Electron thật): mở công cụ từ rừng và từ menu ngang, nạp đúng 3 phiếu, nội dung phiếu, bản in PDF qua Chromium đúng 2 trang 240 × 279 mm, chọn A4 thì ra 210 × 297 mm, nút “Tải PDF PhieuCan” ra file 2 trang 240 × 279 mm.
+- **Đơn giá, thành tiền trên phiếu cân**: Google Sheets (`moneyOf` trong `src/lookup.js`, cột “Đơn giá”, “Thanh toán”) và file mẫu phiếu cân (hai cột mới) cùng ghi `donGia`, `thanhTien` vào phiếu; phiếu in lấy giá từ đó; bổ sung giá cho phiếu cũ qua Tra cứu (`scripts/e2e-bienso.js`, `scripts/e2e-pcmau.js`, `tests/lookup.test.js`, `tests/phieucan.test.js`, `tests/xlsxmau.test.js`).
+- **Một mẫu Excel đầy đủ trường cho phiếu cân** (`src/xlsxmau.js`, `ui/app.src.html` H_PC/PC_ALIAS/parseSheet, `scripts/e2e-pcmau.js`, `tests/fixtures/MauPhieuCan_cong_cu.xlsx`): tên cột trùng công cụ PhieuCan; nạp được file của công cụ (tiêu đề dòng 4, KL trống tự tính, đơn giá chữ, trạng thái HỦY không chọn sẵn khi in) và file mẫu cũ (tên cột cũ). Google Sheets: sửa biển số từng phiếu trong bảng xem trước rồi mới đưa qua (`scripts/e2e-bienso.js`).
+- **Cả luồng phiếu cân** (`scripts/e2e-luongpc.js`, 14 kiểm tra, Electron thật, bảng tính Google Sheets giả lập): đổi biển số trong bảng xem trước rồi đưa qua rừng (phiếu 1001 mang biển 92C-77777, đủ giờ cân, cân 1/2, KL, khách hàng, địa chỉ, nguồn gốc, đơn giá, thành tiền) → in phiếu cân ra đúng biển, cân, giá 1.500 đ/kg, thành tiền 4.260.000; rồi đổi xe lần nữa bằng “cập nhật biển số xe” (92C-77777 → 92C-54321) → in lại ra biển mới nhất, các trường khác giữ nguyên.
+- **In theo rừng, giản lược** (`scripts/e2e-phieucan.js`, `tests/phieucan.test.js`): thẻ In phiếu cân nằm ở tab Xuất hồ sơ (bỏ nút ở menu ngang và tab Vận chuyển); công cụ ẩn phần Excel, mẫu, khách hàng, công ty, Số CT/đơn giá; phiếu từ file nhập ở rừng, Google Sheets và cập nhật biển số cho ra cùng một dòng dữ liệu; báo phiếu thiếu thông tin.
+- Thông tin công ty: hồ sơ công ty có thêm **Fax** và **Nơi lập chứng từ**; tiêu đề phiếu cân (tên, địa chỉ, điện thoại, fax, nơi lập) lấy từ đó (`tests/phieucan.test.js`, 2 kiểm tra e2e).
+- **Chưa kiểm được**: in ra giấy lỗ thật bằng máy in của người dùng (đường xé, lề vật lý).
+
+## 42. Báo cáo đối chiếu bản tra cứu (bản 1.4.30)
+- `Lookup.audit()` (`src/lookup.js`): đối chiếu ba tab theo CCCD + mã hợp đồng: rừng thiếu hoặc không dùng được tọa độ, phiếu cân thiếu hồ sơ rừng, tọa độ thiếu hồ sơ rừng, rừng chưa có phiếu cân. Giao tiếp qua `lookup:audit` (preload, tiến trình chính). Mẫu báo cáo `doichieu` trong `ui/reports.js` với tìm nhanh và hai điều kiện lọc riêng.
+- `tests/lookup.test.js` (+2): kết quả trên bảng tính giả lập (CCCD 049000000003 có vĩ độ sai; phiếu 9001 hợp đồng 999 không có hồ sơ), xóa dòng để tạo từng loại phát hiện, chưa có bản tra cứu. `scripts/e2e-doichieu.js` (10 kiểm tra, Electron thật): xem trước, chỉ số, tìm nhanh, lọc, xuất Excel và Word, chưa có bản tra cứu.
+- **Chưa kiểm được**: bảng Google Sheet thật của người dùng (chỉ kiểm bằng bảng tính giả lập đúng tên tab và cột).
+
+## 43. Màn hình Tổng quan bổ sung (bản 1.4.30)
+- Thêm chỉ số sản lượng dự kiến, tỷ lệ đã cân so với dự kiến, lao động, số xe; thẻ **Cần chú ý ở các rừng** (gom theo rừng, bấm mở đúng rừng), **Sản lượng theo tháng** (6 tháng), **Hệ thống** (bản tra cứu, sao lưu, lối tắt gồm Báo cáo đối chiếu).
+- `scripts/e2e-tongquan.js` (12 kiểm tra, Electron thật): chỉ số, từng loại cảnh báo (dưới 18 tuổi, xe sắp hết hạn, thiếu tọa độ, chưa có phiếu cân), tên rừng, biểu đồ, hệ thống khi chưa và đã có bản tra cứu, bấm rừng mở đúng hồ sơ, bấm Báo cáo đối chiếu mở thẳng mẫu có số liệu.
+

@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('hak', {
     useDefault: () => ipcRenderer.invoke('data:useDefault')
   },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
+  phieuCan: (rows, company) => ipcRenderer.invoke('phieucan:open', rows, company),
   google: {
     status: () => ipcRenderer.invoke('google:status'),
     login: () => ipcRenderer.invoke('google:login'),
@@ -31,6 +32,7 @@ contextBridge.exposeInMainWorld('hak', {
   },
   lookup: {
     status: () => ipcRenderer.invoke('lookup:status'),
+    audit: () => ipcRenderer.invoke('lookup:audit'),
     setSheet: link => ipcRenderer.invoke('lookup:setSheet', link),
     sync: () => ipcRenderer.invoke('lookup:sync'),
     confirmTabs: choices => ipcRenderer.invoke('lookup:confirmTabs', choices),
