@@ -58,11 +58,11 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
 
   // ===== 4. Excel: dòng mới, dòng đổi, dòng giống, dòng trùng trong file =====
   const wbX = XLSX.utils.book_new(), H = ['Số phiếu', 'Ngày cân 1', 'Biển số 1', 'KL', 'Khách hàng'];
-  XLSX.utils.book_append_sheet(wbX, XLSX.utils.aoa_to_sheet([H, ['PA1', '05/10/2026', '92C-12345', 12500, ''], ['PA2', '06/10/2026', '92C-67890', 9000, 'KH SỬA'], ['PE1', '11/10/2026', '92C-12345', 8000, ''], ['PE2', '12/10/2026', '92C-12345', 7000, ''], ['PE2', '12/10/2026', '92C-12345', 7000, '']]), 'PHIEU_CAN');
+  XLSX.utils.book_append_sheet(wbX, XLSX.utils.aoa_to_sheet([H, ['PA1', '05/10/2026', '92C-12345', 12500, ''], ['PA2', '06/10/2026', '92C-67890', 9250, 'KH SỬA'], ['PE1', '11/10/2026', '92C-12345', 8000, ''], ['PE2', '12/10/2026', '92C-12345', 7000, ''], ['PE2', '12/10/2026', '92C-12345', 7000, '']]), 'PHIEU_CAN');
   const fx = path.join(dir, 'pc.xlsx'); XLSX.writeFile(wbX, fx);
   await w.setInputFiles('input[data-file="pc"]', fx); await w.waitForTimeout(700); t = await body();
   ok('nạp Excel chỉ vào bản nháp: báo thêm/cập nhật/giữ nguyên, PA3 (đã lưu, file không có) được giữ; vẫn chưa lưu', /BẢN NHÁP/.test(t) && /giữ 1 bản ghi đã lưu không có trong file/.test(t) && (await forest('fa')).pc.length === 3, t.slice(0, 400));
-  ok('trạng thái từng dòng: PA2 “Sửa” (đổi khách hàng), PE1/PE2 “Thêm mới”; PE2 trùng số phiếu trong file bị báo lỗi', (await w.$$eval('tr', rs => rs.filter(r => /PA2/.test(r.innerText))[0].innerText)).includes('Sửa') && /Số phiếu cân PE2 trùng/.test(t));
+  ok('trạng thái từng dòng: PA2 “Sửa” (đổi khách hàng), PE1/PE2 “Thêm mới”; PE2 trùng số phiếu trong file bị báo lỗi', (await w.$$eval('tr', rs => rs.filter(r => /PA2/.test(r.innerText) && r.querySelector('[data-act=stEdit]'))[0].innerText)).includes('Sửa') && /Số phiếu cân PE2 trùng/.test(t));
   // lưu bị chặn vì còn lỗi (PE2 trùng)
   await w.click('#stDirty [data-act=stSave]'); await w.waitForTimeout(500); t = await body();
   ok('bấm Lưu khi còn lỗi: không ghi, liệt kê lỗi cần sửa; bản nháp còn nguyên', /Chưa lưu được vì còn lỗi/.test(t) && (await forest('fa')).pc.length === 3 && !!(await w.$('#stDirty')));
@@ -101,7 +101,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   // ===== 7. lưu thành công: ghi trong một lần, tính lại tổng, mở khóa xuất, lô B nguyên vẹn =====
   await w.click('#stDirty [data-act=stSave]'); await w.waitForTimeout(900); t = await body();
   const fa = await forest('fa');
-  const exTong = Math.round((12.5 + 9 + 8 + 12 + 8 + 7) * 1000) / 1000;   // PA1 12,5 (giữ); PA2 9 (Excel đổi 9,25 → 9); PA3 8; PX1 12; PE1 8; PE2 7
+  const exTong = Math.round((12.5 + 9.25 + 8 + 12 + 8 + 7) * 1000) / 1000;   // PA1 12,5 (giữ); PA2 9,25 (Excel chỉ đổi khách hàng; khối lượng khác sẽ phải đối chiếu); PA3 8; PX1 12; PE1 8; PE2 7
   ok('đã lưu: lô A có 6 phiếu, 4 nhân công, 3 xe; tổng khối lượng khớp tính tay ' + exTong + ' tấn; lô B giữ nguyên', fa.pc.length === 6 && fa.nc.length === 4 && fa.dx.length === 3 && klTong(fa) === exTong && JSON.stringify(await forest('fb')) === snapB && /Đã lưu dữ liệu vào lô/.test(t), JSON.stringify([fa.pc.length, fa.nc.length, fa.dx.length, klTong(fa)]));
   ok('liên kết xe–phiếu: mọi phiếu có biển số thuộc đội xe của lô; nhật ký đổi biển ghi PA1 và PA3 (92C-12345 → 92C-54321, “Sửa biển số xe”)', fa.pc.every(p => fa.dx.some(x => x.bienSo.toUpperCase().replace(/[\s.\-]/g, '') === p.bienSo.toUpperCase().replace(/[\s.\-]/g, ''))) && (fa.bienLog || []).length === 2 && fa.bienLog.every(e => e.cu === '92C-12345' && e.moi === '92C-54321' && e.nguon === 'Sửa biển số xe'), JSON.stringify(fa.bienLog));
   ok('sau khi lưu hết thanh “Chưa lưu”; hồ sơ lô có dữ liệu đã lưu', !(await w.$('#stDirty')));
@@ -110,7 +110,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
 
   // ===== 8. nạp lại cùng nguồn: không tính trùng =====
   const wb2 = XLSX.utils.book_new();   // cùng nguồn, đã khớp với dữ liệu đã lưu (biển số xe đã đổi sang 92C-54321, không còn dòng trùng)
-  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet([H, ['PA1', '05/10/2026', '92C-54321', 12500, ''], ['PA2', '06/10/2026', '92C-67890', 9000, 'KH SỬA'], ['PE1', '11/10/2026', '92C-54321', 8000, ''], ['PE2', '12/10/2026', '92C-54321', 7000, '']]), 'PHIEU_CAN');
+  XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet([H, ['PA1', '05/10/2026', '92C-54321', 12500, ''], ['PA2', '06/10/2026', '92C-67890', 9250, 'KH SỬA'], ['PE1', '11/10/2026', '92C-54321', 8000, ''], ['PE2', '12/10/2026', '92C-54321', 7000, '']]), 'PHIEU_CAN');
   const fx2 = path.join(dir, 'pc2.xlsx'); XLSX.writeFile(wb2, fx2);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="pc"]', fx2); await w.waitForTimeout(700); t = await body();
   ok('nạp lại đúng file Excel đó: không thêm, không sửa, không chưa-lưu; số phiếu và tổng giữ nguyên', !(await w.$('#stDirty')) && /thêm 0, cập nhật 0, giữ nguyên 4/.test(t) && (await forest('fa')).pc.length === 6 && klTong(await forest('fa')) === exTong, t.slice(0, 300));
