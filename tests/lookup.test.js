@@ -351,3 +351,21 @@ test('phiếu cân từ Google Sheets có đơn giá và thành tiền (cột �
   assert.ok(f.phieu.every(x => x.donGia === null || typeof x.donGia === 'number') && f.phieu.every(x => x.thanhTien === null || typeof x.thanhTien === 'number'));
 });
 
+
+test('đối chiếu bản tra cứu: rừng thiếu/không dùng được tọa độ, phiếu cân thiếu hồ sơ rừng, tọa độ thiếu hồ sơ rừng, rừng chưa có phiếu', () => {
+  const {L} = fresh(); L.load(build(), 'excel', 'x');
+  let a = L.audit();
+  assert.strictEqual(a.ok, true); assert.deepStrictEqual(a.counts, {HoSoRung: 5, ToaDoRung: 7, HoSoKeo: 8});
+  assert.deepStrictEqual(a.rungThieuToaDo.map(x => x.hd), ['101']); assert.match(a.rungThieuToaDo[0].lyDo, /tọa độ không dùng được/); assert.strictEqual(a.rungThieuToaDo[0].cccd, '049000000003');   // vĩ độ 154712975 sai
+  assert.deepStrictEqual(a.phieuThieuHoSoRung.map(x => [x.hd, x.soPhieu, x.tan]), [['999', 1, 1]]); assert.match(a.phieuThieuHoSoRung[0].goiY, /chưa có trong HoSoRung/);   // phiếu 9001 không có CCCD và hợp đồng 999
+  assert.deepStrictEqual(a.toaDoThieuHoSoRung, []); assert.deepStrictEqual(a.rungChuaCoPhieu, []);
+  // bỏ toàn bộ ToaDoRung của hợp đồng 201 → rừng thiếu tọa độ; bỏ HoSoRung 201 → phiếu và tọa độ mồ côi, và hợp đồng 401 bị bỏ phiếu → rừng chưa có phiếu
+  L.db.prepare("DELETE FROM lookup_rows WHERE tab='ToaDoRung_QC' AND k_hd='201'").run();
+  a = L.audit(); assert.ok(a.rungThieuToaDo.some(x => x.hd === '201' && x.soDongToaDo === 0 && /không có dòng nào/.test(x.lyDo)));
+  L.db.prepare("DELETE FROM lookup_rows WHERE tab='HoSoKeo_QC' AND k_hd='401'").run();
+  a = L.audit(); assert.deepStrictEqual(a.rungChuaCoPhieu.map(x => x.hd), ['401']);
+  L.db.prepare("DELETE FROM lookup_rows WHERE tab='HoSoRung_QC' AND k_hd='201'").run();
+  a = L.audit(); assert.ok(!a.rungThieuToaDo.some(x => x.hd === '201'));
+  const p = a.phieuThieuHoSoRung.find(x => x.hd === '201'); assert.ok(p && p.soPhieu === 1 && p.tan === 6 && p.vd === '2001/2026/NK' && p.tuNgay === '01/03/2026');
+});
+test('đối chiếu khi chưa có bản tra cứu', () => { const {L} = fresh(); assert.deepStrictEqual(L.audit(), {ok: false, noData: true}); });

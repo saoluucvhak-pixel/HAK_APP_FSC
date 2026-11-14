@@ -342,7 +342,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <p><b>In đợt 2</b> (mục <b>In hồ sơ đợt 2</b>): <b>cách A</b>, khi đủ dữ liệu thì in đầy đủ một lần trên <b>giấy trắng</b>; <b>cách B</b>, in <b>mẫu nền</b> (chữ cố định, số để trống), bấm “Xác nhận đã in mẫu nền”, khi có số liệu thì nạp lại tờ nền đã in và <b>in đè</b> chỉ phần bổ sung. Việc giao khoán hay trực tiếp, trả theo ngày công hay khối lượng đã biết từ đầu nên tờ nền không đổi; sau này chỉ điền thêm khối lượng, số tiền, ngày. Nền và in đè cùng khổ A4, tỉ lệ 100%, cùng lề, cùng máy in; in thử một tờ nháp trước. Nếu bố cục đổi sau khi in nền (ví dụ thêm người lao động) thì phần mềm báo “bố cục đã đổi”: in lại nền hoặc in đầy đủ trên giấy trắng.</p>
 <p><b>In phiếu cân</b> (thẻ <b>In phiếu cân</b> ở tab Xuất hồ sơ, theo rừng): mở nguyên bản công cụ PhieuCan (giấy lỗ 240 × 279 mm, đường xé giữa, chỉnh lề, tải PDF) đã nạp sẵn phiếu cân của rừng. Tiêu đề phiếu lấy từ <b>Cài đặt → Công ty</b> (tên, địa chỉ, điện thoại, <b>Fax</b>, <b>Nơi lập chứng từ</b>). Thẻ báo phiếu còn thiếu gì (cân, giờ, khách hàng, đơn giá…); phiếu thiếu vẫn in được, phần thiếu để trống. Khách hàng trống thì lấy tên chủ rừng; thiếu đơn giá thì in 0.</p>
 <p><b>Số hợp đồng trên biểu mẫu</b>: nhập số đầy đủ (ví dụ <code>015/2025-KT</code>) thì được giữ nguyên; chỉ nhập phần số (<code>015</code>) thì phần mềm ghép năm lấy từ <b>ngày ký của chính hợp đồng đó</b>; thiếu ngày ký thì năm để trống và khung <i>Số hợp đồng đầy đủ sẽ in</i> ở tab Xuất hồ sơ nêu cần bổ sung ngày nào. BM-01, BM-14, BM-20 luôn cùng một số hợp đồng khai thác.</p>
-<p><b>Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (8 mẫu, có bộ lọc thông minh: điều hành, sản lượng theo rừng, sổ phiếu cân, danh sách lao động, danh sách xe, phiếu cân đã cập nhật biển số xe, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
+<p><b>Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (9 mẫu, có bộ lọc thông minh: điều hành, sản lượng theo rừng, sổ phiếu cân, danh sách lao động, danh sách xe, <b>đối chiếu bản tra cứu</b>, phiếu cân đã cập nhật biển số xe, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
+<p><b>Đối chiếu bản tra cứu</b> (Báo cáo → “Đối chiếu bản tra cứu: tọa độ, hồ sơ rừng, phiếu cân”): đọc bản Google Sheets/Excel đang dùng ở Tra cứu và đối chiếu ba tab theo CCCD và mã hợp đồng. Báo cáo liệt kê: <b>I.</b> rừng ở HoSoRung thiếu dòng tọa độ ở ToaDoRung hoặc tọa độ không dùng được; <b>II.</b> phiếu cân ở HoSoKeo thiếu hồ sơ rừng ở HoSoRung (gộp theo chủ rừng và hợp đồng, kèm số phiếu, khối lượng, gợi ý); <b>III.</b> dòng tọa độ thiếu hồ sơ rừng; <b>IV.</b> rừng chưa có phiếu cân. Có tìm nhanh, lọc “chỉ rừng thiếu tọa độ”, “chỉ phiếu cân thiếu hồ sơ rừng”, xuất Word và Excel. Chưa có bản tra cứu thì báo rõ; sửa dữ liệu trên bảng tính gốc rồi Đồng bộ lại.</p>
 <h3>8a. Đổi biển số xe của phiếu cân</h3>
 <p>Phiếu cân từ nhà máy đôi khi ghi biển cũ hoặc tên xe. Có hai thời điểm sửa, cho cùng một kết quả:</p>
 <p><b>Cách 1 – đổi biển rồi mới đưa qua rừng</b> (phiếu lấy từ Google Sheets):</p>
@@ -2283,6 +2284,32 @@ const HAKReports = (function () {
       notes};
   }
 
+  /* ---- 9. Đối chiếu bản tra cứu (Google Sheets / Excel): tọa độ, hồ sơ rừng, phiếu cân. Dữ liệu o.audit do tiến trình chính tính từ bản tra cứu đang dùng (src/lookup.js audit). ---- */
+  function doiChieu(recs, o) {
+    const a = o.audit, fold = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+    const words = fold(o.q || '').split(/\s+/).filter(Boolean), fl = o.flag || {};
+    const keep = row => !words.length || words.every(w => fold(row.join(' ')).includes(w));
+    const none = !a || !a.ok, G = x => (a && a.ok ? a[x] : []);
+    const rowsOf = (list, fn) => list.map(fn).filter(keep).map((r, i) => [i + 1, ...r]);
+    const t1 = fl.onlyPhieu ? [] : rowsOf(G('rungThieuToaDo'), x => [x.ten, x.cccd, x.hd, x.diaChi, x.dong, x.soDongToaDo, x.lyDo]);
+    const t2 = fl.onlyToaDo ? [] : rowsOf(G('phieuThieuHoSoRung'), x => [x.ten, x.cccd || '(trống)', x.hd || '(trống)', x.soPhieu, x.tan, x.tuNgay, x.denNgay, x.vd, x.goiY]);
+    const t3 = fl.onlyPhieu || fl.onlyToaDo ? [] : rowsOf(G('toaDoThieuHoSoRung'), x => [x.ten, x.cccd, x.hd, x.maRung, x.soDongToaDo, x.goiY]);
+    const t4 = fl.onlyPhieu || fl.onlyToaDo ? [] : rowsOf(G('rungChuaCoPhieu'), x => [x.ten, x.cccd, x.hd, x.diaChi, x.tinhTrang]);
+    const phieu = G('phieuThieuHoSoRung').reduce((n, x) => n + x.soPhieu, 0), tan = round(G('phieuThieuHoSoRung').reduce((n, x) => n + x.tan, 0), 3);
+    const notes = [];
+    if (none) notes.push(a && a.noData ? 'Chưa có bản tra cứu. Vào Tra cứu Google Sheets, bấm Đồng bộ ngay hoặc nạp file Excel, rồi mở lại báo cáo này.' : 'Đang đọc bản tra cứu…');
+    else { notes.push('Đối chiếu theo CCCD và mã hợp đồng giữa ba tab HoSoRung, ToaDoRung, HoSoKeo của bản tra cứu đang dùng (nạp lúc ' + (a.loadedAt ? a.loadedAt.replace('T', ' ').slice(0, 16) : '…') + '). Dữ liệu trên bảng tính gốc cần được sửa rồi đồng bộ lại.');
+      if (words.length || fl.onlyPhieu || fl.onlyToaDo) notes.push('Báo cáo đang lọc theo từ khóa hoặc điều kiện riêng nên chỉ hiện phần khớp; KPI là toàn bộ bản tra cứu.'); }
+    return {id: 'doichieu', title: 'BÁO CÁO ĐỐI CHIẾU BẢN TRA CỨU: TỌA ĐỘ – HỒ SƠ RỪNG – PHIẾU CÂN', orient: 'landscape', period: none ? '' : 'Bản tra cứu: ' + a.counts.HoSoRung + ' dòng HoSoRung, ' + a.counts.ToaDoRung + ' dòng ToaDoRung, ' + a.counts.HoSoKeo + ' dòng HoSoKeo',
+      kpis: [{label: 'Rừng thiếu tọa độ', value: G('rungThieuToaDo').length, f: 'n0'}, {label: 'Phiếu cân thiếu hồ sơ rừng', value: phieu, f: 'n0'}, {label: 'Khối lượng phiếu thiếu hồ sơ (tấn)', value: tan, f: 'n3'}, {label: 'Rừng chưa có phiếu cân', value: G('rungChuaCoPhieu').length, f: 'n0'}],
+      sections: [
+        {heading: 'I. Rừng (HoSoRung) thiếu tọa độ ở ToaDoRung hoặc tọa độ không dùng được', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Địa chỉ rừng', w: 28}, {h: 'Dòng HoSoRung', w: 10, f: 'n0'}, {h: 'Số dòng ToaDoRung', w: 10, f: 'n0'}, {h: 'Lý do', w: 36}], rows: t1},
+        {heading: 'II. Phiếu cân (HoSoKeo) thiếu hồ sơ rừng ở HoSoRung', note: 'Gộp theo chủ rừng và mã hợp đồng ghi trên phiếu.', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 22}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Số phiếu cân', w: 9, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 11, f: 'n3'}, {h: 'Từ ngày', w: 11}, {h: 'Đến ngày', w: 11}, {h: 'Ví dụ số phiếu', w: 24}, {h: 'Gợi ý', w: 32}], rows: t2},
+        {heading: 'III. Dòng tọa độ (ToaDoRung) thiếu hồ sơ rừng ở HoSoRung', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Mã rừng', w: 20}, {h: 'Số dòng ToaDoRung', w: 10, f: 'n0'}, {h: 'Gợi ý', w: 34}], rows: t3},
+        {heading: 'IV. Rừng (HoSoRung) chưa có phiếu cân nào ở HoSoKeo', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Địa chỉ rừng', w: 34}, {h: 'Tình trạng hợp đồng', w: 18}], rows: t4}],
+      notes};
+  }
+
   const REPORTS = [
     {id: 'dieuhanh', name: 'Tổng hợp điều hành', desc: 'Một trang cho lãnh đạo: số liệu chính theo chủ rừng và các vấn đề cần xử lý.', build: withUnit(dieuHanh, 'Đơn vị tính: diện tích ha; khối lượng tấn; tiến độ %')},
     {id: 'sanluong', name: 'Sản lượng khai thác theo rừng', desc: 'Diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân; cảnh báo vượt định mức.', build: withUnit(sanLuong, 'Đơn vị tính: diện tích ha; định mức tấn/ha; sản lượng tấn')},
@@ -2291,6 +2318,7 @@ const HAKReports = (function () {
     {id: 'bienso', name: 'Phiếu cân đã cập nhật biển số xe', desc: 'Theo từng lô rừng: phiếu cân nào đã được cập nhật biển số xe mới (biển cũ, biển mới, thời điểm, nguồn).', build: withUnit(bienSoDoi, 'Đơn vị tính: khối lượng tấn; tỷ lệ %')},
     {id: 'laodong', name: 'Danh sách lao động theo lô', desc: 'Lao động của từng lô: vai trò, chức danh, ngày sinh, tuổi, CCCD, đơn giá; cảnh báo dưới 18 tuổi và thiếu thông tin.', build: withUnit(laoDong, 'Đơn vị tính: người; đơn giá theo cơ sở tính của lô (đồng/tấn, đồng/ha, đồng/công)')},
     {id: 'danhsachxe', name: 'Danh sách xe vận chuyển theo lô', desc: 'Xe của từng lô: biển số, loại xe, chủ xe, người ký, liên hệ, số chuyến và khối lượng theo phiếu cân.', build: withUnit(danhSachXe, 'Đơn vị tính: khối lượng tấn (theo phiếu cân)')},
+    {id: 'doichieu', name: 'Đối chiếu bản tra cứu: tọa độ, hồ sơ rừng, phiếu cân', desc: 'Từ bản tra cứu Google Sheets: rừng thiếu tọa độ (HoSoRung với ToaDoRung), phiếu cân thiếu hồ sơ rừng (HoSoKeo với HoSoRung), tọa độ và rừng mồ côi.', build: withUnit(doiChieu, 'Đơn vị tính: khối lượng tấn; đối chiếu theo CCCD và mã hợp đồng')},
     {id: 'tiendo', name: 'Tiến độ hồ sơ và checklist FSC', desc: 'Tiến độ từng rừng và danh sách hạng mục còn thiếu để hoàn thiện hồ sơ.', build: withUnit(tienDo, 'Đơn vị tính: tiến độ %; số lượng theo từng cột')}
   ];
 
@@ -5289,7 +5317,8 @@ const RP_EXTRA = {
   laodong: {fields: [{key: 'chucDanh', label: 'Chức danh', opts: () => chucDanhAll()}, {key: 'vaiTro', label: 'Vai trò', opts: () => ['Tổ trưởng', 'Công nhân']}], flags: [['onlyMinors', 'Chỉ người dưới 18 tuổi'], ['onlyMissing', 'Chỉ hồ sơ cần bổ sung (thiếu ngày sinh, CCCD)']], hint: 'họ tên, CCCD, chức danh, địa chỉ, mã rừng, chủ rừng'},
   danhsachxe: {fields: [{key: 'nguoiKy', label: 'Người ký HĐ vận chuyển', opts: () => ['Chủ xe', 'Tài xế']}], flags: [['onlyNoPhone', 'Chỉ xe chưa có số điện thoại'], ['onlyTrips', 'Chỉ xe có chuyến trong kỳ'], ['onlyNoTrips', 'Chỉ xe chưa có chuyến trong kỳ']], hint: 'biển số, chủ xe, tài xế, SĐT, loại xe, mã rừng'},
   phieucan: {fields: [], flags: [], hint: 'số phiếu, biển số, khách hàng, nơi giao, mã rừng, chủ rừng'},
-  bienso: {fields: [], flags: [], hint: 'mã rừng, chủ rừng'}
+  bienso: {fields: [], flags: [], hint: 'mã rừng, chủ rừng'},
+  doichieu: {fields: [], flags: [['onlyToaDo', 'Chỉ rừng thiếu tọa độ'], ['onlyPhieu', 'Chỉ phiếu cân thiếu hồ sơ rừng']], hint: 'tên chủ rừng, CCCD, mã hợp đồng, số phiếu'}
 };
 const rpUniq = a => [...new Set(a.filter(Boolean))].sort((x, y) => String(x).localeCompare(String(y), 'vi'));
 function rpCfg() {
@@ -5336,7 +5365,9 @@ function rpData() {
   });
   return out;
 }
-const rpModel = () => HAKReports.REPORTS.find(r => r.id === rp.id).build(rpData(), {from: rp.from, to: rp.to, today: todayStr(), detail: rp.detail});
+const rpModel = () => HAKReports.REPORTS.find(r => r.id === rp.id).build(rpData(), {from: rp.from, to: rp.to, today: todayStr(), detail: rp.detail, audit: rp.audit, q: rp.q, flag: rp.flag});
+/* Báo cáo đối chiếu lấy số liệu từ bản tra cứu ở tiến trình chính: tải lại mỗi lần chọn mẫu */
+function rpLoadAudit() { rp.audit = HB ? null : {ok: false, noData: true}; if (!HB) return; HB.lookup.audit().then(r => { rp.audit = r && r.ok ? r.audit : {ok: false, noData: true}; if (rp.id === 'doichieu') rpRender(); }); }
 const stampStr = () => todayStr() + ' ' + pad2(new Date().getHours()) + ':' + pad2(new Date().getMinutes());
 /* Thanh bộ lọc thông minh của hộp Báo cáo */
 function rpFilterHtml() {
@@ -5430,7 +5461,7 @@ document.addEventListener('click', async e => {
   if (!t.closest('#rpBox')) return;
   const fold = t.closest('[data-rpfold]'); if (fold) { const k = fold.dataset.rpfold; rp.folded[k] = !rp.folded[k]; return rpRender(); }
   const rm = t.closest('[data-rprm]'); if (rm) { rpReadParams(); rpFromSf(HAKCore.sf.remove(rpSf(), rp.conds[+rm.dataset.rprm])); return rpRender(); }
-  const sel = t.closest('[data-rpsel]'); if (sel) { rpReadParams(); rp.id = sel.dataset.rpsel; rp.one = {}; rp.flag = {}; rp.q = ''; rp.presetSel = ''; return rpRender(); }
+  const sel = t.closest('[data-rpsel]'); if (sel) { rpReadParams(); rp.id = sel.dataset.rpsel; rp.one = {}; rp.flag = {}; rp.q = ''; rp.presetSel = ''; if (rp.id === 'doichieu') rpLoadAudit(); return rpRender(); }
   const el = t.closest('[data-act]'); if (!el) return; const a = el.dataset.act;
   if (a === 'rpClose') return rpClose();
   rpReadParams();

@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('hak', {
   },
   lookup: {
     status: () => ipcRenderer.invoke('lookup:status'),
+    audit: () => ipcRenderer.invoke('lookup:audit'),
     setSheet: link => ipcRenderer.invoke('lookup:setSheet', link),
     sync: () => ipcRenderer.invoke('lookup:sync'),
     confirmTabs: choices => ipcRenderer.invoke('lookup:confirmTabs', choices),

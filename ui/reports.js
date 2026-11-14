@@ -310,6 +310,32 @@ const HAKReports = (function () {
       notes};
   }
 
+  /* ---- 9. Đối chiếu bản tra cứu (Google Sheets / Excel): tọa độ, hồ sơ rừng, phiếu cân. Dữ liệu o.audit do tiến trình chính tính từ bản tra cứu đang dùng (src/lookup.js audit). ---- */
+  function doiChieu(recs, o) {
+    const a = o.audit, fold = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+    const words = fold(o.q || '').split(/\s+/).filter(Boolean), fl = o.flag || {};
+    const keep = row => !words.length || words.every(w => fold(row.join(' ')).includes(w));
+    const none = !a || !a.ok, G = x => (a && a.ok ? a[x] : []);
+    const rowsOf = (list, fn) => list.map(fn).filter(keep).map((r, i) => [i + 1, ...r]);
+    const t1 = fl.onlyPhieu ? [] : rowsOf(G('rungThieuToaDo'), x => [x.ten, x.cccd, x.hd, x.diaChi, x.dong, x.soDongToaDo, x.lyDo]);
+    const t2 = fl.onlyToaDo ? [] : rowsOf(G('phieuThieuHoSoRung'), x => [x.ten, x.cccd || '(trống)', x.hd || '(trống)', x.soPhieu, x.tan, x.tuNgay, x.denNgay, x.vd, x.goiY]);
+    const t3 = fl.onlyPhieu || fl.onlyToaDo ? [] : rowsOf(G('toaDoThieuHoSoRung'), x => [x.ten, x.cccd, x.hd, x.maRung, x.soDongToaDo, x.goiY]);
+    const t4 = fl.onlyPhieu || fl.onlyToaDo ? [] : rowsOf(G('rungChuaCoPhieu'), x => [x.ten, x.cccd, x.hd, x.diaChi, x.tinhTrang]);
+    const phieu = G('phieuThieuHoSoRung').reduce((n, x) => n + x.soPhieu, 0), tan = round(G('phieuThieuHoSoRung').reduce((n, x) => n + x.tan, 0), 3);
+    const notes = [];
+    if (none) notes.push(a && a.noData ? 'Chưa có bản tra cứu. Vào Tra cứu Google Sheets, bấm Đồng bộ ngay hoặc nạp file Excel, rồi mở lại báo cáo này.' : 'Đang đọc bản tra cứu…');
+    else { notes.push('Đối chiếu theo CCCD và mã hợp đồng giữa ba tab HoSoRung, ToaDoRung, HoSoKeo của bản tra cứu đang dùng (nạp lúc ' + (a.loadedAt ? a.loadedAt.replace('T', ' ').slice(0, 16) : '…') + '). Dữ liệu trên bảng tính gốc cần được sửa rồi đồng bộ lại.');
+      if (words.length || fl.onlyPhieu || fl.onlyToaDo) notes.push('Báo cáo đang lọc theo từ khóa hoặc điều kiện riêng nên chỉ hiện phần khớp; KPI là toàn bộ bản tra cứu.'); }
+    return {id: 'doichieu', title: 'BÁO CÁO ĐỐI CHIẾU BẢN TRA CỨU: TỌA ĐỘ – HỒ SƠ RỪNG – PHIẾU CÂN', orient: 'landscape', period: none ? '' : 'Bản tra cứu: ' + a.counts.HoSoRung + ' dòng HoSoRung, ' + a.counts.ToaDoRung + ' dòng ToaDoRung, ' + a.counts.HoSoKeo + ' dòng HoSoKeo',
+      kpis: [{label: 'Rừng thiếu tọa độ', value: G('rungThieuToaDo').length, f: 'n0'}, {label: 'Phiếu cân thiếu hồ sơ rừng', value: phieu, f: 'n0'}, {label: 'Khối lượng phiếu thiếu hồ sơ (tấn)', value: tan, f: 'n3'}, {label: 'Rừng chưa có phiếu cân', value: G('rungChuaCoPhieu').length, f: 'n0'}],
+      sections: [
+        {heading: 'I. Rừng (HoSoRung) thiếu tọa độ ở ToaDoRung hoặc tọa độ không dùng được', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Địa chỉ rừng', w: 28}, {h: 'Dòng HoSoRung', w: 10, f: 'n0'}, {h: 'Số dòng ToaDoRung', w: 10, f: 'n0'}, {h: 'Lý do', w: 36}], rows: t1},
+        {heading: 'II. Phiếu cân (HoSoKeo) thiếu hồ sơ rừng ở HoSoRung', note: 'Gộp theo chủ rừng và mã hợp đồng ghi trên phiếu.', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 22}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Số phiếu cân', w: 9, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 11, f: 'n3'}, {h: 'Từ ngày', w: 11}, {h: 'Đến ngày', w: 11}, {h: 'Ví dụ số phiếu', w: 24}, {h: 'Gợi ý', w: 32}], rows: t2},
+        {heading: 'III. Dòng tọa độ (ToaDoRung) thiếu hồ sơ rừng ở HoSoRung', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Mã rừng', w: 20}, {h: 'Số dòng ToaDoRung', w: 10, f: 'n0'}, {h: 'Gợi ý', w: 34}], rows: t3},
+        {heading: 'IV. Rừng (HoSoRung) chưa có phiếu cân nào ở HoSoKeo', cols: [{h: 'STT', w: 6}, {h: 'Chủ rừng', w: 24}, {h: 'CCCD', w: 14}, {h: 'Mã hợp đồng', w: 12}, {h: 'Địa chỉ rừng', w: 34}, {h: 'Tình trạng hợp đồng', w: 18}], rows: t4}],
+      notes};
+  }
+
   const REPORTS = [
     {id: 'dieuhanh', name: 'Tổng hợp điều hành', desc: 'Một trang cho lãnh đạo: số liệu chính theo chủ rừng và các vấn đề cần xử lý.', build: withUnit(dieuHanh, 'Đơn vị tính: diện tích ha; khối lượng tấn; tiến độ %')},
     {id: 'sanluong', name: 'Sản lượng khai thác theo rừng', desc: 'Diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân; cảnh báo vượt định mức.', build: withUnit(sanLuong, 'Đơn vị tính: diện tích ha; định mức tấn/ha; sản lượng tấn')},
@@ -318,6 +344,7 @@ const HAKReports = (function () {
     {id: 'bienso', name: 'Phiếu cân đã cập nhật biển số xe', desc: 'Theo từng lô rừng: phiếu cân nào đã được cập nhật biển số xe mới (biển cũ, biển mới, thời điểm, nguồn).', build: withUnit(bienSoDoi, 'Đơn vị tính: khối lượng tấn; tỷ lệ %')},
     {id: 'laodong', name: 'Danh sách lao động theo lô', desc: 'Lao động của từng lô: vai trò, chức danh, ngày sinh, tuổi, CCCD, đơn giá; cảnh báo dưới 18 tuổi và thiếu thông tin.', build: withUnit(laoDong, 'Đơn vị tính: người; đơn giá theo cơ sở tính của lô (đồng/tấn, đồng/ha, đồng/công)')},
     {id: 'danhsachxe', name: 'Danh sách xe vận chuyển theo lô', desc: 'Xe của từng lô: biển số, loại xe, chủ xe, người ký, liên hệ, số chuyến và khối lượng theo phiếu cân.', build: withUnit(danhSachXe, 'Đơn vị tính: khối lượng tấn (theo phiếu cân)')},
+    {id: 'doichieu', name: 'Đối chiếu bản tra cứu: tọa độ, hồ sơ rừng, phiếu cân', desc: 'Từ bản tra cứu Google Sheets: rừng thiếu tọa độ (HoSoRung với ToaDoRung), phiếu cân thiếu hồ sơ rừng (HoSoKeo với HoSoRung), tọa độ và rừng mồ côi.', build: withUnit(doiChieu, 'Đơn vị tính: khối lượng tấn; đối chiếu theo CCCD và mã hợp đồng')},
     {id: 'tiendo', name: 'Tiến độ hồ sơ và checklist FSC', desc: 'Tiến độ từng rừng và danh sách hạng mục còn thiếu để hoàn thiện hồ sơ.', build: withUnit(tienDo, 'Đơn vị tính: tiến độ %; số lượng theo từng cột')}
   ];
 

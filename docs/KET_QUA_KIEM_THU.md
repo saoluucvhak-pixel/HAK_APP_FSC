@@ -284,3 +284,8 @@ Chi tiết ở `docs/QUY_TRINH_HO_SO.md`. Bất biến “đợt 1 độc lập 
 - Thông tin công ty: hồ sơ công ty có thêm **Fax** và **Nơi lập chứng từ**; tiêu đề phiếu cân (tên, địa chỉ, điện thoại, fax, nơi lập) lấy từ đó (`tests/phieucan.test.js`, 2 kiểm tra e2e).
 - **Chưa kiểm được**: in ra giấy lỗ thật bằng máy in của người dùng (đường xé, lề vật lý).
 
+## 42. Báo cáo đối chiếu bản tra cứu (bản 1.4.30)
+- `Lookup.audit()` (`src/lookup.js`): đối chiếu ba tab theo CCCD + mã hợp đồng: rừng thiếu hoặc không dùng được tọa độ, phiếu cân thiếu hồ sơ rừng, tọa độ thiếu hồ sơ rừng, rừng chưa có phiếu cân. Giao tiếp qua `lookup:audit` (preload, tiến trình chính). Mẫu báo cáo `doichieu` trong `ui/reports.js` với tìm nhanh và hai điều kiện lọc riêng.
+- `tests/lookup.test.js` (+2): kết quả trên bảng tính giả lập (CCCD 049000000003 có vĩ độ sai; phiếu 9001 hợp đồng 999 không có hồ sơ), xóa dòng để tạo từng loại phát hiện, chưa có bản tra cứu. `scripts/e2e-doichieu.js` (10 kiểm tra, Electron thật): xem trước, chỉ số, tìm nhanh, lọc, xuất Excel và Word, chưa có bản tra cứu.
+- **Chưa kiểm được**: bảng Google Sheet thật của người dùng (chỉ kiểm bằng bảng tính giả lập đúng tên tab và cột).
+

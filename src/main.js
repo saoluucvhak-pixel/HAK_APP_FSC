@@ -171,6 +171,7 @@ function registerIpc() {
     const parsed = LoRung.parsePackage(pkg, sha); if (!parsed.ok) throw new Error(parsed.error);
     return {...store.applyLot(parsed.pkg, action), db: store.load()};
   })()));
+  ipcMain.handle('lookup:audit', () => wrap(() => ({audit: lookup.audit()}))());
   ipcMain.handle('lookup:status', () => wrap(() => ({...lookup.status(), sheetUrl: lookup.getMeta('sheetUrl') || DEFAULT_SHEET}))());
   ipcMain.handle('lookup:setSheet', afterReloc((e, link) => wrap(() => { if (!exportUrl(link)) throw new Error('Liên kết không phải Google Sheets'); lookup.setMeta('sheetUrl', link); return {}; })()));
   ipcMain.handle('lookup:sync', afterReloc(async () => { try { return await syncSheets(); } catch (e) { log('ERROR', e.message); return {ok: false, errors: [e.message]}; } }));
