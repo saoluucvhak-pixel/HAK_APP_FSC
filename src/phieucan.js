@@ -15,15 +15,25 @@
     const d = parseD(ngay1), a = secOf(gio1), b = secOf(gio2); if (!d || a == null || b == null) return '';
     return fmtD(new Date(d.getTime() + (b < a ? 864e5 : 0)));
   }
+  /* Ghi ngày cân 2 vào CHÍNH phiếu cân khi nạp (Excel, Google Sheets) hoặc sửa tay: có ngày cân 2 nhập thật thì giữ (ngay2Nguon bỏ); để trống thì suy ra từ ngày cân 1 và giờ cân và đánh dấu ngay2Nguon = 'suy ra'
+   * (suy lại mỗi lần lưu nên đổi giờ cân thì ngày cân 2 đổi theo). old: phiếu trước khi sửa; ô ngày cân 2 vẫn là số đã suy ra từ trước thì không bị coi là người dùng nhập. */
+  function chuanHoaNgay2(p, old) {
+    if (!p) return p;
+    const cur = String(p.ngay2 == null ? '' : p.ngay2).trim(), daSuy = (p.ngay2Nguon === 'suy ra' && cur) || (old && old.ngay2Nguon === 'suy ra' && cur && cur === String(old.ngay2 || '').trim());
+    if (cur && !daSuy) { delete p.ngay2Nguon; return p; }
+    const s = suyNgay2(p.ngay, p.gioCan1, p.gioCan2);
+    if (s) { p.ngay2 = s; p.ngay2Nguon = 'suy ra'; } else { p.ngay2 = ''; delete p.ngay2Nguon; }
+    return p;
+  }
   /* {ngay, nguon}: nguon = 'nhập' (có ngày cân 2 thật), 'suy ra' (từ ngày cân 1 và giờ cân), 'theo ngày cân 1' (thiếu giờ) hoặc '' (không có ngày nào) */
   function ngay2Of(p) {
-    p = p || {}; const e = parseD(p.ngay2); if (e) return {ngay: fmtD(e), nguon: 'nhập'};
+    p = p || {}; const e = parseD(p.ngay2); if (e) return {ngay: fmtD(e), nguon: p.ngay2Nguon === 'suy ra' ? 'suy ra' : 'nhập'};
     const s = suyNgay2(p.ngay, p.gioCan1, p.gioCan2); if (s) return {ngay: s, nguon: 'suy ra'};
     return p.ngay ? {ngay: String(p.ngay), nguon: 'theo ngày cân 1'} : {ngay: '', nguon: ''};
   }
   /* Cảnh báo khi ngày cân 2 NHẬP THẬT mâu thuẫn với ngày cân 1 và giờ cân (không chặn lưu) */
   function ngay2Warn(p) {
-    p = p || {}; const e = parseD(p.ngay2), d = parseD(p.ngay); if (!e || !d) return [];
+    p = p || {}; const e = parseD(p.ngay2), d = parseD(p.ngay); if (!e || !d || p.ngay2Nguon === 'suy ra') return [];   // ngày đã suy ra thì luôn khớp với giờ cân
     const a = secOf(p.gioCan1), b = secOf(p.gioCan2), days = Math.round((e - d) / 864e5), w = [];
     if (days < 0) w.push('ngày cân 2 (' + fmtD(e) + ') trước ngày cân 1 (' + fmtD(d) + ')');
     else if (days > 1) w.push('ngày cân 2 (' + fmtD(e) + ') cách ngày cân 1 (' + fmtD(d) + ') ' + days + ' ngày');
@@ -63,6 +73,6 @@
     return '(function(){try{' + SIMPLE_JS + fill + (rows && rows.length > 1 ? 'var a=' + JSON.stringify(rows).replace(/\u2028|\u2029/g, '') + ';var ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"PHIEU_CAN");' +
       'var buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});var f=new File([buf],"PhieuCan_HAKQN.xlsx",{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});var dt=new DataTransfer();dt.items.add(f);var i=document.getElementById("file");i.files=dt.files;i.dispatchEvent(new Event("change",{bubbles:true}));' : '') + 'return true}catch(e){return String(e&&e.message||e)}})()';
   }
-  const api = {HEAD, aoa, inject, company, gaps, FIELDS, SIMPLE_CSS, suyNgay2, ngay2Of, ngay2Warn};
+  const api = {HEAD, aoa, inject, company, gaps, FIELDS, SIMPLE_CSS, suyNgay2, ngay2Of, ngay2Warn, chuanHoaNgay2};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKPhieuCan = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -68,7 +68,7 @@ h4{font-size:13.5px}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0 18px}
 .kpi>div{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);color:var(--mut-aa);font-size:12.5px}
 .kpi b{display:block;font-size:24px;line-height:1.15;color:var(--ink);font-weight:700;letter-spacing:-.3px;margin-bottom:2px}
-.kpi>div.acc{border-color:var(--acc);background:var(--accSoft)}.kpi>div.acc b{color:var(--acc)}
+.sro{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.kpi>div.acc{border-color:var(--acc);background:var(--accSoft);color:var(--ink)}.kpi>div.acc b{color:var(--acc)}
 .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:4px}
 .hero p{margin:2px 0 0}
 .alr{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line2,var(--line))}.alr:last-child{border-bottom:0}.alrN{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px}.alrN .lnk{padding:0;font-size:12.5px;border:0;background:none;color:var(--acc);text-decoration:underline;cursor:pointer;text-align:left}
@@ -2684,7 +2684,8 @@ function stFinishRow() {
   const kind = stm.kind, st = stCur(), rec = curRec(); if (!st || !rec) return;
   const vals = stRead(), o = Object.assign({}, vals, {maRung: rec.info.maRung}); if (o.bienSo === '__new') o.bienSo = '';
   const row = ST_NORM[kind](o); const idx = stm.id ? st.cur[kind].findIndex(r => r._id === stm.id) : -1;
-  const old = idx >= 0 ? st.cur[kind][idx] : null; row._row = old ? old._row : st.cur[kind].reduce((m, r) => Math.max(m, +r._row || 0), 1) + 1; if (old) row._id = old._id;
+  const old = idx >= 0 ? st.cur[kind][idx] : null; if (kind === 'pc') HAKPhieuCan.chuanHoaNgay2(row, old);   // ngày cân 2 trống thì suy ra từ ngày cân 1 và giờ cân
+   row._row = old ? old._row : st.cur[kind].reduce((m, r) => Math.max(m, +r._row || 0), 1) + 1; if (old) row._id = old._id;
   const list = st.cur[kind].slice(); if (idx >= 0) list[idx] = row; else list.push(row);
   const chk = ST_CHECK[kind](Object.assign({}, stJob(rec), {[kind]: list})), mine = chk.errs.filter(m => m.startsWith('Dòng ' + row._row + ':'));
   if (mine.length) { stm.errs = mine; return stRender(); }
@@ -2729,7 +2730,7 @@ async function stSave(opt) {
   if (dups.length && !opt?.confirmedDup && !confirm('Có ' + dups.length + ' số phiếu cũng đang có ở lô khác:\n' + dups.slice(0, 10).map(x => '• ' + x).join('\n') + (dups.length > 10 ? '\n• …' : '') + '\n\nHai nơi cân hoặc hai lô có thể dùng trùng số phiếu. Đối chiếu kỹ (ngày, biển số, khối lượng) rồi bấm OK để vẫn lưu vào lô này, hoặc Hủy để quay lại.')) return {ok: false, error: 'chờ đối chiếu'};
   stSaving = true; const snap = {nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
   try {
-    const cm = HAKStage.commit(st), at = stamp(), dk = HAKStage.dirtyKinds(st);
+    const cm = HAKStage.commit(st, r => HAKPhieuCan.chuanHoaNgay2(r, null)), at = stamp(), dk = HAKStage.dirtyKinds(st);   // mọi phiếu có cột ngày cân 2 khi lưu vào hồ sơ rừng (nhập thật thì giữ, trống thì suy ra)
     f.nc = cm.lists.nc; f.dx = cm.lists.dx; f.pc = cm.lists.pc; if (cm.bienLog.length) f.bienLog = (f.bienLog || []).concat(cm.bienLog);
     if (dk.includes('nc')) { f.ncAt = at; if (st.src.nc && /^Excel: /.test(st.src.nc)) f.ncFile = st.src.nc.slice(7); }
     if (dk.includes('dx')) { f.dxAt = at; if (st.src.dx && /^Excel: /.test(st.src.dx)) f.dxFile = st.src.dx.slice(7); }
@@ -2971,7 +2972,7 @@ function qtPanel(rec) {
   const steps = [['chuanbi', '1. Chuẩn bị', prep.length ? prep.length + ' việc còn thiếu' : 'Đủ'], ['dot1', '2. In đợt 1', d1.xong ? 'Xong' : d1.daIn + '/' + d1.total + ' đã in'], ['khaithac', '3. Khai thác, cân', (rec.pc || []).length ? (rec.pc.length + ' phiếu cân') : 'Chờ phiếu cân'],
     ['dot2', '4. In đợt 2: giấy trắng hoặc nền + in đè', dd2.xong ? 'Xong' : dd2.daIn + '/' + dd2.total + ' đã in · ' + Q.d2Text(d2)], ['xong', '5. Hoàn tất', nx.step === 'xong' ? 'Đã khớp' : 'Chưa']];
   const cur = nx.step, order = ['chuanbi', 'dot1', 'khaithac', 'dot2', 'xong'];
-  const tbl = dot => '<table class="qtTbl" id="qtDot' + dot + '"><thead><tr><th>Mẫu</th><th>Dữ liệu</th>' + (dot === 2 ? '<th>Hướng in đợt 2</th>' : '') + '<th>In ấn</th><th></th></tr></thead><tbody>' + list.filter(x => x.form.dot === dot).map(x => {
+  const tbl = dot => '<table class="qtTbl" id="qtDot' + dot + '"><thead><tr><th>Mẫu</th><th>Dữ liệu</th>' + (dot === 2 ? '<th>Hướng in đợt 2</th>' : '') + '<th>In ấn</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' + list.filter(x => x.form.dot === dot).map(x => {
     const dd = QT_DATA[x.ready], ii = QT_IN[x.printed], rt = dot === 2 ? Q.route(E2.list.filter(y => y.code === x.code)) : null;
     return '<tr data-qt="' + x.code + '" data-ready="' + x.ready + '" data-printed="' + x.printed + '"' + (rt ? ' data-route="' + rt.key + '"' : '') + '><td><b>BM-' + x.code + '</b> ' + esc(x.form.name) + '</td><td class="' + dd[0] + '" title="' + esc(x.why || '') + '">' + dd[1] + (x.ready === 'nhap' && x.why ? ' <span class="mut">(' + esc(x.why.slice(0, 60)) + (x.why.length > 60 ? '…' : '') + ')</span>' : '') + '</td>' +
       (rt ? '<td class="' + rt.cls + '">' + esc(rt.text) + '</td>' : '') + '<td class="' + ii[0] + '">' + ii[1] + (x.at ? ' <span class="mut">' + esc(x.at.slice(0, 10).split('-').reverse().join('/')) + '</span>' : '') + '</td><td class="d2act">' +
@@ -3326,7 +3327,7 @@ async function importFile(kind, file) {
     const o1 = db.rs[tgt.o], f1 = o1 && o1.forests && o1.forests[tgt.f];
     if (tgt.epoch !== dbEpoch || !f1) { pushNote('Đã dừng nạp file ' + file.name + ': lô ' + tgt.ma + ' không còn như lúc chọn file (đã bị xóa hoặc dữ liệu vừa được khôi phục). Không có gì được đưa vào bản nháp.', 'err'); return; }
     const ma = f1.info.maRung, other = [...new Set(r.rows.map(x => x.maRung).filter(x => x && x !== ma))];   // file mang mã lô khác lô đích: KHÔNG tự chuyển lô, báo lỗi ở bản nháp
-    r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; });
+    r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; if (kind === 'pc') HAKPhieuCan.chuanHoaNgay2(x); });   // file không có hoặc để trống ngày cân 2: suy ra và đánh dấu
     stErrList = null; const st = stGetFor(tgt.o, tgt.f, true), rep = HAKStage.merge(st, kind, r.rows, {source: 'Excel: ' + file.name});
     const here = cur === tgt.o && curF === tgt.f;
     const msg = 'Đã đưa ' + r.rows.length + ' dòng ' + ST_LABEL[kind] + ' từ ' + file.name + ' vào BẢN NHÁP của lô ' + ma + ' (chưa lưu): thêm ' + rep.add + ', cập nhật ' + rep.upd + ', giữ nguyên ' + rep.same + (rep.kept ? ', giữ ' + rep.kept + ' bản ghi đã lưu không có trong file' : '') + (rep.pending ? ', CẦN ĐỐI CHIẾU ' + rep.pending + ' dòng trùng số phiếu nhưng khác dữ liệu (chưa áp dụng)' : '') + (rep.errors ? ', ' + rep.errors + ' ô sai định dạng (giữ giá trị cũ, xem chi tiết)' : '') + (other.length ? '. Cảnh báo: file có mã rừng khác lô này (' + other.join(', ') + ') nên các dòng đó báo lỗi' : '') + '. Xem trước, chỉnh sửa rồi bấm “Lưu dữ liệu vào lô”.';
@@ -4162,7 +4163,7 @@ async function lkApply() {
     const chosen = lkChosenPhieu();
     if (chosen.length) {   // phiếu cân đi vào BẢN NHÁP của lô; chỉ thành dữ liệu của lô sau khi bấm “Lưu dữ liệu vào lô”
       const k0 = stKeyOf(o.id, f.id); if (!stages[k0]) { stages[k0] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); lkNewStages.push(k0); }
-      const rows = chosen.map(p => Object.assign(normPC({maRung: f.info.maRung, ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', gioCan1: p.gioCan1, gioCan2: p.gioCan2, can1: p.can1, can2: p.can2, klKg: p.klKg, khachHang: p.khachHang, diaChi: p.diaChi, nguonGoc: p.nguonGoc, donGia: p.donGia, thanhTien: p.thanhTien}), {maKhachHang: p.maKhachHang || '', _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}}));
+      const rows = chosen.map(p => Object.assign(HAKPhieuCan.chuanHoaNgay2(normPC({maRung: f.info.maRung, ngay: p.ngay, bienSo: p.bien, soPhieu: p.soPhieu, kl: p.kl, noiGiao: '', gioCan1: p.gioCan1, gioCan2: p.gioCan2, can1: p.can1, can2: p.can2, klKg: p.klKg, khachHang: p.khachHang, diaChi: p.diaChi, nguonGoc: p.nguonGoc, donGia: p.donGia, thanhTien: p.thanhTien})), {maKhachHang: p.maKhachHang || '', _src: {tab: 'HoSoKeo_QC', row: p.row, at, set}}));
       // phiếu đã có mà bảng tính có biển khác, chọn “chỉ đổi biển số”: người dùng đã chọn đúng phiếu → coi là cùng chuyến, chỉ đổi biển số
       const isPlate = (p, i) => s.plateOnly && p.bienDoi;
       const plateRows = rows.filter((r, i) => isPlate(chosen[i], i)).map(r => ({soPhieu: r.soPhieu, bienSo: r.bienSo, _src: r._src})), restRows = rows.filter((r, i) => !isPlate(chosen[i], i));

@@ -26,3 +26,6 @@
 --sb:linear-gradient(180deg,#0f0c06 0%,#0a0804 100%);--okBg:rgba(220,184,98,.14);--okFg:#e8c97c;--focus:rgba(220,184,98,.34);--edit:#dcb862;--editBg:#262010;
 --hero:radial-gradient(1200px 300px at 90% -20%,rgba(220,184,98,.14),transparent 60%),linear-gradient(120deg,#0f0c06,#3a2d12);
 --c1:rgba(220,184,98,.16);--c1f:#e8c97c;--deep:#0f0c06}
+
+/* Chế độ tối: bảng màu có màu cảnh báo/thông tin riêng cho chế độ sáng (nền sáng) phải có bản tối, nếu không chữ sáng nằm trên nền sáng (độ tương phản 1,1) */
+[data-skin][data-theme="dark"]{--warnBg:#2a2213;--warnBd:#5a4520;--warnFg:#f0cf8f;--warn:#f0b35a;--red:#ff8a6a;--redBg:#3a1e17;--infoBg:#18243a;--infoBd:#2c3d5c;--infoFg:#c3d3f0}

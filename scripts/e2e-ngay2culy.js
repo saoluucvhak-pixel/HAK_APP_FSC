@@ -24,6 +24,7 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), SEED); await w.reload(); await w.waitForSelector('#side');
   const db = () => w.evaluate(() => window.hak.loadSync().db);
+  const saveStageNow = async () => { await w.evaluate(async () => (window.__stDirty && window.__stDirty().length) ? await window.__stSaveCurrent() : null); await w.waitForTimeout(500); };
   const open = async tab => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + tab + ']'); await w.waitForTimeout(300); };
   const row = so => w.evaluate(s => { const r = [...document.querySelectorAll('#main tr')].find(x => new RegExp('(^|\\s)' + s + '(\\s|$)').test(x.innerText) && x.querySelector('[data-act=stEdit]')); return r ? r.innerText.replace(/\s+/g, ' ') : ''; }, so);
 
@@ -52,7 +53,10 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet([['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Giờ cân 2', 'Biển số 1', 'KL'], ['X1', '20/10/2026', '23:40:00', '00:10:00', '92C-12345', 5000]]); XLSX.utils.book_append_sheet(wb, ws, 'PHIEU_CAN');
   const fx = path.join(dir, 'x.xlsx'); XLSX.writeFile(wb, fx); await w.setInputFiles('input[data-file="pc"]', fx); await w.waitForTimeout(900);
   ok('nạp Excel không có cột Ngày cân 2: phiếu X1 hiện ngày cân 2 = 21/10/2026 suy ra', /20\/10\/2026 23:40:00 21\/10\/2026 suy ra 00:10:00/.test(await w.evaluate(() => [...document.querySelectorAll('#main tr')].filter(r => /X1/.test(r.innerText)).map(r => r.innerText.replace(/\s+/g, ' ')).join('|'))));
-  await w.click('[data-act=stDiscard]');
+  await saveStageNow();
+  const x1 = (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'X1');
+  ok('lưu vào hồ sơ rừng: phiếu X1 có cột ngày cân 2 = 21/10/2026, đánh dấu “suy ra” (lưu trong SQLite); phiếu cũ chưa có ngày cân 2 cũng được ghi khi lưu', !!x1 && x1.ngay2 === '21/10/2026' && x1.ngay2Nguon === 'suy ra' && (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N2').ngay2 === '06/10/2026', JSON.stringify(x1));
+  ok('ngày cân 2 nhập thật (N6 = 11/10/2026) giữ nguyên sau khi lưu, không bị đánh dấu “suy ra”', (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N6').ngay2 === '11/10/2026' && !(await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N6').ngay2Nguon);
 
   // ===== 2. cự ly tự tính =====
   await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');

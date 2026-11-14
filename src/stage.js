@@ -69,9 +69,13 @@
   /* áp dụng dòng nhập lên dòng đang có theo quy tắc trên; trả về danh sách thay đổi từng trường */
   function applyInto(kind, old, inc, opt) {
     const next = clone(old), fields = [], errs = [], tay = old._tay || [];
+    // ngày cân 2 do phần mềm suy ra không được ghi đè ngày cân 2 NHẬP THẬT đã có
+    const khongGhiNgay2 = kind === 'pc' && inc.ngay2Nguon === 'suy ra' && !isBlank(old.ngay2) && old.ngay2Nguon !== 'suy ra';
     Object.keys(inc).forEach(f => {
       if (SKIP[f] || f === 'giaLoi') return;
+      if (khongGhiNgay2 && (f === 'ngay2' || f === 'ngay2Nguon')) return;
       const v = inc[f];
+      if (f === 'ngay2Nguon') { if (!same(old[f], v)) next[f] = clone(v); return; }   // nhãn nguồn của ngày cân 2: áp dụng lặng lẽ (không liệt kê như một trường dữ liệu)
       if (f[0] === '_') { if (!isBlank(v)) next[f] = clone(v); return; }
       if (invalid(kind, f, v)) { errs.push({f, label: labelOf(kind, f), v}); fields.push({f, label: labelOf(kind, f), cu: old[f], moi: v === 'x' ? '(không hợp lệ)' : v, act: 'loi'}); return; }
       if (isBlank(v)) { if (!isBlank(old[f])) fields.push({f, label: labelOf(kind, f), cu: old[f], moi: '', act: 'giu-trong'}); return; }
@@ -172,9 +176,9 @@
   const dirty = (st, kind) => !st ? false : (kind ? KINDS.filter(k => k === kind) : KINDS).some(k => { const c = counts(st, k); return c.new + c.changed + c.removed > 0 || pendingOf(st, k).length > 0; });
   const dirtyKinds = st => st ? KINDS.filter(k => dirty(st, k)) : [];
   /* danh sách để ghi vào lô + nhật ký đổi biển số (phiếu đã lưu mà biển số đổi so với bản đã lưu) */
-  function commit(st) {
+  function commit(st, fixPc) {
     const out = {}, bienLog = [], at = new Date().toISOString(), baseById = new Map(st.base.pc.map(r => [r._id, r]));
-    KINDS.forEach(k => { out[k] = st.cur[k].map(r => { const c = clone(r); delete c._plateSrc; delete c._renamedFrom; delete c._nguon; delete c._tay; return c; }); });
+    KINDS.forEach(k => { out[k] = st.cur[k].map(r => { const c = clone(r); if (k === 'pc' && fixPc) fixPc(c); delete c._plateSrc; delete c._renamedFrom; delete c._nguon; delete c._tay; return c; }); });
     st.cur.pc.forEach(r => { const b = baseById.get(r._id); if (b && bienKey(b.bienSo) !== bienKey(r.bienSo)) bienLog.push({soPhieu: r.soPhieu, ngay: r.ngay, kl: typeof r.kl === 'number' ? r.kl : 0, cu: b.bienSo || '', moi: r.bienSo, at, nguon: r._plateSrc || 'Sửa tay'}); });
     return {lists: out, bienLog};
   }

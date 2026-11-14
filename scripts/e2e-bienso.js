@@ -57,6 +57,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   ok('phiếu cân từ Google Sheets mang đơn giá và thành tiền (1.500.000 đ/tấn × 2,84 tấn = 4.260.000 đ) để in phiếu cân', p1.donGia === 1500000 && p1.thanhTien === 4260000, JSON.stringify(p1));
   await w.click('[data-ftab=dx]'); const dxTxt = await w.innerText('#main');
   ok('danh sách phiếu cân (tab Vận chuyển) hiện các cột giờ cân, cân lần 1/2, khối lượng kg và tấn, khách hàng', ['Cân lần 1 (ngày, giờ)', 'Cân lần 2 (ngày, giờ)', 'Cân lần 1 (kg)', 'Cân lần 2 (kg)', 'Khối lượng (kg)', 'Khối lượng (tấn)', 'Khách hàng'].every(h => dxTxt.includes(h)) && /08:15:00/.test(dxTxt) && /NGUYỄN VĂN AN/.test(dxTxt) && /6\.840/.test(dxTxt));
+  ok('phiếu từ Google Sheets không có cột Ngày cân 2: khi lưu vào hồ sơ rừng có cột ngày cân 2 = ngày cân 1 (giờ cân 2 sau giờ cân 1), đánh dấu “suy ra”', pc1().ngay2 === pc1().ngay && pc1().ngay2Nguon === 'suy ra' && /suy ra/.test(await w.innerText('#main')), JSON.stringify([pc1().ngay, pc1().ngay2, pc1().ngay2Nguon]));
   const kl0 = pc1().kl, ngay0 = pc1().ngay;
   // 2. bảng tính cập nhật biển số xe mới
   ok('nhập bảng tính có biển số mới (92C-12345 → 92C-54321)', (await w.evaluate(p => window.hak.lookup.importExcel(p), wf('moi.xlsx', 'newplate'))).ok);
