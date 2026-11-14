@@ -553,7 +553,7 @@ const dinhMucEff = i => {
 };
 /* Định mức thời gian khai thác (ngày/ha) của rừng: số rừng tự điền, hoặc mặc định theo ngày bắt đầu (Định mức → Định mức thời gian khai thác) */
 const nDoiNc = nc => Math.max(1, HAKDoi.build(nc || [], isTT).doi.length);   // số đội theo nhân công = số Tổ trưởng
-const nDoiOf = (i, nc) => (typeof i.soDoi === 'number' && i.soDoi >= 1) ? i.soDoi : nDoiNc(nc);   // số đội khai ở Thông tin rừng; chưa khai thì theo nhân công
+const nDoiOf = (i, nc) => (typeof i.soDoi === 'number' && i.soDoi >= 1) ? i.soDoi : isDirect(i) ? 1 : nDoiNc(nc);   // số đội khai ở Thông tin rừng; chưa khai thì theo nhân công
 const haDoi = (i, nd) => typeof i.dienTich === 'number' ? i.dienTich / (nd || 1) : i.dienTich;   // diện tích tính cho một đội
 const ngayHaEff = i => {
   if (typeof i.dinhMucNgayHa === 'number' && i.dinhMucNgayHa > 0) return {v: i.dinhMucNgayHa, src: 'rừng'};
@@ -794,7 +794,7 @@ function checkNC(rec) {
     }
   });
   if (tt < 1) errs.push('Cần ít nhất 1 tổ trưởng (hiện có ' + tt + ')');
-  else if (tt > 1) HAKDoi.build(rec.nc, isTT).errs.forEach(e => { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; });   // nhiều tổ trưởng = nhiều đội, mỗi người phải thuộc đúng một đội
+  else if (tt > 1 && !isDirect(rec.info)) HAKDoi.build(rec.nc, isTT).errs.forEach(e => { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; });   // nhiều tổ trưởng = nhiều đội, mỗi người phải thuộc đúng một đội
   return {errs, warns, state};
 }
 
@@ -888,9 +888,13 @@ const hdldList = rec => isDirect(rec.info) ? rec.nc : [];   // giao khoán: thay
 /* ===== Nhiều đội: mỗi Tổ trưởng là một đội, ký hợp đồng giao khoán riêng (src/doi.js) =====
  * doiOf(rec): các đội cùng phần diện tích và khối lượng của lô chia theo số người. subRec(rec, d): hồ sơ của riêng đội d (nhân công của đội, diện tích và khối lượng phần của đội),
  * dùng chung các hàm lập biểu mẫu hiện có nên mỗi đội ra một bộ BM-01, BM-20, BM-08, BM-14 riêng. Lô chỉ một đội: giữ nguyên hồ sơ, không đổi gì. */
-const doiOf = rec => { const b = HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi), kl = HAKDoi.chia(rec.info.khoiLuong, b.doi); b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kl[i]; }); return b; };
-const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {_share: d.share, _doiTen: d.ten, nc: [d.tt, ...d.members], info: Object.assign({}, rec.info, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
+const doiOf = rec => { const b = isDirect(rec.info) ? HAKDoi.single(rec.nc, isTT) : HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi), kl = HAKDoi.chia(rec.info.khoiLuong, b.doi); b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kl[i]; }); return b; };
+const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {_share: d.share, _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], info: Object.assign({}, rec.info, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
 const ncList = rec => { const tt = rec.nc.find(isTT); return tt ? [tt, ...rec.nc.filter(r => r !== tt)] : rec.nc.slice(); };   // tổ trưởng đầu danh sách, rồi mọi người còn lại (kể cả các tổ trưởng khác)
+/* Lô nhiều đội: mỗi đội ký hợp đồng riêng nên số hợp đồng, giấy ủy quyền, biên bản nghiệm thu của mỗi đội thêm hậu tố .1, .2… ngay sau phần số (015 → 015.1, 015/2026-KT → 015.1/2026-KT).
+ * Số để trống (chưa nhập) thì giữ nguyên chỗ trống để điền tay. Số xác nhận khối lượng và hợp đồng vận chuyển là của cả lô nên không đổi. */
+const soDoiSo = (x, k) => (x.thieuSo || !x.so) ? x : Object.assign({}, x, {so: /\//.test(x.so) ? x.so.replace('/', '.' + k + '/') : x.so + '.' + k});
+const exDoi = (ex, b, idx) => !b.multi ? ex : Object.assign({}, ex, {_so: Object.assign({}, ex._so, {kt: soDoiSo(ex._so.kt, idx + 1), uq: soDoiSo(ex._so.uq, idx + 1), nt: soDoiSo(ex._so.nt, idx + 1)})});
 const doiLabel = d => (d.ten ? d.ten + ' — ' : '') + d.tt.ten;
 const ucList = rec => rec.nc.filter(r => !isTT(r));         // người ủy quyền cho Tổ trưởng (hình thức giao khoán)
 // Khối lượng dùng cho bảng lương: thực tế nếu có, không thì dự kiến (diện tích × định mức)
@@ -1179,6 +1183,7 @@ function docGiaoKhoan(rec, ex) {
     P('Sau khi bàn bạc cụ thể, hai bên thống nhất ký hợp đồng khai thác gỗ keo rừng trồng với các điều khoản như sau:'),
     P('**Điều 1: Nội dung**', {keep: true}),
     P('Bên B đồng ý nhận và bên A đồng ý giao khai thác gỗ Keo Lai rừng trồng có kiểm soát tại địa chỉ: ' + rs.diaDiem + rungText(rs) + '.'),
+    ...(rec._doiTen ? [P('Lô được giao cho ' + rec._nDoi + ' đội khai thác làm song song, mỗi đội ký hợp đồng riêng. Phạm vi giao cho đội “' + rec._doiTen + '” (Tổ trưởng ' + ttName + '): ' + [typeof rs.dienTich === 'number' ? fmtTan(rs.dienTich) + ' ha' : '', typeof rs.khoiLuong === 'number' ? fmtTan(rs.khoiLuong) + ' tấn' : ''].filter(Boolean).join(', ') + ' (phần của lô chia theo số người của các đội).')] : []),
     P('**Điều 2: Giá cả và phương thức thanh toán**', {keep: true}),
     P('2.1. Đơn giá khoán theo vai trò (' + bs.unit + '): ' + roleRates(rec).join('; ') + '.', {ind: 360}),
     ...(pr.plan.ngc ? [P('2.2. Hình thức trả theo ngày công: số công của từng người do Tổ trưởng chấm hằng ngày vào Bảng chấm công; tiền của mỗi người bằng số công thực tế nhân với đơn giá công theo vai trò ở mục 2.1. Bên B nhận thay cho cả tổ và chi trả lại cho từng người.' + (pr.sum && pr.plan.cong != null ? ' Dự tính ' + fmtCong(pr.plan.cong) + ' công mỗi người (theo thời gian khai thác, không tính Chủ nhật), tổng tiền công dự tính: ' + fmt(pr.sum) + ' đồng.' : ''), {ind: 360})] : [])
@@ -1887,9 +1892,9 @@ function dot2Files0(rec, mode, keys) {
   const ex = exOf(rec, mode), s = slug(rec.info.ten), IA = HAKInAn2, files = [], used = new Set();
   const want = k => !keys || keys.includes(k), B = doiOf(rec);
   const push = f => { let q = f.path, n = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + n++ + '.docx'); used.add(q); f.path = q; files.push(f); };
-  B.doi.forEach(d => { const sr = subRec(rec, B, d), k8 = IA.keyOf('08', B.multi ? d.key : ''), k14 = IA.keyOf('14', B.multi ? d.key : '');
-    if (want(k8)) push({key: k8, path: B.multi ? '08_Bang_thanh_toan_tien_cong/' + slug(d.ten) + '.docx' : '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(sr, ex), land: true});
-    if (want(k14)) push({key: k14, path: B.multi ? '14_BB_nghiem_thu_thanh_ly/' + slug(d.ten) + '.docx' : '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(sr, ex)}); });
+  B.doi.forEach((d, di) => { const sr = subRec(rec, B, d), exd = exDoi(ex, B, di), k8 = IA.keyOf('08', B.multi ? d.key : ''), k14 = IA.keyOf('14', B.multi ? d.key : '');
+    if (want(k8)) push({key: k8, path: B.multi ? '08_Bang_thanh_toan_tien_cong/' + slug(d.ten) + '.docx' : '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(sr, exd), land: true});
+    if (want(k14)) push({key: k14, path: B.multi ? '14_BB_nghiem_thu_thanh_ly/' + slug(d.ten) + '.docx' : '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(sr, exd)}); });
   groupsDX(rec).forEach(g => { const k = IA.keyOf('09', g.cccd || g.ten); if (want(k)) push({key: k, path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}); });
   groupsDX(rec).forEach(g => { const k = IA.keyOf('10', g.cccd || g.ten); if (want(k)) push({key: k, path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}); });
   return files;
@@ -1899,7 +1904,7 @@ function buildFilesRaw0(rec, kind) {
   const ex = exOf(rec, 'day'); ex._kind = kind;
   const s = slug(rec.info.ten), B = doiOf(rec);
   /* Mỗi đội (mỗi Tổ trưởng) một bộ riêng. Lô một đội: một file như cũ; nhiều đội: thư mục con, mỗi đội một file tên theo đội */
-  const perDoi = (dir, base, fn, o) => B.doi.forEach(d => { const sr = subRec(rec, B, d); if (o && o.skip && o.skip(d)) return; files.push(Object.assign({path: B.multi ? dir + '/' + slug(d.ten) + '.docx' : base + '_' + s + '.docx', blocks: fn(sr, ex)}, o && o.land ? {land: true} : {})); });
+  const perDoi = (dir, base, fn, o) => B.doi.forEach((d, di) => { const sr = subRec(rec, B, d); if (o && o.skip && o.skip(d)) return; files.push(Object.assign({path: B.multi ? dir + '/' + slug(d.ten) + '.docx' : base + '_' + s + '.docx', blocks: fn(sr, exDoi(ex, B, di))}, o && o.land ? {land: true} : {})); });
   const files = [], used = new Set();
   /* Hai người ký trùng tên (khác CCCD) không được ghi đè file của nhau trong ZIP: thêm hậu tố _2, _3… */
   files.push = f => { let q = f.path, k = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + k++ + '.docx'); used.add(q); f.path = q; return Array.prototype.push.call(files, f); };
@@ -2313,6 +2318,7 @@ function exportCheck(job) {
   if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  { const ttN = (job.nc || []).filter(isTT).length, sd = job.info.soDoi; if (!isDirect(job.info) && typeof sd === 'number' && ttN >= 1 && sd !== ttN) add('doi', 'Số đội', 'Thông tin rừng khai ' + sd + ' đội làm song song nhưng tab Nhân công có ' + ttN + ' Tổ trưởng (' + ttN + ' đội): thời gian khai thác dự kiến tính theo ' + sd + ' đội, hồ sơ lập theo ' + ttN + ' đội.', 'Số đội khai thác', {ftab: 'finfo'}); }
   { const rows = HAKDinhBien.get(db).rows, bd = HAKDoi.build(job.nc || [], isTT);
     (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
       if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}); }); }
@@ -2644,7 +2650,10 @@ function ccAct(act) {
 }
 async function ccExport(rec, k) {
   const ex = exOf(rec, 'day'); ex._ccMonth = k; docMode = 'day';
-  try { const f = {path: '05_Bang_cham_cong_' + slug(rec.info.ten) + '_' + k + '.docx', blocks: docChamCong(rec, ex), land: true}; download(await makeDocx(f.blocks, docOpts(f, rec)), f.path.split('/').pop()); }
+  try {
+    const B = doiOf(rec);   // lô nhiều đội: mỗi đội một bảng chấm công
+    for (const d of B.doi) { const sr = subRec(rec, B, d), f = {path: '05_Bang_cham_cong_' + slug(rec.info.ten) + (B.multi ? '_' + slug(d.ten) : '') + '_' + k + '.docx', blocks: docChamCong(sr, ex), land: true}; download(await makeDocx(f.blocks, docOpts(f, sr)), f.path.split('/').pop()); }
+  }
   catch (err) { note('Lỗi khi tạo file: ' + err.message, 'err'); }
 }
 document.addEventListener('change', e => {
@@ -2887,9 +2896,9 @@ function doiPanel(rec) {
   const b = doiOf(rec), tt = (rec.nc || []).filter(isTT).length;
   if (!b.multi) return tt <= 1 && (rec.nc || []).length ? '<div class="mut" id="doiInfo" style="margin:6px 0">Lô có 1 đội (1 Tổ trưởng): ký 1 hợp đồng giao khoán. Muốn ký với nhiều đội, thêm Tổ trưởng và ghi tên đội ở cột <b>Đội</b>: mỗi Tổ trưởng là một đội.</div>' : '';
   const bq = basisOf(rec.info).qty, bs = bq === 'ha' ? 'ha' : 'tan', unit = bq === 'ha' ? 'ha' : 'tấn', fmtV = v => v == null ? '—' : formatNumber(v, 3);
-  return '<details class="card" id="doiPanel" open><summary><b>Nhiều đội: ' + b.doi.length + ' đội, ' + b.doi.length + ' hợp đồng giao khoán</b></summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Đội</th><th>Tổ trưởng</th><th>Số người</th><th>Phần sản lượng (' + unit + ')</th></tr></thead><tbody>' +
-    b.doi.map(d => '<tr><td><b>' + esc(d.ten) + '</b></td><td>' + esc(d.tt.ten) + '</td><td style="text-align:center">' + d.n + '</td><td style="text-align:right">' + fmtV(bs === 'ha' ? d.dienTich : d.khoiLuong) + '</td></tr>').join('') +
-    '</tbody></table></div><p class="mut" style="margin:8px 0 0">Sản lượng của lô chia cho các đội theo số người. Mỗi đội có hợp đồng giao khoán (BM-01), giấy ủy quyền (BM-20), bảng chấm công, danh sách đội, bảng thanh toán tiền công và biên bản nghiệm thu riêng, xuất vào thư mục con theo tên đội.</p></details>';
+  return '<details class="card" id="doiPanel" open><summary><b>Nhiều đội: ' + b.doi.length + ' đội, ' + b.doi.length + ' hợp đồng giao khoán</b></summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Đội</th><th>Tổ trưởng</th><th>Số người</th><th>Phần sản lượng (' + unit + ')</th><th>Số hợp đồng giao khoán</th></tr></thead><tbody>' +
+    b.doi.map((d, di) => '<tr><td><b>' + esc(d.ten) + '</b></td><td>' + esc(d.tt.ten) + '</td><td style="text-align:center">' + d.n + '</td><td style="text-align:right">' + fmtV(bs === 'ha' ? d.dienTich : d.khoiLuong) + '</td><td>' + esc(soDoiSo(HAKHopDong.numbers(exOf(rec, 'day')).kt, di + 1).so) + '</td></tr>').join('') +
+    '</tbody></table></div><p class="mut" style="margin:8px 0 0">Sản lượng của lô chia cho các đội theo số người. Mỗi đội có <b>số hợp đồng riêng</b> (số bạn nhập thêm .1, .2… theo thứ tự đội), hợp đồng giao khoán (BM-01), giấy ủy quyền (BM-20), bảng chấm công, danh sách đội, bảng thanh toán tiền công và biên bản nghiệm thu riêng, xuất vào thư mục con theo tên đội.</p></details>';
 }
 function panelNC(rec) {
   const c = checkNC(rec);

@@ -46,13 +46,19 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('2 hợp đồng giao khoán, mỗi đội một file', gk.length === 2, names.join(', '));
   const t1 = gk.length ? await txt(gk[0]) : '', t2 = gk.length > 1 ? await txt(gk[1]) : '';
   ok('hợp đồng đội 1 chỉ có Tổ trưởng đội 1; hợp đồng đội 2 chỉ có Tổ trưởng đội 2', /TRẦN ĐỘI MỘT/.test(t1) && !/NGUYỄN ĐỘI HAI/.test(t1) && /NGUYỄN ĐỘI HAI/.test(t2) && !/TRẦN ĐỘI MỘT/.test(t2));
+  ok('hợp đồng nêu rõ lô giao cho 2 đội làm song song và phạm vi của đội (ha)', /giao cho 2 đội khai thác làm song song/.test(t1) && /đội “Đội 1”/.test(t1) && /1,2 ha/.test(t1) && /0,8 ha/.test(t2), t1.slice(300, 900));
   ok('2 giấy ủy quyền, mỗi đội một', uq.length === 2, names.join(', '));
+  ok('số hợp đồng từng đội khác nhau: 015.1/2026-KT và 015.2/2026-KT (không trùng số)', /015\.1\/2026-KT/.test(t1) && !/015\.2\/2026-KT/.test(t1) && /015\.2\/2026-KT/.test(t2) && !/015\.1\/2026-KT/.test(t2), t1.slice(0, 200) + ' | ' + t2.slice(0, 200));
   ['05_Bang_cham_cong', '06_DS_doi_khai_thac', '07_XN_dao_tao_ATLD', '08_Bang_thanh_toan_tien_cong', '14_BB_nghiem_thu_thanh_ly'].forEach(d => ok(d + ': mỗi đội một file', names.filter(n => new RegExp(d + '[^/]*/').test(n)).length === 2, names.join(', ')));
   // 3. lỗi: thiếu tên đội / đội mồ côi (lô C)
   const C = lot('fc', 'R-C', {exp: {}, pc: [], kl: 10, nc: [p(1, 'Tổ trưởng', 'TT MỘT', 'Tổ trưởng', 'Đội 1'), p(2, 'Tổ trưởng', 'TT HAI', 'Tổ trưởng', ''), p(3, 'Công nhân', 'CN LẠC', 'Công nhân khai thác', 'Đội 9')].map(r => ({...r, maRung: 'R-C'}))});
   const D2 = seed([A, B, C]); await w.evaluate(d => window.hak.save(d), D2); await w.reload(); await w.waitForSelector('#side');
   await open('fc'); const e = await w.innerText('#main');
   ok('thiếu tên đội của Tổ trưởng và công nhân vào đội không có Tổ trưởng: báo lỗi rõ', /chưa ghi tên đội/.test(e) && /không có Tổ trưởng/.test(e), e.slice(0, 600));
+  const E = lot('fd', 'R-D', {exp: {}, pc: [], kl: 10, nc: [p(1, 'Tổ trưởng', 'TT MỘT', 'Tổ trưởng', ''), p(2, 'Tổ trưởng', 'TT HAI', 'Tổ trưởng', ''), p(3, 'Công nhân', 'CN BA', 'Công nhân khai thác', '')].map(r => ({...r, maRung: 'R-D'}))}); E.info.moHinhKy = 'tructiep';
+  await w.evaluate(d => window.hak.save(d), seed([A, B, C, E])); await w.reload(); await w.waitForSelector('#side'); await open('fd');
+  const ed = await w.innerText('#main');
+  ok('hình thức trực tiếp: không yêu cầu tên đội, không chia đội', !/chưa ghi tên đội/.test(ed) && !(await w.$('#doiPanel')), ed.slice(0, 400));
   // 4. lô một tổ trưởng không đổi
   await open('fb'); z = await zipOf(); const nb = Object.keys(z.files).filter(n => !z.files[n].dir);
   ok('lô 1 Tổ trưởng: vẫn 1 hợp đồng giao khoán như cũ, không có thư mục theo đội', nb.filter(x => /01_HD_Giao_khoan_[^/]*\.docx$/.test(x)).length === 1 && !nb.some(x => /01_HD_Giao_khoan[^/]*\//.test(x)), nb.join(', '));

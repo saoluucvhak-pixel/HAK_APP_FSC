@@ -427,3 +427,8 @@ Một lô có thể giao khoán cho **nhiều đội**, mỗi tổ trưởng là
 - Định mức nhân công được so sánh theo từng đội (1 đội 8 người). Định mức thời gian khai thác (ngày/ha) tính cho một đội nên lô nhiều đội chia thêm cho số đội.
 - Biên bản nghiệm thu (BM-14) của từng đội ghi khối lượng phiếu cân của cả lô và phần của đội chia theo số người (phiếu cân không phân theo đội).
 - Thiếu tên đội, hai tổ trưởng trùng tên đội hoặc công nhân thuộc đội không có tổ trưởng sẽ báo lỗi và chặn xuất.
+- **Số hợp đồng riêng cho từng đội**: số bạn nhập ở tab Xuất hồ sơ được thêm hậu tố theo thứ tự đội, ví dụ 015/2026-KT thành 015.1/2026-KT (đội 1) và 015.2/2026-KT (đội 2); áp dụng cho hợp đồng giao khoán (BM-01), giấy ủy quyền (BM-20) và biên bản nghiệm thu (BM-14). Số chưa nhập thì để trống như cũ. Số xác nhận khối lượng và hợp đồng vận chuyển là của cả lô nên không đổi. Bảng ở tab Nhân công hiện sẵn số của từng đội.
+- **Hợp đồng nêu rõ phạm vi của đội**: BM-01 ghi lô giao cho bao nhiêu đội làm song song và phần diện tích (hoặc khối lượng) giao cho đội đó.
+- **In bảng chấm công đã nhập**: lô nhiều đội tải mỗi đội một file.
+- **Hình thức trực tiếp** (không có hợp đồng giao khoán) không chia đội: cột Đội bị bỏ qua và không báo lỗi tên đội.
+- **Khai số đội khác số Tổ trưởng**: ngoài lời nhắc ở Thông tin rừng, còn có mục **Số đội** ở Kiểm tra trước khi xuất (cần đối chiếu, không chặn).

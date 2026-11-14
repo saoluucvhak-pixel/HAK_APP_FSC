@@ -36,6 +36,11 @@
     if (typeof vol !== 'number' || !(vol > 0) || !doi.length) return doi.map(() => null);
     let used = 0; return doi.map((d, i) => { const v = i === doi.length - 1 ? Math.round((vol - used) * 1000) / 1000 : Math.round(vol * d.share * 1000) / 1000; used += v; return v; });
   }
-  const api = {build, chia, keyOf, fold};
+  /* Hình thức trực tiếp không có hợp đồng giao khoán nên không chia đội: coi cả lô là một đội (Tổ trưởng đầu tiên, mọi người còn lại) */
+  function single(nc, isTT) {
+    nc = nc || []; const t = nc.find(isTT);
+    return {multi: false, doi: t ? [{key: keyOf(t), ten: trim(t.doi), tt: t, members: nc.filter(r => r !== t), n: nc.length, share: 1}] : [], errs: [], orphans: []};
+  }
+  const api = {build, single, chia, keyOf, fold};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDoi = api;
 })(typeof self !== 'undefined' ? self : this);
