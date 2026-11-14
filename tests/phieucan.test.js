@@ -6,7 +6,9 @@ const FILE = path.join(__dirname, '..', 'renderer', 'PhieuCan.html');
 const SHA = fs.readFileSync(path.join(__dirname, 'phieucan.sha256'), 'utf8').trim();
 
 test('file công cụ in phiếu cân giữ nguyên bản gốc từng byte', () => {
-  assert.strictEqual(crypto.createHash('sha256').update(fs.readFileSync(FILE)).digest('hex'), SHA);
+  // so theo nội dung với ký tự xuống dòng LF: máy Windows có thể đổi LF thành CRLF khi lấy mã về (đã đặt .gitattributes -text), không làm đổi bản in
+  const buf = fs.readFileSync(FILE), lf = Buffer.from(buf.toString('latin1').replace(/\r\n/g, '\n'), 'latin1');
+  assert.strictEqual(crypto.createHash('sha256').update(lf).digest('hex'), SHA);
 });
 test('khổ giấy lỗ 240 × 279 mm và bố cục tuyệt đối theo mm vẫn có trong file', () => {
   const h = fs.readFileSync(FILE, 'utf8');
