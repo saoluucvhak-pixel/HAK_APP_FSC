@@ -1,12 +1,13 @@
 'use strict';
 /* Kiểm thử đầu-cuối bằng Electron thật (cần màn hình ảo trên Linux: xvfb-run node scripts/e2e.js) */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const root = path.join(__dirname, '..');
 const FIX = process.env.FIXTURES || path.join(root, 'tests', 'fixtures');
 const dbFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-e2e-')), 'e2e.sqlite');
 let fail = 0; const ok = (name, cond) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name); if (!cond) fail++; };
-const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: dbFile, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
 
 (async () => {
   let app = await launch(), win = await app.firstWindow(); const errs = []; win.on('pageerror', e => errs.push(e.message)); win.on('dialog', d => d.accept());
@@ -26,6 +27,12 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   ok('thanh ngữ cảnh hiện mã rừng đang mở', /CR-001-R2/.test(await win.innerText('#ctxForest')));
   if (fs.existsSync(path.join(FIX, 'test_nhancong.xlsx'))) {
     await win.click('[data-ftab=nc]'); await win.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await win.waitForTimeout(600);
+    // file mang mã rừng CR-001-R1 nhưng đang mở lô CR-001-R2: KHÔNG tự chuyển lô, báo lỗi và không ghi gì (tránh ghi nhầm lô)
+    const blocked = await win.evaluate(async () => (window.__stDirty().length ? await window.__stSaveCurrent() : null));
+    ok('file nhân công mang mã lô khác lô đang mở: không lưu được, báo rõ; không lô nào có nhân công', !!blocked && blocked.ok === false && /khác lô đang mở/.test((blocked.errs || []).join(' ')), JSON.stringify(blocked).slice(0, 200));
+    await win.evaluate(() => document.querySelector('[data-act=stDiscard]') && document.querySelector('[data-act=stDiscard]').click()); await win.waitForTimeout(300);
+    await win.click('[data-tab=rung]'); await win.click('[data-forest]'); await win.click('[data-ftab=nc]');   // sang đúng lô CR-001-R1 rồi nạp lại
+    await win.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await win.waitForTimeout(600); await stSave(win);
   }
   await win.waitForFunction(() => document.getElementById('saveSt').textContent.includes('Đã lưu'), null, {timeout: 5000}).catch(() => {});
   ok('trạng thái lưu: Đã lưu', (await win.innerText('#saveSt')).includes('Đã lưu'));

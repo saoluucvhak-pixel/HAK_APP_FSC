@@ -1,6 +1,7 @@
 'use strict';
 /* Kiểm thử đầu-cuối phần Tra cứu Google Sheets bằng Electron thật, dữ liệu giả lập (xvfb-run node scripts/e2e-lookup.js) */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os'), http = require('http');
 const {build} = require('../tests/fixtures/make-lookup');
 const root = path.join(__dirname, '..');
@@ -14,7 +15,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
 (async () => {
   await new Promise(r => srv.listen(0, '127.0.0.1', r));
   const url = 'http://127.0.0.1:' + srv.address().port + '/export.xlsx';
-  const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: dbFile, HAKQN_SHEET_URL: url}});
+  const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_SHEET_URL: url}});
   const pick = (app, p) => app.evaluate(({dialog}, p) => { dialog.showOpenDialog = async () => ({canceled: false, filePaths: [p]}); }, p);
   let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message));
   w.on('dialog', d => d.accept());
@@ -46,7 +47,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   await w.fill('[data-lkalias]', '92C-99999'); await w.dispatchEvent('[data-lkalias]', 'change'); await w.waitForTimeout(100);
   await w.click('[data-act=lkPcAll]');
   await w.check('[data-lkkl]');
-  await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'});
+  await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   ok('đã tạo chủ rừng mới từ kết quả', (await w.innerText('#side')).includes('NGUYỄN VĂN AN'));
   ok('thanh ngữ cảnh: mã rừng 20260110_001', /20260110_001/.test(await w.innerText('#ctxForest')));
   const finfo = await w.$eval('#forestForm', f => Object.fromEntries(new FormData(f)));
@@ -60,7 +61,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.waitForSelector('[data-act=lkApply]');
   const pv2 = await w.innerText('#lkBody');
   ok('nhập lại: phiếu đã có hiện "bỏ qua", trường giống nhau hiện "giống nhau"', /bỏ qua — Đã có trong hồ sơ/.test(pv2) && /giống nhau/.test(pv2));
-  await w.click('[data-act=lkPcAll]'); await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'});
+  await w.click('[data-act=lkPcAll]'); await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   await w.click('[data-ftab=dx]');
   ok('nhập lại không tạo phiếu trùng', ((await w.innerText('#main')).match(/1001\/2026\/NK/g) || []).length === 1);
   // Ô đã có dữ liệu khác: bắt buộc chọn
@@ -68,7 +69,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   await w.click('#forestForm [data-act=lkOpen]'); await w.fill('#lkQ', '1001/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(150);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.click('[data-act=lkApply]'); await w.waitForTimeout(150);
   ok('ô đã có giá trị khác: chưa chọn thì không cho lưu', /Chưa lưu: Rừng: chọn giữ hay thay “Địa điểm khai thác/.test(await w.innerText('#lkBody')));
-  await w.check('[data-lkrad="forest|diaDiem|keep"]'); await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'});
+  await w.check('[data-lkrad="forest|diaDiem|keep"]'); await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   ok('chọn giữ hiện có: giá trị người dùng nhập được giữ', (await w.$eval('#forestForm [name=diaDiem]', i => i.value)) === 'Địa điểm do người dùng nhập');
   // Hợp đồng nhiều rừng: tạo rừng mới cho chủ đã có, mã rừng trùng bị chặn
   await w.click('header [data-act=lkOpen]'); await w.fill('#lkQ', 'tran thi binh'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(150);
@@ -81,7 +82,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   ok('diện tích khác nhau giữa hai nguồn: bắt buộc chọn', /Chọn giá trị diện tích/.test(await w.innerText('#lkBody')));
   await w.check('[data-lkarea="1"]'); await w.check('[data-lkgps="0"]');
   await w.screenshot({path: path.join(process.env.SHOTS || dir, 'xem_truoc.png'), fullPage: true});
-  await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'});
+  await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   await w.click('header [data-act=lkOpen]'); await w.fill('#lkQ', '20260220_001'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(150);
   await w.click('[data-lkpick]'); await w.waitForTimeout(150);
   const fi2 = await w.$eval('#forestForm', f => Object.fromEntries(new FormData(f)));

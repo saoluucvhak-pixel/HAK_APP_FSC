@@ -3,6 +3,7 @@
  * đủ giờ cân, cân 1/2, khối lượng, khách hàng, địa chỉ, đơn giá, thành tiền; sau đó đổi xe lần nữa bằng “cập nhật biển số xe” → in phiếu cân lại ra biển mới nhất.
  * Chạy: xvfb-run -a node scripts/e2e-luongpc.js */
 const {_electron: electron} = require('playwright-core');
+const {saveStage: stSave, addXe} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const {build} = require('../tests/fixtures/make-lookup');
 const root = path.join(__dirname, '..');
@@ -10,7 +11,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-lpc-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, build(v)); return f; };
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'l.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'l.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const forest = async () => Object.values(Object.values((await db()).rs)[0].forests)[0];
@@ -34,6 +35,8 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   await w.click('[data-act=lkPcAll]');
   ok('đã đổi biển 1001 → 92C-77777 (viết hoa), phiếu 1002 ghép tên xe → 92C-99999, cả hai được chọn đưa qua', (await w.inputValue(ov)) === '92C-77777' && /đã đổi từ 92C-12345/.test(await w.innerText('#lkBody')) && (await w.$$eval('[data-lkpc]:checked', e => e.length)) >= 2);
   await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await w.waitForTimeout(600);
+  ok('đưa qua chỉ vào BẢN NHÁP: dữ liệu đã lưu của lô chưa có phiếu, nút In phiếu cân bị khóa cho đến khi bấm Lưu dữ liệu vào lô', (await forest()).pc.length === 0 && !!(await w.$('#stDirty')));
+  await addXe(w, '92C-77777'); await addXe(w, '92C-99999'); await stSave(w);
   let p1 = await pcOf('1001/2026/NK'), p2 = await pcOf('1002/2026/NK');
   ok('đưa qua rừng: phiếu 1001 mang biển ĐÃ ĐỔI 92C-77777 (không phải 92C-12345); phiếu 1002 là 92C-99999', !!p1 && p1.bienSo === '92C-77777' && !!p2 && p2.bienSo === '92C-99999', JSON.stringify([p1 && p1.bienSo, p2 && p2.bienSo]));
   ok('phiếu 1001 mang đủ trường để in: giờ cân 1/2, cân 1/2, KL kg và tấn, khách hàng, địa chỉ rừng, nguồn gốc, đơn giá 1.500.000, thành tiền 4.260.000',
@@ -48,10 +51,9 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   await w.click('[data-lktab="HoSoKeo_QC"]'); await w.fill('#lkQ', '1001/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.waitForSelector('[data-act=lkApply]');
   ok('khung “Biển số xe khác với hồ sơ” nêu 92C-77777 → 92C-54321', /Biển số xe khác với hồ sơ/.test(await w.innerText('#lkBienDoi').catch(() => '')) && /92C-77777/.test(await w.innerText('#lkBienDoi').catch(() => '')) && /92C-54321/.test(await w.innerText('#lkBienDoi').catch(() => '')));
-  await w.click('[data-act=lkPlateOnly]'); await w.waitForTimeout(900);
+  await w.click('[data-act=lkPlateOnly]'); await w.waitForTimeout(900); await addXe(w, '92C-54321'); await stSave(w);
   p1 = await pcOf('1001/2026/NK');
   ok('cập nhật biển số: 1001 thành 92C-54321, các trường in (cân, khối lượng, khách hàng, giá) giữ nguyên', p1.bienSo === '92C-54321' && p1.can1 === 6840 && p1.klKg === 2840 && p1.khachHang === 'NGUYỄN VĂN AN' && p1.donGia === 1500000 && p1.thanhTien === 4260000, JSON.stringify(p1));
-  await w.click('[data-act=lkClose]'); await w.waitForTimeout(300);
   pr = await printText(2);
   ok('in phiếu cân lại: ra biển mới nhất 92C-54321, không còn 92C-77777; giá và thành tiền vẫn đúng', pr.t.includes('92C-54321') && !pr.t.includes('92C-77777') && pr.t.includes('92C-99999') && /4\.260\.000\s*\(vnđ\)/.test(pr.t), pr.t.slice(0, 400));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));

@@ -13,7 +13,7 @@ const pad = n => (n < 10 ? '0' : '') + n;
 const daysFromNow = n => { const d = new Date(Date.now() + n * 864e5); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); };
 const thisMonth = day => { const d = new Date(); return pad(day) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); };
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 't.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 't.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   // rừng A: đủ phiếu cân trong tháng này, xe có giấy tờ sắp hết hạn, có lao động dưới 18 tuổi; rừng B: chưa có phiếu cân, chưa có tọa độ
   const A = lot('fa', 'R-A', {exp: {}, pc: PC.map((p, i) => ({...p, ngay: thisMonth(5 + i)})), kl: 30});

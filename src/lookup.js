@@ -662,20 +662,19 @@ function forestOf(code, T, R, keo, nRung, hd) {
     // thông tin cân: giờ cân 1/2, cân lần 1/2 (kg), khối lượng kg và tấn, khách hàng
     const kgOf = v => (typeof v === 'number' && isFinite(v) && v >= 0 ? v : null);
     const klKg = kg > 0 ? kg : (kl > 0 ? Math.round(kl * 1000) : null);
-    const donGia = moneyOf(r['Đơn giá']), thanhTien = moneyOf(r['Thành tiền'] != null && r['Thành tiền'] !== '' ? r['Thành tiền'] : r['Thanh toán']);   // thành tiền: cột “Thành tiền” nếu có, không thì “Thanh toán” (chỉ nhận số)
-    return {soPhieu: clean(r['SỐ PHIẾU CÂN']), ngay, bienRaw, isPlate: isPlate(bienRaw), kl, donGia, thanhTien, thanhToan: r['Thanh toán'], issue, row: r._row, assignable,
+    const tt = r['Thành tiền'] != null && r['Thành tiền'] !== '' ? ['Thành tiền', r['Thành tiền']] : ['Thanh toán', r['Thanh toán']];   // thành tiền: cột “Thành tiền” nếu có, không thì “Thanh toán” (chỉ nhận số)
+    const soPh = clean(r['SỐ PHIẾU CÂN']) || '?', giaLoi = [Money.problem('Phiếu ' + soPh + ' dòng ' + r._row + ', cột “Đơn giá”', r['Đơn giá']),
+      /^[\s]*[-−–\d]/.test(String(tt[1] == null ? '' : tt[1])) || typeof tt[1] === 'number' ? Money.problem('Phiếu ' + soPh + ' dòng ' + r._row + ', cột “' + tt[0] + '”', tt[1]) : ''].filter(Boolean);   // “Thanh toán” là chữ (đã/chưa thanh toán) thì không coi là lỗi
+    const donGia = moneyOf(r['Đơn giá']), thanhTien = moneyOf(tt[1]);
+    return {soPhieu: clean(r['SỐ PHIẾU CÂN']), ngay, bienRaw, isPlate: isPlate(bienRaw), kl, donGia, thanhTien, giaLoi, thanhToan: r['Thanh toán'], issue, row: r._row, assignable,
       gioCan1: timeText(r['Giờ cân 1']), gioCan2: timeText(r['Giờ cân 2']), can1: kgOf(r['Cân lần 1']), can2: kgOf(r['Cân lần 2']), klKg, klTan: kl,
       khachHang: stripSuffix(clean(r['Họ và tên chủ rừng'])), maKhachHang: clean(r['Mã khách hàng']), diaChi: clean(r['ĐỊA CHỈ RỪNG']), nguonGoc: clean(r['Nguồn gốc'])};
   });
   return {maRung: code, fields: f, area, areaConflict, gps, docs, ref, phieu, warns};
 }
-/* Số tiền trong bảng tính: số thật, hoặc chữ như “1.250.000” / “1.250.000,5” / “1,250,000”; không phải số dương thì null */
-function moneyOf(v) {
-  if (typeof v === 'number') return isFinite(v) && v > 0 ? v : null;
-  const t = String(v == null ? '' : v).replace(/[^\d.,]/g, ''); if (!t) return null;
-  const n = /,\d{1,2}$/.test(t) ? Number(t.replace(/\./g, '').replace(',', '.')) : Number(t.replace(/[.,]/g, ''));
-  return isFinite(n) && n > 0 ? n : null;
-}
+/* Số tiền trong bảng tính: dùng bộ đọc chặt chẽ chung (src/money.js): số âm, mũ, chữ lẫn trong số, định dạng mơ hồ bị từ chối (không tự đoán) */
+const Money = require('./money');
+const moneyOf = v => Money.positive(v);
 function mapDoc(l) {
   const f = fold(l);
   if (/quyen su dung dat|qsdd|giay chung nhan/.test(f)) return {loai: 'Giấy chứng nhận QSDĐ', ten: ''};

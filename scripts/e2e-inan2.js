@@ -23,7 +23,7 @@ const EXP0 = {soKT: '015', ngayKy: '02/10/2026', soVC: '07', ntSo: '03', pcSo: '
 const EXP1 = Object.assign({}, EXP0, {ntNgay: '20/12/2026', pcNgay: '20/12/2026', ntDaTT: '50000000'});
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('');
 async function readZip(file) { const z = await JSZip.loadAsync(fs.readFileSync(file)); const o = {}; for (const n of Object.keys(z.files).filter(n => n.endsWith('.docx'))) { const d = await JSZip.loadAsync(await z.file(n).async('nodebuffer')); o[n] = {xml: await d.file('word/document.xml').async('string'), foot: await d.file('word/footer1.xml').async('string')}; } return o; }
-const app0 = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+const app0 = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
 (async () => {
   let app = await app0(), w = await app.firstWindow(); const errs = [];
   const hook = () => { w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => { dialogs.push(d.message()); d.accept(); }); };
