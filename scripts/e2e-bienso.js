@@ -26,6 +26,15 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   ok('sửa biển số trước khi đưa qua: hiện “đã đổi từ 92C-12345”, biển mới viết hoa 92C-77777', (await w.inputValue(ov)) === '92C-77777' && /đã đổi từ 92C-12345/.test(await w.innerText('#lkBody')));
   await w.fill(ov, '92C-12345'); await w.dispatchEvent(ov, 'change'); await w.waitForTimeout(200);
   ok('trả lại biển gốc: không còn nhãn “đã đổi”', !/đã đổi từ/.test(await w.innerText('#lkBody')));
+  // đổi biển hàng loạt ngay lúc tra cứu: các phiếu đang tích đổi một lượt, rồi trả lại
+  const ov2 = '[data-lkov="1002/2026/NK"]', nTick = await w.$$eval('input[data-lkpc]:checked', b => b.length);
+  await w.fill('#lkBulkNew', '92c-88888'); await w.click('[data-act=lkBulk]'); await w.waitForTimeout(300);
+  ok('đổi hàng loạt: mọi phiếu đang tích (' + nTick + ') đổi sang 92C-88888 ở cột Biển số, có nhãn “đã đổi từ”, có thông báo; chưa ghi vào hồ sơ', nTick >= 2 && (await w.inputValue(ov)) === '92C-88888' && (await w.inputValue(ov2)) === '92C-88888' && (await w.innerText('#lkBody').then(t => (t.match(/đã đổi từ/g) || []).length)) >= 2 && /Đã đổi biển \d+ phiếu thành 92C-88888/.test(await w.innerText('#lkBody')) && !Object.values((await db()).rs).length);
+  await w.click('[data-act=lkBulkUndo]'); await w.waitForTimeout(300);
+  ok('trả lại biển gốc hàng loạt: các phiếu về 92C-12345 và 92C-99999, hết nhãn “đã đổi”', (await w.inputValue(ov)) === '92C-12345' && (await w.inputValue(ov2)) === '92C-99999' && !/đã đổi từ/.test(await w.innerText('#lkBody')));
+  await w.fill('#lkBulkNew', ''); await w.selectOption('#lkBulkSrc', {label: await w.$eval('#lkBulkSrc option:nth-child(2)', o => o.textContent)}); await w.fill('#lkBulkNew', '92C-77777'); await w.click('[data-act=lkBulk]'); await w.waitForTimeout(300);
+  ok('đổi hàng loạt theo nhóm biển (mọi phiếu đang ghi cùng một biển): chỉ nhóm đó đổi', (await w.inputValue(ov)) === '92C-77777' && (await w.inputValue(ov2)) === '92C-99999');
+  await w.click('[data-act=lkBulkUndo]'); await w.waitForTimeout(200);
   ok('lần nạp đầu không có phiếu nào đổi biển (chưa hiện khung cập nhật biển số)', !(await w.$('#lkBienDoi')));
   await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await w.waitForTimeout(500); await addXe(w, '92C-12345'); await addXe(w, '92C-99999'); await stSave(w);
   let d = await db(); const forest = () => Object.values(Object.values(d.rs)[0].forests)[0];

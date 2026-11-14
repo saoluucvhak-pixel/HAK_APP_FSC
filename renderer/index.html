@@ -6265,6 +6265,17 @@ function lkInitSel() {
   lk.sel = s; lkPhieuDefaults();
 }
 function lkAliasOf(raw) { return ((db.bienAlias || {})[foldVi(raw)]) || (lk.alias || {})[foldVi(raw)] || ''; }
+/* Đổi biển số hàng loạt ngay lúc tra cứu: chọn nhóm phiếu (đang tích, hoặc cùng một biển trên bảng) rồi gõ biển mới một lần; vẫn chỉ vào bản nháp */
+function lkBulkHtml(P, chosen) {
+  const groups = {}; P.filter(p => p.st !== 'issue').forEach(p => { const k = p.bien || ('(tên xe) ' + p.bienRaw); groups[k] = (groups[k] || 0) + 1; });
+  return '<div class="card" id="lkBulk"><b>Đổi biển số hàng loạt</b><div class="mut">Chọn nhóm phiếu, gõ biển đúng một lần, bấm Áp dụng. Biển mới hiện ở cột Biển số của từng dòng; vẫn có thể sửa riêng từng dòng. Chỉ đổi trong lần tra cứu này, chưa ghi vào hồ sơ.</div>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><select id="lkBulkSrc"><option value="*">Các phiếu đang tích (' + chosen.length + ')</option>' + Object.entries(groups).map(([k, n]) => '<option value="' + esc(k) + '">Mọi phiếu đang ghi ' + esc(k) + ' (' + n + ')</option>').join('') + '</select>' +
+    ' → <input id="lkBulkNew" list="lkPlates2" size="12" placeholder="Biển số mới" aria-label="Biển số mới"> <button class="btn sm" data-act="lkBulk">Áp dụng</button> <button class="btn ghost sm" data-act="lkBulkUndo">Trả lại biển gốc cho nhóm này</button></div></div>';
+}
+function lkBulkTargets() {
+  const src = ($('#lkBulkSrc') || {}).value || '*';
+  return lkPhieuRows().filter(p => p.st !== 'issue' && (src === '*' ? lk.sel.phieu[p.soPhieu] : (p.bien || ('(tên xe) ' + p.bienRaw)) === src));
+}
 function lkPhieuRows() {
   const F = lk.cand.forests[lk.fi], T = lkTarget(), byNo = {}, keys = new Set(T.dx.map(x => bienKey(x.bienSo)));
   T.pc.forEach(p => { byNo[String(p.soPhieu).toUpperCase()] = p; });
@@ -6326,6 +6337,7 @@ function lkPreviewHtml() {
     (P.some(p => p.bienDoi) ? '<div class="card" id="lkBienDoi"><b>Biển số xe khác với hồ sơ: ' + P.filter(p => p.bienDoi).length + ' phiếu cân</b><div class="mut">Các phiếu này đã có trong hồ sơ nhưng bảng tính có biển số mới; đã tích sẵn trong bảng bên dưới (đổi biển trong ô Biển số của từng dòng nếu cần, bỏ tích phiếu không đổi). Bấm “Lưu vào hồ sơ” để đưa vào bản nháp tab Vận chuyển; việc đổi được ghi lại ở Báo cáo “Phiếu cân đã cập nhật biển số xe” sau khi lưu.</div>' +
       P.filter(p => p.bienDoi).map(p => '<div style="margin:2px 0"><b>' + esc(p.soPhieu) + '</b> · ' + esc(p.ngay) + ' · ' + esc(p.exBien || '(chưa có)') + ' → <b>' + esc(p.bien) + '</b></div>').join('') +
       '<label style="flex-direction:row;color:var(--ink);margin-top:6px"><input type="checkbox" data-lkplonly' + (s.plateOnly ? ' checked' : '') + '> Chỉ đổi biển số, giữ nguyên ngày, khối lượng, nơi giao, đơn giá, thành tiền và các trường khác của phiếu đã có</label></div>' : '') +
+    lkBulkHtml(P, chosen) +
     '<div class="row" style="margin:6px 0"><button class="btn ghost sm" data-act="lkPcAll">Chọn mọi phiếu ghi được</button><button class="btn ghost sm" data-act="lkPcNone">Bỏ chọn tất cả</button></div>' +
     '<datalist id="lkPlates2">' + plates.map(x => '<option value="' + esc(x) + '">').join('') + '</datalist>' + 
     '<div class="wrap" style="max-height:40vh"><table><tr><th></th><th>Số phiếu</th><th>Ngày cân</th><th>Giờ cân 1</th><th>Giờ cân 2</th><th>Biển số</th><th style="text-align:right">Cân lần 1 (kg)</th><th style="text-align:right">Cân lần 2 (kg)</th><th style="text-align:right">Khối lượng (kg)</th><th style="text-align:right">Khối lượng (tấn)</th><th>Khách hàng</th><th style="text-align:right">Đơn giá (tham chiếu)</th><th style="text-align:right">Thanh toán (tham chiếu)</th><th>Trạng thái</th><th>Nguồn</th></tr>' +
@@ -6455,6 +6467,14 @@ document.addEventListener('click', async e => {
   if (a === 'lkModeNew') { lk.owner = $('#lkOwner').value; lk.mode = 'new'; lk.alias = {}; lk.plateOv = {}; lkInitSel(); lk.view = 'preview'; lk.msg = null; return lkRender(); }
   if (a === 'lkOpenDup') { const d = findForestByMa(lk.cand.forests[lk.fi].maRung); cur = d.o.id; curF = d.f.id; tab = 'rung'; view = 'owner'; render(); lk.mode = 'fill'; lk.tgt = {o: cur, f: curF, epoch: dbEpoch}; lk.alias = {}; lk.plateOv = {}; lkInitSel(); lk.view = 'preview'; return lkRender(); }
   if (a === 'lkPcAll') { lkPhieuRows().forEach(p => { lk.sel.phieu[p.soPhieu] = p.st === 'new' || p.st === 'upd'; }); return lkRender(); }
+  if (a === 'lkBulk') {
+    const nw = (($('#lkBulkNew') || {}).value || '').trim().toUpperCase(), T = lkBulkTargets();
+    if (!nw) { lk.msg = {kind: 'err', text: 'Gõ biển số mới trước khi áp dụng.'}; return lkRender(); }
+    if (!T.length) { lk.msg = {kind: 'warn', text: 'Nhóm đã chọn không có phiếu nào (tích phiếu trước, hoặc chọn nhóm theo biển).'}; return lkRender(); }
+    lk.plateOv = lk.plateOv || {}; T.forEach(p => { lk.plateOv[p.soPhieu.toUpperCase()] = nw; }); lkPhieuDefaultsKeep();
+    lk.msg = {kind: 'ok', text: 'Đã đổi biển ' + T.length + ' phiếu thành ' + nw + ' (chưa ghi vào hồ sơ). Kiểm tra cột Biển số rồi bấm “Lưu vào hồ sơ”.'}; return lkRender();
+  }
+  if (a === 'lkBulkUndo') { const T = lkBulkTargets(); lk.plateOv = lk.plateOv || {}; T.forEach(p => { delete lk.plateOv[p.soPhieu.toUpperCase()]; }); lkPhieuDefaultsKeep(); lk.msg = {kind: 'ok', text: 'Đã trả lại biển gốc cho ' + T.length + ' phiếu.'}; return lkRender(); }
   if (a === 'lkPcNone') { Object.keys(lk.sel.phieu).forEach(k => { lk.sel.phieu[k] = false; }); return lkRender(); }
   if (a === 'lkApply') return lkApply();
 });

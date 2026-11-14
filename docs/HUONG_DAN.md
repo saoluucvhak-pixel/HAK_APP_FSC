@@ -95,6 +95,7 @@ Hai thời điểm sửa, cùng một kết quả.
 **Cách 1 – đổi biển rồi mới đưa qua rừng (phiếu từ Google Sheets):**
 1. Mở rừng cần nhận phiếu (hoặc chọn **Xem trước để tạo rừng mới**). **Tra cứu Google Sheets** → tab **HoSoKeo (phiếu cân)** → gõ số phiếu, CCCD hoặc tên chủ rừng → **Tìm** → **Chọn**.
 2. Bấm **Điền vào rừng đang mở**. Bảng **Phiếu cân** hiện từng phiếu với ô **Biển số** sửa được (gợi ý biển trong đội xe của rừng).
+2b. **Đổi hàng loạt**: khung **Đổi biển số hàng loạt** phía trên bảng. Chọn nhóm (**Các phiếu đang tích** hoặc **Mọi phiếu đang ghi biển X**), gõ **biển số mới** một lần, bấm **Áp dụng**; biển mới hiện ở cột Biển số của từng dòng và vẫn sửa riêng được. **Trả lại biển gốc cho nhóm này** để hoàn lại.
 3. Gõ biển đúng vào ô của phiếu cần đổi (tự viết hoa, hiện nhãn *đã đổi từ …*). Phiếu ghi bằng tên xe thì dùng khung **Ghép tên xe với biển số** (lưu một lần). Xóa nội dung ô để trả lại biển gốc.
 4. **Chọn mọi phiếu ghi được** (hoặc tích từng phiếu) → **Lưu vào hồ sơ**. Phiếu vào rừng mang biển đã đổi cùng đủ giờ cân, cân 1/2, khối lượng, khách hàng, địa chỉ, đơn giá, thành tiền.
 
