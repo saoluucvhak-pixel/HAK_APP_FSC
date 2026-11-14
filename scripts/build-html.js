@@ -20,6 +20,9 @@ const lib = p => fs.readFileSync(path.join(root, 'node_modules', p), 'utf8');
  * nên mã chèn qua dữ liệu (ví dụ <img onerror=...> trong tên chủ rừng) không chạy; không tải tài nguyên ngoài, không gọi mạng từ giao diện.
  * style 'unsafe-inline' vì giao diện dùng thuộc tính style. Dựng lại mã băm mỗi lần build nên sửa script không cần sửa tay CSP. */
 function withCsp(html) {
+  /* Trình phân tích HTML đổi CRLF / CR thành LF TRƯỚC khi tính mã băm script. Nguồn checkout trên Windows (git core.autocrlf=true) có CRLF:
+   * nếu băm nguyên văn thì mã băm lệch và CSP chặn MỌI script. Chuẩn hóa cả file về LF (cùng ngữ nghĩa với trình duyệt) rồi mới băm. */
+  html = html.replace(/\r\n?/g, '\n');
   const hashes = [];
   html.replace(/<script>([\s\S]*?)<\/script>/g, (m, body) => { hashes.push("'sha256-" + require('crypto').createHash('sha256').update(body, 'utf8').digest('base64') + "'"); return m; });
   if (/<script\s+[^>]/.test(html)) throw new Error('build-html: chỉ hỗ trợ thẻ <script> không thuộc tính (CSP theo mã băm)');
@@ -38,5 +41,5 @@ function render() {
     .replace('/*@@XLSX@@*/', () => lib('xlsx/dist/xlsx.full.min.js')).replace('/*@@JSZIP@@*/', () => lib('jszip/dist/jszip.min.js')).replace('/*@@REPORTS@@*/', () => fs.readFileSync(path.join(root, 'ui', 'reports.js'), 'utf8')));
 }
 function build() { fs.mkdirSync(path.dirname(OUT), {recursive: true}); fs.writeFileSync(OUT, render()); }
-module.exports = {appSource, appModules, render, build, OUT};
+module.exports = {appSource, appModules, render, build, withCsp, OUT};
 if (require.main === module) { build(); console.log('Đã tạo renderer/index.html (' + appModules().length + ' module giao diện)'); }
