@@ -101,7 +101,9 @@ const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
   ok('xem trước toàn bộ: nêu lô A TRÙNG và lô B được GIỮ', /TRÙNG/.test(box) && /GIỮ/.test(box) && /R-B/.test(box), box.slice(0, 600));
   await w.check('input[name=impStrat][value=overwrite]'); await w.click('[data-act=impGo]'); await w.waitForTimeout(700);
   d2 = await dbOf(w);
-  ok('ghi đè từ bản sao lưu chỉ có A: A về bản cũ', JSON.stringify(d2.rs.own1.forests.fa) === JSON.stringify(SEED.rs.own1.forests.fa));
+  { const M = require('../src/model'), A2 = d2.rs.own1.forests.fa;   // bản sao lưu dạng 1.4.x: khôi phục rồi chuẩn hóa sang dạng có đội (cấu trúc 2.0)
+  const same = (x, y) => { try { require('assert').deepStrictEqual(x, y); return true; } catch (e) { return false; } };   // thứ tự khóa trong JSON không quan trọng
+  ok('ghi đè từ bản sao lưu chỉ có A: A về bản cũ (đã chuẩn hóa có đội; dựng lại dạng cũ giống hệt)', same(A2, M.ensureForest(SEED.rs.own1.forests.fa)) && same(M.legacyForest(A2), SEED.rs.own1.forests.fa), JSON.stringify(A2).slice(0, 300)); }
   ok('B không bị xóa và còn bản đã sửa; chủ khác giữ nguyên', JSON.stringify(d2.rs.own1.forests.fb) === JSON.stringify(editedDb.rs.own1.forests.fb) && JSON.stringify(d2.rs.own2) === JSON.stringify(editedDb.rs.own2));
   // bản sao lưu toàn bộ + "Thay toàn bộ" phải nêu rõ phạm vi
   let said = ''; w.removeAllListeners('dialog'); w.on('dialog', async dlg => { said = dlg.message(); await dlg.dismiss(); });

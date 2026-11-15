@@ -43,7 +43,7 @@ const NC = [nv(1, 'Tổ trưởng', 'TRẦN VĂN TỔ', 'Tổ trưởng', '04908
   ok('BM-08: tiền từng người đúng (4.200.000; 3.300.000 ×2; 3.800.000)', /4\.200\.000/.test(d.tc) && (d.tc.match(/3\.300\.000/g) || []).length >= 2 && /3\.800\.000/.test(d.tc));
   // ===== 2. có đơn giá Tổ trưởng ở Thông tin rừng: như cũ =====
   d = await run(340000, 'cu');
-  ok('đã lưu đơn giá vào lô: ' + JSON.stringify(await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.donGia)), (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.donGia)) === 340000);
+  ok('đã lưu đơn giá vào đội của lô: ' + JSON.stringify(await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc.donGia)), (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc.donGia)) === 340000);
   ok('có đơn giá Tổ trưởng ở Thông tin rừng: BM-01 làm như cũ (không có đơn giá bình quân, không có công thức)', !/đơn giá bình quân|Cơ sở tính giá trung bình/.test(d.gk) && /Tổng tiền khoán dự tính/.test(d.gk));
   ok('có đơn giá Tổ trưởng ở Thông tin rừng: BM-20 và BM-08 như cũ (không có phần suy ra đơn giá ký)', !/Đơn giá ký:/.test(d.uq) && !/đơn giá khoán của tổ/.test(d.tc));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));

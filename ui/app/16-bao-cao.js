@@ -10,13 +10,13 @@ function rpRecords(ownerFilter = rp.owner) {
       let pct = 0, thieu = [];
       try { const pr = progressOf(jobView(o, f)); pct = pr.pct; thieu = pr.L.filter(x => !x.ok).map(x => ({label: x.label, hint: x.hint, warn: x.warn})); }
       catch (e) { thieu = [{label: 'Không tính được tiến độ', hint: e.message}]; }
-      const i = f.info || {};
+      const i = f.info || {}, jr = jobView(o, f);   // đơn giá, cách tính theo đội của từng người (cấu trúc 2.0)
       out.push({oid: o.id, fid: f.id, chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
         dienTich: i.dienTich, dinhMuc: i.dinhMucTanHa, khoiLuongTT: i.khoiLuong, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
         diemDen: destOf(jobView(o, f)),
         pc: (f.pc || []).map(p => ({ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null, can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
         nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu,
-        ncList: (f.nc || []).map(r => ({vaiTro: r.vaiTro, stt: r.stt, danhXung: r.danhXung, ten: r.ten, chucDanh: r.chucDanh, ngaySinh: r.ngaySinh, cccd: r.cccd, diaChi: r.diaChi, ngayCap: r.ngayCap, noiCap: r.noiCap, rate: rateOf(i, r)})), donVi: basisOf(i).short,
+        ncList: (f.nc || []).map(r => ({vaiTro: r.vaiTro, stt: r.stt, danhXung: r.danhXung, ten: r.ten, chucDanh: r.chucDanh, ngaySinh: r.ngaySinh, cccd: r.cccd, diaChi: r.diaChi, ngayCap: r.ngayCap, noiCap: r.noiCap, rate: rateOf(infoRow(jr, r), r)})), donVi: basisOf(jr.info).short,
         dxList: (f.dx || []).map(r => ({bienSo: r.bienSo, loaiXe: r.loaiXe, chuXe: r.chuXe, nguoiKy: r.nguoiKy, taiXe: r.taiXe, cccd: r.cccd, cccdTx: r.cccdTx, sdt: r.sdt, hanBH: r.hanBH, hanGplx: r.hanGplx}))});
     });
   });
