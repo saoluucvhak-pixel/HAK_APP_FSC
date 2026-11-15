@@ -122,3 +122,15 @@ test('đội xe: thêm đội, chuyển xe, chọn người ký trong đội ho�
   assert.deepStrictEqual(M.hdOrder(f).map(h => h.id), [t.id, d2.id]);
   assert.ok(M.removeHd(M.moveXe(f, [1], t.id).f, d2.id).ok);
 });
+
+test('phiếu cân gắn đội: lô một đội tự gán; lô nhiều đội phiếu cũ chưa gán, phiếu mới theo cột Đội; gán hàng loạt; chặn xóa đội còn phiếu; dựng lại dạng cũ bỏ doiId', () => {
+  const pc = (so, kl, o) => Object.assign({soPhieu: so, kl, ngay: '05/10/2026', bienSo: 'A'}, o || {});
+  let f = M.ensureForest({id: 'f', info: {}, nc: [nv(1, 'Tổ trưởng', 'T', 'Tổ trưởng', '1')], pc: [pc('P1', 10)]});
+  assert.strictEqual(f.pc[0].doiId, 'doi1');
+  const g = M.ensureForest({id: 'g', info: {moHinhKy: 'giaokhoan'}, nc: [nv(1, 'Tổ trưởng', 'A', 'Tổ trưởng', '1', {doi: 'A'}), nv(2, 'Tổ trưởng', 'B', 'Tổ trưởng', '2', {doi: 'B'})], pc: [pc('P1', 10), pc('P2', 5)]});
+  assert.deepStrictEqual(g.pc.map(r => r.doiId), ['', ''], 'phiếu cũ của lô nhiều đội: chưa gán');
+  g.pc.push(pc('P3', 2, {doi: 'b'})); assert.strictEqual(M.ensureForest(g).pc[2].doiId, 'doi2', 'phiếu mới ghi cột Đội B');
+  const r = M.assignPc(g, [0, 1], 'doi1'); assert.deepStrictEqual([r.n, r.f.pc.map(x => x.doiId)], [2, ['doi1', 'doi1', 'doi2']]);
+  f = M.addTeam(f, 'Hai').f; assert.match(M.removeTeam(M.moveMembers(f, [0], 'doi2').f, 'doi1').error, /còn 1 phiếu cân/);
+  assert.ok(!('doiId' in M.legacyForest(r.f).pc[0]));
+});

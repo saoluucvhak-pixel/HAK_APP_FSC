@@ -116,7 +116,21 @@
     const co = new Set(dx.map(r => r && r.hdvcId));
     return f.hdvc.some(h => (!co.has(h.id) && !hdRieng(h)) || (!h.donViId && co.has(h.id) && !signerOf(dx.filter(r => r && r.hdvcId === h.id), h.key)));
   };
-  function ensureForest(f) { const out = ensureDoi(f); if (out && typeof out === 'object' && needsVC(out)) ensureVC(out); return out; }
+  /* GIAI ĐOẠN 5 — PHIẾU CÂN GẮN ĐỘI (khối lượng thực hiện của đội = tổng phiếu cân của đội): lô.pc[i].doiId.
+   * Lô một đội: phiếu tự thuộc đội đó. Lô nhiều đội: phiếu mới theo cột Đội (nếu khớp tên đội), không thì '' = chưa gán (gán ở bảng phiếu cân, có gán hàng loạt theo bộ lọc).
+   * Phiếu cũ của lô nhiều đội: chưa gán → khối lượng đội vẫn tính như bản cũ cho đến khi gán đủ. */
+  const needsPC = f => Array.isArray(f.pc) && f.pc.some(r => r && !has(r, 'doiId'));
+  function ensurePC(out) {
+    const doi = out.doi || [];
+    (out.pc || []).forEach(r => { if (!r || has(r, 'doiId')) return; const m = trim(r.doi) && doi.find(d => fold(d.ten) === fold(r.doi)); r.doiId = doi.length === 1 ? doi[0].id : m ? m.id : ''; });
+    return out;
+  }
+  function ensureForest(f) { const out = ensureDoi(f); if (out && typeof out === 'object') { if (needsVC(out)) ensureVC(out); if (needsPC(out)) ensurePC(out); } return out; }
+  /* gán đội cho phiếu cân (chỉ số dòng); id '' = bỏ gán */
+  function assignPc(f, idxs, id) {
+    const out = ensureForest(f); if (id && !out.doi.some(d => d.id === id)) return {ok: false, error: 'Không có đội này'};
+    let n = 0; idxs.forEach(i => { const r = out.pc && out.pc[i]; if (r && r.doiId !== id) { r.doiId = id; n++; } }); return {ok: true, f: out, n};
+  }
 
   /* Dựng lại dạng 1.4.x của một lô (thông tin và số văn bản của đội đầu; bỏ doiId) — để kiểm chứng chuyển dữ liệu không mất gì */
   function legacyForest(f) {
@@ -127,11 +141,12 @@
     if (tu.exp.length) { out.exp = out.exp || {}; tu.exp.forEach(k => { if (has(d0.exp, k)) out.exp[k] = clone(d0.exp[k]); }); }
     if (Array.isArray(out.nc)) out.nc.forEach(r => { if (r) delete r.doiId; });
     delete out.hdvc; if (Array.isArray(out.dx)) out.dx.forEach(r => { if (r) delete r.hdvcId; });
+    if (Array.isArray(out.pc)) out.pc.forEach(r => { if (r) delete r.doiId; });
     return out;
   }
 
   /* lô cần chuẩn hóa? (chưa có đội, hoặc có dòng nhân công thiếu doiId) — để chỉ chuẩn hóa lô cần, khỏi sao chép cả cơ sở dữ liệu mỗi lần lưu */
-  const needsEnsure = f => !!f && typeof f === 'object' && (!Array.isArray(f.doi) || !f.doi.length || (Array.isArray(f.nc) && f.nc.some(r => r && !has(r, 'doiId'))) || needsVC(f));
+  const needsEnsure = f => !!f && typeof f === 'object' && (!Array.isArray(f.doi) || !f.doi.length || (Array.isArray(f.nc) && f.nc.some(r => r && !has(r, 'doiId'))) || needsVC(f) || needsPC(f));
   const eachForest = (db, fn) => { const out = clone(db) || {}; Object.values(out.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { o.forests[k] = fn(o.forests[k]); })); return out; };
   const ensureDb = db => eachForest(db, ensureForest);
   const legacyDb = db => eachForest(db, legacyForest);
@@ -171,6 +186,7 @@
     if (!d) return {ok: false, error: 'Không có đội này'};
     if (out.doi.length <= 1) return {ok: false, error: 'Lô phải có ít nhất một đội'};
     const n = membersOf(out, d).length; if (n) return {ok: false, error: 'Đội còn ' + n + ' nhân công: chuyển họ sang đội khác hoặc xóa trước khi xóa đội'};
+    const np = (out.pc || []).filter(r => r && r.doiId === id).length; if (np) return {ok: false, error: 'Đội còn ' + np + ' phiếu cân: gán phiếu sang đội khác trước khi xóa đội'};
     out.doi = out.doi.filter(x => x.id !== id); return {ok: true, f: out};
   }
   /* cập nhật thông tin đội (tên, hình thức, diện tích, số văn bản) */
@@ -228,6 +244,6 @@
     return out;
   }
 
-  const api = {HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
+  const api = {assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKModel = api;
 })(typeof window !== 'undefined' ? window : globalThis);

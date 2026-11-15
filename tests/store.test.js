@@ -14,7 +14,7 @@ test('lưu và đọc lại đúng từng rừng, giữ CCCD dạng chuỗi có 
   const d = tmp(), f = path.join(d, 'a.sqlite');
   let s = new Store(f); s.save(sample()); s.close();
   s = new Store(f); const o = s.load();
-  assert.deepStrictEqual(o.rs.r1.forests.f1.pc, [{so: '1'}, {so: '2'}]);
+  assert.deepStrictEqual(o.rs.r1.forests.f1.pc, [{so: '1', doiId: 'doi1'}, {so: '2', doiId: 'doi1'}]);   // lô một đội: phiếu cân tự thuộc đội (cấu trúc 2.0)
   assert.strictEqual(o.rs.r1.info.cccd, '049000000001');
   assert.strictEqual(Object.keys(o.rs.r1.forests).length, 2);
   assert.deepStrictEqual(o.norm, {x: 1});

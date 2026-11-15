@@ -21,6 +21,7 @@ document.addEventListener('click', async e => {
   if (act === 'ncTheoDoi') { ncTatCa = false; return render(); }
   if (act === 'chonHd') { curHd = curHd === el.dataset.hd ? null : el.dataset.hd; return render(); }
   if (act === 'themHd') return themHd();
+  if (act === 'pcGanLoat') return pcGanLoat();
   if (act === 'xoaHd') return xoaHd();
   if (act === 'hdCapNhatDv') return hdCapNhatDv();
   if (act === 'suaDv') { const d = (db.dmDonViVC || {})[el.dataset.dv], fm = document.getElementById('dvForm'); if (d && fm) fm.outerHTML = dvForm(d); return; }
@@ -137,6 +138,7 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persist(); render(); return; }
   if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persist(); render(); return; }
   if (t.id === 'xeDm' && t.value) { const x = xeDanhMuc().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); ST_FIELDS.dx.forEach(([k]) => { if (x[k] != null && k !== 'stt') stm.vals[k] = stStr(x[k]); }); stRender(); } return; }
   if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persist(); render(); return; }

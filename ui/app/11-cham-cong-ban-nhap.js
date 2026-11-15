@@ -63,7 +63,7 @@ const stDirtyCur = () => stDirtyOf(stKey());
 function stGetFor(oid, fid, make) { const k = stKeyOf(oid, fid), o = db.rs[oid], f = o && o.forests && o.forests[fid]; if (!f) return null; if (!stages[k] && make) stages[k] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); return stages[k] || null; }
 function stGet(make) { const k = stKey(); if (!stages[k] && make) { const f = curForest(); if (!f) return null; stages[k] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); } return stages[k] || null; }
 /* hồ sơ lô với ba danh sách là bản nháp (nếu có): dùng để hiển thị và kiểm tra khi xem trước */
-function stJob(rec) { const st = stCur(); if (!st) return rec; const g = ganDoi(rec.doi, st.cur.nc), v = ganVC(rec.hdvc, st.cur.dx); return Object.assign({}, rec, {nc: g.nc, doi: g.doi, dx: v.dx, hdvc: v.hdvc, pc: st.cur.pc}); }
+function stJob(rec) { const st = stCur(); if (!st) return rec; const g = ganDoi(rec.doi, st.cur.nc), v = ganVC(rec.hdvc, st.cur.dx), pc = ganPC(g.doi, st.cur.pc); return Object.assign({}, rec, {nc: g.nc, doi: g.doi, dx: v.dx, hdvc: v.hdvc, pc, info: Object.assign({}, rec.info, {_klPC: klPhieu(pc)})}); }
 const ST_LABEL = {nc: 'nhân công', dx: 'xe', pc: 'phiếu cân'}, ST_CHECK = {nc: checkNC, dx: checkDX, pc: checkPC};
 const ST_TAB = {nc: 'nc', dx: 'dx', pc: 'dx'};
 /* Lý do chặn tạo, xuất, in hồ sơ khi lô còn thay đổi chưa lưu ('' nếu được phép) */
@@ -232,7 +232,7 @@ async function stSave(opt) {
   if (pend.length) { const msg = 'Chưa lưu: còn ' + pend.length + ' dòng CẦN ĐỐI CHIẾU (cùng số phiếu nhưng khác ngày, biển số, nơi cân hoặc khối lượng): ' + pend.slice(0, 10).map(q => q.key).join(', ') + (pend.length > 10 ? '…' : '') + '. Chọn giữ bản hiện có, cập nhật cùng chuyến, chuyến khác hoặc bỏ dòng nguồn. Dữ liệu đã lưu và bản nháp giữ nguyên.'; pushNote(msg, 'err'); ftab = 'dx'; render(); return {ok: false, error: 'cần đối chiếu', pend}; }
   const idc = HAKStage.idConflicts(st);   // _id nội bộ phải duy nhất trước khi ghi SQLite; xung đột thì chặn, giữ dữ liệu đã lưu và bản nháp
   if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: 'trùng _id', idc}; }
-  const rec0 = jobView(o, f), g0 = ganDoi(rec0.doi, st.cur.nc), v0 = ganVC(rec0.hdvc, st.cur.dx), rec = Object.assign(rec0, {nc: g0.nc, doi: g0.doi, dx: v0.dx, hdvc: v0.hdvc, pc: st.cur.pc}), errs = [];
+  const rec0 = jobView(o, f), g0 = ganDoi(rec0.doi, st.cur.nc), v0 = ganVC(rec0.hdvc, st.cur.dx), p0 = ganPC(g0.doi, st.cur.pc), rec = Object.assign(rec0, {nc: g0.nc, doi: g0.doi, dx: v0.dx, hdvc: v0.hdvc, pc: p0, info: Object.assign({}, rec0.info, {_klPC: klPhieu(p0)})}), errs = [];
   let errTab = null, cfgWarn = 0;
   const dkv = HAKStage.dirtyKinds(st);   // chỉ kiểm phần có thay đổi; phiếu cân luôn kiểm cùng xe (quan hệ biển số)
   [['Nhân công', checkNC, 'nc', ['nc']], ['Vận chuyển (xe)', checkDX, 'dx', ['dx']], ['Phiếu cân', checkPC, 'dx', ['pc', 'dx']]].filter(x => x[3].some(k => dkv.includes(k))).forEach(([n, fn, tb]) => { const c = fn(rec); if (c.errs.length && !errTab) errTab = tb; c.errs.filter(e => !CONFIG_ERR.test(e)).forEach(e => errs.push(n + ' — ' + e)); if (c.errs.some(e => CONFIG_ERR.test(e))) cfgWarn++; });
@@ -246,7 +246,8 @@ async function stSave(opt) {
     const cm = HAKStage.commit(st, r => HAKPhieuCan.chuanHoaNgay2(r, null)), at = stamp(), dk = HAKStage.dirtyKinds(st);   // mọi phiếu có cột ngày cân 2 khi lưu vào hồ sơ rừng (nhập thật thì giữ, trống thì suy ra)
     f.nc = cm.lists.nc; f.dx = cm.lists.dx; f.pc = cm.lists.pc;
     if (dk.includes('nc')) { const g = ganDoi(f.doi, f.nc); if (g.doi) { f.doi = g.doi; f.nc = g.nc; } }
-    if (dk.includes('dx')) { const v = ganVC(f.hdvc || null, f.dx); if (v.hdvc) { f.hdvc = v.hdvc; f.dx = v.dx; } }   // người mới: cùng quy tắc gán đội với bước kiểm tra (ganDoi)
+    if (dk.includes('dx')) { const v = ganVC(f.hdvc || null, f.dx); if (v.hdvc) { f.hdvc = v.hdvc; f.dx = v.dx; } }
+    if (dk.includes('pc')) f.pc = ganPC(f.doi, f.pc);   // người mới: cùng quy tắc gán đội với bước kiểm tra (ganDoi)
     if (cm.bienLog.length) f.bienLog = (f.bienLog || []).concat(cm.bienLog);
     if (dk.includes('nc')) { f.ncAt = at; if (st.src.nc && /^Excel: /.test(st.src.nc)) f.ncFile = st.src.nc.slice(7); }
     if (dk.includes('dx')) { f.dxAt = at; if (st.src.dx && /^Excel: /.test(st.src.dx)) f.dxFile = st.src.dx.slice(7); }

@@ -161,11 +161,18 @@ function ganVC(hdvc, dx) {
   if (!HAKModel.needsEnsure(F)) return {hdvc, dx};
   const x = HAKModel.ensureForest(F); return {hdvc: x.hdvc, dx: x.dx};
 }
+/* phiếu cân chưa gắn đội (vừa nạp, bản nháp): gán như khi lưu (src/model.js: lô một đội → đội đó; nhiều đội → theo cột Đội, không thì chưa gán) */
+function ganPC(doi, pc) {
+  if (!doi || !doi.length || !(pc || []).some(r => r && r.doiId === undefined)) return pc;
+  return HAKModel.ensureForest({doi, nc: [], pc, dx: [], hdvc: []}).pc;
+}
+/* khối lượng thực tế = tổng phiếu cân (tấn, làm tròn từng phiếu theo kg như các báo cáo) */
+const klPhieu = pc => Math.round((pc || []).reduce((a, p) => a + (typeof p.kl === 'number' && p.kl > 0 ? Math.round(p.kl * 1000) : 0), 0)) / 1000;
 function jobView(o, f) {
   if (!Array.isArray(f.doi) || !f.doi.length) Object.assign(f, HAKModel.ensureForest(f));   // lô mới tạo (chưa lưu lần nào): có đội ngay, như SQLite sẽ lưu
   const d0 = (f.doi || [])[0], exp = d0 && Object.keys(d0.exp || {}).length ? Object.assign({}, f.exp, d0.exp) : f.exp;
-  const g = ganDoi(f.doi, f.nc), v = ganVC(f.hdvc || null, f.dx);
-  return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info, d0 ? d0.hinhThuc : {}), nc: g.nc, dx: v.dx, pc: f.pc || [], exp, cc: f.cc || {}, doi: g.doi || null, hdvc: v.hdvc || null,
+  const g = ganDoi(f.doi, f.nc), v = ganVC(f.hdvc || null, f.dx), pc = ganPC(g.doi, f.pc || []);
+  return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info, d0 ? d0.hinhThuc : {}, {_klPC: klPhieu(pc)}), nc: g.nc, dx: v.dx, pc, exp, cc: f.cc || {}, doi: g.doi || null, hdvc: v.hdvc || null,
     ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
 }
 const curRec = () => { const o = curOwner(), f = curForest(); return o && f ? jobView(o, f) : null; };
