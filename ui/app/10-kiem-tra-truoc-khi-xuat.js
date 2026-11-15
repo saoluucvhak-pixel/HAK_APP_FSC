@@ -11,8 +11,9 @@ function exportCheck(job) {
   // mã lô trùng ở dữ liệu cũ: liệt kê đủ các lô khớp để đối chiếu, không tự sửa
   HAKLoRung.duplicateGroups(db).filter(x => x.lots.some(l => l.forest === job.fid)).forEach(x => add('chan', 'Mã lô trùng (dữ liệu cũ)', 'Mã “' + x.ma + '” đang dùng cho ' + x.lots.length + ' lô: ' + x.lots.map(l => l.lo + ' (chủ ' + l.chu + '; ' + l.nc + ' nhân công, ' + l.dx + ' xe, ' + l.pc + ' phiếu cân)').join('; ') + '. Đổi mã các lô thừa ở tab Thông tin rừng, dữ liệu không bị đổi trước khi bạn xác nhận.', x.ma, {ftab: 'finfo'}));
   // chồng lấn giữa các lô (src/cheolo.js): phiếu cân trùng, xe trùng giờ, người ở hai lô, lệch sản lượng dự kiến
-  try { HAKCheoLo.kiemTra(db, job.id, job.fid).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go)); } catch (e) { /* không kiểm được chéo lô: bỏ qua, không chặn */ }
+  try { HAKCheoLo.kiemTra(db, job.id, job.fid).filter(x => x.nhom !== 'Chéo lô: phiếu cân trùng').forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go)); } catch (e) { /* không kiểm được chéo lô: bỏ qua, không chặn */ }
   try { HAKSoVB.trung(db, job.id, job.fid).forEach(x => add('doi', 'Số văn bản trùng', 'Số “' + x.so + '” cũng đang dùng ở lô ' + x.ma + ': hai văn bản không được trùng số.', x.so, {ftab: 'xuat'})); } catch (e) { /* bỏ qua */ }
+  try { HAKSoVB.trungTrongLo(curForest() && curForest().id === job.fid ? curForest() : ((db.rs[job.id] || {}).forests || {})[job.fid] || {}).forEach(x => add('doi', 'Số văn bản trùng', 'Hai đội của lô cùng dùng số “' + x.so + '” (đội “' + x.ten + '”): kiểm tra, số của đội đã xóa có thể bị cấp lại ở dữ liệu cũ.', x.so, {ftab: 'xuat'})); } catch (e) { /* bỏ qua */ }
   // nhân công, định mức, tuổi
   g.nc.errs.forEach(e => add('chan', 'Nhân công', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'nc'}));
   g.normErrs.forEach(e => add('chan', 'Định mức BHLĐ', e, '', {view: 'norm'}));
@@ -40,7 +41,7 @@ function exportCheck(job) {
   { const bd = doiOf(job); if (bd.pcChuaGan) add('doi', 'Phiếu cân chưa gán đội', 'Lô có ' + bd.doi.length + ' đội nhưng ' + bd.pcChuaGan + ' phiếu cân chưa gán đội: khối lượng từng đội đang ' + (bd.klNguon === 'nhap' ? 'theo số nhập tay của hồ sơ cũ' : 'chia theo số người') + '. Gán đội cho phiếu cân (gán hàng loạt theo bộ lọc) để khối lượng đội lấy đúng theo phiếu cân.', '', {ftab: 'dx', focus: 'pc'}); }
   { const bd = doiOf(job); if (bd.klLoi) add('doi', 'Số đội', 'Khối lượng thực tế từng đội: ' + bd.klLoi + '. BM-08 và BM-14 của từng đội sẽ là bản nháp cho đến khi sửa.', 'Khối lượng thực tế từng đội', {ftab: 'finfo'}); }
   { const rows = viTriRowsTai((job.info || {}).tuNgay), bd = doiOf(job);   // theo ĐỘI THẬT (bảng Nhân công khai thác), không chia lại theo cột chữ
-    (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', ten: d.ten, nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
+    if (rows.ngayLoi) add('chan', 'Định mức nhân công: ngày bắt đầu sai', rows.ngayLoi, '', {ftab: 'finfo'}); else (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', ten: d.ten, nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
       if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}, u.ten ? {loai: 'doi', ten: u.ten} : null); }); }
   { const L = tgLechOf(i, job.pc, nDoiOf(i, job.nc)); if (L && L.canhBao) add('doi', 'Thời gian khai thác', tgLechText(i, L), 'Thời gian khai thác', {ftab: 'finfo'}); }
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
@@ -272,11 +273,11 @@ let dbVer = '';   // id phiên bản đang xem / sửa ('' = mới nhất)
 function dbVerBar() {
   const vs = HAKDinhBien.versions(db), cur = vs.find(v => v.id === dbVer) || vs[vs.length - 1];
   const lots = []; Object.values(db.rs || {}).forEach(o => forestList(o).forEach(f => lots.push({maRung: f.info.maRung, tuNgay: (f.info || {}).tuNgay || ''})));
-  const ah = HAKDinhBien.anhHuong(db, cur.id, lots);
+  const ahc = HAKDinhBien.anhHuongChiTiet(db, cur.id, lots), ah = ahc.lo;
   return '<div class="row" id="dbVerBar" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin:6px 0"><label>Phiên bản <select id="dbVerSel">' + vs.map(v => '<option value="' + esc(v.id) + '"' + (v.id === cur.id ? ' selected' : '') + '>' + (v.tuNgay ? 'Hiệu lực từ ' + esc(v.tuNgay) : 'Bản gốc (từ trước)') + '</option>').join('') + '</select></label>' +
     '<label>Thêm phiên bản từ ngày <input id="dbVerNew" placeholder="dd/mm/yyyy" style="width:120px"></label><button class="btn ghost sm" type="button" data-act="dbVerAdd">Sao chép phiên bản này thành phiên bản mới</button>' +
     (cur.id !== 'goc' ? '<button class="btn ghost sm" type="button" data-act="dbVerDel">Xóa phiên bản này</button>' : '') + '</div>' +
-    '<p class="mut" style="margin:0 0 6px">Lô dùng phiên bản có hiệu lực tại <b>ngày bắt đầu khai thác</b> của lô. Phiên bản đang xem áp dụng cho <b>' + ah.length + '</b> lô' + (ah.length ? ': ' + esc(ah.slice(0, 8).map(l => l.maRung || '(chưa mã)').join(', ')) + (ah.length > 8 ? ' …' : '') : '') + '. Thêm phiên bản mới không đổi các lô bắt đầu trước ngày hiệu lực.</p>';
+    '<p class="mut" style="margin:0 0 6px">Lô dùng phiên bản có hiệu lực tại <b>ngày bắt đầu khai thác</b> của lô. Phiên bản đang xem áp dụng cho <b>' + ah.length + '</b> lô' + (ah.length ? ': ' + esc(ah.slice(0, 8).map(l => l.maRung || '(chưa mã)').join(', ')) + (ah.length > 8 ? ' …' : '') : '') + '. Thêm phiên bản mới không đổi các lô bắt đầu trước ngày hiệu lực.' + (ahc.ngayLoi.length ? ' <b class="err">Chưa xác định được phiên bản của ' + ahc.ngayLoi.length + ' lô vì ngày bắt đầu khai thác không có thật: ' + esc(ahc.ngayLoi.slice(0, 6).map(l => (l.maRung || '(chưa mã)') + ' (' + l.tuNgay + ')').join(', ')) + ' — sửa ngày ở Thông tin rừng.</b>' : '') + '</p>';
 }
 function dbCard() {
   const vsAll = HAKDinhBien.versions(db), curV = vsAll.find(v => v.id === dbVer) || vsAll[vsAll.length - 1];

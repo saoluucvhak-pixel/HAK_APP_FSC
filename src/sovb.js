@@ -18,20 +18,44 @@
   const nam = v => { const m = /(\d{4})$/.exec(s(v)); return m ? m[1] : ''; };
   const hai = n => String(n).padStart(2, '0');
   const so = (stt, y, kyHieu, ma) => hai(stt) + '/' + y + '/' + kyHieu + '-' + maLo(ma);
-  /* Danh sách đề xuất cho một lô: [{cap, id, ten, stt, ma, ten mẫu, truong, hienCo, deXuat, nam}] — hienCo là số đang lưu; deXuat chỉ có khi ô trống.
-   * STT: đội đã có `stt` thì giữ; đội mới nhận số nhỏ nhất chưa dùng (không dùng lại số của đội đã xóa nếu `sttDaCap` còn ghi). */
+  /* STT đã cấp của một nhóm (doi | doiXe) trong lô — hợp của: lịch sử f.sttDaCap[nhom] (kể cả đội đã xóa), STT đang lưu của các đội còn lại, và STT đọc được từ các số văn bản đã có theo dạng
+   * NN/NĂM/… (lịch sử có thể xác minh khi dữ liệu cũ chưa có sttDaCap). Không bao giờ cấp lại số trong tập này. */
+  const sttTuSo = v => { const m = /^(\d{1,3})(?:-\d+)?\/\d{4}\//.exec(s(v)); return m ? +m[1] : 0; };
+  function daCap(f, nhom) {
+    const used = new Set(), h = f && f.sttDaCap && Array.isArray(f.sttDaCap[nhom]) ? f.sttDaCap[nhom] : [];
+    h.forEach(n => { if (n > 0) used.add(n); });
+    ((nhom === 'doi' ? f.doi : f.hdvc) || []).forEach(d => { if (d.stt > 0) used.add(d.stt); LOAI.filter(l => l.cap === nhom).forEach(l => { const n = sttTuSo((d.exp || {})[l.truong]); if (n > 0) used.add(n); }); });
+    return used;
+  }
+  /* cấp STT cho các đội chưa có: nhỏ nhất chưa từng dùng (không dùng lại số của đội đã xóa). Hàm thuần: xem trước và xác nhận dùng CHUNG hàm này. Trả mảng STT theo thứ tự ds. */
+  function capStt(f, nhom, ds) {
+    const used = daCap(f, nhom), tuSo = d => { for (const l of LOAI.filter(x => x.cap === nhom)) { const n = sttTuSo((d.exp || {})[l.truong]); if (n > 0) return n; } return 0; };   // đội chưa có STT nhưng đã có số văn bản dạng NN/NĂM/…: giữ STT đó (xác minh được), không đánh lại
+    return ds.map(d => { if (d.stt > 0) return d.stt; const n = tuSo(d); if (n > 0) return n; let k = 1; while (used.has(k)) k++; used.add(k); return k; });
+  }
+  /* Danh sách đề xuất cho một lô: [{cap, id, ten, stt, ma, mau, truong, hienCo, deXuat, nam}] — hienCo là số đang lưu; deXuat chỉ có khi ô trống. Không sửa f. */
   function deXuat(f, homNay) {
     f = f || {}; const info = f.info || {}, y0 = nam(info.tuNgay) || String((homNay || new Date()).getFullYear()), ma = info.maRung || f.id || '', out = [];
-    const cap = (ds) => { const dung = new Set(ds.map(d => d.stt).filter(Boolean)); let k = 0; return ds.map(d => { if (d.stt) return d.stt; do { k++; } while (dung.has(k)); dung.add(k); return k; }); };
-    const them = (ds, capLoai, tenMac) => { const stts = cap(ds); ds.forEach((d, i) => LOAI.filter(l => l.cap === capLoai).forEach(l => { const ex = d.exp || {}, y = nam(l.ngay ? ex[l.ngay] : '') || nam((f.exp || {}).ngayKy) || y0, hien = s(ex[l.truong]); out.push({cap: capLoai, id: d.id, ten: s(d.ten) || tenMac + ' ' + (i + 1), stt: stts[i], ma: l.ma, mau: l.ten, truong: l.truong, hienCo: hien, deXuat: hien ? '' : so(stts[i], y, l.kyHieu, ma), nam: y}); })); };
+    const them = (ds, capLoai, tenMac) => { const stts = capStt(f, capLoai, ds); ds.forEach((d, i) => LOAI.filter(l => l.cap === capLoai).forEach(l => { const ex = d.exp || {}, y = nam(l.ngay ? ex[l.ngay] : '') || nam((f.exp || {}).ngayKy) || y0, hien = s(ex[l.truong]); out.push({cap: capLoai, id: d.id, ten: s(d.ten) || tenMac + ' ' + (i + 1), stt: stts[i], ma: l.ma, mau: l.ten, truong: l.truong, hienCo: hien, deXuat: hien ? '' : so(stts[i], y, l.kyHieu, ma), nam: y}); })); };
     them(f.doi || [], 'doi', 'Đội'); them(f.hdvc || [], 'doiXe', 'Đội xe');
     return out;
   }
-  /* điền các ô số còn TRỐNG theo quy tắc (không ghi đè số đã có, giữ STT đã cấp); trả số ô đã điền */
+  const ghiStt = (f, nhom, stt) => { if (!(stt > 0)) return; f.sttDaCap = f.sttDaCap && typeof f.sttDaCap === 'object' ? f.sttDaCap : {}; const l = Array.isArray(f.sttDaCap[nhom]) ? f.sttDaCap[nhom] : []; if (!l.includes(stt)) l.push(stt); l.sort((a, b) => a - b); f.sttDaCap[nhom] = l; };
+  /* ĐIỀN: gán STT cho đội chưa có (giữ STT đang có), ghi lịch sử, và điền các ô số còn TRỐNG theo quy tắc. Không ghi đè số đã có (kể cả số đã in, số người dùng nhập). Lịch sử nằm trong f nên chỉ có hiệu lực
+   * khi lô được LƯU (bỏ bản nháp thì lịch sử cũng bị bỏ). Trả số ô số đã điền. */
   function dien(f, homNay) {
     let n = 0; const ds = deXuat(f, homNay);
-    ds.forEach(x => { const arr = x.cap === 'doi' ? f.doi : f.hdvc, d = (arr || []).find(y => y.id === x.id); if (!d) return; if (!d.stt) d.stt = x.stt; if (x.deXuat) { d.exp = d.exp || {}; if (!s(d.exp[x.truong])) { d.exp[x.truong] = x.deXuat; n++; } } });
+    ds.forEach(x => { const arr = x.cap === 'doi' ? f.doi : f.hdvc, d = (arr || []).find(y => y.id === x.id); if (!d) return; if (!(d.stt > 0)) d.stt = x.stt; ghiStt(f, x.cap, d.stt); if (x.deXuat) { d.exp = d.exp || {}; if (!s(d.exp[x.truong])) { d.exp[x.truong] = x.deXuat; n++; } } });
     return n;
+  }
+  /* khởi tạo lịch sử cho dữ liệu cũ (nâng cấp SQLite): từ STT đang lưu và STT đọc được từ số văn bản; KHÔNG đánh lại số cũ. Trả true nếu có thay đổi. */
+  function khoiTaoLichSu(f) {
+    let dd = false; ['doi', 'doiXe'].forEach(nhom => { const truoc = JSON.stringify((f.sttDaCap || {})[nhom] || []); daCap(f, nhom).forEach(n => ghiStt(f, nhom, n)); if (JSON.stringify((f.sttDaCap || {})[nhom] || []) !== truoc) dd = true; });
+    return dd;
+  }
+  /* số văn bản trùng NGAY TRONG một lô (cùng ô số, hai đội khác nhau cùng số): cảnh báo, vì dữ liệu cũ có thể đã dùng lại số của đội đã xóa */
+  function trungTrongLo(f) {
+    const out = [], by = new Map(); [['doi', f.doi], ['doiXe', f.hdvc]].forEach(([cap, ds]) => (ds || []).forEach(d => LOAI.filter(l => l.cap === cap).forEach(l => { const v = s((d.exp || {})[l.truong]); if (!v) return; const k = l.truong + '|' + v.toUpperCase(); if (by.has(k) && by.get(k) !== d.id) { if (!out.some(x => x.so === v)) out.push({so: v, truong: l.truong, ten: s(d.ten) || 'đội'}); } else by.set(k, d.id); })));
+    return out;
   }
   /* số văn bản trùng giữa các lô: cùng ô số, cùng nội dung ở lô khác. Trả [{so, truong, ma (lô kia)}] cho lô (oid, fid) */
   function trung(db, oid, fid) {
@@ -43,6 +67,6 @@
     nhan(me.f).forEach(([t, v]) => { const k = t + '|' + v.toUpperCase(); if (seen.has(k) && !out.some(x => x.so === v && x.truong === t)) out.push({so: v, truong: t, ma: seen.get(k)}); });
     return out;
   }
-  const api = {LOAI, maLo, so, deXuat, dien, trung};
+  const api = {LOAI, maLo, so, capStt, daCap, deXuat, dien, khoiTaoLichSu, trungTrongLo, trung};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKSoVB = api;
 })(typeof self !== 'undefined' ? self : this);

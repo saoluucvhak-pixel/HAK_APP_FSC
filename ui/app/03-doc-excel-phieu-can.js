@@ -112,6 +112,8 @@ function checkPC(rec) {
   const errs = [], warns = [], state = {}, pc = rec.pc || [];
   const mark = (r, k, m) => { (k === 'err' ? errs : warns).push('Dòng ' + r._row + ': ' + m); if (k === 'err' || !state[r._row]) state[r._row] = k; };
   const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seen = {}, thieuKy = rec.hdvc ? doiXeThieuKy(rec) : new Set();
+  /* phiếu GIỐNG HỆT phiếu ở lô khác (cùng số phiếu, ngày lịch, biển số): chặn BM-08, 09, 10, 14 ở mọi đường xuất; không tự xóa hay chuyển phiếu (src/cheolo.js) */
+  try { HAKCheoLo.phieuTrung(db, rec.id, rec.fid, pc).forEach(x => mark(x.p, 'err', 'Phiếu ' + (x.p.soPhieu || '') + ' (' + x.p.ngay + ', ' + x.p.bienSo + ') giống hệt phiếu đã có ở lô ' + x.ma + ' (cùng số phiếu, ngày cân, biển số): một phiếu cân chỉ thuộc một lô')); } catch (e) { /* không kiểm được chéo lô: bỏ qua */ }
   pc.forEach(r => {
     if (trim(r.doi) && rec.doi && rec.doi.length > 1 && !rec.doi.some(d => d.id === r.doiId) && !rec.doi.some(d => keyName(d.ten) === keyName(r.doi))) mark(r, 'err', 'Đội “' + trim(r.doi) + '” không có trong lô (tên đội ở tab Nhân công): sửa tên đội hoặc để trống ô Đội');
     { const d = thieuKy.size ? doiXeOfPc(rec, r) : null; if (d && d.hd && thieuKy.has(d.hd.id)) mark(r, 'err', 'Biển ' + r.bienSo + ' thuộc đội xe chưa có người ký (chủ xe hoặc tài xế): vào tab Vận chuyển chọn người ký cho đội xe này'); }

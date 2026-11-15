@@ -103,7 +103,7 @@ function panelXuat(rec) {
     '<div class="card"><h3 style="margin-top:0">Hợp đồng khai thác và nghiệm thu</h3>' +
     (g.direct ? row('Hợp đồng khai thác (giao khoán)', 'Không dùng: chủ rừng ký hợp đồng lao động trực tiếp với từng người', '')
       : row('Hợp đồng khai thác gỗ keo (giao khoán tổ trưởng)', 'Bên A: chủ rừng · Bên B: tổ trưởng', btn('Tải .docx', 'gk', null, g.canGK))) +
-    row('Biên bản nghiệm thu, thanh lý khai thác', g.direct ? 'Chủ rừng và đại diện tổ khai thác · theo hợp đồng lao động' : 'Chủ rừng và tổ trưởng · sản lượng chia đều × đơn giá khoán theo vai trò', btn('Tải .docx', 'nttl', null, g.canBHLD)) + '</div>' +
+    row('Biên bản nghiệm thu, thanh lý khai thác', g.direct ? 'Chủ rừng và đại diện tổ khai thác · theo hợp đồng lao động' : 'Chủ rừng và tổ trưởng · sản lượng chia đều × đơn giá khoán theo vai trò', btn('Tải .docx', 'nttl', null, g.canTC)) + '</div>' +
     (g.direct
       ? '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng lao động (chủ rừng ký trực tiếp với từng người)</h3>' + btn('Tải tất cả (.zip)', 'hdld', null, g.canHDLD) + '</div>' +
         (hdld.length ? hdld.map((r, i) => row(esc(personName(r.danhXung, r.ten)), esc(r.chucDanh) + ' · ' + fmt(rateOf(infoRow(rec, r), r)) + ' ' + basisOf(infoRow(rec, r)).short, btn('.docx', 'hdld', i, g.canHDLD))).join('') : '<p class="mut">Chưa có nhân công.</p>') + '</div>'
@@ -121,7 +121,7 @@ function panelXuat(rec) {
     row('Bảng chấm công', 'Tháng <input data-exp="thang" value="' + esc(ex.thang || '') + '" style="width:70px" placeholder="MM hoặc MM/yyyy"> · nhập tháng (hoặc MM/yyyy để có năm) · bảng trống để chấm tay', btn('Tải .docx', 'cc', null, g.canBHLD)) +
     '<div class="docrow"><div><b>Bảng thanh toán tiền công</b><div class="mut">Từ ' + esc(ex.tuNgayTT || rec.info.tuNgay || '…') + ' đến ' + esc(ex.denNgayTT || rec.info.denNgay || '…') + ' (kỳ thanh toán của đội: sửa ở tab Nhân công) · để trống thì lấy thời gian khai thác của rừng</div>' +
       '<div class="' + (pay.issues.length ? 'msg warn' : 'mut') + '" style="margin-top:4px">' + (pay.issues.length ? 'Chưa tính được tiền: ' + esc(pay.issues.join('; ')) + '. Cột tiền sẽ để trống.'
-        : pay.ngc ? 'Tự tính: ' + pay.cong + ' công (từ ' + esc(pay.tu) + ' đến ' + esc(pay.den) + ', trừ Chủ nhật)' : 'Tự tính: ' + fmtTan(pay.vol.v) + (pay.basis === 'ha' ? ' ha (' : ' tấn (') + pay.vol.src + ') chia đều ' + (rec.nc.length || 0) + ' người') + '</div></div>' + btn('Tải .docx', 'tc', null, g.canBHLD) + '</div>' +
+        : pay.ngc ? 'Tự tính: ' + pay.cong + ' công (từ ' + esc(pay.tu) + ' đến ' + esc(pay.den) + ', trừ Chủ nhật)' : 'Tự tính: ' + fmtTan(pay.vol.v) + (pay.basis === 'ha' ? ' ha (' : ' tấn (') + pay.vol.src + ') chia đều ' + (rec.nc.length || 0) + ' người') + '</div></div>' + btn('Tải .docx', 'tc', null, g.canTC) + '</div>' +
     row('Sổ theo dõi tai nạn lao động, sự cố', 'Sổ trống để ghi tại hiện trường, có xác nhận cuối đợt (in ngang)', btn('Tải .docx', 'stai', null, g.canBHLD)) +
     row('Biên bản kiểm tra, bảo dưỡng thiết bị', 'Cưa xăng, phương tiện (lấy từ tab Vận chuyển), bình chữa cháy (in ngang)', btn('Tải .docx', 'tbi', null, g.canBHLD)) + '</div>';
   S.vc = '<div class="card"><div class="row" style="justify-content:space-between"><b>Số HĐ vận chuyển, chi phí, xác nhận khối lượng: số chung và số riêng từng đội xe</b>' + sua('dx', 'Sửa ở tab Vận chuyển') + '</div></div>' +

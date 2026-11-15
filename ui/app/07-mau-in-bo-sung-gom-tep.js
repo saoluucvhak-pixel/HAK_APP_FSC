@@ -42,7 +42,7 @@ function docDSDoi(rec, ex) {
 }
 /* Phân công nhiệm vụ theo vị trí (định mức nhân công): chỉ in khi đã lưu định mức nhân công, nên hồ sơ cũ không đổi */
 function nhiemVuBlocks(rec) {
-  const g = HAKDinhBien.get(db, (rec.info || {}).tuNgay); if (!g.saved) return [];
+  const g = HAKDinhBien.get(db, (rec.info || {}).tuNgay); if (g.ngayLoi || !g.saved) return [];   // ngày bắt đầu sai: không chọn được phiên bản, không in phần phân công (đã báo ở Kiểm tra)
   const sc = HAKDinhBien.soSanh(g.rows, rec.nc || []);
   return [P('**PHÂN CÔNG NHIỆM VỤ THEO VỊ TRÍ**', {al: 'center', sz: 22, before: 200, after: 80, keep: true}),
     T([2600, 1200, 1200, 9900], [['VỊ TRÍ', 'ĐỊNH BIÊN', 'THỰC TẾ', 'NHIỆM VỤ'], ...sc.vt.map(v => [v.chucDanh + (v.kiemNhiem ? ' (kiêm ' + v.kiemNhiem.toLowerCase() + ')' : ''), String(v.can), String(v.co), v.nhiemVu || ''])],   // nhiệm vụ của đúng vị trí đó (không ghép theo số dòng: danh mục có vị trí 0 người)
@@ -181,7 +181,8 @@ function buildFilesRaw0(rec, kind) {
   if (kind === 'hdvc' || dau) {
     groupsDX(rec).forEach(g => files.push({path: '04_HDVC/' + slug(g.ten) + '.docx', blocks: docHDVC(rec, ex, g)}));
   }
-  const want = k => kind === k || kind === 'all' || (kind === 'dau' && !PHAN_CUOI.includes(k)) || (kind === 'cuoi' && PHAN_CUOI.includes(k));
+  const pcTrung = gate(rec).pcTrung.length > 0;   // phiếu cân trùng lô khác: không xuất BM-08, BM-14 ở bất kỳ đường nào (riêng, theo gói, cuối)
+  const want = k => (kind === k || kind === 'all' || (kind === 'dau' && !PHAN_CUOI.includes(k)) || (kind === 'cuoi' && PHAN_CUOI.includes(k))) && !(pcTrung && (k === 'tc' || k === 'nttl'));
   const wantPC = k => kind === k || ((kind === 'all' || kind === 'cuoi') && gate(rec).canPC);
   if (want('tdcr')) files.push({path: '17_Phieu_tham_dinh_chu_rung_' + s + '.docx', blocks: docThamDinh(rec, ex)});
   if (want('nkkt')) files.push({path: '18_Nhat_ky_khai_thac_' + s + '.docx', blocks: docNhatKy(rec, ex), land: true});

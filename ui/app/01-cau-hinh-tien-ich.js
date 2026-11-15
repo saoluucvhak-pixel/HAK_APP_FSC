@@ -17,7 +17,9 @@ let _cdNho = null;   // gọi rất nhiều lần trong một lượt vẽ (mỗ
 /* định mức nhân công của MỘT LÔ: phiên bản có hiệu lực tại ngày bắt đầu khai thác của lô (chưa có phiên bản có ngày thì đúng như viTriRows) */
 function viTriRowsTai(ref, rowsVer) {
   const rows = viTriRows(); if (!rowsVer && HAKDinhBien.versions(db).length < 2) return rows;
-  const ver = rowsVer || HAKDinhBien.get(db, ref).rows, by = new Map(ver.map(v => [v.chucDanh.toLowerCase(), v]));
+  const gv = rowsVer ? null : HAKDinhBien.get(db, ref);
+  if (gv && gv.ngayLoi) { rows.ngayLoi = gv.ngayLoi; return rows; }   // ngày bắt đầu sai: KHÔNG chọn bản nào (không so sánh, người gọi hiện lỗi để sửa ngày)
+  const ver = rowsVer || gv.rows, by = new Map(ver.map(v => [v.chucDanh.toLowerCase(), v]));
   rows.forEach(r => { const v = by.get(r.chucDanh.toLowerCase()); r.soNguoi = v ? v.soNguoi : 0; if (v) { r.kiemNhiem = v.kiemNhiem; r.nhiemVu = v.nhiemVu; } });
   return rows;
 }

@@ -17,11 +17,12 @@ function d2Items(rec) {
   const baseVC = g.canHDVC ? [] : [{text: 'chưa đủ thông tin chủ rừng, đội xe hoặc đơn giá vận chuyển: ' + [...g.info, ...g.dx.errs, ...g.vc].slice(0, 3).join('; '), where: 'Vận chuyển', go: {ftab: g.info.length ? 'finfo' : 'dx'}}];
   const mk = (code, gkey, label, nen, full) => items.push({key: IA.keyOf(code, gkey), code, gkey: gkey || '', label, nenMissing: nen, fullMissing: [...nen, ...full], sig: '', info: null});
   const BD = doiOf(rec), dk = d => BD.multi ? d.key : '', dl = d => BD.multi ? ' · ' + doiLabel(d) : '';
-  BD.doi.forEach(d => mk('08', dk(d), FORMS_D2['08'] + dl(d), baseNC.concat(miss('08', D2_NEN_NEED['08'])), miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k)))));
+  const trungMiss = g.pcTrung && g.pcTrung.length ? [{text: g.pcTrung.length + ' phiếu cân giống hệt phiếu ở lô khác (ví dụ phiếu ' + g.pcTrung[0].p.soPhieu + ' ↔ lô ' + g.pcTrung[0].ma + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'kt'}}] : [];
+  BD.doi.forEach(d => mk('08', dk(d), FORMS_D2['08'] + dl(d), baseNC.concat(miss('08', D2_NEN_NEED['08'])), trungMiss.concat(miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k))))));
   groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = gr.cccd || gr.ten;
     const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : g.pc && g.pc.errs.length ? [{text: 'phiếu cân còn lỗi (' + g.pc.errs.length + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : hanLoiOf(rec, gr).slice(0, 3).map(v => ({text: 'giấy tờ xe hết hạn lúc chạy ' + HAKGiayTo.text(v), where: 'Vận chuyển → Xe', go: {ftab: 'dx'}})).concat(hanLoiOf(rec, gr).length > 3 ? [{text: 'còn ' + (hanLoiOf(rec, gr).length - 3) + ' phiếu khác quá hạn giấy tờ', where: 'Vận chuyển → Xe', go: {ftab: 'dx'}}] : []);
     ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + d2GroupLabel(rec, gr), baseVC.concat(miss(code, D2_NEN_NEED[code])), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))))); });
-  BD.doi.forEach(d => mk('14', dk(d), FORMS_D2['14'] + dl(d), baseNC.concat(miss('14', D2_NEN_NEED['14'])), miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k)))));
+  BD.doi.forEach(d => mk('14', dk(d), FORMS_D2['14'] + dl(d), baseNC.concat(miss('14', D2_NEN_NEED['14'])), trungMiss.concat(miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k))))));
   items.sort((a, b) => IA.ORDER.indexOf(a.code) - IA.ORDER.indexOf(b.code));
   // chữ ký bố cục từ chính file mẫu nền sẽ in (chỉ khi dựng được mẫu)
   try {
@@ -152,7 +153,7 @@ function exportNotes(rec, g, kind) {
   return n;
 }
 /* Điều kiện đủ dữ liệu để xuất từng mẫu (dùng chung cho nút tải và bảng Quy trình hồ sơ) */
-const kindOk = g => ({gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canBHLD, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canBHLD, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD});
+const kindOk = g => ({gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canTC, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canTC, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD});
 /* Tải toàn bộ / Đợt 2 khi đã có tờ nền đợt 2 in sẵn: hỏi dùng phần in đè hay in lại đầy đủ trên giấy trắng, và tách gói để không nạp nhầm giấy */
 const ALLQ_TXT = {de: 'Đủ dữ liệu: in đè phần bổ sung', kiemtra: 'Nền in từ trước: đối chiếu rồi in đè', cho: 'Chờ đủ dữ liệu để in đè', doibocuc: 'Bố cục đã đổi: phải in lại', trang: 'Chưa in nền', nen: 'Chưa in nền', thieu: 'Chưa đủ dữ liệu'};
 function exportAllAsk(kind, printed, E) {
@@ -199,3 +200,5 @@ async function exportKind(kind, idx, opt) {
   } finally { docMode = 'day'; }
 }
 
+/* móc kiểm thử e2e (giống window.__doiKT): các mục thiếu của từng mẫu đợt 2 */
+window.__d2Missing = () => { const rec = curRec(); return rec ? d2Eval(rec).list.map(x => ({code: x.code, nen: x.nenMissing.map(m => m.text), full: x.fullMissing.map(m => m.text)})) : []; };

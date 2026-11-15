@@ -338,10 +338,12 @@ function gate(rec) {
   const hasTT = rec.nc.some(isTT);
   const direct = allDirect(rec), normErrs = normErrors(rec);
   const pc = checkPC(rec);
+  let pcTrung = []; try { pcTrung = HAKCheoLo.phieuTrung(db, rec.id, rec.fid, rec.pc || []); } catch (e) { /* không kiểm được chéo lô: không chặn */ }   // phiếu giống hệt phiếu ở lô khác: chặn BM-08, 09, 10, 14
   return {
-    pc, info, nc, dx, direct, normErrs, vc: vcL,
+    pc, pcTrung, info, nc, dx, direct, normErrs, vc: vcL,
     canGK: !direct && !info.length && !nc.errs.length && hasTT,
     canBHLD: !info.length && !nc.errs.length && hasTT,
+    canTC: !info.length && !nc.errs.length && hasTT && !pcTrung.length,   // BM-08 và BM-14 (theo đội): chặn khi phiếu cân của lô trùng lô khác
     canPhat: !info.length && !nc.errs.length && hasTT && !normErrs.length,
     canHDLD: !info.length && !nc.errs.length && hasTT && hdldList(rec).length > 0,
     canUQ: !direct && !info.length && !nc.errs.length && hasTT && ucList(rec).length > 0 && !minorsOf(rec).length,   // người ủy quyền phải từ đủ 18 tuổi (Điều 18 BLLĐ 2019)

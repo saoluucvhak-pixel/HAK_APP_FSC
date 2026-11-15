@@ -224,12 +224,15 @@
     out.doi.push(d); return {f: out, id: d.id};
   }
   /* xóa đội: chặn nếu còn nhân công (chuyển hoặc xóa họ trước); không xóa đội cuối cùng */
+  /* lịch sử STT văn bản đã cấp theo lô và theo nhóm (doi | doiXe), cùng quy tắc src/sovb.js: f.sttDaCap = {doi: [..], doiXe: [..]} */
+  function ghiSttDaCap(f, nhom, stt) { if (!(stt > 0)) return; f.sttDaCap = f.sttDaCap && typeof f.sttDaCap === 'object' ? f.sttDaCap : {}; const l = Array.isArray(f.sttDaCap[nhom]) ? f.sttDaCap[nhom] : []; if (!l.includes(stt)) l.push(stt); l.sort((a, b) => a - b); f.sttDaCap[nhom] = l; }
   function removeTeam(f, id) {
     const out = ensureForest(f), d = out.doi.find(x => x.id === id);
     if (!d) return {ok: false, error: 'Không có đội này'};
     if (out.doi.length <= 1) return {ok: false, error: 'Lô phải có ít nhất một đội'};
     const n = membersOf(out, d).length; if (n) return {ok: false, error: 'Đội còn ' + n + ' nhân công: chuyển họ sang đội khác hoặc xóa trước khi xóa đội'};
     const np = (out.pc || []).filter(r => r && r.doiId === id).length; if (np) return {ok: false, error: 'Đội còn ' + np + ' phiếu cân: gán phiếu sang đội khác trước khi xóa đội'};
+    ghiSttDaCap(out, 'doi', d.stt);   // đội bị xóa vẫn giữ STT đã cấp: đội mới không nhận lại số này
     out.doi = out.doi.filter(x => x.id !== id); return {ok: true, f: out};
   }
   /* cập nhật thông tin đội (tên, hình thức, diện tích, số văn bản) */
@@ -278,6 +281,7 @@
   function removeHd(f, id) {
     const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có đội xe này'};
     const n = xeOf(out, h).length; if (n) return {ok: false, error: 'Đội xe còn ' + n + ' xe: chuyển xe sang đội khác trước'};
+    ghiSttDaCap(out, 'doiXe', h.stt);
     out.hdvc = out.hdvc.filter(x => x !== h); return {ok: true, f: out};
   }
   /* những người ký được của đội xe: chủ xe và tài xế (có CCCD) của các xe trong đội, không trùng */

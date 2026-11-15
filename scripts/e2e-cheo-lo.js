@@ -17,7 +17,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fb]'); await w.click('[data-ftab=kt]'); await w.waitForTimeout(500);
   const t = await w.innerText('#main');
-  ok('lô R-B có phiếu PA1 giống hệt lô R-A: mục chặn “Chéo lô: phiếu cân trùng”', /phiếu cân trùng/i.test(t) && /giống hệt/.test(t) && /lô R-A/.test(t), t.slice(0, 500));
+  ok('lô R-B có phiếu PA1 giống hệt lô R-A: mục chặn (nhóm Phiếu cân) nêu số phiếu và mã lô', /giống hệt/.test(t) && /Phiếu PA1/.test(t) && /lô R-A/.test(t), t.slice(0, 500));
   ok('hai lô có cùng nhân công và thời gian giao nhau: cảnh báo “người ở hai lô”', /Chéo lô: người ở hai lô|cũng là nhân công của lô/.test(t));
   ok('lô R-B (diện tích 2 ha, định mức 80 tấn/ha = 160 tấn dự kiến) lệch quá 10% so với 21,5 tấn phiếu cân: cảnh báo lệch sản lượng', /lệch sản lượng dự kiến|lệch .*% so với sản lượng dự kiến/.test(t));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));

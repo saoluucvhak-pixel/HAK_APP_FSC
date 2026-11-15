@@ -114,7 +114,7 @@ function xoaDoi() {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
   const r = HAKModel.removeTeam(f, t.id); if (r.error) return note('Chưa xóa đội: ' + r.error, 'warn');
   if (!confirm('Xóa đội “' + (t.ten || '') + '” (không còn nhân công)?')) return;
-  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); curDoi = null; persistLo(); note('Đã xóa đội “' + (t.ten || '') + '”.'); render();
+  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; curDoi = null; persistLo(); note('Đã xóa đội “' + (t.ten || '') + '”.'); render();
 }
 function saveDoi(form, nhap) {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
@@ -164,7 +164,7 @@ function saveHd(form, nhap) {
 function xoaHd() {
   const f = curForest(); if (!f || !curHd) return;
   const r = HAKModel.removeHd(f, curHd); if (r.error) return note('Chưa xóa: ' + r.error, 'warn');
-  Object.assign(f, {hdvc: r.f.hdvc}); curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
+  Object.assign(f, {hdvc: r.f.hdvc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
 }
 function hdCapNhatDv() {
   const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === curHd), dv = h && (db.dmDonViVC || {})[h.donViId]; if (!dv) return;

@@ -9,22 +9,30 @@
   const s = v => String(v == null ? '' : v).trim();
   const digits = v => s(v).replace(/\D/g, '');
   const plate = v => s(v).toUpperCase().replace(/[\s.\-]/g, '');
-  const dmy = v => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s(v)); if (!m) return null; const d = new Date(+m[3], +m[2] - 1, +m[1]); return d.getFullYear() === +m[3] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[1] ? d : null; };
+  /* ngày lịch dùng CHUNG (src/dates.js): “1/11/2026” và “01/11/2026” là cùng một ngày; ngày thiếu hoặc không có thật cho null/0 và KHÔNG làm căn cứ kết luận hai phiếu là cùng chuyến */
+  const Dt = () => (typeof require !== 'undefined' ? require('./dates') : root.HAKDates);
+  const dmy = v => { const p = Dt().parse(s(v)); return p ? new Date(p.y, p.m - 1, p.d) : null; };
   const gio = v => { const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s(v)); return m ? (+m[1]) * 3600 + (+m[2]) * 60 + (+(m[3] || 0)) : null; };
   const moc = (ngay, g) => { const d = dmy(ngay), t = gio(g); return d && t != null ? d.getTime() + t * 1000 : null; };
   const lots = db => { const out = []; Object.values((db && db.rs) || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => out.push({oid: o.id, fid: f.id, f, ma: s((f.info || {}).maRung) || f.id}))); return out; };
   const khoang = p => { const a = moc(p.ngay, p.gioCan1), b = moc(p.ngay2 || p.ngay, p.gioCan2); if (a == null || b == null) return null; return b >= a ? [a, b] : [a, b + 86400000]; };
+  /* khóa đối chiếu: số phiếu (bỏ khoảng trắng, hoa), ngày lịch hợp lệ (yyyymmdd), biển số chuẩn hóa. Thiếu số phiếu, ngày không có thật hoặc thiếu biển số: null (không đối chiếu; lỗi ngày báo ở bước kiểm tra phiếu cân). Dữ liệu gốc không bị đổi. */
+  const khoaPhieu = p => { const so = s(p.soPhieu).toUpperCase().replace(/\s+/g, ''), d = Dt().key(s(p.ngay)), b = plate(p.bienSo); return so && d && b ? so + '|' + d + '|' + b : null; };
+  /* phiếu cân của lô (oid, fid) GIỐNG HỆT một phiếu đã lưu ở lô khác: [{p, ma}] (p là phiếu trong `pcList`, mặc định phiếu đã lưu của lô; ma là mã lô kia). Dùng chung cho Kiểm tra và cổng xuất (BM-08, 09, 10, 14). */
+  function phieuTrung(db, oid, fid, pcList) {
+    const all = lots(db), me = all.find(l => l.oid === oid && l.fid === fid); if (!me) return [];
+    const idx = new Map(); all.filter(l => l !== me).forEach(l => (l.f.pc || []).forEach(p => { const k = khoaPhieu(p); if (k && !idx.has(k)) idx.set(k, l.ma); }));
+    return (pcList || me.f.pc || []).map(p => { const k = khoaPhieu(p); return k && idx.has(k) ? {p, ma: idx.get(k)} : null; }).filter(Boolean);
+  }
   function kiemTra(db, oid, fid, opt) {
     const all = lots(db), me = all.find(l => l.oid === oid && l.fid === fid), items = []; if (!me) return items;
     const others = all.filter(l => l !== me), f = me.f, add = (kind, nhom, text, ref, go) => items.push({kind, nhom, text, ref: ref || '', go: go || {ftab: 'dx'}});
-    // 1. phiếu cân trùng hẳn với lô khác
-    const key = p => s(p.soPhieu).toUpperCase() + '|' + s(p.ngay) + '|' + plate(p.bienSo);
-    const idx = new Map(); others.forEach(l => (l.f.pc || []).forEach(p => { if (s(p.soPhieu)) { const k = key(p); if (!idx.has(k)) idx.set(k, l.ma); } }));
-    const dup = (f.pc || []).filter(p => s(p.soPhieu) && idx.has(key(p)));
-    if (dup.length) { const lo = [...new Set(dup.map(p => idx.get(key(p))))]; add('chan', 'Chéo lô: phiếu cân trùng', dup.length + ' phiếu cân giống hệt (cùng số phiếu, ngày cân, biển số) đã có ở lô ' + lo.join(', ') + ', ví dụ phiếu ' + dup[0].soPhieu + ' ngày ' + dup[0].ngay + '. Một phiếu cân chỉ thuộc một lô: xóa ở lô sai.', 'Phiếu ' + dup[0].soPhieu); }
+    // 1. phiếu cân trùng hẳn với lô khác (cổng xuất chặn qua checkPC dùng cùng hàm phieuTrung)
+    const key = khoaPhieu, dup = phieuTrung(db, oid, fid, f.pc);
+    if (dup.length) add('chan', 'Chéo lô: phiếu cân trùng', dup.length + ' phiếu cân giống hệt (cùng số phiếu, cùng ngày cân, cùng biển số; ngày viết khác nhau như 1/11 và 01/11 vẫn là một ngày) đã có ở lô khác: ' + dup.slice(0, 5).map(x => 'phiếu ' + x.p.soPhieu + ' (' + x.p.ngay + ', ' + s(x.p.bienSo) + ') ↔ lô ' + x.ma).join('; ') + (dup.length > 5 ? '; …' : '') + '. Một phiếu cân chỉ thuộc một lô: kiểm tra rồi xóa hoặc chuyển ở lô sai (phần mềm không tự xóa).', 'Phiếu ' + dup[0].p.soPhieu);
     // 2. một xe ở hai lô trùng giờ cân
     const xung = new Map();
-    (f.pc || []).forEach(p => { const a = khoang(p); if (!a || !plate(p.bienSo)) return; others.forEach(l => (l.f.pc || []).forEach(q => { if (plate(q.bienSo) !== plate(p.bienSo) || key(q) === key(p)) return; const b = khoang(q); if (b && a[0] < b[1] && b[0] < a[1]) { const k = plate(p.bienSo) + '|' + l.ma; if (!xung.has(k)) xung.set(k, {bien: p.bienSo, lo: l.ma, p, q, n: 0}); xung.get(k).n++; } })); });
+    (f.pc || []).forEach(p => { const a = khoang(p); if (!a || !plate(p.bienSo)) return; others.forEach(l => (l.f.pc || []).forEach(q => { if (plate(q.bienSo) !== plate(p.bienSo) || (key(q) && key(q) === key(p))) return; const b = khoang(q); if (b && a[0] < b[1] && b[0] < a[1]) { const k = plate(p.bienSo) + '|' + l.ma; if (!xung.has(k)) xung.set(k, {bien: p.bienSo, lo: l.ma, p, q, n: 0}); xung.get(k).n++; } })); });
     xung.forEach(x => add('doi', 'Chéo lô: xe trùng giờ cân', 'Xe ' + x.bien + ' có ' + x.n + ' phiếu cân trùng khoảng giờ cân với lô ' + x.lo + ' (phiếu ' + x.p.soPhieu + ' ngày ' + x.p.ngay + ' và phiếu ' + x.q.soPhieu + '): một xe không thể ở hai nơi cùng lúc, đối chiếu giờ cân hoặc biển số.', x.bien));
     // 3. người ở hai lô có thời gian khai thác giao nhau
     const kt = l => { const a = dmy((l.f.info || {}).tuNgay), b = dmy((l.f.info || {}).denNgay); return a ? [a.getTime(), b ? b.getTime() : Infinity] : null; }, mk = kt(me);
@@ -39,6 +47,6 @@
     if (dk > 0 && tt > 0) { const lech = Math.abs(tt - dk) / dk * 100; if (lech > ng) add('doi', 'Chéo lô: lệch sản lượng dự kiến', 'Tổng phiếu cân ' + String(Math.round(tt * 1000) / 1000).replace('.', ',') + ' tấn lệch ' + String(Math.round(lech * 10) / 10).replace('.', ',') + '% so với sản lượng dự kiến ' + String(Math.round(dk * 1000) / 1000).replace('.', ',') + ' tấn (ngưỡng ' + ng + '%). Đối chiếu diện tích, định mức hoặc phiếu cân.', '', {ftab: 'finfo'}); }
     return items;
   }
-  const api = {kiemTra, NGUONG_MAC_DINH};
+  const api = {kiemTra, phieuTrung, khoaPhieu, NGUONG_MAC_DINH};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKCheoLo = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -80,6 +80,15 @@ const MIGRATIONS = [
     const rs = {}; db.prepare('SELECT owner_id, data FROM forests').all().forEach(r => { const o = rs[r.owner_id] = rs[r.owner_id] || {forests: {}}; const f = JSON.parse(r.data); o.forests[f.id || r.owner_id + '/' + Object.keys(o.forests).length] = f; });
     const list = DM.dungDoiTac(rs, g('dmDonViVC') || {}, g('dmDoiTac') || []);
     db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('dmDoiTac', JSON.stringify(list));
+  },
+  /* v9 (bản 2.2): LỊCH SỬ STT văn bản đã cấp theo lô và theo nhóm (f.sttDaCap = {doi: [..], doiXe: [..]}, src/sovb.js). Khởi tạo từ STT đang lưu của đội, đội xe và STT đọc được từ các số văn bản dạng NN/NĂM/…;
+   * KHÔNG đánh lại số cũ, không đổi nội dung văn bản. GIỚI HẠN: đội đã xóa TRƯỚC bản này không có lịch sử nên số của đội đó (nếu không còn ở văn bản nào) có thể bị cấp lại; app cảnh báo số trùng trong lô và giữa các lô. */
+  function v9(db) {
+    const SV = require('./sovb'), up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    db.prepare('SELECT id, data FROM forests').all().forEach(r => {
+      const f = JSON.parse(r.data); if (!SV.khoiTaoLichSu(f)) return;
+      const data = JSON.stringify(f); up.run(data, sha(data), r.id);
+    });
   }
 ];
 
