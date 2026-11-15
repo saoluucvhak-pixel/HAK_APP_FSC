@@ -93,6 +93,7 @@ function renderMsgs() {
 }
 
 function renderMain() {
+  if (view === 'dm') { $('#main').innerHTML = renderMsgs() + panelDanhMuc(); return; }
   if (view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
   if (view === 'cty') { $('#main').innerHTML = renderMsgs() + settingsFrame('cty', panelCty()); return; }
   if (view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }

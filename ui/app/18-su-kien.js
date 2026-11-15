@@ -36,6 +36,7 @@ document.addEventListener('click', async e => {
   if (act === 'setBackup' || act === 'setBackupDefault') return settingsBackup(act === 'setBackupDefault');
   if (act === 'setOpenBackup') return HB.settings.openBackup();
   if (act === 'setOpenData') return HB.openDataFolder();
+  if (act === 'openDm') { view = 'dm'; return render(); }
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
