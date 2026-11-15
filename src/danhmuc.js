@@ -204,6 +204,17 @@
     const sc = new Set(); dt = dt.filter(r => { if (r.loai === 'doanhnghiep') return true; const k = cccdSo(r.cccd); if (k === b && sc.has(k)) return false; if (k === b) sc.add(k); return true; });
     return {ok: true, db: {dmLaoDong: ld, dmXeVC: xe, dmDoiTac: dt}, so};
   }
-  const api = {chuanDoiTacId, timDoiTac, hopNhatDoiTac, KHUNG_LO, CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, lechLaoDong, lechXe, moiHonChup, CHU_XE, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu, nguoiChung, timNguoi, gopNguoi};
+  /* NGÀY CHỤP CHO DÒNG CŨ (bản 2.2, A4): nhân công / xe nhập trước khi có _dmNgay coi như đã chụp danh mục đúng lúc nâng cấp
+   * (ngày cập nhật của dòng danh mục hiện hành khớp CCCD / biển số; dòng danh mục không có ngày hoặc không khớp: ngày nâng cấp `homNay`).
+   * Nhờ vậy chỉ thay đổi danh mục SAU khi nâng cấp mới được đề nghị "Cập nhật từ danh mục". Sửa trực tiếp f; trả số dòng đã gán. Chạy lại không đổi. */
+  function ganNgayChup(f, dmLaoDong, dmXe, homNay) {
+    if (!f || f.chot || f.dung) return 0;   // lô đã chốt / đã dừng: không đổi dữ liệu (giữ nguyên dấu vân tay của gói đã chốt, không vướng khóa chỉ đọc)
+    let n = 0; const hn = trim(homNay);
+    const gan = (r, m) => { if (!r || typeof r !== 'object' || Object.prototype.hasOwnProperty.call(r, '_dmNgay')) return; const d = m && trim(m.row.ngayCapNhat) && ngayKey(m.row.ngayCapNhat) ? trim(m.row.ngayCapNhat) : hn; r._dmNgay = d; n++; };
+    ((f && f.nc) || []).forEach(r => gan(r, r && layLaoDong(dmLaoDong || [], r.cccd)));
+    ((f && f.dx) || []).forEach(r => gan(r, r && layXe(dmXe || [], r.bienSo)));
+    return n;
+  }
+  const api = {ganNgayChup, chuanDoiTacId, timDoiTac, hopNhatDoiTac, KHUNG_LO, CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, lechLaoDong, lechXe, moiHonChup, CHU_XE, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu, nguoiChung, timNguoi, gopNguoi};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDanhMuc = api;
 })(typeof self !== 'undefined' ? self : this);

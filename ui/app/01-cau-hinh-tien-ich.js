@@ -47,7 +47,9 @@ function dinhMucMacDinh() {
   const base = {qa: '1 bộ', giay: '1 đôi', mu: '1 cái', gang: '3 đôi', nut: '', kinh: ''};
   return {'Tổ trưởng': {...base}, 'Công nhân khai thác': {...base}, 'Công nhân cưa': {...base, nut: '2 đôi', kinh: '3 cái'}};
 }
-function withDefaults(o) { if (!o.dinhMuc) o.dinhMuc = dinhMucMacDinh(); if (!o.congTy) o.congTy = {}; if (o.dmDonViVC) { o.dmDoiTac = HAKDanhMuc.hopNhatDoiTac(o.dmDonViVC, o.dmDoiTac || []).list; delete o.dmDonViVC; } return o; }   // dữ liệu cũ (sao lưu, localStorage): danh mục đơn vị vận chuyển gộp vào Đối tác — MỘT nguồn
+const ngayHomNay = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };   // dùng được ngay lúc nạp dữ liệu (trước module 06)
+function withDefaults(o) { if (o && o.rs) Object.values(o.rs).forEach(ow => Object.values((ow && ow.forests) || {}).forEach(f => HAKDanhMuc.ganNgayChup(f, o.dmLaoDong, o.dmXeVC, ngayHomNay())));   // A4: dòng cũ chưa có ngày chụp danh mục (sao lưu cũ nạp vào: như SQLite v11)
+  if (!o.dinhMuc) o.dinhMuc = dinhMucMacDinh(); if (!o.congTy) o.congTy = {}; if (o.dmDonViVC) { o.dmDoiTac = HAKDanhMuc.hopNhatDoiTac(o.dmDonViVC, o.dmDoiTac || []).list; delete o.dmDonViVC; } return o; }   // dữ liệu cũ (sao lưu, localStorage): danh mục đơn vị vận chuyển gộp vào Đối tác — MỘT nguồn
 
 /* ========== Tiện ích ========== */
 const $ = s => document.querySelector(s);

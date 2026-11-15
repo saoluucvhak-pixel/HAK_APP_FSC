@@ -98,6 +98,14 @@ const MIGRATIONS = [
     const r = DM.hopNhatDoiTac(dv, g('dmDoiTac') || []);
     db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('dmDoiTac', JSON.stringify(r.list));
     db.prepare("DELETE FROM meta WHERE key='dmDonViVC'").run();
+  },
+  /* v11 (A4): NGÀY CHỤP DANH MỤC cho dòng nhân công / xe nhập trước khi có _dmNgay (src/danhmuc.js ganNgayChup): ngày cập nhật của dòng danh mục hiện hành, không có thì ngày nâng cấp.
+   * Chỉ đổi cột data của forests có dòng được gán; bản in không đổi (_dmNgay không in). Chạy sau khi sao lưu file. */
+  function v11(db) {
+    const DM = require('./danhmuc'), g = k => { const r = db.prepare('SELECT value FROM meta WHERE key=?').get(k); return r ? JSON.parse(r.value) : null; };
+    const ld = g('dmLaoDong') || [], xe = g('dmXeVC') || [], d = new Date(), homNay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    const up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    db.prepare('SELECT id, data FROM forests').all().forEach(r => { const f = JSON.parse(r.data); if (!DM.ganNgayChup(f, ld, xe, homNay)) return; const data = JSON.stringify(f); up.run(data, sha(data), r.id); });
   }
 ];
 

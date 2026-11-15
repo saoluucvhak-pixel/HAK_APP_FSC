@@ -14,7 +14,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const B = lot('fb', 'R-B', {exp: {}, kl: null, pc: [], nc: [nv(1, 'Tổ trưởng', 'TỔ TRƯỞNG B', 'Tổ trưởng', '049085007009')]});
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'}));
-  B.dx = B.dx.map((r, i) => ({...r, maRung: 'R-B', ...(i === 0 ? {bienSo: '92C-777.88', taiXe: 'Tư', cccdTx: '049000000009', gplx: 'GPTU', hanGplx: '01/01/2030', kdDen: '01/01/2027', hanBH: '01/01/2027', chuXe: 'Chủ cũ'} : {})}));
+  B.dx = B.dx.map((r, i) => ({...r, maRung: 'R-B', ...(i === 0 ? {bienSo: '92C-777.88', taiXe: 'Tư', cccdTx: '049000000009', gplx: 'GPTU', hanGplx: '01/01/2030', kdDen: '01/01/2027', hanBH: '01/01/2027', chuXe: 'Chủ cũ', _dmNgay: '01/01/2026'} : {})}));
   const D = seed([B]);
   D.dmXeVC = [{ngayCapNhat: '01/11/2026', bienSo: '92C-777.88', chuXe: '', taiXe: '', cccdTx: '', diaChiTx: '', ngayCapTx: '', noiCapTx: '', gplx: '', hanGplx: '', hanDangKiem: '01/06/2027', hanBaoHiem: '',
     loaiXe: '', cccd: '', ngaySinh: '', ngayCap: '', noiCap: '', diaChi: '', sdt: '', cavet: '', nguoiKy: ''},
