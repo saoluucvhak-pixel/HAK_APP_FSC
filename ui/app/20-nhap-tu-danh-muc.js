@@ -58,3 +58,19 @@ function dmCapNhatLo(kind) {
   l.forEach(x => { const row = kind === 'nc' ? HAKDanhMuc.chupLaoDong(x.d, x.row) : HAKDanhMuc.chupXe(x.d, x.row); if (HAKStage.updateRow(st, kind, x.row._id, row).ok !== false) n++; });
   stErrList = null; note('Đã cập nhật ' + n + ' dòng từ danh mục vào bản nháp. Bấm “Lưu dữ liệu vào lô” để ghi.', 'ok'); render();
 }
+/* Lấy đơn giá theo vị trí từ đội khác của lô, không có thì từ lô gần nhất (theo ngày bắt đầu) cùng cách tính; chỉ điền vào ô (bản nháp), chưa lưu */
+function luongLayDonGia() {
+  const f = curForest(), rec = curRec(), fm = document.getElementById('luongForm'); if (!f || !rec || !fm) return;
+  const cur = fm.elements.hinhThucLuong.value, B = BASIS[cur]; if (!B) return note('Chọn cơ sở tính đơn giá (tấn, ha hoặc ngày công) trước.', 'warn');
+  const pre = {donGiaTan: 'dt_', donGiaHa: 'ha_', donGiaNgay: 'dn_'}[B.map], t = rec.doi && curTeam(f);
+  const co = m => m && Object.values(m).some(v => +v > 0);
+  const nguon = [];
+  (rec.doi || []).forEach(d => { if (!t || d.id !== t.id) nguon.push({ten: 'đội “' + (d.ten || 'khác') + '” của lô này', m: (d.hinhThuc || {})[B.map]}); });
+  const kh = ow => forestList(ow); const khac = [];
+  Object.values(db.rs || {}).forEach(ow => kh(ow).forEach(ff => { if (ff.id === f.id) return; const dk = HAKDates.parse(ff.info && ff.info.tuNgay || ''); khac.push({ff, k: dk ? dk.y * 10000 + dk.m * 100 + dk.d : 0}); }));
+  khac.sort((a, b) => b.k - a.k).forEach(({ff}) => { const ten = 'lô ' + (ff.info.maRung || '?'); (ff.doi || []).forEach(d => nguon.push({ten: ten + (d.ten ? ', đội “' + d.ten + '”' : ''), m: (d.hinhThuc || {})[B.map]})); nguon.push({ten, m: (ff.info || {})[B.map]}); });
+  const s = nguon.find(x => co(x.m)); if (!s) return note('Chưa có đội hay lô nào khác có đơn giá ' + B.short + ' để lấy.', 'warn');
+  let n = 0; chucDanhAll().forEach((cd, k) => { const el = fm.elements[pre + k], v = +(s.m || {})[cd]; if (el && v > 0) { el.value = String(v).replace('.', ','); n++; } });
+  const msg = document.getElementById('luongLayMsg'); if (msg) msg.textContent = 'Đã điền ' + n + ' đơn giá từ ' + s.ten + '. Kiểm tra rồi bấm “Lưu dữ liệu vào lô”.';
+  fm.elements.hinhThucLuong.dispatchEvent(new Event('change', {bubbles: true}));
+}

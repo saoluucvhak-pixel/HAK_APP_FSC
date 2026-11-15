@@ -39,6 +39,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('thêm đội: 2 đội, đội đầu tự đặt tên “Đội 1”, đội mới đang chọn và chép hình thức của đội 1', /2 đội/.test(t) && f.doi.length === 2 && f.doi[0].ten === 'Đội 1' && f.doi[1].ten === 'Đội Hai' && f.doi[1].hinhThuc.moHinhKy === 'giaokhoan' && /Đội Hai[\s\S]*đang chọn/.test(t), t);
   // đội 2: trực tiếp, ngày công
   await w.selectOption('#luongForm select[name=moHinhKy]', 'tructiep'); await w.selectOption('#luongForm select[name=hinhThucLuong]', 'ngaycong');
+  await w.evaluate(() => document.querySelectorAll('#luongForm details').forEach(d => { d.open = true; }));   // vị trí chưa có người nằm trong mục gập
   await w.fill('#luongForm input[name=dn_0]', '500000'); await w.fill('#luongForm input[name=dn_1]', '350000');
   await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(300); f = await dbNow();
   ok('lưu thông số khi đội 2 đang chọn: chỉ đội 2 đổi sang trực tiếp, ngày công; đội 1 vẫn giao khoán', f.doi[1].hinhThuc.moHinhKy === 'tructiep' && f.doi[1].hinhThuc.hinhThucLuong === 'ngaycong' && f.doi[0].hinhThuc.moHinhKy === 'giaokhoan' && f.doi[0].hinhThuc.hinhThucLuong !== 'ngaycong', JSON.stringify(f.doi.map(d => d.hinhThuc)));

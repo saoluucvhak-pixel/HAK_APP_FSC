@@ -169,8 +169,15 @@ const luongOptions = (direct, cur) => {
 };
 function panelLuong(rec) {
   const f = curForest(), t = rec.doi && f ? curTeam(f) : null, i = t ? infoTeam(rec, rec.doi.find(d => d.id === t.id) || t) : rec.info, direct = isDirect(i), cur = i.hinhThucLuong || 'sanluong';
-  const rate = (pre, map, unit, legacyTt) => chucDanhAll().map((cd, k) => '<label><span>Đơn giá ' + esc(cd) + ' (' + unit + ')</span><input name="' + pre + k + '" value="' +
-    esc(((map || {})[cd]) ?? '') + '"></label>').join('');
+  /* Bảng đơn giá theo vị trí (bản 2.2): mỗi dòng một vị trí đang có người trong đội kèm số người; vị trí chưa có người gập trong mục riêng. Tên ô (dt_/ha_/dn_ + số thứ tự vị trí) giữ nguyên để lưu như cũ. */
+  const nguoi = ((rec.nc || []).filter(r => !rec.doi || !t || r.doiId === t.id)), dem = {}; nguoi.forEach(r => { const k = trim(r.chucDanh); dem[k] = (dem[k] || 0) + 1; });
+  const rate = (pre, map, unit) => {
+    const ds = chucDanhAll().map((cd, k) => ({cd, k, n: dem[cd] || 0})), co = ds.filter(x => x.n), chua = ds.filter(x => !x.n);
+    const row = x => '<tr><td>' + esc(x.cd) + '</td><td style="text-align:center">' + x.n + '</td><td><input name="' + pre + x.k + '" value="' + esc(((map || {})[x.cd]) ?? '') + '" inputmode="numeric" style="text-align:right;width:140px"> <span class="mut">' + unit + '</span></td></tr>';
+    return '<div class="wrap" style="grid-column:1/-1"><table class="normTbl dgTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí đang có người</th><th>Số người</th><th>Đơn giá (' + unit + ')</th></tr></thead><tbody>' +
+      (co.length ? co.map(row).join('') : '<tr><td colspan="3" class="mut">Đội chưa có người: thêm nhân công để thấy các vị trí cần đơn giá.</td></tr>') + '</tbody></table>' +
+      (chua.length ? '<details style="margin-top:6px"><summary class="mut">Vị trí chưa có người (' + chua.length + ')</summary><table class="normTbl" style="min-width:0;table-layout:auto"><tbody>' + chua.map(row).join('') + '</tbody></table></details>' : '') + '</div>';
+  };
   const grp = (name, html) => '<div class="grid" data-grp="' + name + '" style="grid-column:1/-1;' + (cur === name ? '' : 'display:none') + '">' + html + '</div>';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá' + (t && rec.doi.length > 1 ? ' — đội “' + esc(t.ten || '') + '”' : '') + '</h3>' +
     '<p class="mut" style="margin-top:0">Danh sách nhân công nạp từ file Excel. <b>Giao khoán</b>: chủ rừng ký với Tổ trưởng, công nhân ký một Giấy ủy quyền cho Tổ trưởng; tính theo tấn, ha hoặc ngày công. <b>Trực tiếp</b>: chủ rừng ký hợp đồng lao động với tất cả nhân công; tính theo tấn hoặc ngày công. Sản lượng (tấn, ha) hoặc số công chia đều cho mọi người; đơn giá theo từng vai trò.</p>' +
@@ -179,6 +186,7 @@ function panelLuong(rec) {
       '<option value="giaokhoan"' + (!direct ? ' selected' : '') + '>Giao khoán: chủ rừng ký với Tổ trưởng; công nhân ký một Giấy ủy quyền cho Tổ trưởng</option>' +
       '<option value="tructiep"' + (direct ? ' selected' : '') + '>Trực tiếp: chủ rừng ký hợp đồng lao động với tất cả nhân công</option></select></label>' +
     '<label style="grid-column:1/-1"><span>Cơ sở tính đơn giá</span><select name="hinhThucLuong">' + luongOptions(direct, cur) + '</select></label>' +
+    '<div style="grid-column:1/-1" class="row"><button class="btn ghost sm" type="button" data-act="luongLay">Lấy đơn giá từ đội khác hoặc lô gần nhất</button><span class="mut" id="luongLayMsg"></span></div>' +
     grp('sanluong', rate('dt_', i.donGiaTan, 'đ/tấn', true)) + grp('ha', rate('ha_', i.donGiaHa, 'đ/ha')) + grp('ngaycong', rate('dn_', i.donGiaNgay, 'đ/công')) +
     '<label><span>Hợp đồng lao động từ ngày (dd/mm/yyyy)</span><input name="ngayBDLD" value="' + esc(i.ngayBDLD ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></div></form></div>';
