@@ -19,7 +19,8 @@ test('chốt rồi lưu: gói vào chot_goi, JSON lô không còn goi; đọc l�
   assert.deepStrictEqual(goiRows(s).map(r => [r.forest_id, r.phien_ban, r.hash, r.data === goi]), [['f1', 1, hash, true]]);
   const L = s.load().rs.r1.forests.f1;
   assert.equal(L.chot.goi, undefined); assert.equal(L.chot.hash, hash); assert.equal(L.chot.hashDL, V.bamDuLieu(goi));
-  assert.ok(V.nguyenVen(L), 'còn nguyên'); L.pc[3].kl = 999; assert.equal(V.nguyenVen(L), false, 'đổi dữ liệu → không còn nguyên');
+  assert.equal(V.kiemToanVen(L).ma, 'thieu-goi', 'không có gói trong bộ nhớ thì không kết luận nguyên vẹn');
+  assert.ok(V.nguyenVen(L, null, s.kiemGoi('f1')), 'còn nguyên (gói kiểm trên SQLite)'); L.pc[3].kl = 999; assert.equal(V.kiemToanVen(L, null, s.kiemGoi('f1')).ma, 'du-lieu-khac', 'đổi dữ liệu → khác bản chụp');
   assert.equal(s.load({kemGoi: true}).rs.r1.forests.f1.chot.goi, goi, 'sao lưu toàn bộ mang gói như trước');
   assert.deepStrictEqual(s.docGoi('f1'), {phienBan: 1, hash, at: '2026-11-01T00:00:00Z', data: goi});
   assert.equal(s.save(s.load()).changed, 0, 'lưu lại không ghi gì');
@@ -48,7 +49,7 @@ test('mở khóa rồi chốt lại: giữ gói của từng phiên bản; docGo
   db = s.load(); V.chot(db.rs.r1.forests.f1, 'KT', 't3', []); s.save(db);
   assert.deepStrictEqual(s.dsGoi('f1').map(x => x.phienBan), [1, 2]);
   assert.equal(s.docGoi('f1').phienBan, 2); assert.equal(JSON.parse(s.docGoi('f1', 1).data).pc[0].kl, 10); assert.equal(JSON.parse(s.docGoi('f1').data).pc[0].kl, 77);
-  assert.ok(V.nguyenVen(s.load().rs.r1.forests.f1));
+  assert.ok(V.nguyenVen(s.load().rs.r1.forests.f1, null, s.kiemGoi('f1')));
   s.close();
 });
 
@@ -59,7 +60,7 @@ test('v14: lô đã chốt từ bản cũ (gói trong JSON lô) → gói ra chot
   const s = new Store(file), L = s.load(), f = L.rs.r1.forests.f1, f0 = truoc.rs.r1.forests.f1;
   assert.ok(!/"goi":/.test(dongLo(s, 'f1')));
   assert.equal(s.docGoi('f1').data, f0.chot.goi);
-  assert.equal(f.chot.hashDL, V.bamDuLieu(f0.chot.goi)); assert.ok(V.nguyenVen(f));
+  assert.equal(f.chot.hashDL, V.bamDuLieu(f0.chot.goi)); assert.ok(V.nguyenVen(f, null, s.kiemGoi('f1')));
   assert.equal(V.doiNgoaiVongDoi(f0, f), false, 'phần dữ liệu lô (ngoài khóa vòng đời) giống hệt: bản in không đổi');
   assert.deepStrictEqual(s.load({kemGoi: true}).rs.r1.forests.f1.chot.goi, f0.chot.goi);
   assert.ok(fs.readdirSync(path.join(path.dirname(file), 'backups')).some(n => /truoc-nang-cap-v13/.test(n)));

@@ -12,6 +12,12 @@
  *   lo:{...đủ dữ liệu một lô, kèm info.muaHang (công ty và địa chỉ giao đã chốt)}, dungChung:{dinhMuc, bienAlias (chỉ phần lô cần)}, kiemTra:{nc,dx,pc,tongTan}, maKiemTra}
  * Không chứa: lô của chủ khác hoặc lô khác, bản tra cứu Google Sheets, thông tin đăng nhập, danh mục công ty. */
 (function (root) {
+  /* hồ sơ đã chốt trong file sao lưu: kiểm gói đóng băng và dữ liệu trước khi cho khôi phục (src/vongdoi.js kiemToanVen) */
+  const VD = () => (typeof require === 'function' ? require('./vongdoi') : root.HAKVongDoi);
+  function loiToanVen(f) {
+    if (!f || !f.chot) return null; const k = VD().kiemToanVen(f); if (k.ok) return null;
+    return {loai: 'toanVen', ten: forestLabel(f), ma: k.ma, toanVen: k, moTa: 'Hồ sơ đã chốt của lô “' + (k.maLo || forestLabel(f)) + '”' + (k.phienBan ? ' (phiên bản chốt ' + k.phienBan + ')' : '') + ' trong file không toàn vẹn: ' + k.ten + ' — ' + k.lyDo + '. Không khôi phục được từ file này; hãy chọn bản sao lưu khác để đối chiếu.'};
+  }
   const KIND = 'HAKQN_LO_RUNG', FORMAT = 1;
   const t = v => (v == null ? '' : String(v)).trim();
   const clone = o => JSON.parse(JSON.stringify(o));
@@ -90,6 +96,7 @@
   function planImport(cur, incoming, opts) {
     opts = opts || {};
     const conflicts = [], owners = [], seenMa = {};
+    Object.values((incoming && incoming.rs) || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => { const tv = loiToanVen(f); if (tv) conflicts.push(tv); }));
     Object.entries((incoming && incoming.rs) || {}).forEach(([key, o]) => {
       const oid = (o && o.id) || key, mo = matchOwner(cur, oid, o && o.info);
       if (mo.conflict) conflicts.push({loai: 'chu', ten: ownerName(o), moTa: mo.conflict});
@@ -207,6 +214,7 @@
   /* Xem trước khôi phục lô: cùng quy tắc nhận diện với planImport */
   function planLot(cur, pkg) {
     const o = pkg.chuRung, f = pkg.lo, conflicts = [];
+    const tv = loiToanVen(f); if (tv) conflicts.push(tv);   // gói đóng băng hỏng / dữ liệu khác bản chụp: dừng ngay ở bước xem trước, applyLot cũng dừng (cùng planLot)
     const mo = matchOwner(cur, o.id, o.info); if (mo.conflict) conflicts.push({loai: 'chu', ten: ownerName(o), moTa: mo.conflict});
     const mf = matchForest(cur, f.id, f.info.maRung); if (mf.conflict) conflicts.push({loai: 'lo', ten: forestLabel(f), moTa: mf.conflict, cacLo: mf.cacLo || null});
     if (!mf.conflict && mf.hit) {
@@ -254,6 +262,6 @@
     return {next, plan, doi: true, ownerId: oid, forestId: fid};
   }
 
-  const api = {KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl};
+  const api = {KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKLoRung = api;
 })(typeof self !== 'undefined' ? self : this);

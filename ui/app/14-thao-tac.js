@@ -370,16 +370,17 @@ async function importWithPreview(inc) {
   const p = await HB.importPreview(inc, {strategy: 'both', maMoi: {}});
   if (!p.ok) return note('Không đọc được bản sao lưu: ' + p.error, 'err');
   const row = (l, a, b) => '<tr><td>' + l + '</td><td style="text-align:right">' + fmt(a) + '</td><td style="text-align:right">' + fmt(b) + '</td></tr>';
-  const I = p.incoming, E = p.existing, blocked = p.plan.conflicts.length > 0;
+  const I = p.incoming, E = p.existing, blocked = p.plan.conflicts.length > 0, hong = p.plan.conflicts.some(c => c.loai === 'toanVen');   // hồ sơ đã chốt trong file không toàn vẹn: không cách xử lý nào được ghi
   $('#impBody').innerHTML = '<h2>Khôi phục bản sao lưu toàn bộ</h2><table><tr><th></th><th style="text-align:right">Trong file</th><th style="text-align:right">Đang có trên máy</th></tr>' +
     row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' + impPlanHtml(p.plan) +
     '<p><b>Cách xử lý:</b></p>' +
+    (hong ? '<div class="msg err" id="impToanVen"><b>Không khôi phục được từ file này: có hồ sơ đã chốt không toàn vẹn</b> (xem danh sách trên). Mọi cách xử lý, kể cả thay toàn bộ, đều bị dừng; chưa ghi gì. Bấm Hủy rồi chọn bản sao lưu khác để đối chiếu.</div>' : '') +
     '<label><input type="radio" name="impStrat" value="skip"' + (blocked ? ' disabled' : ' checked') + '> Giữ bản trên máy, chỉ thêm lô/chủ mới</label>' +
     '<label><input type="radio" name="impStrat" value="overwrite"' + (blocked ? ' disabled' : '') + '> Ghi đè các lô TRÙNG bằng dữ liệu trong file (lô khác của chủ được giữ)</label>' +
     '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> Giữ cả hai (lô trùng trong file được thêm thành lô MỚI với <b>mã lô mới do bạn xác nhận</b>)</label>' + impMaHtml(p.plan) +
-    '<hr><label><input type="radio" name="impStrat" value="replace"' + (blocked ? ' checked' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
+    '<hr><label><input type="radio" name="impStrat" value="replace"' + (hong ? ' disabled' : blocked ? ' checked' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi và ghi trong một giao dịch: lỗi giữa chừng thì không đổi gì. Bản tra cứu Google Sheets không bị đổi.</p>' +
-    '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button><button class="btn" data-act="impGo">Thực hiện</button></div>';
+    '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button>' + (hong ? '' : '<button class="btn" data-act="impGo">Thực hiện</button>') + '</div>';
   window.__imp = inc; window.__plan = p.plan; $('#impBox').classList.add('on');
 }
 async function importGo() {

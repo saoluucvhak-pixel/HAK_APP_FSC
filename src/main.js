@@ -149,6 +149,8 @@ function registerIpc() {
   ipcMain.handle('db:saveDelta', afterReloc((e, d) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.saveDelta(d))(); if (r.ok) checkModel('delta'); return r; })()));
   /* B5: đọc gói đóng băng của lô đã chốt (bảng chot_goi); phienBan bỏ trống = bản mới nhất. Gói không nạp sẵn khi mở app. */
   ipcMain.handle('db:goiChot', (e, forestId, phienBan) => wrap(() => ({goi: store.docGoi(forestId, phienBan), ds: store.dsGoi(forestId)}))());
+  /* kiểm gói đã chốt của một lô (cấu trúc, JSON, dấu vân tay) trên SQLite; giao diện so tiếp dữ liệu hiện tại (src/vongdoi.js kiemToanVen). Đồng bộ, không kèm dữ liệu gói. */
+  ipcMain.on('db:kiemGoi', (e, forestId) => { try { e.returnValue = store ? store.kiemGoi(forestId) : {ok: false, ma: 'thieu-goi', lyDo: NO_STORE()}; } catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, ma: 'thieu-goi', lyDo: err.message}; } });
   ipcMain.handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, opts))()));
   ipcMain.handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))()));
   ipcMain.handle('backup:to', afterReloc(async () => {
@@ -191,7 +193,8 @@ function registerIpc() {
       }
       // ghi qua file tạm, đọc lại kiểm tra gói lô; tên tự đặt (kiểm thử) không ghi đè bản có sẵn; chọn qua hộp thoại thì hệ điều hành đã hỏi ghi đè
       const out = Backup.saveLotFile({file, text: JSON.stringify(sealed, null, 2), unique: !!process.env.HAKQN_LOT_DIR, verify: t => { const pp = LoRung.parsePackage(t, sha); if (!pp.ok) throw new Error('gói lô ghi ra không hợp lệ: ' + pp.error); }});
-      return {ok: true, file: out};
+      const tv = LoRung.loiToanVen(p0.lo);   // lô chốt có gói hỏng vẫn sao lưu được (để đối chiếu) nhưng báo rõ: file này sẽ không khôi phục được
+      return {ok: true, file: out, canhBao: tv ? tv.moTa : ''};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
   ipcMain.handle('lot:open', async (e, filePath) => {

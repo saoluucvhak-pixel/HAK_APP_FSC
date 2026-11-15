@@ -151,7 +151,7 @@ const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac'];
 function tachGoi(f) {
   if (!f || !f.chot || typeof f.chot.goi !== 'string') return {f, goi: null};
   const V = require('./vongdoi'), chot = Object.assign({}, f.chot), data = chot.goi; delete chot.goi;
-  if (!chot.hashDL) { try { chot.hashDL = V.bamDuLieu(data); } catch (e) { /* gói hỏng: để nguyên, nguyenVen so được khi có gói */ } }
+  if (!chot.hashDL) { const k = V.kiemGoi(chot, data, f.id); if (k.ok) chot.hashDL = k.bamDL; }   // gói hỏng / sai dấu vân tay: KHÔNG tính dấu vân tay mới; gói giữ nguyên ở chot_goi để đối chiếu
   return {f: Object.assign({}, f, {chot}), goi: {phienBan: Number(chot.phienBan) || 0, hash: String(chot.hash || ''), at: String(chot.at || ''), data}};
 }   // danh mục lưu theo dòng ở bảng danh_muc (v13); trùng src/delta.js DM_BANG
 const now = () => new Date().toISOString();
@@ -221,6 +221,16 @@ class Store {
     const r = phienBan != null ? this.db.prepare('SELECT phien_ban, hash, at, data FROM chot_goi WHERE forest_id=? AND phien_ban=?').get(String(forestId), Number(phienBan))
       : this.db.prepare('SELECT phien_ban, hash, at, data FROM chot_goi WHERE forest_id=? ORDER BY phien_ban DESC LIMIT 1').get(String(forestId));
     return r ? {phienBan: r.phien_ban, hash: r.hash, at: r.at, data: r.data} : null;
+  }
+  /* KIỂM GÓI ĐÃ CHỐT của một lô ngay trên SQLite (src/vongdoi.js kiemGoi): đọc chot của lô và gói đúng phiên bản. Trả kết quả kiemGoi (không kèm dữ liệu gói), {ma:'chua-chot'} nếu lô chưa chốt.
+   * Gói còn nằm trong JSON lô (bản chưa nâng cấp, chạy trong bộ nhớ) cũng được kiểm. Không sửa gì. */
+  kiemGoi(forestId) {
+    const V = require('./vongdoi'), row = this.db.prepare('SELECT data FROM forests WHERE id=?').get(String(forestId));
+    if (!row) return {ok: false, ma: 'thieu-goi', lyDo: 'Không có lô ' + forestId};
+    let f; try { f = JSON.parse(row.data); } catch (e) { return {ok: false, ma: 'json-hong', lyDo: 'Dữ liệu lô không đọc được'}; }
+    if (!f.chot) return {ok: true, ma: 'chua-chot', lyDo: ''};
+    const g = typeof f.chot.goi === 'string' ? f.chot.goi : ((this.docGoi(f.id || forestId, f.chot.phienBan) || {}).data);
+    const k = V.kiemGoi(f.chot, g, f.id || forestId); return {ok: k.ok, ma: k.ma, lyDo: k.lyDo, bamDL: k.bamDL, phienBan: f.chot.phienBan || null, hash: f.chot.hash || ''};
   }
   /* các phiên bản gói đã lưu của một lô (không kèm dữ liệu) */
   dsGoi(forestId) { return this._coBangGoi() ? this.db.prepare('SELECT phien_ban phienBan, hash, at, length(data) bytes FROM chot_goi WHERE forest_id=? ORDER BY phien_ban').all(String(forestId)) : []; }
@@ -448,6 +458,9 @@ class Store {
    * Hồ sơ mâu thuẫn (ID, mã lô, chủ rừng chỉ về các bản ghi khác nhau) → dừng, không ghi. Luôn sao lưu file SQLite trước; ghi trong một giao dịch nên lỗi thì dữ liệu cũ còn nguyên. */
   applyImport(incoming, strategy, opts) {
     if (!incoming || typeof incoming.rs !== 'object') throw new Error('File không đúng định dạng sao lưu.');
+    // hồ sơ đã chốt trong file phải toàn vẹn (gói, dấu vân tay, dữ liệu) với MỌI cách xử lý, kể cả thay toàn bộ: lỗi thì dừng trước khi sao lưu hay ghi
+    const hong = []; Object.values(incoming.rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => { const e = LoRung.loiToanVen(f); if (e) hong.push(e); }));
+    if (hong.length) throw Object.assign(new Error(hong.slice(0, 3).map(e => e.moTa).join(' | ') + (hong.length > 3 ? ' (và ' + (hong.length - 3) + ' lô khác)' : '') + ' Dữ liệu trên máy chưa bị thay đổi.'), {code: 'GOI_HONG', lots: hong.map(e => e.toanVen)});
     const cur = this.load();
     let next;
     if (strategy === 'replace') {
@@ -469,6 +482,7 @@ class Store {
   /* Khôi phục MỘT lô rừng từ gói đã kiểm tra (LoRung.parsePackage). Xem trước dùng planLot, ghi dùng applyLot: cùng quy tắc. */
   previewLot(pkg) { return LoRung.planLot(this.load(), pkg); }
   applyLot(pkg, action) {
+    { const e = LoRung.loiToanVen(pkg && pkg.lo); if (e) throw Object.assign(new Error(e.moTa + ' Dữ liệu trên máy chưa bị thay đổi.'), {code: 'GOI_HONG', toanVen: e.toanVen}); }   // trước khi sao lưu hay ghi
     const cur = this.load(), r = LoRung.applyLot(cur, pkg, action);
     if (!r.doi) return {backup: '', plan: r.plan, doi: false};                  // lô đã có và giữ bản hiện có: không ghi gì
     const backup = this.snapshotFile('truoc-khoi-phuc-lo');

@@ -37,7 +37,7 @@ const doc = (q, ...a) => { const s = new Store(file, {migrations: MIGRATIONS}); 
   const db = await w.evaluate(() => window.hak.loadSync().db);
   ok('danh mục đọc lại đủ (lao động 2, xe 1, đối tác 1)', (db.dmLaoDong || []).length === 2 && (db.dmXeVC || []).length === 1 && (db.dmDoiTac || []).length === 1, JSON.stringify([db.dmLaoDong, db.dmXeVC, db.dmDoiTac]).slice(0, 300));
   const fa = db.rs.own1.forests.fa, fb = db.rs.own1.forests.fb;
-  ok('lô đã chốt đọc lên không mang gói, có dấu vân tay phần dữ liệu; còn nguyên', fa.chot && fa.chot.goi === undefined && fa.chot.hashDL === V.bamDuLieu(goiCu) && V.nguyenVen(fa), JSON.stringify(fa.chot));
+  ok('lô đã chốt đọc lên không mang gói, có dấu vân tay phần dữ liệu; còn nguyên', fa.chot && fa.chot.goi === undefined && fa.chot.hashDL === V.bamDuLieu(goiCu) && V.kiemToanVen(fa, null, await w.evaluate(() => window.hak.kiemGoiSync('fa'))).ma === 'nguyen-ven', JSON.stringify(fa.chot));
   const g = await w.evaluate(() => window.hak.goiChot('fa'));
   ok('gói đóng băng đọc được qua IPC, đúng như trước nâng cấp', g.ok && g.goi && g.goi.data === goiCu && g.goi.phienBan === 1);
   const hd = (fb.dx.find(r => r.bienSo === '92C-12345') || {}).hdvcId;

@@ -4,11 +4,27 @@
 const loKhoa = f => !!f && HAKVongDoi.chiDoc(f);
 function loKhoaNote(f) { note(f.dung ? 'Lô đã dừng (chỉ đọc). Mở lại lô để sửa.' : 'Lô đã chốt (chỉ đọc). Mở khóa (nhập lý do) để sửa.', 'warn'); return {ok: false, error: 'lô chỉ đọc'}; }
 function loTrangThai(rec, f) { const q = qtEval(rec, f); return HAKVongDoi.trangThai(f, q.sum); }
+/* TOÀN VẸN hồ sơ đã chốt (src/vongdoi.js kiemToanVen): gói đóng băng ở SQLite (bảng chot_goi) được kiểm ở tiến trình chính (cấu trúc, JSON, dấu vân tay), dữ liệu
+ * hiện tại so tiếp ở đây. Gói còn trong bộ nhớ (vừa chốt, bản trình duyệt) thì kiểm tại chỗ. Nhớ tạm theo phiên bản dữ liệu. Không bao giờ ném lỗi: lô hỏng vẫn mở được (chỉ đọc). */
+const tvNho = new Map();
+function toanVenLo(f) {
+  if (!f || !f.chot) return HAKVongDoi.kiemToanVen(f);
+  const k = (f.id || '') + '|' + f.chot.phienBan + '|' + f.chot.hash + '|' + (f.chot.hashDL || '') + '|' + dataVer, c = tvNho.get(f.id);
+  if (c && c.k === k && c.f === f) return c.r;
+  let r;
+  try {
+    if (typeof f.chot.goi === 'string' || !HB || !HB.kiemGoiSync) r = HAKVongDoi.kiemToanVen(f);
+    else { const kg = HB.kiemGoiSync(f.id); r = kg && kg.ma === 'chua-chot' ? HAKVongDoi.kiemToanVen(f) : HAKVongDoi.kiemToanVen(f, null, kg || {ok: false, ma: 'thieu-goi', lyDo: 'Không kiểm được gói trên máy'}); }
+  } catch (e) { r = {ok: false, ma: 'thieu-goi', ten: HAKVongDoi.TEN_KT['thieu-goi'], lyDo: 'Không kiểm được gói: ' + e.message, maLo: (f.info || {}).maRung || f.id, phienBan: f.chot.phienBan || null}; }
+  tvNho.set(f.id, {k, f, r}); return r;
+}
+const toanVenHtml = r => '<div class="msg err" id="toanVenLoi" data-ma="' + esc(r.ma) + '"><b>Hồ sơ đã chốt không toàn vẹn — ' + esc(r.ten) + '</b> · lô ' + esc(r.maLo) + (r.phienBan ? ' · phiên bản chốt ' + esc(r.phienBan) : '') + '<br>' + esc(r.lyDo) +
+  '<br><small>Lô vẫn mở được ở chế độ chỉ đọc để đối chiếu; phần mềm không tự mở khóa, không tự chốt lại, không tính lại dấu vân tay. Đối chiếu với bản sao lưu (Thêm → Khôi phục lô rừng… chỉ xem trước), hoặc mở khóa có lý do rồi chốt lại sau khi kiểm tra.</small></div>';
 function loKhoaBanner(f) {
   if (!loKhoa(f)) return '';
-  const nv = HAKVongDoi.nguyenVen(f);
+  const tv = f.chot ? toanVenLo(f) : {ok: true}, nv = tv.ok;
   return '<div class="msg warn" id="loKhoaBar"><b>' + (f.dung ? 'Lô đã dừng' + (f.dung.ngay ? ' ngày ' + esc(f.dung.ngay) : '') + ' · chỉ đọc' : 'Đã chốt ngày ' + esc(new Date(f.chot.at).toLocaleDateString('vi-VN')) + ' · phiên bản ' + f.chot.phienBan + ' · chỉ đọc') + '</b>' +
-    (f.chot && !nv ? ' <span class="pill err">dữ liệu lô khác bản đã chốt</span>' : '') + ' Các ô nhập đã khóa. Mở khóa ở tab Xuất hồ sơ (nhập lý do).</div>';
+    (f.chot && !nv ? ' <span class="pill err">' + esc(tv.ma === 'du-lieu-khac' ? 'dữ liệu lô khác bản đã chốt' : tv.ten) + '</span>' : '') + ' Các ô nhập đã khóa. Mở khóa ở tab Xuất hồ sơ (nhập lý do).</div>' + (f.chot && !nv ? toanVenHtml(tv) : '');
 }
 function chotBox(rec) {
   const f = curForest(); if (!f) return '';
@@ -19,7 +35,8 @@ function chotBox(rec) {
   if (f.dung) act = '<button class="btn" data-act="chotMoLai">Mở lại lô</button>';
   else if (f.chot) act = '<button class="btn" data-act="chotMoKhoa">Mở khóa (nhập lý do)</button> ' + (f.luuTru ? '<button class="btn ghost" data-act="chotBoLuuTru">Bỏ lưu trữ</button>' : '<button class="btn ghost" data-act="chotLuuTru">Lưu trữ</button>');
   else act = '<button class="btn" data-act="chotLo"' + (thieu.length || !sach ? ' disabled' : '') + '>Chốt hồ sơ</button> <button class="btn ghost" data-act="chotDung">Dừng lô</button>';
-  return '<div class="card" id="chotBox" data-tt="' + tt + '" style="margin-bottom:10px"><h3 style="margin-top:0">Vòng đời lô: <span class="pill ' + (HAKVongDoi.CHI_DOC.has(tt) ? 'warn' : 'ok') + '" id="chotTT">' + esc(HAKVongDoi.TEN[tt]) + '</span></h3>' +
+  const tvC = f.chot ? toanVenLo(f) : null;
+  return '<div class="card" id="chotBox" data-tt="' + tt + '" data-toanven="' + (tvC ? esc(tvC.ma) : '') + '" style="margin-bottom:10px"><h3 style="margin-top:0">Vòng đời lô: <span class="pill ' + (HAKVongDoi.CHI_DOC.has(tt) ? 'warn' : 'ok') + '" id="chotTT">' + esc(HAKVongDoi.TEN[tt]) + '</span></h3>' +
     (!f.chot && !f.dung ? (thieu.length ? '<p class="mut" style="margin:0 0 6px">Để chốt hồ sơ còn thiếu:</p><ul id="chotThieu" style="margin:0 0 8px">' + thieu.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p class="mut" style="margin:0 0 8px">Đủ điều kiện chốt: không còn mục chặn, mọi mẫu đã in và ký, mọi phiếu cân đã gán đội.</p>') + (sach ? '' : '<p class="msg warn">Còn thay đổi chưa lưu: bấm “Lưu dữ liệu vào lô” trước khi chốt.</p>') : '') +
     (true ? '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px"><label style="flex:1;min-width:260px">Lý do (bắt buộc khi mở khóa, dừng lô, mở lại lô)<input id="chotLyDo" style="width:100%" placeholder="Ví dụ: sửa số phiếu cân bị nhập nhầm"></label>' + (f.chot || f.dung ? '' : '<label>Ngày dừng <input id="chotNgay" value="' + esc(todayStr()) + '" style="width:120px"></label>') + '</div>' : '') +
     '<div class="row" style="gap:8px;flex-wrap:wrap">' + act + '</div>' +
