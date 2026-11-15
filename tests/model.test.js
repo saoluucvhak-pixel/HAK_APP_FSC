@@ -219,3 +219,21 @@ test('v8: SQLite dựng danh mục Đối tác từ người ký của đội xe
   const ids = db.dmDoiTac.map(x => x.id).sort(); assert.deepStrictEqual(ids, ['ct:049000000001', 'dn:d1']);
   const ct = db.dmDoiTac.find(x => x.id === 'ct:049000000001'); assert.deepStrictEqual([ct.ten, ct.noiCap, ct.loai], ['A', 'CA', 'nguoiKyVC']); s8.close();
 });
+
+test('A3: trạng thái in đợt 2 BM-09/10 theo ĐỘI XE — khóa cũ (CCCD / tên người ký) đổi sang hd:<id>; đổi người ký sau đó không mất; lô đã chốt giữ nguyên; chạy lại không đổi', () => {
+  const xe = (bien, chu, cccd, o) => Object.assign({bienSo: bien, chuXe: chu, cccd, nguoiKy: 'Chủ xe'}, o || {});
+  const f = M.ensureForest({id: 'f', info: {}, dx: [xe('A', 'An', '049000000001'), xe('B', 'Chủ B', '049000000002', {nguoiKy: 'Tài xế', taiXe: 'Tư', cccdTx: '049000000009'})]});
+  f.hdvc.push({id: 'hd9', ten: 'DN', key: '', donViId: 'dn:dv1', ben: {id: 'dn:dv1', loai: 'doanhnghiep', ten: 'CTY VT'}, cuoc: null, exp: {}});
+  f.dx.push(xe('C', 'Chủ C', '049000000003', {hdvcId: 'hd9'}));
+  f.inDot2 = {v: 1, items: {'09:049000000001': {at: 'a', sig: 's1'}, '10:049000000009': {at: 'b', sig: 's2'}, '09:CTY VT': {at: 'c', sig: 's3'}, '14:x': {at: 'd'}}};
+  const h1 = f.dx[0].hdvcId, h2 = f.dx[1].hdvcId;
+  assert.deepStrictEqual([M.khoaInCuVC(f, f.hdvc.find(h => h.id === h1)), M.khoaInCuVC(f, f.hdvc.find(h => h.id === h2)), M.khoaInCuVC(f, f.hdvc.find(h => h.id === 'hd9'))], ['049000000001', '049000000009', 'CTY VT'], 'khóa cũ đúng như giao diện dựng (chủ xe, tài xế ký, doanh nghiệp)');
+  assert.strictEqual(M.doiKhoaInVC(f), 3);
+  assert.deepStrictEqual(Object.keys(f.inDot2.items).sort(), ['09:hd:' + h1, '09:hd:hd9', '10:hd:' + h2, '14:x'].sort());
+  assert.strictEqual(f.inDot2.items['09:hd:' + h1].sig, 's1', 'giữ nguyên nội dung trạng thái');
+  assert.strictEqual(M.doiKhoaInVC(f), 0, 'chạy lại không đổi');
+  f.dx[0].cccd = '049000000777';   // đổi người ký của đội xe: khóa mới không phụ thuộc người ký
+  assert.ok(f.inDot2.items['09:hd:' + M.ensureForest(f).dx[0].hdvcId]);
+  const k = {id: 'k', chot: {at: 'x'}, dx: [xe('A', 'An', '049000000001', {hdvcId: 'h1'})], hdvc: [{id: 'h1', key: '049000000001', cuoc: null, exp: {}}], inDot2: {v: 1, items: {'09:049000000001': {at: 'a'}}}};
+  assert.deepStrictEqual([M.doiKhoaInVC(k), Object.keys(k.inDot2.items)], [0, ['09:049000000001']], 'lô đã chốt: không đổi dữ liệu');
+});

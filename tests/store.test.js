@@ -332,3 +332,15 @@ test('v11 (A4): dòng nhân công / xe cũ chưa có ngày chụp danh mục đ�
   assert.deepStrictEqual(DM.lechLaoDong(lo.nc[0], {ngayCapNhat: '10/03/2026', cccd: '049000000001', ten: 'AN MỚI'}), ['họ tên'], 'danh mục có dòng mới hơn: đề nghị đúng trường');
   s.close();
 });
+
+test('v12 (A3): SQLite đổi khóa trạng thái in đợt 2 của BM-09/10 sang id đội xe; lô đã chốt giữ nguyên', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v12-')), file = path.join(d, 'x.sqlite');
+  const f = {id: 'f', info: {maRung: 'R-1', tenRung: 'R'}, exp: {}, nc: [], dx: [{_row: 2, bienSo: '92C-1', chuXe: 'AN', cccd: '049000000001', nguoiKy: 'Chủ xe', hdvcId: 'hd1'}],
+    hdvc: [{id: 'hd1', ten: '', key: '049000000001', donViId: null, ben: null, cuoc: null, exp: {}}], inDot2: {v: 1, items: {'09:049000000001': {at: 'a', sig: 's'}}}};
+  const g = JSON.parse(JSON.stringify(f)); g.id = 'g'; g.info.maRung = 'R-2'; g.chot = {at: 'x', phienBan: 1, hash: 'h', goi: '{}'};
+  const s11 = new Store(file, {migrations: MIGRATIONS.slice(0, 11)}); s11.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C', cccd: '049067005459'}, forests: {f, g}}}}); s11.close();
+  const s = new Store(file), F = s.load().rs.o.forests;
+  assert.deepStrictEqual(Object.keys(F.f.inDot2.items), ['09:hd:hd1']);
+  assert.deepStrictEqual(Object.keys(F.g.inDot2.items), ['09:049000000001'], 'lô đã chốt giữ nguyên');
+  s.close();
+});

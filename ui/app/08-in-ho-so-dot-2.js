@@ -16,12 +16,12 @@ function d2Items(rec) {
   const kt = exportCheck(rec), K = HAKKiemTra;
   /* việc còn thiếu của một biểu mẫu = các mục CHẶN của exportCheck thuộc biểu mẫu đó (và đội / đội xe đó): cùng danh sách với nút tải, quy trình, gói ZIP. Nền: bỏ nhóm phiếu cân (tờ nền in được trước khi có phiếu cân). */
   const chanMiss = (code, pham, nen) => K.chanCho(kt.chan, code, pham).filter(x => !(nen && ((K.NHOM[x.ma] || {}).pc))).slice(0, 3).map(x => ({text: x.nhom + ': ' + x.text, where: x.ref || x.nhom, go: x.noiSua || {ftab: 'kt'}}));
-  const mk = (code, gkey, label, nen, full, pham) => items.push({key: IA.keyOf(code, gkey), code, gkey: gkey || '', label, nenMissing: [...chanMiss(code, pham, true), ...nen], fullMissing: [...chanMiss(code, pham, false), ...nen, ...full], sig: '', info: null});
+  const mk = (code, gkey, label, nen, full, pham, gkeyCu) => items.push({key: IA.keyOf(code, gkey), keyCu: gkeyCu && gkeyCu !== gkey ? IA.keyOf(code, gkeyCu) : '', code, gkey: gkey || '', label, nenMissing: [...chanMiss(code, pham, true), ...nen], fullMissing: [...chanMiss(code, pham, false), ...nen, ...full], sig: '', info: null});
   const BD = doiOf(rec), dk = d => BD.multi ? d.key : '', dl = d => BD.multi ? ' · ' + doiLabel(d) : '', ph = d => BD.multi ? {loai: 'doi', ten: trim(d.ten)} : null;
   BD.doi.forEach(d => mk('08', dk(d), FORMS_D2['08'] + dl(d), miss('08', D2_NEN_NEED['08']), miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k))), ph(d)));
-  groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = gr.cccd || gr.ten, pg = groupsDX(rec).length > 1 ? {loai: 'doiXe', ten: trim(gr.ten)} : null;
+  groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = vcGKey(gr), kc = vcGKeyCu(gr), pg = groupsDX(rec).length > 1 ? {loai: 'doiXe', ten: trim(gr.ten)} : null;
     const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : [];
-    ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + d2GroupLabel(rec, gr), miss(code, D2_NEN_NEED[code]), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))), pg)); });
+    ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + d2GroupLabel(rec, gr), miss(code, D2_NEN_NEED[code]), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))), pg, kc)); });
   BD.doi.forEach(d => mk('14', dk(d), FORMS_D2['14'] + dl(d), miss('14', D2_NEN_NEED['14']), miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k))), ph(d)));
   items.sort((a, b) => IA.ORDER.indexOf(a.code) - IA.ORDER.indexOf(b.code));
   // chữ ký bố cục từ chính file mẫu nền sẽ in (chỉ khi dựng được mẫu)

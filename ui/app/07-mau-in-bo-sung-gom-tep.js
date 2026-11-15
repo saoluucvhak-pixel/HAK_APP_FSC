@@ -91,6 +91,9 @@ function vcCtx(rec, ex, g) {
   const e = Object.assign({}, ex, h.exp), n = HAKHopDong.numbers(e); e._so = Object.assign({}, ex._so, {vc: n.vc, xn: n.xn}); return [r2, e];
 }
 const vaiTroDV = b => (b && b.loai === 'doanhnghiep') ? 'Doanh nghiệp' : (b && b.loai === 'nguoiKyVC' && ['Chủ xe', 'Tài xế'].includes(b.vaiTro)) ? b.vaiTro : 'Đơn vị vận chuyển';   // người ký cá nhân từ Đối tác: giữ vai trò đã khai (Chủ xe, Tài xế) để lời văn hợp đồng đúng
+/* khóa trạng thái in đợt 2 của BM-09 / BM-10: theo ĐỘI XE (đổi người ký không mất lịch sử in); hồ sơ cũ không có đội xe: theo người ký như trước */
+const vcGKey = g => g.hd ? HAKModel.khoaInVC(g.hd) : (g.cccd || g.ten);
+const vcGKeyCu = g => g.cccd || g.ten;
 function groupsDX(rec) {
   if (rec.hdvc) {   // cấu trúc 2.0: mỗi hợp đồng vận chuyển một nhóm, thứ tự theo xe đầu tiên (như bản cũ gom theo người ký)
     const F = {dx: rec.dx, hdvc: rec.hdvc};
@@ -153,8 +156,8 @@ function dot2Files0(rec, mode, keys) {
   B.doi.forEach((d, di) => { const sr = subRec(rec, B, d), exd = exDoi(ex, B, di), k8 = IA.keyOf('08', B.multi ? d.key : ''), k14 = IA.keyOf('14', B.multi ? d.key : '');
     if (want(k8)) push({key: k8, pham: B.multi ? {loai: 'doi', ten: trim(d.ten)} : null, path: B.multi ? '08_Bang_thanh_toan_tien_cong/' + slug(d.ten) + '.docx' : '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(sr, exd), land: true});
     if (want(k14)) push({key: k14, pham: B.multi ? {loai: 'doi', ten: trim(d.ten)} : null, path: B.multi ? '14_BB_nghiem_thu_thanh_ly/' + slug(d.ten) + '.docx' : '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(sr, exd)}); });
-  groupsDX(rec).forEach(g => { const k = IA.keyOf('09', g.cccd || g.ten); if (want(k)) push({key: k, pham: phXe(g), path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}); });
-  groupsDX(rec).forEach(g => { const k = IA.keyOf('10', g.cccd || g.ten); if (want(k)) push({key: k, pham: phXe(g), path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}); });
+  groupsDX(rec).forEach(g => { const k = IA.keyOf('09', vcGKey(g)); if (want(k)) push({key: k, pham: phXe(g), path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}); });
+  groupsDX(rec).forEach(g => { const k = IA.keyOf('10', vcGKey(g)); if (want(k)) push({key: k, pham: phXe(g), path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}); });
   return bmDanhDau(rec, files);
 }
 const buildFilesRaw = (rec, kind) => viNum(() => buildFilesRaw0(rec, kind));

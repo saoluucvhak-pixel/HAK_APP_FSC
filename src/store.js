@@ -106,6 +106,12 @@ const MIGRATIONS = [
     const ld = g('dmLaoDong') || [], xe = g('dmXeVC') || [], d = new Date(), homNay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
     const up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
     db.prepare('SELECT id, data FROM forests').all().forEach(r => { const f = JSON.parse(r.data); if (!DM.ganNgayChup(f, ld, xe, homNay)) return; const data = JSON.stringify(f); up.run(data, sha(data), r.id); });
+  },
+  /* v12 (A3): trạng thái in đợt 2 của BM-09 / BM-10 theo ĐỘI XE ('09:hd:<id>') thay cho CCCD / tên người ký (src/model.js doiKhoaInVC). Lô đã chốt / dừng giữ nguyên.
+   * Chỉ đổi cột data của forests có mục được đổi; bản in không đổi. Chạy sau khi sao lưu file. */
+  function v12(db) {
+    const M = require('./model'), up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    db.prepare('SELECT id, data FROM forests').all().forEach(r => { const f = JSON.parse(r.data); if (!M.doiKhoaInVC(f)) return; const data = JSON.stringify(f); up.run(data, sha(data), r.id); });
   }
 ];
 
