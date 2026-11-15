@@ -379,6 +379,38 @@ function registerIpc() {
  * create: ghi 1 chủ rừng có 2 rừng; verify: đọc lại sau khi đóng/mở app. Cả hai kiểm tra giao diện có bộ lọc mới và menu Báo cáo. */
 /* Kiểm tra khói đổi thư mục dữ liệu bằng bộ cài thật (CI Windows): sao chép, ghi đè có bản dự phòng, hoàn tác khi lỗi, đích đang được dùng,
  * dùng dữ liệu có sẵn, ổ biến mất. Dùng đúng hàm DM.relocate như thao tác thật; thư mục làm việc: HAKQN_SMOKE_DIR (mặc định thư mục tạm). */
+/* Kiểm tra khói LÔ ĐÃ CHỐT bằng bộ cài thật: lần chạy đầu (create, hoặc verify sau cài đè khi chưa có) chốt lô 'fchot' của chủ smoke1 và lưu; các lần sau đọc lại.
+ * Kiểm: chỉ đọc, phiên bản chốt, toàn vẹn (gói ở chot_goi, src/vongdoi.js kiemToanVen); sao lưu riêng lô ra file (có gói, niêm phong SHA-256), đọc lại file,
+ * khôi phục vào MỘT HỒ SƠ SQLITE MỚI (thư mục tạm, như máy Windows khác), đóng mở lại hồ sơ đó và kiểm lại. Toàn bộ chạy trên máy, không dùng mạng (r.online ghi trạng thái mạng lúc chạy). */
+async function smokeChot(r, o) {
+  const V = require('./vongdoi'), sha = t => require('crypto').createHash('sha256').update(t).digest('hex');
+  if (!o.forests.fchot) {
+    const db = store.load(), f = {id: 'fchot', info: {maRung: 'R-CHOT', tenRung: 'Rừng đã chốt', diaDiem: 'Thôn C', dienTich: 1, dinhMucTanHa: 10, donGia: 340000, giayTo: []},
+      nc: [{stt: 1, ten: 'NGƯỜI THỬ', cccd: '049000000098', vaiTro: 'Tổ trưởng'}], dx: [], pc: [{stt: 1, ngay: '05/01/2026', bienSo: '92C-00001', soPhieu: 'CHOT-1', kl: 7.5}], exp: {}};
+    db.rs.smoke1.forests.fchot = require('./model').ensureForest(f); V.chot(db.rs.smoke1.forests.fchot, 'Kiểm tra khói', new Date().toISOString(), []); store.save(db);
+    r.chotTaoLuc = r.phase;
+  }
+  const f = store.load().rs.smoke1.forests.fchot, kt = V.kiemToanVen(f, null, store.kiemGoi('fchot'));
+  r.checks.chotReadOnly = V.chiDoc(f);
+  r.checks.chotVersion = !!f.chot && f.chot.phienBan === 1;
+  r.checks.chotIntegrity = kt.ma === 'nguyen-ven';
+  r.checks.chotUi = await win.webContents.executeJavaScript("(()=>{ const k = window.hak.kiemGoiSync('fchot'); return !!k && k.ok === true && k.ma === 'ok'; })()");
+  // sao lưu riêng lô (như lot:save: gắn gói từ chot_goi, niêm phong) → file → đọc lại → khôi phục vào hồ sơ SQLite mới
+  const base = fs.mkdtempSync(path.join(process.env.HAKQN_SMOKE_DIR || require('os').tmpdir(), 'hakqn-chot-')), file = path.join(base, 'lo.json');
+  const pkg = LoRung.exportLot(store.load({kemGoi: true}), 'smoke1', 'fchot', {version: app.getVersion()});
+  fs.writeFileSync(file, JSON.stringify(LoRung.seal(pkg, sha), null, 2));
+  const parsed = LoRung.parsePackage(fs.readFileSync(file, 'utf8'), sha);
+  r.checks.chotLotFile = parsed.ok && typeof parsed.pkg.lo.chot.goi === 'string' && V.kiemToanVen(parsed.pkg.lo).ok;
+  const dbMoi = path.join(base, 'ho-so-moi', Settings.DB_NAME); fs.mkdirSync(path.dirname(dbMoi), {recursive: true});
+  let s2 = new Store(dbMoi); const ap = parsed.ok ? s2.applyLot(parsed.pkg, 'giu') : {}; s2.close();
+  s2 = new Store(dbMoi); const own = Object.values(s2.load().rs).find(x => x.forests && x.forests[ap.forestId || 'fchot']), f2 = own && own.forests[ap.forestId || 'fchot'];
+  r.checks.chotRestored = !!f2 && V.chiDoc(f2) && f2.chot.phienBan === 1 && V.kiemToanVen(f2, null, s2.kiemGoi(f2.id)).ma === 'nguyen-ven';
+  // gói bị sửa (dấu vân tay) phải bị chặn ở hồ sơ mới, không ghi gì
+  const hong = JSON.parse(JSON.stringify(parsed.pkg)); hong.lo.chot.hash = 'deadbeefdeadbeef'; const truoc = JSON.stringify(s2.load());
+  let chan = false; try { s2.applyLot(hong, 'thay'); } catch (e) { chan = e.code === 'GOI_HONG'; }
+  r.checks.chotBadRestoreBlocked = chan && JSON.stringify(s2.load()) === truoc;
+  s2.close();
+}
 async function smokeRelocate() {
   const out = process.env.HAKQN_SMOKE, r = {phase: 'relocate', version: app.getVersion(), platform: process.platform, checks: {}};
   try {
@@ -487,8 +519,9 @@ async function smoke() {
       r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('NGUYỄN VĂN MỘT')");
     } else {
       r.checks.owner = !!o && o.info.ten === 'CHỦ RỪNG THỬ NGHIỆM';
-      r.checks.twoForests = !!o && Object.keys(o.forests || {}).length === 2;
+      r.checks.twoForests = !!o && Object.keys(o.forests || {}).filter(k => k !== 'fchot').length === 2;   // fchot: lô đã chốt của kiểm tra khói (smokeChot)
       r.checks.forestData = !!o && o.forests.f2.info.diaDiem === 'Thôn B' && o.forests.f1.pc.length === 1;
+      if (o) await smokeChot(r, o);
     }
     await new Promise(res => { if (win.webContents.isLoading()) win.webContents.once('did-finish-load', res); else res(); });
     r.dom = await win.webContents.executeJavaScript(`(async()=>({title: document.title, reportMenu: !!document.querySelector('[data-act=rpOpen]'), lookupMenu: !!document.querySelector('[data-act=lkOpen]'), sideFilter: !!document.getElementById('sideQ'),
