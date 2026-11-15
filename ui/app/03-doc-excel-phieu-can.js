@@ -150,11 +150,7 @@ function payVC(rec, g) {
   return {rows, n: rows.reduce((a, r) => a + r.n, 0), kg: rows.reduce((a, r) => a + r.kg, 0), tien: rows.reduce((a, r) => a + r.tien, 0)};
 }
 /* Tên một đội xe để so với cột “Đội xe” của file: tên đội xe đã đặt, tên đơn vị vận chuyển (doanh nghiệp) hoặc tên người ký (chủ xe / tài xế) */
-const hdTenKhop = (F, h, ten) => {
-  const k = keyName(ten); if (!k) return false;
-  const sg = h.donViId ? null : HAKModel.signerOf(HAKModel.xeOf(F, h), h.key);
-  return [h.ten, h.ben && h.ben.ten, sg && (sg.tx ? sg.r.taiXe : sg.r.chuXe)].some(v => v && keyName(v) === k);
-};
+const hdTenKhop = (F, h, ten) => HAKModel.hdTenKhop(F, h, ten);
 /* Phiếu cân → xe (khớp biển số) → đội xe (hợp đồng vận chuyển) của lô. Trả {hd, xe} hoặc null khi biển không thuộc xe nào của lô; lô cũ chưa có hdvc thì hd = null */
 function doiXeOfPc(rec, r) {
   const x = (rec.dx || []).find(v => bienKey(v.bienSo) === bienKey(r.bienSo)); if (!x) return null;

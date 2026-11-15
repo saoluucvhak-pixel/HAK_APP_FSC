@@ -17,7 +17,7 @@ function newForest() {
   while (HAKLoRung.lotsByMa(db, code).length) code = base + (++k);
   const fid = newId('f');
   o.forests[fid] = {id: fid, info: {maRung: code, tenRung: 'Rừng ' + k, diaDiem: '', lat: null, lng: null, dienTich: null,
-    dinhMucTanHa: null, cuLy: null, tuNgay: '', denNgay: '', donGia: null, giayTo: []},
+    dinhMucTanHa: null, cuLy: null, tuNgay: '', denNgay: '', giayTo: []},
     nc: [], dx: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
   curF = fid; ftab = 'finfo'; tab = 'rung';
   persist();
@@ -30,10 +30,7 @@ function readForest(form) {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
     lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: toDec(fd.get('dienTich')),
     dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), dinhMucNgayHa: toDec(fd.get('dinhMucNgayHa')), cuLy: toDec(fd.get('cuLy')),
-    tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay')), khoiLuong: toDec(fd.get('khoiLuong')),
-    donGia: toNum(fd.get('donGia')),   // để trống = null: giao khoán tự suy đơn giá khoán của tổ từ định biên nhân sự
-    // khối lượng thực tế từng đội (chỉ có ô khi lô giao khoán nhiều đội): ô trống không ghi; không có ô thì giữ giá trị cũ
-    ...(form.querySelector('[data-kldoi]') ? {klDoi: Object.fromEntries([...form.querySelectorAll('[data-kldoi]')].map(x => [x.dataset.kldoi, toDec(x.value)]).filter(([, v]) => v != null))} : {})
+    tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay'))
   };
 }
 
@@ -54,7 +51,7 @@ function readVc(form) {
   return {
     vanChuyen: {
       ...old,   // giữ dữ liệu bậc cũ (không dùng nữa) để không mất dữ liệu
-      mode: ['tanKm', 'coDinh', 'tanDoan'].includes(fd.get('vcMode')) ? fd.get('vcMode') : 'tanKm',   // tanDoan chỉ còn khi hồ sơ cũ chưa chọn lại
+      mode: ['tanKm', 'coDinh'].includes(fd.get('vcMode')) ? fd.get('vcMode') : 'tanKm',   // tanDoan chỉ còn khi hồ sơ cũ chưa chọn lại
       donGiaKm: toDec(fd.get('vcKm')), coDinh: toDec(fd.get('vcCoDinh')), tuNgay: trim(fd.get('vcTu'))
     }
   };
@@ -77,10 +74,7 @@ function forestFill(act, el) {
   if (act === 'tgDefault') { setv('dinhMucNgayHa', ''); const k = HAKDinhMuc.tgPick(db, trim(form.elements.tuNgay.value)); document.getElementById('tgDmNote').textContent = k.found ? 'Sẽ dùng định mức mặc định ' + fmtTan(k.item.ngayHa) + ' ngày/ha sau khi lưu.' : 'Chưa có định mức mặc định.'; return; }
   if (act === 'fillDenDk') { const ii = readForest(form), d = ngayHaEff(ii), n = d ? HAKDinhMuc.soNgay(haDoi(ii, nDoiOf(ii, (curForest() || {}).nc)), d.v) : null, kt = n && HAKDates.isValid(ii.tuNgay) ? HAKDinhMuc.ngayKetThuc(ii.tuNgay, n) : ''; if (!kt) return hint('Chưa tính được ngày kết thúc: cần diện tích, định mức thời gian khai thác và ngày bắt đầu hợp lệ.'); setv('denNgay', kt); return hint('Đã điền ngày kết thúc dự kiến ' + kt + ' (' + n + ' ngày khai thác, không tính Chủ nhật). Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa ngày.'); }
   if (act === 'dmDefault') { setv('dinhMucTanHa', ''); const k = HAKDinhMuc.keoPick(db, trim(form.elements.tuNgay.value)); document.getElementById('dmNote').textContent = k.found ? 'Sẽ dùng định mức gỗ keo mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha sau khi lưu.' : 'Chưa có định mức mặc định.'; return; }
-  if (act === 'fillKl') {
-    const nums = pcs.map(p => p.kl).filter(x => typeof x === 'number' && x > 0); if (!nums.length) return hint('Chưa có phiếu cân nào của rừng này để lấy khối lượng.');
-    const sum = Math.round(nums.reduce((a, b) => a + b, 0) * 1000) / 1000; setv('khoiLuong', String(sum).replace('.', ',')); return hint('Đã điền tổng ' + fmtTan(sum) + ' tấn từ ' + nums.length + ' phiếu cân. Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa số.');
-  }
+  if (act === 'boKlCu') { const f = curForest(); if (!f) return; delete f.info.klHoSoCu; (f.doi || []).forEach(d => { delete d.klHoSoCu; }); persistLo(); note('Đã bỏ số khối lượng của hồ sơ cũ: khối lượng lô lấy theo tổng phiếu cân.', 'ok'); return render(); }
   const ds = pcs.map(p => HAKDates.parse(p.ngay)).filter(Boolean); if (!ds.length) return hint('Chưa có phiếu cân có ngày hợp lệ của rừng này.');
   const pick = ds.reduce((a, b) => (act === 'fillTu' ? (b.key < a.key ? b : a) : (b.key > a.key ? b : a)));
   setv(act === 'fillTu' ? 'tuNgay' : 'denNgay', HAKDates.format(pick)); hint('Đã điền ' + (act === 'fillTu' ? 'ngày cân nhỏ nhất ' : 'ngày cân lớn nhất ') + HAKDates.format(pick) + ' (từ ' + ds.length + ' phiếu cân). Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa ngày.');

@@ -452,7 +452,7 @@ async function smoke() {
       r.checks.upThreeForests = Object.keys(F).length === 3;
       r.checks.upRecords = ['f1', 'f2', 'f3'].map(k => F[k] ? F[k].dx.length + '/' + F[k].pc.length : '').join() === '2/2,2/1,2/3';
       r.checks.upTypedDestination = !!F.f1 && F.f1.exp.vcDiemDen === 'Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc' && !F.f1.info.muaHang;   // địa chỉ cũ còn nguyên, chưa tự đổi
-      r.checks.upBacSauCu = !!F.f2 && F.f2.info.vanChuyen.mode === 'tanDoan' && F.f2.info.vanChuyen.bac.length === 2;
+      r.checks.upBacSauCu = !!F.f2 && F.f2.info.vanChuyen.mode === 'tanKm' && F.f2.info.vanChuyen.bacCu.length === 2 && !('bac' in F.f2.info.vanChuyen);   // v6: cước bậc cự ly chuyển sang tấn/km, giữ dữ liệu bậc ở bacCu
       r.checks.upBackup = bk.some(f => /^truoc-nang-cap-v2-len-v\d+-/.test(f));
       r.checks.upSchema = store.db.pragma('user_version', {simple: true}) === SCHEMA_VERSION;
       const lk = lookup.status(); r.checks.upLookup = !!lk && JSON.stringify(lk).length > 20;

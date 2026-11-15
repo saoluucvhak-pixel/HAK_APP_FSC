@@ -158,13 +158,18 @@ test('nâng cấp từ cơ sở dữ liệu v1.0.0 THẬT (tests/fixtures/hakqn_
   const M = require('../src/model'), [ownB, forB] = JSON.parse(rowsBefore);
   assert.strictEqual(JSON.stringify(s.db.prepare('SELECT id,data FROM owners ORDER BY id').all()), JSON.stringify(ownB));
   const forA = s.db.prepare('SELECT id,data FROM forests ORDER BY id').all();
-  assert.deepStrictEqual(forA.map(r => [r.id, M.legacyForest(JSON.parse(r.data))]), forB.map(r => [r.id, JSON.parse(r.data)]));
+  /* so từng lô trước/sau: giống từng trường, TRỪ các trường đã chuyển ở v6 (đơn giá Tổ trưởng cũ vào bảng đơn giá theo vị trí, cước bậc sang tấn/km + bacCu) — kiểm riêng bên dưới */
+  const sanCu = o => { const c = JSON.parse(JSON.stringify(o)); ['donGia', 'donGiaTan', 'soDoi', 'khoiLuong', 'klHoSoCu', 'klDoi'].forEach(k => delete (c.info || {})[k]); if (c.info && c.info.vanChuyen) ['mode', 'bac', 'bacCu'].forEach(k => delete c.info.vanChuyen[k]); return c; };
+  assert.deepStrictEqual(forA.map(r => [r.id, sanCu(M.legacyForest(JSON.parse(r.data)))]), forB.map(r => [r.id, sanCu(JSON.parse(r.data))]));
+  forB.forEach(rb => { const b = JSON.parse(rb.data), x = JSON.parse(forA.find(z => z.id === rb.id).data);   // đơn giá Tổ trưởng cũ nay nằm ở bảng đơn giá theo vị trí của đội; số cũ không còn ở thông tin rừng
+    assert.ok(!('donGia' in x.info) && !('donGia' in x.doi[0].hinhThuc));
+    if (b.info.donGia > 0 && (!b.info.hinhThucLuong || b.info.hinhThucLuong === 'sanluong')) assert.strictEqual(x.doi[0].hinhThuc.donGiaTan['Tổ trưởng'], (b.info.donGiaTan || {})['Tổ trưởng'] > 0 ? b.info.donGiaTan['Tổ trưởng'] : b.info.donGia); });
   forA.forEach(r => { const x = JSON.parse(r.data); assert.ok(x.doi.length >= 1 && (x.nc || []).every(n => x.doi.some(t => t.id === n.doiId)), 'lô ' + r.id + ' có đội'); });
   const F = Object.fromEntries(Object.values(db.rs.own1.forests).map(x => [x.info.maRung, x]));
   assert.strictEqual(F['R-CU1'].exp.vcDiemDen, 'Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc');   // điểm đến nhập tay còn nguyên
   assert.strictEqual(F['R-CU1'].pc[1].noiGiao, 'Kho Điện Bàn');                           // nơi giao thực tế trên phiếu còn nguyên
-  assert.strictEqual(F['R-CU2'].info.vanChuyen.mode, 'tanDoan');                          // cước theo bậc: dữ liệu gốc còn
-  assert.deepStrictEqual(F['R-CU2'].info.vanChuyen.bac, [{den: 50, gia: 40000}, {den: 100, gia: 55000}]);
+  assert.strictEqual(F['R-CU2'].info.vanChuyen.mode, 'tanKm');                           // v6: cước theo bậc chuyển sang tấn/km (chọn lại đơn giá), dữ liệu bậc còn ở bacCu
+  assert.ok(!('bac' in F['R-CU2'].info.vanChuyen)); assert.deepStrictEqual(F['R-CU2'].info.vanChuyen.bacCu, [{den: 50, gia: 40000}, {den: 100, gia: 55000}]);
   assert.strictEqual(F['R-CU3'].pc[0].ngay, '31/02/2026'); assert.strictEqual(F['R-CU3'].pc[0].kl, 5);   // phiếu cũ sai ngày: giữ để người dùng sửa
   assert.deepStrictEqual(db.congTy, {});                                                  // chưa có công ty mua hàng
   assert.strictEqual(new Lookup(s).search('', '').total, lkBefore);                       // bản tra cứu 3 tab còn nguyên

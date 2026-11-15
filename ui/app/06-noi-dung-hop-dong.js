@@ -363,7 +363,7 @@ function docNghiemThu(rec, ex) {
   const daTT = toNum(ex.ntDaTT) || 0;
   const hd = direct ? 'các hợp đồng lao động đã ký giữa chủ rừng và người lao động' : 'Hợp đồng khai thác gỗ keo số ' + ex._so.kt.so;
   // lô nhiều đội: phiếu cân là của cả lô; phần của đội theo khối lượng thực tế từng đội đã nhập (nếu có, src/doi.js khoiLuong), không thì chia theo số người
-  const pcAll = totalKg(rec.pc || []), klTyLe = rec._klNhap && rec._klLo > 0 && typeof rs.khoiLuong === 'number' ? rs.khoiLuong / rec._klLo : null;
+  const pcAll = totalKg(rec.pc || []), klTyLe = rec._klNhap && rec._klLo > 0 && typeof rs.klHoSoCu === 'number' ? rs.klHoSoCu / rec._klLo : null;
   const pcKg = rec._share ? pcAll * (klTyLe != null ? klTyLe : rec._share) : pcAll, pcCach = klTyLe != null ? 'theo khối lượng thực tế từng đội' : 'chia theo số người';
   return [
     ...TITLE_HEAD(),

@@ -25,8 +25,6 @@ function forestErrors(info, fid) {
   if (info.dinhMucTanHa === 'x') e.push('Định mức không phải là số');
   if (info.dinhMucNgayHa === 'x') e.push('Định mức thời gian khai thác (ngày/ha) không phải là số');
   if (info.cuLy === 'x') e.push('Cự ly không phải là số');
-  if (info.khoiLuong === 'x') e.push('Khối lượng thực tế không phải là số');
-  if (typeof info.khoiLuong === 'number' && info.khoiLuong < 0) e.push('Khối lượng thực tế không được âm');
   if ((info.lat == null) !== (info.lng == null)) e.push('Nhập đủ vĩ độ và kinh độ (WGS84)');
   if (typeof info.lat === 'number' && Math.abs(info.lat) > 90) e.push('Vĩ độ phải nằm trong khoảng -90 đến 90');
   if (typeof info.lng === 'number' && Math.abs(info.lng) > 180) e.push('Kinh độ phải nằm trong khoảng -180 đến 180');
@@ -164,8 +162,7 @@ function transportPrice(i) {
 function rateOf(i, r) {
   const v = (i[basisOf(i).map] || {})[r.chucDanh];
   if (v > 0) return v;
-  // hồ sơ cũ: giá của Tổ trưởng chỉ nhập ở Thông tin rừng (info.donGia, đ/tấn)
-  return (basisOf(i) === BASIS.sanluong && r.chucDanh === 'Tổ trưởng' && i.donGia > 0) ? i.donGia : null;
+  return null;   // đơn giá Tổ trưởng hồ sơ cũ (info.donGia) đã chuyển vào bảng đơn giá theo vị trí của đội (SQLite v6)
 }
 const isDirect = i => i.moHinhKy === 'tructiep';
 /* Cơ sở tính đơn giá. Hợp đồng có 2 hình thức:
@@ -214,7 +211,7 @@ function klTheoPhieu(rec, b) {
 }
 const doiKl = (rec, b, ha) => {
   const kp = b.multi ? klTheoPhieu(rec, b) : null;
-  let kq = b.multi ? HAKDoi.khoiLuong(klLo(rec.info), b.doi, rec.info.klDoi) : {vals: HAKDoi.chia(klLo(rec.info), b.doi), nguon: 'songuoi', loi: ''};
+  let kq = b.multi ? HAKDoi.khoiLuong(klLo(rec.info), b.doi, Object.fromEntries(b.doi.map(d => [d.key, d.team && d.team.klHoSoCu]))) : {vals: HAKDoi.chia(klLo(rec.info), b.doi), nguon: 'songuoi', loi: ''};
   if (kp && kp.vals) kq = kp.loi ? Object.assign({}, kq, {loi: kp.loi}) : kp;   // gán đủ: khối lượng đội = phiếu cân của đội
   else if (kp && kp.chuaGan && kq.nguon !== 'nhap') kq = Object.assign({}, kq, {chuaGan: kp.chuaGan});   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
   b.klNguon = kq.nguon; b.klLoi = kq.loi; b.pcChuaGan = kq.chuaGan || 0; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
@@ -227,7 +224,7 @@ const recDoiChon = rec => {
 };
 /* hồ sơ cho một người theo đội của người đó (hợp đồng lao động của đội ký trực tiếp) */
 const recOfRow = (rec, r) => { if (!rec.doi) return rec; const B = doiOf(rec); if (!B.multi) return rec; const d = B.doi.find(x => x.id === r.doiId); return d ? subRec(rec, B, d) : rec; };
-const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, b.klNguon === 'phieucan' ? {pc: (rec.pc || []).filter(p => p.doiId === d.id)} : {}, {_share: b.klNguon === 'phieucan' ? null : d.share, _klNhap: b.klNguon === 'nhap', _klLo: klLo(rec.info), _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], _team: d.team || null, exp: d.team && Object.keys(d.team.exp || {}).length ? Object.assign({}, rec.exp, d.team.exp) : rec.exp, info: Object.assign({}, rec.info, d.team ? d.team.hinhThuc : {}, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
+const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, b.klNguon === 'phieucan' ? {pc: (rec.pc || []).filter(p => p.doiId === d.id)} : {}, {_share: b.klNguon === 'phieucan' ? null : d.share, _klNhap: b.klNguon === 'nhap', _klLo: klLo(rec.info), _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], _team: d.team || null, exp: d.team && Object.keys(d.team.exp || {}).length ? Object.assign({}, rec.exp, d.team.exp) : rec.exp, info: Object.assign({}, rec.info, d.team ? d.team.hinhThuc : {}, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {klHoSoCu: d.khoiLuong} : {})});
 const ncList = rec => { const tt = rec.nc.find(isTT); return tt ? [tt, ...rec.nc.filter(r => r !== tt)] : rec.nc.slice(); };   // tổ trưởng đầu danh sách, rồi mọi người còn lại (kể cả các tổ trưởng khác)
 /* Lô nhiều đội: mỗi đội ký hợp đồng riêng nên số hợp đồng, giấy ủy quyền, biên bản nghiệm thu của mỗi đội thêm hậu tố .1, .2… ngay sau phần số (015 → 015.1, 015/2026-KT → 015.1/2026-KT).
  * Số để trống (chưa nhập) thì giữ nguyên chỗ trống để điền tay. Số xác nhận khối lượng và hợp đồng vận chuyển là của cả lô nên không đổi. */
@@ -242,9 +239,9 @@ const doiLabel = d => (d.ten ? d.ten + ' — ' : '') + d.tt.ten;
 const ucList = rec => rec.nc.filter(r => !isTT(r) && !isDirect(infoRow(rec, r)));         // người ủy quyền cho Tổ trưởng (đội giao khoán)
 // Khối lượng dùng cho bảng lương: thực tế nếu có, không thì dự kiến (diện tích × định mức)
 /* khối lượng thực tế của lô: số nhập tay (chỉ còn ở hồ sơ cũ) hoặc TỔNG PHIẾU CÂN (một nguồn); chưa có thì dự kiến */
-const klLo = i => typeof i.khoiLuong === 'number' && i.khoiLuong > 0 ? i.khoiLuong : (i._klPC > 0 ? i._klPC : null);
+const klLo = i => typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0 ? i.klHoSoCu : (i._klPC > 0 ? i._klPC : null);   // số khối lượng nhập tay của hồ sơ cũ (klHoSoCu) còn thì vẫn là khối lượng lô; bỏ số này thì lấy tổng phiếu cân
 const volumeOf = i => {
-  if (typeof i.khoiLuong === 'number' && i.khoiLuong > 0) return {v: i.khoiLuong, src: 'thực tế'};
+  if (typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0) return {v: i.klHoSoCu, src: 'thực tế'};
   if (i._klPC > 0) return {v: i._klPC, src: 'thực tế'};
   const y = forestYield(i);
   return y > 0 ? {v: y, src: 'dự kiến'} : null;
@@ -290,7 +287,7 @@ function payRows(rec, ex) {
 /* Giao khoán, trường hợp 1 (Thông tin rừng KHÔNG có đơn giá Tổ trưởng): đơn giá khoán của tổ = đơn giá bình quân suy ra từ định biên nhân sự (số người từng vị trí ở sheet nhân công × đơn giá vị trí).
  * Trường hợp 2 (Thông tin rừng có đơn giá Tổ trưởng): làm như cũ. Trả null khi không áp dụng. */
 const khoanSuyRa = rec => {
-  const rs = rec.info; if (isDirect(rs) || rs.donGia > 0) return null;
+  const rs = rec.info; if (isDirect(rs)) return null;
   const pr = payRows(rec, {}); if (pr.plan.ngc || !pr.khoan.ok) return null;
   const bs = basisOf(rs), pos = chucDanhAll().map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; return {cd, n, rate: rateOf(rs, {chucDanh: cd})}; }).filter(x => x.n > 0 || x.rate > 0);   // vị trí của danh mục đang có người hoặc đã có đơn giá
   const used = pos.filter(x => x.n > 0), k = pr.khoan;

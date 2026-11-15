@@ -8,10 +8,16 @@ const M = require('../src/model');
 const {Store} = require('../src/store');
 
 const clone = x => JSON.parse(JSON.stringify(x));
+/* các trường đã bỏ ở giai đoạn 6 (SQLite v6) được kiểm riêng bằng test chuyển dữ liệu từng trường (cuối tệp); phần còn lại dựng lại giống hệt */
+const boCu = db => { const c = clone(db); Object.values((c && c.rs) || {}).forEach(o => Object.values(o.forests || {}).forEach(f => {
+  ['soDoi', 'khoiLuong', 'klHoSoCu', 'klDoi', 'donGia', 'donGiaTan'].forEach(k => { if (f.info) delete f.info[k]; });
+  (f.nc || []).forEach(r => { delete r.doi; }); (f.pc || []).forEach(r => { delete r.doi; }); (f.dx || []).forEach(r => { delete r.doiXe; });
+  if (f.info && f.info.vanChuyen) { delete f.info.vanChuyen.mode; delete f.info.vanChuyen.bac; delete f.info.vanChuyen.bacCu; }
+})); return c; };
 const roundTrip = (db0, label) => {
   const db = clone(db0), before = clone(db), m = M.ensureDb(db);
   assert.deepStrictEqual(db, before, label + ': không sửa đầu vào');
-  assert.deepStrictEqual(M.legacyDb(m), before, label + ': dựng lại dạng cũ giống hệt');
+  assert.deepStrictEqual(boCu(M.legacyDb(m)), boCu(before), label + ': dựng lại dạng cũ giống hệt (trừ các trường đã bỏ ở giai đoạn 6)');
   assert.deepStrictEqual(M.ensureDb(m), m, label + ': chuẩn hóa lại không đổi');
   return m;
 };
@@ -145,4 +151,46 @@ test('danh mục người lao động: gộp theo CCCD, lô mới nhất thắng
   assert.strictEqual(JSON.stringify(rs), before);
   assert.deepStrictEqual(L.map(r => [r.ten, r.diaChi]), [['BÙI B', 'Đà Nẵng'], ['LÊ ANH', 'Mới']]);   // CCCD ghi có dấu cách vẫn gộp; ngày bắt đầu 01/09/2026 thắng; dòng thiếu tên và CCCD sai bị bỏ
   assert.deepStrictEqual(M.nguoiDanhMuc(null), []);
+});
+
+/* ===== GIAI ĐOẠN 6.1: bỏ trường cũ, chuyển dữ liệu từng trường ===== */
+const lot6 = o => Object.assign({id: 'f', info: {maRung: 'R', hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', donGiaTan: {'Công nhân khai thác': 330000}, dienTich: 3}, exp: {},
+  nc: [nv(1, 'Tổ trưởng', 'TT A', 'Tổ trưởng', '111111111111'), nv(2, 'Công nhân', 'CN', 'Công nhân khai thác', '222222222222')], dx: [], pc: []}, o);
+const ens = f => M.ensureForest(clone(f));
+test('v6: info.soDoi bị bỏ; chạy lại không đổi', () => {
+  const f = ens(lot6({info: {maRung: 'R', soDoi: 3}})); assert.ok(!('soDoi' in f.info)); assert.deepStrictEqual(ens(f), f); assert.ok(!M.coTruongCu(f));
+});
+test('v6: khối lượng nhập tay → klHoSoCu (khối lượng lô vẫn lấy số đó), 0/trống thì bỏ hẳn', () => {
+  let f = ens(lot6({info: {maRung: 'R', khoiLuong: 29.75}})); assert.strictEqual(f.info.klHoSoCu, 29.75); assert.ok(!('khoiLuong' in f.info));
+  f = ens(lot6({info: {maRung: 'R', khoiLuong: null}})); assert.ok(!('klHoSoCu' in f.info) && !('khoiLuong' in f.info));
+  f = ens(lot6({info: {maRung: 'R', khoiLuong: 0}})); assert.ok(!('klHoSoCu' in f.info));
+});
+test('v6: klDoi (khóa Tổ trưởng) → klHoSoCu của đội có Tổ trưởng đó', () => {
+  const nc = [nv(1, 'Tổ trưởng', 'TT A', 'Tổ trưởng', '111111111111', {doi: 'Đội 1'}), nv(2, 'Tổ trưởng', 'TT B', 'Tổ trưởng', '222222222222', {doi: 'Đội 2'})];
+  const f = ens(lot6({nc, info: {maRung: 'R', hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', klDoi: {'111111111111': 20, '222222222222': 9.5}}}));
+  assert.deepStrictEqual(f.doi.map(d => [d.ten, d.klHoSoCu]), [['Đội 1', 20], ['Đội 2', 9.5]]); assert.ok(!('klDoi' in f.info));
+});
+test('v6: đơn giá Tổ trưởng hồ sơ cũ → bảng đơn giá theo vị trí của đội (chỉ khi tính theo tấn và chưa có giá Tổ trưởng); bỏ donGia', () => {
+  let f = ens(lot6({info: {maRung: 'R', hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', donGia: 420000, donGiaTan: {'Công nhân khai thác': 330000}}}));
+  assert.deepStrictEqual(f.doi[0].hinhThuc.donGiaTan, {'Công nhân khai thác': 330000, 'Tổ trưởng': 420000}); assert.ok(!('donGia' in f.doi[0].hinhThuc));
+  f = ens(lot6({info: {maRung: 'R', hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', donGia: 420000, donGiaTan: {'Tổ trưởng': 500000}}})); assert.strictEqual(f.doi[0].hinhThuc.donGiaTan['Tổ trưởng'], 500000, 'giá đã có ở bảng được giữ');
+  f = ens(lot6({info: {maRung: 'R', hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGia: 420000}})); assert.ok(!('donGia' in f.doi[0].hinhThuc) && !(f.doi[0].hinhThuc.donGiaNgay || {})['Tổ trưởng'], 'cách tính khác tấn: giá cũ không dùng, chỉ bỏ');
+});
+test('v6: cước theo bậc cự ly → tấn/km, giữ dữ liệu bậc ở bacCu', () => {
+  const f = ens(lot6({info: {maRung: 'R', vanChuyen: {mode: 'tanDoan', bac: [{den: 50, gia: 40000}], donGiaKm: 700}}}));
+  assert.strictEqual(f.info.vanChuyen.mode, 'tanKm'); assert.deepStrictEqual(f.info.vanChuyen.bacCu, [{den: 50, gia: 40000}]); assert.ok(!('bac' in f.info.vanChuyen)); assert.strictEqual(f.info.vanChuyen.donGiaKm, 700);
+});
+test('v6: chữ ở cột Đội / Đội xe chỉ bỏ khi dòng đã có đội; dòng chưa thuộc đội giữ chữ để báo lỗi', () => {
+  const nc = [nv(1, 'Tổ trưởng', 'TT A', 'Tổ trưởng', '111111111111', {doi: 'Đội 1'}), nv(2, 'Tổ trưởng', 'TT B', 'Tổ trưởng', '222222222222', {doi: 'Đội 2'}), nv(3, 'Công nhân', 'LẠC', 'Công nhân khai thác', '333333333333', {doi: 'Đội 9'})];
+  const f = ens(lot6({nc})); assert.deepStrictEqual(f.nc.map(r => [r.doiId !== '', 'doi' in r]), [[true, false], [true, false], [false, true]]);
+});
+test('v6: SQLite nâng cấp v5 → v6 có sao lưu file trước, chỉ đổi cột data của forests, hồ sơ khác nguyên vẹn', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v6-')), file = path.join(d, 'x.sqlite');
+  const s5 = new Store(file, {migrations: MIGRATIONS.slice(0, 5)});
+  const o = {id: 'o', info: {ten: 'CHỦ', ma: 'C1', cccd: '049067005459'}, forests: {f: lot6({info: {maRung: 'R', hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', soDoi: 2, khoiLuong: 12, donGia: 400000}})}};
+  s5.save({v: 2, rs: {o}}); s5.close();
+  const s6 = new Store(file), f = s6.load().rs.o.forests.f;
+  assert.strictEqual(s6.db.pragma('user_version', {simple: true}), MIGRATIONS.length); assert.ok(MIGRATIONS.length >= 6);
+  assert.ok(!('soDoi' in f.info) && f.info.klHoSoCu === 12 && f.doi[0].hinhThuc.donGiaTan['Tổ trưởng'] === 400000);
+  assert.ok(fs.readdirSync(path.join(d, 'backups')).some(n => /^truoc-nang-cap-v5-len-v6/.test(n)), 'có bản sao file trước khi nâng cấp'); s6.close();
 });

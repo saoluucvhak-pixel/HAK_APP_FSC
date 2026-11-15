@@ -59,7 +59,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lô nhiều đội: bảng nhân công chỉ hiện người của đội đang chọn (đội 2: NGUYỄN BỐN), PHẠM BA của đội 1 không hiện', !(await w.$('select[data-ncdoi="' + ix + '"]')) && /NGUYỄN BỐN/.test(await w.innerText('#main')));
   await w.click('[data-act=ncTatCa]'); await w.waitForTimeout(200);
   await w.selectOption('select[data-ncdoi="' + ix + '"]', f.doi[1].id); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); f = await dbNow();
-  ok('chọn đội ở cột Đội: PHẠM BA chuyển sang đội 2, cột Đội ghi theo đội thật', f.nc[ix].doiId === f.doi[1].id && f.nc[ix].doi === 'Đội Hai', JSON.stringify(f.nc[ix]));
+  ok('chọn đội ở cột Đội: PHẠM BA chuyển sang đội 2 (doiId); không còn chữ ở cột Đội của dòng đã có đội (v6)', f.nc[ix].doiId === f.doi[1].id && !('doi' in f.nc[ix]), JSON.stringify(f.nc[ix]));
   // sửa người vừa chuyển đội trong bản nháp: không bị đưa về đội cũ
   await w.click('[data-act=stEdit][data-kind=nc][data-i="' + ix + '"]'); await w.waitForSelector('#stForm');
   await w.fill('#stForm input[name=diaChi]', 'Quảng Nam (sửa)'); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);

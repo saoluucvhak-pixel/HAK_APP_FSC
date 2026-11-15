@@ -53,6 +53,16 @@ const MIGRATIONS = [
       const f = JSON.parse(r.data); if (!M.needsEnsure(f)) return;
       const data = JSON.stringify(M.ensureForest(f)); up.run(data, sha(data), r.id);
     });
+  },
+  /* v6 (giai đoạn 6): BỎ TRƯỜNG CŨ ĐÃ ĐƯỢC THAY (src/model.js xoaTruongCu): info.soDoi, khối lượng nhập tay → klHoSoCu (chỉ hiển thị), klDoi → doi[].klHoSoCu,
+   * đơn giá Tổ trưởng hồ sơ cũ → bảng đơn giá theo vị trí của đội, cước bậc cự ly → tấn/km (giữ bậc ở bacCu), chữ ở cột Đội / Đội xe của dòng đã có đội. Một chiều;
+   * chạy sau khi sao lưu file (snapshotFile trước khi nâng cấp); chỉ đổi cột data của forests. */
+  function v6(db) {
+    const M = require('./model'), up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    db.prepare('SELECT id, data FROM forests').all().forEach(r => {
+      const f = JSON.parse(r.data); if (!M.needsEnsure(f)) return;
+      const data = JSON.stringify(M.ensureForest(f)); up.run(data, sha(data), r.id);
+    });
   }
 ];
 

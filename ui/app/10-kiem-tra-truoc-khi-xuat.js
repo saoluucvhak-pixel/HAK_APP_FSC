@@ -18,8 +18,7 @@ function exportCheck(job) {
   groupsDX(job).forEach(gr => hanLoiOf(job, gr).forEach(v => add('chan', 'Giấy tờ xe hết hạn lúc chạy phiếu', 'Đội xe “' + gr.ten + '”: ' + HAKGiayTo.text(v) + '. BM-09 và BM-10 của đội xe này bị chặn: sửa hạn giấy tờ của xe hoặc ngày cân của phiếu nếu nhập sai.', 'Phiếu ' + (v.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'})));
   g.dx.warns.forEach(e => add('doi', 'Giấy tờ xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
   const vcm = (i.vanChuyen || {}).mode;
-  if (vcm === 'tanDoan') add('chan', 'Cước theo bậc cự ly (hồ sơ cũ)', 'Hồ sơ cũ còn dùng cước “theo bậc cự ly” (cách tính đã bỏ). Dữ liệu các bậc vẫn được giữ; hãy chọn lại cước cố định hoặc tấn/km.', 'Cách tính cước', {ftab: 'dx'});
-  else g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'dx'}));
+  g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'dx'}));
   // phiếu cân: thiếu/sai ngày, trùng, biển số chưa ghép, khối lượng…
   g.pc.errs.forEach(e => {
     const m = /^Dòng (\d+): (.*)$/.exec(e), r = m && pcRow(m[1]), so = r ? (r.soPhieu || '(không số)') : '', msg = m ? m[2] : e;
@@ -124,17 +123,17 @@ function cuLyNote(i) {
 /* Khối lượng thực tế từng đội (lô giao khoán nhiều đội): tùy chọn; trống hết thì chia theo số người (src/doi.js khoiLuong) */
 function klDoiField(f) {
   const i = fInfo(f), r0 = {info: Object.assign({}, i, {_klPC: klPhieu(f.pc)}), nc: f.nc || [], doi: f.doi || null, pc: f.pc || []};
-  if (!Object.values(i.klDoi || {}).some(v => typeof v === 'number')) return '';   // chỉ hồ sơ cũ đã nhập khối lượng từng đội; bản mới: khối lượng đội = phiếu cân của đội
-  const kq = doiOf(r0), b = kq, m = i.klDoi || {}; if (!b.multi) return '';
-  return '<fieldset style="grid-column:1/-1;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px 12px"><legend class="mut">Khối lượng thực tế từng đội (tấn, tùy chọn)</legend>' +
-    '<div class="row" style="gap:10px;flex-wrap:wrap">' + b.doi.map(d => '<label><span>' + esc(doiLabel(d)) + ' (' + d.n + ' người)</span><input data-kldoi="' + esc(d.key) + '" inputmode="decimal" value="' + esc(typeof m[d.key] === 'number' ? String(m[d.key]).replace('.', ',') : '') + '" placeholder="trống: theo số người"></label>').join('') + '</div>' +
-    '<small class="mut">Phiếu cân không ghi đội nên mặc định sản lượng chia theo số người. Nếu năng suất các đội khác nhau, nhập đủ khối lượng thực tế của MỌI đội (tổng phải bằng khối lượng thực tế của lô); BM-08 và BM-14 của từng đội dùng số này.</small>' +
-    (kq.klLoi ? '<div class="msg warn" style="margin-top:6px">' + esc(kq.klLoi) + '</div>' : kq.klNguon === 'nhap' ? '<div class="mut" style="margin-top:6px">Đang dùng khối lượng nhập riêng của từng đội.</div>' : '') + '</fieldset>';
+  if (!(f.doi || []).some(d => typeof d.klHoSoCu === 'number')) return '';   // chỉ hồ sơ cũ đã nhập khối lượng từng đội; bản mới: khối lượng đội = phiếu cân của đội
+  const kq = doiOf(r0), b = kq; if (!b.multi) return '';
+  return '<fieldset style="grid-column:1/-1;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px 12px"><legend class="mut">Khối lượng thực tế từng đội của hồ sơ cũ (tấn) — chỉ hiển thị</legend>' +
+    '<div class="row" style="gap:10px;flex-wrap:wrap">' + b.doi.map(d => '<span><b>' + esc(doiLabel(d)) + '</b>: ' + (typeof d.team.klHoSoCu === 'number' ? fmtTan(d.team.klHoSoCu) + ' tấn' : '—') + '</span>').join('') + '</div>' +
+    '<small class="mut">Số nhập tay của bản cũ, đang dùng cho BM-08 và BM-14 của từng đội. Bỏ số hồ sơ cũ (nút ở ô khối lượng lô) thì khối lượng đội lấy theo phiếu cân đã gán đội.</small>' +
+    (kq.klLoi ? '<div class="msg warn" style="margin-top:6px">' + esc(kq.klLoi) + '</div>' : '') + '</fieldset>';
 }
 function panelForest(f) {
   const i = fInfo(f);
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
-    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['khoiLuong', 'dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
+    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
   return '<div class="card"><h3 style="margin-top:0">Thông tin khai thác của rừng</h3>' +
     '<form id="forestForm" class="grid">' +
@@ -143,13 +142,12 @@ function panelForest(f) {
     inp('dienTich', 'Diện tích (ha)') + dmField(i) +
     dmTgField(i) + soDoiField(i, f.nc) + '<p class="mut" id="tgNote" style="grid-column:1/-1;margin:0">' + tgDuKienHtml(i, f.pc, nDoiOf(i, f.nc)) + '</p>' +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
-    (typeof i.khoiLuong === 'number' && i.khoiLuong > 0
-      ? inp('khoiLuong', 'Khối lượng thực tế nhập tay (hồ sơ cũ, tấn) — xóa trống để lấy theo phiếu cân', {ph: 'trống = tổng phiếu cân', btn: fillBtn('fillKl', 'Lấy tổng từ phiếu cân')})
+    (typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0
+      ? '<label><span>Khối lượng thực tế của hồ sơ cũ (tấn) — chỉ hiển thị</span><div id="klCu"><b>' + fmtTan(i.klHoSoCu) + ' tấn</b> <span class="mut">— số nhập tay của bản cũ, đang được dùng làm khối lượng lô; tổng phiếu cân hiện là ' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn' : '—') + '.</span> <button type="button" class="linkbtn" data-act="boKlCu">Bỏ số hồ sơ cũ, lấy theo phiếu cân</button></div></label>'
       : '<label><span>Khối lượng khai thác thực tế (tấn)</span><div id="klPC"><b>' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn</b> <span class="mut">— tổng ' + (f.pc || []).filter(p => p.kl > 0).length + ' phiếu cân (một nguồn duy nhất)</span>' : '—</b> <span class="mut">chưa có phiếu cân: hồ sơ dùng sản lượng dự kiến</span>') + '</div></label>') +
     klDoiField(f) + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p>' +
     /* Ô cũ “Đơn giá giao khoán Tổ trưởng”: chỉ còn hiện ở hồ sơ cũ đã có giá trị (để hợp đồng đã in không đổi). Lô mới nhập đơn giá Tổ trưởng ở bảng đơn giá theo vị trí (tab Nhân công);
      * đơn giá khoán của cả tổ luôn suy ra từ định biên. Xóa trống ô này thì ô biến mất và hợp đồng chuyển sang cách tính mới. */
-    (i.donGia > 0 ? '<label><span>Đơn giá Tổ trưởng của hồ sơ cũ (đồng/tấn)</span><input name="donGia" inputmode="numeric" style="text-align:right" value="' + esc(fmt(i.donGia)) + '"><small class="mut">Ô của bản cũ: chỉ dùng khi bảng đơn giá theo vị trí (tab Nhân công) chưa có giá Tổ trưởng, và khi còn giá trị thì hợp đồng không in đoạn “đơn giá khoán bình quân của tổ”. Nên chuyển giá này sang bảng đơn giá theo vị trí rồi xóa trống ô.</small></label>' : '<input type="hidden" name="donGia" value="">') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
 
@@ -161,7 +159,7 @@ const luongOptions = (direct, cur) => {
 function panelLuong(rec) {
   const f = curForest(), t = rec.doi && f ? curTeam(f) : null, i = t ? infoTeam(rec, rec.doi.find(d => d.id === t.id) || t) : rec.info, direct = isDirect(i), cur = i.hinhThucLuong || 'sanluong';
   const rate = (pre, map, unit, legacyTt) => chucDanhAll().map((cd, k) => '<label><span>Đơn giá ' + esc(cd) + ' (' + unit + ')</span><input name="' + pre + k + '" value="' +
-    esc(((map || {})[cd]) ?? ((legacyTt && k === 0 && i.donGia > 0) ? i.donGia : '')) + '"></label>').join('');
+    esc(((map || {})[cd]) ?? '') + '"></label>').join('');
   const grp = (name, html) => '<div class="grid" data-grp="' + name + '" style="grid-column:1/-1;' + (cur === name ? '' : 'display:none') + '">' + html + '</div>';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá' + (t && rec.doi.length > 1 ? ' — đội “' + esc(t.ten || '') + '”' : '') + '</h3>' +
     '<p class="mut" style="margin-top:0">Danh sách nhân công nạp từ file Excel. <b>Giao khoán</b>: chủ rừng ký với Tổ trưởng, công nhân ký một Giấy ủy quyền cho Tổ trưởng; tính theo tấn, ha hoặc ngày công. <b>Trực tiếp</b>: chủ rừng ký hợp đồng lao động với tất cả nhân công; tính theo tấn hoặc ngày công. Sản lượng (tấn, ha) hoặc số công chia đều cho mọi người; đơn giá theo từng vai trò.</p>' +

@@ -38,7 +38,7 @@ document.addEventListener('click', async e => {
   if (act === 'setOpenData') return HB.openDataFolder();
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
-  if (/^(fillTu|fillDen|fillKl|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
+  if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
   if (act === 'pcPrint') { if (stBlockNote()) return; const rec = curRec(); if (!rec) return; const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(HAKPhieuCan.aoa(rec), HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }

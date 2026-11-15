@@ -125,7 +125,50 @@
     (out.pc || []).forEach(r => { if (!r || has(r, 'doiId')) return; const m = trim(r.doi) && doi.find(d => fold(d.ten) === fold(r.doi)); r.doiId = doi.length === 1 ? doi[0].id : m ? m.id : ''; });
     return out;
   }
-  function ensureForest(f) { const out = ensureDoi(f); if (out && typeof out === 'object') { if (needsVC(out)) ensureVC(out); if (needsPC(out)) ensurePC(out); } return out; }
+  /* ===== GIAI ĐOẠN 6: BỎ TRƯỜNG CŨ ĐÃ ĐƯỢC THAY (một chiều, chạy lại không đổi gì; SQLite v6 chạy hàm này cho mọi lô sau khi sao lưu file) =====
+   *  - info.soDoi                : bỏ (số đội luôn lấy từ danh sách đội)
+   *  - info.khoiLuong (nhập tay) : → info.klHoSoCu, CHỈ HIỂN THỊ ở Thông tin rừng (có nút Bỏ); còn số này thì khối lượng lô vẫn lấy số đó như trước nên bản in không đổi
+   *  - info.klDoi (theo khóa Tổ trưởng) : → doi[].klHoSoCu của đội có Tổ trưởng đó; cùng quy tắc với khối lượng lô
+   *  - đơn giá Tổ trưởng hồ sơ cũ (donGia, đ/tấn) : → bảng đơn giá theo vị trí của đội (donGiaTan['Tổ trưởng']) khi cách tính theo tấn và bảng chưa có giá này; bỏ donGia
+   *  - vanChuyen.mode 'tanDoan' (bậc cự ly) : → 'tanKm'; dữ liệu bậc giữ ở vanChuyen.bacCu (không mất)
+   *  - chữ ở cột Đội của nhân công / phiếu cân, cột Đội xe của xe : bỏ khi dòng đã có doiId / hdvcId (chỉ dùng lúc nhập Excel); dòng chưa thuộc đội giữ chữ để báo lỗi */
+  /* tên có khớp một đội xe không: tên đội xe, tên đơn vị vận chuyển (doanh nghiệp) hoặc tên người ký (chủ xe / tài xế) — dùng cho cột Đội xe của file xe */
+  const hdTenKhop = (F, h, ten) => {
+    const k = fold(ten); if (!k || !h) return false;
+    const sg = h.donViId ? null : signerOf(xeOf(F, h), h.key);
+    return [h.ten, h.ben && h.ben.ten, sg && (sg.tx ? sg.r.taiXe : sg.r.chuXe)].some(v => v && fold(v) === k);
+  };
+  const CU_INFO = ['soDoi', 'donGia', 'klDoi', 'khoiLuong'];
+  function coTruongCu(f) {
+    if (!f || typeof f !== 'object') return false;
+    const info = f.info || {};
+    if (CU_INFO.some(k => has(info, k)) || (info.vanChuyen && info.vanChuyen.mode === 'tanDoan')) return true;
+    if ((f.doi || []).some(d => d && d.hinhThuc && has(d.hinhThuc, 'donGia'))) return true;
+    return (f.nc || []).some(r => r && has(r, 'doi') && r.doiId) || (f.pc || []).some(r => r && has(r, 'doi') && r.doiId) || (f.dx || []).some(r => r && has(r, 'doiXe') && r.hdvcId && (!trim(r.doiXe) || hdTenKhop({dx: f.dx, hdvc: f.hdvc || []}, (f.hdvc || []).find(h => h.id === r.hdvcId), r.doiXe)));
+  }
+  function xoaTruongCu(out) {
+    if (!out || typeof out !== 'object') return out;
+    const info = out.info || (out.info = {}), doi = Array.isArray(out.doi) ? out.doi : [];
+    delete info.soDoi;
+    if (has(info, 'khoiLuong')) { if (typeof info.khoiLuong === 'number' && info.khoiLuong > 0) info.klHoSoCu = info.khoiLuong; delete info.khoiLuong; }
+    if (has(info, 'klDoi')) {
+      const m = info.klDoi || {};
+      doi.forEach(d => { const tt = (out.nc || []).find(r => r && r.doiId === d.id && isTT(r)), k = tt ? String(tt.cccd || tt.ten || '') : '', v = m[k]; if (typeof v === 'number' && isFinite(v) && v >= 0) d.klHoSoCu = v; });
+      delete info.klDoi;
+    }
+    const chep = h => {
+      if (!h || !has(h, 'donGia')) return;
+      const g = h.donGia; if (typeof g === 'number' && g > 0 && (!h.hinhThucLuong || h.hinhThucLuong === 'sanluong')) { const t = Object.assign({}, h.donGiaTan); if (!(t['Tổ trưởng'] > 0)) t['Tổ trưởng'] = g; h.donGiaTan = t; }
+      delete h.donGia;
+    };
+    chep(info); doi.forEach(d => chep(d && d.hinhThuc));
+    if (info.vanChuyen && info.vanChuyen.mode === 'tanDoan') { const v = info.vanChuyen; v.mode = 'tanKm'; if (has(v, 'bac')) { v.bacCu = v.bac; delete v.bac; } }
+    (out.nc || []).forEach(r => { if (r && has(r, 'doi') && r.doiId) delete r.doi; });
+    (out.pc || []).forEach(r => { if (r && has(r, 'doi') && r.doiId) delete r.doi; });
+    { const F = {dx: out.dx || [], hdvc: out.hdvc || []}; (out.dx || []).forEach(r => { if (r && has(r, 'doiXe') && r.hdvcId && (!trim(r.doiXe) || hdTenKhop(F, F.hdvc.find(h => h.id === r.hdvcId), r.doiXe))) delete r.doiXe; }); }   // tên không khớp đội xe nào: giữ chữ để báo lỗi dòng
+    return out;
+  }
+  function ensureForest(f) { const out = ensureDoi(f); if (out && typeof out === 'object') { if (needsVC(out)) ensureVC(out); if (needsPC(out)) ensurePC(out); if (coTruongCu(out)) xoaTruongCu(out); } return out; }
   /* gán đội cho phiếu cân (chỉ số dòng); id '' = bỏ gán */
   function assignPc(f, idxs, id) {
     const out = ensureForest(f); if (id && !out.doi.some(d => d.id === id)) return {ok: false, error: 'Không có đội này'};
@@ -146,7 +189,7 @@
   }
 
   /* lô cần chuẩn hóa? (chưa có đội, hoặc có dòng nhân công thiếu doiId) — để chỉ chuẩn hóa lô cần, khỏi sao chép cả cơ sở dữ liệu mỗi lần lưu */
-  const needsEnsure = f => !!f && typeof f === 'object' && (!Array.isArray(f.doi) || !f.doi.length || (Array.isArray(f.nc) && f.nc.some(r => r && !has(r, 'doiId'))) || needsVC(f) || needsPC(f));
+  const needsEnsure = f => !!f && typeof f === 'object' && (!Array.isArray(f.doi) || !f.doi.length || (Array.isArray(f.nc) && f.nc.some(r => r && !has(r, 'doiId'))) || needsVC(f) || needsPC(f) || coTruongCu(f));
   const eachForest = (db, fn) => { const out = clone(db) || {}; Object.values(out.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { o.forests[k] = fn(o.forests[k]); })); return out; };
   const ensureDb = db => eachForest(db, ensureForest);
   const legacyDb = db => eachForest(db, legacyForest);
@@ -256,6 +299,6 @@
     })));
     return [...by.values()].map(x => x.r).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
   }
-  const api = {nguoiDanhMuc, cccdSo, assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
+  const api = {hdTenKhop, xoaTruongCu, coTruongCu, nguoiDanhMuc, cccdSo, assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKModel = api;
 })(typeof window !== 'undefined' ? window : globalThis);
