@@ -1,7 +1,7 @@
 'use strict';
 /* Giao khoán: đơn giá khoán của tổ suy ra từ định biên nhân sự (Electron thật, dữ liệu giả lập).
  *  1. Thông tin rừng KHÔNG có đơn giá Tổ trưởng: BM-01 ghi cơ sở tính giá trung bình + chi tiết từng vị trí + tổng giá trị khoán = tổng thanh toán; BM-20 ghi đơn giá ký; BM-08 ghi đơn giá khoán và tổng.
- *  2. Thông tin rừng CÓ đơn giá Tổ trưởng: làm như cũ (không có phần suy ra).
+ *  2. Hồ sơ cũ CÓ đơn giá Tổ trưởng ở Thông tin rừng: làm như cũ (không có phần suy ra). Từ 1.4.37 lô mới không còn ô này.
  * Chạy: xvfb-run -a node scripts/e2e-khoan.js   (KHOAN_OUT=thư_mục để giữ các file Word) */
 const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os');
@@ -22,11 +22,13 @@ const NC = [nv(1, 'Tổ trưởng', 'TRẦN VĂN TỔ', 'Tổ trưởng', '04908
   let cur = '';
   const run = async (donGiaTT, tag) => {
     cur = tag;
-    const L = lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 40, nc: NC}); L.info.donGia = null;
+    // 1.4.37: lô mới không còn ô “Đơn giá giao khoán Tổ trưởng” (đơn giá Tổ trưởng nhập ở bảng đơn giá theo vị trí); hồ sơ cũ đã có giá trị thì vẫn hiện ô và làm như cũ
+    const L = lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 40, nc: NC}); L.info.donGia = donGiaTT || null;
     await w.evaluate(d => window.hak.save(d), seed([L])); await w.reload(); await w.waitForSelector('#side');
     await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
-    await w.click('[data-ftab=finfo]'); const fld = await w.$('#forestForm input[name=donGia]'); ok('Thông tin rừng có ô “Đơn giá giao khoán Tổ trưởng”' + (donGiaTT ? ' (nhập ' + donGiaTT + ')' : ' (để trống)'), !!fld);
-    if (donGiaTT) { await fld.fill(String(donGiaTT)); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400); }
+    await w.click('[data-ftab=finfo]'); const fld = await w.$('#forestForm input[name=donGia]:not([type=hidden])');
+    ok(donGiaTT ? 'hồ sơ cũ có đơn giá Tổ trưởng ' + donGiaTT + ': Thông tin rừng vẫn hiện ô của bản cũ với giá trị đó' : 'lô mới: Thông tin rừng không còn ô “Đơn giá giao khoán Tổ trưởng”', donGiaTT ? !!fld && (await fld.inputValue()) === '340.000' : !fld);
+    if (donGiaTT) { await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400); }
     await w.click('[data-ftab=xuat]');
     return {gk: await get('hd', 'gk'), uq: await get('hd', 'uq'), tc: await get('ld', 'tc')};
   };

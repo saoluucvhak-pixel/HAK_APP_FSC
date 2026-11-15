@@ -25,3 +25,16 @@ test('nhiều Tổ trưởng: thiếu tên đội, trùng tên đội, công nh�
   assert.ok(t.some(x => /^5:“A” chưa thuộc đội nào/.test(x))); assert.ok(t.some(x => /^6:Đội “Đội 9” của “B” không có Tổ trưởng/.test(x)));
   assert.deepStrictEqual(r.orphans.map(o => o.ten), ['A', 'B']); assert.strictEqual(r.doi.length, 1);
 });
+
+test('khối lượng thực tế từng đội: trống → chia theo số người; nhập đủ và khớp tổng → dùng số nhập; thiếu hoặc lệch → chia theo số người kèm lỗi', () => {
+  const D = require('../src/doi');
+  const doi = [{key: 'a', share: 0.5}, {key: 'b', share: 0.5}];
+  assert.deepStrictEqual(D.khoiLuong(30, doi, {}), {vals: [15, 15], nguon: 'songuoi', loi: ''});
+  assert.deepStrictEqual(D.khoiLuong(30, doi, {a: 20, b: 10}), {vals: [20, 10], nguon: 'nhap', loi: ''});
+  const thieu = D.khoiLuong(30, doi, {a: 20});
+  assert.deepStrictEqual([thieu.vals, thieu.nguon], [[15, 15], 'songuoi']); assert.match(thieu.loi, /1\/2 đội/);
+  assert.match(D.khoiLuong(30, doi, {a: 20, b: 15}).loi, /35 tấn khác khối lượng thực tế của lô 30 tấn/);
+  assert.match(D.khoiLuong(null, doi, {a: 20, b: 10}).loi, /chưa có khối lượng thực tế của cả lô/);
+  assert.strictEqual(D.khoiLuong(30, doi, {a: 20.0004, b: 9.9999}).nguon, 'nhap', 'lệch dưới 1 kg vẫn khớp');
+  assert.strictEqual(D.khoiLuong(30, doi, {a: 'x', b: 10}).nguon, 'songuoi', 'ô nhập sai coi như chưa nhập');
+});

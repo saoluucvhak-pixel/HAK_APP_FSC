@@ -30,3 +30,12 @@ test('nhãn và tên file: BM-xx_BAN_NHAP_…; file trong thư mục: thư_mục
   assert.ok(/^BẢN NHÁP – chưa đủ dữ liệu/.test(B.banner(B.issues('14', {}))));
   assert.ok(/BM-14/.test(B.label('14')));
 });
+
+test('điều kiện mới (1.4.37): ngày công cần chấm công; cước tấn/km cần cự ly nhập tay; lô nhiều đội cần khối lượng từng đội khớp; lời gọi cũ không truyền cờ thì không đổi', () => {
+  const all = {ngayKy: true, diaChiGiao: true, klThucTe: true, ntNgay: true, pcNgay: true, nguoiMua: true};
+  assert.deepStrictEqual(B.issues('08', {...all, chamCong: false}).map(x => x.key), ['chamCong']);
+  assert.deepStrictEqual(B.issues('14', {...all, klDoi: false}).map(x => x.key), ['klDoi']);
+  for (const c of ['04', '09', '10']) assert.deepStrictEqual(B.issues(c, {...all, cuLyThuc: false}).map(x => x.key), ['cuLyThuc'], c);
+  for (const c of ['01', '04', '08', '09', '10', '14']) assert.deepStrictEqual(B.issues(c, all), [], 'không truyền cờ mới: ' + c);
+  assert.match(B.issues('04', {...all, cuLyThuc: false})[0].text, /đường chim bay/);
+});

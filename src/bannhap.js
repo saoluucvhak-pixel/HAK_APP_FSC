@@ -9,23 +9,26 @@
     klThucTe: {text: 'chưa nhập khối lượng khai thác thực tế (đang tính theo sản lượng dự kiến)', where: 'Thông tin rừng → Khối lượng thực tế (tấn)'},
     ntNgay: {text: 'chưa nhập ngày lập biên bản nghiệm thu', where: 'tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập'},
     pcNgay: {text: 'chưa nhập ngày lập biên bản xác nhận khối lượng', where: 'tab Xuất hồ sơ → Xác nhận khối lượng, thanh toán: ngày lập'},
+    chamCong: {text: 'trả theo ngày công nhưng chưa có chấm công thực tế (đang tính mỗi người đủ mọi ngày làm việc)', where: 'tab Nhân công → Chấm công thực tế'},
+    klDoi: {text: 'khối lượng thực tế từng đội nhập chưa đủ hoặc tổng không khớp khối lượng của lô', where: 'Thông tin rừng → Khối lượng thực tế từng đội'},
+    cuLyThuc: {text: 'cước tấn/km đang dùng cự ly tự tính theo đường chim bay (ngắn hơn quãng đường xe chạy)', where: 'Thông tin rừng → Cự ly vận chuyển (km): nhập quãng đường thực tế'},
     nguoiMua: {text: 'chưa khai đơn vị nhận (Công ty mua hàng) nên dòng “Kính gửi” để chấm', where: 'Cài đặt → Công ty, hoặc tab Xuất hồ sơ → đơn vị nhận'}
   };
   /* điều kiện chính thức của từng biểu mẫu (mã hai chữ số của BM-xx); mẫu không liệt kê không có điều kiện riêng */
   const FORMS = {
     '01': {label: 'BM-01 Hợp đồng giao khoán', need: ['ngayKy']},
-    '04': {label: 'BM-04 Hợp đồng vận chuyển', need: ['ngayKy', 'diaChiGiao']},
-    '08': {label: 'BM-08 Bảng thanh toán tiền công', need: ['klThucTe']},
-    '09': {label: 'BM-09 Xác nhận khối lượng vận chuyển', need: ['ngayKy', 'diaChiGiao', 'pcNgay']},
-    '10': {label: 'BM-10 Thanh toán tiền vận chuyển', need: ['ngayKy', 'diaChiGiao', 'pcNgay']},
+    '04': {label: 'BM-04 Hợp đồng vận chuyển', need: ['ngayKy', 'diaChiGiao', 'cuLyThuc']},
+    '08': {label: 'BM-08 Bảng thanh toán tiền công', need: ['klThucTe', 'chamCong', 'klDoi']},
+    '09': {label: 'BM-09 Xác nhận khối lượng vận chuyển', need: ['ngayKy', 'diaChiGiao', 'pcNgay', 'cuLyThuc']},
+    '10': {label: 'BM-10 Thanh toán tiền vận chuyển', need: ['ngayKy', 'diaChiGiao', 'pcNgay', 'cuLyThuc']},
     '11': {label: 'BM-11 Cam kết nguồn gốc', need: ['nguoiMua']},
-    '14': {label: 'BM-14 Nghiệm thu, thanh lý khai thác', need: ['ngayKy', 'klThucTe', 'ntNgay']},
+    '14': {label: 'BM-14 Nghiệm thu, thanh lý khai thác', need: ['ngayKy', 'klThucTe', 'ntNgay', 'chamCong', 'klDoi']},
     '20': {label: 'BM-20 Giấy ủy quyền', need: ['ngayKy']}
   };
-  /* ctx: các cờ true khi đủ điều kiện: {ngayKy, diaChiGiao, klThucTe, ntNgay, pcNgay, nguoiMua}. Trả danh sách thiếu [{key, text, where}] */
+  /* ctx: các cờ true khi đủ điều kiện: {ngayKy, diaChiGiao, klThucTe, ntNgay, pcNgay, nguoiMua, chamCong, cuLyThuc}; cờ không truyền (undefined) coi như đủ (tương thích lời gọi cũ). Trả danh sách thiếu [{key, text, where}] */
   function issues(code, ctx) {
     const f = FORMS[code]; if (!f) return [];
-    return f.need.filter(k => !ctx[k]).map(k => ({key: k, text: NEED[k].text, where: NEED[k].where}));
+    return f.need.filter(k => ctx[k] === undefined ? !['chamCong', 'cuLyThuc', 'klDoi'].includes(k) : !ctx[k]).map(k => ({key: k, text: NEED[k].text, where: NEED[k].where}));
   }
   const label = code => (FORMS[code] && FORMS[code].label) || ('BM-' + code);
   /* dòng nhãn đầu tài liệu */

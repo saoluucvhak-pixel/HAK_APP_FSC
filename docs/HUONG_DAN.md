@@ -409,11 +409,11 @@ Mỗi biểu mẫu có **điều kiện in chính thức riêng**. Thiếu đi�
 | Mẫu | Điều kiện bản chính thức | Bổ sung ở |
 | --- | --- | --- |
 | BM-01 Hợp đồng giao khoán, BM-20 Giấy ủy quyền | Có ngày ký hợp đồng (số hợp đồng đủ năm) | Thông tin chủ rừng → Ngày ký hợp đồng |
-| BM-04 Hợp đồng vận chuyển | Ngày ký + địa chỉ giao hàng đã chốt | Tab Vận chuyển → Chọn địa chỉ giao hàng |
-| BM-08 Bảng thanh toán tiền công | Khối lượng khai thác **thực tế** (không phải sản lượng dự kiến); tính theo ngày công thì không cần | Thông tin rừng → Khối lượng thực tế |
-| BM-09, BM-10 | Ngày ký + địa chỉ giao hàng + ngày lập biên bản xác nhận khối lượng (và phải có phiếu cân hợp lệ mới có file) | Tab Xuất hồ sơ → Xác nhận khối lượng, thanh toán: ngày lập |
+| BM-04 Hợp đồng vận chuyển | Ngày ký + địa chỉ giao hàng đã chốt + (cước tấn/km) **cự ly nhập tay**, không dùng cự ly tự tính đường chim bay | Tab Vận chuyển → Chọn địa chỉ giao hàng; Thông tin rừng → Cự ly vận chuyển (km) |
+| BM-08 Bảng thanh toán tiền công | Khối lượng khai thác **thực tế** (không phải sản lượng dự kiến); tính theo ngày công thì cần **chấm công thực tế** thay cho khối lượng; lô nhiều đội đã nhập khối lượng từng đội thì phải đủ và khớp tổng | Thông tin rừng → Khối lượng thực tế |
+| BM-09, BM-10 | Ngày ký + địa chỉ giao hàng + ngày lập biên bản xác nhận khối lượng + (cước tấn/km) cự ly nhập tay (và phải có phiếu cân hợp lệ mới có file) | Tab Xuất hồ sơ → Xác nhận khối lượng, thanh toán: ngày lập |
 | BM-11 Cam kết nguồn gốc | Đơn vị nhận (Công ty mua hàng) | Nút Công ty mua hàng |
-| BM-14 Nghiệm thu, thanh lý | Ngày ký + khối lượng thực tế + ngày lập biên bản nghiệm thu | Tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập |
+| BM-14 Nghiệm thu, thanh lý | Ngày ký + khối lượng thực tế + ngày lập biên bản nghiệm thu (ngày công: thêm chấm công thực tế; nhiều đội: khối lượng từng đội đủ và khớp nếu đã nhập) | Tab Xuất hồ sơ → Nghiệm thu, thanh lý: ngày lập |
 
 Các mẫu còn lại không có điều kiện riêng nên luôn là bản chính thức (khi dữ liệu cơ bản đã đủ để xuất). **Mẫu trống / chỉ phần số** (in hai bước) là mẫu thiết kế để điền sau nên không gắn nhãn. Khi đã bổ sung đủ, tải lại để có bản chính thức.
 
@@ -424,13 +424,23 @@ Một lô có thể giao khoán cho **nhiều đội**, mỗi tổ trưởng là
 
 - Tab **Nhân công**: thêm cột **Đội**. Lô chỉ có 1 tổ trưởng thì để trống, mọi thứ như cũ. Lô có từ 2 tổ trưởng thì mỗi tổ trưởng ghi một tên đội khác nhau và mỗi công nhân ghi tên đội của mình.
 - Sản lượng (tấn hoặc ha) của lô chia cho các đội theo số người; đội cuối nhận phần còn lại nên tổng luôn khớp.
+- **Khối lượng thực tế từng đội (tùy chọn)**: nếu năng suất các đội khác nhau, nhập ở Thông tin rừng → *Khối lượng thực tế từng đội* cho **mọi** đội, tổng phải bằng khối lượng thực tế của lô. Khi đó BM-08 và BM-14 của từng đội dùng số này (cả phần phiếu cân của đội trong BM-14). Nhập thiếu đội hoặc tổng lệch: BM-08, BM-14 là bản nháp và Kiểm tra trước khi xuất nêu rõ; để trống hết thì chia theo số người như cũ.
 - Mỗi đội có bộ hồ sơ riêng: BM-01 hợp đồng giao khoán, BM-20 giấy ủy quyền (bỏ qua đội chỉ có tổ trưởng), BM-05 chấm công, BM-06 danh sách đội, BM-07 xác nhận đào tạo, BM-08 bảng thanh toán tiền công, BM-14 nghiệm thu. Gói hồ sơ xếp mỗi loại vào một thư mục con, mỗi đội một file tên theo đội. Hồ sơ dùng chung cả lô (BHLĐ, vận chuyển, FSC) vẫn một bộ.
 - In đợt 2: BM-08 và BM-14 có mục riêng cho từng đội.
 - Định mức nhân công được so sánh theo từng đội (1 đội 8 người). Định mức thời gian khai thác (ngày/ha) tính cho một đội nên lô nhiều đội chia thêm cho số đội.
-- Biên bản nghiệm thu (BM-14) của từng đội ghi khối lượng phiếu cân của cả lô và phần của đội chia theo số người (phiếu cân không phân theo đội).
+- Biên bản nghiệm thu (BM-14) của từng đội ghi khối lượng phiếu cân của cả lô và phần của đội: theo khối lượng thực tế từng đội nếu đã nhập, không thì chia theo số người (phiếu cân không phân theo đội).
 - Thiếu tên đội, hai tổ trưởng trùng tên đội hoặc công nhân thuộc đội không có tổ trưởng sẽ báo lỗi và chặn xuất.
 - **Số hợp đồng riêng cho từng đội**: số bạn nhập ở tab Xuất hồ sơ được thêm hậu tố theo thứ tự đội, ví dụ 015/2026-KT thành 015.1/2026-KT (đội 1) và 015.2/2026-KT (đội 2); áp dụng cho hợp đồng giao khoán (BM-01), giấy ủy quyền (BM-20) và biên bản nghiệm thu (BM-14). Số chưa nhập thì để trống như cũ. Số xác nhận khối lượng và hợp đồng vận chuyển là của cả lô nên không đổi. Bảng ở tab Nhân công hiện sẵn số của từng đội.
 - **Hợp đồng nêu rõ phạm vi của đội**: BM-01 ghi lô giao cho bao nhiêu đội làm song song và phần diện tích (hoặc khối lượng) giao cho đội đó.
 - **In bảng chấm công đã nhập**: lô nhiều đội tải mỗi đội một file.
 - **Hình thức trực tiếp** (không có hợp đồng giao khoán) không chia đội: cột Đội bị bỏ qua và không báo lỗi tên đội.
 - **Khai số đội khác số Tổ trưởng**: ngoài lời nhắc ở Thông tin rừng, còn có mục **Số đội** ở Kiểm tra trước khi xuất (cần đối chiếu, không chặn).
+
+
+## Rà soát nghiệp vụ định mức – hợp đồng – vận chuyển (bản 1.4.37)
+- **Người dưới 18 tuổi** (tính tại ngày bắt đầu khai thác, chưa có thì hôm nay) là lỗi của dòng nhân công: khai thác gỗ là công việc nặng nhọc, nguy hiểm nên mọi biểu mẫu có tên người đó (hợp đồng giao khoán, hợp đồng lao động, giấy ủy quyền, nghiệm thu…) đều bị khóa cho đến khi bỏ người đó khỏi danh sách.
+- **BM-01 điều khoản thanh toán** ghi đúng hình thức trả công: theo tấn “căn cứ theo số lượng bán cho nhà máy” (như cũ); theo ha “căn cứ diện tích đã khai thác xong và được hai bên nghiệm thu”; theo ngày công “căn cứ số công thực tế của từng người ghi trong Bảng chấm công”.
+- **Đối chiếu khối lượng**: khi đã nhập khối lượng thực tế, Kiểm tra trước khi xuất báo nếu lệch tổng phiếu cân quá **1%** (ngưỡng mặc định; đổi ở Xuất hồ sơ → Cảnh báo lệch khối lượng). Chưa nhập khối lượng thực tế thì không so (lô đang khai thác dở).
+- **Ô “Đơn giá giao khoán Tổ trưởng”** ở Thông tin rừng đã bỏ với lô mới: đơn giá Tổ trưởng nhập ở bảng đơn giá theo vị trí (tab Nhân công), đơn giá khoán của tổ luôn suy ra từ định biên. Hồ sơ cũ đã có giá trị vẫn hiện ô (ghi “của hồ sơ cũ”) và hợp đồng in như cũ; xóa trống ô để chuyển sang cách tính mới.
+- **Danh mục vị trí**: các vị trí của Định mức nhân công (kể cả mặc định: Công nhân bóc vỏ, Công nhân bốc xếp) có sẵn trong danh sách chức danh, bảng đơn giá và định mức BHLĐ.
+- **Cự ly tấn/km**: cự ly tự tính là đường chim bay, thường ngắn hơn quãng đường xe chạy nên BM-04, BM-09, BM-10 là bản nháp cho đến khi nhập quãng đường thực tế ở Thông tin rừng → Cự ly vận chuyển (km).

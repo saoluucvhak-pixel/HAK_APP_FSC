@@ -393,3 +393,22 @@ Rà soát theo các skill `hak-code-auditor`, `hak-electron-security`, `hak-data
 | 600.000 phiếu (140 MB) | 1.489 + 1.527 ms | 687 + 84 ms |
 
 E2E `e2e-luudelta` (Electron thật, 20.000 phiếu): lần lưu đầu sau khi mở là lưu toàn bộ, các lần sau lưu theo phần thay đổi; xóa chủ rừng qua giao diện; Khôi phục toàn bộ qua giao diện → lần lưu kế tiếp `STALE` → tự lưu toàn bộ, không mất thay đổi; đo 167 ms (toàn bộ) so với 19 ms (phần thay đổi); mở lại dữ liệu đúng. Kiểm thử đơn vị `tests/delta.test.js`: chuỗi 8 thao tác (sửa, thêm, chuyển lô, xóa lô, xóa chủ, công ty, meta, không đổi) cho cơ sở dữ liệu **trùng khớp từng dòng và mã băm** với lưu toàn bộ.
+
+## 12. Bản 1.4.37: rà soát nghiệp vụ định mức – hợp đồng nhân công – vận chuyển (15/11/2026)
+
+| # | Phát hiện | Sửa / cách xử lý | Kiểm thử |
+| --- | --- | --- | --- |
+| 1 | Người dưới 18 tuổi chỉ khóa BM-20; BM-01, BM-03 (trực tiếp), BM-14 vẫn tải được dù Kiểm tra ghi “chặn xuất” (tái hiện trên Electron với người sinh 01/06/2010) | Thành lỗi của dòng nhân công (`checkNC`): khóa mọi biểu mẫu có tên người đó; Kiểm tra báo một lần kèm ngày tham chiếu và tuổi | `e2e-nghiepvu` 1 |
+| 2 | BM-01 mục 2.3 luôn “căn cứ theo số lượng bán cho nhà máy”, mục 3.1 với trả theo ha ghi “khối lượng gỗ” | Câu theo đúng hình thức (tấn giữ nguyên câu cũ; ha: diện tích đã khai thác được nghiệm thu; ngày công: số công trong Bảng chấm công) | `e2e-nghiepvu` 2 |
+| 3 | Ngày công chưa chấm công: BM-08, BM-14 tính đủ mọi ngày làm việc mà vẫn là bản chính thức | Điều kiện `chamCong` (src/bannhap.js) cho BM-08, BM-14 | `bannhap.test`, `e2e-nghiepvu` 3 |
+| 4 | Khối lượng thực tế (BM-08, BM-14) không đối chiếu tổng phiếu cân khi chưa đặt ngưỡng | Ngưỡng mặc định 1% khi đã nhập khối lượng thực tế (số dự kiến thì không so, trừ khi người dùng đặt ngưỡng) | `e2e-nghiepvu` 4 |
+| 5 | Ô “Đơn giá giao khoán Tổ trưởng” gần như không tác dụng, dễ hiểu nhầm là giá khoán cả tổ | Bỏ với lô mới; hồ sơ cũ có giá trị vẫn hiện ô (“của hồ sơ cũ”), hợp đồng in như cũ | `e2e-nghiepvu` 5, `e2e-khoan` |
+| 6 | Định biên mặc định (bóc vỏ, bốc xếp) không có trong danh mục chức danh / bảng đơn giá | `chucDanhAll` gồm mọi vị trí của định mức nhân công; biểu mẫu vẫn chỉ in vị trí mặc định và vị trí đang có người (không đổi bản đã in) | `e2e-nghiepvu` 6 |
+| 7 | Cước tấn/km theo cự ly tự tính (đường chim bay) vẫn in BM-04/09/10 chính thức | Điều kiện `cuLyThuc`: bản nháp cho đến khi nhập quãng đường thực tế | `bannhap.test`, `e2e-nghiepvu` 7 |
+| 8 | Lô nhiều đội: sản lượng chia theo số người, không có cách sửa khi năng suất khác nhau | Ô tùy chọn khối lượng thực tế từng đội (`HAKDoi.khoiLuong`): đủ và khớp tổng thì BM-08/BM-14 từng đội dùng số đó; thiếu/lệch thì bản nháp và báo; trống thì như cũ | `doi.test`, `e2e-nghiepvu` 8 |
+
+**Phát hiện thêm khi kiểm thử mục 8:** BM-14 mục 2.2 vẫn tự chia phiếu cân theo số người trong khi mục 2.1 dùng số nhập riêng (một biên bản hai số khác nhau cho cùng một đội); đã sửa để phần phiếu cân của đội theo tỷ lệ khối lượng từng đội đã nhập. Trường hợp chia theo số người giữ nguyên cách tính (không đổi biên bản đã in).
+
+**Chưa làm, cần xác nhận với kế toán/pháp chế:** hạn kiểm định/bảo hiểm/GPLX đang so với ngày hôm nay thay vì ngày vận chuyển; phiếu cân sau ngày kết thúc khai thác chưa được báo; hợp đồng lao động trực tiếp từ đủ 1 tháng có thể thuộc diện BHXH bắt buộc.
+
+**Kết quả (Linux):** `npm test` 312 đạt (1 bỏ qua); e2e 59/59 bộ (`e2e-nghiepvu` mới 28 kiểm tra; `e2e-khoan` cập nhật theo quy tắc mục 5).

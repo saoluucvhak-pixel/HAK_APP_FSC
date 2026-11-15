@@ -1,5 +1,5 @@
 /* ========== In hồ sơ đợt 2: trạng thái "đủ dữ liệu" / "đã in mẫu nền" (src/inan2.js) ========== */
-const D2_GO = {ngayKy: {ftab: 'xuat'}, diaChiGiao: {ftab: 'dx'}, klThucTe: {ftab: 'finfo'}, ntNgay: {ftab: 'xuat'}, pcNgay: {ftab: 'xuat'}};
+const D2_GO = {ngayKy: {ftab: 'xuat'}, diaChiGiao: {ftab: 'dx'}, klThucTe: {ftab: 'finfo'}, ntNgay: {ftab: 'xuat'}, pcNgay: {ftab: 'xuat'}, chamCong: {ftab: 'nc'}, cuLyThuc: {ftab: 'finfo'}, klDoi: {ftab: 'finfo'}};
 /* Điều kiện CHỮ CỐ ĐỊNH của mẫu nền (phải biết khi in nền vì được in thật lên giấy): ngày ký hợp đồng và điểm đến. Các giá trị còn lại (số biên bản, ngày lập, khối lượng, tiền) để trống dành chỗ. */
 const D2_NEN_NEED = {'08': [], '09': ['ngayKy', 'diaChiGiao'], '10': ['ngayKy', 'diaChiGiao'], '14': ['ngayKy']};
 const withMode = (m, fn) => { const o = docMode; docMode = m; try { return fn(); } finally { docMode = o; } };

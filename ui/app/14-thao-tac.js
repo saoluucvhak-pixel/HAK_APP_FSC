@@ -31,7 +31,9 @@ function readForest(form) {
     lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: toDec(fd.get('dienTich')),
     dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), dinhMucNgayHa: toDec(fd.get('dinhMucNgayHa')), soDoi: toDec(fd.get('soDoi')), cuLy: toDec(fd.get('cuLy')),
     tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay')), khoiLuong: toDec(fd.get('khoiLuong')),
-    donGia: toNum(fd.get('donGia'))   // để trống = null: giao khoán tự suy đơn giá khoán của tổ từ định biên nhân sự
+    donGia: toNum(fd.get('donGia')),   // để trống = null: giao khoán tự suy đơn giá khoán của tổ từ định biên nhân sự
+    // khối lượng thực tế từng đội (chỉ có ô khi lô giao khoán nhiều đội): ô trống không ghi; không có ô thì giữ giá trị cũ
+    ...(form.querySelector('[data-kldoi]') ? {klDoi: Object.fromEntries([...form.querySelectorAll('[data-kldoi]')].map(x => [x.dataset.kldoi, toDec(x.value)]).filter(([, v]) => v != null))} : {})
   };
 }
 

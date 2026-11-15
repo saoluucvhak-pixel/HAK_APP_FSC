@@ -12,7 +12,7 @@ function exportCheck(job) {
   // nhân công, định mức, tuổi
   g.nc.errs.forEach(e => add('chan', 'Nhân công', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'nc'}));
   g.normErrs.forEach(e => add('chan', 'Định mức BHLĐ', e, '', {view: 'norm'}));
-  if (job.nc.length && minorsOf(job).length) add('chan', 'Nhân công', 'Có người dưới 18 tuổi: ' + minorsOf(job).map(r => r.ten).join(', '), '', {ftab: 'nc'});
+  // người dưới 18 tuổi: đã là lỗi của từng dòng nhân công (checkNC) nên chặn mọi biểu mẫu có tên người đó
   // vận chuyển
   g.dx.errs.forEach(e => add('chan', 'Đội xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
   g.dx.warns.forEach(e => add('doi', 'Giấy tờ xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
@@ -33,6 +33,7 @@ function exportCheck(job) {
   if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  { const bd = doiOf(job); if (bd.klLoi) add('doi', 'Số đội', 'Khối lượng thực tế từng đội: ' + bd.klLoi + '. BM-08 và BM-14 của từng đội sẽ là bản nháp cho đến khi sửa.', 'Khối lượng thực tế từng đội', {ftab: 'finfo'}); }
   { const ttN = (job.nc || []).filter(isTT).length, sd = job.info.soDoi; if (!isDirect(job.info) && typeof sd === 'number' && ttN >= 1 && sd !== ttN) add('doi', 'Số đội', 'Thông tin rừng khai ' + sd + ' đội làm song song nhưng tab Nhân công có ' + ttN + ' Tổ trưởng (' + ttN + ' đội): thời gian khai thác dự kiến tính theo ' + sd + ' đội, hồ sơ lập theo ' + ttN + ' đội.', 'Số đội khai thác', {ftab: 'finfo'}); }
   { const rows = HAKDinhBien.get(db).rows, bd = HAKDoi.build(job.nc || [], isTT);
     (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
@@ -121,6 +122,16 @@ function cuLyNote(i) {
   if (e.nguon === 'tự tính') return 'Đang dùng cự ly <b>tự tính ' + k(e.km) + '</b>: khoảng cách <b>đường chim bay</b> từ tọa độ rừng đến tọa độ nơi giao, chưa phải quãng đường xe chạy (thường dài hơn). Nhập số km thực tế vào ô trên nếu khác.';
   return 'Chưa có cự ly: ' + e.thieu + '.';
 }
+/* Khối lượng thực tế từng đội (lô giao khoán nhiều đội): tùy chọn; trống hết thì chia theo số người (src/doi.js khoiLuong) */
+function klDoiField(f) {
+  const i = f.info || {}; if (isDirect(i)) return '';
+  const b = HAKDoi.build(f.nc || [], isTT); if (!b.multi) return '';
+  const kq = doiOf(Object.assign({nc: f.nc || []}, f)), m = i.klDoi || {};
+  return '<fieldset style="grid-column:1/-1;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px 12px"><legend class="mut">Khối lượng thực tế từng đội (tấn, tùy chọn)</legend>' +
+    '<div class="row" style="gap:10px;flex-wrap:wrap">' + b.doi.map(d => '<label><span>' + esc(doiLabel(d)) + ' (' + d.n + ' người)</span><input data-kldoi="' + esc(d.key) + '" inputmode="decimal" value="' + esc(typeof m[d.key] === 'number' ? String(m[d.key]).replace('.', ',') : '') + '" placeholder="trống: theo số người"></label>').join('') + '</div>' +
+    '<small class="mut">Phiếu cân không ghi đội nên mặc định sản lượng chia theo số người. Nếu năng suất các đội khác nhau, nhập đủ khối lượng thực tế của MỌI đội (tổng phải bằng khối lượng thực tế của lô); BM-08 và BM-14 của từng đội dùng số này.</small>' +
+    (kq.klLoi ? '<div class="msg warn" style="margin-top:6px">' + esc(kq.klLoi) + '</div>' : kq.klNguon === 'nhap' ? '<div class="mut" style="margin-top:6px">Đang dùng khối lượng nhập riêng của từng đội.</div>' : '') + '</fieldset>';
+}
 function panelForest(f) {
   const i = f.info || {};
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
@@ -134,8 +145,10 @@ function panelForest(f) {
     dmTgField(i) + soDoiField(i, f.nc) + '<p class="mut" id="tgNote" style="grid-column:1/-1;margin:0">' + tgDuKienHtml(i, f.pc, nDoiOf(i, f.nc)) + '</p>' +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến', btn: fillBtn('fillKl', 'Lấy tổng từ phiếu cân')}) +
-    inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p>' +
-    '<label><span>Đơn giá giao khoán Tổ trưởng (đồng/tấn)</span><input name="donGia" inputmode="numeric" style="text-align:right" value="' + esc(i.donGia > 0 ? fmt(i.donGia) : '') + '" placeholder="để trống: tự suy"><small class="mut">Để trống thì giao khoán tự suy đơn giá từ định biên nhân sự.</small></label>' +
+    klDoiField(f) + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p>' +
+    /* Ô cũ “Đơn giá giao khoán Tổ trưởng”: chỉ còn hiện ở hồ sơ cũ đã có giá trị (để hợp đồng đã in không đổi). Lô mới nhập đơn giá Tổ trưởng ở bảng đơn giá theo vị trí (tab Nhân công);
+     * đơn giá khoán của cả tổ luôn suy ra từ định biên. Xóa trống ô này thì ô biến mất và hợp đồng chuyển sang cách tính mới. */
+    (i.donGia > 0 ? '<label><span>Đơn giá Tổ trưởng của hồ sơ cũ (đồng/tấn)</span><input name="donGia" inputmode="numeric" style="text-align:right" value="' + esc(fmt(i.donGia)) + '"><small class="mut">Ô của bản cũ: chỉ dùng khi bảng đơn giá theo vị trí (tab Nhân công) chưa có giá Tổ trưởng, và khi còn giá trị thì hợp đồng không in đoạn “đơn giá khoán bình quân của tổ”. Nên chuyển giá này sang bảng đơn giá theo vị trí rồi xóa trống ô.</small></label>' : '<input type="hidden" name="donGia" value="">') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
 

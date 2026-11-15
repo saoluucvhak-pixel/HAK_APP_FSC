@@ -65,12 +65,13 @@ function docGiaoKhoan(rec, ex) {
       bl((kh.bs.qty === 'ha' ? 'Diện tích khai thác' : 'Sản lượng khai thác') + ' chia đều cho ' + kh.k.N + ' người; tiền của mỗi người bằng phần được chia nhân với đơn giá vị trí của người đó.'),
       ...(pr.sum ? [bl('Tổng giá trị khoán = đơn giá bình quân × ' + kh.qty + ' = **' + fmt(pr.sum) + ' đồng**, bằng tổng tiền thanh toán cho ' + kh.k.N + ' người kể cả Tổ trưởng (cộng tiền của từng người theo Bảng thanh toán tiền công).')] : [])
     ])(khoanSuyRa(rec)) : [P('2.2. ' + (bs.qty === 'ha' ? 'Diện tích khai thác' : 'Sản lượng khai thác') + ' được chia đều cho ' + pr.N + ' người trong tổ; tiền của mỗi người bằng phần được chia nhân với đơn giá khoán theo vai trò của người đó.' + (pr.sum ? ' Tổng tiền khoán dự tính: ' + fmt(pr.sum) + ' đồng.' : ''), {ind: 360})]),
-    P('2.3. Hình thức thanh toán: Căn cứ theo số lượng bán cho nhà máy, hai bên tiến hành thanh toán bằng tiền mặt.', {ind: 360}),
+    // căn cứ thanh toán theo ĐÚNG hình thức trả công (tấn: giữ nguyên câu cũ để hợp đồng đã in theo tấn không đổi)
+    P('2.3. Hình thức thanh toán: ' + (pr.plan.ngc ? 'Căn cứ số công thực tế của từng người ghi trong Bảng chấm công' : bs.qty === 'ha' ? 'Căn cứ diện tích đã khai thác xong và được hai bên nghiệm thu' : 'Căn cứ theo số lượng bán cho nhà máy') + ', hai bên tiến hành thanh toán bằng tiền mặt.', {ind: 360}),
     P('2.4. Thời gian khai thác: từ ngày ' + (rs.tuNgay || '…/…/……') + ' ' +
       (rs.denNgay ? 'đến ngày ' + rs.denNgay : 'đến hết khi khai thác hết rừng keo tại địa điểm trên') + '.', {ind: 360}),
     P('**Điều 3: Trách nhiệm của mỗi bên**', {keep: true}),
     P('3.1. Trách nhiệm của bên A', {keep: true}),
-    bl(pr.plan.ngc ? 'Thanh toán cho bên B theo đơn giá quy định tại Điều 2 dựa trên số công thực tế ghi trong Bảng chấm công.' : 'Thanh toán cho bên B theo đơn giá quy định tại Điều 2 dựa trên khối lượng gỗ đã khai thác.'),
+    bl(pr.plan.ngc ? 'Thanh toán cho bên B theo đơn giá quy định tại Điều 2 dựa trên số công thực tế ghi trong Bảng chấm công.' : bs.qty === 'ha' ? 'Thanh toán cho bên B theo đơn giá quy định tại Điều 2 dựa trên diện tích đã khai thác xong được nghiệm thu.' : 'Thanh toán cho bên B theo đơn giá quy định tại Điều 2 dựa trên khối lượng gỗ đã khai thác.'),
     bl('Chịu trách nhiệm mở đường và các chi phí khác để tạo điều kiện cho bên B khai thác gỗ.'),
     bl('Sắp xếp xe vận chuyển theo đúng tiến độ.'),
     P('3.2. Trách nhiệm của bên B', {keep: true}),
@@ -354,7 +355,9 @@ function docNghiemThu(rec, ex) {
   const pr = payRows(rec, ex), bs = basisOf(rs), tien = direct ? 0 : (pr.sum || 0);
   const daTT = toNum(ex.ntDaTT) || 0;
   const hd = direct ? 'các hợp đồng lao động đã ký giữa chủ rừng và người lao động' : 'Hợp đồng khai thác gỗ keo số ' + ex._so.kt.so;
-  const pcAll = totalKg(rec.pc || []), pcKg = rec._share ? pcAll * rec._share : pcAll;   // lô nhiều đội: phiếu cân là của cả lô, phần của đội chia theo số người
+  // lô nhiều đội: phiếu cân là của cả lô; phần của đội theo khối lượng thực tế từng đội đã nhập (nếu có, src/doi.js khoiLuong), không thì chia theo số người
+  const pcAll = totalKg(rec.pc || []), klTyLe = rec._klNhap && rec._klLo > 0 && typeof rs.khoiLuong === 'number' ? rs.khoiLuong / rec._klLo : null;
+  const pcKg = rec._share ? pcAll * (klTyLe != null ? klTyLe : rec._share) : pcAll, pcCach = klTyLe != null ? 'theo khối lượng thực tế từng đội' : 'chia theo số người';
   return [
     ...TITLE_HEAD(),
     P('**BIÊN BẢN NGHIỆM THU VÀ THANH LÝ KHAI THÁC**', {al: 'center', sz: 28, before: 120, after: 60}),
@@ -371,7 +374,7 @@ function docNghiemThu(rec, ex) {
     P('Thời gian khai thác: ' + VP(tuDen(rs.tuNgay, rs.denNgay, ex), S_TUDEN) + '.', {ind: 360}),
     P('**Điều 2: Nghiệm thu khối lượng**', {keep: true}),
     P('2.1. Khối lượng khai thác được nghiệm thu: **' + V(vol ? fmtT(kg) : '………', 14) + ' tấn**' + (ex._mode === 'day' ? V(vol ? ' (' + vol.src + ')' : '', 0, '') : '') + '.', {ind: 360}),
-    ...((pcKg || ex._mode !== 'day') ? [P(rec._share ? '2.2. Khối lượng đã vận chuyển về nhà máy theo phiếu cân: cả lô ' + V(pcAll ? fmtT(pcAll) : '', 14) + ' tấn (' + V(pcAll ? String((rec.pc || []).length) : '', 4) + ' chuyến), phần của đội “' + rec._doiTen + '” chia theo số người ' + V(pcKg ? fmtT(pcKg) : '', 14) + ' tấn.' : '2.2. Khối lượng đã vận chuyển về nhà máy theo phiếu cân: ' + V(pcKg ? fmtT(pcKg) : '', 14) + ' tấn (' + V(pcKg ? String((rec.pc || []).length) : '', 4) + ' chuyến).', {ind: 360})] : []),
+    ...((pcKg || ex._mode !== 'day') ? [P(rec._share ? '2.2. Khối lượng đã vận chuyển về nhà máy theo phiếu cân: cả lô ' + V(pcAll ? fmtT(pcAll) : '', 14) + ' tấn (' + V(pcAll ? String((rec.pc || []).length) : '', 4) + ' chuyến), phần của đội “' + rec._doiTen + '” ' + pcCach + ' ' + V(pcKg ? fmtT(pcKg) : '', 14) + ' tấn.' : '2.2. Khối lượng đã vận chuyển về nhà máy theo phiếu cân: ' + V(pcKg ? fmtT(pcKg) : '', 14) + ' tấn (' + V(pcKg ? String((rec.pc || []).length) : '', 4) + ' chuyến).', {ind: 360})] : []),
     P(((pcKg || ex._mode !== 'day') ? '2.3' : '2.2') + '. Hiện trường đã được thu dọn; khai thác đúng ranh giới, thời gian; không phát sinh tranh chấp, tai nạn lao động hay sự cố môi trường.', {ind: 360}),
     P('**Điều 3: Thanh toán và thanh lý**', {keep: true}),
     ...(direct

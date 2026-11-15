@@ -56,6 +56,9 @@ function checkNC(rec) {
     if (!['Ông', 'Bà'].includes(r.danhXung)) bad('Danh xưng phải là Ông hoặc Bà');
     if (!r.ngaySinh) bad('thiếu Ngày sinh');
     else if (!parseVN(r.ngaySinh)) bad('Ngày sinh "' + r.ngaySinh + '" không có thật hoặc sai dd/mm/yyyy');
+    else { const ref = dateKey(rec.info.tuNgay) ? rec.info.tuNgay : todayStr(), age = ageAt(r.ngaySinh, ref);
+      // khai thác gỗ là công việc nặng nhọc, nguy hiểm: người dưới 18 tuổi không được đưa vào bất kỳ hợp đồng, danh sách hay giấy ủy quyền nào (chặn mọi biểu mẫu có tên người đó)
+      if (age != null && age < 18) bad((r.ten || 'Người này') + ' chưa đủ 18 tuổi tại ngày ' + (dateKey(rec.info.tuNgay) ? 'bắt đầu khai thác ' : 'hôm nay ') + ref + ' (' + age + ' tuổi): không được tham gia khai thác gỗ, bỏ khỏi danh sách nhân công'); }
     if (!r.ngayCap) bad('thiếu Ngày cấp CCCD');
     else if (!parseVN(r.ngayCap)) bad('Ngày cấp CCCD "' + r.ngayCap + '" không có thật hoặc sai dd/mm/yyyy');
     if (!r.noiCap) bad('thiếu Nơi cấp CCCD');
@@ -167,8 +170,10 @@ const hdldList = rec => isDirect(rec.info) ? rec.nc : [];   // giao khoán: thay
 /* ===== Nhiều đội: mỗi Tổ trưởng là một đội, ký hợp đồng giao khoán riêng (src/doi.js) =====
  * doiOf(rec): các đội cùng phần diện tích và khối lượng của lô chia theo số người. subRec(rec, d): hồ sơ của riêng đội d (nhân công của đội, diện tích và khối lượng phần của đội),
  * dùng chung các hàm lập biểu mẫu hiện có nên mỗi đội ra một bộ BM-01, BM-20, BM-08, BM-14 riêng. Lô chỉ một đội: giữ nguyên hồ sơ, không đổi gì. */
-const doiOf = rec => { const b = isDirect(rec.info) ? HAKDoi.single(rec.nc, isTT) : HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi), kl = HAKDoi.chia(rec.info.khoiLuong, b.doi); b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kl[i]; }); return b; };
-const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {_share: d.share, _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], info: Object.assign({}, rec.info, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
+const doiOf = rec => { const b = isDirect(rec.info) ? HAKDoi.single(rec.nc, isTT) : HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi);
+  const kq = b.multi ? HAKDoi.khoiLuong(rec.info.khoiLuong, b.doi, rec.info.klDoi) : {vals: HAKDoi.chia(rec.info.khoiLuong, b.doi), nguon: 'songuoi', loi: ''};   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
+  b.klNguon = kq.nguon; b.klLoi = kq.loi; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
+const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {_share: d.share, _klNhap: b.klNguon === 'nhap', _klLo: rec.info.khoiLuong, _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], info: Object.assign({}, rec.info, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
 const ncList = rec => { const tt = rec.nc.find(isTT); return tt ? [tt, ...rec.nc.filter(r => r !== tt)] : rec.nc.slice(); };   // tổ trưởng đầu danh sách, rồi mọi người còn lại (kể cả các tổ trưởng khác)
 /* Lô nhiều đội: mỗi đội ký hợp đồng riêng nên số hợp đồng, giấy ủy quyền, biên bản nghiệm thu của mỗi đội thêm hậu tố .1, .2… ngay sau phần số (015 → 015.1, 015/2026-KT → 015.1/2026-KT).
  * Số để trống (chưa nhập) thì giữ nguyên chỗ trống để điền tay. Số xác nhận khối lượng và hợp đồng vận chuyển là của cả lô nên không đổi. */

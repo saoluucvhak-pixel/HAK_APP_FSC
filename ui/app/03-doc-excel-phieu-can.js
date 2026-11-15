@@ -107,6 +107,7 @@ function moneyWords(n) {
   const t = out.join(' ');
   return t.charAt(0).toUpperCase() + t.slice(1) + ' đồng chẵn.';
 }
+const PC_NGUONG_MAC_DINH = 1;   // % lệch tối đa giữa khối lượng thực tế và tổng phiếu cân khi chưa đặt ngưỡng riêng (cùng mức với cảnh báo ở Tổng quan)
 function checkPC(rec) {
   const errs = [], warns = [], state = {}, pc = rec.pc || [];
   const mark = (r, k, m) => { (k === 'err' ? errs : warns).push('Dòng ' + r._row + ': ' + m); if (k === 'err' || !state[r._row]) state[r._row] = k; };
@@ -125,10 +126,13 @@ function checkPC(rec) {
     if (typeof r.klKg === 'number' && typeof r.kl === 'number' && r.klKg > 0 && Math.abs(r.klKg / 1000 - r.kl) > 0.0005) mark(r, 'warn', 'Khối lượng kg (' + fmt(r.klKg) + ') và tấn (' + fmtT(Math.round(r.kl * 1000)) + ') không khớp nhau');
     if (typeof r.can1 === 'number' && typeof r.can2 === 'number' && typeof r.klKg === 'number' && r.klKg > 0 && Math.abs(Math.abs(r.can1 - r.can2) - r.klKg) > 1) mark(r, 'warn', 'Khối lượng kg không bằng chênh lệch cân lần 1 và cân lần 2');
   });
-  const ng = parseFloat(String((rec.exp || {}).pcNguong || '').replace(',', '.')), vol = volumeOf(rec.info);
+  /* đối chiếu khối lượng khai thác với tổng phiếu cân (mục tiêu “nhất quán số liệu” của QT-FSC-01): ngưỡng người dùng đặt (pcNguong, %) áp dụng cho cả số dự kiến;
+   * không đặt ngưỡng thì vẫn đối chiếu KHỐI LƯỢNG THỰC TẾ (số ghi vào BM-08, BM-14) với ngưỡng mặc định PC_NGUONG_MAC_DINH %, để biên bản không ghi khác tổng phiếu cân mà không ai biết */
+  const ngDat = parseFloat(String((rec.exp || {}).pcNguong || '').replace(',', '.')), vol = volumeOf(rec.info);
+  const ng = ngDat > 0 ? ngDat : (vol && vol.src === 'thực tế' ? PC_NGUONG_MAC_DINH : 0);
   if (pc.length && ng > 0 && vol) {
     const kg = totalKg(pc), lech = Math.abs(kg / 1000 - vol.v) / vol.v * 100;
-    if (lech > ng) warns.push('Tổng khối lượng phiếu cân ' + fmtT(kg) + ' tấn lệch ' + lech.toFixed(1) + '% so với khối lượng khai thác ' + vol.src + ' ' + fmtT(Math.round(vol.v * 1000)) + ' tấn (ngưỡng ' + ng + '%)');
+    if (lech > ng) warns.push('Tổng khối lượng phiếu cân ' + fmtT(kg) + ' tấn lệch ' + lech.toFixed(1) + '% so với khối lượng khai thác ' + vol.src + ' ' + fmtT(Math.round(vol.v * 1000)) + ' tấn (ngưỡng ' + ng + '%' + (ngDat > 0 ? '' : ' mặc định; đổi ở Xuất hồ sơ → Cảnh báo lệch khối lượng') + '): kiểm tra lại khối lượng thực tế hoặc phiếu cân');
   }
   return {errs, warns, state};
 }

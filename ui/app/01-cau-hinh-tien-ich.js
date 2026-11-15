@@ -2,7 +2,9 @@
 const KEY = 'hskt.v2';
 const KEY_OLD = 'hskt.v1';
 const CHUCDANH = ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa'];   // ba vị trí mặc định; danh sách đầy đủ (kể cả vị trí người dùng thêm) lấy từ chucDanhAll()
-const chucDanhAll = () => HAKDinhMuc.allPositions(db);
+/* danh mục vị trí dùng chung (Nhân công, đơn giá, định mức BHLĐ, file mẫu): vị trí mặc định + vị trí thêm + MỌI vị trí của Định mức nhân công (kể cả định biên mặc định chưa lưu),
+ * để vị trí trong định biên (bóc vỏ, bốc xếp…) chọn và nhập đơn giá được ngay, không còn lệch hai danh mục */
+const chucDanhAll = () => { const out = HAKDinhMuc.allPositions(db); HAKDinhBien.get(db).rows.forEach(r => { if (r.chucDanh && !out.some(x => x.toLowerCase() === r.chucDanh.toLowerCase())) out.push(r.chucDanh); }); return out; };
 const H_NC = {'Vai trò':'vaiTro','STT':'stt','Danh xưng':'danhXung','Họ và tên':'ten','Ngày sinh':'ngaySinh','CCCD':'cccd','Ngày cấp CCCD':'ngayCap','Nơi cấp CCCD':'noiCap','Địa chỉ thường trú':'diaChi','Chức danh':'chucDanh','Đội':'doi'};
 const NC_REQ = ['Vai trò','Họ và tên','CCCD','Chức danh'];
 const H_DX = {'STT':'stt','Chủ xe (bên vận chuyển)':'chuXe','Ngày sinh chủ xe':'ngaySinh','CCCD chủ xe':'cccd','Ngày cấp CCCD chủ xe':'ngayCap','Nơi cấp CCCD chủ xe':'noiCap','Thường trú chủ xe':'diaChi',

@@ -100,7 +100,11 @@ function draftCtx(rec) {
   const i = rec.info, ex = Object.assign({}, rec.exp || {}); if (!ex.ngayKy && i.ngayKyHopDong) ex.ngayKy = i.ngayKyHopDong;
   const vol = volumeOf(i); let ngc = false; try { ngc = !!payRows(rec, ex).plan.ngc; } catch (e) { /* chưa đủ dữ liệu tính tiền công */ }
   const has = v => !!v && HAKDates.isValid(v);
-  return {ngayKy: has(ex.ngayKy), diaChiGiao: !!destOf(rec).text, klThucTe: ngc || !!(vol && vol.src === 'thực tế'), ntNgay: has(ex.ntNgay), pcNgay: has(ex.pcNgay), nguoiMua: !!(ex.ckNhan || buyerName(rec))};
+  const vcm = (i.vanChuyen || {}).mode || 'tanKm';
+  return {ngayKy: has(ex.ngayKy), diaChiGiao: !!destOf(rec).text, klThucTe: ngc || !!(vol && vol.src === 'thực tế'), ntNgay: has(ex.ntNgay), pcNgay: has(ex.pcNgay), nguoiMua: !!(ex.ckNhan || buyerName(rec)),
+    chamCong: !ngc || HAKChamCong.hasAny(rec.cc),                                  // ngày công: bản chính thức cần chấm công thực tế
+    cuLyThuc: vcm !== 'tanKm' || HAKCuLy.eff(i).nguon !== 'tự tính',
+    klDoi: (() => { try { return !doiOf(rec).klLoi; } catch (e) { return true; } })()};               // tấn/km: bản chính thức cần quãng đường nhập tay, không dùng đường chim bay
 }
 const draftList = rec => { const c = draftCtx(rec); return Object.keys(HAKBanNhap.FORMS).map(code => ({code, label: HAKBanNhap.label(code), issues: HAKBanNhap.issues(code, c)})); };
 /* Xuất lẻ và xuất theo gói dùng chung: file thiếu điều kiện chính thức của riêng mẫu đó được gắn BẢN NHÁP (tên file + nhãn đầu tài liệu + chân trang).
