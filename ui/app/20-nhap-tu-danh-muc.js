@@ -154,3 +154,12 @@ function nhatKyNapHoanTac(kind) {
   const t = g.truoc; st.cur = NK_COPY(t.cur); st.src = NK_COPY(t.src); st.pending = NK_COPY(t.pending); st.report = NK_COPY(t.report); st.seq = t.seq;
   st.nhatKy = st.nhatKy.slice(0, i); stErrList = null; note('Đã hoàn tác lần nạp “' + g.nguon + '”: bản nháp về như trước đó.', 'ok'); render();
 }
+
+/* ========== Kiểu ô chuẩn (bản 2.2, mục 6.2): gõ ngày nhanh, CCCD sạch ==========
+ * Chạy ở pha bắt sự kiện nên mọi trình xử lý `change` phía sau đều thấy giá trị đã chuẩn hóa. Chỉ đổi khi ra ngày có thật / CCCD toàn chữ số; còn lại để bộ kiểm tra báo lỗi. */
+const NHAP_O_NGAY = /^(ngay|tuNgay|denNgay|han|kd|cavet|uqNgay|ntNgay|pcNgay|a_ngay|t_tu)/i, NHAP_O_CCCD = /^cccd/i;
+document.addEventListener('change', e => {
+  const t = e.target; if (!t || t.tagName !== 'INPUT' || (t.type && t.type !== 'text') || !t.name) return;
+  const v = NHAP_O_NGAY.test(t.name) ? HAKNhapLieu.chuanHoaNgay(t.value) : NHAP_O_CCCD.test(t.name) ? HAKNhapLieu.chuanHoaCccd(t.value) : null;
+  if (v != null && v !== t.value) t.value = v;
+}, true);

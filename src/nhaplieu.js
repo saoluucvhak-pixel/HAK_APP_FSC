@@ -54,6 +54,17 @@
     });
     return items;
   }
-  const api = {kiemTra, NGAY_EXP, NGAY_INFO};
+  /* KIỂU Ô CHUẨN (bản 2.2, mục 6.2): ô ngày nhận `151126`, `15112026`, `15-11-26`, `15.11.2026`, `15/11/26` → `15/11/2026` (năm 2 chữ số: 00–39 là 20xx, 40–99 là 19xx).
+   * Chỉ đổi khi ra NGÀY CÓ THẬT; ngày sai hoặc không nhận ra thì giữ nguyên để bộ kiểm tra báo lỗi. */
+  function chuanHoaNgay(v) {
+    const t = s(v); if (!t) return t;
+    let d, m, y; const a = /^(\d{1,2})[\/.\-\s](\d{1,2})[\/.\-\s](\d{2}|\d{4})$/.exec(t), b = /^(\d{2})(\d{2})(\d{2}|\d{4})$/.exec(t);
+    const x = a || b; if (!x) return t; d = +x[1]; m = +x[2]; y = x[3].length === 2 ? (+x[3] < 40 ? 2000 : 1900) + +x[3] : +x[3];
+    const dt = new Date(y, m - 1, d); if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return t;
+    return String(d).padStart(2, '0') + '/' + String(m).padStart(2, '0') + '/' + y;
+  }
+  /* số CCCD gõ có khoảng trắng, chấm, gạch: bỏ ký tự thừa khi còn lại ít nhất 9 chữ số; ngoài ra giữ nguyên */
+  function chuanHoaCccd(v) { const t = s(v), n = t.replace(/\D/g, ''); return n.length >= 9 && /^[\d\s.\-]+$/.test(t) ? n : t; }
+  const api = {kiemTra, chuanHoaNgay, chuanHoaCccd, NGAY_EXP, NGAY_INFO};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNhapLieu = api;
 })(typeof self !== 'undefined' ? self : this);
