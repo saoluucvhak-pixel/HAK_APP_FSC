@@ -15,6 +15,7 @@ function exportCheck(job) {
   // người dưới 18 tuổi: đã là lỗi của từng dòng nhân công (checkNC) nên chặn mọi biểu mẫu có tên người đó
   // vận chuyển
   g.dx.errs.forEach(e => add('chan', 'Đội xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
+  groupsDX(job).forEach(gr => hanLoiOf(job, gr).forEach(v => add('chan', 'Giấy tờ xe hết hạn lúc chạy phiếu', 'Đội xe “' + gr.ten + '”: ' + HAKGiayTo.text(v) + '. BM-09 và BM-10 của đội xe này bị chặn: sửa hạn giấy tờ của xe hoặc ngày cân của phiếu nếu nhập sai.', 'Phiếu ' + (v.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'})));
   g.dx.warns.forEach(e => add('doi', 'Giấy tờ xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
   const vcm = (i.vanChuyen || {}).mode;
   if (vcm === 'tanDoan') add('chan', 'Cước theo bậc cự ly (hồ sơ cũ)', 'Hồ sơ cũ còn dùng cước “theo bậc cự ly” (cách tính đã bỏ). Dữ liệu các bậc vẫn được giữ; hãy chọn lại cước cố định hoặc tấn/km.', 'Cách tính cước', {ftab: 'dx'});

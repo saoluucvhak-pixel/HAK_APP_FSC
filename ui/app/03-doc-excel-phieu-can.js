@@ -147,5 +147,7 @@ function payVC(rec, g) {
   }).filter(r => r.n);
   return {rows, n: rows.reduce((a, r) => a + r.n, 0), kg: rows.reduce((a, r) => a + r.kg, 0), tien: rows.reduce((a, r) => a + r.tien, 0)};
 }
-const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length);
+/* Giấy tờ xe của một đội xe so với NGÀY CỦA TỪNG PHIẾU CÂN (src/giayto.js): phiếu chạy khi kiểm định, bảo hiểm hoặc GPLX đã hết hạn chặn BM-09 và BM-10 của đội xe đó */
+const hanLoiOf = (rec, g) => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g));
+const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
 
