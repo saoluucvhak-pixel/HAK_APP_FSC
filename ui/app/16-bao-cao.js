@@ -17,7 +17,7 @@ function rpRecords(ownerFilter = rp.owner) {
         pc: (f.pc || []).map(p => ({ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null, can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
         nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu,
         ncList: (f.nc || []).map(r => ({vaiTro: r.vaiTro, stt: r.stt, danhXung: r.danhXung, ten: r.ten, chucDanh: r.chucDanh, ngaySinh: r.ngaySinh, cccd: r.cccd, diaChi: r.diaChi, ngayCap: r.ngayCap, noiCap: r.noiCap, rate: rateOf(infoRow(jr, r), r)})), donVi: basisOf(jr.info).short,
-        dxList: (f.dx || []).map(r => ({bienSo: r.bienSo, loaiXe: r.loaiXe, chuXe: r.chuXe, nguoiKy: r.nguoiKy, taiXe: r.taiXe, cccd: r.cccd, cccdTx: r.cccdTx, sdt: r.sdt, hanBH: r.hanBH, hanGplx: r.hanGplx}))});
+        dxList: (f.dx || []).map((r, xi) => ({ky: kyBaoCao(jr, jr.dx[xi]), bienSo: r.bienSo, loaiXe: r.loaiXe, chuXe: r.chuXe, nguoiKy: r.nguoiKy, taiXe: r.taiXe, cccd: r.cccd, cccdTx: r.cccdTx, sdt: r.sdt, hanBH: r.hanBH, hanGplx: r.hanGplx}))});
     });
   });
   return out;
@@ -50,6 +50,12 @@ const rpPresets = () => HAKCore.sf.presets(lkStore);
 /* Phạm vi lọc: một chuỗi duy nhất (HAK Smart Filter) dùng cho màn hình xem trước, Word và Excel */
 const rpScope = () => HAKCore.sf.scopeText(rpCfg(), rpSf(), 'Tất cả chủ rừng (không lọc)');
 /* Dữ liệu đã lọc: lọc theo lô rừng, chủ rừng, tìm nhanh và các điều kiện riêng của mẫu TRƯỚC khi lập báo cáo, nên tổng và KPI khớp với phần đã lọc */
+/* người ký hợp đồng vận chuyển của xe = người ký của ĐỘI XE (chủ xe / tài xế / doanh nghiệp); hồ sơ cũ: theo cột Người ký của xe */
+function kyBaoCao(rec, r) {
+  if (!rec.hdvc) return null;
+  const g = groupsDX(rec).find(x => x.xe.includes(r)); if (!g) return null;
+  return {vai: g.vaiTro === 'Chủ xe' || g.vaiTro === 'Tài xế' ? g.vaiTro : g.vaiTro + ': ' + (g.ten || ''), so: g.loai === 'doanhnghiep' ? (g.mst || '') : (g.cccd || '')};
+}
 function rpData() {
   const words = foldVi(rp.q).split(/\s+/).filter(Boolean), hit = (...p) => { const t = foldVi(p.join(' ')); return words.every(w => t.includes(w)); };
   const o = rp.one, fl = rp.flag, id = rp.id, active = !!(words.length || o.chucDanh || o.vaiTro || o.nguoiKy || fl.onlyMinors || fl.onlyMissing || fl.onlyNoPhone || fl.onlyTrips || fl.onlyNoTrips);

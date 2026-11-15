@@ -6,7 +6,7 @@ function exportCheck(job) {
   // thông tin chủ rừng, rừng, đơn giá
   infoErrors(i, job.id).forEach(e => add('chan', 'Thông tin chủ rừng', e, '', {tab: 'info'}));
   forestErrors(i, job.fid).forEach(e => add('chan', 'Thông tin rừng', e, '', {ftab: 'finfo'}));
-  giaErrors(i).forEach(e => add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}));
+  giaErrorsRec(job).forEach(e => add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}));   // từng đội theo hình thức của đội
   // mã lô trùng ở dữ liệu cũ: liệt kê đủ các lô khớp để đối chiếu, không tự sửa
   HAKLoRung.duplicateGroups(db).filter(x => x.lots.some(l => l.forest === job.fid)).forEach(x => add('chan', 'Mã lô trùng (dữ liệu cũ)', 'Mã “' + x.ma + '” đang dùng cho ' + x.lots.length + ' lô: ' + x.lots.map(l => l.lo + ' (chủ ' + l.chu + '; ' + l.nc + ' nhân công, ' + l.dx + ' xe, ' + l.pc + ' phiếu cân)').join('; ') + '. Đổi mã các lô thừa ở tab Thông tin rừng, dữ liệu không bị đổi trước khi bạn xác nhận.', x.ma, {ftab: 'finfo'}));
   // nhân công, định mức, tuổi
@@ -34,13 +34,12 @@ function exportCheck(job) {
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
   { const bd = doiOf(job); if (bd.klLoi) add('doi', 'Số đội', 'Khối lượng thực tế từng đội: ' + bd.klLoi + '. BM-08 và BM-14 của từng đội sẽ là bản nháp cho đến khi sửa.', 'Khối lượng thực tế từng đội', {ftab: 'finfo'}); }
-  { const ttN = (job.nc || []).filter(isTT).length, sd = job.info.soDoi; if (!isDirect(job.info) && typeof sd === 'number' && ttN >= 1 && sd !== ttN) add('doi', 'Số đội', 'Thông tin rừng khai ' + sd + ' đội làm song song nhưng tab Nhân công có ' + ttN + ' Tổ trưởng (' + ttN + ' đội): thời gian khai thác dự kiến tính theo ' + sd + ' đội, hồ sơ lập theo ' + ttN + ' đội.', 'Số đội khai thác', {ftab: 'finfo'}); }
-  { const rows = viTriRows(), bd = HAKDoi.build(job.nc || [], isTT);
+  { const rows = viTriRows(), bd = doiOf(job);   // theo ĐỘI THẬT (bảng Nhân công khai thác), không chia lại theo cột chữ
     (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
       if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}); }); }
   { const L = tgLechOf(i, job.pc, nDoiOf(i, job.nc)); if (L && L.canhBao) add('doi', 'Thời gian khai thác', tgLechText(i, L), 'Thời gian khai thác', {ftab: 'finfo'}); }
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
-  HAKNhapLieu.kiemTra(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));
+  nhapLieuAll(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));   // của lô, từng đội và từng đội xe
   // các mục checklist FSC còn lại chưa được xét ở trên
   const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo chức danh', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
   const goOf = lb => /Tọa độ|Giấy tờ pháp lý|Thời gian/.test(lb) ? {ftab: 'finfo'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo'};
@@ -98,12 +97,10 @@ function dmTgField(i) {
 }
 /* Ô Số đội khai thác của rừng: các đội làm song song nên thời gian dự kiến chia cho số đội. Để trống thì lấy theo số Tổ trưởng ở tab Nhân công. */
 function soDoiNote(i, nc) {
-  const nn = nDoiNc(nc), own = typeof i.soDoi === 'number' && i.soDoi >= 1, tt = (nc || []).filter(isTT).length;
-  if (!own) return 'Để trống: lấy theo số Tổ trưởng ở tab Nhân công (hiện ' + nn + ' đội). Khai số đội ở đây để tính thời gian khai thác dự kiến.';
-  return 'Đang dùng <b>' + i.soDoi + ' đội</b> làm song song.' + (tt > 1 && tt !== i.soDoi ? ' <b style="color:var(--warn)">Tab Nhân công đang có ' + tt + ' Tổ trưởng (' + tt + ' đội): kiểm tra lại số đội.</b>' : '') + ' <button type="button" class="linkbtn" data-act="soDoiAuto">Theo nhân công</button>';
+  return 'Lô có <b>' + nDoiNc(nc) + ' đội</b> làm song song (lập ở bảng “Nhân công khai thác”, tab Nhân công): thời gian dự kiến chia cho số đội.';
 }
 function soDoiField(i, nc) {
-  return '<label><span>Số đội khai thác (làm song song)</span><input name="soDoi" inputmode="numeric" value="' + esc(typeof i.soDoi === 'number' ? String(i.soDoi) : (i.soDoi ?? '')) + '" placeholder="' + esc('theo nhân công: ' + nDoiNc(nc)) + '"><small class="mut" id="soDoiNote">' + soDoiNote(i, nc) + '</small></label>';
+  return '<label><span>Số đội khai thác</span><small class="mut" id="soDoiNote">' + soDoiNote(i, nc) + '</small></label>';
 }
 /* Thời gian khai thác dự kiến của rừng = diện tích × ngày/ha; có ngày bắt đầu thì hiện ngày kết thúc dự kiến (không tính Chủ nhật) */
 function tgDuKienHtml(i, pcs, nd) {

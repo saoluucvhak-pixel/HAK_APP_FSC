@@ -55,7 +55,18 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // chuyển PHẠM BA sang đội 2 ở cột Đội
   const ix = f.nc.findIndex(x => x.ten === 'PHẠM BA');
   await w.selectOption('select[data-ncdoi="' + ix + '"]', f.doi[1].id); await w.waitForTimeout(400); f = await dbNow();
-  ok('chọn đội ở cột Đội: PHẠM BA chuyển sang đội 2', f.nc[ix].doiId === f.doi[1].id);
+  ok('chọn đội ở cột Đội: PHẠM BA chuyển sang đội 2, cột Đội ghi theo đội thật', f.nc[ix].doiId === f.doi[1].id && f.nc[ix].doi === 'Đội Hai', JSON.stringify(f.nc[ix]));
+  // sửa người vừa chuyển đội trong bản nháp: không bị đưa về đội cũ
+  await w.click('[data-act=stEdit][data-kind=nc][data-i="' + ix + '"]'); await w.waitForSelector('#stForm');
+  await w.fill('#stForm input[name=diaChi]', 'Quảng Nam (sửa)'); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
+  await saveStage(w); f = await dbNow();
+  ok('sửa PHẠM BA sau khi chuyển đội: vẫn ở đội 2', f.nc[ix].doiId === f.doi[1].id && f.nc[ix].diaChi === 'Quảng Nam (sửa)', JSON.stringify(f.nc[ix]));
+  // chấm công theo đội đang chọn: đội 2 tính ngày công (đội 1 theo tấn)
+  await w.click('[data-act=chonDoi][data-doi=doi2]'); await w.waitForTimeout(300);
+  const cc2 = await w.$$eval('#ccCard tr[data-ccp] .ccName', els => els.map(e => e.textContent));
+  await w.click('[data-act=chonDoi][data-doi=doi1]'); await w.waitForTimeout(300);
+  ok('chấm công: chọn đội 2 (ngày công) hiện bảng chấm công của đúng 2 người đội 2; chọn đội 1 (theo tấn) không có bảng', JSON.stringify(cc2.sort()) === JSON.stringify(['NGUYỄN BỐN', 'PHẠM BA']) && !(await w.$('#ccCard')), JSON.stringify(cc2));
+  await w.click('[data-act=chonDoi][data-doi=doi2]'); await w.waitForTimeout(200);
   const ch = await w.evaluate(() => window.__doiKT());
   ok('không còn lỗi nhân công; 2 đội 2 người mỗi đội; đội 2 nhập 1,2 ha thì đội 1 nhận phần còn lại 1,8 ha của lô 3 ha', !ch.loi.length && ch.doi.length === 2 && ch.doi[0][1] === 2 && ch.doi[1][1] === 2 && ch.doi[1][2] === 1.2 && ch.doi[0][2] === 1.8, JSON.stringify(ch));
   ok('hợp đồng lao động chỉ cho người đội trực tiếp (NGUYỄN BỐN, PHẠM BA); ủy quyền chỉ người đội giao khoán (LÊ HAI)', JSON.stringify(ch.hdld.sort()) === JSON.stringify(['NGUYỄN BỐN', 'PHẠM BA']) && JSON.stringify(ch.uq) === JSON.stringify(['LÊ HAI']), JSON.stringify(ch));

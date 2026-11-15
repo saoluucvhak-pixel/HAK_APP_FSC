@@ -290,7 +290,7 @@ const HAKReports = (function () {
       X.forEach(x => {
         const m = by[plateKey(x.bienSo)] || {n: 0, t: 0}; nT += m.n; tT += m.t;
         const tx = x.nguoiKy === 'Tài xế';
-        det.push([det.length + 1, r.maRung, r.chuRung, x.bienSo, x.loaiXe || '', x.chuXe, x.nguoiKy || 'Chủ xe', tx ? x.taiXe : '', tx ? x.cccdTx : x.cccd, x.sdt || '', x.hanBH || '', x.hanGplx || '', m.n, round(m.t, 3)]);
+        det.push([det.length + 1, r.maRung, r.chuRung, x.bienSo, x.loaiXe || '', x.chuXe, x.ky ? x.ky.vai : (x.nguoiKy || 'Chủ xe'), tx ? x.taiXe : '', x.ky ? x.ky.so : (tx ? x.cccdTx : x.cccd), x.sdt || '', x.hanBH || '', x.hanGplx || '', m.n, round(m.t, 3)]);
       });
       Object.keys(by).filter(k => k && !known.has(k)).forEach(k => unknown.push([unknown.length + 1, r.maRung, k, by[k].n, round(by[k].t, 3)]));
       sum.push([sum.length + 1, r.maRung, r.chuRung, X.length, nT, round(tT, 3)]);

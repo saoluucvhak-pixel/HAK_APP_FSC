@@ -271,6 +271,8 @@ function stGuard(proceed) {
 }
 window.__stDirty = () => stDirtyList();
 window.__stSaveCurrent = () => stSave();
+window.__checkDX = () => { const rec = curRec(); return rec ? checkDX(rec) : null; };
+window.__rpXe = () => rpData().map(x => ({maRung: x.maRung, xe: x.dxList.map(d => ({bienSo: d.bienSo, ky: d.ky}))}));
 window.__doiKT = () => { const rec = curRec(); if (!rec) return null; const B = doiOf(rec); return {loi: checkNC(rec).errs, doi: B.doi.map(d => [d.ten, d.n, d.dienTich, d.khoiLuong]), hdld: hdldList(rec).map(r => r.ten), uq: ucList(rec).map(r => r.ten), g: gate(rec)}; };   // kiểm thử đầu-cuối đọc cấu trúc đội của lô đang mở
 /* Chặn rời lô khi còn bản nháp: bắt sự kiện bấm ở pha bắt (trước mọi xử lý khác) với các nút đổi lô, đổi chủ rừng, sang màn hình khác */
 document.addEventListener('click', e => {
@@ -325,7 +327,7 @@ function doiCell(rec, r) {
 }
 function panelNC(rec) {
   const c = checkNC(rec);
-  const head = panelDoiKT(rec) + panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec) + panelImport('nc', rec) + panelChamCong(rec) + stBar('nc', rec) + stErrBox();
+  const head = panelDoiKT(rec) + panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec) + panelImport('nc', rec) + panelChamCong(recDoiChon(rec)) + stBar('nc', rec) + stErrBox();
   if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có danh sách nhân công. Bấm “+ Thêm nhân công”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>';
   return head + issuesBox(c.errs, c.warns) + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', 'Đội', 'Đơn giá'],
     r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + doiCell(rec, r) + '</td><td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>', c);

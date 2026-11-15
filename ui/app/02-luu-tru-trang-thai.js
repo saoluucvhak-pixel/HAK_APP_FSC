@@ -144,6 +144,8 @@ function ganDoi(doi, nc) {
 /* xe chưa thuộc hợp đồng vận chuyển (vừa nạp, thêm trong bản nháp): gán như khi lưu (src/model.js: theo người ký; xe trong hợp đồng với đơn vị giữ nguyên) */
 function ganVC(hdvc, dx) {
   if (!hdvc) return {hdvc, dx};
+  const t = curHd && hdvc.find(h => h.id === curHd);   // xe mới (chưa có đội xe) vào ĐỘI XE ĐANG CHỌN; chưa chọn đội: theo người ký (mỗi người ký một đội như trước)
+  if (t && (dx || []).some(r => r && r.hdvcId === undefined)) dx = dx.map(r => r && r.hdvcId === undefined ? Object.assign({}, r, {hdvcId: t.id}) : r);
   const F = {doi: [{id: '_'}], nc: [], hdvc, dx};
   if (!HAKModel.needsEnsure(F)) return {hdvc, dx};
   const x = HAKModel.ensureForest(F); return {hdvc: x.hdvc, dx: x.dx};
@@ -162,8 +164,8 @@ const dinhMucEff = i => {
   const k = HAKDinhMuc.keoPick(db, i.tuNgay || ''); return k.found ? {v: k.item.tanHa, src: 'mặc định', tu: k.item.tuNgay} : null;
 };
 /* Định mức thời gian khai thác (ngày/ha) của rừng: số rừng tự điền, hoặc mặc định theo ngày bắt đầu (Định mức → Định mức thời gian khai thác) */
-const nDoiNc = nc => Math.max(1, HAKDoi.build(nc || [], isTT).doi.length);   // số đội theo nhân công = số Tổ trưởng
-const nDoiOf = (i, nc) => (typeof i.soDoi === 'number' && i.soDoi >= 1) ? i.soDoi : isDirect(i) ? 1 : nDoiNc(nc);   // số đội khai ở Thông tin rừng; chưa khai thì theo nhân công
+const nDoiNc = nc => { const ids = new Set((nc || []).map(r => r && r.doiId).filter(Boolean)); return ids.size ? ids.size : Math.max(1, HAKDoi.build(nc || [], isTT).doi.length); };   // số đội = số đội có người (bảng Nhân công khai thác); hồ sơ chưa có đội: số Tổ trưởng
+const nDoiOf = (i, nc) => (nc || []).some(r => r && r.doiId) ? nDoiNc(nc) : isDirect(i) ? 1 : nDoiNc(nc);   // không còn ô “Số đội” nhập tay: một nguồn là danh sách đội   // số đội khai ở Thông tin rừng; chưa khai thì theo nhân công
 const haDoi = (i, nd) => typeof i.dienTich === 'number' ? i.dienTich / (nd || 1) : i.dienTich;   // diện tích tính cho một đội
 const ngayHaEff = i => {
   if (typeof i.dinhMucNgayHa === 'number' && i.dinhMucNgayHa > 0) return {v: i.dinhMucNgayHa, src: 'rừng'};

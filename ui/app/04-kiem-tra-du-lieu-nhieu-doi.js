@@ -24,7 +24,6 @@ function forestErrors(info, fid) {
   if (info.dienTich === 'x') e.push('Diện tích không phải là số');
   if (info.dinhMucTanHa === 'x') e.push('Định mức không phải là số');
   if (info.dinhMucNgayHa === 'x') e.push('Định mức thời gian khai thác (ngày/ha) không phải là số');
-  if (info.soDoi === 'x' || (typeof info.soDoi === 'number' && (!Number.isInteger(info.soDoi) || info.soDoi < 1 || info.soDoi > 20))) e.push('Số đội khai thác phải là số nguyên từ 1 đến 20');
   if (info.cuLy === 'x') e.push('Cự ly không phải là số');
   if (info.khoiLuong === 'x') e.push('Khối lượng thực tế không phải là số');
   if (typeof info.khoiLuong === 'number' && info.khoiLuong < 0) e.push('Khối lượng thực tế không được âm');
@@ -83,6 +82,14 @@ function checkNC(rec) {
 
 const parseVN = v => { const p = HAKDates.parse(trim(v)); return p ? new Date(p.y, p.m - 1, p.d) : null; };
 const driverSigns = r => trim(r.nguoiKy) === 'Tài xế';
+/* người ký của xe trong cấu trúc đội xe: {tx} = xe này là nguồn thông tin người ký (chủ xe / tài xế); false = xe không ký (đội ký với doanh nghiệp hoặc người ký là người khác trong đội); null = hồ sơ cũ (mỗi xe tự ký) */
+function kyOfXe(rec, r) {
+  if (!rec.hdvc) return null;
+  const F = {dx: rec.dx, hdvc: rec.hdvc}, h = HAKModel.hdOf(F, r); if (!h) return null;
+  if (h.donViId) return false;
+  if (HAKModel.vcKey(r) === h.key) return {tx: driverSigns(r)};
+  const s = HAKModel.signerOf(HAKModel.xeOf(F, h), h.key); return s && s.r === r ? {tx: s.tx} : false;
+}
 function checkDX(rec) {
   const errs = [], warns = [], state = {}, plates = {};
   const n0 = new Date(), today = new Date(n0.getFullYear(), n0.getMonth(), n0.getDate());
@@ -94,8 +101,9 @@ function checkDX(rec) {
     if (!r.bienSo) bad('thiếu Biển kiểm soát');
     else if (plates[r.bienSo]) bad('Biển kiểm soát trùng dòng ' + plates[r.bienSo]);
     else plates[r.bienSo] = r._row;
-    const nk = trim(r.nguoiKy), tx = driverSigns(r);
+    const nk = trim(r.nguoiKy), ky = kyOfXe(rec, r), tx = ky ? ky.tx : driverSigns(r);
     if (nk && nk !== 'Chủ xe' && nk !== 'Tài xế') bad('Người ký HĐ vận chuyển phải là "Chủ xe" hoặc "Tài xế" (đang là "' + nk + '")');
+    if (ky !== false) {   // xe là nguồn người ký (hoặc hồ sơ cũ: mỗi xe tự ký); xe trong đội ký với doanh nghiệp / người khác thì không bắt thông tin người ký
     // Chỉ người ký HĐ vận chuyển bắt buộc có CCCD, ngày cấp, thường trú, SĐT; người không ký thì không cần
     if (tx && !r.taiXe) bad('người ký là tài xế nhưng thiếu Tên tài xế');
     const sg = tx ? {c: r.cccdTx, nc: r.ngayCapTx, dc: r.diaChiTx, w: 'tài xế'} : {c: r.cccd, nc: r.ngayCap, dc: r.diaChi, w: 'chủ xe'};
@@ -106,12 +114,13 @@ function checkDX(rec) {
     if (trim(sgSinh) && !parseVN(sgSinh)) bad('Ngày sinh ' + sg.w + ' "' + sgSinh + '" không có thật hoặc sai dd/mm/yyyy');
     if (!trim(sg.dc)) bad('thiếu Thường trú ' + sg.w + ' (người ký)');
     if (!trim(r.sdt)) bad('thiếu SĐT người ký (' + sg.w + ')');
+    }
     // Cảnh báo, không chặn xuất hồ sơ
     const w = [];
     const need = tx ? [['ngaySinhTx', 'ngày sinh tài xế'], ['noiCapTx', 'nơi cấp CCCD tài xế']]
       : [['ngaySinh', 'ngày sinh chủ xe'], ['noiCap', 'nơi cấp CCCD chủ xe']];
     const miss = need.filter(([k]) => !trim(r[k])).map(x => x[1]);
-    if (miss.length) w.push('người ký còn thiếu ' + miss.join(', ') + ' (hợp đồng để trống)');
+    if (miss.length && ky !== false) w.push('người ký còn thiếu ' + miss.join(', ') + ' (hợp đồng để trống)');
     if (r.taiXe && !r.gplx) w.push('thiếu Số GPLX');
     const exp = (k, label, must) => {
       const v = trim(r[k]);
@@ -196,6 +205,13 @@ const doiOf = rec => { if (rec.doi) { const {b, ha} = doiTuongMinh(rec); return 
 const doiKl = (rec, b, ha) => {
   const kq = b.multi ? HAKDoi.khoiLuong(rec.info.khoiLuong, b.doi, rec.info.klDoi) : {vals: HAKDoi.chia(rec.info.khoiLuong, b.doi), nguon: 'songuoi', loi: ''};   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
   b.klNguon = kq.nguon; b.klLoi = kq.loi; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
+/* hồ sơ của ĐỘI ĐANG CHỌN (màn Nhân công khai thác): nhân công và hình thức của đội; lô một đội: cả lô */
+const recDoiChon = rec => {
+  if (!rec.doi || rec.doi.length < 2) return rec;
+  const t = curTeam(); if (!t) return rec;
+  const d = rec.doi.find(x => x.id === t.id) || t;
+  return Object.assign({}, rec, {nc: rec.nc.filter(r => r.doiId === d.id), info: infoTeam(rec, d), _team: d, exp: Object.keys(d.exp || {}).length ? Object.assign({}, rec.exp, d.exp) : rec.exp});
+};
 /* hồ sơ cho một người theo đội của người đó (hợp đồng lao động của đội ký trực tiếp) */
 const recOfRow = (rec, r) => { if (!rec.doi) return rec; const B = doiOf(rec); if (!B.multi) return rec; const d = B.doi.find(x => x.id === r.doiId); return d ? subRec(rec, B, d) : rec; };
 const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {_share: d.share, _klNhap: b.klNguon === 'nhap', _klLo: rec.info.khoiLuong, _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], _team: d.team || null, exp: d.team && Object.keys(d.team.exp || {}).length ? Object.assign({}, rec.exp, d.team.exp) : rec.exp, info: Object.assign({}, rec.info, d.team ? d.team.hinhThuc : {}, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
@@ -291,8 +307,18 @@ function vcLoi(rec) {
   const out = []; gs.forEach(g => { const v = transportPrice(vcInfo(rec, g.hd)); if (v.loi) out.push(g.hd.cuoc ? 'Hợp đồng với ' + (g.ten || '(chưa có tên)') + ': ' + v.loi : v.loi); });
   return [...new Set(out)];
 }
+/* rà mâu thuẫn ngày, số (src/nhaplieu.js) cho lô, cho TỪNG ĐỘI (hình thức, số văn bản của đội) và TỪNG ĐỘI XE có số / cước riêng; trùng thì chỉ báo một lần */
+function nhapLieuAll(rec) {
+  const out = [], seen = new Set(), base = HAKNhapLieu.kiemTra(rec), baseT = new Set(base.map(x => x.text));
+  const add = (x, pre) => { const t = pre ? Object.assign({}, x, {text: pre + x.text}) : x, k = t.kind + '|' + t.text; if (!seen.has(k)) { seen.add(k); out.push(t); } };
+  base.forEach(x => add(x));
+  if (rec.doi && rec.doi.length > 1) { const B = doiOf(rec); if (B.multi) B.doi.forEach(d => HAKNhapLieu.kiemTra(subRec(rec, B, d)).forEach(x => { if (!baseT.has(x.text)) add(x, 'Đội “' + (d.ten || '') + '”: '); })); }
+  if (rec.hdvc) groupsDX(rec).forEach(g => { const h = g.hd; if (!h || (!h.cuoc && !Object.keys(h.exp || {}).length)) return; const [r2, e2] = vcCtx(rec, Object.assign({}, rec.exp, {_so: {}}), g);
+    HAKNhapLieu.kiemTra(Object.assign({}, r2, {exp: e2})).forEach(x => { if (!baseT.has(x.text)) add(x, 'Đội xe “' + (g.ten || '') + '”: '); }); });
+  return out;
+}
 function gate(rec) {
-  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrorsRec(rec), ...HAKNhapLieu.kiemTra(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
+  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrorsRec(rec), ...nhapLieuAll(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
   const nc = checkNC(rec);
   const dx = checkDX(rec);
   const vcL = vcLoi(rec);

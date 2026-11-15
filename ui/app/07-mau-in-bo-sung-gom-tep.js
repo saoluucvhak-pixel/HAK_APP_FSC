@@ -96,7 +96,7 @@ function groupsDX(rec) {
     const F = {dx: rec.dx, hdvc: rec.hdvc};
     return HAKModel.hdOrder(F).map(h => {
       const xs = HAKModel.xeOf(F, h); if (!xs.length) return null;
-      const r = xs[0], tx = driverSigns(r), gia = transportPrice(vcInfo(rec, h)).gia;
+      const sg = HAKModel.signerOf(xs, h.key), r = sg ? sg.r : xs[0], tx = sg ? sg.tx : driverSigns(r), gia = transportPrice(vcInfo(rec, h)).gia;   // người ký của ĐỘI XE
       const base = h.donViId ? Object.assign({}, h.ben || {}, {vaiTro: vaiTroDV(h.ben)})
         : tx ? {cccd: r.cccdTx, ten: r.taiXe, ngaySinh: r.ngaySinhTx, ngayCap: r.ngayCapTx, noiCap: r.noiCapTx, diaChi: r.diaChiTx, vaiTro: 'Tài xế'}
           : {cccd: r.cccd, ten: r.chuXe, ngaySinh: r.ngaySinh, ngayCap: r.ngayCap, noiCap: r.noiCap, diaChi: r.diaChi, vaiTro: 'Chủ xe'};

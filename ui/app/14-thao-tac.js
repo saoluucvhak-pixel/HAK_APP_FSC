@@ -29,7 +29,7 @@ function readForest(form) {
   return {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
     lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: toDec(fd.get('dienTich')),
-    dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), dinhMucNgayHa: toDec(fd.get('dinhMucNgayHa')), soDoi: toDec(fd.get('soDoi')), cuLy: toDec(fd.get('cuLy')),
+    dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), dinhMucNgayHa: toDec(fd.get('dinhMucNgayHa')), cuLy: toDec(fd.get('cuLy')),
     tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay')), khoiLuong: toDec(fd.get('khoiLuong')),
     donGia: toNum(fd.get('donGia')),   // để trống = null: giao khoán tự suy đơn giá khoán của tổ từ định biên nhân sự
     // khối lượng thực tế từng đội (chỉ có ô khi lô giao khoán nhiều đội): ô trống không ghi; không có ô thì giữ giá trị cũ
@@ -137,11 +137,11 @@ function saveDv(form) {
   db.dmDonViVC[id] = {id, loai: 'doanhnghiep', ten: g('ten'), mst: g('mst'), diaChi: g('diaChi'), daiDien: g('daiDien'), chucVu: g('chucVu'), sdt: g('sdt')};
   persist(); note('Đã lưu “' + g('ten') + '” vào danh mục đơn vị vận chuyển.'); render();
 }
-function themHdDv() {
-  const f = curForest(), s = document.getElementById('hdDvSel'), dv = s && (db.dmDonViVC || {})[s.value]; if (!f) return;
-  if (!dv) return note('Chọn một đơn vị trong danh mục trước (hoặc thêm doanh nghiệp vào danh mục).', 'warn');
-  const r = HAKModel.addHdDonVi(f, dv); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); curHd = r.id; persist();
-  note('Đã thêm hợp đồng với ' + dv.ten + '. Chọn hợp đồng này ở cột “Hợp đồng” của các xe do đơn vị chạy.'); render();
+function themHd() {
+  const f = curForest(); if (!f) return;
+  const inp = document.getElementById('hdMoiTen'), n = ((f.hdvc || []).length + 1), ten = trim(inp && inp.value) || 'Đội xe ' + n;
+  const r = HAKModel.addHd(f, ten); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); curHd = r.id; persist();
+  note('Đã thêm “' + ten + '”. Chọn đội này ở cột “Đội xe” của các xe, hoặc thêm xe khi đội đang được chọn; rồi chọn người ký của đội.'); render();
 }
 function saveHd(form) {
   const f = curForest(); if (!f || !curHd) return;
@@ -156,8 +156,11 @@ function saveHd(form) {
   }
   if (g('pcNgay') && !parseVN(g('pcNgay'))) e.push('ngày lập xác nhận khối lượng phải đúng dd/mm/yyyy');
   if (e.length) return formMsg(form, 'Chưa lưu: ' + e.join('; '));
-  const r = HAKModel.updateHd(f, curHd, {cuoc, exp: {soVC: g('soVC'), vcChiPhi: g('vcChiPhi'), pcSo: g('pcSo'), pcNgay: g('pcNgay')}}); if (r.error) return formMsg(form, 'Chưa lưu: ' + r.error);
-  Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persist(); note('Đã lưu hợp đồng vận chuyển.'); render();
+  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? (db.dmDonViVC || {})[ky.slice(2)] : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
+  const patch = {ten: g('ten'), cuoc, exp: {soVC: g('soVC'), vcChiPhi: g('vcChiPhi'), pcSo: g('pcSo'), pcNgay: g('pcNgay')}};
+  if (dv) { if (cur.donViId !== dv.id) patch.donVi = dv; } else if (ky.startsWith('p:')) patch.key = ky.slice(2);   // người ký: người trong đội hoặc doanh nghiệp
+  const r = HAKModel.updateHd(f, curHd, patch); if (r.error) return formMsg(form, 'Chưa lưu: ' + r.error);
+  Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persist(); note('Đã lưu đội xe và hợp đồng vận chuyển.'); render();
 }
 function xoaHd() {
   const f = curForest(); if (!f || !curHd) return;

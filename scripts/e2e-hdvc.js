@@ -17,7 +17,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   let app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env});
   let w = await app.firstWindow(); const errs = [];
   const hook = () => { w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); }; hook(); await w.waitForSelector('#side');
-  const A = lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 29.75, dx: [xe('92C-12345', '049000000077', 'LÊ VĂN AN'), xe('92C-67890', '049000000078', 'TRẦN BÌNH')]});
+  const A = lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 29.75, dx: [xe('92C-12345', '049000000077', 'LÊ VĂN AN'), Object.assign(xe('92C-67890', '049000000078', 'TRẦN BÌNH'), {sdt: '', ngayCap: ''})]});
   A.info.vanChuyen = {mode: 'coDinh', coDinh: 50000};
   const B = lot('fb', 'R-B', {exp: {}, pc: [], kl: 10, dx: []}); B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.info.tuNgay = '01/09/2026';
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');
@@ -35,21 +35,29 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('#dvForm [type=submit]'); await w.waitForTimeout(400);
   const dm = (await w.evaluate(() => window.hak.loadSync().db)).dmDonViVC || {};
   ok('lưu doanh nghiệp vào danh mục dùng chung (db.dmDonViVC)', Object.values(dm).length === 1 && Object.values(dm)[0].mst === '0401234567', JSON.stringify(dm));
-  // hợp đồng với doanh nghiệp
-  await w.selectOption('#hdDvSel', Object.keys(dm)[0]); await w.click('[data-act=themHdDv]'); await w.waitForTimeout(300);
+  // đội xe mới, ký với doanh nghiệp
+  await w.fill('#hdMoiTen', 'Đội xe Hòa Phát'); await w.click('[data-act=themHd]'); await w.waitForTimeout(300);
   t = await w.innerText('#hdvcKT'); f = await lotDb('fa');
-  ok('thêm hợp đồng với doanh nghiệp: 3 hợp đồng, thông tin đơn vị chụp lại trong hợp đồng', /3 hợp đồng/.test(t) && f.hdvc.some(h => h.donViId && h.ben.mst === '0401234567'), t);
-  const ix = f.dx.findIndex(r => r.chuXe === 'TRẦN BÌNH'), hdDn = f.hdvc.find(h => h.donViId).id;
+  ok('thêm đội xe: 3 đội xe (3 hợp đồng), đội mới đang chọn', /3 đội xe/.test(t) && /Đội xe Hòa Phát[\s\S]*đang chọn/.test(t) && f.hdvc.some(h => h.ten === 'Đội xe Hòa Phát'), t);
+  const ix = f.dx.findIndex(r => r.chuXe === 'TRẦN BÌNH'), hdDn = f.hdvc.find(h => h.ten === 'Đội xe Hòa Phát').id;
   await w.selectOption('select[data-xehd="' + ix + '"]', hdDn); await w.waitForTimeout(400); f = await lotDb('fa');
-  ok('chọn hợp đồng ở cột “Hợp đồng”: xe của TRẦN BÌNH sang hợp đồng doanh nghiệp; hợp đồng cá nhân trống tự bỏ (còn 2)', f.dx[ix].hdvcId === hdDn && f.hdvc.length === 2, JSON.stringify(f.hdvc.map(h => h.id + ':' + h.key)));
-  // cước, số riêng của hợp đồng doanh nghiệp
+  const cd = await w.evaluate(() => window.__checkDX());
+  ok('xe của TRẦN BÌNH (đội xe ký với doanh nghiệp sau đó) — trước khi chọn người ký là doanh nghiệp: vẫn là người ký nên báo thiếu ngày cấp, SĐT', cd.errs.some(e => /SĐT người ký/.test(e)), JSON.stringify(cd.errs));
+  ok('chọn đội xe ở cột “Đội xe”: xe của TRẦN BÌNH sang đội xe mới; đội cũ của Bình trống tự bỏ (còn 2)', f.dx[ix].hdvcId === hdDn && f.hdvc.length === 2, JSON.stringify(f.hdvc.map(h => h.id + ':' + h.key)));
   if (!(await w.$('#hdForm'))) await w.click('[data-act=chonHd][data-hd=' + hdDn + ']'); await w.waitForSelector('#hdForm');
+  ok('người ký của đội xe chọn được: người trong đội (TRẦN BÌNH) hoặc doanh nghiệp trong danh mục', /TRẦN BÌNH · Chủ xe/.test(await w.innerText('#hdForm [name=ky]')) && /HÒA PHÁT · doanh nghiệp/.test(await w.innerText('#hdForm [name=ky]')));
+  await w.selectOption('#hdForm [name=ky]', 'd:' + Object.keys(dm)[0]);
+  // cước, số riêng của hợp đồng doanh nghiệp
   await w.check('#hdForm [name=rieng]'); await w.selectOption('#hdForm [name=vcMode]', 'coDinh'); await w.fill('#hdForm [name=vcCoDinh]', '');
   await w.click('#hdForm [type=submit]'); await w.waitForTimeout(200);
   ok('cước riêng thiếu đơn giá: không lưu, nêu rõ', /chưa nhập đơn giá cố định/.test(await w.innerText('#hdForm')));
   await w.fill('#hdForm [name=vcCoDinh]', '60000'); await w.fill('#hdForm [name=soVC]', '88'); await w.click('#hdForm [type=submit]'); await w.waitForTimeout(400);
   f = await lotDb('fa'); const H = f.hdvc.find(h => h.id === hdDn);
-  ok('lưu cước riêng 60.000 đ/tấn và số HĐ 88 cho hợp đồng doanh nghiệp; cước chung của lô không đổi', H.cuoc && H.cuoc.coDinh === 60000 && H.exp.soVC === '88' && f.info.vanChuyen.coDinh === 50000, JSON.stringify(H));
+  ok('lưu đội xe: ký với doanh nghiệp (chụp lại thông tin), cước riêng 60.000 đ/tấn, số HĐ 88; cước chung của lô không đổi', H.donViId === Object.keys(dm)[0] && H.ben.mst === '0401234567' && H.cuoc && H.cuoc.coDinh === 60000 && H.exp.soVC === '88' && f.info.vanChuyen.coDinh === 50000, JSON.stringify(H));
+  const cd2 = await w.evaluate(() => window.__checkDX());
+  ok('đội xe ký với doanh nghiệp: không bắt CCCD, ngày cấp, SĐT người ký của xe trong đội (lỗi “thiếu SĐT người ký” hết)', !cd2.errs.some(e => /người ký/.test(e)), JSON.stringify(cd2.errs));
+  const rx = (await w.evaluate(() => window.__rpXe())).find(x => x.maRung === 'R-A');
+  ok('báo cáo Danh sách xe: xe trong đội doanh nghiệp ghi người ký “Doanh nghiệp: …” và MST; xe cá nhân ghi Chủ xe', rx.xe.find(x => x.bienSo === '92C-67890').ky.vai === 'Doanh nghiệp: CÔNG TY TNHH VẬN TẢI HÒA PHÁT' && rx.xe.find(x => x.bienSo === '92C-67890').ky.so === '0401234567' && rx.xe.find(x => x.bienSo === '92C-12345').ky.vai === 'Chủ xe', JSON.stringify(rx));
   ok('bảng hợp đồng: cước riêng 60.000, hợp đồng cá nhân vẫn cước chung 50.000', /60\.000 đ\/tấn\s*riêng/.test(await w.innerText('#hdvcKT')) && /50\.000 đ\/tấn\s*\(cước chung\)/.test(await w.innerText('#hdvcKT')), await w.innerText('#hdvcKT'));
   // xuất ZIP
   for (const x of fs.readdirSync(out)) fs.unlinkSync(path.join(out, x));

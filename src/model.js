@@ -73,29 +73,38 @@
     return out;
   }
 
-  /* GIAI ĐOẠN 4 — HỢP ĐỒNG VẬN CHUYỂN (bảng con của lô; xe là bảng con của hợp đồng):
-   *   lô.hdvc = [{id, key, donViId, ben, cuoc, exp}], lô.dx[i].hdvcId.
-   *   - Hợp đồng CÁ NHÂN (donViId null): bên ký là chủ xe hoặc tài xế của xe (như bản cũ); xe tự vào hợp đồng có cùng người ký (key = CCCD người ký),
-   *     đổi người ký của xe thì xe sang hợp đồng của người đó. Thứ tự hợp đồng khi in = thứ tự xe đầu tiên (như bản cũ).
-   *   - Hợp đồng với ĐƠN VỊ trong danh mục (donViId = id trong db.dmDonViVC, ví dụ doanh nghiệp): ben = thông tin đơn vị chụp lại lúc chọn; xe gán tay.
-   *   - cuoc (null = dùng cước chung của lô: info.vanChuyen) và exp (số HĐ, chi phí khác, số/ngày xác nhận khối lượng; trống = dùng của lô): riêng từng hợp đồng.
-   *   Hợp đồng cá nhân không còn xe và không có gì riêng thì bỏ. */
-  const vcKey = r => { const raw = trim(r && r.nguoiKy) === 'Tài xế' ? r.cccdTx : r.cccd; return String(String(raw == null ? '' : raw).replace(/\D/g, '') || raw); };
+  /* GIAI ĐOẠN 4 — ĐỘI XE và HỢP ĐỒNG VẬN CHUYỂN (bảng con của lô; xe là bảng con của đội xe), KÝ THEO ĐỘI XE như đội khai thác:
+   *   lô.hdvc = [{id, ten, key, donViId, ben, cuoc, exp}] (mỗi đội xe một hợp đồng), lô.dx[i].hdvcId.
+   *   - Xe đã thuộc đội xe thì GIỮ đội (đổi chủ xe / người ký của xe không tự chuyển đội); xe mới chưa có đội: vào đội có cùng người ký,
+   *     không có thì lập đội mới cho người ký đó (dữ liệu cũ: mỗi người ký một đội, đúng như bản cũ gom xe theo người ký).
+   *   - Người ký của đội: một người trong đội (key = CCCD chủ xe hoặc tài xế của một xe trong đội), hoặc một ĐƠN VỊ trong danh mục db.dmDonViVC
+   *     (donViId, ben = thông tin chụp lại lúc chọn, ví dụ doanh nghiệp). Người ký không còn trong đội → người ký của xe đầu tiên.
+   *   - cuoc (null = cước chung của lô) và exp (số HĐ, chi phí khác, số/ngày xác nhận khối lượng; trống = của lô): riêng từng đội xe.
+   *   Đội xe không còn xe và không có gì riêng (tên, đơn vị, cước, số) thì bỏ. Thứ tự in = thứ tự xe đầu tiên. */
+  const digits = v => String(v == null ? '' : v).replace(/\D/g, '');
+  const vcKey = r => { const raw = trim(r && r.nguoiKy) === 'Tài xế' ? r.cccdTx : r.cccd; return String(digits(raw) || raw); };
   const HD_EXP = ['soVC', 'vcChiPhi', 'pcSo', 'pcNgay'];
-  const hdRieng = h => !!(h && (h.donViId || h.cuoc || Object.keys(h.exp || {}).length));
+  const hdRieng = h => !!(h && (trim(h.ten) || h.donViId || h.cuoc || Object.keys(h.exp || {}).length));
+  /* người ký (cá nhân) của đội xe: xe trong đội có người ký trùng key (theo cột Người ký của xe), không có thì chủ xe / tài xế có CCCD trùng key */
+  const signerOf = (xs, key) => {
+    let r = xs.find(x => vcKey(x) === key); if (r) return {r, tx: trim(r.nguoiKy) === 'Tài xế'};
+    r = xs.find(x => digits(x.cccd) && digits(x.cccd) === key); if (r) return {r, tx: false};
+    r = xs.find(x => trim(x.taiXe) && digits(x.cccdTx) && digits(x.cccdTx) === key); if (r) return {r, tx: true};
+    return null;
+  };
   function ensureVC(out) {
     const dx = Array.isArray(out.dx) ? out.dx : [];
-    let hd = Array.isArray(out.hdvc) ? out.hdvc : [];
+    const hd = Array.isArray(out.hdvc) ? out.hdvc : [];
     const byId = new Map(hd.map(h => [h.id, h])), used = new Set(hd.map(h => h.id));
     const nid = () => { let k = 1; while (used.has('hd' + k)) k++; used.add('hd' + k); return 'hd' + k; };
     dx.forEach(r => {
-      if (!r) return;
-      const cur = byId.get(r.hdvcId); if (cur && cur.donViId) return;
-      const k = vcKey(r); if (cur && cur.key === k) return;
+      if (!r || byId.get(r.hdvcId)) return;
+      const k = vcKey(r);
       let h = hd.find(x => !x.donViId && x.key === k);
-      if (!h) { h = {id: nid(), key: k, donViId: null, ben: null, cuoc: null, exp: {}}; hd.push(h); byId.set(h.id, h); }
+      if (!h) { h = {id: nid(), ten: '', key: k, donViId: null, ben: null, cuoc: null, exp: {}}; hd.push(h); byId.set(h.id, h); }
       r.hdvcId = h.id;
     });
+    hd.forEach(h => { if (h.donViId) return; const xs = dx.filter(r => r && r.hdvcId === h.id); if (xs.length && !signerOf(xs, h.key)) h.key = vcKey(xs[0]); });
     const co = new Set(dx.map(r => r && r.hdvcId));
     out.hdvc = hd.filter(h => co.has(h.id) || hdRieng(h));
     return out;
@@ -103,8 +112,9 @@
   const needsVC = f => {
     if (!Array.isArray(f.hdvc)) return true;
     const byId = new Map(f.hdvc.map(h => [h.id, h])), dx = Array.isArray(f.dx) ? f.dx : [];
-    if (dx.some(r => { if (!r) return false; const h = byId.get(r.hdvcId); return !h || (!h.donViId && h.key !== vcKey(r)); })) return true;
-    const co = new Set(dx.map(r => r && r.hdvcId)); return f.hdvc.some(h => !co.has(h.id) && !hdRieng(h));
+    if (dx.some(r => r && !byId.get(r.hdvcId))) return true;
+    const co = new Set(dx.map(r => r && r.hdvcId));
+    return f.hdvc.some(h => (!co.has(h.id) && !hdRieng(h)) || (!h.donViId && co.has(h.id) && !signerOf(dx.filter(r => r && r.hdvcId === h.id), h.key)));
   };
   function ensureForest(f) { const out = ensureDoi(f); if (out && typeof out === 'object' && needsVC(out)) ensureVC(out); return out; }
 
@@ -166,7 +176,7 @@
   /* cập nhật thông tin đội (tên, hình thức, diện tích, số văn bản) */
   function updateTeam(f, id, patch) {
     const out = ensureForest(f), d = out.doi.find(x => x.id === id); if (!d) return {ok: false, error: 'Không có đội này'};
-    if (has(patch, 'ten')) d.ten = trim(patch.ten);
+    if (has(patch, 'ten')) { const cu = d.ten; d.ten = trim(patch.ten); if (d.ten && d.ten !== cu) membersOf(out, d).forEach(r => { r.doi = d.ten; }); }   // đổi tên đội: cột Đội của người trong đội đổi theo
     if (patch.hinhThuc) d.hinhThuc = Object.assign({}, d.hinhThuc, clone(patch.hinhThuc));
     if (has(patch, 'dienTich')) d.dienTich = typeof patch.dienTich === 'number' && patch.dienTich >= 0 ? patch.dienTich : null;
     if (patch.exp) d.exp = Object.assign({}, d.exp, clone(patch.exp));
@@ -175,7 +185,8 @@
   /* chuyển nhân công (theo chỉ số dòng) sang đội khác */
   function moveMembers(f, idxs, id) {
     const out = ensureForest(f); if (!out.doi.some(d => d.id === id)) return {ok: false, error: 'Không có đội này'};
-    idxs.forEach(i => { if (out.nc && out.nc[i]) out.nc[i].doiId = id; }); return {ok: true, f: out};
+    const d = out.doi.find(x => x.id === id);
+    idxs.forEach(i => { const r = out.nc && out.nc[i]; if (!r) return; r.doiId = id; if (trim(d.ten)) r.doi = d.ten; }); return {ok: true, f: out};   // cột Đội (chữ) theo đội thật: sửa người sau đó không về đội cũ
   }
 
   /* ===== hợp đồng vận chuyển ===== */
@@ -183,30 +194,40 @@
   const xeOf = (f, h) => ((f && f.dx) || []).filter(r => r && r.hdvcId === h.id);
   /* hợp đồng theo thứ tự in: xe đầu tiên của hợp đồng (như bản cũ gom xe theo người ký); hợp đồng chưa có xe ở cuối */
   const hdOrder = f => { const hd = (f && f.hdvc) || [], dx = (f && f.dx) || [], first = h => { const i = dx.findIndex(r => r && r.hdvcId === h.id); return i < 0 ? Infinity : i; }; return hd.map((h, k) => ({h, k, i: first(h)})).sort((a, b) => a.i - b.i || a.k - b.k).map(x => x.h); };
-  /* hợp đồng với một đơn vị trong danh mục (doanh nghiệp…): chụp lại thông tin đơn vị lúc chọn */
-  function addHdDonVi(f, dv) {
-    const out = ensureForest(f), used = new Set(out.hdvc.map(h => h.id)); let k = 1; while (used.has('hd' + k)) k++;
-    const h = {id: 'hd' + k, key: '', donViId: dv.id, ben: clone(dv), cuoc: null, exp: {}}; out.hdvc.push(h); return {f: out, id: h.id};
-  }
+  const newHdId = f => { const used = new Set(((f && f.hdvc) || []).map(h => h.id)); let k = 1; while (used.has('hd' + k)) k++; return 'hd' + k; };
+  /* thêm đội xe (chưa có xe); người ký chọn sau (một người trong đội hoặc một đơn vị trong danh mục) */
+  function addHd(f, ten) { const out = ensureForest(f), h = {id: newHdId(out), ten: trim(ten), key: '', donViId: null, ben: null, cuoc: null, exp: {}}; out.hdvc.push(h); return {f: out, id: h.id}; }
+  /* đội xe ký với một đơn vị trong danh mục (doanh nghiệp…): chụp lại thông tin đơn vị lúc chọn */
+  function addHdDonVi(f, dv) { const out = ensureForest(f), h = {id: newHdId(out), ten: '', key: '', donViId: dv.id, ben: clone(dv), cuoc: null, exp: {}}; out.hdvc.push(h); return {f: out, id: h.id}; }
+  /* cập nhật đội xe: tên, người ký ({key} = người trong đội | {donVi} = đơn vị danh mục), cước, số văn bản */
   function updateHd(f, id, patch) {
-    const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có hợp đồng này'};
+    const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có đội xe này'};
+    if (has(patch, 'ten')) h.ten = trim(patch.ten);
     if (has(patch, 'cuoc')) h.cuoc = patch.cuoc ? clone(patch.cuoc) : null;
     if (patch.exp) { h.exp = Object.assign({}, h.exp); Object.entries(patch.exp).forEach(([k, v]) => { if (trim(v)) h.exp[k] = trim(v); else delete h.exp[k]; }); }
+    if (patch.donVi) { h.donViId = patch.donVi.id; h.ben = clone(patch.donVi); h.key = ''; }
+    else if (has(patch, 'key')) { h.donViId = null; h.ben = null; h.key = String(patch.key || ''); }
     if (has(patch, 'ben') && h.donViId) h.ben = clone(patch.ben);
     return {ok: true, f: ensureForest(out)};
   }
-  /* chuyển xe (chỉ số dòng) vào hợp đồng với đơn vị; id '' = về hợp đồng theo người ký của xe */
+  /* chuyển xe (chỉ số dòng) sang đội xe khác */
   function moveXe(f, idxs, id) {
-    const out = ensureForest(f), h = id ? out.hdvc.find(x => x.id === id) : null; if (id && (!h || !h.donViId)) return {ok: false, error: 'Chỉ chuyển được xe vào hợp đồng với đơn vị trong danh mục'};
-    idxs.forEach(i => { const r = out.dx && out.dx[i]; if (!r) return; if (h) r.hdvcId = h.id; else delete r.hdvcId; });
+    const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có đội xe này'};
+    idxs.forEach(i => { const r = out.dx && out.dx[i]; if (r) r.hdvcId = h.id; });
     return {ok: true, f: ensureForest(out)};
   }
   function removeHd(f, id) {
-    const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có hợp đồng này'};
-    const n = xeOf(out, h).length; if (n) return {ok: false, error: 'Hợp đồng còn ' + n + ' xe: chuyển xe sang hợp đồng khác trước'};
+    const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có đội xe này'};
+    const n = xeOf(out, h).length; if (n) return {ok: false, error: 'Đội xe còn ' + n + ' xe: chuyển xe sang đội khác trước'};
     out.hdvc = out.hdvc.filter(x => x !== h); return {ok: true, f: out};
   }
+  /* những người ký được của đội xe: chủ xe và tài xế (có CCCD) của các xe trong đội, không trùng */
+  function signersOf(f, h) {
+    const out = [], seen = new Set();
+    xeOf(f, h).forEach(r => [[r.cccd, r.chuXe, 'Chủ xe'], [r.cccdTx, r.taiXe, 'Tài xế']].forEach(([c, t, v]) => { const k = digits(c); if (k && trim(t) && !seen.has(k)) { seen.add(k); out.push({key: k, ten: trim(t), vaiTro: v, bienSo: r.bienSo}); } }));
+    return out;
+  }
 
-  const api = {HD_EXP, vcKey, hdOf, xeOf, hdOrder, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
+  const api = {HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKModel = api;
 })(typeof window !== 'undefined' ? window : globalThis);

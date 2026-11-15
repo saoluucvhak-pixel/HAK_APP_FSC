@@ -18,7 +18,7 @@ document.addEventListener('click', async e => {
   if (act === 'delForest') return delForest(), render();
   if (act === 'chonDoi') { curDoi = el.dataset.doi; return render(); }
   if (act === 'chonHd') { curHd = curHd === el.dataset.hd ? null : el.dataset.hd; return render(); }
-  if (act === 'themHdDv') return themHdDv();
+  if (act === 'themHd') return themHd();
   if (act === 'xoaHd') return xoaHd();
   if (act === 'hdCapNhatDv') return hdCapNhatDv();
   if (act === 'suaDv') { const d = (db.dmDonViVC || {})[el.dataset.dv], fm = document.getElementById('dvForm'); if (d && fm) fm.outerHTML = dvForm(d); return; }
