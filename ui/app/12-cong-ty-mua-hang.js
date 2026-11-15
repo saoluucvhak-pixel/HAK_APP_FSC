@@ -172,7 +172,7 @@ function issuesBox(errs, warns) {
 
 /* Xem trước SỐ ĐẦY ĐỦ sẽ in trên biểu mẫu (cùng quy tắc với lúc xuất: src/hopdong.js) và nhắc việc cần bổ sung để có năm */
 function soPreviewHtml(rec, exo, which) {
-  const ex = Object.assign({}, exo || rec.exp || {}); if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;
+  const ex = expLo(rec, exo);
   const n = HAKHopDong.numbers(ex), direct = isDirect(rec.info), cbs = HAKHopDong.canBoSung(ex);
   const line = (label, x, forms) => '<tr><td>' + label + '</td><td><b>' + esc(x.so) + '</b></td><td class="mut">' + forms + (x.giuNguyen ? ' · số đã đầy đủ, giữ nguyên' : x.nam ? ' · năm ' + x.nam + ' lấy từ ngày ' + esc(x.ngay) : ' · <span style="color:var(--err)">chưa có năm</span>') + '</td></tr>';
   const rows = which === 'vc' ? [line('Hợp đồng vận chuyển', n.vc, 'BM-04, BM-09, BM-10'), line('Biên bản xác nhận khối lượng', n.xn, 'BM-09, BM-10')]

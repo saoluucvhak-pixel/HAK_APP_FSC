@@ -23,7 +23,7 @@ async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(f
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), SEED); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
-  const setP = async (k, v) => { await w.fill(`[data-exp=${k}]`, v); await w.dispatchEvent(`[data-exp=${k}]`, 'change'); };
+  const setP = (k, v) => require('./lib-stage').setExp(w, k, v);   // ô ở đúng màn của đối tượng (đội, vận chuyển, lô)
   const exportOf = async (kind, xt) => { await w.click(`[data-xtab=${xt}]`); for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); await w.click(`button[data-act=dl][data-kind=${kind}]`); let f = null; for (let i = 0; i < 80 && !f; i++) { f = fs.existsSync(out) && fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); if (!f) await w.waitForTimeout(100); } await w.waitForTimeout(300); const p = path.join(out, f), t = await docText(p); fs.copyFileSync(p, path.join(dir, kind + '_' + Date.now() + path.extname(p))); return t; };
   const three = async () => ({gk: await exportOf('gk', 'hd'), nttl: await exportOf('nttl', 'hd'), uq: await exportOf('uq', 'hd')});
   const prev = () => w.innerText('#soPreviewHd');

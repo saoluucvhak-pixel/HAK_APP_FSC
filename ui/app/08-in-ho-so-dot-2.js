@@ -137,7 +137,7 @@ function docUyQuyen(rec, ex) {
 }
 /* Cảnh báo theo từng trường hợp sau khi tải: mục nào CHƯA đủ dữ liệu thì biểu mẫu tương ứng thiếu hoặc còn chấm; hồ sơ đủ thì không có cảnh báo */
 function exportNotes(rec, g, kind) {
-  const n = [], i = rec.info, ex = Object.assign({}, rec.exp || {}); if (!ex.ngayKy && i.ngayKyHopDong) ex.ngayKy = i.ngayKyHopDong;
+  const n = [], i = rec.info, ex = expLo(rec);
   const tail = kind === 'all' || kind === 'cuoi', head = kind === 'all' || kind === 'dau', vol = volumeOf(i);
   if (tail) {
     if (!g.canPC) n.push('BM-09 (xác nhận khối lượng) và BM-10 (thanh toán vận chuyển) KHÔNG có trong file vì chưa đủ phiếu cân hợp lệ (nạp phiếu cân ở tab Vận chuyển, xem mục “Phiếu cân” ở tab Kiểm tra trước khi xuất).');

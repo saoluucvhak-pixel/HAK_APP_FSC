@@ -25,7 +25,7 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
-  for (const [k, v] of [['soKT', '07'], ['soVC', '09'], ['ngayKy', '01/10/2026']]) { if (await w.$(`[data-exp=${k}]`)) { await w.fill(`[data-exp=${k}]`, v); await w.dispatchEvent(`[data-exp=${k}]`, 'change'); } }
+  for (const [k, v] of [['soKT', '07'], ['soVC', '09'], ['ngayKy', '01/10/2026']]) await require('./lib-stage').setExp(w, k, v);
   const btns = await w.$$('button[data-act=dl]'); let done = 0; const disabled = [];
   for (let bi = 0; bi < btns.length; bi++) {
     const b = (await w.$$('button[data-act=dl]'))[bi];   // lấy lại nút mỗi lần: sau khi tải, thông báo cảnh báo làm giao diện vẽ lại

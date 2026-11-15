@@ -54,6 +54,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('Tổ trưởng mới nhập tay (không ghi cột Đội) vào ĐỘI ĐANG CHỌN (đội 2); người cũ giữ đội 1', r && r.ok && bon && bon.doiId === f.doi[1].id && f.nc.filter(x => x.doiId === f.doi[0].id).length === 3, JSON.stringify(r) + ' ' + JSON.stringify(f.nc.map(x => x.ten + ':' + x.doiId)));
   // chuyển PHẠM BA sang đội 2 ở cột Đội
   const ix = f.nc.findIndex(x => x.ten === 'PHẠM BA');
+  ok('lô nhiều đội: bảng nhân công chỉ hiện người của đội đang chọn (đội 2: NGUYỄN BỐN), PHẠM BA của đội 1 không hiện', !(await w.$('select[data-ncdoi="' + ix + '"]')) && /NGUYỄN BỐN/.test(await w.innerText('#main')));
+  await w.click('[data-act=ncTatCa]'); await w.waitForTimeout(200);
   await w.selectOption('select[data-ncdoi="' + ix + '"]', f.doi[1].id); await w.waitForTimeout(400); f = await dbNow();
   ok('chọn đội ở cột Đội: PHẠM BA chuyển sang đội 2, cột Đội ghi theo đội thật', f.nc[ix].doiId === f.doi[1].id && f.nc[ix].doi === 'Đội Hai', JSON.stringify(f.nc[ix]));
   // sửa người vừa chuyển đội trong bản nháp: không bị đưa về đội cũ
@@ -73,11 +75,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lô có cả hai loại đội: vẫn được lập hợp đồng giao khoán, ủy quyền và hợp đồng lao động', ch.g.canGK && ch.g.canUQ && ch.g.canHDLD, JSON.stringify(ch.g));
   // số văn bản: nhập số HĐ giao khoán khi đội 1 đang chọn thì ghi vào đội 1
   await w.click('[data-act=chonDoi][data-doi=doi1]'); await w.waitForTimeout(200);
-  await w.click('[data-ftab=xuat]'); await w.waitForTimeout(300);
-  const soKT = await w.$('input[data-exp=soKT]');
-  if (soKT) { await soKT.fill('031'); await soKT.dispatchEvent('change'); await w.waitForTimeout(300); }
+  ok('số văn bản của đội nằm ở màn đội (tab Nhân công), tab Xuất không còn ô số HĐ giao khoán', !!(await w.$('#doiKT input[data-exp=soKT]')));
+  await w.fill('#doiKT input[data-exp=soKT]', '031'); await w.dispatchEvent('#doiKT input[data-exp=soKT]', 'change'); await w.waitForTimeout(300);
   f = await dbNow();
-  ok('số hợp đồng giao khoán nhập ở tab Xuất hồ sơ ghi vào đội đang chọn (đội 1)', !soKT || (f.doi[0].exp.soKT === '031' && !('soKT' in f.exp)), JSON.stringify({doi: f.doi.map(d => d.exp), exp: f.exp}));
+  ok('số hợp đồng giao khoán nhập ở màn đội ghi vào đội đang chọn (đội 1)', f.doi[0].exp.soKT === '031' && !('soKT' in f.exp), JSON.stringify({doi: f.doi.map(d => d.exp), exp: f.exp}));
+  await w.click('[data-ftab=xuat]'); await w.waitForTimeout(300);
+  ok('tab Xuất hồ sơ không còn ô nhập số của đội, có nút sang màn đội', !(await w.$('#main input[data-exp=soKT]')) && /Sửa ở màn đội/.test(await w.innerText('#main')));
   // xuất toàn bộ hồ sơ
   for (const x of fs.readdirSync(out)) fs.unlinkSync(path.join(out, x));
   await w.click('[data-xtab=all]'); await w.waitForTimeout(300);

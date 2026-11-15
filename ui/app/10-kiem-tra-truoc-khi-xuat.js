@@ -187,7 +187,11 @@ function panelVc(rec) {
     '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + (HAKCuLy.eff(i).nguon === 'tự tính' ? ', đường chim bay' : '') + ')' : 'chưa có') + '</b> · xem và sửa ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;}">tab Thông tin rừng → Cự ly vận chuyển (km)</button></div>' +
     '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
-    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số vận chuyển</button></div></form></div>';
+    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số vận chuyển</button></div></form>' +
+    '<h4 style="margin:12px 0 4px">Số văn bản chung của các đội xe <span class="mut" style="font-weight:400">· đội xe đặt số riêng ở bảng Đội xe bên dưới; để trống thì in dòng chấm</span></h4>' +
+    expInputs([['soVC', 'Số HĐ vận chuyển (phần số hoặc số đầy đủ)', 'năm lấy từ ngày ký các hợp đồng của lô'], ['vcChiPhi', 'HĐVC: chi phí khác (cầu đường, bốc xếp, thuế)', 'trống = dòng chấm'],
+      ['pcSo', 'Xác nhận KL vận chuyển: số biên bản', 'năm lấy từ ngày lập biên bản'], ['pcNgay', 'Xác nhận KL, thanh toán: ngày lập', 'dd/mm/yyyy'],
+      ['pcNguoiLap', 'Thanh toán vận chuyển: người lập bảng', 'trống = để ký tay'], ['pcNguong', 'Cảnh báo lệch khối lượng (%)', 'VD: 5 · trống = không kiểm tra']], expLo(rec)) + '</div>';
 }
 function giayRowHtml(g) {
   g = g || {};
@@ -298,8 +302,8 @@ const INFO_FIELDS = [
   ['ma', 'Mã chủ rừng', 'text', true],
   ['danhXung', 'Danh xưng', 'select', true],
   ['ten', 'Họ và tên', 'text', true],
-  ['soHopDong', 'Số hợp đồng', 'text', false],
-  ['ngayKyHopDong', 'Ngày ký hợp đồng (dd/mm/yyyy)', 'text', false],
+  ['soHopDong', 'Số hợp đồng mua bán gỗ (căn cứ in trong các hợp đồng)', 'text', false],
+  ['ngayKyHopDong', 'Ngày ký hợp đồng mua bán gỗ (dd/mm/yyyy; mặc định ngày ký các hợp đồng của lô)', 'text', false],
   ['cccd', 'CCCD', 'text', true],
   ['ngayCap', 'Ngày cấp CCCD', 'text', true],
   ['noiCap', 'Nơi cấp CCCD', 'text', true],

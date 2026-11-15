@@ -118,7 +118,7 @@ function groupsDX(rec) {
 }
 /* Điều kiện dữ liệu cho quy tắc BẢN NHÁP (src/bannhap.js): true = đủ */
 function draftCtx(rec) {
-  const i = rec.info, ex = Object.assign({}, rec.exp || {}); if (!ex.ngayKy && i.ngayKyHopDong) ex.ngayKy = i.ngayKyHopDong;
+  const i = rec.info, ex = expLo(rec);
   const vol = volumeOf(i); let ngc = false; try { ngc = !!payRows(rec, ex).plan.ngc; } catch (e) { /* chưa đủ dữ liệu tính tiền công */ }
   const has = v => !!v && HAKDates.isValid(v);
   const vcm = (i.vanChuyen || {}).mode || 'tanKm';
@@ -138,8 +138,7 @@ function buildFiles(rec, kind) {
 }
 /* Thông số xuất của lô + chế độ in: dùng chung cho xuất hồ sơ và cho luồng in đợt 2 */
 function exOf(rec, mode) {
-  const ex = Object.assign({}, rec.exp || {}, {vcDiemDen: destOf(rec).text});
-  if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
+  const ex = Object.assign(expLo(rec), {vcDiemDen: destOf(rec).text});   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
   ex._so = HAKHopDong.numbers(ex);                                                // MỘT quy tắc số hợp đồng cho BM-01, BM-04, BM-09, BM-10, BM-14, BM-20 (src/hopdong.js)
   ex._mode = mode || 'day';
   return ex;

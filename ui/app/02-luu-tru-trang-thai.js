@@ -120,7 +120,7 @@ const forestList = o => Object.values(o.forests || {});
 const destOf = rec => HAKMuaHang.diemDen(rec.info, rec.exp);
 const curForest = () => { const o = curOwner(); return (o && curF && o.forests[curF]) || null; };
 /* Đội đang chọn của lô đang mở (bảng con “Nhân công khai thác”); chưa chọn / không còn: đội đầu */
-let curDoi = null, curHd = null;   // đội / hợp đồng vận chuyển đang chọn của lô đang mở
+let curDoi = null, curHd = null, ncTatCa = false;   // đội / hợp đồng vận chuyển đang chọn của lô đang mở
 const curTeam = f => { f = f || curForest(); if (!f) return null; if (HAKModel.needsEnsure(f)) Object.assign(f, HAKModel.ensureForest(f)); return f.doi.find(d => d.id === curDoi) || f.doi[0]; };
 /* thông tin rừng + hình thức của đội đầu (để đọc ở form thông tin rừng; hồ sơ dùng jobView) */
 const fInfo = f => Object.assign({}, (f && f.info) || {}, (((f && f.doi) || [])[0] || {}).hinhThuc || {});
@@ -141,6 +141,17 @@ function ganDoi(doi, nc) {
   const nc2 = t ? nc.map(r => r && r.doiId === undefined && !trim(r.doi) ? Object.assign({}, r, {doiId: t.id}) : r) : nc;
   const x = HAKModel.ensureForest({doi, nc: nc2}); return {doi: x.doi, nc: x.nc};
 }
+/* Ô số / ngày văn bản (data-exp): mỗi ô nằm ở MÀN CỦA ĐỐI TƯỢNG sở hữu nó — đội (tab Nhân công), đội xe / vận chuyển chung (tab Vận chuyển), lô (tab Xuất hồ sơ).
+ * Ghi: ô của đội ghi vào đội đang chọn (ghiDoi), còn lại vào lô. */
+const EXP_VC = ['soVC', 'vcChiPhi', 'pcSo', 'pcNgay', 'pcNguoiLap', 'pcNguong'];
+const expTab = k => HAKModel.DOI_EXP.includes(k) ? {ftab: 'nc'} : EXP_VC.includes(k) ? {ftab: 'dx'} : {ftab: 'xuat', xtab: ['capNgay', 'capHan', 'capNguoi', 'dtNgay', 'dtDiaDiem', 'dtThoiLuong', 'dtNguoi', 'dtNoiDung', 'tbNgay', 'tbNguoi', 'tbSoBinh', 'thang'].includes(k) ? 'ld' : 'hd'};
+window.__expTab = expTab;   // kiểm thử đầu-cuối: ô này nằm ở màn nào
+function expInputs(list, ex) {
+  return '<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">' +
+    list.map(x => '<label>' + x[1] + '<input data-exp="' + x[0] + '" value="' + esc(ex[x[0]] || '') + '" placeholder="' + esc(x[2] || '') + '"></label>').join('') + '</div>';
+}
+/* tham số xuất của lô kèm ngày ký mặc định (ngày ký HĐ mua bán gỗ ở Thông tin chủ rừng) — MỘT chỗ cho mọi nơi dùng */
+const expLo = (rec, exo) => { const ex = Object.assign({}, exo || rec.exp || {}); if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong; return ex; };
 /* xe chưa thuộc hợp đồng vận chuyển (vừa nạp, thêm trong bản nháp): gán như khi lưu (src/model.js: theo người ký; xe trong hợp đồng với đơn vị giữ nguyên) */
 function ganVC(hdvc, dx) {
   if (!hdvc) return {hdvc, dx};

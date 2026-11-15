@@ -17,6 +17,8 @@ document.addEventListener('click', async e => {
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
   if (act === 'chonDoi') { curDoi = el.dataset.doi; return render(); }
+  if (act === 'ncTatCa') { ncTatCa = true; return render(); }
+  if (act === 'ncTheoDoi') { ncTatCa = false; return render(); }
   if (act === 'chonHd') { curHd = curHd === el.dataset.hd ? null : el.dataset.hd; return render(); }
   if (act === 'themHd') return themHd();
   if (act === 'xoaHd') return xoaHd();
