@@ -111,8 +111,9 @@ const PC_NGUONG_MAC_DINH = 1;   // % lệch tối đa giữa khối lượng th�
 function checkPC(rec) {
   const errs = [], warns = [], state = {}, pc = rec.pc || [];
   const mark = (r, k, m) => { (k === 'err' ? errs : warns).push('Dòng ' + r._row + ': ' + m); if (k === 'err' || !state[r._row]) state[r._row] = k; };
-  const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seen = {};
+  const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seen = {}, thieuKy = rec.hdvc ? doiXeThieuKy(rec) : new Set();
   pc.forEach(r => {
+    { const d = thieuKy.size ? doiXeOfPc(rec, r) : null; if (d && d.hd && thieuKy.has(d.hd.id)) mark(r, 'err', 'Biển ' + r.bienSo + ' thuộc đội xe chưa có người ký (chủ xe hoặc tài xế): vào tab Vận chuyển chọn người ký cho đội xe này'); }
     if (r.maRung && r.maRung !== rec.info.maRung) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
     if (!HAKDates.isValid(r.ngay)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(r.ngay).replace(/^thiếu ngày$/, 'thiếu ngày cân'));
     if (!r.bienSo) mark(r, 'err', 'Thiếu biển kiểm soát'); else if (!keys.has(bienKey(r.bienSo))) mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)');
@@ -146,6 +147,23 @@ function payVC(rec, g) {
     return {bienSo: x.bienSo, n: t.length, kg, tien: Math.round(kg * g.donGia / 1000)};
   }).filter(r => r.n);
   return {rows, n: rows.reduce((a, r) => a + r.n, 0), kg: rows.reduce((a, r) => a + r.kg, 0), tien: rows.reduce((a, r) => a + r.tien, 0)};
+}
+/* Phiếu cân → xe (khớp biển số) → đội xe (hợp đồng vận chuyển) của lô. Trả {hd, xe} hoặc null khi biển không thuộc xe nào của lô; lô cũ chưa có hdvc thì hd = null */
+function doiXeOfPc(rec, r) {
+  const x = (rec.dx || []).find(v => bienKey(v.bienSo) === bienKey(r.bienSo)); if (!x) return null;
+  return {xe: x, hd: (rec.hdvc || []).find(h => h.id === x.hdvcId) || null};
+}
+/* tên đội xe để hiện ở bảng phiếu cân: đơn vị vận chuyển / người ký của đội xe */
+function doiXeTen(rec, d) {
+  if (!d || !d.hd) return '';
+  const h = d.hd, gs = typeof groupsDX === 'function' ? groupsDX(rec) : [], g = gs.find(x => x.hd === h);
+  return g ? g.ten : (h.ben && h.ben.ten) || h.ten || '';
+}
+/* đội xe chưa có người ký: hợp đồng theo người ký mà trong đội không xác định được chủ xe / tài xế ký (src/model.js signerOf) */
+function doiXeThieuKy(rec) {
+  const F = {dx: rec.dx || [], hdvc: rec.hdvc || []}, out = new Set();
+  (rec.hdvc || []).forEach(h => { if (h.donViId) return; const xs = HAKModel.xeOf(F, h); if (xs.length && !HAKModel.signerOf(xs, h.key)) out.add(h.id); });
+  return out;
 }
 /* Giấy tờ xe của một đội xe so với NGÀY CỦA TỪNG PHIẾU CÂN (src/giayto.js): phiếu chạy khi kiểm định, bảo hiểm hoặc GPLX đã hết hạn chặn BM-09 và BM-10 của đội xe đó */
 const hanLoiOf = (rec, g) => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g));

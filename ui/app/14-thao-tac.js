@@ -173,9 +173,9 @@ function hdCapNhatDv() {
 /* gán đội cho các phiếu cân đang lọc (ngày, biển số, số phiếu, chỉ phiếu chưa gán) */
 function pcGanLoat() {
   const f = curForest(); if (!f || !f.doi || f.doi.length < 2) return;
-  const v = id => trim((document.getElementById(id) || {}).value), tu = HAKDates.key(v('pgTu')), den = HAKDates.key(v('pgDen')), bien = HAKStage.bienKey(v('pgBien')), so = v('pgSo').toUpperCase(), chua = (document.getElementById('pgChua') || {}).checked, id = v('pgDoi');
+  const v = id => trim((document.getElementById(id) || {}).value), hx = trim((document.getElementById('pgXe') || {}).value), tu = HAKDates.key(v('pgTu')), den = HAKDates.key(v('pgDen')), bien = HAKStage.bienKey(v('pgBien')), so = v('pgSo').toUpperCase(), chua = (document.getElementById('pgChua') || {}).checked, id = v('pgDoi');
   if ((v('pgTu') && !tu) || (v('pgDen') && !den)) return note('Ngày lọc phải đúng dd/mm/yyyy.', 'warn');
-  const idx = (f.pc || []).map((p, i) => ({p, i})).filter(({p}) => { const k = HAKDates.key(p.ngay); return (!tu || (k && k >= tu)) && (!den || (k && k <= den)) && (!bien || HAKStage.bienKey(p.bienSo).includes(bien)) && (!so || String(p.soPhieu || '').toUpperCase().includes(so)) && (!chua || !f.doi.some(d => d.id === p.doiId)); }).map(x => x.i);
+  const idx = (f.pc || []).map((p, i) => ({p, i})).filter(({p}) => { const k = HAKDates.key(p.ngay); return (!tu || (k && k >= tu)) && (!den || (k && k <= den)) && (!bien || HAKStage.bienKey(p.bienSo).includes(bien)) && (!hx || ((doiXeOfPc(f, p) || {}).hd || {}).id === hx) && (!so || String(p.soPhieu || '').toUpperCase().includes(so)) && (!chua || !f.doi.some(d => d.id === p.doiId)); }).map(x => x.i);
   if (!idx.length) return note('Không có phiếu cân nào khớp bộ lọc.', 'warn');
   const r = HAKModel.assignPc(f, idx, id); if (r.error) return note(r.error, 'err');
   f.pc = r.f.pc; persistLo(); note('Đã gán ' + r.n + ' phiếu cân vào đội “' + ((f.doi.find(d => d.id === id) || {}).ten || '') + '” (' + idx.length + ' phiếu khớp bộ lọc).'); render();
