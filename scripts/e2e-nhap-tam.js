@@ -19,7 +19,7 @@ const open = async w => { await w.click('[data-open=own1]'); await w.click('[dat
   await w.waitForTimeout(500); ok('sửa một ô: hiện thanh Chưa lưu', /Chưa lưu/.test(await w.innerText('#main')));
   await w.waitForTimeout(3800);
   ok('đã tự lưu bản tạm (localStorage)', await w.evaluate(() => !!localStorage.getItem('hakqn.nhapTam.v1')));
-  app.process().kill('SIGKILL'); await new Promise(r => setTimeout(r, 1200));   // mô phỏng mất điện / treo máy: không qua đường đóng bình thường
+  await app.evaluate(({app: a}) => { setTimeout(() => a.exit(0), 50); }).catch(() => {}); await new Promise(r => setTimeout(r, 2500));   // mô phỏng mất điện / treo máy: thoát ngay, không qua đường đóng bình thường (chạy được cả Windows, không phụ thuộc tín hiệu kill)
   app = await launch(); w = await app.firstWindow(); msgs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => { msgs.push(d.message()); d.accept(); }); await w.waitForSelector('#side'); await w.waitForTimeout(1500);
   ok('mở lại: hỏi “Khôi phục thay đổi chưa lưu”, nêu mã lô', msgs.some(m => /chưa lưu/.test(m) && /R-A/.test(m)), msgs.join(' | '));
   const saved = (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fa.info.diaDiem;
