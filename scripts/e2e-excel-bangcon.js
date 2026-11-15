@@ -36,6 +36,10 @@ const book = (sheet, rows, name) => { const wb = XLSX.utils.book_new(); XLSX.uti
   await w.click('[data-act=chonDoi][data-doi="' + d2 + '"]'); await w.waitForTimeout(300);
   await w.setInputFiles('input[data-file="nc"]', book('NHAN_CONG', [person(8, 'MAI TÁM', '049085006008')], 'nc4.xlsx')); await w.waitForTimeout(800); await save(); F = await db();
   ok('lô nhiều đội: file nhân công KHÔNG có cột Đội vào ĐỘI ĐANG CHỌN (Đội 2)', (F.fa.nc.find(r => r.ten === 'MAI TÁM') || {}).doiId === d2, JSON.stringify(F.fa.nc.map(r => r.ten + ':' + r.doiId)));
+  // nạp lại đúng file đã lưu (có cột Đội): các dòng phải là “giữ nguyên”, không bị coi là sửa vì chữ ở cột Đội đã bỏ sau khi có đội (v6)
+  await w.setInputFiles('input[data-file="nc"]', book('NHAN_CONG', [person(5, 'ĐỖ NĂM', '049085006005', 'Đội 2'), person(6, 'HỒ SÁU', '049085006006', 'Đội 1')], 'nc2.xlsx')); await w.waitForTimeout(800);
+  { const t2 = await w.innerText('#main'); ok('nạp lại file nhân công đã lưu (có cột Đội): thêm 0, cập nhật 0, giữ nguyên 2', /thêm 0, cập nhật 0, giữ nguyên 2/.test(t2), t2.slice(0, 300)); }
+  if (await w.$('button[data-act=stDiscard]')) { await w.click('button[data-act=stDiscard]'); await w.waitForTimeout(300); }
   // 2. xe: cột Đội xe khớp tên người ký của đội xe → xe vào đội xe đó; tên lạ → lỗi dòng
   await open('fa', 'dx');
   await w.setInputFiles('input[data-file="dx"]', book('DOI_XE', [car('92C-11111', 'PHẠM XE BA', '049000000079', 'LÊ VĂN MỘT'), car('92C-22222', 'BÙI XE BỐN', '049000000080', 'KHÔNG CÓ')], 'dx1.xlsx')); await w.waitForTimeout(800);

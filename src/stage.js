@@ -87,6 +87,7 @@
     if (msgs.length) next.giaLoi = msgs; else if (old.giaLoi && old.giaLoi.length) next.giaLoi = [];
     return {next, fields};
   }
+  const HINT_NHAP = {nc: ['doi'], pc: ['doi'], dx: ['doiXe']};
   function merge(st, kind, rows, opt) {
     opt = opt || {}; const list = st.cur[kind], key = KEY[kind], rep = {add: 0, upd: 0, same: 0, kept: 0, ids: [], dupInFile: [], changes: [], pending: 0, errors: 0};
     const seenInFile = new Map(), touched = new Set(); st.pending = st.pending || [];
@@ -108,6 +109,9 @@
         }
       } else target = matches.find(m => !identDiffs(m, r).length) || matches[0];
       touched.add(target._id);
+      /* chữ ở cột Đội (nhân công, phiếu cân) và Đội xe (xe) chỉ là GỢI Ý lúc nhập: sau khi dòng đã có đội, chữ này được bỏ (SQLite v6). Dòng đã có thì không đổi đội theo chữ,
+       * nên nạp lại cùng file không được tính là “cập nhật”; dòng cũ còn giữ chữ (chưa thuộc đội, đang báo lỗi) vẫn được cập nhật. */
+      (HINT_NHAP[kind] || []).forEach(h => { if (target[h] === undefined) delete r[h]; });
       const {next, fields} = applyInto(kind, target, r, Object.assign({}, opt, {suy, suyFn: opt.suyNgay2}));
       // trường tạo nên khóa chỉ khác cách viết (hoa/thường, dấu chấm, số 0 đầu) thì giữ cách viết đã lưu: không coi là thay đổi
       const kf = kind === 'pc' ? 'soPhieu' : kind === 'dx' ? 'bienSo' : (cccd(r.cccd) ? 'cccd' : 'ten'); if (target[kf] !== undefined && target[kf] !== '') next[kf] = target[kf];
