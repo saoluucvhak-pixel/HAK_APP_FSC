@@ -10,6 +10,8 @@ function exportCheck(job) {
   giaErrorsRec(job).forEach(e => add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}));   // từng đội theo hình thức của đội
   // mã lô trùng ở dữ liệu cũ: liệt kê đủ các lô khớp để đối chiếu, không tự sửa
   HAKLoRung.duplicateGroups(db).filter(x => x.lots.some(l => l.forest === job.fid)).forEach(x => add('chan', 'Mã lô trùng (dữ liệu cũ)', 'Mã “' + x.ma + '” đang dùng cho ' + x.lots.length + ' lô: ' + x.lots.map(l => l.lo + ' (chủ ' + l.chu + '; ' + l.nc + ' nhân công, ' + l.dx + ' xe, ' + l.pc + ' phiếu cân)').join('; ') + '. Đổi mã các lô thừa ở tab Thông tin rừng, dữ liệu không bị đổi trước khi bạn xác nhận.', x.ma, {ftab: 'finfo'}));
+  // chồng lấn giữa các lô (src/cheolo.js): phiếu cân trùng, xe trùng giờ, người ở hai lô, lệch sản lượng dự kiến
+  try { HAKCheoLo.kiemTra(db, job.id, job.fid).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go)); } catch (e) { /* không kiểm được chéo lô: bỏ qua, không chặn */ }
   // nhân công, định mức, tuổi
   g.nc.errs.forEach(e => add('chan', 'Nhân công', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'nc'}));
   g.normErrs.forEach(e => add('chan', 'Định mức BHLĐ', e, '', {view: 'norm'}));

@@ -19,7 +19,7 @@
     'Đội xe': VAN_CHUYEN, 'Giấy tờ xe': VAN_CHUYEN, 'Giấy tờ xe hết hạn lúc chạy phiếu': ['09', '10'], 'Cước vận chuyển': VAN_CHUYEN,
     'Phiếu cân': ['08', '09', '10', '14'], 'Phiếu cân: ngày thiếu hoặc sai': ['08', '09', '10', '14'], 'Phiếu cân trùng số': ['09', '10'], 'Phiếu cân: biển số chưa ghép với xe': ['09', '10'],
     'Phiếu cân chưa gán đội': ['08', '14'], 'Chênh lệch sản lượng': ['08', '14'], 'Địa chỉ giao hàng': VAN_CHUYEN, 'Cự ly vận chuyển': VAN_CHUYEN,
-    'Định mức nhân công': ['06'], 'Ủy quyền sau hợp đồng': ['20', '01'], 'Thời gian khai thác': ['01', '08', '14'], 'Số đội': ['01', '08', '14'], 'Checklist FSC': []
+    'Định mức nhân công': ['06'], 'Ủy quyền sau hợp đồng': ['20', '01'], 'Chéo lô: phiếu cân trùng': ['08', '09', '10', '14'], 'Chéo lô: xe trùng giờ cân': [], 'Chéo lô: người ở hai lô': [], 'Chéo lô: lệch sản lượng dự kiến': [], 'Thời gian khai thác': ['01', '08', '14'], 'Số đội': ['01', '08', '14'], 'Checklist FSC': []
   };
   const bieuMauCuaNhom = nhom => (BIEU_MAU_NHOM[nhom] || []).slice();
   const trim = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
