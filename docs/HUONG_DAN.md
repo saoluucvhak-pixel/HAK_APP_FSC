@@ -463,3 +463,14 @@ Một lô có thể giao khoán cho **nhiều đội**, mỗi tổ trưởng là
 7. **Xuất hồ sơ** theo đội và đội xe: BM-01, 05, 06, 07, 08, 14, 20 mỗi đội một bộ (số hợp đồng thêm .1, .2…); BM-04, 09, 10 mỗi đội xe một bộ.
 8. **Báo cáo**: Sản lượng theo đội khai thác, Vận chuyển theo đội xe, Danh sách lao động (có cột Đội).
 9. **Nâng cấp từ 1.4.x**: phần mềm tự sao lưu file dữ liệu trước khi chuyển; các trường cũ được chuyển như trong CHANGELOG.md.
+
+## Bản 2.1: Danh mục dùng chung (lao động, xe, đối tác)
+
+Thông tin gốc của người và xe nhập **một lần** ở màn **Danh mục** (nút trên thanh menu).
+
+1. **Lao động:** mã công nhân là số CCCD (12 số). Cập nhật thông tin = thêm dòng có **ngày cập nhật** mới; phần mềm luôn dùng dòng mới nhất, bấm "Lịch sử" để xem hoặc xóa dòng cũ. Có thể nạp file Excel (các cột: Ngày cập nhật, Số CCCD, Họ và tên, Giới tính, Ngày sinh, Nơi thường trú, Ngày cấp, Nơi cấp, Số điện thoại, Chức vụ, Vị trí).
+2. **Xe vận chuyển:** khóa là biển số (`92C-123.45` và `92c12345` là một xe). Hạn giấy phép, đăng kiểm, bảo hiểm quá hạn hiện đỏ.
+3. **Chức vụ / vị trí:** chức vụ Tổ trưởng, Công nhân; vị trí là danh mục của Định mức nhân công (sửa ở đó). **Định mức BHLĐ** tính theo vị trí này.
+4. **Đối tác:** người ký vận chuyển (cá nhân), doanh nghiệp ký vận chuyển, tổ trưởng ký nhân công.
+5. **Nhập theo hợp đồng:** ở tab Nhân công / Vận chuyển của lô, "+ Thêm nhân công / xe" cho chọn từ danh mục; người / xe mới nhập tại lô tự vào danh mục khi Lưu dữ liệu vào lô. Lô **chụp lại** thông tin nên hồ sơ đã in không đổi; khi danh mục có thông tin mới hơn, bấm **Cập nhật từ danh mục** (chỉ đổi bản nháp) rồi Lưu dữ liệu vào lô.
+

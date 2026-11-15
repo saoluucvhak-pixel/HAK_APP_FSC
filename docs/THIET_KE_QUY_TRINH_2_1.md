@@ -49,3 +49,7 @@ Bản chụp: khi thêm người / xe vào hợp đồng của một lô, phần
 | B | Màn **Danh mục** (năm tab, thêm / sửa theo ngày, nạp Excel, lịch sử từng dòng) | e2e |
 | C | Nhập theo hợp đồng: thêm nhân công và xe từ danh mục; bổ sung khoán / ngày công; "Cập nhật từ danh mục"; bỏ các đường nhập trùng | e2e, bản in không đổi |
 | D | BHLĐ theo vị trí danh mục; kiểm tra và báo cáo đọc danh mục; tài liệu, CHANGELOG, bản 2.1.0, CI | e2e toàn bộ, CI |
+
+## 6. Tình trạng (bản 2.1.0)
+A, B, C xong (mô hình + SQLite v7, màn Danh mục, chọn / chụp / cập nhật từ danh mục, người và xe mới tự vào danh mục). D: tài liệu, CHANGELOG, version 2.1.0. Chưa làm: màn khai khoán / ngày công theo vị trí cho từng hợp đồng, dựng sẵn đối tác cá nhân khi nâng cấp, bước CI nâng cấp từ bản dựng 2.0.0.
+
