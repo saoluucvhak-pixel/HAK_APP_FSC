@@ -51,9 +51,37 @@ if (HB) { document.addEventListener('DOMContentLoaded', () => { const l = docume
 let saveSt = {text: '', err: false}, saveTimer = null;
 function showSave(text, err) { saveSt = {text, err: !!err}; const el = document.getElementById('saveSt'); if (el) { el.textContent = text; el.classList.toggle('err', !!err); } }
 const hhmm = () => new Date().toLocaleTimeString('vi-VN');
+/* Lưu vào SQLite (bản desktop). Lưu theo phần thay đổi (src/delta.js): giữ ảnh chụp chuỗi JSON từng chủ rừng / lô của lần lưu thành công gần nhất
+ * cùng phiên bản `rev` của cơ sở dữ liệu, chỉ gửi dòng thêm / sửa / xóa. Chưa có ảnh chụp, trùng mã nội bộ, hoặc tiến trình chính báo STALE
+ * (dữ liệu đã đổi từ nơi khác: khôi phục, đổi thư mục...) / MISMATCH (lệch số chủ / lô) thì lưu TOÀN BỘ như trước — không mất thay đổi nào.
+ * Các lần lưu được xếp hàng (không chạy chồng); ảnh chụp lấy ngay trước khi gửi nên đúng với nội dung được ghi. */
+let saveCache = null, saveChain = Promise.resolve();
+window.__saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
+async function saveOnce() {
+  let r = null, snap = null;
+  if (saveCache && HB.saveDelta) {
+    snap = HAKDelta.snapshot(db);
+    if (!snap.dup) {
+      const d = HAKDelta.diff(saveCache.snap, snap);
+      d.rev = saveCache.rev; d.side = HAKDelta.side(db); d.counts = snap.counts;
+      r = await HB.saveDelta(d);
+      if (r && !r.ok && (r.code === 'STALE' || r.code === 'MISMATCH')) { window.__saveStats.fallback++; r = null; }
+      else if (r && r.ok) window.__saveStats.delta++;
+    }
+  }
+  if (!r) {
+    snap = HAKDelta.snapshot(db);                    // chụp lại ngay trước khi gửi: db có thể đã đổi trong lúc chờ
+    r = await HB.save(db);
+    if (r && r.ok) window.__saveStats.full++;
+  }
+  window.__saveStats.last = r && r.ok ? r.mode || 'full' : 'error';
+  saveCache = r && r.ok && r.rev && !snap.dup ? {rev: r.rev, snap} : null;
+  return r;
+}
+function storeSave() { const p = saveChain.then(saveOnce, saveOnce); saveChain = p.catch(() => {}); return p; }
 function flushSave() {
   saveTimer = null;
-  HB.save(db).then(r => {
+  storeSave().then(r => {
     if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); }
     else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
   }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });

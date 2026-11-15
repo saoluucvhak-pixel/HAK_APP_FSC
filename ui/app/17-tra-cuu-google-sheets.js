@@ -402,7 +402,7 @@ async function persistNow() {
   if (!HB) { persist(); return {ok: storeOk}; }
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   showSave('… Đang lưu');
-  const r = await HB.save(db);
+  const r = await storeSave();
   if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); } else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || ''), true); }
   return r || {ok: false, error: 'không rõ'};
 }

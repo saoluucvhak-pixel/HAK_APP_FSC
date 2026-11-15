@@ -52,6 +52,7 @@ class Store {
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
     this.migrate(existed);
+    this._bump();
   }
 
   migrate(existed) {
@@ -94,6 +95,42 @@ class Store {
 
   isEmpty() { return this.db.prepare('SELECT COUNT(*) c FROM owners').get().c === 0; }
 
+  /* Câu lệnh ghi dùng chung cho save và saveDelta */
+  _stmts() {
+    if (this._st) return this._st;
+    this._st = {
+      upO: this.db.prepare(`INSERT INTO owners(id,ma,ten,cccd,data,hash,updated_at) VALUES(@id,@ma,@ten,@cccd,@data,@hash,@t)
+        ON CONFLICT(id) DO UPDATE SET ma=@ma,ten=@ten,cccd=@cccd,data=@data,hash=@hash,updated_at=@t`),
+      upF: this.db.prepare(`INSERT INTO forests(id,owner_id,ma_rung,ten_rung,data,hash,updated_at) VALUES(@id,@owner_id,@ma_rung,@ten_rung,@data,@hash,@t)
+        ON CONFLICT(id) DO UPDATE SET owner_id=@owner_id,ma_rung=@ma_rung,ten_rung=@ten_rung,data=@data,hash=@hash,updated_at=@t`),
+      upC: this.db.prepare(`INSERT INTO companies(id,ten,mst,data,hash,updated_at) VALUES(@id,@ten,@mst,@data,@hash,@t)
+        ON CONFLICT(id) DO UPDATE SET ten=@ten,mst=@mst,data=@data,hash=@hash,updated_at=@t`),
+      delO: this.db.prepare('DELETE FROM owners WHERE id=?'), delF: this.db.prepare('DELETE FROM forests WHERE id=?'), delC: this.db.prepare('DELETE FROM companies WHERE id=?'),
+      putMeta: this.db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')
+    };
+    return this._st;
+  }
+  /* Danh mục công ty (db.congTy) và các khóa meta: ghi theo đúng trạng thái trong `side` (như lưu toàn bộ). Gọi TRONG giao dịch. */
+  _writeSide(side, t) {
+    const st = this._stmts(); let changed = 0;
+    const comps = Object.entries(side.congTy || {}).map(([id, c]) => { const o = {...c, id: c.id || id}, data = JSON.stringify(o); return {id: o.id, ten: String(o.ten || ''), mst: String(o.mst || ''), data, hash: sha(data)}; });
+    const haveC = new Map(this.db.prepare('SELECT id, hash FROM companies').all().map(r => [r.id, r.hash]));
+    comps.forEach(c => { if (haveC.get(c.id) !== c.hash) { st.upC.run({...c, t}); changed++; } });
+    const keepC = new Set(comps.map(c => c.id));
+    haveC.forEach((h, id) => { if (!keepC.has(id)) { st.delC.run(id); changed++; } });
+    const metaKeys = Object.keys(side).filter(k => k !== 'rs' && k !== 'v' && k !== 'congTy');
+    this.db.prepare("DELETE FROM meta WHERE key NOT LIKE 'lk:%' AND key NOT IN (" + (metaKeys.map(() => '?').join(',') || "''") + ')').run(...metaKeys);
+    metaKeys.forEach(k => st.putMeta.run(k, JSON.stringify(side[k])));
+    return changed;
+  }
+  _guardDelete(goneO, goneF, opts) {
+    if (goneO.length >= 2 && !opts.allowBulkDelete) throw Object.assign(new Error('Lần lưu này sẽ xóa ' + goneO.length + ' hồ sơ chủ rừng cùng lúc nên đã bị chặn để tránh mất dữ liệu. Xóa từng chủ rừng, hoặc dùng Khôi phục toàn bộ nếu muốn thay toàn bộ dữ liệu.'), {code: 'BULK_DELETE'});
+    if (goneO.length || goneF.length) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
+  }
+  /* Phiên bản dữ liệu trong phiên làm việc: đổi sau MỖI lần ghi hồ sơ (save, saveDelta, khôi phục...). Giao diện chỉ được lưu theo phần thay đổi
+   * khi ảnh chụp của nó ứng đúng phiên bản này (src/delta.js); khác thì lưu toàn bộ. */
+  _bump() { this.rev = crypto.randomUUID(); return this.rev; }
+
   /* Ghi đối tượng db của giao diện: chỉ ghi các dòng đã đổi, trong một giao dịch. Lỗi thì không đổi gì.
    * Bảo vệ chống mất dữ liệu: db phải có rs là đối tượng (không nhận {} / null); xóa từ 2 chủ rừng trở lên trong MỘT lần lưu bị từ chối
    * trừ khi opts.allowBulkDelete (khôi phục 'replace'); lần lưu nào có xóa chủ rừng hoặc lô rừng đều sao lưu file trước khi ghi. */
@@ -101,35 +138,61 @@ class Store {
     if (!db || typeof db !== 'object' || !db.rs || typeof db.rs !== 'object' || Array.isArray(db.rs)) throw new Error('Dữ liệu lưu không hợp lệ (thiếu danh sách chủ rừng). Không ghi gì để tránh mất dữ liệu.');
     const rows = this.explode(db);
     const have = new Map(this.db.prepare('SELECT id, hash FROM owners').all().map(r => [r.id, r.hash]));
-    const haveF = new Map(this.db.prepare('SELECT id, hash FROM forests').all().map(r => [r.id, r.hash]));
-    { const keepO = new Set(rows.owners.map(o => o.id)), keepF = new Set(rows.forests.map(f => f.id));
-      const goneO = [...have.keys()].filter(id => !keepO.has(id)), goneF = [...haveF.keys()].filter(id => !keepF.has(id));
-      if (goneO.length >= 2 && !opts.allowBulkDelete) throw Object.assign(new Error('Lần lưu này sẽ xóa ' + goneO.length + ' hồ sơ chủ rừng cùng lúc nên đã bị chặn để tránh mất dữ liệu. Xóa từng chủ rừng, hoặc dùng Khôi phục toàn bộ nếu muốn thay toàn bộ dữ liệu.'), {code: 'BULK_DELETE'});
-      if (goneO.length || goneF.length) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
-    }
-    const upO = this.db.prepare(`INSERT INTO owners(id,ma,ten,cccd,data,hash,updated_at) VALUES(@id,@ma,@ten,@cccd,@data,@hash,@t)
-      ON CONFLICT(id) DO UPDATE SET ma=@ma,ten=@ten,cccd=@cccd,data=@data,hash=@hash,updated_at=@t`);
-    const upF = this.db.prepare(`INSERT INTO forests(id,owner_id,ma_rung,ten_rung,data,hash,updated_at) VALUES(@id,@owner_id,@ma_rung,@ten_rung,@data,@hash,@t)
-      ON CONFLICT(id) DO UPDATE SET owner_id=@owner_id,ma_rung=@ma_rung,ten_rung=@ten_rung,data=@data,hash=@hash,updated_at=@t`);
-    const comps = Object.entries(db.congTy || {}).map(([id, c]) => { const o = {...c, id: c.id || id}, data = JSON.stringify(o); return {id: o.id, ten: String(o.ten || ''), mst: String(o.mst || ''), data, hash: sha(data)}; });
-    const haveC = new Map(this.db.prepare('SELECT id, hash FROM companies').all().map(r => [r.id, r.hash]));
-    const upC = this.db.prepare(`INSERT INTO companies(id,ten,mst,data,hash,updated_at) VALUES(@id,@ten,@mst,@data,@hash,@t)
-      ON CONFLICT(id) DO UPDATE SET ten=@ten,mst=@mst,data=@data,hash=@hash,updated_at=@t`);
-    const t = now(); let changed = 0;
+    // so cả chủ của lô: chuyển lô sang chủ rừng khác mà nội dung không đổi vẫn phải cập nhật owner_id (trước đây bị bỏ qua, mở lại lô quay về chủ cũ)
+    const haveF = new Map(this.db.prepare('SELECT id, hash, owner_id FROM forests').all().map(r => [r.id, r.hash + '|' + r.owner_id]));
+    const keepO = new Set(rows.owners.map(o => o.id)), keepF = new Set(rows.forests.map(f => f.id));
+    const goneO = [...have.keys()].filter(id => !keepO.has(id)), goneF = [...haveF.keys()].filter(id => !keepF.has(id));
+    this._guardDelete(goneO, goneF, opts);
+    const st = this._stmts(), t = now(); let changed = 0;
     this.db.transaction(() => {
-      comps.forEach(c => { if (haveC.get(c.id) !== c.hash) { upC.run({...c, t}); changed++; } });
-      const keepC = new Set(comps.map(c => c.id));
-      haveC.forEach((h, id) => { if (!keepC.has(id)) { this.db.prepare('DELETE FROM companies WHERE id=?').run(id); changed++; } });
-      rows.owners.forEach(o => { if (have.get(o.id) !== o.hash) { upO.run({...o, t}); changed++; } });
-      rows.forests.forEach(f => { if (haveF.get(f.id) !== f.hash) { upF.run({...f, t}); changed++; } });
-      const keepO = new Set(rows.owners.map(o => o.id)), keepF = new Set(rows.forests.map(f => f.id));
-      have.forEach((h, id) => { if (!keepO.has(id)) { this.db.prepare('DELETE FROM owners WHERE id=?').run(id); changed++; } });
-      haveF.forEach((h, id) => { if (!keepF.has(id)) { this.db.prepare('DELETE FROM forests WHERE id=?').run(id); changed++; } });
-      const metaKeys = Object.keys(db).filter(k => k !== 'rs' && k !== 'v' && k !== 'congTy');
-      this.db.prepare("DELETE FROM meta WHERE key NOT LIKE 'lk:%' AND key NOT IN (" + (metaKeys.map(() => '?').join(',') || "''") + ')').run(...metaKeys);
-      metaKeys.forEach(k => this.db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(k, JSON.stringify(db[k])));
+      changed += this._writeSide(db, t);
+      rows.owners.forEach(o => { if (have.get(o.id) !== o.hash) { st.upO.run({...o, t}); changed++; } });
+      rows.forests.forEach(f => { if (haveF.get(f.id) !== f.hash + '|' + f.owner_id) { st.upF.run({...f, t}); changed++; } });
+      goneO.forEach(id => { st.delO.run(id); changed++; });
+      goneF.forEach(id => { if (haveF.has(id)) { st.delF.run(id); changed++; } });
     })();
-    return {changed, at: t};
+    return {changed, at: t, rev: this._bump(), mode: 'full'};
+  }
+
+  /* Lưu theo phần thay đổi (src/delta.js). d = {rev, upO: {id: json}, upF: {id: {owner, json}}, delO: [id], delF: [id], side, counts: {owners, forests}}.
+   * - d.rev phải khớp phiên bản hiện tại (STALE nếu không): ảnh chụp của giao diện ứng đúng trạng thái đang có trong cơ sở dữ liệu;
+   * - cùng các bảo vệ như lưu toàn bộ (chặn xóa hàng loạt, sao lưu trước khi xóa); JSON từng dòng phải đọc được và đúng mã;
+   * - sau khi ghi, số chủ rừng và lô rừng phải bằng đúng số giao diện đang có (MISMATCH nếu lệch) — lệch thì hoàn tác cả giao dịch.
+   * Giao diện gặp STALE / MISMATCH thì tự lưu toàn bộ, nên không mất thay đổi nào. */
+  saveDelta(d, opts = {}) {
+    if (!d || typeof d !== 'object' || typeof d.rev !== 'string') throw Object.assign(new Error('Dữ liệu lưu theo phần thay đổi không hợp lệ.'), {code: 'MISMATCH'});
+    if (d.rev !== this.rev) throw Object.assign(new Error('Dữ liệu trên máy đã đổi từ nơi khác (khôi phục, đổi thư mục...): cần lưu toàn bộ.'), {code: 'STALE'});
+    const upO = d.upO && typeof d.upO === 'object' ? d.upO : {}, upF = d.upF && typeof d.upF === 'object' ? d.upF : {};
+    const delO = Array.isArray(d.delO) ? d.delO.map(String) : [], delF = Array.isArray(d.delF) ? d.delF.map(String) : [];
+    const counts = d.counts || {}, side = d.side && typeof d.side === 'object' ? d.side : {};
+    const bad = m => { throw Object.assign(new Error('Dữ liệu lưu theo phần thay đổi không hợp lệ: ' + m), {code: 'MISMATCH'}); };
+    if (!Number.isInteger(counts.owners) || !Number.isInteger(counts.forests)) bad('thiếu số đếm');
+    const rowsO = Object.entries(upO).map(([id, json]) => {
+      let o; try { o = JSON.parse(json); } catch (e) { bad('chủ rừng ' + id); }
+      if (!o || typeof o !== 'object' || o.id !== id || 'forests' in o) bad('chủ rừng ' + id);
+      const info = o.info || {};
+      return {id, ma: String(info.ma || ''), ten: String(info.ten || ''), cccd: String(info.cccd || ''), data: json, hash: sha(json)};
+    });
+    const rowsF = Object.entries(upF).map(([id, v]) => {
+      let f; try { f = JSON.parse(v && v.json); } catch (e) { bad('lô ' + id); }
+      if (!f || typeof f !== 'object' || (f.id || id) !== id || !v.owner || delO.includes(String(v.owner))) bad('lô ' + id);
+      const fi = f.info || {};
+      return {id, owner_id: String(v.owner), ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: v.json, hash: sha(v.json)};
+    });
+    if (delF.some(id => id in upF) || delO.some(id => id in upO)) bad('vừa sửa vừa xóa cùng một dòng');
+    this._guardDelete(delO, delF, opts);
+    const st = this._stmts(), t = now(); let changed = 0;
+    const tx = this.db.transaction(() => {
+      changed += this._writeSide(side, t);
+      rowsO.forEach(o => { st.upO.run({...o, t}); changed++; });
+      rowsF.forEach(f => { st.upF.run({...f, t}); changed++; });
+      delF.forEach(id => { changed += st.delF.run(id).changes; });
+      delO.forEach(id => { changed += st.delO.run(id).changes; });
+      const n = this.db.prepare('SELECT (SELECT COUNT(*) FROM owners) o, (SELECT COUNT(*) FROM forests) f').get();
+      if (n.o !== counts.owners || n.f !== counts.forests) bad('sau khi ghi có ' + n.o + ' chủ / ' + n.f + ' lô, giao diện có ' + counts.owners + ' / ' + counts.forests);
+    });
+    try { tx(); } catch (e) { if (/FOREIGNKEY|FOREIGN KEY/i.test(String(e.code) + e.message)) bad('lô gắn với chủ rừng không có'); throw e; }   // lệch ảnh chụp → giao diện lưu toàn bộ
+    return {changed, at: t, rev: this._bump(), mode: 'delta'};
   }
 
   /* Mã nội bộ (id) chủ rừng và lô rừng là khóa chính: trùng thì bản sau ghi đè bản trước trong SQLite → dừng và báo, không ghi gì */

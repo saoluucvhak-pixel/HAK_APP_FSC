@@ -370,3 +370,26 @@ Rà soát theo các skill `hak-code-auditor`, `hak-electron-security`, `hak-data
 | 5 | Hiệu năng lưu | Đo bằng `scripts/perf-luu.js`: 10.000 phiếu (2,4 MB) lưu đổi 1 phiếu ~22 ms, nạp ~9 ms, sao chép IPC ~19 ms; 120.000 phiếu (28 MB) ~285 ms + ~394 ms sao chép; 600.000 phiếu (140 MB) ~1,5 s + ~1,4 s. Lưu đã gom 250 ms và chạy nền; SQLite chỉ ghi đúng dòng đổi. Phần tốn là tuần tự hóa/băm toàn bộ trạng thái, chỉ giảm được bằng đổi kiến trúc sang lưu theo phần thay đổi (36 chỗ gọi `persist()`, rủi ro toàn vẹn dữ liệu) — **chưa làm**, đề xuất khi dữ liệu vượt ~100.000 phiếu. Thêm `tests/store-perf.test.js` chặn hồi quy thuật toán | `npm test` |
 | 6 | Lỗ hổng công cụ build | `minimatch` 9.0.9/10.2.6 (GHSA-g3hv-75wg-m249, mức trung bình, kéo theo electron-builder) → `overrides` 11.0.8 cho `app-builder-lib` và `@electron/universal` | `npm audit` (toàn bộ): 0 lỗ hổng; đóng gói và kiểm tra khói đạt |
 | 7 | Chênh lệch số kiểm tra e2e Windows/Linux | 33 kiểm tra chênh lệch nằm ở `sohd`, `inde`, `bm08`, `chuky`: dựng .docx ra PDF bằng LibreOffice (đếm trang, so ảnh, dòng chữ ký) — Windows CI không có LibreOffice nên bỏ qua mà vẫn tính đạt. Sửa: bộ chạy đếm dòng `BỎ QUA` (hiện trong bảng tổng), `--no-skip` coi là không đạt; `e2e-chuky` in `BỎ QUA` thay vì đạt ngầm khi thiếu LibreOffice/pdftotext; job CI mới **e2e-pdf** (Ubuntu 24.04 + LibreOffice + font Liberation) chạy 4 bộ này với `--no-skip` | thiếu LibreOffice (giả lập): 2 bộ báo “thiếu công cụ”; có LibreOffice: đạt đủ |
+
+## 11. Mục 5: lưu theo phần thay đổi (15/11/2026)
+
+**Cách làm.** Giao diện giữ ảnh chụp chuỗi JSON từng chủ rừng / lô rừng của lần lưu thành công gần nhất cùng mã phiên bản `rev` của cơ sở dữ liệu (`src/delta.js`); mỗi lần lưu chỉ gửi dòng thêm / sửa / xóa qua `db:saveDelta` → `Store.saveDelta`. Chuỗi JSON tạo giống hệt `Store.explode` nên mã băm hai cách lưu khớp nhau. Cả hai chỗ lưu của giao diện (`flushSave`, `persistNow`) đi qua `storeSave()`: các lần lưu xếp hàng, không chạy chồng; ảnh chụp lấy ngay trước khi gửi.
+
+**Bảo vệ toàn vẹn (giữ đủ như lưu toàn bộ, thêm hai lớp):**
+- `rev` đổi sau mọi lần ghi hồ sơ (lưu, khôi phục, khôi phục lô, đổi thư mục dữ liệu mở Store mới): ảnh chụp cũ → `STALE` → giao diện tự **lưu toàn bộ**;
+- sau khi ghi, số chủ rừng và lô trong SQLite phải bằng đúng số giao diện đang có, lô phải gắn với chủ có thật → nếu lệch: `MISMATCH`, hoàn tác cả giao dịch, giao diện lưu toàn bộ;
+- vẫn chặn xóa từ 2 chủ rừng một lần, sao lưu `truoc-xoa-*` trước khi xóa, từ chối JSON hỏng / sai mã; trùng mã nội bộ → lưu toàn bộ để nhận lỗi `DUP_ID`.
+
+**Lỗi có sẵn phát hiện nhờ kiểm thử mới và đã sửa:** lưu toàn bộ chỉ so mã băm nội dung lô nên **chuyển lô sang chủ rừng khác mà nội dung không đổi thì không cập nhật chủ của lô** (mở lại lô quay về chủ cũ). Giao diện hiện không có thao tác chuyển lô, nhưng dữ liệu khôi phục/gộp có thể gặp. Nay so cả mã băm lẫn chủ của lô; có bài hồi quy.
+
+**Lỗi phát sinh khi làm và đã chặn:** hàm mới ban đầu tên `saveDb` trùng một hàm khác ở module khác (18 module dùng chung phạm vi) nên bị đè âm thầm; đổi tên `storeSave` và thêm kiểm thử chặn hai khai báo cấp ngoài cùng trùng tên giữa các module.
+
+**Đo (`scripts/perf-luu.js`, Linux):**
+
+| Dữ liệu | Trước: lưu đổi 1 phiếu + sao chép IPC | Nay: chụp ảnh + gửi/ghi phần đổi |
+| --- | --- | --- |
+| 10.000 phiếu (2,4 MB) | 20 + 24 ms | 6 + 3 ms |
+| 120.000 phiếu (28 MB) | 371 + 266 ms | 92 + 16 ms |
+| 600.000 phiếu (140 MB) | 1.489 + 1.527 ms | 687 + 84 ms |
+
+E2E `e2e-luudelta` (Electron thật, 20.000 phiếu): lần lưu đầu sau khi mở là lưu toàn bộ, các lần sau lưu theo phần thay đổi; xóa chủ rừng qua giao diện; Khôi phục toàn bộ qua giao diện → lần lưu kế tiếp `STALE` → tự lưu toàn bộ, không mất thay đổi; đo 167 ms (toàn bộ) so với 19 ms (phần thay đổi); mở lại dữ liệu đúng. Kiểm thử đơn vị `tests/delta.test.js`: chuỗi 8 thao tác (sửa, thêm, chuyển lô, xóa lô, xóa chủ, công ty, meta, không đổi) cho cơ sở dữ liệu **trùng khớp từng dòng và mã băm** với lưu toàn bộ.

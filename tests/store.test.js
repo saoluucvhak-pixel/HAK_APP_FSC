@@ -215,3 +215,14 @@ test('hồi quy: hai chủ rừng có lô trùng mã nội bộ → báo lỗi D
   assert.throws(() => s.save({v: 2, rs: {A: {id: 'A', info: {ten: 'A'}, forests: {f1: F('R1')}}, B: {id: 'B', info: {ten: 'B'}, forests: {f1: F('R2')}}}}), e => e.code === 'DUP_ID' && /f1/.test(e.message));
   const o = s.load(); assert.strictEqual(o.rs.A.forests.f1.info.maRung, 'R1'); assert.ok(!o.rs.B);
 });
+
+test('hồi quy: chuyển lô sang chủ rừng khác mà nội dung lô không đổi — lưu toàn bộ vẫn cập nhật chủ của lô, mở lại không quay về chủ cũ', () => {
+  const d = tmp(), f = path.join(d, 'mv.sqlite'), lot = {id: 'fx', info: {maRung: 'RX'}, nc: [], dx: [], pc: [{soPhieu: 'P1', kl: 10}]};
+  let s = new Store(f);
+  s.save({v: 2, rs: {a: {id: 'a', info: {ten: 'A'}, forests: {fx: lot}}, b: {id: 'b', info: {ten: 'B'}, forests: {}}}});
+  const r = s.save({v: 2, rs: {a: {id: 'a', info: {ten: 'A'}, forests: {}}, b: {id: 'b', info: {ten: 'B'}, forests: {fx: lot}}}});
+  assert.strictEqual(r.changed, 1);
+  s.close(); s = new Store(f); const o = s.load();
+  assert.deepStrictEqual([Object.keys(o.rs.a.forests), Object.keys(o.rs.b.forests)], [[], ['fx']]);
+  s.close();
+});

@@ -1,7 +1,8 @@
 'use strict';
 /* Đo hiệu năng lưu/nạp cơ sở dữ liệu với dữ liệu giả lập nhiều cỡ (chủ rừng × lô × phiếu cân). Chạy bằng Node của Electron:
  *   ELECTRON_RUN_AS_NODE=1 npx electron scripts/perf-luu.js [chủ lô phiếu ...]   ví dụ: ... scripts/perf-luu.js 50 2 100 200 3 200
- * In: dung lượng JSON, thời gian lưu lần đầu / lưu không đổi / lưu khi đổi 1 phiếu, nạp, và sao chép qua IPC (structuredClone). */
+ * In: dung lượng JSON, thời gian lưu lần đầu / lưu không đổi / lưu khi đổi 1 phiếu, nạp, sao chép qua IPC (structuredClone),
+ * và lưu theo phần thay đổi (src/delta.js): chụp ảnh ở giao diện + gửi/ghi phần đổi. */
 const {Store} = require('../src/store');
 const fs = require('fs'), os = require('os'), path = require('path');
 const ms = f => { const a = process.hrtime.bigint(); const r = f(); return [Math.round(Number(process.hrtime.bigint() - a) / 1e6), r]; };
@@ -24,12 +25,17 @@ function measure(O, F, P) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-perf-')), s = new Store(path.join(dir, 'p.sqlite')), db = sample(O, F, P);
   const [first] = ms(() => s.save(db)), [same] = ms(() => s.save(db));
   db.rs.o0.forests.f0_0.pc[0].kl = 99; const [one, r] = ms(() => s.save(db));
+  // lưu theo phần thay đổi như giao diện (src/delta.js): chụp ảnh + so sánh ở giao diện, chỉ gửi và ghi lô đã đổi
+  const D = require('../src/delta'); let snap = D.snapshot(db), rev = r.rev;
+  db.rs.o0.forests.f0_0.pc[0].kl = 77;
+  const [snapMs, s2] = ms(() => D.snapshot(db));
+  const [deltaMs, rd] = ms(() => { const d = D.diff(snap, s2); d.rev = rev; d.side = D.side(db); d.counts = s2.counts; return s.saveDelta(structuredClone(d)); });
   const [load] = ms(() => s.load()), [clone] = ms(() => structuredClone(db));
   s.close(); fs.rmSync(dir, {recursive: true, force: true});
-  return {phieu: O * F * P, mb: Math.round(JSON.stringify(db).length / 104857.6) / 10, first, same, one, changed: r.changed, load, clone};
+  return {phieu: O * F * P, mb: Math.round(JSON.stringify(db).length / 104857.6) / 10, first, same, one, changed: r.changed, load, clone, snapMs, deltaMs, deltaChanged: rd.changed};
 }
 module.exports = {sample, measure};
 if (require.main === module) {
   const a = process.argv.slice(2).map(Number), sizes = a.length >= 3 ? Array.from({length: Math.floor(a.length / 3)}, (_, i) => a.slice(i * 3, i * 3 + 3)) : [[50, 2, 100], [200, 3, 200]];
-  for (const [O, F, P] of sizes) { const m = measure(O, F, P); console.log(`${O} chủ × ${F} lô × ${P} phiếu = ${m.phieu} phiếu cân | JSON ${m.mb} MB | lưu lần đầu ${m.first} ms | lưu không đổi ${m.same} ms | lưu đổi 1 phiếu ${m.one} ms (ghi ${m.changed} dòng) | nạp ${m.load} ms | sao chép IPC ${m.clone} ms`); }
+  for (const [O, F, P] of sizes) { const m = measure(O, F, P); console.log(`${O} chủ × ${F} lô × ${P} phiếu = ${m.phieu} phiếu cân | JSON ${m.mb} MB | lưu lần đầu ${m.first} ms | lưu không đổi ${m.same} ms | lưu đổi 1 phiếu ${m.one} ms (ghi ${m.changed} dòng) | nạp ${m.load} ms | sao chép IPC ${m.clone} ms || theo phần thay đổi: chụp ảnh ${m.snapMs} ms + gửi/ghi ${m.deltaMs} ms (ghi ${m.deltaChanged} dòng)`); }
 }

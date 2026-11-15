@@ -55,3 +55,15 @@ test('CSP cửa sổ in phiếu cân: tính được mã băm cho mọi script n
   const inline = (html.match(/<script(\s[^>]*)?>/gi) || []).length;
   assert.ok(C.scriptHashes(html).length >= 4 && C.scriptHashes(html).length <= inline);
 });
+
+test('các module ui/app/*.js dùng chung một phạm vi: không có hai khai báo cấp ngoài cùng trùng tên (hàm sau sẽ âm thầm đè hàm trước)', () => {
+  const seen = new Map(), dup = [];
+  for (const n of B.appModules()) {
+    const t = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app', n), 'utf8');
+    for (const m of t.matchAll(/^(?:async\s+)?function\*?\s*([A-Za-z_$][\w$]*)|^(?:const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm)) {
+      const name = m[1] || m[2];
+      if (seen.has(name)) dup.push(name + ' (' + seen.get(name) + ', ' + n + ')'); else seen.set(name, n);
+    }
+  }
+  assert.deepStrictEqual(dup, []);
+});
