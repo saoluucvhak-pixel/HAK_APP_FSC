@@ -64,7 +64,7 @@ document.addEventListener('click', async e => {
   if (act === 'mhCancel') { mh.open = false; return render(); }
   if (act === 'mhConfirm') {
     const f = curForest(), snap = mhSnapshotNow(); if (!f || !snap) return;
-    f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false; persistLo();
+    f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false; luuLo();   // nút Xác nhận của khung = lưu cả lô
     mh.msg = {kind: 'ok', text: 'Đã lưu công ty mua hàng và địa điểm vận chuyển đến cho rừng này: ' + snap.ten + ' – ' + snap.diaChi + '.'}; return render();
   }
   if (act === 'guide') return document.getElementById('guideBox').classList.add('on');
