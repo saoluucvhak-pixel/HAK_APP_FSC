@@ -122,7 +122,7 @@
     const g = get(db), rows = [], seen = new Set();
     const add = r => { const k = trim(r.chucDanh).toLowerCase(); if (!k || seen.has(k)) return; seen.add(k); rows.push({chucDanh: trim(r.chucDanh), soNguoi: typeof r.soNguoi === 'number' ? r.soNguoi : 0, kiemNhiem: r.kiemNhiem || '', nhiemVu: r.nhiemVu || ''}); };
     const def = name => MAC_DINH.find(x => x.chucDanh.toLowerCase() === trim(name).toLowerCase()) || {chucDanh: name, soNguoi: 0};
-    if (g.saved) { g.rows.forEach(add); (ten || []).forEach(t => add({chucDanh: t})); }
+    if (g.saved) { g.rows.forEach(add); versions(db).forEach(v => (v.rows || []).forEach(r => add({chucDanh: r.chucDanh}))); (ten || []).forEach(t => add({chucDanh: t})); }   // danh mục vị trí = hợp các phiên bản (sửa bản gốc không làm mất vị trí chỉ có ở bản gốc)
     else { add(def(TO_TRUONG)); (ten || []).forEach(t => add(def(t))); MAC_DINH.forEach(add); }
     return {rows, saved: g.saved};
   }

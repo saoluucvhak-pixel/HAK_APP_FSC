@@ -106,3 +106,9 @@ test('4d. lô bị ảnh hưởng: ngày sai tách riêng (không tính vào b�
   assert.deepEqual(B.anhHuong(db, 'goc', lots).map(l => l.maRung), ['A']); assert.deepEqual(B.anhHuong(db, '01/12/2026', lots).map(l => l.maRung), ['B', 'D']);
   const ct = B.anhHuongChiTiet(db, '01/12/2026', lots); assert.deepEqual(ct.ngayLoi.map(l => l.maRung), ['C']); assert.equal(B.anhHuongChiTiet(db, 'goc', lots).ngayLoi.length, 1);
 });
+
+test('3d. danh mục vị trí là hợp các phiên bản: vị trí chỉ có ở bản gốc (kể cả 0 chủ động) không mất khi lưu lại bản gốc', () => {
+  const db = {}; B.set(db, B.get({}).rows.concat([{chucDanh: 'Vị trí gốc 0', soNguoi: 0, kiemNhiem: '', nhiemVu: ''}]), DM); const a = B.addVersion(db, '01/12/2026'); assert.ok(a.ok);
+  B.setVersion(db, a.id, B.get(db, '01/12/2026').rows.filter(r => r.chucDanh !== 'Vị trí gốc 0').concat([{chucDanh: 'Vị trí chỉ ở bản mới', soNguoi: 1, kiemNhiem: '', nhiemVu: 'Phụ'}]), DM);
+  const ten = B.danhMuc(db, []).rows.map(r => r.chucDanh); assert.ok(ten.includes('Vị trí gốc 0') && ten.includes('Vị trí chỉ ở bản mới'), ten.join('|'));
+});
