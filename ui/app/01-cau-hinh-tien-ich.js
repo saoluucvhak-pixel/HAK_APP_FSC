@@ -21,9 +21,9 @@ const NC_REQ = ['Vai trò','Họ và tên','CCCD','Chức danh'];
 const H_DX = {'STT':'stt','Chủ xe (bên vận chuyển)':'chuXe','Ngày sinh chủ xe':'ngaySinh','CCCD chủ xe':'cccd','Ngày cấp CCCD chủ xe':'ngayCap','Nơi cấp CCCD chủ xe':'noiCap','Thường trú chủ xe':'diaChi',
   'Biển kiểm soát':'bienSo','Ngày cấp đăng ký xe (cà vẹt)':'cavet','Loại xe':'loaiXe','Người ký HĐ vận chuyển':'nguoiKy',
   'Tên tài xế':'taiXe','Ngày sinh tài xế':'ngaySinhTx','CCCD tài xế':'cccdTx','Ngày cấp CCCD tài xế':'ngayCapTx','Nơi cấp CCCD tài xế':'noiCapTx','Thường trú tài xế':'diaChiTx',
-  'Số GPLX':'gplx','Ngày đến hạn GPLX':'hanGplx','Ngày đến hạn bảo hiểm':'hanBH','Kiểm định từ ngày':'kdTu','Kiểm định đến ngày':'kdDen','SĐT':'sdt'};
+  'Số GPLX':'gplx','Ngày đến hạn GPLX':'hanGplx','Ngày đến hạn bảo hiểm':'hanBH','Kiểm định từ ngày':'kdTu','Kiểm định đến ngày':'kdDen','SĐT':'sdt','Đội xe':'doiXe'};
 const DX_REQ = ['Chủ xe (bên vận chuyển)','Biển kiểm soát','Người ký HĐ vận chuyển'];
-const H_PC = {'STT':'stt','Số phiếu':'soPhieu','Ngày cân 1':'ngay','Giờ cân 1':'gioCan1','Ngày cân 2':'ngay2','Giờ cân 2':'gioCan2','Biển số 1':'bienSo','Cân 1':'can1','Cân 2':'can2','KL':'klKg','Khối lượng (tấn)':'kl','Nguồn gốc':'nguonGoc','Khách hàng':'khachHang','Địa chỉ':'diaChi','ĐG_AD':'donGia','So_CT':'soCT','Đơn giá_TC':'donGiaTC','Trạng thái':'trangThai','Thành tiền':'thanhTien','Nơi giao (nhà máy)':'noiGiao','Ghi chú':'ghiChu'};
+const H_PC = {'STT':'stt','Số phiếu':'soPhieu','Ngày cân 1':'ngay','Giờ cân 1':'gioCan1','Ngày cân 2':'ngay2','Giờ cân 2':'gioCan2','Biển số 1':'bienSo','Cân 1':'can1','Cân 2':'can2','KL':'klKg','Khối lượng (tấn)':'kl','Nguồn gốc':'nguonGoc','Khách hàng':'khachHang','Địa chỉ':'diaChi','ĐG_AD':'donGia','So_CT':'soCT','Đơn giá_TC':'donGiaTC','Trạng thái':'trangThai','Thành tiền':'thanhTien','Nơi giao (nhà máy)':'noiGiao','Ghi chú':'ghiChu','Đội':'doi'};
 /* Tên cột cũ của file mẫu phiếu cân (trước khi thống nhất với bộ cột in phiếu cân): vẫn nạp được */
 const PC_ALIAS = {'Số phiếu cân':'soPhieu','Ngày cân':'ngay','Biển kiểm soát':'bienSo','Cân lần 1 (kg)':'can1','Cân lần 2 (kg)':'can2','Khối lượng (kg)':'klKg','Đơn giá (đồng/tấn)':'donGia','Thành tiền (đồng)':'thanhTien','Địa chỉ rừng':'diaChi'};
 const PC_REQ = ['Số phiếu','Ngày cân 1','Biển số 1'];   // khối lượng: một trong KL (kg), tấn hoặc Cân 1 và Cân 2 (kiểm ở từng dòng)

@@ -186,6 +186,8 @@ const expLo = (rec, exo) => { const ex = Object.assign({}, exo || rec.exp || {})
 /* xe chưa thuộc hợp đồng vận chuyển (vừa nạp, thêm trong bản nháp): gán như khi lưu (src/model.js: theo người ký; xe trong hợp đồng với đơn vị giữ nguyên) */
 function ganVC(hdvc, dx) {
   if (!hdvc) return {hdvc, dx};
+  const F0 = {dx, hdvc};   // xe có cột Đội xe khớp tên một đội xe của lô: vào đội xe đó (ưu tiên hơn đội xe đang chọn)
+  if ((dx || []).some(r => r && r.hdvcId === undefined && trim(r.doiXe))) dx = dx.map(r => { if (!r || r.hdvcId !== undefined || !trim(r.doiXe)) return r; const m = hdvc.find(h => hdTenKhop(F0, h, r.doiXe)); return m ? Object.assign({}, r, {hdvcId: m.id}) : r; });
   const t = curHd && hdvc.find(h => h.id === curHd);   // xe mới (chưa có đội xe) vào ĐỘI XE ĐANG CHỌN; chưa chọn đội: theo người ký (mỗi người ký một đội như trước)
   if (t && (dx || []).some(r => r && r.hdvcId === undefined)) dx = dx.map(r => r && r.hdvcId === undefined ? Object.assign({}, r, {hdvcId: t.id}) : r);
   const F = {doi: [{id: '_'}], nc: [], hdvc, dx};

@@ -97,6 +97,7 @@ function checkDX(rec) {
     const at = 'Dòng ' + r._row + ': ';
     const bad = m => { errs.push(at + m); state[r._row] = 'err'; };
     if (r.maRung && r.maRung !== rec.info.maRung) bad('Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
+    if (trim(r.doiXe) && rec.hdvc && !rec.hdvc.some(h => hdTenKhop({dx: rec.dx, hdvc: rec.hdvc}, h, r.doiXe))) bad('Đội xe “' + trim(r.doiXe) + '” không có trong lô: thêm đội xe ở tab Vận chuyển trước, hoặc để trống ô Đội xe');
     if (!r.chuXe) bad('thiếu Chủ xe');
     if (!r.bienSo) bad('thiếu Biển kiểm soát');
     else if (plates[r.bienSo]) bad('Biển kiểm soát trùng dòng ' + plates[r.bienSo]);
