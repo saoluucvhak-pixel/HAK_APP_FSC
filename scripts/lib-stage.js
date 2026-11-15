@@ -20,6 +20,7 @@ exports.setExp = async (w, k, v) => {
   if (back.ftab !== go.ftab) await w.click('[data-ftab=' + go.ftab + ']');
   if (go.xtab && (back.ftab !== 'xuat' || back.xtab !== go.xtab)) await w.click('[data-xtab=' + go.xtab + ']');
   await w.fill('[data-exp=' + k + ']', v); await w.dispatchEvent('[data-exp=' + k + ']', 'change');
+  await w.evaluate(() => window.__stSaveCurrent());   // một cách lưu: ô vào bản nháp của lô, người dùng bấm “Lưu dữ liệu vào lô”
   if (back.ftab && back.ftab !== go.ftab) { await w.click('[data-ftab=' + back.ftab + ']'); if (back.ftab === 'xuat' && back.xtab) await w.click('[data-xtab=' + back.xtab + ']'); }
   else if (back.ftab === 'xuat' && back.xtab && back.xtab !== go.xtab) await w.click('[data-xtab=' + back.xtab + ']');
 };

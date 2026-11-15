@@ -33,16 +33,18 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('bảng phiếu cân có cột Đội và khung gán đội; chưa gán: 4 phiếu', !!(await w.$('#pcGan')) && /chưa gán: 4 phiếu/.test(await w.innerText('#pcGan')));
   // gán hàng loạt theo bộ lọc
   await w.fill('#pgBien', '12345'); await w.selectOption('#pgDoi', 'doi1'); await w.click('[data-act=pcGanLoat]'); await w.waitForTimeout(400);
+  ok('gán đội vào BẢN NHÁP: SQLite chưa đổi đến khi bấm “Lưu dữ liệu vào lô”', (await db()).fa.pc.every(x => x.doiId === '') && !!(await w.$('#loDirtyBar')));
+  await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   F = await db();
   ok('lọc biển số 12345 → gán Đội 1: PA1, PA3', JSON.stringify(F.fa.pc.map(x => x.soPhieu + ':' + x.doiId)) === JSON.stringify(['PA1:doi1', 'PA2:', 'PA3:doi1', 'PA4:']), JSON.stringify(F.fa.pc.map(x => x.doiId)));
-  await w.fill('#pgBien', ''); await w.selectOption('#pgDoi', 'doi2'); await w.click('[data-act=pcGanLoat]'); await w.waitForTimeout(400);
+  await w.fill('#pgBien', ''); await w.selectOption('#pgDoi', 'doi2'); await w.click('[data-act=pcGanLoat]'); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   F = await db();
   ok('lọc “chỉ phiếu chưa gán” → gán Đội 2: PA2, PA4; phiếu đã gán giữ nguyên', JSON.stringify(F.fa.pc.map(x => x.doiId)) === JSON.stringify(['doi1', 'doi2', 'doi1', 'doi2']));
   let k = await w.evaluate(() => window.__doiKT());
   ok('khối lượng từng đội = tổng phiếu cân của đội: Đội 1 20,5 tấn, Đội 2 15,25 tấn', k.doi[0][3] === 20.5 && k.doi[1][3] === 15.25, JSON.stringify(k.doi));
   // sửa một phiếu ở cột Đội
   const ix = F.fa.pc.findIndex(x => x.soPhieu === 'PA4');
-  await w.selectOption('select[data-pcdoi="' + ix + '"]', 'doi1'); await w.waitForTimeout(400);
+  await w.selectOption('select[data-pcdoi="' + ix + '"]', 'doi1'); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   k = await w.evaluate(() => window.__doiKT());
   ok('chọn đội tại dòng: PA4 sang Đội 1 → Đội 1 26,5 tấn, Đội 2 9,25 tấn', (await db()).fa.pc[ix].doiId === 'doi1' && k.doi[0][3] === 26.5 && k.doi[1][3] === 9.25, JSON.stringify(k.doi));
   await w.click('[data-ftab=kt]'); await w.waitForTimeout(300);

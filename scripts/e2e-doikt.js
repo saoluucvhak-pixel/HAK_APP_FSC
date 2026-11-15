@@ -33,6 +33,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 
   // thêm đội 2
   await w.fill('#doiMoiTen', 'Đội Hai'); await w.click('[data-act=themDoi]'); await w.waitForTimeout(400);
+  ok('thêm đội vào BẢN NHÁP của lô: hiện thanh “Chưa lưu”, SQLite chưa đổi', !!(await w.$('#loDirtyBar')) && (await dbNow()).doi.length === 1);
+  await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   t = await w.innerText('#doiKT'); f = await dbNow();
   ok('thêm đội: 2 đội, đội đầu tự đặt tên “Đội 1”, đội mới đang chọn và chép hình thức của đội 1', /2 đội/.test(t) && f.doi.length === 2 && f.doi[0].ten === 'Đội 1' && f.doi[1].ten === 'Đội Hai' && f.doi[1].hinhThuc.moHinhKy === 'giaokhoan' && /Đội Hai[\s\S]*đang chọn/.test(t), t);
   // đội 2: trực tiếp, ngày công
@@ -56,7 +58,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const ix = f.nc.findIndex(x => x.ten === 'PHẠM BA');
   ok('lô nhiều đội: bảng nhân công chỉ hiện người của đội đang chọn (đội 2: NGUYỄN BỐN), PHẠM BA của đội 1 không hiện', !(await w.$('select[data-ncdoi="' + ix + '"]')) && /NGUYỄN BỐN/.test(await w.innerText('#main')));
   await w.click('[data-act=ncTatCa]'); await w.waitForTimeout(200);
-  await w.selectOption('select[data-ncdoi="' + ix + '"]', f.doi[1].id); await w.waitForTimeout(400); f = await dbNow();
+  await w.selectOption('select[data-ncdoi="' + ix + '"]', f.doi[1].id); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); f = await dbNow();
   ok('chọn đội ở cột Đội: PHẠM BA chuyển sang đội 2, cột Đội ghi theo đội thật', f.nc[ix].doiId === f.doi[1].id && f.nc[ix].doi === 'Đội Hai', JSON.stringify(f.nc[ix]));
   // sửa người vừa chuyển đội trong bản nháp: không bị đưa về đội cũ
   await w.click('[data-act=stEdit][data-kind=nc][data-i="' + ix + '"]'); await w.waitForSelector('#stForm');
@@ -76,7 +78,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // số văn bản: nhập số HĐ giao khoán khi đội 1 đang chọn thì ghi vào đội 1
   await w.click('[data-act=chonDoi][data-doi=doi1]'); await w.waitForTimeout(200);
   ok('số văn bản của đội nằm ở màn đội (tab Nhân công), tab Xuất không còn ô số HĐ giao khoán', !!(await w.$('#doiKT input[data-exp=soKT]')));
-  await w.fill('#doiKT input[data-exp=soKT]', '031'); await w.dispatchEvent('#doiKT input[data-exp=soKT]', 'change'); await w.waitForTimeout(300);
+  await w.fill('#doiKT input[data-exp=soKT]', '031'); await w.dispatchEvent('#doiKT input[data-exp=soKT]', 'change'); await w.waitForTimeout(300); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   f = await dbNow();
   ok('số hợp đồng giao khoán nhập ở màn đội ghi vào đội đang chọn (đội 1)', f.doi[0].exp.soKT === '031' && !('soKT' in f.exp), JSON.stringify({doi: f.doi.map(d => d.exp), exp: f.exp}));
   await w.click('[data-ftab=xuat]'); await w.waitForTimeout(300);

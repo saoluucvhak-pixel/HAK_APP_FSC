@@ -36,11 +36,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const dm = (await w.evaluate(() => window.hak.loadSync().db)).dmDonViVC || {};
   ok('lưu doanh nghiệp vào danh mục dùng chung (db.dmDonViVC)', Object.values(dm).length === 1 && Object.values(dm)[0].mst === '0401234567', JSON.stringify(dm));
   // đội xe mới, ký với doanh nghiệp
-  await w.fill('#hdMoiTen', 'Đội xe Hòa Phát'); await w.click('[data-act=themHd]'); await w.waitForTimeout(300);
+  await w.fill('#hdMoiTen', 'Đội xe Hòa Phát'); await w.click('[data-act=themHd]'); await w.waitForTimeout(300); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   t = await w.innerText('#hdvcKT'); f = await lotDb('fa');
   ok('thêm đội xe: 3 đội xe (3 hợp đồng), đội mới đang chọn', /3 đội xe/.test(t) && /Đội xe Hòa Phát[\s\S]*đang chọn/.test(t) && f.hdvc.some(h => h.ten === 'Đội xe Hòa Phát'), t);
   const ix = f.dx.findIndex(r => r.chuXe === 'TRẦN BÌNH'), hdDn = f.hdvc.find(h => h.ten === 'Đội xe Hòa Phát').id;
-  await w.selectOption('select[data-xehd="' + ix + '"]', hdDn); await w.waitForTimeout(400); f = await lotDb('fa');
+  await w.selectOption('select[data-xehd="' + ix + '"]', hdDn); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); f = await lotDb('fa');
   const cd = await w.evaluate(() => window.__checkDX());
   ok('xe của TRẦN BÌNH (đội xe ký với doanh nghiệp sau đó) — trước khi chọn người ký là doanh nghiệp: vẫn là người ký nên báo thiếu ngày cấp, SĐT', cd.errs.some(e => /SĐT người ký/.test(e)), JSON.stringify(cd.errs));
   ok('chọn đội xe ở cột “Đội xe”: xe của TRẦN BÌNH sang đội xe mới; đội cũ của Bình trống tự bỏ (còn 2)', f.dx[ix].hdvcId === hdDn && f.hdvc.length === 2, JSON.stringify(f.hdvc.map(h => h.id + ':' + h.key)));

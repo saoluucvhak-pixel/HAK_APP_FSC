@@ -103,7 +103,7 @@ const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml'
     nv(3, 'Tổ trưởng', 'TRẦN ĐỘI HAI', 'Tổ trưởng', '049085000021', {doi: 'Đội 2'}), nv(4, 'Công nhân', 'LÊ HAI', 'Công nhân khai thác', '049085000022', {doi: 'Đội 2'})];
   d = clone(BASE); Object.assign(lotOf(d), {nc: NC2, pc: [P(1, 20), P(2, 10)]}); Object.assign(lotOf(d).info, {khoiLuong: 30, soDoi: 2});
   await load(d, 'finfo');
-  ok('lô 2 đội: Thông tin rừng có ô khối lượng thực tế từng đội (trống = theo số người)', (await w.$$('[data-kldoi]')).length === 2 && /Khối lượng thực tế từng đội/.test(await w.innerText('#main')));
+  ok('lô 2 đội chưa nhập khối lượng từng đội: không còn ô nhập (khối lượng đội = phiếu cân của đội)', (await w.$$('[data-kldoi]')).length === 0);
   card = await draftCard(d);
   ok('chưa nhập khối lượng từng đội: không có điều kiện khối lượng đội (chia theo số người như cũ)', !/khối lượng thực tế từng đội/.test(card));
   lotOf(d).info.klDoi = {'049085000011': 20}; card = await draftCard(d);

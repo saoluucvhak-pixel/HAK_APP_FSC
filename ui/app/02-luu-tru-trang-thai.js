@@ -65,6 +65,11 @@ function persistLo(f) {
   f = f || curForest(); if (!f) return;
   if (!savedSnap) savedSnap = (saveCache && saveCache.snap) || HAKDelta.snapshot(dbGhi());
   loDirty.add(f.id); showSave('Lô ' + ((f.info || {}).maRung || '') + ' còn thay đổi chưa lưu — bấm “Lưu dữ liệu vào lô”');
+  if (typeof loBar === 'function') {   // hiện thanh “Chưa lưu” ngay, không vẽ lại cả trang (giữ ô đang nhập)
+    const el = document.getElementById('loDirtyBar'), h = loBar();
+    // thanh đã hiện thì giữ nguyên (đang bấm nút trên thanh thì không thay phần tử)
+    if (!el && h) { const tb = document.querySelector('#main .tabs'); if (tb) tb.insertAdjacentHTML('beforebegin', h); }
+  }
 }
 /* nội dung sẽ ghi: lô còn thay đổi chưa lưu giữ bản đã lưu (chưa có bản đã lưu — lô mới — thì ghi như hiện tại) */
 function dbGhi() {
