@@ -36,6 +36,7 @@ document.addEventListener('click', async e => {
   if (act === 'setBackup' || act === 'setBackupDefault') return settingsBackup(act === 'setBackupDefault');
   if (act === 'setOpenBackup') return HB.settings.openBackup();
   if (act === 'setOpenData') return HB.openDataFolder();
+  if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
   if (act === 'openDm') { view = 'dm'; return render(); }
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
@@ -150,8 +151,8 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persistLo(); render(); return; }
   if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persistLo(); render(); return; }
-  if (t.id === 'ncDm' && t.value) { const x = HAKModel.nguoiDanhMuc(db.rs).find(z => HAKModel.cccdSo(z.cccd) === t.value); if (x) { stRead(); ['danhXung', 'ten', 'ngaySinh', 'cccd', 'ngayCap', 'noiCap', 'diaChi'].forEach(k => { if (x[k] != null) stm.vals[k] = stStr(x[k]); }); stRender(); } return; }
-  if (t.id === 'xeDm' && t.value) { const x = xeDanhMuc().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); ST_FIELDS.dx.forEach(([k]) => { if (x[k] != null && k !== 'stt') stm.vals[k] = stStr(x[k]); }); stRender(); } return; }
+  if (t.id === 'ncDm' && t.value) { const x = dmNguonLd().find(z => HAKModel.cccdSo(z.cccd) === t.value); if (x) { stRead(); dmDienNguoi(x); stRender(); } return; }
+  if (t.id === 'xeDm' && t.value) { const x = dmNguonXe().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); dmDienXe(x); stRender(); } return; }
   if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persistLo(); render(); return; }
   if (t.name === 'bienSo' && t.form && t.form.id === 'stForm' && t.value === '__new') { stRead(); stOpen('dx', null, null, {kind: stm.kind, id: stm.id, vals: Object.assign({}, stm.vals, {bienSo: ''})}); return; }   // thêm xe ngay trong lượt sửa phiếu: giữ nguyên các ô đã nhập
   if (t.name === 'vcMode' && t.form && t.form.id === 'vcForm') {
