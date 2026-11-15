@@ -1,5 +1,5 @@
 'use strict';
-/* Phiếu cân → xe → đội xe: cột “Đội xe” (chỉ xem) ở bảng phiếu cân, lọc theo đội xe trong khung gán đội hàng loạt (Electron thật, SQLite thật).
+/* Phiếu cân → xe → đội xe: đội xe (chỉ xem, dưới biển số) ở bảng phiếu cân, lọc theo đội xe trong khung gán đội hàng loạt (Electron thật, SQLite thật).
  * Chạy: xvfb-run -a node scripts/e2e-doixe-phieu.js */
 const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os');
@@ -23,7 +23,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const open = async (id, ftab) => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + id + ']'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(300); };
   // 1. lô hai đội xe: bảng phiếu cân có cột Đội xe với người ký của đội xe
   await open('fa', 'dx'); const PCT = '#main table:has(th:text("Số phiếu cân"))'; const th = await w.$$eval(PCT + ' thead th', l => l.map(x => x.textContent.trim()));
-  ok('bảng phiếu cân có cột “Đội xe” (lô có hai đội xe)', th.includes('Đội xe'), th.join('|'));
+  ok('bảng phiếu cân hiện đội xe dưới biển số của từng phiếu (lô có hai đội xe), không thêm cột mới làm tràn bảng', /Đội xe: /.test(await w.innerText(PCT)) && !th.includes('Đội xe'), th.join('|'));
   const rows = await w.$$eval(PCT + ' tbody tr', trs => trs.map(tr => tr.innerText.replace(/\s+/g, ' ')));
   const r1 = rows.find(r => /PA1/.test(r)) || '', r2 = rows.find(r => /PA2/.test(r)) || '';
   ok('mỗi phiếu hiện đội xe của xe chạy phiếu đó: PA1 → LÊ VĂN MỘT, PA2 → TRẦN VĂN HAI', /LÊ VĂN MỘT/.test(r1) && /TRẦN VĂN HAI/.test(r2) && !/TRẦN VĂN HAI/.test(r1), r1 + ' || ' + r2);
@@ -37,7 +37,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lọc đội xe “LÊ VĂN MỘT” → gán Đội 1: chỉ PA1, PA3 (xe 92C-12345); PA2, PA4 chưa gán', JSON.stringify(F.fa.pc.map(x => x.soPhieu + ':' + x.doiId)) === JSON.stringify(['PA1:doi1', 'PA2:', 'PA3:doi1', 'PA4:']), JSON.stringify(F.fa.pc.map(x => x.soPhieu + ':' + x.doiId)));
   // 3. lô một đội xe: không hiện cột Đội xe
   await open('fb', 'dx'); const thB = await w.$$eval(PCT + ' thead th', l => l.map(x => x.textContent.trim()));
-  ok('lô một đội xe: không có cột “Đội xe” (giữ nguyên bảng cũ)', !thB.includes('Đội xe'), thB.join('|'));
+  ok('lô một đội xe: không hiện đội xe ở bảng phiếu cân (giữ nguyên bảng cũ)', !/Đội xe: /.test(await w.innerText(PCT)) && !thB.includes('Đội xe'), thB.join('|'));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
