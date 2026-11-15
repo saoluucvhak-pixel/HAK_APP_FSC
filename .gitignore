@@ -2,5 +2,6 @@ node_modules
 dist/
 *.sqlite*
 !tests/fixtures/*.sqlite
-reports/
+reports/*
+!reports/perf/
 1
