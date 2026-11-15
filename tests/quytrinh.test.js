@@ -50,3 +50,17 @@ test('việc nên làm tiếp nêu đúng bước in nền, chờ dữ liệu, i
   assert.ok(/giấy trắng/.test(N({coPhieuCan: true, d2: {nenReady: 6, nenPrinted: 0, deReady: 0, cho: 0, doibocuc: 0, trang: 6}}).text));
   assert.ok(/thiếu dữ liệu để in đè/.test(N({coPhieuCan: true, d2: {nenReady: 6, nenPrinted: 6, deReady: 0, cho: 6, doibocuc: 0, trang: 0}}).text));
 });
+
+test('đã ký và Sổ in: ghi thêm từng lần, đã ký chỉ khi đã in và còn khớp, dữ liệu đổi thì hết hiệu lực, in lại ghi lý do', () => {
+  const Q = require('../src/quytrinh'), st = Q.emptyState(), items = sig => [{code: '01', ready: 'du', sig}, {code: '20', ready: 'du', sig: 'b'}];
+  assert.equal(Q.ky(st, '01', 'a', 't0'), null, 'chưa in thì chưa ký');
+  Q.mark(st, '01', 'a', 't1'); Q.ky(st, '01', 'a', 't2');
+  let e = Q.evaluate(items('a'), st); assert.deepEqual([e[0].printed, e[0].daKy, e[0].kyAt, e[1].daKy], ['da', true, 't2', false]);
+  assert.equal(Q.summary(e).dot1.daKy, 1);
+  e = Q.evaluate(items('a2'), st); assert.deepEqual([e[0].printed, e[0].daKy, e[0].kyDoi], ['doi', false, true], 'dữ liệu đổi: chữ ký hết hiệu lực');
+  assert.equal(Q.ky(st, '01', 'a2', 't3'), null, 'đang lệch chữ ký nội dung: chưa in lại thì không ký');
+  Q.mark(st, '01', 'a2', 't4'); assert.equal(st.items['01'].ky, undefined, 'in lại thì phải ký lại');
+  Q.ky(st, '01', 'a2', 't5'); assert.ok(Q.huyKy(st, '01', 't6')); Q.unmark(st, '01', 't7');
+  assert.deepEqual(st.soIn.map(x => x.hanh), ['in', 'ky', 'in', 'ky', 'huyky', 'huyin']);
+  assert.deepEqual(st.soIn.map(x => x.lyDo).slice(0, 3), ['in lần đầu', 'đã ký', 'in lại: dữ liệu đã đổi']);
+});

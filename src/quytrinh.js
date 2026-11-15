@@ -37,15 +37,23 @@
   const emptyState = () => ({v: 1, items: {}});
   const peek = f => (f && f.inAn && typeof f.inAn.items === 'object' && f.inAn.items ? f.inAn : emptyState());
   function stateOf(f) { if (!f.inAn || typeof f.inAn.items !== 'object' || !f.inAn.items) f.inAn = emptyState(); return f.inAn; }
-  const mark = (st, code, sig, now) => { st.items[code] = {at: now, sig}; return st.items[code]; };
-  const unmark = (st, code) => { const had = !!st.items[code]; delete st.items[code]; return had; };
+  /* SỔ IN (bản 2.2, mục 3.5): mỗi lần xác nhận đã in / đã ký / hủy ghi THÊM một dòng (không ghi đè): thời điểm, mẫu, hành động, chữ ký nội dung, lý do. Giữ 500 dòng gần nhất. */
+  const ghiSo = (st, e) => { st.soIn = Array.isArray(st.soIn) ? st.soIn : []; st.soIn.push(e); if (st.soIn.length > 500) st.soIn.shift(); };
+  const mark = (st, code, sig, now, lyDo) => {
+    const cu = st.items[code], lai = !!cu;   // in lại khi mẫu đã được xác nhận trước đó (dữ liệu đổi, in hỏng, bổ sung)
+    st.items[code] = {at: now, sig}; ghiSo(st, {at: now, ma: code, hanh: 'in', sig, lyDo: lyDo || (lai ? (cu.sig !== sig ? 'in lại: dữ liệu đã đổi' : 'in lại') : 'in lần đầu')}); return st.items[code];
+  };
+  const unmark = (st, code, now) => { const had = !!st.items[code]; if (had) ghiSo(st, {at: now || new Date().toISOString(), ma: code, hanh: 'huyin', sig: st.items[code].sig, lyDo: 'bỏ xác nhận đã in'}); delete st.items[code]; return had; };
+  /* ĐÃ KÝ: chỉ khi mẫu đã in và còn khớp dữ liệu. Dữ liệu đổi thì chữ ký không còn hiệu lực (phải in và ký lại). */
+  const ky = (st, code, sig, now) => { const r = st.items[code]; if (!r || r.sig !== sig) return null; r.ky = now; ghiSo(st, {at: now, ma: code, hanh: 'ky', sig, lyDo: 'đã ký'}); return r; };
+  const huyKy = (st, code, now) => { const r = st.items[code]; if (!r || !r.ky) return false; delete r.ky; ghiSo(st, {at: now || new Date().toISOString(), ma: code, hanh: 'huyky', sig: r.sig, lyDo: 'bỏ đánh dấu đã ký'}); return true; };
 
   /* items: [{code, ready: 'du'|'nhap'|'thieu', sig}] → thêm printed: 'chua' | 'da' | 'doi', at */
   function evaluate(items, st) {
     return items.map(it => {
       const r = st && st.items ? st.items[it.code] : null;
       const printed = !r ? 'chua' : (r.sig === it.sig ? 'da' : 'doi');
-      return Object.assign({}, it, {printed, at: r ? r.at : '', form: byCode(it.code)});
+      return Object.assign({}, it, {printed, at: r ? r.at : '', daKy: !!(r && r.ky && r.sig === it.sig), kyAt: r && r.ky ? r.ky : '', kyDoi: !!(r && r.ky && r.sig !== it.sig), form: byCode(it.code)});
     });
   }
   /* tổng hợp từng đợt: số mẫu, đủ dữ liệu, đã in và còn khớp, đã in nhưng dữ liệu đổi, bản nháp */
@@ -54,8 +62,8 @@
     [1, 2].forEach(d => {
       const L = list.filter(x => x.form && x.form.dot === d);
       out['dot' + d] = {total: L.length, du: L.filter(x => x.ready === 'du').length, nhap: L.filter(x => x.ready === 'nhap').length, thieu: L.filter(x => x.ready === 'thieu').length,
-        daIn: L.filter(x => x.printed === 'da').length, doi: L.filter(x => x.printed === 'doi').length, chuaIn: L.filter(x => x.printed === 'chua').length,
-        xong: L.length > 0 && L.every(x => x.printed === 'da' && x.ready === 'du')};
+        daIn: L.filter(x => x.printed === 'da').length, daKy: L.filter(x => x.printed === 'da' && x.daKy).length, kyDoi: L.filter(x => x.kyDoi).length, doi: L.filter(x => x.printed === 'doi').length, chuaIn: L.filter(x => x.printed === 'chua').length,
+        xong: L.length > 0 && L.every(x => x.printed === 'da' && x.ready === 'du'), kyXong: L.length > 0 && L.every(x => x.printed === 'da' && x.daKy)};
     });
     return out;
   }
@@ -97,6 +105,6 @@
     if (b.chuaIn || b.nhap || b.thieu) return {step: 'dot2', text: 'In đợt 2: ' + (d2.trang ? d2.trang + ' mục đủ dữ liệu, chưa in nền: in giấy trắng. ' : '') + 'Sau khi in xong (giấy trắng hoặc in đè), đánh dấu đã in.'};
     return {step: 'dot2', text: 'Đợt 2: đánh dấu các mẫu đã in xong.'};
   }
-  const api = {FORMS, byCode, applicable, emptyState, peek, stateOf, mark, unmark, evaluate, summary, route, d2Text, next};
+  const api = {FORMS, byCode, applicable, emptyState, peek, stateOf, mark, unmark, ky, huyKy, ghiSo, evaluate, summary, route, d2Text, next};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKQuyTrinh = api;
 })(typeof self !== 'undefined' ? self : this);
