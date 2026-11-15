@@ -1,7 +1,7 @@
 /* ========== Màn Danh mục (bản 2.1; docs/THIET_KE_QUY_TRINH_2_1.md): chức vụ / vị trí, lao động, xe vận chuyển, định mức BHLĐ, đối tác ==========
  * Thông tin gốc nhập MỘT LẦN ở đây. Lao động và xe lưu NHIỀU DÒNG theo NGÀY CẬP NHẬT (db.dmLaoDong, db.dmXeVC, src/danhmuc.js); luôn dùng dòng mới nhất. */
 let dmTab = 'laodong', dmQ = '', dmLs = null, dmSuaLd = null, dmSuaXe = null, dmSuaDt = null;
-const DM_TABS = [['chucvu', 'Chức vụ / vị trí'], ['laodong', 'Lao động'], ['xe', 'Xe vận chuyển'], ['bhld', 'Định mức BHLĐ'], ['doitac', 'Đối tác']];
+const DM_TABS = [['chucvu', 'Chức vụ / vị trí'], ['laodong', 'Lao động'], ['nguoi', 'Người (chung)'], ['xe', 'Xe vận chuyển'], ['bhld', 'Định mức BHLĐ'], ['doitac', 'Đối tác']];
 const H_DMLD = {'Ngày cập nhật': 'ngayCapNhat', 'Số CCCD': 'cccd', 'Họ và tên': 'ten', 'Giới tính': 'gioiTinh', 'Ngày sinh': 'ngaySinh', 'Nơi thường trú': 'diaChi', 'Ngày cấp': 'ngayCap', 'Nơi cấp': 'noiCap', 'Số điện thoại': 'sdt', 'Chức vụ': 'chucVu', 'Vị trí': 'viTri'};
 const H_DMXE = {'Ngày cập nhật': 'ngayCapNhat', 'Biển số xe': 'bienSo', 'Chủ xe': 'chuXe', 'Tên tài xế': 'taiXe', 'CCCD tài xế': 'cccdTx', 'Thường trú': 'diaChiTx', 'Ngày cấp': 'ngayCapTx', 'Nơi cấp': 'noiCapTx', 'Số giấy phép lái xe': 'gplx', 'Ngày hết hạn giấy phép': 'hanGplx', 'Ngày hết hạn đăng kiểm': 'hanDangKiem', 'Ngày hết hạn bảo hiểm': 'hanBaoHiem'};
 const dmNormLd = o => ({_row: o._row, ngayCapNhat: normDate(o.ngayCapNhat), cccd: normCccd(o.cccd), ten: trim(o.ten), gioiTinh: trim(o.gioiTinh), ngaySinh: normDate(o.ngaySinh), diaChi: trim(o.diaChi), ngayCap: normDate(o.ngayCap), noiCap: trim(o.noiCap), sdt: trim(o.sdt), chucVu: trim(o.chucVu), viTri: trim(o.viTri)});
@@ -80,7 +80,7 @@ function dmTabDoiTac() {
     (tt.length ? '<ul style="margin:0">' + tt.map(r => '<li>' + esc(r.ten) + ' · CCCD ' + esc(r.cccd) + '</li>').join('') + '</ul>' : '<p class="mut">Chưa có lao động chức vụ Tổ trưởng.</p>');
 }
 function panelDanhMuc() {
-  const body = {chucvu: dmTabChucVu, laodong: dmTabLaoDong, xe: dmTabXe, bhld: dmTabBhld, doitac: dmTabDoiTac}[dmTab]();
+  const body = {chucvu: dmTabChucVu, laodong: dmTabLaoDong, nguoi: dmTabNguoi, xe: dmTabXe, bhld: dmTabBhld, doitac: dmTabDoiTac}[dmTab]();
   return '<h2>Danh mục</h2><div class="tabs" id="dmTabs">' + DM_TABS.map(([k, l]) => '<button class="' + (dmTab === k ? 'on' : '') + '" data-dmtab="' + k + '">' + l + '</button>').join('') + '</div><div class="card" id="dmBody">' + body + '</div>';
 }
 /* ----- thao tác ----- */

@@ -53,3 +53,13 @@ Bản chụp: khi thêm người / xe vào hợp đồng của một lô, phần
 ## 6. Tình trạng (bản 2.1.0)
 A, B, C xong (mô hình + SQLite v7, màn Danh mục, chọn / chụp / cập nhật từ danh mục, người và xe mới tự vào danh mục). D: tài liệu, CHANGELOG, version 2.1.0. Chưa làm: màn khai khoán / ngày công theo vị trí cho từng hợp đồng, dựng sẵn đối tác cá nhân khi nâng cấp, bước CI nâng cấp từ bản dựng 2.0.0.
 
+
+## 7. Quyết định bản 2.2 (đã xác nhận 15/11/2026, trả lời mục 10 của file thiết kế 2.2)
+- **Chuỗi ngày**: giấy ủy quyền cùng ngày hoặc **trước** ngày hợp đồng giao khoán (sau thì báo lỗi). Ngày văn bản **nhập tay**; để trống thì **mặc định theo ngày bắt đầu khai thác** của lô.
+- **Đợt 2 in**: đội khai thác (BM-08, BM-14) trước, đội xe (BM-09, BM-10) sau.
+- **Người chung**: một CCCD = một người; lao động, tài xế, đối tác cá nhân là vai trò. Làm dạng **danh sách dựng từ ba danh mục** (không thêm bảng, không chuyển dữ liệu): nhận ra người đã có khi gõ CCCD, điền sẵn chỗ trống; thao tác **Gộp hai người**; bản chụp trong lô không đổi.
+- **Định mức gỗ keo**: **tự nhập ngày hiệu lực**. **Thời gian khai thác**: mặc định lấy **ngày phiếu cân nhỏ nhất** của lô, hoặc điền tay (đã có).
+- **Mở khóa lô đã chốt**: chỉ cần nhập lý do, ghi nhật ký (không mật khẩu).
+- **Một người thuộc hai lô trùng thời gian**: **cảnh báo**, không chặn.
+- **Ngưỡng lệch sản lượng dự kiến so với khối lượng thực hiện**: **10%**.
+- **Bản scan đã ký**: **không cần** đính kèm (giả định từ câu trả lời "kg cần bản scan"; xác nhận lại nếu ý khác). Số năm lưu hồ sơ chưa được trả lời: tạm 5 năm, sửa được trong Cài đặt.

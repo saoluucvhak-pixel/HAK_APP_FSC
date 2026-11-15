@@ -78,3 +78,21 @@ test('tạo lô từ lô cũ: chép đội, nhân công, xe, đơn giá, cước
   assert.deepStrictEqual([f.dx[0].taiXe, f.dx[0].hanGplx, f.dx[0].hdvcId, f.dx[0].maRung], ['Y', '01/01/2030', 'h1', 'R-B']);
   assert.deepStrictEqual([r.nguoi, r.xe], [1, 1]);
 });
+
+test('người chung: một CCCD = một người dù là lao động, tài xế hay đối tác; dòng mới nhất thắng, chỗ trống bù từ nguồn khác; gộp hai người giữ lịch sử và không sửa dữ liệu truyền vào', () => {
+  const M = require('../src/danhmuc');
+  const db = {
+    dmLaoDong: [{ngayCapNhat: '01/09/2026', cccd: '049085007001', ten: 'AN', diaChi: 'Quế Sơn', ngayCap: '01/01/2021', noiCap: 'CA QN', chucVu: 'Công nhân', viTri: 'Công nhân cưa'}, {ngayCapNhat: '01/11/2026', cccd: '049085007001', ten: 'AN', diaChi: 'Đại Lộc', sdt: '0905'}],
+    dmXeVC: [{ngayCapNhat: '01/10/2026', bienSo: '92C-1', taiXe: 'AN', cccdTx: '049085007001', diaChiTx: 'Thăng Bình', ngayCapTx: '02/02/2020', noiCapTx: 'CA'}, {ngayCapNhat: '01/10/2026', bienSo: '92C-2', taiXe: 'SAI', cccdTx: '049085007099', diaChiTx: 'X'}],
+    dmDoiTac: [{id: 'ct:049085007001', loai: 'nguoiKyVC', ten: 'AN', cccd: '049085007001', ngaySinh: '05/05/1985'}, {id: 'dn:1', loai: 'doanhnghiep', ten: 'CTY', mst: '0400'}]};
+  const n = M.timNguoi(db, '049085007001');
+  assert.deepStrictEqual([n.vaiTro.join(','), n.diaChi, n.sdt, n.ngaySinh, n.noiCap], ['Lao động,Tài xế,Đối tác', 'Đại Lộc', '0905', '05/05/1985', 'CA'], 'dòng mới nhất có giá trị thắng (nơi cấp: dòng tài xế 01/10 mới hơn dòng lao động 01/09); chỗ trống bù từ nguồn khác');
+  assert.strictEqual(M.nguoiChung(db).length, 2, 'doanh nghiệp không phải người');
+  const truoc = JSON.stringify(db);
+  assert.strictEqual(M.gopNguoi(db, '123', '049085007001').ok, false); assert.strictEqual(M.gopNguoi(db, '049085007001', '049085007001').ok, false); assert.strictEqual(M.gopNguoi(db, '049085000000', '049085007001').ok, false);
+  const g = M.gopNguoi(db, '049085007099', '049085007001');
+  assert.ok(g.ok); assert.strictEqual(JSON.stringify(db), truoc, 'không sửa dữ liệu truyền vào');
+  assert.deepStrictEqual([g.so.xe, g.db.dmXeVC[1].cccdTx], [1, '049085007001']);
+  assert.strictEqual(M.nguoiChung(Object.assign({}, db, g.db)).length, 1, 'sau gộp chỉ còn một người');
+  assert.strictEqual(g.db.dmLaoDong.length, 2, 'lịch sử lao động giữ nguyên');
+});

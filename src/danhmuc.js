@@ -147,6 +147,38 @@
     });
     return {f, nguoi, xe};
   }
-  const api = {CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu};
+  /* NGƯỜI CHUNG (bản 2.2, mục 6.3): một người = một CCCD, dù là lao động, tài xế hay đối tác cá nhân. Dựng từ ba danh mục (không thêm bảng): thông tin lấy từ dòng MỚI NHẤT
+   * (danh mục lao động và xe có ngày cập nhật; đối tác không có ngày thì coi là cũ nhất), chỗ trống bù từ các nguồn còn lại. vaiTro: các danh mục người đó có mặt. */
+  function nguoiChung(db) {
+    const by = new Map(), put = (cccd, vai, ngay, o) => {
+      const k = cccdSo(cccd); if (k.length !== 12) return; const e = by.get(k) || {cccd: k, vaiTro: [], ds: []};
+      if (!e.vaiTro.includes(vai)) e.vaiTro.push(vai); e.ds.push(Object.assign({k: ngayKey(ngay)}, o)); by.set(k, e);
+    };
+    (db.dmLaoDong || []).forEach(r => put(r.cccd, 'Lao động', r.ngayCapNhat, {ten: trim(r.ten), gioiTinh: trim(r.gioiTinh), ngaySinh: trim(r.ngaySinh), diaChi: trim(r.diaChi), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), sdt: trim(r.sdt)}));
+    (db.dmXeVC || []).forEach(r => put(r.cccdTx, 'Tài xế', r.ngayCapNhat, {ten: trim(r.taiXe), diaChi: trim(r.diaChiTx), ngayCap: trim(r.ngayCapTx), noiCap: trim(r.noiCapTx)}));
+    (db.dmDoiTac || []).filter(r => r && r.loai !== 'doanhnghiep').forEach(r => put(r.cccd, 'Đối tác', '', {ten: trim(r.ten), ngaySinh: trim(r.ngaySinh), diaChi: trim(r.diaChi), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), sdt: trim(r.sdt)}));
+    return [...by.values()].map(e => {
+      const ds = e.ds.slice().reverse().sort((a, b) => b.k - a.k), o = {cccd: e.cccd, vaiTro: e.vaiTro, ngayCapNhat: ''};
+      ['ten', 'gioiTinh', 'ngaySinh', 'diaChi', 'ngayCap', 'noiCap', 'sdt'].forEach(f => { const x = ds.find(d => trim(d[f])); o[f] = x ? x[f] : ''; });
+      return o;
+    }).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
+  }
+  const timNguoi = (db, cccd) => nguoiChung(db).find(x => x.cccd === cccdSo(cccd)) || null;
+  /* GỘP HAI NGƯỜI: mọi dòng của CCCD `tu` (lao động, tài xế của xe, đối tác) chuyển sang CCCD `den`, giữ nguyên lịch sử. Không động tới bản chụp trong lô (hồ sơ đã in không đổi).
+   * Trả {ok, error} hoặc {ok, db: {dmLaoDong, dmXeVC, dmDoiTac}, so: {laoDong, xe, doiTac}} — không sửa `db` truyền vào. */
+  function gopNguoi(db, tu, den) {
+    const a = cccdSo(tu), b = cccdSo(den);
+    if (a.length !== 12 || b.length !== 12) return {ok: false, error: 'Cả hai số CCCD phải đủ 12 chữ số'};
+    if (a === b) return {ok: false, error: 'Hai số CCCD giống nhau'};
+    if (!timNguoi(db, a)) return {ok: false, error: 'Không có người mang CCCD ' + a + ' trong danh mục'};
+    const so = {laoDong: 0, xe: 0, doiTac: 0}, cp = x => JSON.parse(JSON.stringify(x || []));
+    let ld = cp(db.dmLaoDong).map(r => { if (cccdSo(r.cccd) === a) { so.laoDong++; return Object.assign(r, {cccd: b}); } return r; });
+    const seen = new Set(); ld = ld.filter(r => { const k = cccdSo(r.cccd) + '|' + trim(r.ngayCapNhat); if (seen.has(k) && cccdSo(r.cccd) === b) return false; seen.add(k); return true; });   // cùng người cùng ngày sau khi gộp: giữ dòng đầu
+    const xe = cp(db.dmXeVC).map(r => { if (cccdSo(r.cccdTx) === a) { so.xe++; return Object.assign(r, {cccdTx: b}); } return r; });
+    let dt = cp(db.dmDoiTac).map(r => { if (r.loai !== 'doanhnghiep' && cccdSo(r.cccd) === a) { so.doiTac++; return Object.assign(r, {cccd: b}); } return r; });
+    const sc = new Set(); dt = dt.filter(r => { if (r.loai === 'doanhnghiep') return true; const k = cccdSo(r.cccd); if (k === b && sc.has(k)) return false; if (k === b) sc.add(k); return true; });
+    return {ok: true, db: {dmLaoDong: ld, dmXeVC: xe, dmDoiTac: dt}, so};
+  }
+  const api = {CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu, nguoiChung, timNguoi, gopNguoi};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDanhMuc = api;
 })(typeof self !== 'undefined' ? self : this);
