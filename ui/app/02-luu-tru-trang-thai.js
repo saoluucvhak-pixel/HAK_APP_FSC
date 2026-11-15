@@ -223,7 +223,7 @@ function ganPC(doi, pc) {
   return HAKModel.ensureForest({doi, nc: [], pc, dx: [], hdvc: []}).pc;
 }
 /* khối lượng thực tế = tổng phiếu cân (tấn, làm tròn từng phiếu theo kg như các báo cáo) */
-const klPhieu = pc => Math.round((pc || []).reduce((a, p) => a + (typeof p.kl === 'number' && p.kl > 0 ? Math.round(p.kl * 1000) : 0), 0)) / 1000;
+const klPhieu = pc => HAKDinhMuc.tongPhieuTan(pc);   // một định nghĩa với kiểm tra chéo lô (src/dinhmuc.js)
 function jobView(o, f) {
   if (!Array.isArray(f.doi) || !f.doi.length) Object.assign(f, HAKModel.ensureForest(f));   // lô mới tạo (chưa lưu lần nào): có đội ngay, như SQLite sẽ lưu
   const d0 = (f.doi || [])[0], exp = d0 && Object.keys(d0.exp || {}).length ? Object.assign({}, f.exp, d0.exp) : f.exp;
@@ -233,10 +233,7 @@ function jobView(o, f) {
 }
 const curRec = () => { const o = curOwner(), f = curForest(); return o && f ? jobView(o, f) : null; };
 /* Định mức (tấn/ha) của rừng: giá trị rừng tự điền; chưa điền thì lấy định mức gỗ keo mặc định có hiệu lực theo ngày bắt đầu khai thác (Định mức BHLĐ → gỗ keo) */
-const dinhMucEff = i => {
-  if (typeof i.dinhMucTanHa === 'number' && i.dinhMucTanHa > 0) return {v: i.dinhMucTanHa, src: 'rừng'};
-  const k = HAKDinhMuc.keoPick(db, i.tuNgay || ''); return k.found ? {v: k.item.tanHa, src: 'mặc định', tu: k.item.tuNgay} : null;
-};
+const dinhMucEff = i => HAKDinhMuc.dinhMucLo(db, i);   // một định nghĩa với kiểm tra chéo lô (src/dinhmuc.js)
 /* Định mức thời gian khai thác (ngày/ha) của rừng: số rừng tự điền, hoặc mặc định theo ngày bắt đầu (Định mức → Định mức thời gian khai thác) */
 const nDoiNc = nc => { const ids = new Set((nc || []).map(r => r && r.doiId).filter(Boolean)); return ids.size ? ids.size : Math.max(1, HAKDoi.build(nc || [], isTT).doi.length); };   // số đội = số đội có người (bảng Nhân công khai thác); hồ sơ chưa có đội: số Tổ trưởng
 const nDoiOf = (i, nc) => (nc || []).some(r => r && r.doiId) ? nDoiNc(nc) : isDirect(i) ? 1 : nDoiNc(nc);   // không còn ô “Số đội” nhập tay: một nguồn là danh sách đội   // số đội khai ở Thông tin rừng; chưa khai thì theo nhân công
@@ -254,7 +251,7 @@ function tgLechOf(i, pcs, nd) {
 }
 const tgLechText = (i, L) => 'Thời gian khai thác thực tế ' + L.thucTe + ' ngày (' + i.tuNgay + ' → ' + L.den + ' theo ' + L.nguon + ', không tính Chủ nhật) ' + (L.lech > 0 ? 'DÀI hơn' : 'NGẮN hơn') + ' dự kiến ' + L.duKien + ' ngày: ' + (L.lech > 0 ? '+' : '') + L.lech + ' ngày (' + (L.tyLe > 0 ? '+' : '') + String(L.tyLe).replace('.', ',') + '%). Ngưỡng cảnh báo: lệch quá ' + L.nguong + ' ngày (20% thời gian dự kiến, tối thiểu 3 ngày). Kiểm tra diện tích, định mức ngày/ha hoặc ngày kết thúc.';
 const forestDays = (i, nd) => { const d = ngayHaEff(i); return d ? HAKDinhMuc.soNgay(haDoi(i, nd), d.v) : null; };
-const forestYield = i => { const d = dinhMucEff(i); return (typeof i.dienTich === 'number' && d) ? i.dienTich * d.v : null; };
+const forestYield = i => HAKDinhMuc.sanLuongDuKien(db, i);
 const toDec = v => { const s = trim(v).replace(',', '.'); if (!s) return null; const n = Number(s); return isFinite(n) ? n : 'x'; };
 const GIAY_LOAI = ['Giấy chứng nhận QSDĐ', 'Giấy xác nhận', 'Khác'];
 

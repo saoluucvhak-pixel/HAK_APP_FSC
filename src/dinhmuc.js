@@ -89,6 +89,17 @@
     let it = null; list.forEach(x => { if (x.key <= rk) it = x; });
     return {item: it, found: !!it, noDate: false, earliest: list[0]};
   }
+  /* MỘT định nghĩa dùng chung (giao diện, kiểm tra chéo lô, kiểm thử Node):
+   *  - dinhMucLo: định mức tấn/ha của lô = số rừng tự điền, chưa điền thì định mức gỗ keo mặc định hiệu lực tại ngày bắt đầu khai thác;
+   *  - sanLuongDuKien: diện tích × định mức đó (null khi thiếu);
+   *  - tongPhieuTan: tổng khối lượng phiếu cân (tấn), làm tròn TỪNG phiếu theo kg như mọi báo cáo. */
+  function dinhMucLo(db, info) {
+    const i = info || {};
+    if (typeof i.dinhMucTanHa === 'number' && i.dinhMucTanHa > 0) return {v: i.dinhMucTanHa, src: 'rừng'};
+    const k = keoPick(db || {}, i.tuNgay || ''); return k.found ? {v: k.item.tanHa, src: 'mặc định', tu: k.item.tuNgay} : null;
+  }
+  const sanLuongDuKien = (db, info) => { const d = dinhMucLo(db, info), i = info || {}; return (typeof i.dienTich === 'number' && d) ? i.dienTich * d.v : null; };
+  const tongPhieuTan = pc => Math.round((pc || []).reduce((a, p) => a + (p && typeof p.kl === 'number' && p.kl > 0 ? Math.round(p.kl * 1000) : 0), 0)) / 1000;
   function keoCheck(tuNgay, tanHa) {
     const p = D.parse(trim(tuNgay)); if (!p) return {error: 'Ngày hiệu lực phải đúng dd/mm/yyyy và có thật trên lịch'};
     const n = typeof tanHa === 'number' ? tanHa : Number(String(tanHa).replace(',', '.'));
@@ -171,6 +182,6 @@
     const lech = tt - duKien, nguong = Math.max(NGUONG_NGAY, Math.ceil(duKien * NGUONG_TYLE));
     return {thucTe: tt, duKien, lech, tyLe: Math.round(lech / duKien * 1000) / 10, nguong, canhBao: Math.abs(lech) > nguong};
   }
-  const api = {demNgay, lechThoiGian, NGUONG_NGAY, NGUONG_TYLE, keoItems, keoPick, keoAdd, keoSetAll, tgItems, tgPick, tgAdd, tgSetAll, soNgay, ngayKetThuc, nangSuat, BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
+  const api = {dinhMucLo, sanLuongDuKien, tongPhieuTan, demNgay, lechThoiGian, NGUONG_NGAY, NGUONG_TYLE, keoItems, keoPick, keoAdd, keoSetAll, tgItems, tgPick, tgAdd, tgSetAll, soNgay, ngayKetThuc, nangSuat, BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDinhMuc = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -11,6 +11,7 @@
   const plate = v => s(v).toUpperCase().replace(/[\s.\-]/g, '');
   /* ngày lịch dùng CHUNG (src/dates.js): “1/11/2026” và “01/11/2026” là cùng một ngày; ngày thiếu hoặc không có thật cho null/0 và KHÔNG làm căn cứ kết luận hai phiếu là cùng chuyến */
   const Dt = () => (typeof require !== 'undefined' ? require('./dates') : root.HAKDates);
+  const DM = () => (typeof require !== 'undefined' ? require('./dinhmuc') : root.HAKDinhMuc);   // sản lượng dự kiến, tổng phiếu: cùng định nghĩa với giao diện
   const dmy = v => { const p = Dt().parse(s(v)); return p ? new Date(p.y, p.m - 1, p.d) : null; };
   const gio = v => { const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s(v)); return m ? (+m[1]) * 3600 + (+m[2]) * 60 + (+(m[3] || 0)) : null; };
   const moc = (ngay, g) => { const d = dmy(ngay), t = gio(g); return d && t != null ? d.getTime() + t * 1000 : null; };
@@ -48,7 +49,7 @@
       others.forEach(l => { const k = kt(l); if (!k || !(mk[0] <= k[1] && k[0] <= mk[1])) return; (l.f.nc || []).forEach(r => { const c = digits(r.cccd); if (mine.has(c) && !seen.has(c + '|' + l.ma)) { seen.add(c + '|' + l.ma); add('doi', 'Chéo lô: người ở hai lô', s(mine.get(c).ten) + ' (CCCD ' + c + ') cũng là nhân công của lô ' + l.ma + ' có thời gian khai thác giao với lô này. Kiểm tra có đúng một người làm ở hai lô cùng lúc không.', s(mine.get(c).ten), {ftab: 'nc'}); } }); });
     }
     // 4. lệch sản lượng dự kiến
-    const info = f.info || {}, dk = typeof info.dienTich === 'number' && typeof info.dinhMucTanHa === 'number' ? info.dienTich * info.dinhMucTanHa : 0, tt = (f.pc || []).reduce((n, p) => n + (typeof p.kl === 'number' ? p.kl : 0), 0);
+    const info = f.info || {}, dk = DM().sanLuongDuKien(db, info) || 0, tt = DM().tongPhieuTan(f.pc);   // lô dùng định mức gỗ keo mặc định cũng được kiểm; tổng làm tròn từng phiếu theo kg
     const ng = (opt && opt.nguong) || (db && db.nguongLechSanLuong) || NGUONG_MAC_DINH;
     if (dk > 0 && tt > 0) { const lech = Math.abs(tt - dk) / dk * 100; if (lech > ng) add('doi', 'Chéo lô: lệch sản lượng dự kiến', 'Tổng phiếu cân ' + String(Math.round(tt * 1000) / 1000).replace('.', ',') + ' tấn lệch ' + String(Math.round(lech * 10) / 10).replace('.', ',') + '% so với sản lượng dự kiến ' + String(Math.round(dk * 1000) / 1000).replace('.', ',') + ' tấn (ngưỡng ' + ng + '%). Đối chiếu diện tích, định mức hoặc phiếu cân.', '', {ftab: 'finfo'}); }
     return items;
