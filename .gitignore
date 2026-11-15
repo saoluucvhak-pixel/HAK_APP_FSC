@@ -3,3 +3,4 @@ dist/
 *.sqlite*
 !tests/fixtures/*.sqlite
 reports/
+1
