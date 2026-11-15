@@ -444,3 +444,10 @@ Một lô có thể giao khoán cho **nhiều đội**, mỗi tổ trưởng là
 - **Ô “Đơn giá giao khoán Tổ trưởng”** ở Thông tin rừng đã bỏ với lô mới: đơn giá Tổ trưởng nhập ở bảng đơn giá theo vị trí (tab Nhân công), đơn giá khoán của tổ luôn suy ra từ định biên. Hồ sơ cũ đã có giá trị vẫn hiện ô (ghi “của hồ sơ cũ”) và hợp đồng in như cũ; xóa trống ô để chuyển sang cách tính mới.
 - **Danh mục vị trí**: các vị trí của Định mức nhân công (kể cả mặc định: Công nhân bóc vỏ, Công nhân bốc xếp) có sẵn trong danh sách chức danh, bảng đơn giá và định mức BHLĐ.
 - **Cự ly tấn/km**: cự ly tự tính là đường chim bay, thường ngắn hơn quãng đường xe chạy nên BM-04, BM-09, BM-10 là bản nháp cho đến khi nhập quãng đường thực tế ở Thông tin rừng → Cự ly vận chuyển (km).
+
+## Danh mục vị trí (từ bản 2.0 giai đoạn 2)
+- **Định mức → Định mức nhân công** là danh mục vị trí duy nhất: chức danh nhân công, định mức BHLĐ, bảng đơn giá theo vị trí và hợp đồng đều lấy vị trí từ đây.
+- Thêm vị trí: ghi ở dòng cuối của Định mức nhân công. **Số người 0** nghĩa là vị trí ngoài định biên chuẩn của một đội (ví dụ Công nhân khai thác của hồ sơ cũ, lái máy): vẫn chọn được, có định mức BHLĐ và đơn giá, không tính vào “1 đội = N người”.
+- Vị trí đang có người giữ tự có trong danh mục; không xóa được vị trí còn nhân công giữ.
+- Màn Định mức BHLĐ không còn ô thêm/xóa vị trí riêng.
+- Hợp đồng liệt kê đơn giá của các vị trí đang có người hoặc đã có đơn giá.

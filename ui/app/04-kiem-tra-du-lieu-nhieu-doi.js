@@ -230,13 +230,13 @@ function payRows(rec, ex) {
 const khoanSuyRa = rec => {
   const rs = rec.info; if (isDirect(rs) || rs.donGia > 0) return null;
   const pr = payRows(rec, {}); if (pr.plan.ngc || !pr.khoan.ok) return null;
-  const bs = basisOf(rs), pos = chucDanhAll().map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; return {cd, n, rate: rateOf(rs, {chucDanh: cd})}; }).filter(x => CHUCDANH.includes(x.cd) || x.n > 0);
+  const bs = basisOf(rs), pos = chucDanhAll().map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; return {cd, n, rate: rateOf(rs, {chucDanh: cd})}; }).filter(x => x.n > 0 || x.rate > 0);   // vị trí của danh mục đang có người hoặc đã có đơn giá
   const used = pos.filter(x => x.n > 0), k = pr.khoan;
   const formula = '(' + used.map(x => x.n + ' × ' + fmt(x.rate)).join(' + ') + ') ÷ ' + k.N + ' người = ' + HAKKhoan.fmtPrice(k.sumRates) + ' ÷ ' + k.N + ' = ' + HAKKhoan.fmtPrice(k.price) + ' ' + bs.unit;
   return {pr, k, bs, pos, used, formula, price: HAKKhoan.fmtPrice(k.price), qty: bs.qty === 'ha' ? 'diện tích' : 'sản lượng'};
 };
 /* Đơn giá khoán theo TỪNG vị trí: luôn liệt kê đủ cả ba vị trí (Tổ trưởng, Công nhân khai thác, Công nhân cưa), kể cả khi chưa có người ở vị trí đó */
-const roleRates = rec => chucDanhAll().filter(cd => CHUCDANH.includes(cd) || rec.nc.some(r => r.chucDanh === cd)).map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; const rate = rateOf(rec.info, {chucDanh: cd}); return cd + ': ' + (rate ? fmt(rate) : '………') + ' ' + basisOf(rec.info).unit + (n ? ' (' + n + ' người)' : ' (hiện chưa có người ở vị trí này)'); });
+const roleRates = rec => chucDanhAll().filter(cd => rec.nc.some(r => r.chucDanh === cd) || rateOf(rec.info, {chucDanh: cd}) > 0).map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; const rate = rateOf(rec.info, {chucDanh: cd}); return cd + ': ' + (rate ? fmt(rate) : '………') + ' ' + basisOf(rec.info).unit + (n ? ' (' + n + ' người)' : ' (hiện chưa có người ở vị trí này)'); });
 /* Ngày tham chiếu để chọn bản định mức BHLĐ có hiệu lực: danh sách cấp phát BM-02 theo ngày cấp phát (hoặc ngày bắt đầu khai thác); hợp đồng lao động BM-03 theo ngày bắt đầu hợp đồng, ngày ký, hoặc ngày bắt đầu khai thác */
 const normRefCapPhat = (rec, ex) => { const e = ex || rec.exp || {}; return HAKDates.isValid(e.capNgay) ? e.capNgay : (rec.info.tuNgay || ''); };
 const normRefHDLD = (rec, ex) => { const e = ex || rec.exp || {}; return [rec.info.ngayBDLD, e.ngayKy, rec.info.ngayKyHopDong, rec.info.tuNgay].find(x => HAKDates.isValid(x)) || ''; };

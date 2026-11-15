@@ -45,7 +45,7 @@ function nhiemVuBlocks(rec) {
   const g = HAKDinhBien.get(db); if (!g.saved) return [];
   const sc = HAKDinhBien.soSanh(g.rows, rec.nc || []);
   return [P('**PHÂN CÔNG NHIỆM VỤ THEO VỊ TRÍ**', {al: 'center', sz: 22, before: 200, after: 80, keep: true}),
-    T([2600, 1200, 1200, 9900], [['VỊ TRÍ', 'ĐỊNH BIÊN', 'THỰC TẾ', 'NHIỆM VỤ'], ...sc.vt.map((v, i) => [v.chucDanh + (v.kiemNhiem ? ' (kiêm ' + v.kiemNhiem.toLowerCase() + ')' : ''), String(v.can), String(v.co), g.rows[i].nhiemVu])],
+    T([2600, 1200, 1200, 9900], [['VỊ TRÍ', 'ĐỊNH BIÊN', 'THỰC TẾ', 'NHIỆM VỤ'], ...sc.vt.map(v => [v.chucDanh + (v.kiemNhiem ? ' (kiêm ' + v.kiemNhiem.toLowerCase() + ')' : ''), String(v.can), String(v.co), v.nhiemVu || ''])],   // nhiệm vụ của đúng vị trí đó (không ghép theo số dòng: danh mục có vị trí 0 người)
       {head: true, borders: true, sz: 18, rowH: 380, alignCols: ['left', 'center', 'center', 'left']})];
 }
 function docXNDaoTao(rec, ex) {

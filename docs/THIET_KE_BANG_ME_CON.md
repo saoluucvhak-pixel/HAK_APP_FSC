@@ -146,3 +146,15 @@ Mỗi giai đoạn một commit (hoặc vài commit) có kiểm thử chạy th�
 - Chưa đổi giao diện và cách lưu: dữ liệu vẫn lưu dạng 1.4.x cho đến giai đoạn 3.
 
 Kiểm thử: `tests/model.test.js` (cơ sở dữ liệu thật 1.0.0 và 1.4.x, dữ liệu e2e dùng chung, nhiều đội, nhiều người ký, gộp danh mục, vị trí, lô thiếu khóa); tự kiểm `HAKQN_CHECK_MODEL` chạy `legacyDb(migrateDb(db)) = db` sau **mọi lần lưu** của cả bộ e2e.
+
+## 13. Giai đoạn 2 — danh mục vị trí thống nhất (đã làm)
+
+- **Nguồn duy nhất**: bảng Định mức nhân công (`db.dinhBien`, `HAKDinhBien.danhMuc`). Chức danh nhân công, định mức BHLĐ, bảng đơn giá theo vị trí và hợp đồng đều lấy vị trí từ đây (`chucDanhAll` → `viTriRows`).
+- **Số người 0** = vị trí ngoài định biên chuẩn của một đội: vẫn chọn được, có định mức BHLĐ và đơn giá; không tính vào “1 đội = N người”; nhiệm vụ không bắt buộc; so sánh định biên báo người giữ vị trí này là “ngoài định biên chuẩn”.
+- **Chưa lưu định mức nhân công**: danh mục = Tổ trưởng + các vị trí cũ theo đúng thứ tự cũ (ba vị trí mặc định, vị trí thêm, khóa định mức BHLĐ) + định biên mặc định; không ghi gì vào dữ liệu cho đến khi người dùng bấm Lưu.
+- **Đã lưu**: đúng các dòng đã lưu + vị trí còn được nhân công / đơn giá dùng mà chưa có (0 người).
+- Màn Định mức BHLĐ **bỏ** ô thêm vị trí và nút xóa vị trí; thêm / đổi tên / xóa vị trí ở Định mức nhân công; xóa vị trí còn nhân công giữ thì không cho lưu.
+- **Hợp đồng** (BM-01, BM-14, BM-20, BM-08) liệt kê vị trí đang có người hoặc đã có đơn giá (trước: luôn liệt kê ba vị trí mặc định cũ).
+- Sửa kèm: BM-06 “Phân công nhiệm vụ theo vị trí” ghép nhiệm vụ theo **tên vị trí** (trước ghép theo số dòng — sẽ lệch khi danh mục có vị trí 0 người).
+
+**So bản in với `main`** (4 bộ dữ liệu: giao khoán theo tấn, theo ha, trực tiếp, có vị trí thêm; 89 tài liệu Word): 87 giống từng byte; 2 khác (BM-01, BM-14 của lô có vị trí mặc định cũ không người và không đơn giá: không còn in dòng “……… (hiện chưa có người)” của vị trí đó) — đúng quy tắc mới.

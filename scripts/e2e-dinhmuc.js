@@ -1,5 +1,5 @@
 'use strict';
-/* Định mức BHLĐ có HIỆU LỰC TỪ NGÀY và thêm VỊ TRÍ mới (Electron thật, dữ liệu giả lập).
+/* Định mức BHLĐ có HIỆU LỰC TỪ NGÀY; danh mục VỊ TRÍ là Định mức nhân công (cấu trúc 2.0 giai đoạn 2): vị trí đang dùng tự có, thêm/xóa vị trí ở Định mức nhân công (Electron thật, dữ liệu giả lập).
  * Chạy: xvfb-run -a node scripts/e2e-dinhmuc.js */
 const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os');
@@ -27,12 +27,16 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   await w.click('header.top .nav [data-act=openNorm]'); await w.waitForSelector('#normForm');
   ok('mở từ menu ngang: nút được tô sáng (đang ở màn Định mức)', await w.evaluate(() => document.getElementById('navNorm').classList.contains('on')));
   await openNorm();
-  ok('màn Định mức (tiêu đề “Định mức”, mục Định mức BHLĐ theo vị trí) có ô “Hiệu lực từ ngày”, nút thêm bản mới và thêm vị trí mới', (await w.innerText('#main h2')).trim() === 'Định mức' && !!(await w.$('#normForm input[name=tuNgay]')) && !!(await w.$('[data-act=normAddVer]')) && !!(await w.$('[data-act=normAddPos]')) && /Hiệu lực từ ngày/.test(await w.innerText('#normForm')));
-  // 2. thêm vị trí mới
-  await w.fill('#normNewPos', 'Công nhân phụ'); await w.click('[data-act=normAddPos]'); await w.waitForSelector('tr[data-pos="Công nhân phụ"]');
-  ok('thêm vị trí “Công nhân phụ”: hiện thêm một dòng trong bảng định mức', !!(await w.$('tr[data-pos="Công nhân phụ"]')));
-  await w.fill('#normNewPos', 'công nhân PHỤ'); await w.click('[data-act=normAddPos]'); await w.waitForTimeout(300);
-  ok('thêm vị trí trùng tên (khác hoa/thường): từ chối', /đã có/.test(await note()), await note());
+  ok('màn Định mức (tiêu đề “Định mức”, mục Định mức BHLĐ theo vị trí) có ô “Hiệu lực từ ngày”, nút thêm bản mới', (await w.innerText('#main h2')).trim() === 'Định mức' && !!(await w.$('#normForm input[name=tuNgay]')) && !!(await w.$('[data-act=normAddVer]')) && /Hiệu lực từ ngày/.test(await w.innerText('#normForm')));
+  // 2. danh mục vị trí = Định mức nhân công
+  ok('màn BHLĐ không còn ô thêm vị trí riêng; ghi rõ vị trí lấy từ Định mức nhân công', !(await w.$('#normNewPos')) && /Danh sách vị trí lấy từ Định mức nhân công/.test(await w.innerText('#main')));
+  ok('vị trí đang có người giữ (“Công nhân phụ”) tự có trong bảng định mức BHLĐ và trong Định mức nhân công (số người 0)', !!(await w.$('tr[data-pos="Công nhân phụ"]')) && (await w.$$eval('#dbForm tr[data-db]', trs => trs.map(t => t.querySelector('[name=b_cd]').value + ':' + t.querySelector('[name=b_so]').value))).includes('Công nhân phụ:0'));
+  const addDb = async (cd, so) => { const last = (await w.$$('#dbForm tr[data-db]')).pop(); await (await last.$('[name=b_cd]')).fill(cd); await (await last.$('[name=b_so]')).fill(String(so)); await w.click('#dbForm button[type=submit]'); await w.waitForTimeout(400); };
+  await addDb('Công nhân lái máy', 0); await openNorm();
+  ok('thêm vị trí “Công nhân lái máy” (0 người) ở Định mức nhân công: hiện ngay trong bảng định mức BHLĐ', !!(await w.$('tr[data-pos="Công nhân lái máy"]')), await note());
+  await addDb('công nhân LÁI MÁY', 0);
+  ok('thêm vị trí trùng tên (khác hoa/thường) ở Định mức nhân công: từ chối', /bị trùng/.test(await note()), await note());
+  await openNorm();
   // 3. bản gốc: hiệu lực từ 01/01/2026 và định mức cho vị trí mới
   const setRow = async (cd, vals) => { for (const [k, v] of Object.entries(vals)) await w.fill('tr[data-pos="' + cd + '"] input[name$="_' + k + '"]', v); };
   await w.fill('#normForm input[name=tuNgay]', '01/01/2026'); await setRow('Công nhân phụ', {qa: '1 bộ', giay: '1 đôi', mu: '1 cái', gang: '2 đôi'});
@@ -44,7 +48,7 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   ok('thêm bản hiệu lực từ 01/09/2026: có hai bản để chọn', (await w.$$eval('#normVer option', o => o.map(x => x.textContent))).some(t => /01\/09\/2026/.test(t)) && (await w.$$('#normVer option')).length === 2);
   await setRow('Tổ trưởng', {qa: '2 bộ'}); await w.click('#normForm button[type=submit]'); await w.waitForTimeout(600);
   const saved = await w.evaluate(() => window.hak.loadSync().db);
-  ok('đã lưu vào cơ sở dữ liệu: ngày hiệu lực, hai bản, vị trí thêm', saved.dinhMucTu === '01/01/2026' && saved.dinhMucBan.length === 1 && saved.dinhMucBan[0].tuNgay === '01/09/2026' && saved.dinhMucBan[0].dm['Tổ trưởng'].qa === '2 bộ' && saved.dinhMuc['Tổ trưởng'].qa === '1 bộ' && saved.chucDanhThem.includes('Công nhân phụ'), JSON.stringify([saved.dinhMucTu, (saved.dinhMucBan || []).map(x => x.tuNgay), saved.chucDanhThem]));
+  ok('đã lưu vào cơ sở dữ liệu: ngày hiệu lực, hai bản; danh mục vị trí trong Định mức nhân công', saved.dinhMucTu === '01/01/2026' && saved.dinhMucBan.length === 1 && saved.dinhMucBan[0].tuNgay === '01/09/2026' && saved.dinhMucBan[0].dm['Tổ trưởng'].qa === '2 bộ' && saved.dinhMuc['Tổ trưởng'].qa === '1 bộ' && saved.dinhBien.some(r => r.chucDanh === 'Công nhân phụ' && r.soNguoi === 0) && saved.dinhBien.some(r => r.chucDanh === 'Công nhân lái máy'), JSON.stringify([saved.dinhMucTu, (saved.dinhMucBan || []).map(x => x.tuNgay), (saved.dinhBien || []).map(r => r.chucDanh)]));
   // 5. BM-02 theo ngày cấp phát
   const toXuat = async capNgay => {
     const d = JSON.parse(JSON.stringify(await w.evaluate(() => window.hak.loadSync().db))); d.rs.own1.forests.fa.exp.capNgay = capNgay;
@@ -63,8 +67,9 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   await toXuat('31/12/2025'); const b = await w.$('button[data-act=dl][data-kind=bhld]');
   ok('ngày cấp phát trước mọi bản định mức: chặn xuất và nêu rõ chưa có bản hiệu lực', !!b && await b.isDisabled() && /chưa có bản định mức BHLĐ hiệu lực tại ngày 31\/12\/2025/.test(await w.innerText('#main')), (await w.innerText('#main')).slice(0, 300));
   // 8. không xóa vị trí đang có người giữ; Excel mẫu có vị trí mới
-  await openNorm(); await w.click('[data-act=normDelPos][data-name="Công nhân phụ"]'); await w.waitForTimeout(300);
-  ok('vị trí đang có nhân công giữ: không cho xóa', /Còn nhân công đang giữ/.test(await note()), await note());
+  await openNorm(); { const trs = await w.$$('#dbForm tr[data-db]'); for (const tr of trs) if ((await (await tr.$('[name=b_cd]')).inputValue()) === 'Công nhân phụ') await (await tr.$('[data-act=dbDel]')).click(); }
+  await w.click('#dbForm button[type=submit]'); await w.waitForTimeout(400);
+  ok('xóa ở Định mức nhân công vị trí đang có nhân công giữ: không cho lưu, nêu rõ vị trí', /còn nhân công giữ vị trí “Công nhân phụ”/.test(await note()) && (await w.evaluate(() => window.hak.loadSync().db.dinhBien.some(r => r.chucDanh === 'Công nhân phụ'))), await note());
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });
