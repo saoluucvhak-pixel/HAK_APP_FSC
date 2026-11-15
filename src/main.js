@@ -116,6 +116,7 @@ function runAutoBackup() {
   const s = store, dir = loc.backupDir;
   autoBkP = AutoBackup.daily(s, {keep: st.autoKeep, dir}).then(r => {
     autoBk = {...r, at: new Date().toISOString()};
+    if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
     if (!r.ok) log('ERROR', 'Tự sao lưu hằng ngày không được: ' + r.error);
     else if (!r.skipped) log('INFO', 'Tự sao lưu hằng ngày: ' + path.basename(r.file) + (r.removed.length ? ' (xóa ' + r.removed.length + ' bản cũ)' : ''));
   }, e => { autoBk = {ok: false, error: e.message}; });
@@ -243,7 +244,7 @@ function registerIpc() {
   /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
   const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
   const dbInfo = () => { try { const st = fs.statSync(loc.dbFile); return {size: st.size, mtime: st.mtime.toISOString(), version: store ? store.db.pragma('user_version', {simple: true}) : null, open: !!store}; } catch (e) { return {size: 0, mtime: null, version: null, open: !!store}; } };
-  const autoView = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } const ls = AutoBackup.list(loc.backupDir); return {keep: st.autoKeep, count: ls.length, last: ls[0] ? {name: ls[0].name, day: ls[0].day, size: ls[0].size} : null, result: autoBk}; };
+  const autoView = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } const ls = AutoBackup.list(loc.backupDir); return {keep: st.autoKeep, dir2: st.backupDir2 || '', count: ls.length, last: ls[0] ? {name: ls[0].name, day: ls[0].day, size: ls[0].size} : null, result: autoBk}; };
   const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), auto: autoView(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
   const pickFolder = async title => {
     if (process.env.HAKQN_PICK_DIR) return process.env.HAKQN_PICK_DIR;
@@ -254,6 +255,13 @@ function registerIpc() {
   ipcMain.handle('settings:setRemind', (e, days) => wrap(() => { const ud = app.getPath('userData'); const d = Math.max(0, Math.min(365, parseInt(days, 10) || 0)); Settings.save(ud, {...Settings.load(ud), remindDays: d}); return {settings: setView()}; })());
   ipcMain.handle('settings:setAutoKeep', (e, n) => wrap(() => { const ud = app.getPath('userData'); const k = Math.max(0, Math.min(60, parseInt(n, 10) || 0)); Settings.save(ud, {...Settings.load(ud), autoKeep: k}); if (k) runAutoBackup(); return {settings: setView()}; })());
   ipcMain.handle('settings:openBackup', () => { try { fs.mkdirSync(loc.backupDir, {recursive: true}); shell.openPath(loc.backupDir); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
+  ipcMain.handle('settings:setBackup2', async (e, reset) => {
+    try {
+      let dir = ''; if (!reset) { dir = await pickFolder('Chọn thư mục sao lưu thứ hai (ổ ngoài, thư mục đồng bộ)'); if (!dir) return {ok: true, canceled: true}; dir = Settings.checkFolder(dir); }
+      const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), backupDir2: dir}); log('INFO', 'Thư mục sao lưu thứ hai: ' + (dir ? 'đã chọn' : 'tắt')); if (dir) runAutoBackup();
+      return {ok: true, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
   ipcMain.handle('settings:setBackup', async (e, reset) => {
     try {
       let dir = '';

@@ -55,4 +55,16 @@ async function daily(store, opts = {}) {
   }
 }
 
-module.exports = {daily, list, prune, dayOf, PREFIX};
+/* Chép bản tự sao lưu `file` sang thư mục THỨ HAI (ổ ngoài, thư mục đồng bộ): ghi qua file tạm rồi đổi tên; chỉ giữ `keep` bản tự động gần nhất ở đó.
+ * Lỗi (ổ rút ra, hết chỗ) chỉ trả {ok: false, error}: bản chính ở thư mục sao lưu vẫn còn nguyên. */
+function copyTo(file, dir2, keep) {
+  try {
+    if (!file || !dir2) return {ok: true, skipped: true};
+    const out = path.join(dir2, path.basename(file)), tmp = out + '.tmp-' + process.pid;
+    fs.mkdirSync(dir2, {recursive: true});
+    if (!fs.existsSync(out)) { try { fs.copyFileSync(file, tmp); fs.renameSync(tmp, out); } catch (e) { try { fs.unlinkSync(tmp); } catch (e2) { /* không có file tạm */ } throw e; } }
+    return {ok: true, file: out, removed: prune(dir2, Math.max(1, Math.min(60, parseInt(keep, 10) || 7)))};
+  } catch (e) { return {ok: false, error: e.message, removed: []}; }
+}
+
+module.exports = {daily, list, prune, copyTo, dayOf, PREFIX};

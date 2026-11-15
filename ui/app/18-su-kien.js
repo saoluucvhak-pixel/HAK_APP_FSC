@@ -33,6 +33,7 @@ document.addEventListener('click', async e => {
   if (act === 'dataPick') return issueAct('pick');
   if (act === 'dataDefault') return issueAct('default');
   if (act === 'setData' || act === 'setDataDefault') return settingsData(act === 'setDataDefault');
+  if (act === 'setBackup2' || act === 'setBackup2Off') return settingsBackup2(act === 'setBackup2Off');
   if (act === 'setBackup' || act === 'setBackupDefault') return settingsBackup(act === 'setBackupDefault');
   if (act === 'setOpenBackup') return HB.settings.openBackup();
   if (act === 'setOpenData') return HB.openDataFolder();

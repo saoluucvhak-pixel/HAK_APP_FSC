@@ -2,7 +2,7 @@
 /* Danh mục "Công ty mua hàng" và điểm đến vận chuyển. Thuần dữ liệu, không phụ thuộc DOM/Electron: dùng ở giao diện (nhúng khi build) và kiểm thử Node.
  *
  * Công ty (db.congTy[id]):
- *   {id, ten, mst, diaChi, lat, lng, nguoiDaiDien, chucVu, sdt, fax, noiLap, email, diaChiGiao: [{id, nhan, diaChi, lat, lng}], ghiChu}
+ *   {id, ten, mst, diaChi, lat, lng, nguoiDaiDien, chucVu, sdt, fax, noiLap, nguoiLap, email, diaChiGiao: [{id, nhan, diaChi, lat, lng}], ghiChu}
  *   - lat, lng (WGS84, tùy chọn) của trụ sở và của từng địa chỉ giao: dùng để TỰ TÍNH cự ly vận chuyển từ rừng đến nơi giao (src/culy.js); bản chụp theo rừng giữ cả tọa độ.
  *   - ten (tên pháp lý) và diaChi (địa chỉ công ty/trụ sở) BẮT BUỘC; các trường còn lại tùy chọn.
  *   - diaChiGiao: các địa chỉ giao hàng khác của công ty (kho, nhà máy…); địa chỉ công ty luôn là lựa chọn đầu tiên.
@@ -20,7 +20,7 @@
   const mstValid = v => { const m = normMst(v); return m === '' || /^\d{10}$/.test(m) || /^\d{13}$/.test(m); };
   const mstShow = v => { const m = normMst(v); return m.length === 13 ? m.slice(0, 10) + '-' + m.slice(10) : m; };
 
-  function newCompany() { return {id: '', ten: '', mst: '', diaChi: '', lat: null, lng: null, nguoiDaiDien: '', chucVu: '', sdt: '', fax: '', noiLap: '', email: '', diaChiGiao: [], ghiChu: ''}; }
+  function newCompany() { return {id: '', ten: '', mst: '', diaChi: '', lat: null, lng: null, nguoiDaiDien: '', chucVu: '', sdt: '', fax: '', noiLap: '', nguoiLap: '', email: '', diaChiGiao: [], ghiChu: ''}; }
 
   const geo = v => (typeof v === 'number' && isFinite(v)) ? v : (v == null || v === '' ? null : (isFinite(parseFloat(String(v).replace(',', '.'))) ? parseFloat(String(v).replace(',', '.')) : null));
   const geoWhy = (lat, lng) => { if (lat == null && lng == null) return ''; if (lat == null || lng == null) return 'thiếu vĩ độ hoặc kinh độ'; if (lat < -90 || lat > 90) return 'vĩ độ phải từ -90 đến 90'; if (lng < -180 || lng > 180) return 'kinh độ phải từ -180 đến 180'; return ''; };
@@ -28,7 +28,7 @@
   /* Chuẩn hóa dữ liệu nhập (không đổi ý nghĩa): cắt khoảng trắng, MST chuẩn hóa, bỏ địa chỉ giao rỗng, giữ id địa chỉ */
   function clean(o, newId) {
     const c = Object.assign(newCompany(), o || {});
-    ['ten', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'email', 'ghiChu'].forEach(k => { c[k] = trim(c[k]); });
+    ['ten', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'nguoiLap', 'email', 'ghiChu'].forEach(k => { c[k] = trim(c[k]); });
     c.mst = mstShow(c.mst); c.lat = geo(c.lat); c.lng = geo(c.lng);
     let n = 0;
     c.diaChiGiao = (Array.isArray(c.diaChiGiao) ? c.diaChiGiao : []).map(a => ({id: trim(a && a.id) || (newId ? newId('a') : 'a' + (++n)), nhan: trim(a && a.nhan), diaChi: trim(a && a.diaChi), lat: geo(a && a.lat), lng: geo(a && a.lng)})).filter(a => a.diaChi || a.nhan);

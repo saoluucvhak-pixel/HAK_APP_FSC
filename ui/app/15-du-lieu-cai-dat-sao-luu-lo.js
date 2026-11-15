@@ -67,6 +67,9 @@ function settingsPaint() {
     (s.lockedByEnv ? '<div class="msg warn">Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB nên không đổi được ở đây.</div>' : '') +
     row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).', s.dbFile, s.customData, s.defaultDataDir, 'setData', 'setDataDefault', '<button class="btn ghost" data-act="setOpenData">Mở thư mục chứa dữ liệu</button>') +
     row('Thư mục sao lưu', 'Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu hằng ngày, bản sao lưu toàn bộ (⋯ Thêm → Sao lưu toàn bộ dữ liệu: lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc ổ USB để phòng hỏng máy.', s.backupDir, s.customBackup, s.defaultBackupDir, 'setBackup', 'setBackupDefault', '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button>') +
+    '<div class="card" style="margin:10px 0" id="dbBk2"><h3 style="margin:0 0 4px">Thư mục sao lưu thứ hai</h3><p class="mut" style="margin:0 0 8px">Mỗi bản tự sao lưu hằng ngày được chép thêm sang đây (ổ ngoài, USB, thư mục đồng bộ) để phòng hỏng cả máy. Ổ không cắm thì bỏ qua, bản chính vẫn còn.</p>' +
+    (s.auto && s.auto.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(s.auto.dir2) + '</code></div>' + ((s.auto.result && s.auto.result.copy2 && !s.auto.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' + esc(s.auto.result.copy2.error) + '</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
+    '<div class="row" style="margin-top:8px;gap:8px"><button class="btn" data-act="setBackup2">Chọn thư mục…</button>' + (s.auto && s.auto.dir2 ? '<button class="btn ghost" data-act="setBackup2Off">Tắt</button>' : '') + '</div></div>' +
     '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">Nhắc sao lưu</h3><p class="mut" style="margin:0 0 8px">Khi mở phần mềm, nhắc sao lưu toàn bộ dữ liệu nếu đã quá số ngày dưới đây kể từ lần sao lưu cuối (⋯ Thêm → Sao lưu toàn bộ dữ liệu).</p>' +
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Nhắc sau <select id="setRemind">' + [[0, 'Không nhắc'], [3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày']].map(o => '<option value="' + o[0] + '"' + (o[0] === s.remind.remindDays ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
     '<span class="mut">Sao lưu toàn bộ lần cuối: ' + (s.remind.lastBackup ? esc(new Date(s.remind.lastBackup).toLocaleString('vi-VN')) : 'chưa có') + '</span></div></div>' + autoBackupCard(s.auto);
@@ -100,6 +103,11 @@ async function settingsData(reset) {
   }
   if (r.same) { setg.msg = ['Đó đang là thư mục dữ liệu hiện tại.', 'warn']; return render(); }
   // chương trình chính tự tải lại cửa sổ từ cơ sở dữ liệu mới và hiện thông báo kết quả sau khi tải
+}
+async function settingsBackup2(reset) {
+  const r = await HB.settings.setBackup2(reset); if (r.canceled) return;
+  setg.msg = r.ok ? [reset ? 'Đã tắt thư mục sao lưu thứ hai.' : 'Đã chọn thư mục sao lưu thứ hai: mỗi bản tự sao lưu hằng ngày được chép thêm sang đó.', 'ok'] : ['Không đổi được thư mục sao lưu thứ hai: ' + r.error, 'err'];
+  setg.s = r.ok ? r.settings : setg.s; render();
 }
 async function settingsBackup(reset) {
   const r = await HB.settings.setBackup(reset);

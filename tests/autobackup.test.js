@@ -49,3 +49,14 @@ test('tự sao lưu: ngày theo giờ máy (không theo UTC)', () => {
   assert.strictEqual(AB.dayOf(new Date(2026, 0, 1, 0, 30)), '2026-01-01');
   assert.strictEqual(AB.dayOf(new Date(2026, 11, 31, 23, 59)), '2026-12-31');
 });
+
+test('thư mục sao lưu thứ hai: chép bản tự động sang, chỉ giữ N bản, đọc lại đủ dữ liệu; thư mục không tạo được thì báo lỗi, không ném', async () => {
+  const d = tmp(), bk = path.join(d, 'bk'), b2 = path.join(d, 'usb', 'hak'), s = withData(path.join(d, 'a.sqlite'));
+  for (const dd of [12, 13, 14]) { const r = await AB.daily(s, {dir: bk, now: day(2026, 11, dd)}); const c = AB.copyTo(r.file, b2, 2); assert.ok(c.ok && c.file, JSON.stringify(c)); }
+  assert.deepStrictEqual(names(b2), ['tu-dong-2026-11-13.sqlite', 'tu-dong-2026-11-14.sqlite'], 'giữ 2 bản gần nhất ở thư mục thứ hai');
+  const back = new Store(path.join(b2, 'tu-dong-2026-11-14.sqlite')); assert.strictEqual(back.load().rs.o1.forests.f1.pc[0].soPhieu, 'P1'); back.close();
+  assert.deepStrictEqual(names(bk).length, 3, 'thư mục chính không bị đụng');
+  fs.writeFileSync(path.join(d, 'chan'), 'x'); const bad = AB.copyTo(path.join(bk, 'tu-dong-2026-11-14.sqlite'), path.join(d, 'chan', 'con'), 2);
+  assert.strictEqual(bad.ok, false); assert.ok(bad.error);
+  assert.deepStrictEqual(AB.copyTo('', b2, 2), {ok: true, skipped: true}); s.close();
+});

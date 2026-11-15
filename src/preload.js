@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('hak', {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     setData: reset => ipcRenderer.invoke('settings:setData', !!reset),
+    setBackup2: reset => ipcRenderer.invoke('settings:setBackup2', !!reset),
     setBackup: reset => ipcRenderer.invoke('settings:setBackup', !!reset),
     setRemind: d => ipcRenderer.invoke('settings:setRemind', d),
     setAutoKeep: n => ipcRenderer.invoke('settings:setAutoKeep', n),
