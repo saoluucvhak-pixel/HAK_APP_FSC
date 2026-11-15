@@ -20,7 +20,7 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026');
   await w.$eval('#forestForm', f => f.requestSubmit());
   await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.$eval('#vcForm', f => f.requestSubmit());
-  await w.click('[data-ftab=nc]'); await w.fill('#luongForm [name=dt_0]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(150);
+  await w.click('[data-ftab=nc]'); await w.evaluate(() => document.querySelectorAll('#luongForm details').forEach(d => { d.open = true; }));   /* vị trí chưa có người nằm trong mục gập */ await w.fill('#luongForm [name=dt_0]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(150);
   await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);

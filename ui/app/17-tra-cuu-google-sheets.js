@@ -387,7 +387,7 @@ async function lkApply() {
     if (s.ref && (c.owner.ref.length || F.ref.length)) f.ref = {at, set, hd: c.hd, cccd: c.cccd, fields: c.owner.ref.concat(F.ref)};
     const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
     const r = await persistNow();
-    if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); }
+    if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } nhapTamGhi();
     cur = o.id; curF = f.id; tab = 'rung'; ftab = 'finfo'; view = 'owner';
     lkClose(); lk.view = 'search';
     if (chosen.length) ftab = 'dx';

@@ -40,3 +40,10 @@ test('số hợp đồng đầy đủ có năm khác năm của ngày văn bản
 test('kỳ thanh toán vượt ngoài thời gian khai thác', () => {
   const j = base(); j.exp.denNgayTT = '15/12/2026'; assert.equal(by(N.kiemTra(j), 'Thứ tự ngày').length, 1);
 });
+
+test('kiểu ô chuẩn: ngày gõ nhanh thành dd/mm/yyyy, chỉ khi ra ngày có thật; CCCD bỏ ký tự thừa', () => {
+  const N = require('../src/nhaplieu');
+  assert.deepStrictEqual(['151126', '15112026', '15-11-26', '15.11.2026', '15/11/26', '1/2/2026', '150185'].map(N.chuanHoaNgay), ['15/11/2026', '15/11/2026', '15/11/2026', '15/11/2026', '15/11/2026', '01/02/2026', '15/01/1985']);
+  assert.deepStrictEqual(['310226', '31/02/2026', 'abc', '', '  '].map(N.chuanHoaNgay), ['310226', '31/02/2026', 'abc', '', ''], 'ngày không có thật hoặc không nhận ra: giữ nguyên');
+  assert.deepStrictEqual(['049 085 007 001', '049.085.007.001', '049085007001', '12', 'abc'].map(N.chuanHoaCccd), ['049085007001', '049085007001', '049085007001', '12', 'abc']);
+});

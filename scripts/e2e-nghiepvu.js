@@ -88,7 +88,7 @@ const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml'
   // 6. vị trí của định mức nhân công có trong bảng đơn giá
   await load(clone(BASE), 'nc');
   const ncTxt = await w.innerText('#main');
-  ok('bảng đơn giá có cả vị trí của định mức nhân công (Công nhân bóc vỏ, Công nhân bốc xếp)', /Đơn giá Công nhân bóc vỏ/.test(ncTxt) && /Đơn giá Công nhân bốc xếp/.test(ncTxt));
+  ok('bảng đơn giá có cả vị trí của định mức nhân công (Công nhân bóc vỏ, Công nhân bốc xếp)', await w.$eval('#luongForm', f => f.textContent).then(t => t.includes('Công nhân bóc vỏ') && t.includes('Công nhân bốc xếp')));
 
   // 7. cự ly tự tính (đường chim bay) → BM-04/09/10 bản nháp
   d = clone(BASE); Object.assign(lotOf(d).info, {cuLy: null, vanChuyen: {mode: 'tanKm', donGiaKm: 1000, bac: []}});

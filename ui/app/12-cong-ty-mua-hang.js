@@ -14,14 +14,14 @@ function panelCty() {
     '<div class="card" id="ctyCard"><form id="ctyForm" class="grid">' +
     f('ten', 'Tên pháp lý', {req: true, wide: true}) + f('mst', 'Mã số thuế', {ph: '10 hoặc 13 chữ số'}) + f('diaChi', 'Địa chỉ công ty', {req: true, wide: true}) +
     '<label><span>Tọa độ trụ sở (vĩ độ, kinh độ)</span><input name="toaDo" value="' + esc(HAKCuLy.fmtToaDo(c.lat, c.lng)) + '" placeholder="VD: 15.912345, 108.123456 (dán từ Google Maps)"><small class="mut">Tùy chọn. Có tọa độ nơi giao thì phần mềm tự tính cự ly vận chuyển từ rừng đến đây.</small></label>' +
-    f('nguoiDaiDien', 'Người đại diện') + f('chucVu', 'Chức vụ') + f('sdt', 'Số điện thoại') + f('fax', 'Fax', {ph: 'tùy chọn; in ở tiêu đề phiếu cân'}) + f('noiLap', 'Nơi lập chứng từ', {ph: 'VD: Đà Nẵng; in trước ngày tháng năm trên phiếu cân'}) + f('email', 'Email') +
+    f('nguoiDaiDien', 'Người đại diện') + f('nguoiLap', 'Người lập biểu', {ph: 'khai một lần; dùng cho nhật ký, Sổ in, chốt hồ sơ, báo cáo'}) + f('chucVu', 'Chức vụ') + f('sdt', 'Số điện thoại') + f('fax', 'Fax', {ph: 'tùy chọn; in ở tiêu đề phiếu cân'}) + f('noiLap', 'Nơi lập chứng từ', {ph: 'VD: Đà Nẵng; in trước ngày tháng năm trên phiếu cân'}) + f('email', 'Email') +
     '<div style="grid-column:1/-1"><div class="mut">Địa chỉ giao hàng khác (kho, nhà máy…). Khi chọn điểm đến cho rừng, địa chỉ công ty luôn là lựa chọn đầu tiên, sau đó là các địa chỉ này.</div><div id="ctyAddrs">' + (c.diaChiGiao || []).map(addrRowHtml).join('') + '</div>' +
       '<button type="button" class="btn ghost sm" style="margin-top:6px" data-act="ctyAddAddr">+ Thêm địa chỉ giao hàng</button></div>' +
     '<div id="ctyMsg" style="grid-column:1/-1"></div><div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin công ty</button></div></form></div>';
 }
 function ctyReadForm() {
   const form = $('#ctyForm'), fd = new FormData(form), c = {...(cty.edit || MH.newCompany())};
-  ['ten', 'mst', 'diaChi', 'nguoiDaiDien', 'chucVu', 'sdt', 'fax', 'noiLap', 'email'].forEach(k => { c[k] = fd.get(k) ?? ''; });
+  ['ten', 'mst', 'diaChi', 'nguoiDaiDien', 'nguoiLap', 'chucVu', 'sdt', 'fax', 'noiLap', 'email'].forEach(k => { c[k] = fd.get(k) ?? ''; });
   const td = HAKCuLy.parseToaDo(fd.get('toaDo')); c.lat = td ? td.lat : null; c.lng = td ? td.lng : null; c.toaDoSai = String(fd.get('toaDo') || '').trim() && !td ? String(fd.get('toaDo')).trim() : '';
   c.diaChiGiao = [...form.querySelectorAll('.ctyAddr')].map(r => { const raw = r.querySelector('[name=a_toado]').value, t = HAKCuLy.parseToaDo(raw); return {id: r.dataset.aid || '', nhan: r.querySelector('[name=a_nhan]').value, diaChi: r.querySelector('[name=a_dia]').value, lat: t ? t.lat : null, lng: t ? t.lng : null, toaDoSai: raw.trim() && !t ? raw.trim() : ''}; });
   return MH.clean(c, newId);

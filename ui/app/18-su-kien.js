@@ -33,9 +33,13 @@ document.addEventListener('click', async e => {
   if (act === 'dataPick') return issueAct('pick');
   if (act === 'dataDefault') return issueAct('default');
   if (act === 'setData' || act === 'setDataDefault') return settingsData(act === 'setDataDefault');
+  if (act === 'setBackup2' || act === 'setBackup2Off') return settingsBackup2(act === 'setBackup2Off');
   if (act === 'setBackup' || act === 'setBackupDefault') return settingsBackup(act === 'setBackupDefault');
   if (act === 'setOpenBackup') return HB.settings.openBackup();
   if (act === 'setOpenData') return HB.openDataFolder();
+  if (act === 'napHoanTac') return nhatKyNapHoanTac(el.dataset.kind);
+  if (act === 'luongLay') return luongLayDonGia();
+  if (act === 'loTuLoCu') return loTuLoCuTao();
   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
   if (act === 'openDm') { view = 'dm'; return render(); }
   if (act === 'openNorm') { view = 'norm'; return render(); }
@@ -45,6 +49,9 @@ document.addEventListener('click', async e => {
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
   if (act === 'pcPrint') { if (stBlockNote()) return; const rec = curRec(); if (!rec) return; const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(HAKPhieuCan.aoa(rec), HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
   if (act === 'dbDel') { const tr = el.closest('tr'); tr.querySelectorAll('input,textarea').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
+  if (act === 'dbVerAdd') { const r = HAKDinhBien.addVersion(db, (document.getElementById('dbVerNew') || {}).value); if (!r.ok) return note('Chưa thêm phiên bản: ' + r.error, 'err'); dbVer = r.id; persist(); return note('Đã thêm phiên bản hiệu lực từ ' + r.id + ' (sao chép từ phiên bản đang hiệu lực tại ngày đó). Sửa số người, nhiệm vụ rồi Lưu.', 'ok'); }
+  if (act === 'dbVerDel') { if (!confirm('Xóa phiên bản này? Các lô bắt đầu từ ngày này sẽ dùng phiên bản trước đó.')) return; HAKDinhBien.delVersion(db, dbVer); dbVer = ''; persist(); return note('Đã xóa phiên bản.', 'ok'); }
+  if (act === 'dbReset' && HAKDinhBien.versions(db).length > 1) return note('Đã có nhiều phiên bản theo ngày: xóa các phiên bản có ngày trước khi dùng định mức mặc định.', 'warn');
   if (act === 'dbReset') { delete db.dinhBien; persist(); note('Đã quay về định mức nhân công mặc định (chưa lưu thành định mức riêng; bấm Lưu để dùng).', 'warn'); return render(); }
   if (act === 'keoDel') { const tr = el.closest('tr'); tr.querySelectorAll('input').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
@@ -151,6 +158,7 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persistLo(); render(); return; }
   if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persistLo(); render(); return; }
+  if (t.id === 'dbVerSel') { dbVer = t.value; return render(); }
   if (t.id === 'ncDm' && t.value) { const x = dmNguonLd().find(z => HAKModel.cccdSo(z.cccd) === t.value); if (x) { stRead(); dmDienNguoi(x); stRender(); } return; }
   if (t.id === 'xeDm' && t.value) { const x = dmNguonXe().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); dmDienXe(x); stRender(); } return; }
   if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persistLo(); render(); return; }

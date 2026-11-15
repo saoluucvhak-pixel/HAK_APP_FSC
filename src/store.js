@@ -73,6 +73,13 @@ const MIGRATIONS = [
     const x = DM.dungTuLo(rs, homNay), put = db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO NOTHING');
     if (g('dmLaoDong') == null) put.run('dmLaoDong', JSON.stringify(x.laoDong));
     if (g('dmXeVC') == null) put.run('dmXeVC', JSON.stringify(x.xe));
+  },
+  /* v8 (bản 2.2): ĐỐI TÁC dùng chung. Dựng từ danh mục đơn vị vận chuyển (doanh nghiệp) và người ký cá nhân của mọi đội xe; THÊM vào dmDoiTac (không ghi đè dòng đã có). Không đổi hồ sơ lô, bản in không đổi. */
+  function v8(db) {
+    const DM = require('./danhmuc'), g = k => { const r = db.prepare('SELECT value FROM meta WHERE key=?').get(k); return r ? JSON.parse(r.value) : null; };
+    const rs = {}; db.prepare('SELECT owner_id, data FROM forests').all().forEach(r => { const o = rs[r.owner_id] = rs[r.owner_id] || {forests: {}}; const f = JSON.parse(r.data); o.forests[f.id || r.owner_id + '/' + Object.keys(o.forests).length] = f; });
+    const list = DM.dungDoiTac(rs, g('dmDonViVC') || {}, g('dmDoiTac') || []);
+    db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('dmDoiTac', JSON.stringify(list));
   }
 ];
 
