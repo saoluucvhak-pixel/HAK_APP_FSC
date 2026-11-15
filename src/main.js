@@ -147,6 +147,8 @@ function registerIpc() {
   ipcMain.handle('db:save', afterReloc((e, db, opts) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.save(db, {allowBulkDelete: !!(opts && opts.allowBulkDelete)}))(); if (r.ok) checkModel('save'); return r; })()));
   /* Lưu theo phần thay đổi (src/delta.js, Store.saveDelta): chỉ các chủ rừng / lô đã đổi; lệch phiên bản thì giao diện tự lưu toàn bộ */
   ipcMain.handle('db:saveDelta', afterReloc((e, d) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.saveDelta(d))(); if (r.ok) checkModel('delta'); return r; })()));
+  /* B5: đọc gói đóng băng của lô đã chốt (bảng chot_goi); phienBan bỏ trống = bản mới nhất. Gói không nạp sẵn khi mở app. */
+  ipcMain.handle('db:goiChot', (e, forestId, phienBan) => wrap(() => ({goi: store.docGoi(forestId, phienBan), ds: store.dsGoi(forestId)}))());
   ipcMain.handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, opts))()));
   ipcMain.handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))()));
   ipcMain.handle('backup:to', afterReloc(async () => {
@@ -166,7 +168,7 @@ function registerIpc() {
       if (t === 'json' || t === 'enospc') hooks.beforeJson = () => { throw Object.assign(new Error('giả lập'), {code: t === 'enospc' ? 'ENOSPC' : 'EIO'}); };
       if (t === 'sqlite') hooks.beforeSqlite = () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); };
       if (t === 'space') hooks.freeBytes = 1024;
-      const res = await Backup.backupAll({db: store.db, data: store.load(), outDir, dbBytes: sizeWithWal(store.file), hooks});
+      const res = await Backup.backupAll({db: store.db, data: store.load({kemGoi: true}), outDir, dbBytes: sizeWithWal(store.file), hooks});
       if (res.ok) { try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); } }   // chỉ khi cả hai file đã ghi và qua kiểm tra
       else log('ERROR', 'Sao lưu không đầy đủ: ' + res.message);
       return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite};
@@ -178,7 +180,9 @@ function registerIpc() {
   const sizeWithWal = f => { let n = 0; for (const x of ['', '-wal']) try { n += fs.statSync(f + x).size; } catch (e) { /* không có */ } return n; };
   ipcMain.handle('lot:save', async (e, pkg) => {
     try {
-      const sealed = LoRung.seal(LoRung.parsePackage(pkg).pkg || (() => { throw new Error('Dữ liệu lô không hợp lệ.'); })(), sha), name = LoRung.fileName(sealed);
+      const p0 = LoRung.parsePackage(pkg).pkg || (() => { throw new Error('Dữ liệu lô không hợp lệ.'); })();
+      if (store && p0.lo && p0.lo.chot && p0.lo.chot.goi == null) { const g = store.docGoi(p0.lo.id, p0.lo.chot.phienBan); if (g) p0.lo.chot.goi = g.data; }   // B5: gói đóng băng ở bảng chot_goi, file sao lưu lô vẫn mang gói
+      const sealed = LoRung.seal(p0, sha), name = LoRung.fileName(sealed);
       let file = process.env.HAKQN_LOT_DIR ? path.join(process.env.HAKQN_LOT_DIR, name) : null;
       if (!file) {
         const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackup ? loc.backupDir : app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});

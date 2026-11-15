@@ -130,11 +130,30 @@ const MIGRATIONS = [
       db.prepare('INSERT OR IGNORE INTO danh_muc_bang(kind) VALUES(?)').run(k);
       db.prepare('DELETE FROM meta WHERE key=?').run(k);
     });
+  },
+  /* v14 (B5): GÓI ĐÓNG BĂNG của lô đã chốt (chot.goi — bản chụp cả lô, có thể vài MB) ra bảng chot_goi (một dòng mỗi lô × phiên bản chốt).
+   * JSON của lô chỉ còn chot = {at, nguoi, phienBan, hash, hashDL}: mở app, lưu, kiểm tra không phải đọc / chép / băm gói. hashDL tính từ gói để kiểm "còn nguyên".
+   * Không đổi phần dữ liệu lô nên bản in không đổi; khóa chỉ đọc giữ nguyên (chot là khóa vòng đời). Chạy sau khi sao lưu file; chạy lại không đổi (lô đã hết goi). */
+  function v14(db) {
+    db.exec('CREATE TABLE IF NOT EXISTS chot_goi (forest_id TEXT NOT NULL, phien_ban INTEGER NOT NULL, hash TEXT NOT NULL, at TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY (forest_id, phien_ban))');
+    const up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?'), put = db.prepare('INSERT INTO chot_goi(forest_id,phien_ban,hash,at,data) VALUES(?,?,?,?,?) ON CONFLICT(forest_id,phien_ban) DO UPDATE SET hash=excluded.hash, at=excluded.at, data=excluded.data');
+    db.prepare("SELECT id, data FROM forests WHERE data LIKE '%\"goi\":%'").all().forEach(r => {
+      const x = tachGoi(JSON.parse(r.data)); if (!x.goi) return;
+      put.run(r.id, x.goi.phienBan, x.goi.hash, x.goi.at, x.goi.data);
+      const data = JSON.stringify(x.f); up.run(data, sha(data), r.id);
+    });
   }
 ];
 
 const sha = s => crypto.createHash('sha1').update(s).digest('hex');
-const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac'];   // danh mục lưu theo dòng ở bảng danh_muc (v13); trùng src/delta.js DM_BANG
+const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac'];
+/* B5: tách gói đóng băng khỏi JSON của lô đã chốt. f = lô (đối tượng). Trả {f: lô không còn chot.goi, goi: {phienBan, hash, at, data} | null}. Không sửa f đầu vào. */
+function tachGoi(f) {
+  if (!f || !f.chot || typeof f.chot.goi !== 'string') return {f, goi: null};
+  const V = require('./vongdoi'), chot = Object.assign({}, f.chot), data = chot.goi; delete chot.goi;
+  if (!chot.hashDL) { try { chot.hashDL = V.bamDuLieu(data); } catch (e) { /* gói hỏng: để nguyên, nguyenVen so được khi có gói */ } }
+  return {f: Object.assign({}, f, {chot}), goi: {phienBan: Number(chot.phienBan) || 0, hash: String(chot.hash || ''), at: String(chot.at || ''), data}};
+}   // danh mục lưu theo dòng ở bảng danh_muc (v13); trùng src/delta.js DM_BANG
 const now = () => new Date().toISOString();
 
 class Store {
@@ -179,8 +198,8 @@ class Store {
     return out;
   }
 
-  /* Đọc toàn bộ dữ liệu thành đối tượng db của giao diện */
-  load() {
+  /* Đọc toàn bộ dữ liệu thành đối tượng db của giao diện. opts.kemGoi: gắn lại gói đóng băng (chot.goi) cho lô đã chốt — dùng khi sao lưu ra file (bản sao lưu như trước B5) */
+  load(opts) {
     const out = {v: 2, rs: {}};
     this.db.prepare('SELECT key, value FROM meta').all().forEach(r => { if (!r.key.startsWith('lk:')) out[r.key] = JSON.parse(r.value); }); // 'lk:' = dữ liệu của bản tra cứu, không thuộc hồ sơ
     if (this._coBangDM()) {
@@ -192,8 +211,27 @@ class Store {
     this.db.prepare('SELECT id, data FROM companies').all().forEach(r => { out.congTy[r.id] = JSON.parse(r.data); });
     this.db.prepare('SELECT id, data FROM owners').all().forEach(r => { const o = JSON.parse(r.data); o.forests = {}; out.rs[r.id] = o; });
     this.db.prepare('SELECT id, owner_id, data FROM forests').all().forEach(r => { if (out.rs[r.owner_id]) out.rs[r.owner_id].forests[r.id] = JSON.parse(r.data); });
+    if (opts && opts.kemGoi && this._coBangGoi()) Object.values(out.rs).forEach(o => Object.values(o.forests).forEach(f => { if (f.chot && f.chot.goi == null) { const g = this.docGoi(f.id, f.chot.phienBan); if (g) f.chot.goi = g.data; } }));
     return out;
   }
+  _coBangGoi() { if (this._goiOk == null) this._goiOk = !!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='chot_goi'").get(); return this._goiOk; }
+  /* B5: đọc gói đóng băng của một lô (phiên bản chốt; bỏ trống = phiên bản mới nhất). Trả {phienBan, hash, at, data} hoặc null. */
+  docGoi(forestId, phienBan) {
+    if (!this._coBangGoi()) return null;
+    const r = phienBan != null ? this.db.prepare('SELECT phien_ban, hash, at, data FROM chot_goi WHERE forest_id=? AND phien_ban=?').get(String(forestId), Number(phienBan))
+      : this.db.prepare('SELECT phien_ban, hash, at, data FROM chot_goi WHERE forest_id=? ORDER BY phien_ban DESC LIMIT 1').get(String(forestId));
+    return r ? {phienBan: r.phien_ban, hash: r.hash, at: r.at, data: r.data} : null;
+  }
+  /* các phiên bản gói đã lưu của một lô (không kèm dữ liệu) */
+  dsGoi(forestId) { return this._coBangGoi() ? this.db.prepare('SELECT phien_ban phienBan, hash, at, length(data) bytes FROM chot_goi WHERE forest_id=? ORDER BY phien_ban').all(String(forestId)) : []; }
+  /* lô đang ghi có chot.goi (vừa chốt, hoặc nạp từ bản sao lưu): ghi gói vào chot_goi, JSON lô bỏ goi. Gọi TRONG giao dịch (dòng gói ghi cùng lô). */
+  _tachGoiKhiGhi(row) {
+    if (!this._coBangGoi() || row.data.indexOf('"goi":') < 0) return row;
+    const x = tachGoi(JSON.parse(row.data)); if (!x.goi) return row;
+    const data = JSON.stringify(x.f);
+    return Object.assign({}, row, {data, hash: sha(data), goi: x.goi});
+  }
+  _ghiGoi(fid, g) { if (g) (this._goiPut || (this._goiPut = this.db.prepare('INSERT INTO chot_goi(forest_id,phien_ban,hash,at,data) VALUES(?,?,?,?,?) ON CONFLICT(forest_id,phien_ban) DO UPDATE SET hash=excluded.hash, at=excluded.at, data=excluded.data'))).run(fid, g.phienBan, g.hash, g.at, g.data); }
 
   isEmpty() { return this.db.prepare('SELECT COUNT(*) c FROM owners').get().c === 0; }
 
@@ -311,7 +349,7 @@ class Store {
     this.db.transaction(() => {
       changed += this._writeSide(db, t);
       rows.owners.forEach(o => { if (have.get(o.id) !== o.hash) { st.upO.run({...o, t}); changed++; } });
-      rows.forests.forEach(f => { if (haveF.get(f.id) !== f.hash + '|' + f.owner_id) { st.upF.run({...f, t}); changed++; } });
+      rows.forests.forEach(f => { this._ghiGoi(f.id, f.goi); if (haveF.get(f.id) !== f.hash + '|' + f.owner_id) { const {goi: _g, ...r} = f; st.upF.run({...r, t}); changed++; } });
       goneO.forEach(id => { st.delO.run(id); changed++; });
       goneF.forEach(id => { if (haveF.has(id)) { st.delF.run(id); changed++; } });
     })();
@@ -343,7 +381,7 @@ class Store {
       if (!f || typeof f !== 'object' || (f.id || id) !== id || !v.owner || delO.includes(String(v.owner))) bad('lô ' + id);
       const json = M.needsEnsure(f) ? JSON.stringify(f = M.ensureForest(f)) : v.json;   // chuẩn hóa đội như lưu toàn bộ
       const fi = f.info || {};
-      return {id, owner_id: String(v.owner), ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: json, hash: sha(json)};
+      return this._tachGoiKhiGhi({id, owner_id: String(v.owner), ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: json, hash: sha(json)});
     });
     if (delF.some(id => id in upF) || delO.some(id => id in upO)) bad('vừa sửa vừa xóa cùng một dòng');
     this._guardDelete(delO, delF, opts);
@@ -352,7 +390,7 @@ class Store {
     const tx = this.db.transaction(() => {
       changed += sideD ? this._writeSideDelta(sideD, t) : this._writeSide(side, t);   // B6: phần ngoài hồ sơ theo phần thay đổi (danh mục theo dòng)
       rowsO.forEach(o => { st.upO.run({...o, t}); changed++; });
-      rowsF.forEach(f => { st.upF.run({...f, t}); changed++; });
+      rowsF.forEach(f => { this._ghiGoi(f.id, f.goi); const {goi: _g, ...r} = f; st.upF.run({...r, t}); changed++; });
       delF.forEach(id => { changed += st.delF.run(id).changes; });
       delO.forEach(id => { changed += st.delO.run(id).changes; });
       const n = this.db.prepare('SELECT (SELECT COUNT(*) FROM owners) o, (SELECT COUNT(*) FROM forests) f').get();
@@ -376,7 +414,7 @@ class Store {
         const f = M.needsEnsure(f0) ? M.ensureForest(f0) : f0;   // mọi lô ghi xuống đều có đội và mọi nhân công có doiId (tiến trình chính là nơi có thẩm quyền)
         const fd = JSON.stringify(f), fi = f.info || {}, idF = f.id || fid;
         if (seenF.has(idF)) dups.push('lô ' + idF + ' (' + (fi.maRung || '') + ') ở chủ ' + seenF.get(idF) + ' và ' + rest.id); seenF.set(idF, rest.id);
-        forests.push({id: idF, owner_id: rest.id, ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: fd, hash: sha(fd)});
+        forests.push(this._tachGoiKhiGhi({id: idF, owner_id: rest.id, ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: fd, hash: sha(fd)}));
       });
     });
     if (dups.length) throw Object.assign(new Error('Trùng mã nội bộ: ' + dups.slice(0, 5).join('; ') + (dups.length > 5 ? '…' : '') + '. Không ghi gì để tránh mất hồ sơ; hãy khôi phục lại với lựa chọn "Giữ cả hai" để cấp mã mới.'), {code: 'DUP_ID'});

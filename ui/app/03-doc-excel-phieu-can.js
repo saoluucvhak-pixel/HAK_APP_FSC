@@ -178,6 +178,14 @@ function doiXeThieuKy(rec) {
   return out;
 }
 /* Giấy tờ xe của một đội xe so với NGÀY CỦA TỪNG PHIẾU CÂN (src/giayto.js): phiếu chạy khi kiểm định, bảo hiểm hoặc GPLX đã hết hạn chặn BM-09 và BM-10 của đội xe đó */
-const hanLoiOf = (rec, g) => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g));
+/* nhớ tạm theo (mảng phiếu cân, phiên bản dữ liệu): kết quả tính từ phiếu cân của một đội xe không đổi khi dữ liệu không đổi (B7) */
+const pcTheoDoiNho = new WeakMap();
+function nhoTheoPc(pc, ten, khoa, fn) {
+  let c = pcTheoDoiNho.get(pc); if (!c || c.ver !== dataVer || c.n !== pc.length) { c = {ver: dataVer, n: pc.length, m: new Map()}; pcTheoDoiNho.set(pc, c); }
+  const k = ten + '|' + khoa; if (c.m.has(k)) return c.m.get(k);
+  const v = fn(); c.m.set(k, v); return v;
+}
+const khoaXe = g => JSON.stringify(g.xe.map(x => [String(x.bienSo || ''), x.kdDen || '', x.hanBH || '', x.hanGplx || '', x.taiXe || '']));
+const hanLoiOf = (rec, g) => nhoTheoPc(rec.pc || [], 'han', khoaXe(g), () => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g)));
 const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
 

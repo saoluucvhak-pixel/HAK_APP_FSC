@@ -48,7 +48,7 @@ function dinhMucMacDinh() {
   return {'Tổ trưởng': {...base}, 'Công nhân khai thác': {...base}, 'Công nhân cưa': {...base, nut: '2 đôi', kinh: '3 cái'}};
 }
 const ngayHomNay = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };   // dùng được ngay lúc nạp dữ liệu (trước module 06)
-function withDefaults(o) { if (o && o.rs) Object.values(o.rs).forEach(ow => Object.values((ow && ow.forests) || {}).forEach(f => { HAKDanhMuc.ganNgayChup(f, o.dmLaoDong, o.dmXeVC, ngayHomNay()); HAKModel.doiKhoaInVC(f); }));   // A3: trạng thái in BM-09/10 theo đội xe (như SQLite v12)   // A4: dòng cũ chưa có ngày chụp danh mục (sao lưu cũ nạp vào: như SQLite v11)
+function withDefaults(o) { if (o && o.rs) Object.values(o.rs).forEach(ow => Object.values((ow && ow.forests) || {}).forEach(f => { HAKDanhMuc.ganNgayChup(f, o.dmLaoDong, o.dmXeVC, ngayHomNay()); HAKModel.doiKhoaInVC(f); HAKVongDoi.ganHashDL(f); }));   // B5: lô đã chốt từ bản cũ có dấu vân tay phần dữ liệu (như SQLite v14)   // A3: trạng thái in BM-09/10 theo đội xe (như SQLite v12)   // A4: dòng cũ chưa có ngày chụp danh mục (sao lưu cũ nạp vào: như SQLite v11)
   if (!o.dinhMuc) o.dinhMuc = dinhMucMacDinh(); if (!o.congTy) o.congTy = {}; if (o.dmDonViVC) { o.dmDoiTac = HAKDanhMuc.hopNhatDoiTac(o.dmDonViVC, o.dmDoiTac || []).list; delete o.dmDonViVC; } return o; }   // dữ liệu cũ (sao lưu, localStorage): danh mục đơn vị vận chuyển gộp vào Đối tác — MỘT nguồn
 
 /* ========== Tiện ích ========== */

@@ -26,6 +26,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await open('fc', 'nc');
   ok('lô đã chốt: dải “Đã chốt … chỉ đọc” và ô nhập bị khóa', !!(await w.$('#loKhoaBar')) && !!(await w.$('#loKhoaFs')));
   ok('trong lô chốt không bấm được nút Thêm nhân công', await w.isDisabled('[data-act=stAdd][data-kind=nc]'));
+  { // B5: gói đóng băng ở bảng chot_goi, lô đọc lên không mang gói; dải khóa không báo "khác bản đã chốt"; đọc gói qua IPC
+    const L = (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fc, g = await w.evaluate(() => window.hak.goiChot('fc'));
+    ok('SQLite: lô đã chốt không mang gói trong dữ liệu lô, có dấu vân tay phần dữ liệu (hashDL)', L.chot && L.chot.goi === undefined && !!L.chot.hashDL, JSON.stringify(L.chot));
+    ok('đọc gói đã chốt qua IPC (db:goiChot): đúng phiên bản và dấu vân tay', g.ok && g.goi && g.goi.phienBan === 1 && g.goi.hash === L.chot.hash && V.bam(g.goi.data) === L.chot.hash, JSON.stringify(g).slice(0, 200));
+    const khac = V.bamDuLieu(L) !== V.bamDuLieu(g.goi.data);   // lô mẫu chốt trước khi chuẩn hóa đội nên dữ liệu đã khác gói; dải khóa phải nói đúng như so trực tiếp với gói
+    ok('kiểm "còn nguyên" theo hashDL cho cùng kết quả như so với gói (không cần nạp gói)', khac === /khác bản đã chốt/.test(await w.innerText('#loKhoaBar')) && L.chot.hashDL === V.bamDuLieu(g.goi.data));
+  }
   await w.click('[data-ftab=xuat]'); await w.waitForSelector('#chotBox');
   ok('tab Xuất hồ sơ của lô chốt: trạng thái Đã chốt, có nút Mở khóa', /Đã chốt/.test(await w.innerText('#chotTT')) && !!(await w.$('[data-act=chotMoKhoa]')));
   await w.click('[data-act=chotMoKhoa]'); await w.waitForTimeout(400);
