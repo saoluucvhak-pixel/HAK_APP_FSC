@@ -69,6 +69,8 @@ jobs:
           soffice --version
       - run: npm ci
       - run: npm run build:html
+      - name: Nâng cấp dữ liệu v8 (main 2.2) → v14 (danh mục theo dòng, gói chốt riêng, khóa in theo đội xe, ngày chụp danh mục; sao lưu trước, mở lại không đổi)
+        run: xvfb-run -a node scripts/e2e-nangcap-v14.js
       - name: Bốn bộ e2e có kiểm tra PDF (số hợp đồng, in đè, BM-08, chữ ký)
         run: node scripts/e2e-all.js sohd inde bm08 chuky --no-skip --out reports/e2e-pdf
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2

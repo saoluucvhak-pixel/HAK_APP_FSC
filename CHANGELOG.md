@@ -1,5 +1,43 @@
 # Nhật ký thay đổi
 
+## Chưa phát hành — sửa lỗi A1–A4 và hiệu năng B5–B7 (nền: nhánh sửa năm mục)
+
+### Sửa lỗi
+| # | Lỗi (trước) | Sửa (sau) |
+| --- | --- | --- |
+| A1 | Lô nhiều đội: bảng so định mức nhân công so định biên với **cả lô**, nên đội nào cũng bị báo lệch hoặc lệch bị che | So với **từng đội**: bảng định biên ở tab Nhân công so với đội đang chọn (ghi rõ tên đội), tab Kiểm tra báo “Số người của đội “X” khác định mức” theo đội; lô một đội giữ như cũ (`scripts/e2e-dinhbien-doi.js`) |
+| A2 | Kiểm tra chéo lô tính sản lượng dự kiến và tổng phiếu cân bằng công thức riêng (bỏ qua định mức keo mặc định, làm tròn khác màn hình) | Dùng chung `HAKDinhMuc.sanLuongDuKien`, `dinhMucLo`, `tongPhieuTan` (`src/dinhmuc.js`) cho màn hình và `src/cheolo.js`: cùng định mức (kể cả mặc định), cùng cách làm tròn |
+| A3 | Trạng thái in đợt 2 của BM-09 / BM-10 lưu theo CCCD (hoặc tên) người ký: đổi người ký của đội xe (ví dụ sang doanh nghiệp) làm mất lịch sử “đã in” | Khóa theo **đội xe** (`09:hd:<id đội xe>`). SQLite **v12** đổi khóa cũ sang khóa mới (lô đã chốt / đã dừng giữ nguyên, giao diện vẫn đọc khóa cũ); bản sao lưu cũ nạp vào cũng đổi (`withDefaults`) (`scripts/e2e-inkhoa-doixe.js`) |
+| A4 | Dòng nhân công / xe nhập trước khi có ngày chụp danh mục (`_dmNgay`) bị coi là chụp từ rất lâu: gặp danh mục khác là đề nghị “cập nhật” lùi về số cũ, kể cả khi lô đã sửa tay sau đó | SQLite **v11** gán ngày chụp cho dòng cũ = ngày cập nhật của dòng danh mục hiện hành (không có thì ngày nâng cấp); chỉ dòng chưa có ngày chụp, không đụng lô đã chốt / dừng; bản sao lưu cũ nạp vào cũng gán (`scripts/e2e-ngaychup.js`) |
+
+### Hiệu năng
+Đo bằng `scripts/perf-dulieu.js` (Electron thật, SQLite thật): 50 lô × 2.000 phiếu cân, mỗi lô 30 nhân công và 15 xe, danh mục 1.500 người và 300 xe × 3 dòng lịch sử, 10 lô đã chốt; file SQLite ~35 MB. Số đo lưu ở `reports/perf/` (`truoc-B.json`, `sau-B7.json`, `sau-B6.json`, `sau-B5.json`). Thời gian vẽ là số nhỏ nhất của 3 lần, máy CI 4 nhân; các lần đo lặp lại dao động khoảng ±30 %.
+
+| Chỉ số | Trước | Sau B7 | Sau B6 | Sau B5 |
+| --- | --- | --- | --- | --- |
+| Vẽ tab Thông tin rừng (mở lô) | 1.141 ms | 10 ms | 9 ms | 10 ms |
+| Vẽ tab Nhân công | 1.169 ms | 23 ms | 27 ms | 32 ms |
+| Vẽ tab Vận chuyển | 1.207 ms | 154 ms | 216 ms | 271 ms |
+| Vẽ tab Kiểm tra | 1.032 ms | 8 ms | 10 ms | 11 ms |
+| Vẽ tab Xuất hồ sơ (tất cả) | 1.899 ms | 249 ms | 254 ms | 253 ms |
+| Phần ngoài hồ sơ gửi kèm mỗi lần lưu | 1.267.208 byte | 1.267.208 byte | **19 byte** | 19 byte |
+| Sửa một dòng danh mục rồi lưu | (gửi cả danh mục) | — | 325 byte, 369 ms | 325 byte, 423 ms |
+| Tổng JSON các lô đọc lên giao diện | 33,2 MB | 33,2 MB | 33,2 MB | **26,8 MB** |
+| Lô lớn nhất (lô đã chốt) | 1,18 MB | 1,18 MB | 1,18 MB | **0,54 MB** |
+
+- **B7 — nhớ tạm theo phiên bản dữ liệu.** `dataVer` (ui/app/02) tăng ở mọi đường đổi dữ liệu (`persist`, `persistLo`, `persistNow`, `loVeBanDaLuu`, mọi thao tác bản nháp `HAKStage`, thêm / bỏ bản nháp). Kết quả kiểm tra (`exportCheck`), `gateRaw`, tiến độ từng lô ở danh sách bên trái, chỉ mục chéo lô, phiếu cân sắp theo ngày, hạn giấy tờ xe nhớ theo (khóa hồ sơ, `dataVer`, db): vẽ lại khi dữ liệu không đổi thì không tính lại. Trước đây danh sách lô tính lại kiểm tra của **cả 50 lô** mỗi lần vẽ. `tests/datacver.test.js` quét mã: hàm giao diện nào sửa lô / db mà không tăng phiên bản thì test hỏng (ngoại lệ ghi lý do); `scripts/e2e-nhotam.js` kiểm nhớ tạm trúng / tính lại đúng lúc.
+- **B6 — danh mục ra bảng SQLite riêng.** SQLite **v13** chuyển `dmLaoDong`, `dmXeVC`, `dmDoiTac` từ bảng meta (một chuỗi JSON lớn) sang bảng `danh_muc` (mỗi mục một dòng, có băm) và `danh_muc_bang`; đọc lên vẫn là mảng như trước, danh mục rỗng vẫn là `[]`. Lưu toàn bộ chỉ ghi dòng có băm khác; lưu theo phần thay đổi gửi `sideD` (chỉ dòng danh mục, khóa meta, công ty đã đổi), sai dạng thì báo `MISMATCH` và giao diện lưu toàn bộ (`tests/danhmuc-bang.test.js`).
+- **B5 — gói đóng băng ra bảng riêng.** SQLite **v14** chuyển `chot.goi` (bản chụp cả lô lúc chốt) sang bảng `chot_goi` (một dòng mỗi lô × phiên bản chốt, giữ cả các phiên bản cũ). JSON lô chỉ còn `chot = {at, nguoi, phienBan, hash, hashDL}`; `hashDL` là dấu vân tay phần dữ liệu nên kiểm “còn nguyên” (`nguyenVen`) không cần nạp gói. Đọc gói qua IPC `db:goiChot`; sao lưu toàn bộ và sao lưu một lô vẫn mang gói như trước; khóa chỉ đọc (`LOCKED`) giữ nguyên (`tests/chotgoi.test.js`, `scripts/e2e-chot-ho-so.js`).
+
+### Nâng cấp dữ liệu
+- v11–v14 chạy sau khi sao lưu file (`backups/truoc-nang-cap-v…-len-v14-….sqlite`), một chiều, chạy lại không đổi; bản sao lưu JSON cũ nạp vào được xử lý như migration (`withDefaults`). `scripts/e2e-nangcap-v14.js` dựng dữ liệu ở cấu trúc v8 (main 2.2) rồi mở bằng bản mới; CI chạy bài này ở job Ubuntu.
+- Bản in giống từng byte với mốc cce3907: `scripts/so-ban-in.js` cho 198/198 tài liệu giống, 0 khác.
+
+### Giới hạn
+- Thời gian **lưu** chưa giảm nhiều (lần lưu đầu sau khi mở app ~2,4–3,7 s, các lần sau ~1,2–2,0 s ở dữ liệu đo): phần lớn là giao diện tuần tự hóa cả 50 lô để so ảnh chụp, việc này nằm ngoài B5–B7.
+- Tab Vận chuyển dao động 150–270 ms, tab Xuất 250–420 ms giữa các lần đo trên máy CI; mục tiêu < 300 ms đạt ở số nhỏ nhất của 3 lần nhưng có lần vượt.
+- Bản chạy trong trình duyệt (không có Electron) vẫn giữ gói trong lô (lưu vào bộ nhớ trình duyệt như trước).
+
 ## Chưa phát hành — sửa năm mục (nền: main 2.2 + bốn lỗi ở mục trên)
 
 ### Sửa lỗi
