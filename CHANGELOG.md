@@ -15,6 +15,7 @@ Bản nâng cấp lớn. Dữ liệu 1.4.x được chuyển **một chiều** k
 8. **Báo cáo mới:** Sản lượng theo đội khai thác, Vận chuyển theo đội xe; báo cáo Danh sách lao động có cột Đội.
 9. **Một bộ kiểm tra cho mỗi lô** (`src/kiemtra.js`): mỗi mục ghi mức (chặn / cần đối chiếu), nhóm, đối tượng (lô / đội / đội xe / dòng), biểu mẫu bị chặn và nơi sửa. Màn Kiểm tra trước khi xuất và bước Chuẩn bị của quy trình hồ sơ đọc từ đó.
 10. **Breadcrumb** Chủ rừng › Lô › màn › Đội / Đội xe ở đầu lô.
+11. **Bố cục thống nhất** cho màn đội khai thác (tab Nhân công) và đội xe (tab Vận chuyển): chọn đối tượng và thông tin đối tượng → bảng con (nhân công / xe) → **số và ngày văn bản** → thanh Lưu dữ liệu vào lô.
 
 ### Trường cũ được bỏ (SQLite v6, có sao lưu file; chuyển một chiều)
 | Trường cũ | Chuyển thành |
@@ -33,5 +34,4 @@ So `word/document.xml` của mọi tài liệu trong gói "Toàn bộ hồ sơ" 
 
 ### Việc còn lại
 - Chuyển các hàm quy tắc kiểm tra (`checkNC`, `checkDX`, `checkPC`, `gate`…) khỏi giao diện thành hàm thuần trong `src/kiemtra.js` (hiện `src/kiemtra.js` định nghĩa dạng mục chung, biểu mẫu bị chặn, tóm tắt; các quy tắc vẫn chạy ở giao diện và được gom qua `exportCheck`).
-- Sắp xếp lại mọi màn đối tượng theo bố cục thống nhất "thông tin – bảng con – số văn bản".
 - `db.chucDanhThem` (danh sách vị trí thêm cũ): chưa chuyển vào định mức nhân công vì chuyển sẽ làm BM-06 in thêm phần "Phân công nhiệm vụ" ở lô chưa lưu định mức nhân công.

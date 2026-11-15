@@ -77,8 +77,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lô có cả hai loại đội: vẫn được lập hợp đồng giao khoán, ủy quyền và hợp đồng lao động', ch.g.canGK && ch.g.canUQ && ch.g.canHDLD, JSON.stringify(ch.g));
   // số văn bản: nhập số HĐ giao khoán khi đội 1 đang chọn thì ghi vào đội 1
   await w.click('[data-act=chonDoi][data-doi=doi1]'); await w.waitForTimeout(200);
-  ok('số văn bản của đội nằm ở màn đội (tab Nhân công), tab Xuất không còn ô số HĐ giao khoán', !!(await w.$('#doiKT input[data-exp=soKT]')));
-  await w.fill('#doiKT input[data-exp=soKT]', '031'); await w.dispatchEvent('#doiKT input[data-exp=soKT]', 'change'); await w.waitForTimeout(300); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
+  ok('số văn bản của đội nằm ở màn đội (tab Nhân công), tab Xuất không còn ô số HĐ giao khoán', !!(await w.$('#doiKTVb input[data-exp=soKT]')));
+  await w.fill('#doiKTVb input[data-exp=soKT]', '031'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change'); await w.waitForTimeout(300); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   f = await dbNow();
   ok('số hợp đồng giao khoán nhập ở màn đội ghi vào đội đang chọn (đội 1)', f.doi[0].exp.soKT === '031' && !('soKT' in f.exp), JSON.stringify({doi: f.doi.map(d => d.exp), exp: f.exp}));
   await w.click('[data-ftab=xuat]'); await w.waitForTimeout(300);

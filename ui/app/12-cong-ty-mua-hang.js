@@ -113,13 +113,18 @@ function panelHdvc(rec) {
       '<label><span>Đơn giá cố định (đồng/tấn)</span><input name="vcCoDinh" value="' + esc(c.coDinh ?? '') + '"></label>' +
       '<label><span>Đơn giá tấn/km (đồng/tấn/km)</span><input name="vcKm" value="' + esc(c.donGiaKm ?? '') + '"></label>' +
       '<label><span>Vận chuyển từ ngày</span><input name="vcTu" value="' + esc(c.tuNgay ?? '') + '"></label>' +
-      '<label><span>Số HĐ vận chuyển (trống = số chung của lô)</span><input name="soVC" value="' + esc(e.soVC || '') + '"></label>' +
-      '<label><span>Chi phí khác (trống = chung)</span><input name="vcChiPhi" value="' + esc(e.vcChiPhi || '') + '"></label>' +
-      '<label><span>Số biên bản xác nhận KL (trống = chung)</span><input name="pcSo" value="' + esc(e.pcSo || '') + '"></label>' +
-      '<label><span>Ngày lập xác nhận KL (trống = chung)</span><input name="pcNgay" value="' + esc(e.pcNgay || '') + '"></label>' +
       '<div class="row" style="grid-column:1/-1"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (!xe ? '<button class="btn danger sm" type="button" data-act="xoaHd">Xóa đội xe</button>' : '') + '</div></form>';
   }
   return html + '</div>';
+}
+/* Số và ngày văn bản của đội xe đang chọn: cuối màn Vận chuyển (thông tin – bảng con – số văn bản); các ô thuộc form #hdForm qua thuộc tính form */
+function panelHdvcVB(rec) {
+  if (!rec.hdvc) return '';
+  const sel = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc}).find(h => h.id === curHd); if (!sel) return '';
+  const e = sel.exp || {}, k = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc}).indexOf(sel), ten = trim(sel.ten) || 'Đội xe ' + (k + 1);
+  const o = (n, lb) => '<label><span>' + lb + '</span><input form="hdForm" name="' + n + '" value="' + esc(e[n] || '') + '"></label>';
+  return '<div class="card" id="hdVB"><h4 style="margin:0 0 6px">Số và ngày văn bản của ' + esc(ten) + ' <span class="mut" style="font-weight:400">· để trống thì dùng số chung của lô</span></h4><div class="grid">' +
+    o('soVC', 'Số HĐ vận chuyển (trống = số chung của lô)') + o('vcChiPhi', 'Chi phí khác (trống = chung)') + o('pcSo', 'Số biên bản xác nhận KL (trống = chung)') + o('pcNgay', 'Ngày lập xác nhận KL (trống = chung)') + '</div></div>';
 }
 function dvForm(d) {
   d = d || {};
@@ -139,9 +144,9 @@ function hdCell(rec, r) {
 function panelDX(rec) {
   const c = checkDX(rec);
   const head = panelMua(rec) + panelVc(rec) + panelHdvc(rec) + panelImport('dx', rec) + stBar('dx', rec) + stErrBox();
-  if (!rec.dx.length && !stCur()) return head + '<div class="empty">Chưa có danh sách vận chuyển. Bấm “+ Thêm xe”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>';
+  if (!rec.dx.length && !stCur()) return head + '<div class="empty">Chưa có danh sách vận chuyển. Bấm “+ Thêm xe”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>' + panelHdvcVB(rec);
   return head + issuesBox(c.errs, c.warns) + stTable('dx', rec, ['Chủ xe', 'Biển kiểm soát', 'Loại xe', 'Người ký HĐ', 'Đội xe', 'Tài xế', 'Số GPLX', 'Hạn GPLX', 'Hạn bảo hiểm', 'Kiểm định'],
-    r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + hdCell(rec, r) + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c);
+    r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + hdCell(rec, r) + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c) + panelHdvcVB(rec);
 }
 
 /* Ngày cân 2: số đã nhập thì hiện nguyên; không có thì suy từ ngày cân 1 và giờ cân (giờ cân 2 sớm hơn giờ cân 1 = qua nửa đêm, +1 ngày) và ghi “suy ra” */
