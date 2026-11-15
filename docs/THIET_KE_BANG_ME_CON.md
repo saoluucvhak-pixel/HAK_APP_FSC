@@ -1,6 +1,6 @@
 # Thiết kế lại dữ liệu theo bảng mẹ – bảng con (bản 2.0)
 
-Trạng thái: **bản thiết kế chờ duyệt**. Chưa đổi mã chương trình. Áp dụng skill `hak-parent-child-data-model` và `quan-ly-bang-me-bang-con`.
+Trạng thái: **đã duyệt (15/11/2026)**; giai đoạn 1 đã làm (`src/model.js`, xem mục 12). Áp dụng skill `hak-parent-child-data-model` và `quan-ly-bang-me-bang-con`.
 Quyết định đã chốt với người phụ trách (15/11/2026): hình thức và cách tính **theo từng đội**; phiếu cân có **cột Đội** (lô một đội tự gán) và **gán đội hàng loạt theo bộ lọc**; **đơn vị vận chuyển và xe là danh mục dùng chung**; **cước theo từng hợp đồng vận chuyển**.
 
 ## 1. Vấn đề của cấu trúc hiện tại (1.4.x)
@@ -130,9 +130,19 @@ Mỗi bảng con một file mẫu, ghép với cha bằng **khóa nghiệp vụ*
 
 Mỗi giai đoạn một commit (hoặc vài commit) có kiểm thử chạy thật trước khi đẩy.
 
-## 11. Điểm còn cần xác nhận
+## 11. Điểm đã xác nhận (15/11/2026)
 
-1. Đơn vị vận chuyển có thể là **doanh nghiệp** (ký bằng MST, người đại diện) ngoài cá nhân chủ xe / tài xế không?
-2. Một xe có thể chạy cho **hai hợp đồng** trong cùng một lô (ví dụ đổi chủ giữa chừng) không? Thiết kế hiện tại: không (một xe một hợp đồng trong một lô).
-3. Diện tích giao cho từng đội (cách tính theo ha) nhập tay ở đội, tổng phải bằng diện tích lô — đồng ý?
-4. Khối lượng thực tế nhập tay của lô (ô cũ) bỏ hẳn ở lô mới, chỉ lấy từ phiếu cân — đồng ý?
+1. Đơn vị vận chuyển có thể là **doanh nghiệp** (MST, người đại diện) ngoài cá nhân chủ xe / tài xế.
+2. Mỗi xe thuộc **một** hợp đồng vận chuyển trong một lô; cùng một xe có thể chạy cho **nhiều lô** (danh mục xe dùng chung).
+3. Diện tích giao cho từng đội nhập ở đội, tổng các đội bằng diện tích lô; lô **một đội thì mặc định cả lô**.
+4. Lô mới bỏ ô khối lượng thực tế nhập tay, **chỉ lấy từ phiếu cân**; lô cũ giữ trường cũ để bản in cũ không đổi.
+5. Phiếu cân có cột Đội; lô một đội tự gán, không cần chọn; có **gán đội hàng loạt theo bộ lọc**.
+
+## 12. Giai đoạn 1 — đã làm
+
+`src/model.js` (hàm thuần, dùng chung giao diện và kiểm thử):
+- `migrateDb(db)`: mỗi lô sang cấu trúc 2 (`doi`, `hdvc`, phiếu cân gán đội khi lô một đội); danh mục `dmViTri`, `dmDonViVC`, `dmXe` (gộp giữa các lô; trùng thì lô có ngày bắt đầu mới nhất thắng); chạy lại không đổi gì.
+- `legacyDb(db2)` / `legacyForest(lô)`: dựng lại đúng dạng 1.4.x (thứ tự nhân công, xe; chấm công; số văn bản) để biểu mẫu hiện có đọc y nguyên.
+- Chưa đổi giao diện và cách lưu: dữ liệu vẫn lưu dạng 1.4.x cho đến giai đoạn 3.
+
+Kiểm thử: `tests/model.test.js` (cơ sở dữ liệu thật 1.0.0 và 1.4.x, dữ liệu e2e dùng chung, nhiều đội, nhiều người ký, gộp danh mục, vị trí, lô thiếu khóa); tự kiểm `HAKQN_CHECK_MODEL` chạy `legacyDb(migrateDb(db)) = db` sau **mọi lần lưu** của cả bộ e2e.

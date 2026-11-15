@@ -13,7 +13,7 @@ const {GoogleAuth, fileIdOf} = require('./google-auth');
 
 /* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
  * để không tiến trình nào trên máy đặt được chúng nhằm bỏ qua hộp thoại xác nhận hay đổi nguồn dữ liệu. HAKQN_USERDATA/HAKQN_DB/HAKQN_SMOKE* vẫn dùng cho kiểm tra khói bản cài. */
-const TEST_ONLY_ENV = ['HAKQN_FAIL_SAVE', 'HAKQN_SHEET_URL', 'HAKQN_TEST_BACKUP_FAIL', 'HAKQN_LOT_DIR', 'HAKQN_LOT_FILE', 'HAKQN_PICK_DIR', 'HAKQN_PICK_CHOICE',
+const TEST_ONLY_ENV = ['HAKQN_CHECK_MODEL', 'HAKQN_FAIL_SAVE', 'HAKQN_SHEET_URL', 'HAKQN_TEST_BACKUP_FAIL', 'HAKQN_LOT_DIR', 'HAKQN_LOT_FILE', 'HAKQN_PICK_DIR', 'HAKQN_PICK_CHOICE',
   'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE'];
 if (app.isPackaged) TEST_ONLY_ENV.forEach(k => { delete process.env[k]; });
 /* Đường dẫn file do giao diện gửi lên (thay hộp thoại chọn file) chỉ nhận khi chạy từ mã nguồn (kiểm thử); bản cài luôn hỏi qua hộp thoại của hệ điều hành */
@@ -122,6 +122,16 @@ function runAutoBackup() {
 }
 
 const NO_STORE = () => 'Chưa mở được cơ sở dữ liệu' + (dataIssue ? ': ' + dataIssue.reason + ' (' + dataIssue.path + ')' : '') + '. Hãy xử lý ở màn hình thông báo trước.';
+/* Tự kiểm cấu trúc 2.0 (chỉ khi chạy từ mã nguồn, HAKQN_CHECK_MODEL=<file nhật ký>): sau mỗi lần lưu, chuyển dữ liệu sang cấu trúc bảng mẹ – bảng con
+ * rồi dựng lại dạng cũ (src/model.js) phải ra y nguyên dữ liệu vừa lưu; sai lệch ghi vào file nhật ký. Chạy cả bộ e2e với biến này để kiểm trên mọi dữ liệu thử. */
+function checkModel(where) {
+  const f = process.env.HAKQN_CHECK_MODEL; if (!f || !store) return;
+  try {
+    const M = require('./model'), db = store.load(), back = M.legacyDb(M.migrateDb(db, require('./dinhbien').MAC_DINH));
+    require('assert').deepStrictEqual(back, JSON.parse(JSON.stringify(db)));
+    fs.appendFileSync(f, 'OK ' + where + '\n');
+  } catch (e) { fs.appendFileSync(f, 'LECH ' + where + ' ' + String(e.message).slice(0, 4000).replace(/\n/g, ' ⏎ ') + '\n'); }
+}
 function wrap(fn, anyState) { return (...a) => { try { if (!store && !anyState) throw Object.assign(new Error(NO_STORE()), {unavailable: true}); return {ok: true, ...fn(...a)}; } catch (e) { if (e.code !== 'STALE') log('ERROR', e.message); return {ok: false, error: e.message, code: e.code, unavailable: !!e.unavailable}; } }; }
 /* Mọi thao tác ghi/đọc dữ liệu chờ nếu đang đổi thư mục dữ liệu: không mất thao tác lưu phát sinh lúc đó, và chạy trên cơ sở dữ liệu mới sau khi chuyển */
 const afterReloc = fn => async (...a) => { if (relocating) { try { await relocating; } catch (e) { /* lỗi đã được báo ở nơi đổi */ } } return fn(...a); };
@@ -133,9 +143,9 @@ function registerIpc() {
     catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, error: err.message}; }
   });
   /* HAKQN_FAIL_SAVE=<đường dẫn file>: khi file đó tồn tại thì lần lưu giả lập thất bại (chỉ dùng để kiểm thử “lưu lỗi”) */
-  ipcMain.handle('db:save', afterReloc((e, db, opts) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : wrap(() => store.save(db, {allowBulkDelete: !!(opts && opts.allowBulkDelete)}))()));
+  ipcMain.handle('db:save', afterReloc((e, db, opts) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.save(db, {allowBulkDelete: !!(opts && opts.allowBulkDelete)}))(); if (r.ok) checkModel('save'); return r; })()));
   /* Lưu theo phần thay đổi (src/delta.js, Store.saveDelta): chỉ các chủ rừng / lô đã đổi; lệch phiên bản thì giao diện tự lưu toàn bộ */
-  ipcMain.handle('db:saveDelta', afterReloc((e, d) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : wrap(() => store.saveDelta(d))()));
+  ipcMain.handle('db:saveDelta', afterReloc((e, d) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.saveDelta(d))(); if (r.ok) checkModel('delta'); return r; })()));
   ipcMain.handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, opts))()));
   ipcMain.handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))()));
   ipcMain.handle('backup:to', afterReloc(async () => {
