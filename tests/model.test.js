@@ -43,7 +43,7 @@ test('đội khai thác: giao khoán nhiều Tổ trưởng → mỗi Tổ trư�
   assert.deepStrictEqual(f.nc.map(r => r.ten + ':' + r.doiId), ['A1:doi2', 'TT2:doi1', 'TT1:doi2', 'B1:doi1', 'LẠC:']);
   f.doi.forEach(d => { assert.deepStrictEqual(d.hinhThuc, {hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: {'Tổ trưởng': 1}}); assert.deepStrictEqual(d.exp, {soKT: '01', ntNgay: '02/10/2026'}); });
   assert.deepStrictEqual(f.exp, {fscNgay: '01/09/2026', ngayKy: '01/10/2026'}, 'số/ngày của lô (và ngày ký chung) ở lại lô');
-  assert.deepStrictEqual(M.teamErrors(f).map(e => e.text), ['“LẠC” chưa thuộc đội nào: chọn đội cho người này (lô có 2 đội)']);
+  assert.deepStrictEqual(M.teamErrors(f).map(e => e.text), ['Đội “Không có” của “LẠC” không có Tổ trưởng: chọn đội cho người này (lô có 2 đội)']);
 });
 
 test('đội khai thác: hình thức trực tiếp có nhiều Tổ trưởng vẫn là MỘT đội (như bản cũ); lô không có nhân công vẫn có một đội', () => {
@@ -58,7 +58,7 @@ test('đội khai thác: thêm, sửa, chuyển người, xóa đội; lỗi c�
   let f = M.ensureForest({id: 'f', info: {hinhThucLuong: 'sanluong', donGiaTan: {'Tổ trưởng': 400000}}, nc: [nv(1, 'Tổ trưởng', 'T1', 'Tổ trưởng', '1'), nv(2, 'Công nhân', 'C1', 'Công nhân cưa', '2')]});
   const a = M.addTeam(f, ' Đội 2 '); f = a.f;
   assert.deepStrictEqual(f.doi[1], {id: 'doi2', ten: 'Đội 2', hinhThuc: {hinhThucLuong: 'sanluong', donGiaTan: {'Tổ trưởng': 400000}}, dienTich: null, exp: {}}, 'đội mới chép hình thức, đơn giá của đội đầu');
-  assert.ok(M.teamErrors(f).some(e => /chưa có tên/.test(e.text)), 'nhiều đội: đội đầu chưa có tên');
+  assert.ok(M.teamErrors(f).some(e => /chưa ghi tên đội|chưa có tên/.test(e.text)), 'nhiều đội: đội đầu chưa có tên');
   f = M.updateTeam(f, 'doi1', {ten: 'Đội 1', hinhThuc: {moHinhKy: 'tructiep', hinhThucLuong: 'ngaycong'}, dienTich: 1.5, exp: {soKT: '07'}}).f;
   assert.deepStrictEqual([f.doi[0].hinhThuc.moHinhKy, f.doi[0].hinhThuc.hinhThucLuong, f.doi[0].dienTich, f.doi[0].exp.soKT, f.doi[1].hinhThuc.hinhThucLuong], ['tructiep', 'ngaycong', 1.5, '07', 'sanluong'], 'mỗi đội hình thức, cách tính riêng');
   assert.match(M.removeTeam(f, 'doi1').error, /còn 2 nhân công/);

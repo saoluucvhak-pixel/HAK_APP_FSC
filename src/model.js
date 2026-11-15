@@ -98,12 +98,12 @@
   /* lỗi cấu trúc đội của một lô: dòng chưa thuộc đội, đội không / nhiều Tổ trưởng (giao khoán), tên đội trống / trùng khi nhiều đội */
   function teamErrors(f) {
     const errs = [], doi = (f && f.doi) || [], nc = (f && f.nc) || [], multi = doi.length > 1;
-    nc.forEach(r => { if (!teamOf(f, r)) errs.push({row: r._row, text: '“' + (r.ten || '(không tên)') + '” chưa thuộc đội nào' + (multi ? ': chọn đội cho người này (lô có ' + doi.length + ' đội)' : '')}); });
+    nc.forEach(r => { if (!teamOf(f, r)) errs.push({row: r._row, text: (trim(r.doi) ? 'Đội “' + trim(r.doi) + '” của “' + (r.ten || '(không tên)') + '” không có Tổ trưởng' : '“' + (r.ten || '(không tên)') + '” chưa thuộc đội nào') + (multi ? ': chọn đội cho người này (lô có ' + doi.length + ' đội)' : '')}); });
     const names = new Map();
     doi.forEach((d, k) => {
       const m = membersOf(f, d), tts = m.filter(isTT), direct = (d.hinhThuc || {}).moHinhKy === 'tructiep';
       const lb = 'Đội ' + (d.ten ? '“' + d.ten + '”' : (k + 1));
-      if (multi && !trim(d.ten)) errs.push({text: lb + ' chưa có tên: lô có nhiều đội thì mỗi đội một tên'});
+      if (multi && !trim(d.ten)) errs.push({row: tts[0] && tts[0]._row, text: lb + (tts[0] ? ' (Tổ trưởng “' + tts[0].ten + '”) chưa ghi tên đội' : ' chưa có tên') + ': lô có nhiều đội thì mỗi đội một tên'});
       const nk = fold(d.ten); if (multi && nk) { if (names.has(nk)) errs.push({text: 'Tên đội “' + d.ten + '” trùng với đội khác'}); else names.set(nk, true); }
       if (m.length && !tts.length) errs.push({text: lb + ' chưa có Tổ trưởng'});
       if (!direct && tts.length > 1) errs.push({text: lb + ' có ' + tts.length + ' Tổ trưởng: mỗi đội giao khoán chỉ một Tổ trưởng (tách thành đội riêng)'});
