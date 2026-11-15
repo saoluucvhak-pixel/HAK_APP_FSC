@@ -125,7 +125,9 @@ async function saveOnce() {
     const W = dbGhi(); snap = HAKDelta.snapshot(W);
     if (!snap.dup) {
       const d = HAKDelta.diff(saveCache.snap, snap);
-      d.rev = saveCache.rev; d.side = HAKDelta.side(W); d.counts = snap.counts;
+      d.rev = saveCache.rev; d.counts = snap.counts;
+      if (saveCache.snap.side && snap.side) d.sideD = HAKDelta.diffSide(saveCache.snap.side, snap.side); else d.side = HAKDelta.side(W);   // B6: chỉ các dòng danh mục / khóa meta đã đổi
+      window.__saveStats.sideBytes = d.sideD ? JSON.stringify(d.sideD).length : -1;   // đo hiệu năng: cỡ phần ngoài hồ sơ đã gửi (-1: gửi đủ)
       r = await HB.saveDelta(d);
       if (r && !r.ok && (r.code === 'STALE' || r.code === 'MISMATCH')) { window.__saveStats.fallback++; r = null; }
       else if (r && r.ok) window.__saveStats.delta++;

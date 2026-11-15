@@ -53,7 +53,9 @@ function duLieu() {
   const r = await w.evaluate(async () => { const a = performance.now(); const r = await window.__stSaveCurrent(); return {ok: r && r.ok, ms: Math.round(performance.now() - a), cach: window.__saveStats.last}; }); kq.luuMotO = Object.assign(r, {tongMs: Date.now() - a});
   // lần lưu thứ hai (đã có ảnh chụp của lần trước: lưu theo phần thay đổi — trường hợp thường gặp)
   await w.evaluate(() => window.__perf.ve('own1', 'f11', 'nc')); await w.fill('#doiKTVb input[data-exp=soKT]', '098'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change');
-  kq.luuLanHai = await w.evaluate(async () => { const a = performance.now(); const r = await window.__stSaveCurrent(); return {ok: r && r.ok, ms: Math.round(performance.now() - a), cach: window.__saveStats.last}; });
+  kq.luuLanHai = await w.evaluate(async () => { const a = performance.now(); const r = await window.__stSaveCurrent(); return {ok: r && r.ok, ms: Math.round(performance.now() - a), cach: window.__saveStats.last, sideBytes: window.__saveStats.sideBytes}; });
+  // sửa MỘT dòng danh mục lao động (4.500 dòng) rồi lưu: B6 chỉ gửi và ghi dòng đó
+  kq.luuDanhMuc = await w.evaluate(() => window.__perf.luuMotDongDanhMuc());
   await app.close();
   console.log(JSON.stringify(kq, null, 1));
   const out = arg('--out'); if (out) { fs.mkdirSync(path.dirname(out), {recursive: true}); fs.writeFileSync(out, JSON.stringify(kq, null, 1)); }

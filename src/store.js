@@ -112,10 +112,29 @@ const MIGRATIONS = [
   function v12(db) {
     const M = require('./model'), up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
     db.prepare('SELECT id, data FROM forests').all().forEach(r => { const f = JSON.parse(r.data); if (!M.doiKhoaInVC(f)) return; const data = JSON.stringify(f); up.run(data, sha(data), r.id); });
+  },
+  /* v13 (B6): DANH MỤC (lao động, xe, đối tác) ra bảng riêng, MỘT DÒNG MỖI MỤC (danh_muc: loại, thứ tự, JSON, băm); danh_muc_bang ghi danh mục nào đang có
+   * (danh mục rỗng [] vẫn là "có", như khóa meta trước đây). Chuyển nguyên từng dòng từ meta rồi bỏ khóa meta; khóa không phải mảng thì để nguyên ở meta.
+   * Không đổi hồ sơ lô nào nên bản in không đổi. Chạy sau khi sao lưu file; chạy lại không đổi (meta đã không còn khóa danh mục). */
+  function v13(db) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS danh_muc (kind TEXT NOT NULL, ord INTEGER NOT NULL, data TEXT NOT NULL, hash TEXT NOT NULL, PRIMARY KEY (kind, ord));
+      CREATE TABLE IF NOT EXISTS danh_muc_bang (kind TEXT PRIMARY KEY);
+    `);
+    const g = db.prepare('SELECT value FROM meta WHERE key=?'), put = db.prepare('INSERT INTO danh_muc(kind,ord,data,hash) VALUES(?,?,?,?)');
+    DM_BANG.forEach(k => {
+      const r = g.get(k); if (!r) return; let v; try { v = JSON.parse(r.value); } catch (e) { return; }
+      if (!Array.isArray(v)) return;
+      db.prepare('DELETE FROM danh_muc WHERE kind=?').run(k);
+      v.forEach((row, i) => { const data = JSON.stringify(row); put.run(k, i, data, sha(data)); });
+      db.prepare('INSERT OR IGNORE INTO danh_muc_bang(kind) VALUES(?)').run(k);
+      db.prepare('DELETE FROM meta WHERE key=?').run(k);
+    });
   }
 ];
 
 const sha = s => crypto.createHash('sha1').update(s).digest('hex');
+const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac'];   // danh mục lưu theo dòng ở bảng danh_muc (v13); trùng src/delta.js DM_BANG
 const now = () => new Date().toISOString();
 
 class Store {
@@ -164,6 +183,11 @@ class Store {
   load() {
     const out = {v: 2, rs: {}};
     this.db.prepare('SELECT key, value FROM meta').all().forEach(r => { if (!r.key.startsWith('lk:')) out[r.key] = JSON.parse(r.value); }); // 'lk:' = dữ liệu của bản tra cứu, không thuộc hồ sơ
+    if (this._coBangDM()) {
+      const bang = new Set(this.db.prepare('SELECT kind FROM danh_muc_bang').all().map(r => r.kind));
+      bang.forEach(k => { out[k] = []; });
+      this.db.prepare('SELECT kind, data FROM danh_muc ORDER BY kind, ord').all().forEach(r => { if (bang.has(r.kind)) out[r.kind].push(JSON.parse(r.data)); });
+    }
     out.congTy = {};
     this.db.prepare('SELECT id, data FROM companies').all().forEach(r => { out.congTy[r.id] = JSON.parse(r.data); });
     this.db.prepare('SELECT id, data FROM owners').all().forEach(r => { const o = JSON.parse(r.data); o.forests = {}; out.rs[r.id] = o; });
@@ -188,6 +212,17 @@ class Store {
     };
     return this._st;
   }
+  _coBangDM() { if (this._dmOk == null) this._dmOk = !!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='danh_muc'").get(); return this._dmOk; }
+  /* ghi một danh mục theo dòng: chỉ dòng có băm khác, bỏ dòng thừa ở cuối. rows = mảng; null = bỏ danh mục. Trả số dòng đã ghi / xóa. Gọi TRONG giao dịch. */
+  _ghiDM(k, rows) {
+    if (!rows) { const n = this.db.prepare('DELETE FROM danh_muc WHERE kind=?').run(k).changes; this.db.prepare('DELETE FROM danh_muc_bang WHERE kind=?').run(k); return n; }
+    const have = new Map(this.db.prepare('SELECT ord, hash FROM danh_muc WHERE kind=?').all(k).map(r => [r.ord, r.hash])), up = this._dmUp || (this._dmUp = this.db.prepare('INSERT INTO danh_muc(kind,ord,data,hash) VALUES(?,?,?,?) ON CONFLICT(kind,ord) DO UPDATE SET data=excluded.data, hash=excluded.hash'));
+    let n = 0;
+    rows.forEach((r, i) => { const data = typeof r === 'string' ? r : JSON.stringify(r), h = sha(data); if (have.get(i) !== h) { up.run(k, i, data, h); n++; } });
+    n += this.db.prepare('DELETE FROM danh_muc WHERE kind=? AND ord>=?').run(k, rows.length).changes;
+    this.db.prepare('INSERT OR IGNORE INTO danh_muc_bang(kind) VALUES(?)').run(k);
+    return n;
+  }
   /* Danh mục công ty (db.congTy) và các khóa meta: ghi theo đúng trạng thái trong `side` (như lưu toàn bộ). Gọi TRONG giao dịch. */
   _writeSide(side, t) {
     const st = this._stmts(); let changed = 0;
@@ -196,9 +231,45 @@ class Store {
     comps.forEach(c => { if (haveC.get(c.id) !== c.hash) { st.upC.run({...c, t}); changed++; } });
     const keepC = new Set(comps.map(c => c.id));
     haveC.forEach((h, id) => { if (!keepC.has(id)) { st.delC.run(id); changed++; } });
-    const metaKeys = Object.keys(side).filter(k => k !== 'rs' && k !== 'v' && k !== 'congTy');
+    const dmBang = this._coBangDM(), laDM = k => dmBang && DM_BANG.includes(k) && Array.isArray(side[k]);
+    if (dmBang) DM_BANG.forEach(k => { changed += this._ghiDM(k, laDM(k) ? side[k] : null); });   // danh mục theo dòng; không phải mảng thì lưu ở meta như cũ
+    const metaKeys = Object.keys(side).filter(k => k !== 'rs' && k !== 'v' && k !== 'congTy' && !laDM(k));
     this.db.prepare("DELETE FROM meta WHERE key NOT LIKE 'lk:%' AND key NOT IN (" + (metaKeys.map(() => '?').join(',') || "''") + ')').run(...metaKeys);
     metaKeys.forEach(k => st.putMeta.run(k, JSON.stringify(side[k])));
+    return changed;
+  }
+  /* B6: ghi phần ngoài hồ sơ THEO PHẦN THAY ĐỔI (src/delta.js diffSide): 'm:<khóa meta>', 'c:<id công ty>', 'd:<danh mục>' ('#số dòng'), 'd:<danh mục>:<thứ tự>'.
+   * Kiểm tra trước khi ghi: khóa đúng dạng, JSON đọc được (sai → MISMATCH, giao diện lưu toàn bộ). Gọi TRONG giao dịch. */
+  _writeSideDelta(sd, t) {
+    const bad = m => { throw Object.assign(new Error('Dữ liệu lưu theo phần thay đổi không hợp lệ: ' + m), {code: 'MISMATCH'}); };
+    const set = sd && typeof sd.set === 'object' && sd.set ? sd.set : {}, del = Array.isArray(sd && sd.del) ? sd.del.map(String) : [];
+    const st = this._stmts(), dmBang = this._coBangDM(); let changed = 0;
+    const dmUp = this.db.prepare('INSERT INTO danh_muc(kind,ord,data,hash) VALUES(?,?,?,?) ON CONFLICT(kind,ord) DO UPDATE SET data=excluded.data, hash=excluded.hash');
+    const parse = (k, j) => { if (typeof j !== 'string') bad(k); try { return JSON.parse(j); } catch (e) { return bad(k); } };
+    const dm = k => { const m = /^d:([A-Za-z]+)(?::(\d+))?$/.exec(k); if (!m || !DM_BANG.includes(m[1]) || !dmBang) bad(k); return {kind: m[1], ord: m[2] == null ? null : +m[2]}; };
+    del.forEach(k => {
+      if (k.startsWith('m:')) { if (k.startsWith('m:lk:')) bad(k); changed += this.db.prepare('DELETE FROM meta WHERE key=?').run(k.slice(2)).changes; }
+      else if (k.startsWith('c:')) changed += st.delC.run(k.slice(2)).changes;
+      else if (k.startsWith('d:')) { const x = dm(k); if (x.ord == null) changed += this._ghiDM(x.kind, null); else changed += this.db.prepare('DELETE FROM danh_muc WHERE kind=? AND ord=?').run(x.kind, x.ord).changes; }
+      else bad(k);
+    });
+    Object.entries(set).forEach(([k, j]) => {
+      if (k.startsWith('m:')) {
+        const key = k.slice(2); if (!key || key === 'rs' || key === 'v' || key === 'congTy' || key.startsWith('lk:')) bad(k); parse(k, j);
+        st.putMeta.run(key, j); if (dmBang && DM_BANG.includes(key)) this._ghiDM(key, null); changed++;
+      } else if (k.startsWith('c:')) {
+        const c = parse(k, j); if (!c || typeof c !== 'object' || String(c.id) !== k.slice(2)) bad(k);
+        st.upC.run({id: k.slice(2), ten: String(c.ten || ''), mst: String(c.mst || ''), data: j, hash: sha(j), t}); changed++;
+      } else if (k.startsWith('d:')) {
+        const x = dm(k);
+        if (x.ord == null) { const n = /^#(\d+)$/.exec(j); if (!n) bad(k); changed += this.db.prepare('DELETE FROM danh_muc WHERE kind=? AND ord>=?').run(x.kind, +n[1]).changes; this.db.prepare('INSERT OR IGNORE INTO danh_muc_bang(kind) VALUES(?)').run(x.kind); this.db.prepare('DELETE FROM meta WHERE key=?').run(x.kind); }
+        else { parse(k, j); dmUp.run(x.kind, x.ord, j, sha(j)); changed++; }
+      } else bad(k);
+    });
+    if (dmBang) DM_BANG.forEach(k => {   // số dòng của mỗi danh mục phải liền mạch 0..n-1 (ảnh chụp lệch → hoàn tác, lưu toàn bộ)
+      const r = this.db.prepare('SELECT COUNT(*) c, MAX(ord) m FROM danh_muc WHERE kind=?').get(k);
+      if (r.c && r.m !== r.c - 1) bad('danh mục ' + k + ' thiếu dòng');
+    });
     return changed;
   }
   _guardDelete(goneO, goneF, opts) {
@@ -257,7 +328,7 @@ class Store {
     if (d.rev !== this.rev) throw Object.assign(new Error('Dữ liệu trên máy đã đổi từ nơi khác (khôi phục, đổi thư mục...): cần lưu toàn bộ.'), {code: 'STALE'});
     const upO = d.upO && typeof d.upO === 'object' ? d.upO : {}, upF = d.upF && typeof d.upF === 'object' ? d.upF : {};
     const delO = Array.isArray(d.delO) ? d.delO.map(String) : [], delF = Array.isArray(d.delF) ? d.delF.map(String) : [];
-    const counts = d.counts || {}, side = d.side && typeof d.side === 'object' ? d.side : {};
+    const counts = d.counts || {}, side = d.side && typeof d.side === 'object' ? d.side : {}, sideD = d.sideD && typeof d.sideD === 'object' ? d.sideD : null;
     const bad = m => { throw Object.assign(new Error('Dữ liệu lưu theo phần thay đổi không hợp lệ: ' + m), {code: 'MISMATCH'}); };
     if (!Number.isInteger(counts.owners) || !Number.isInteger(counts.forests)) bad('thiếu số đếm');
     const rowsO = Object.entries(upO).map(([id, json]) => {
@@ -279,7 +350,7 @@ class Store {
     if (!opts.boQuaKhoa) this._kiemKhoa(rowsF, delF, delO);
     const st = this._stmts(), t = now(); let changed = 0;
     const tx = this.db.transaction(() => {
-      changed += this._writeSide(side, t);
+      changed += sideD ? this._writeSideDelta(sideD, t) : this._writeSide(side, t);   // B6: phần ngoài hồ sơ theo phần thay đổi (danh mục theo dòng)
       rowsO.forEach(o => { st.upO.run({...o, t}); changed++; });
       rowsF.forEach(f => { st.upF.run({...f, t}); changed++; });
       delF.forEach(id => { changed += st.delF.run(id).changes; });
