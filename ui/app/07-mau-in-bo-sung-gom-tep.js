@@ -42,7 +42,7 @@ function docDSDoi(rec, ex) {
 }
 /* Phân công nhiệm vụ theo vị trí (định mức nhân công): chỉ in khi đã lưu định mức nhân công, nên hồ sơ cũ không đổi */
 function nhiemVuBlocks(rec) {
-  const g = HAKDinhBien.get(db); if (!g.saved) return [];
+  const g = HAKDinhBien.get(db, (rec.info || {}).tuNgay); if (!g.saved) return [];
   const sc = HAKDinhBien.soSanh(g.rows, rec.nc || []);
   return [P('**PHÂN CÔNG NHIỆM VỤ THEO VỊ TRÍ**', {al: 'center', sz: 22, before: 200, after: 80, keep: true}),
     T([2600, 1200, 1200, 9900], [['VỊ TRÍ', 'ĐỊNH BIÊN', 'THỰC TẾ', 'NHIỆM VỤ'], ...sc.vt.map(v => [v.chucDanh + (v.kiemNhiem ? ' (kiêm ' + v.kiemNhiem.toLowerCase() + ')' : ''), String(v.can), String(v.co), v.nhiemVu || ''])],   // nhiệm vụ của đúng vị trí đó (không ghép theo số dòng: danh mục có vị trí 0 người)

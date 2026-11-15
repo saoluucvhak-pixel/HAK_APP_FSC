@@ -14,6 +14,13 @@ function viTriDangDung() {
   return out;
 }
 let _cdNho = null;   // gọi rất nhiều lần trong một lượt vẽ (mỗi dòng nhân công): nhớ trong một lượt, xóa ở lượt sự kiện kế tiếp
+/* định mức nhân công của MỘT LÔ: phiên bản có hiệu lực tại ngày bắt đầu khai thác của lô (chưa có phiên bản có ngày thì đúng như viTriRows) */
+function viTriRowsTai(ref, rowsVer) {
+  const rows = viTriRows(); if (!rowsVer && HAKDinhBien.versions(db).length < 2) return rows;
+  const ver = rowsVer || HAKDinhBien.get(db, ref).rows, by = new Map(ver.map(v => [v.chucDanh.toLowerCase(), v]));
+  rows.forEach(r => { const v = by.get(r.chucDanh.toLowerCase()); r.soNguoi = v ? v.soNguoi : 0; if (v) { r.kiemNhiem = v.kiemNhiem; r.nhiemVu = v.nhiemVu; } });
+  return rows;
+}
 const viTriRows = () => { if (!_cdNho) { _cdNho = HAKDinhBien.danhMuc(db, viTriDangDung()).rows; setTimeout(() => { _cdNho = null; }, 0); } return _cdNho.map(r => Object.assign({}, r)); };
 const chucDanhAll = () => viTriRows().map(r => r.chucDanh);
 const H_NC = {'Vai trò':'vaiTro','STT':'stt','Danh xưng':'danhXung','Họ và tên':'ten','Ngày sinh':'ngaySinh','CCCD':'cccd','Ngày cấp CCCD':'ngayCap','Nơi cấp CCCD':'noiCap','Địa chỉ thường trú':'diaChi','Chức danh':'chucDanh','Đội':'doi'};

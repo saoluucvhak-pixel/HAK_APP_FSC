@@ -16,7 +16,7 @@ const SUITES = ['e2e', 'e2e-lookup', 'e2e-lookup2', 'e2e-export', 'e2e-reports',
   'e2e-caidat2', 'e2e-bienso', 'e2e-pcmau', 'e2e-bcld', 'e2e-bcloc', 'e2e-quytrinh', 'e2e-chamcong', 'e2e-phieucan', 'e2e-pcgio', 'e2e-luongpc', 'e2e-doichieu',
   'e2e-tongquan', 'e2e-luuvaolo', 'e2e-idtrung', 'e2e-gopdulieu', 'e2e-nguoiky', 'e2e-ngay2culy', 'e2e-dinhdang', 'e2e-tgkhai', 'e2e-dinhbien', 'e2e-nhieudoi', 'e2e-doikt', 'e2e-hdvc', 'e2e-phieudoi', 'e2e-motcachluu',
   'e2e-doisoat', 'e2e-taitoanbo', 'e2e-dongapp', 'e2e-batbien', 'e2e-nhaplieu', 'e2e-caidat', 'e2e-bm08', 'e2e-dulieu', 'e2e-mamau', 'e2e-tentab', 'e2e-bannhap',
-  'e2e-manhinh', 'e2e-chuky', 'e2e-tusaoluu', 'e2e-luudelta', 'e2e-nghiepvu', 'e2e-hangiaytoxe', 'e2e-doixe-phieu', 'e2e-excel-bangcon', 'e2e-nguoi-danhmuc', 'e2e-baocao-doi', 'e2e-danhmuc', 'e2e-danhmuc-hopdong', 'e2e-dongia-vitri', 'e2e-nhap-tam', 'e2e-saoluu2', 'e2e-lo-tu-lo-cu', 'e2e-nhatky-nap'];
+  'e2e-manhinh', 'e2e-chuky', 'e2e-tusaoluu', 'e2e-luudelta', 'e2e-nghiepvu', 'e2e-hangiaytoxe', 'e2e-doixe-phieu', 'e2e-excel-bangcon', 'e2e-nguoi-danhmuc', 'e2e-baocao-doi', 'e2e-danhmuc', 'e2e-danhmuc-hopdong', 'e2e-dongia-vitri', 'e2e-nhap-tam', 'e2e-saoluu2', 'e2e-lo-tu-lo-cu', 'e2e-nhatky-nap', 'e2e-dinhbien-ver'];
 const NOT_SUITES = ['e2e-all'];   // file e2e-*.js không phải bộ kiểm thử
 
 const root = path.join(__dirname, '..');

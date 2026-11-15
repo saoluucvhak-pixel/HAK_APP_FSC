@@ -43,3 +43,19 @@ test('danh mục vị trí chưa lưu: Tổ trưởng, vị trí cũ theo đúng
   assert.strictEqual(sc.can, 8); assert.ok(sc.vt.every(v => v.can > 0));
   assert.match(DB.lechText(sc), /1 người giữ vị trí “Công nhân khai thác” ngoài định biên chuẩn \(số người 0\)/);
 });
+
+test('phiên bản định mức nhân công theo ngày: chưa có phiên bản có ngày thì như cũ; lô dùng phiên bản hiệu lực tại ngày bắt đầu; ảnh hưởng đúng lô; trùng ngày và ngày không có thật bị chặn', () => {
+  const db = {};
+  assert.strictEqual(DB.versions(db).length, 1); assert.strictEqual(DB.get(db, '01/10/2026').saved, false); assert.strictEqual(DB.tong(DB.get(db, '01/10/2026').rows), 8);
+  assert.strictEqual(DB.addVersion(db, '31/02/2026').ok, false);
+  const a = DB.addVersion(db, '01/11/2026'); assert.ok(a.ok); assert.strictEqual(DB.addVersion(db, '01/11/2026').ok, false);
+  const rows = DB.get(db, '01/11/2026').rows.map(r => r.chucDanh === 'Công nhân cưa' ? {...r, soNguoi: 4} : r);
+  assert.ok(DB.setVersion(db, a.id, rows, DM).ok);
+  assert.strictEqual(DB.tong(DB.get(db, '15/10/2026').rows), 8, 'lô trước ngày hiệu lực giữ bản gốc');
+  assert.strictEqual(DB.tong(DB.get(db, '01/11/2026').rows), 10, 'từ ngày hiệu lực dùng phiên bản mới');
+  assert.strictEqual(DB.tong(DB.get(db, '').rows), 10, 'không có ngày: bản mới nhất');
+  assert.deepStrictEqual(DB.anhHuong(db, a.id, [{maRung: 'A', tuNgay: '02/11/2026'}, {maRung: 'B', tuNgay: '30/10/2026'}, {maRung: 'C', tuNgay: ''}]).map(x => x.maRung), ['A', 'C']);
+  assert.deepStrictEqual(DB.anhHuong(db, 'goc', [{maRung: 'A', tuNgay: '02/11/2026'}, {maRung: 'B', tuNgay: '30/10/2026'}]).map(x => x.maRung), ['B']);
+  assert.strictEqual(DB.setVersion(db, a.id, rows.map(r => r.chucDanh === 'Tổ trưởng' ? {...r, soNguoi: 2} : r), DM).ok, false, 'vẫn kiểm đúng một Tổ trưởng 1 người');
+  assert.ok(DB.delVersion(db, a.id).ok); assert.strictEqual(DB.versions(db).length, 1); assert.strictEqual(DB.delVersion(db, 'goc').ok, false);
+});
