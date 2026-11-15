@@ -95,7 +95,7 @@ function stBar(kind, rec) {
     ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : '';
   const miss = st && (kind === 'pc' || kind === 'dx') ? [...new Set(st.cur.pc.map(p => p.bienSo).filter(b => b && !st.cur.dx.some(x => HAKStage.bienKey(x.bienSo) === HAKStage.bienKey(b))))] : [];
   const missBar = miss.length ? '<div class="msg warn" id="stMissXe">Biển số có trong phiếu cân nhưng <b>chưa có trong danh sách xe của lô</b>: ' + miss.slice(0, 12).map(b => '<button class="btn ghost sm" data-act="stAddXe" data-bien="' + esc(b) + '">+ Thêm xe ' + esc(b) + '</button>').join(' ') + (miss.length > 12 ? ' … và ' + (miss.length - 12) + ' biển khác' : '') + '</div>' : '';
-  return '<div class="card stBarCard">' + info + '<div class="row" style="gap:8px;flex-wrap:wrap">' + add + '</div>' + missBar + bar + '</div>' + stPendBox(kind) + stReportBox(kind);
+  return '<div class="card stBarCard">' + info + '<div class="row" style="gap:8px;flex-wrap:wrap">' + add + '</div>' + (kind === 'nc' || kind === 'dx' ? dmThanhLech(kind) : '') + missBar + bar + '</div>' + stPendBox(kind) + stReportBox(kind);
 }
 const ST_ACT = {giu: ['pill ok', 'Giữ nguyên bản hiện có'], 'giu-trong': ['pill ok', 'Giữ giá trị hiện có (ô nguồn trống)'], 'giu-tay': ['pill ok', 'Giữ giá trị bạn đã sửa tay'], doi: ['pill warn', 'Đổi sang giá trị mới'], loi: ['pill err', 'Sai định dạng: không áp dụng, báo lỗi']};
 const stV = v => v == null || v === '' ? '<span class="mut">(trống)</span>' : esc(typeof v === 'number' ? String(v).replace('.', ',') : String(v));
@@ -193,8 +193,8 @@ function stRender() {
   $('#stBody').innerHTML = '<div class="gh"><h2>' + title + '</h2><button class="btn ghost sm" data-act="stClose">✕ Đóng</button></div>' +
     '<p class="mut" style="margin:0 0 8px">Chủ rừng: <b>' + esc(o.info.ten) + '</b> · Lô: <b>' + esc(rec.info.maRung) + '</b>. Dòng này chỉ vào bản nháp; hồ sơ lô thay đổi khi bấm “Lưu dữ liệu vào lô”.</p>' +
     (stm.errs.length ? '<div class="msg err"><b>Chưa đưa vào bản nháp:</b><ul class="issues">' + stm.errs.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul></div>' : '') +
-    (kind === 'dx' && !stm.id ? (() => { const L = xeDanhMuc(); return L.length ? '<label style="display:block;margin-bottom:8px"><span>Chọn xe đã có (danh mục xe của mọi lô)</span><select id="xeDm"><option value="">— nhập xe mới —</option>' + L.map(x => '<option value="' + esc(HAKStage.bienKey(x.bienSo)) + '">' + esc(x.bienSo + ' · ' + (x.chuXe || '')) + '</option>').join('') + '</select></label>' : ''; })() : '') +
-    (kind === 'nc' && !stm.id ? (() => { const daCo = new Set(st.cur.nc.map(r => HAKModel.cccdSo(r.cccd))), L = HAKModel.nguoiDanhMuc(db.rs).filter(r => !daCo.has(HAKModel.cccdSo(r.cccd))); return L.length ? '<label style="display:block;margin-bottom:8px"><span>Chọn người đã có (danh mục người lao động của mọi lô, theo CCCD)</span><select id="ncDm"><option value="">— nhập người mới —</option>' + L.map(r => '<option value="' + esc(HAKModel.cccdSo(r.cccd)) + '">' + esc(r.ten + ' · CCCD ' + HAKModel.cccdSo(r.cccd)) + '</option>').join('') + '</select><small class="mut">Điền sẵn họ tên, ngày sinh, CCCD, ngày cấp, nơi cấp, địa chỉ; vai trò, chức danh và đội chọn cho lô này. Thông tin được chụp lại trong lô, sửa ở lô này không đổi lô khác.</small></label>' : ''; })() : '') +
+    (kind === 'dx' && !stm.id ? (() => { const L = dmNguonXe(); return L.length ? '<label style="display:block;margin-bottom:8px"><span>Chọn xe từ Danh mục xe vận chuyển (thông tin mới nhất)</span><select id="xeDm"><option value="">— nhập xe mới (tự vào Danh mục khi lưu lô) —</option>' + L.map(x => '<option value="' + esc(HAKStage.bienKey(x.bienSo)) + '">' + esc(x.bienSo + ' · ' + (x.chuXe || '')) + '</option>').join('') + '</select></label>' : ''; })() : '') +
+    (kind === 'nc' && !stm.id ? (() => { const daCo = new Set(st.cur.nc.map(r => HAKModel.cccdSo(r.cccd))), L = dmNguonLd().filter(r => !daCo.has(HAKModel.cccdSo(r.cccd))); return L.length ? '<label style="display:block;margin-bottom:8px"><span>Chọn người từ Danh mục lao động (theo CCCD, thông tin mới nhất)</span><select id="ncDm"><option value="">— nhập người mới (tự vào Danh mục khi lưu lô) —</option>' + L.map(r => '<option value="' + esc(HAKModel.cccdSo(r.cccd)) + '">' + esc(r.ten + ' · CCCD ' + HAKModel.cccdSo(r.cccd)) + '</option>').join('') + '</select><small class="mut">Điền sẵn họ tên, ngày sinh, CCCD, ngày cấp, nơi cấp, địa chỉ; vai trò, chức danh và đội chọn cho lô này. Thông tin được chụp lại trong lô, sửa ở lô này không đổi lô khác.</small></label>' : ''; })() : '') +
     '<form id="stForm" class="grid">' + ST_FIELDS[kind].map(fld).join('') + '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">' + (stm.id ? 'Cập nhật vào bản nháp' : 'Thêm vào bản nháp') + '</button><button class="btn ghost" type="button" data-act="stClose">Hủy</button></div></form>';
   $('#stBox').classList.add('on');
 }
@@ -267,7 +267,7 @@ async function stSave(opt) {
     if (dk.includes('pc')) { f.pcAt = at; if (st.src.pc && /^Excel: /.test(st.src.pc)) f.pcFile = st.src.pc.slice(7); else if (st.src.pc && /Google/.test(st.src.pc) && !f.pcFile) f.pcFile = 'Tra cứu Google Sheets'; }
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
     const r = await persistNow(); if (!r || !r.ok) throw new Error((r && r.error) || 'không rõ');
-    delete stages[k]; stErrList = null; pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
+    const nDm = dmGhiTuLo(st); delete stages[k]; stErrList = null; if (nDm) pushNote('Đã thêm ' + nDm + ' người / xe mới vào Danh mục.', 'ok'); pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
     Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
@@ -320,7 +320,19 @@ function doiPanel(rec) {
 /* Bảng con “Nhân công khai thác” của lô: danh sách ĐỘI KHAI THÁC (thêm đội = thêm bảng con). Mỗi đội có hình thức, cách tính, đơn giá, diện tích,
  * số văn bản và danh sách nhân công riêng; chọn một đội để sửa phần của đội đó (src/model.js). */
 const hinhThucNgan = i => (isDirect(i) ? 'Trực tiếp' : 'Giao khoán') + ' · ' + basisOf(i).short;
-function panelDoiKT(rec) {
+function panelDoiVB(rec) {   // số và ngày văn bản của đội đang chọn: nằm cuối màn Nhân công (thông tin – bảng con – số văn bản)
+  const f = curForest(); if (!f || !rec.doi) return '';
+  const t = curTeam(f), multi = rec.doi.length > 1;
+  return '<div class="card" id="doiKTVb">' +
+    '<h4 style="margin:12px 0 4px">Số và ngày văn bản của ' + (multi ? 'đội “' + esc(t.ten || '') + '”' : 'đội') + ' <span class="mut" style="font-weight:400">· để trống thì in dòng chấm để điền tay</span></h4>' +
+    expInputs([['soKT', 'Số HĐ giao khoán (phần số VD 015, hoặc số đầy đủ 015/2026-KT)', 'năm lấy từ ngày ký các hợp đồng của lô'],
+      ['uqSo', 'Giấy ủy quyền: số', 'năm lấy từ ngày ký'], ['uqNgay', 'Giấy ủy quyền: ngày lập', 'trống = ngày ký hợp đồng'],
+      ['ntSo', 'Nghiệm thu, thanh lý: số biên bản', 'năm lấy từ ngày lập biên bản'], ['ntNgay', 'Nghiệm thu, thanh lý: ngày lập', 'dd/mm/yyyy'], ['ntDaTT', 'Nghiệm thu: số tiền đã thanh toán trước (đ)', 'VD: 50000000'],
+      ['tuNgayTT', 'Bảng thanh toán tiền công: từ ngày', 'trống = từ ngày khai thác'], ['denNgayTT', 'Bảng thanh toán tiền công: đến ngày', 'trống = đến ngày khai thác'],
+      ['hdPhuCap', 'HĐLĐ: phụ cấp, khoản bổ sung', 'mặc định: Không'], ['hdNangLuong', 'HĐLĐ: nâng bậc, nâng lương', 'mặc định: Không áp dụng']], expLo(recDoiChon(rec))) +
+'</div>';
+}
+function panelDoiKT(rec, phan) {   // phan: 'tt' = chọn đội và thông tin đội (đầu màn); 'vb' = số và ngày văn bản của đội (cuối màn, sau bảng nhân công)
   const f = curForest(); if (!f || !rec.doi) return '';
   const t = curTeam(f), n = d => (rec.nc || []).filter(r => r.doiId === d.id).length, multi = rec.doi.length > 1, chua = (rec.nc || []).filter(r => !rec.doi.some(d => d.id === r.doiId)).length;
   const tt = d => { const x = (rec.nc || []).find(r => r.doiId === d.id && isTT(r)); return x ? x.ten : '—'; };
@@ -331,12 +343,6 @@ function panelDoiKT(rec) {
     '<form id="doiForm" class="grid" style="margin-top:8px"><label><span>Tên đội' + (multi ? '' : ' (tùy chọn khi lô một đội)') + '</span><input name="ten" value="' + esc(t.ten || '') + '"></label>' +
     '<label><span>Diện tích của đội (ha)</span><input name="dienTich" inputmode="decimal" value="' + esc(typeof t.dienTich === 'number' ? String(t.dienTich).replace('.', ',') : '') + '" placeholder="' + (multi ? 'trống: chia theo số người' : 'trống: cả lô') + '"></label>' +
     '<div class="row" style="grid-column:1/-1"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (multi ? '<button class="btn danger sm" type="button" data-act="xoaDoi">Xóa đội này</button>' : '') + '</div></form>' +
-    '<h4 style="margin:12px 0 4px">Số và ngày văn bản của ' + (multi ? 'đội “' + esc(t.ten || '') + '”' : 'đội') + ' <span class="mut" style="font-weight:400">· để trống thì in dòng chấm để điền tay</span></h4>' +
-    expInputs([['soKT', 'Số HĐ giao khoán (phần số VD 015, hoặc số đầy đủ 015/2026-KT)', 'năm lấy từ ngày ký các hợp đồng của lô'],
-      ['uqSo', 'Giấy ủy quyền: số', 'năm lấy từ ngày ký'], ['uqNgay', 'Giấy ủy quyền: ngày lập', 'trống = ngày ký hợp đồng'],
-      ['ntSo', 'Nghiệm thu, thanh lý: số biên bản', 'năm lấy từ ngày lập biên bản'], ['ntNgay', 'Nghiệm thu, thanh lý: ngày lập', 'dd/mm/yyyy'], ['ntDaTT', 'Nghiệm thu: số tiền đã thanh toán trước (đ)', 'VD: 50000000'],
-      ['tuNgayTT', 'Bảng thanh toán tiền công: từ ngày', 'trống = từ ngày khai thác'], ['denNgayTT', 'Bảng thanh toán tiền công: đến ngày', 'trống = đến ngày khai thác'],
-      ['hdPhuCap', 'HĐLĐ: phụ cấp, khoản bổ sung', 'mặc định: Không'], ['hdNangLuong', 'HĐLĐ: nâng bậc, nâng lương', 'mặc định: Không áp dụng']], expLo(recDoiChon(rec))) +
     '<small class="mut">Mọi thông số của đội (hình thức, đơn giá bên dưới, diện tích, số văn bản, nhân công, chấm công) là của <b>đội đang chọn</b>. Người nhập thêm (tay hoặc Excel) không ghi cột Đội sẽ vào đội đang chọn.</small></div>';
 }
 /* cột Đội: lô nhiều đội (không trong bản nháp) chọn đội ngay tại dòng; còn lại hiện tên đội */
@@ -350,10 +356,10 @@ function doiCell(rec, r) {
 function panelNC(rec) {
   const c = checkNC(rec);
   const head = panelDoiKT(rec) + panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec) + panelImport('nc', rec) + panelChamCong(recDoiChon(rec)) + stBar('nc', rec) + stErrBox();
-  if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có danh sách nhân công. Bấm “+ Thêm nhân công”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>';
+  if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có danh sách nhân công. Bấm “+ Thêm nhân công”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>' + panelDoiVB(rec);
   const t = rec.doi && rec.doi.length > 1 && !ncTatCa ? curTeam() : null, only = t ? r => r.doiId === t.id || !rec.doi.some(d => d.id === r.doiId) : null;   // lô nhiều đội: chỉ người của đội đang chọn (và người chưa thuộc đội)
   const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' : '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';
   return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', 'Đội', 'Đơn giá'],
-    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + doiCell(rec, r) + '</td><td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>', c, null, only);
+    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + doiCell(rec, r) + '</td><td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>', c, null, only) + panelDoiVB(rec);
 }
 

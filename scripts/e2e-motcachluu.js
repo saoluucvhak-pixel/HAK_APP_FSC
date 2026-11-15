@@ -17,7 +17,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300);
   const soKT0 = (await db()).rs.own1.forests.fa.doi[0].exp.soKT;
   // 1. thay đổi tại chỗ vào bản nháp
-  await w.fill('#doiKT input[data-exp=soKT]', '099'); await w.dispatchEvent('#doiKT input[data-exp=soKT]', 'change'); await w.waitForTimeout(300);
+  await w.fill('#doiKTVb input[data-exp=soKT]', '099'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change'); await w.waitForTimeout(300);
   ok('đổi số HĐ giao khoán: vào bản nháp, hiện thanh “Chưa lưu” có nút Lưu và Bỏ thay đổi; SQLite chưa đổi', !!(await w.$('#loDirtyBar [data-act=stSave]')) && !!(await w.$('#loDirtyBar [data-act=stDiscard]')) && (await db()).rs.own1.forests.fa.doi[0].exp.soKT === soKT0);
   // 2. lưu thông tin chủ rừng (bản ghi khác): không kéo theo thay đổi chưa lưu của lô
   await w.click('[data-tab=info]'); await w.waitForTimeout(200);
@@ -33,9 +33,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('#loDirtyBar [data-act=stDiscard]'); await w.waitForTimeout(400);
   const f = (await db()).rs.own1.forests.fa;
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
-  ok('Bỏ thay đổi: ô về số đã lưu, hết thanh “Chưa lưu”, SQLite không đổi', (await w.inputValue('#doiKT input[data-exp=soKT]')) === (soKT0 || '') && !(await w.$('#loDirtyBar')) && f.doi[0].exp.soKT === soKT0, await w.inputValue('#doiKT input[data-exp=soKT]'));
+  ok('Bỏ thay đổi: ô về số đã lưu, hết thanh “Chưa lưu”, SQLite không đổi', (await w.inputValue('#doiKTVb input[data-exp=soKT]')) === (soKT0 || '') && !(await w.$('#loDirtyBar')) && f.doi[0].exp.soKT === soKT0, await w.inputValue('#doiKTVb input[data-exp=soKT]'));
   // 5. sửa lại, lưu danh mục (đơn vị vận chuyển) khi lô còn thay đổi: danh mục ghi, lô vẫn chưa ghi
-  await w.fill('#doiKT input[data-exp=soKT]', '077'); await w.dispatchEvent('#doiKT input[data-exp=soKT]', 'change'); await w.waitForTimeout(300);
+  await w.fill('#doiKTVb input[data-exp=soKT]', '077'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change'); await w.waitForTimeout(300);
   await w.click('[data-ftab=dx]'); await w.waitForTimeout(200);
   await w.fill('#dvForm [name=ten]', 'CÔNG TY VT THỬ'); await w.click('#dvForm [type=submit]'); await w.waitForTimeout(500);
   let d = await db();
@@ -45,11 +45,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('“Lưu dữ liệu vào lô”: ghi số 077, hết thanh “Chưa lưu”', d.rs.own1.forests.fa.doi[0].exp.soKT === '077' && !(await w.$('#loDirtyBar')));
   // 7. nút Lưu của một khung = lưu cả lô (kể cả thay đổi tại chỗ trước đó)
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
-  await w.fill('#doiKT input[data-exp=uqSo]', '55'); await w.dispatchEvent('#doiKT input[data-exp=uqSo]', 'change'); await w.waitForTimeout(200);
+  await w.fill('#doiKTVb input[data-exp=uqSo]', '55'); await w.dispatchEvent('#doiKTVb input[data-exp=uqSo]', 'change'); await w.waitForTimeout(200);
   await w.fill('#doiForm [name=dienTich]', '1,5'); await w.$eval('#doiForm', f => f.requestSubmit()); await w.waitForTimeout(500); d = await db();
   ok('nút “Lưu đội” lưu cả lô: diện tích đội 1,5 và số giấy ủy quyền 55 cùng được ghi', d.rs.own1.forests.fa.doi[0].dienTich === 1.5 && d.rs.own1.forests.fa.doi[0].exp.uqSo === '55', JSON.stringify(d.rs.own1.forests.fa.doi[0]));
   // 8. rời lô khi còn thay đổi: hỏi; chọn Lưu và tiếp tục
-  await w.fill('#doiKT input[data-exp=ntSo]', '66'); await w.dispatchEvent('#doiKT input[data-exp=ntSo]', 'change'); await w.waitForTimeout(200);
+  await w.fill('#doiKTVb input[data-exp=ntSo]', '66'); await w.dispatchEvent('#doiKTVb input[data-exp=ntSo]', 'change'); await w.waitForTimeout(200);
   await w.click('[data-forest=fb]'); await w.waitForTimeout(300);
   ok('rời lô khi còn thay đổi: hỏi Lưu và tiếp tục / Bỏ thay đổi / Quay lại', !!(await w.$('#stGSave')));
   await w.click('#stGSave'); await w.waitForTimeout(600); d = await db();

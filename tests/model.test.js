@@ -192,5 +192,17 @@ test('v6: SQLite nâng cấp v5 → v6 có sao lưu file trước, chỉ đổi 
   const s6 = new Store(file), f = s6.load().rs.o.forests.f;
   assert.strictEqual(s6.db.pragma('user_version', {simple: true}), MIGRATIONS.length); assert.ok(MIGRATIONS.length >= 6);
   assert.ok(!('soDoi' in f.info) && f.info.klHoSoCu === 12 && f.doi[0].hinhThuc.donGiaTan['Tổ trưởng'] === 400000);
-  assert.ok(fs.readdirSync(path.join(d, 'backups')).some(n => /^truoc-nang-cap-v5-len-v6/.test(n)), 'có bản sao file trước khi nâng cấp'); s6.close();
+  assert.ok(fs.readdirSync(path.join(d, 'backups')).some(n => /^truoc-nang-cap-v5-len-v\d/.test(n)), 'có bản sao file trước khi nâng cấp'); s6.close();
+});
+
+test('v7: SQLite dựng danh mục lao động và danh mục xe từ dữ liệu 2.0, chỉ thêm khóa meta, không đổi hồ sơ lô; không ghi đè danh mục đã có', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v7-')), file = path.join(d, 'x.sqlite');
+  const s6 = new Store(file, {migrations: MIGRATIONS.slice(0, 6)});
+  const f = lot6({info: {maRung: 'R', hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', tuNgay: '01/10/2026'}, dx: [{_row: 2, bienSo: '92C-1', chuXe: 'A', taiXe: 'B', cccdTx: '049000000009', nguoiKy: 'Chủ xe', cccd: '049000000001', kdDen: '01/12/2027'}]});
+  s6.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C1', cccd: '049067005459'}, forests: {f}}}}); const truoc = JSON.stringify(s6.load().rs); s6.close();
+  const s7 = new Store(file), db = s7.load();
+  assert.strictEqual(s7.db.pragma('user_version', {simple: true}), MIGRATIONS.length); assert.ok(MIGRATIONS.length >= 7);
+  assert.strictEqual(JSON.stringify(db.rs), truoc, 'hồ sơ lô không đổi');
+  assert.deepStrictEqual(db.dmLaoDong.map(r => [r.cccd, r.ngayCapNhat, r.viTri]), [['111111111111', '01/10/2026', 'Tổ trưởng'], ['222222222222', '01/10/2026', 'Công nhân khai thác']]);
+  assert.deepStrictEqual([db.dmXeVC.length, db.dmXeVC[0].bienSo, db.dmXeVC[0].hanDangKiem], [1, '92C-1', '01/12/2027']); s7.close();
 });
