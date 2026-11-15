@@ -178,6 +178,7 @@ function panelForest(f) {
     '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
   return '<div class="card"><h3 style="margin-top:0">Thông tin khai thác của rừng</h3>' +
+    (() => { const t = trim((i || {}).tuNgay); if (!t) return ''; const g = HAKDinhBien.get(db, t); return g.ngayLoi ? '<div class="msg err" id="tuNgayLoi" style="margin-bottom:8px"><b>Ngày bắt đầu khai thác sai:</b> ' + esc(g.ngayLoi) + '. Dữ liệu cũ được giữ nguyên để bạn sửa.</div>' : ''; })() +
     '<form id="forestForm" class="grid">' +
     inp('maRung', 'Mã rừng', {req: true}) + inp('tenRung', 'Tên rừng / lô') + inp('diaDiem', 'Địa điểm khai thác (rừng)', {req: true, wide: true}) +
     inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +

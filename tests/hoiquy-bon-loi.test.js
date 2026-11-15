@@ -84,9 +84,18 @@ test('4a. 30/11 → bản gốc; 01/12 (đúng ngày hiệu lực) → phiên b�
   assert.equal(B.get(db, '30/11/2026').id, 'goc'); assert.equal(B.get(db, '01/12/2026').id, '01/12/2026'); assert.equal(B.get(db, '1/12/2026').id, '01/12/2026', 'ngày viết 1 chữ số');
   const g = B.get(db, '31/11/2026'); assert.equal(g.id, ''); assert.match(g.ngayLoi, /31\/11\/2026/); assert.deepEqual(g.rows, []); assert.equal(JSON.stringify(db), truoc, 'không ghi lại định mức');
 });
-test('4b. ngày trống → bản mới nhất; chỉ có bản gốc thì ngày sai không đổi gì (hồ sơ cũ)', () => {
+test('4b. ngày trống → bản mới nhất; ngày đã nhập nhưng không có thật báo lỗi kể cả khi CHỈ CÓ bản gốc', () => {
   const db = mkv(); assert.equal(B.get(db, '').id, '01/12/2026'); assert.equal(B.get(db, '   ').id, '01/12/2026'); assert.equal(B.get(db).id, '01/12/2026');
-  const goc = {}; assert.equal(B.get(goc, '31/11/2026').id, 'goc'); assert.equal(B.get(goc, '31/11/2026').ngayLoi, undefined);
+  const goc = {};
+  assert.equal(B.get(goc, '').id, 'goc'); assert.equal(B.get(goc).ngayLoi, undefined); assert.equal(B.get(goc, '  ').ngayLoi, undefined);
+  ['31/11/2026', '29/02/2027', '32/01/2026', '1/13/2026', '2026-11-30', 'abc'].forEach(d => { const g = B.get(goc, d); assert.equal(g.id, '', d); assert.deepEqual(g.rows, [], d); assert.match(g.ngayLoi, /không có thật/, d); assert.equal(B.pick(goc, d), null, d); });
+  ['30/11/2026', '01/12/2026', '29/02/2028', '1/1/2027'].forEach(d => assert.equal(B.get(goc, d).id, 'goc', 'ngày hợp lệ, chỉ có bản gốc: dùng bản gốc ' + d));
+  assert.deepEqual(goc, {}, 'không ghi gì vào dữ liệu');
+});
+test('4e. chỉ có bản gốc: danh sách lô bị ảnh hưởng nhận diện lô có ngày sai', () => {
+  const goc = {}, lots = [{maRung: 'A', tuNgay: '30/11/2026'}, {maRung: 'B', tuNgay: '31/11/2026'}, {maRung: 'C', tuNgay: ''}, {maRung: 'D', tuNgay: '29/02/2027'}, {maRung: 'E', tuNgay: '29/02/2028'}];
+  const r = B.anhHuongChiTiet(goc, 'goc', lots);
+  assert.deepEqual(r.lo.map(l => l.maRung), ['A', 'C', 'E']); assert.deepEqual(r.ngayLoi.map(l => l.maRung), ['B', 'D']);
 });
 test('4c. 29/02 năm nhuận có thật, năm thường không; thêm phiên bản chỉ nhận ngày có thật', () => {
   const db = {}; assert.ok(B.addVersion(db, '29/02/2028').ok); assert.equal(B.addVersion(db, '29/02/2027').ok, false); assert.equal(B.addVersion(db, '31/11/2026').ok, false);

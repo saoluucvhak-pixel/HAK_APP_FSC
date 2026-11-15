@@ -30,9 +30,9 @@
   }
   /* phiên bản hiệu lực tại ngày ref (ref rỗng: mới nhất) */
   /* phiên bản hiệu lực tại ngày ref. Ref TRỐNG: bản mới nhất. Ref đã nhập nhưng KHÔNG CÓ THẬT (ví dụ 31/11/2026): trả null khi có nhiều phiên bản (không âm thầm chọn bản gốc hay bản mới nhất);
-   * chỉ có bản gốc thì không có gì để chọn nên vẫn trả bản gốc (hồ sơ cũ không đổi). */
+   * kể cả khi chỉ có bản gốc (xác thực ngày TRƯỚC khi xét số phiên bản). */
   function pick(db, ref) {
-    const vs = versions(db), t = trim(ref); if (!t || vs.length === 1) return vs[vs.length - 1]; const k = dkey(t); if (!k) return null;
+    const vs = versions(db), t = trim(ref); if (!t) return vs[vs.length - 1]; const k = dkey(t); if (!k) return null; if (vs.length === 1) return vs[0];
     let r = vs[0]; vs.forEach(v => { if (v.tuNgay && dkey(v.tuNgay) <= k) r = v; }); return r;
   }
   /* định biên đang dùng: bản đã lưu, chưa lưu thì mặc định. saved = đã lưu thật. ref = ngày bắt đầu khai thác của lô (tùy chọn) */
