@@ -109,6 +109,20 @@
     });
     return {laoDong: ld, xe};
   }
-  const api = {CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, dungTuLo};
+  /* ĐỐI TÁC (bản 2.2, mục 1 điểm 3): mọi đội xe có MỘT đối tác ký. Doanh nghiệp: dòng của danh mục đơn vị vận chuyển (id 'dn:<donViId>'); cá nhân: người ký (chủ xe hoặc tài xế) theo CCCD (id 'ct:<CCCD>').
+   * `doiTacKey(h)` suy ra khóa đối tác của một đội xe mà KHÔNG ghi gì vào lô (bản in không đổi). */
+  const doiTacKey = h => !h ? '' : h.donViId ? 'dn:' + h.donViId : (cccdSo(h.key) ? 'ct:' + cccdSo(h.key) : '');
+  function dungDoiTac(rs, dmDonVi, hienCo) {
+    const list = (hienCo || []).slice(), co = new Set(list.map(x => x.id)), cc = new Set(list.map(x => cccdSo(x.cccd)).filter(Boolean));
+    Object.values(dmDonVi || {}).forEach(d => { if (!d || !trim(d.ten)) return; const id = 'dn:' + d.id; if (co.has(id)) return; co.add(id); list.push({id, loai: 'doanhnghiep', ten: trim(d.ten), mst: trim(d.mst), daiDien: trim(d.daiDien), chucVu: trim(d.chucVu), diaChi: trim(d.diaChi), sdt: trim(d.sdt)}); });
+    Object.values(rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => (f.hdvc || []).forEach(h => {
+      if (!h || h.donViId) return; const k = cccdSo(h.key); if (k.length !== 12 || cc.has(k)) return;
+      const xs = (f.dx || []).filter(r => r && r.hdvcId === h.id); let p = null;
+      xs.forEach(r => { if (p) return; if (cccdSo(r.cccd) === k && trim(r.chuXe)) p = {ten: trim(r.chuXe), ngaySinh: trim(r.ngaySinh), diaChi: trim(r.diaChi), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), sdt: trim(r.sdt)}; else if (cccdSo(r.cccdTx) === k && trim(r.taiXe)) p = {ten: trim(r.taiXe), ngaySinh: trim(r.ngaySinhTx), diaChi: trim(r.diaChiTx), ngayCap: trim(r.ngayCapTx), noiCap: trim(r.noiCapTx), sdt: ''}; });
+      if (!p) return; cc.add(k); list.push(Object.assign({id: 'ct:' + k, loai: 'nguoiKyVC', cccd: k}, p));
+    })));
+    return list;
+  }
+  const api = {CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, dungTuLo, doiTacKey, dungDoiTac};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDanhMuc = api;
 })(typeof self !== 'undefined' ? self : this);

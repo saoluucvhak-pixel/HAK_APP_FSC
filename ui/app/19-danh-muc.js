@@ -66,7 +66,7 @@ function dmTabBhld() {
 }
 /* ----- Đối tác ----- */
 function dmTabDoiTac() {
-  const e = dmSuaDt || {}, ct = dmDt().slice().sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi')), dn = dmVC(), tt = HAKDanhMuc.laoDongHieuLuc(dmLd()).filter(r => r.chucVu === 'Tổ trưởng');
+  const e = dmSuaDt || {}, ct = dmDt().filter(x => x.loai !== 'doanhnghiep').sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi')), dn = dmVC(), tt = HAKDanhMuc.laoDongHieuLuc(dmLd()).filter(r => r.chucVu === 'Tổ trưởng');
   const form = '<form id="dmDtForm" class="grid" style="margin-top:6px"><input type="hidden" name="dtId" value="' + esc(e.id || '') + '"><h4 style="grid-column:1/-1;margin:0">' + (e.id ? 'Sửa người ký vận chuyển' : 'Thêm người ký vận chuyển (cá nhân)') + '</h4>' +
     dmFld('ten', 'Họ và tên', e.ten, {req: true}) + dmFld('cccd', 'Số CCCD', e.cccd, {req: true}) + dmFld('ngaySinh', 'Ngày sinh', e.ngaySinh) + dmFld('diaChi', 'Nơi thường trú', e.diaChi) + dmFld('ngayCap', 'Ngày cấp CCCD', e.ngayCap) + dmFld('noiCap', 'Nơi cấp CCCD', e.noiCap) + dmFld('sdt', 'Số điện thoại', e.sdt) +
     '<div class="row" style="grid-column:1/-1"><button class="btn" type="submit">' + (e.id ? 'Lưu' : 'Thêm vào danh mục') + '</button>' + (e.id ? '<button class="btn ghost" type="button" data-dmhuy="dt">Hủy</button>' : '') + '</div></form>';
