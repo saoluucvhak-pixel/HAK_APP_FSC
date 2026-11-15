@@ -76,7 +76,7 @@ function panelKiemTra(job) {
 function panelRung(own) {
   const fl = forestList(own);
   const list = '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Các rừng của chủ rừng</h3><button class="btn sm" data-act="newForest">+ Rừng mới</button></div>' +
-    '<p class="mut">Mỗi rừng có tổ khai thác, vận chuyển, hợp đồng và hồ sơ xuất riêng.</p>' +
+    '<p class="mut">Mỗi rừng có tổ khai thác, vận chuyển, hợp đồng và hồ sơ xuất riêng.</p>' + loTuLoCuBox(own) +
     (fl.length ? fl.map(f => '<button class="item ' + (f.id === curF ? 'on' : '') + '" data-forest="' + f.id + '"><span class="pill ' + (progressOf(jobView(own, f)).pct === 100 ? 'ok' : '') + '">' + progressOf(jobView(own, f)).pct + '%</span><b>' + esc(f.info.tenRung || f.info.maRung) +
       '</b><small>Mã ' + esc(f.info.maRung) + ' · ' + esc(f.info.diaDiem || 'chưa có địa điểm') + ' · ' + f.nc.length + ' người · ' + f.dx.length + ' xe</small></button>').join('')
       : '<p class="mut">Chưa có rừng. Bấm “+ Rừng mới”.</p>') + '</div>';

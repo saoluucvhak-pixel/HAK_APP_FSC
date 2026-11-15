@@ -59,3 +59,22 @@ test('dựng danh mục từ lô (v7): một dòng mỗi lô cho mỗi CCCD / bi
   assert.strictEqual(M.layLaoDong(x.laoDong, '049085000001').row.chucVu, 'Tổ trưởng'); assert.strictEqual(x.laoDong[0].chucVu, '', 'vai trò ngoài danh mục chức vụ để trống');
   assert.deepStrictEqual([x.xe.length, x.xe[0].bienSo, x.xe[0].hanDangKiem, x.xe[0].hanBaoHiem, x.xe[0].ngayCapNhat], [1, '92C-1', '01/06/2027', '01/07/2027', '01/03/2026']);
 });
+
+test('tạo lô từ lô cũ: chép đội, nhân công, xe, đơn giá, cước; bỏ phiếu cân, chấm công, số/ngày văn bản, thời gian; người và xe lấy dòng danh mục mới nhất; không sửa lô nguồn', () => {
+  const M = require('../src/danhmuc');
+  const src = {id: 'a', info: {maRung: 'R-A', tenRung: 'Lô A', diaDiem: 'Thôn A', dienTich: 2, tuNgay: '01/10/2026', denNgay: '30/11/2026', giayTo: [{x: 1}], donGia: 1, vanChuyen: {mode: 'coDinh', coDinh: 52000}, muaHang: {congTyId: 'c1', xacNhan: '2026-10-01'}, cuLy: 45},
+    doi: [{id: 'd1', ten: 'Đội 1', hinhThuc: {donGiaTan: {'Tổ trưởng': 420000}, ngayBDLD: '05/10/2026'}, dienTich: 1, exp: {soKT: '015'}}], hdvc: [{id: 'h1', cuoc: {x: 1}, exp: {soVC: '07'}}],
+    nc: [{ten: 'CŨ', cccd: '049085007001', diaChi: 'Quế Sơn', vaiTro: 'Tổ trưởng', chucDanh: 'Tổ trưởng', doiId: 'd1', maRung: 'R-A', _nguon: 'Excel'}],
+    dx: [{bienSo: '92C-1', taiXe: 'X', hanGplx: '01/01/2026', hdvcId: 'h1', maRung: 'R-A'}], pc: [{soPhieu: 'P1'}], cc: {a: 1}, exp: {soKT: '015'}, inDot2: {bm08: 1}};
+  const truoc = JSON.stringify(src);
+  const dmLd = [{ngayCapNhat: '01/11/2026', cccd: '049085007001', ten: 'MỚI', diaChi: 'Đại Lộc', chucVu: 'Công nhân', viTri: 'Công nhân cưa'}], dmXe = [{ngayCapNhat: '01/11/2026', bienSo: '92C1', taiXe: 'Y', hanGplx: '01/01/2030'}];
+  const r = M.loTuLoCu(src, {id: 'b', maRung: 'R-B', tenRung: 'Lô B', dmLaoDong: dmLd, dmXe});
+  assert.strictEqual(JSON.stringify(src), truoc, 'lô nguồn không đổi');
+  const f = r.f;
+  assert.deepStrictEqual([f.id, f.info.maRung, f.info.tuNgay, f.info.denNgay, f.info.dienTich, f.info.diaDiem, f.info.giayTo.length, f.info.muaHang.xacNhan, f.info.muaHang.congTyId], ['b', 'R-B', '', '', null, '', 0, '', 'c1']);
+  assert.deepStrictEqual([f.pc.length, 'cc' in f, JSON.stringify(f.exp), 'inDot2' in f, JSON.stringify(f.doi[0].exp), f.doi[0].hinhThuc.ngayBDLD, f.doi[0].dienTich, JSON.stringify(f.hdvc[0].exp)], [0, false, '{}', false, '{}', '', null, '{}']);
+  assert.deepStrictEqual([f.doi[0].hinhThuc.donGiaTan['Tổ trưởng'], f.info.vanChuyen.coDinh, f.hdvc[0].cuoc.x], [420000, 52000, 1], 'đơn giá và cước được giữ');
+  assert.deepStrictEqual([f.nc[0].ten, f.nc[0].diaChi, f.nc[0].vaiTro, f.nc[0].chucDanh, f.nc[0].doiId, f.nc[0].maRung, '_nguon' in f.nc[0]], ['MỚI', 'Đại Lộc', 'Tổ trưởng', 'Tổ trưởng', 'd1', 'R-B', false], 'thông tin theo danh mục, vai trò và đội của lô nguồn');
+  assert.deepStrictEqual([f.dx[0].taiXe, f.dx[0].hanGplx, f.dx[0].hdvcId, f.dx[0].maRung], ['Y', '01/01/2030', 'h1', 'R-B']);
+  assert.deepStrictEqual([r.nguoi, r.xe], [1, 1]);
+});

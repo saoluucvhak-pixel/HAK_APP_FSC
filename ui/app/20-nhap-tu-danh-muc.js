@@ -114,3 +114,20 @@ function nhapTamKhoiPhuc() {
 window.__nhapTamXoa = nhapTamXoa;
 setInterval(nhapTamGhi, 3000);
 setTimeout(nhapTamKhoiPhuc, 400);
+
+/* ========== Tạo lô từ lô cũ (bản 2.2, mục 11.3 điểm 8) ========== */
+function loTuLoCuBox(own) {
+  const ds = []; Object.values(db.rs || {}).forEach(ow => forestList(ow).forEach(f => ds.push({f, ow})));
+  if (!ds.length) return '';
+  return '<details id="loTuLoCu" style="margin:6px 0 10px"><summary class="mut" style="cursor:pointer">Tạo lô mới từ một lô đã làm</summary><div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:6px">' +
+    '<label>Lô nguồn <select id="loTuLoCuSel">' + ds.map(x => '<option value="' + esc(x.ow.id + '|' + x.f.id) + '">' + esc((x.f.info.maRung || '(chưa mã)') + ' · ' + (x.ow.info.ten || '')) + '</option>').join('') + '</select></label>' +
+    '<button class="btn sm" data-act="loTuLoCu">Tạo lô mới</button></div><p class="mut" style="margin:6px 0 0">Chép đội khai thác, nhân công, đội xe, xe, đơn giá, cước, công ty mua. <b>Không</b> chép phiếu cân, chấm công, số và ngày văn bản, thời gian khai thác. Người và xe lấy thông tin mới nhất từ Danh mục.</p></details>';
+}
+function loTuLoCuTao() {
+  const o = curOwner(), sel = document.getElementById('loTuLoCuSel'); if (!o || !sel) return;
+  const [oid, fid] = sel.value.split('|'), src = db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; if (!src) return note('Không thấy lô nguồn.', 'err');
+  const base = (o.info.ma || 'CR') + '-R'; let k = forestList(o).length + 1, code = base + k; while (HAKLoRung.lotsByMa(db, code).length) code = base + (++k);
+  const id = newId('f'), r = HAKDanhMuc.loTuLoCu(src, {id, maRung: code, tenRung: 'Rừng ' + k, dmLaoDong: db.dmLaoDong, dmXe: db.dmXeVC});
+  o.forests[id] = r.f; curF = id; ftab = 'finfo'; tab = 'rung'; persist();
+  note('Đã tạo lô ' + code + ' từ lô ' + (src.info.maRung || '?') + ': ' + (r.f.nc || []).length + ' nhân công, ' + (r.f.dx || []).length + ' xe (làm mới từ Danh mục: ' + r.nguoi + ' người, ' + r.xe + ' xe). Nhập thông tin rừng, thời gian khai thác rồi Lưu; phiếu cân và số/ngày văn bản nhập mới.', 'ok'); render();
+}

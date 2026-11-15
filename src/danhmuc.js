@@ -123,6 +123,30 @@
     })));
     return list;
   }
-  const api = {CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, dungTuLo, doiTacKey, dungDoiTac};
+  /* TẠO LÔ TỪ LÔ CŨ (bản 2.2, mục 11.3 điểm 8): chép đội khai thác (hình thức, đơn giá theo vị trí), nhân công, đội xe, xe, cước, công ty mua; KHÔNG chép phiếu cân, chấm công,
+   * số và ngày văn bản, trạng thái in, thời gian khai thác, diện tích, tọa độ. Người và xe lấy dòng MỚI NHẤT của danh mục (vai trò, vị trí, đội trong lô nguồn giữ nguyên).
+   * src: lô nguồn (không bị sửa). o: {id, maRung, tenRung, dmLaoDong, dmXe}. Trả {f, nguoi, xe}: số người, xe được làm mới từ danh mục. */
+  function loTuLoCu(src, o) {
+    const f = JSON.parse(JSON.stringify(src || {})), ma = trim(o && o.maRung), inf = f.info = f.info || {};
+    f.id = o.id; inf.maRung = ma; inf.tenRung = trim(o.tenRung) || ma;
+    ['tuNgay', 'denNgay'].forEach(k => { inf[k] = ''; });
+    ['dienTich', 'lat', 'lng', 'cuLy', 'dinhMucTanHa', 'dinhMucNgayHa', 'khoiLuong', 'klHoSoCu', '_klPC'].forEach(k => { if (k in inf) inf[k] = null; });
+    inf.diaDiem = ''; inf.giayTo = []; if (inf.muaHang) inf.muaHang = Object.assign({}, inf.muaHang, {xacNhan: ''});
+    f.pc = []; delete f.cc; f.exp = {}; delete f.inDot2; delete f.inAn; delete f.bienLog;
+    ['ncFile', 'ncAt', 'dxFile', 'dxAt', 'pcFile', 'pcAt'].forEach(k => { if (k in f) f[k] = ''; });
+    (f.doi || []).forEach(d => { d.exp = {}; d.dienTich = null; if (d.hinhThuc) d.hinhThuc.ngayBDLD = ''; });
+    (f.hdvc || []).forEach(h => { h.exp = {}; });
+    let nguoi = 0, xe = 0;
+    f.nc = (f.nc || []).map(r => {
+      const x = Object.assign({}, r, {maRung: ma}); delete x._nguon; const m = layLaoDong(o.dmLaoDong || [], r.cccd);
+      if (!m) return x; const moi = chupLaoDong(m.row, x); moi.vaiTro = r.vaiTro; moi.chucDanh = r.chucDanh; if (JSON.stringify(moi) !== JSON.stringify(x)) nguoi++; return moi;
+    });
+    f.dx = (f.dx || []).map(r => {
+      const x = Object.assign({}, r, {maRung: ma}); delete x._nguon; const m = layXe(o.dmXe || [], r.bienSo);
+      if (!m) return x; const moi = chupXe(m.row, x); if (JSON.stringify(moi) !== JSON.stringify(x)) xe++; return moi;
+    });
+    return {f, nguoi, xe};
+  }
+  const api = {CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDanhMuc = api;
 })(typeof self !== 'undefined' ? self : this);

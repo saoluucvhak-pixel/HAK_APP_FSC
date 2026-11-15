@@ -38,6 +38,7 @@ document.addEventListener('click', async e => {
   if (act === 'setOpenBackup') return HB.settings.openBackup();
   if (act === 'setOpenData') return HB.openDataFolder();
   if (act === 'luongLay') return luongLayDonGia();
+  if (act === 'loTuLoCu') return loTuLoCuTao();
   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
   if (act === 'openDm') { view = 'dm'; return render(); }
   if (act === 'openNorm') { view = 'norm'; return render(); }
