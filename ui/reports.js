@@ -387,7 +387,32 @@ const HAKReports = (function () {
       notes};
   }
 
+  /* ---- 12. Sổ hồ sơ khai thác (bản 2.2, mục 4.3): mỗi lô một dòng — quy mô, thời gian, sản lượng, giá trị, vòng đời và số mẫu còn nợ ---- */
+  function soHoSo(recs, o) {
+    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung)), rows = [], T = {dt: 0, dk: 0, tt: 0, pc: 0, nc: 0, cong: 0, vc: 0, noIn: 0, chuaKy: 0, doi: 0, xe: 0, dx: 0};
+    const ngay = iso => { const d = iso ? new Date(iso) : null; return d && !isNaN(d) ? String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear() : ''; };
+    sorted.forEach((r, i) => {
+      const pcs = pcOf(r, o), tt = sumKl(pcs), dk = yieldOf(r), ids = new Set((r.doiList || []).map(d => d.id));
+      const cong = Math.round((r.doiList || []).reduce((s, d) => s + (typeof d.tienTrenTan === 'number' ? sumKl(pcs.filter(p => p.doiId === d.id)) * d.tienTrenTan : 0), 0));
+      const vc = Math.round((r.hdList || []).reduce((s, h) => { const ks = new Set((h.bien || []).map(plateKey)); return s + (typeof h.donGia === 'number' ? sumKl(pcs.filter(p => ks.has(plateKey(p.bienSo)))) * h.donGia : 0); }, 0));
+      T.dt += num(r.dienTich); T.dk += num(dk); T.tt += tt; T.pc += pcs.length; T.nc += r.nc || 0; T.cong += cong; T.vc += vc; T.noIn += r.noIn || 0; T.chuaKy += r.chuaKy || 0; T.doi += r.soDoi || 0; T.xe += r.dx || 0; T.dx += r.soDoiXe || 0;
+      rows.push([i + 1, r.maRung, r.chuRung, r.diaDiem || '', r.congTy || '', typeof r.dienTich === 'number' ? r.dienTich : '', r.soDoi || 0, r.nc || 0, r.soDoiXe || 0, r.dx || 0, r.tuNgay || '', r.denNgay || '', ngay(r.ngayChot),
+        dk == null ? '' : dk, tt, dk ? round(tt / dk * 100, 1) : '', pcs.length, cong || '', vc || '', r.trangThaiTen || '', r.noIn || 0, r.chuaKy || 0]);
+    });
+    const dem = {}; sorted.forEach(r => { const k = r.trangThaiTen || '(chưa rõ)'; dem[k] = (dem[k] || 0) + 1; });
+    const notes = []; if (rangeNote(o)) notes.push(rangeNote(o));
+    notes.push('Trạng thái lô tự suy ra từ tiến độ in và ký, riêng Đã chốt, Lưu trữ, Đã dừng do người dùng bấm. “Mẫu nợ in” = mẫu chưa in hoặc đã in nhưng dữ liệu đổi; “mẫu chưa ký” = đã in nhưng chưa đánh dấu đã ký.');
+    notes.push('Sản lượng thực tế = tổng khối lượng phiếu cân của lô; tiền nhân công và tiền vận chuyển tính theo phiếu cân và đơn giá hiện có của đội, đội xe (trống nếu chưa tính được).');
+    return {id: 'sohoso', title: 'SỔ HỒ SƠ KHAI THÁC', orient: 'landscape', period: periodText(o.from, o.to),
+      kpis: [{label: 'Số lô', value: sorted.length, f: 'n0'}, {label: 'Diện tích (ha)', value: round(T.dt, 3), f: 'n2'}, {label: 'Sản lượng dự kiến (tấn)', value: round(T.dk, 3), f: 'n3'}, {label: 'Thực tế theo phiếu cân (tấn)', value: round(T.tt, 3), f: 'n3'},
+        {label: 'Tiền nhân công (đồng)', value: T.cong, f: 'n0'}, {label: 'Tiền vận chuyển (đồng)', value: T.vc, f: 'n0'}, ...Object.entries(dem).map(([k, v]) => ({label: 'Lô ' + k.toLowerCase(), value: v, f: 'n0'}))],
+      sections: [{heading: 'Sổ hồ sơ theo lô', cols: [{h: 'STT', w: 4, al: 'center', f: 'n0'}, {h: 'Mã lô', w: 10}, {h: 'Chủ rừng', w: 15}, {h: 'Địa điểm', w: 14}, {h: 'Công ty mua', w: 14}, {h: 'Diện tích (ha)', w: 8, f: 'n2'}, {h: 'Số đội', w: 5, f: 'n0'}, {h: 'Số người', w: 6, f: 'n0'}, {h: 'Số đội xe', w: 5, f: 'n0'}, {h: 'Số xe', w: 5, f: 'n0'},
+        {h: 'Bắt đầu', w: 9, al: 'center'}, {h: 'Kết thúc', w: 9, al: 'center'}, {h: 'Ngày chốt', w: 9, al: 'center'}, {h: 'Dự kiến (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế / dự kiến (%)', w: 8, f: 'n1'}, {h: 'Số phiếu', w: 6, f: 'n0'}, {h: 'Tiền nhân công', w: 11, f: 'n0'}, {h: 'Tiền vận chuyển', w: 11, f: 'n0'}, {h: 'Trạng thái', w: 12}, {h: 'Mẫu nợ in', w: 6, f: 'n0'}, {h: 'Mẫu chưa ký', w: 6, f: 'n0'}],
+        rows, foot: ['', 'TỔNG CỘNG', '', '', '', round(T.dt, 3), T.doi, T.nc, T.dx, T.xe, '', '', '', round(T.dk, 3), round(T.tt, 3), T.dk ? round(T.tt / T.dk * 100, 1) : '', T.pc, T.cong, T.vc, '', T.noIn, T.chuaKy]}], notes};
+  }
+
   const REPORTS = [
+    {id: 'sohoso', name: 'Sổ hồ sơ khai thác', desc: 'Mỗi lô một dòng: quy mô, thời gian, sản lượng dự kiến và thực tế, tiền nhân công, vận chuyển, trạng thái vòng đời, số mẫu còn nợ in hoặc chưa ký; lọc theo năm, trạng thái.', build: withUnit(soHoSo, 'Đơn vị tính: diện tích ha; khối lượng tấn; tiền đồng.')},
     {id: 'dieuhanh', name: 'Tổng hợp điều hành', desc: 'Một trang cho lãnh đạo: số liệu chính theo chủ rừng và các vấn đề cần xử lý.', build: withUnit(dieuHanh, 'Đơn vị tính: diện tích ha; khối lượng tấn; tiến độ %')},
     {id: 'sanluong', name: 'Sản lượng khai thác theo rừng', desc: 'Diện tích, định mức, sản lượng dự kiến và thực tế theo phiếu cân; cảnh báo vượt định mức.', build: withUnit(sanLuong, 'Đơn vị tính: diện tích ha; định mức tấn/ha; sản lượng tấn')},
     {id: 'phieucan', name: 'Sổ theo dõi phiếu cân – vận chuyển', desc: 'Danh sách phiếu cân theo kỳ, tổng hợp theo rừng, biển số, ngày; phát hiện trùng phiếu.', build: withUnit(soPhieuCan, 'Đơn vị tính: khối lượng tấn (làm tròn 3 chữ số, theo phiếu cân ghi kg)')},
