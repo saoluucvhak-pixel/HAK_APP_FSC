@@ -134,3 +134,15 @@ test('phiếu cân gắn đội: lô một đội tự gán; lô nhiều đội 
   f = M.addTeam(f, 'Hai').f; assert.match(M.removeTeam(M.moveMembers(f, [0], 'doi2').f, 'doi1').error, /còn 1 phiếu cân/);
   assert.ok(!('doiId' in M.legacyForest(r.f).pc[0]));
 });
+
+test('danh mục người lao động: gộp theo CCCD, lô mới nhất thắng, bỏ dòng thiếu tên hoặc CCCD sai, không sửa lô nguồn', () => {
+  const M = require('../src/model');
+  const nv = (ten, cccd, o) => Object.assign({ten, cccd, ngaySinh: '01/01/1990', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', danhXung: 'Ông'}, o);
+  const rs = {a: {forests: {f1: {info: {tuNgay: '01/03/2026'}, nc: [nv('LÊ A', '049085000001', {diaChi: 'Cũ'}), nv('', '049085000002'), nv('SAI', '123')]},
+    f2: {info: {tuNgay: '01/09/2026'}, nc: [nv('LÊ ANH', '049 085 000 001', {diaChi: 'Mới'}), nv('BÙI B', '049085000003')]}}},
+    b: {forests: {f3: {info: {tuNgay: ''}, nc: [nv('LÊ CŨ NHẤT', '049085000001', {diaChi: 'Rất cũ'})]}}}};
+  const before = JSON.stringify(rs), L = M.nguoiDanhMuc(rs);
+  assert.strictEqual(JSON.stringify(rs), before);
+  assert.deepStrictEqual(L.map(r => [r.ten, r.diaChi]), [['BÙI B', 'Đà Nẵng'], ['LÊ ANH', 'Mới']]);   // CCCD ghi có dấu cách vẫn gộp; ngày bắt đầu 01/09/2026 thắng; dòng thiếu tên và CCCD sai bị bỏ
+  assert.deepStrictEqual(M.nguoiDanhMuc(null), []);
+});
