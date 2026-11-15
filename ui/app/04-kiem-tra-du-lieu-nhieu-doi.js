@@ -71,11 +71,12 @@ function checkNC(rec) {
     if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi chức danh "Tổ trưởng"');
     const ngc = rec.info.hinhThucLuong === 'ngaycong';
     if (chucDanhAll().includes(r.chucDanh)) {
-      const rate = rateOf(rec.info, r);
-      if (!(rate > 0)) bad('chưa có đơn giá ' + basisOf(rec.info).short + ' cho "' + r.chucDanh + '" trong mục Cơ sở tính đơn giá (tab Nhân công)');
+      const ir = infoRow(rec, r), rate = rateOf(ir, r);
+      if (!(rate > 0)) bad('chưa có đơn giá ' + basisOf(ir).short + ' cho "' + r.chucDanh + '" trong mục Cơ sở tính đơn giá (tab Nhân công)');
     }
   });
   if (tt < 1) errs.push('Cần ít nhất 1 tổ trưởng (hiện có ' + tt + ')');
+  else if (rec.doi) HAKModel.teamErrors({doi: rec.doi, nc: rec.nc}).forEach(e => { if (e.row != null) { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; } else errs.push(e.text); });   // cấu trúc đội (bảng con của lô): mỗi người thuộc một đội, mỗi đội một Tổ trưởng
   else if (tt > 1 && !isDirect(rec.info)) HAKDoi.build(rec.nc, isTT).errs.forEach(e => { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; });   // nhiều tổ trưởng = nhiều đội, mỗi người phải thuộc đúng một đội
   return {errs, warns, state};
 }
@@ -166,21 +167,50 @@ const basisOf = i => BASIS[i.hinhThucLuong] || BASIS.sanluong;
 const basisAllowed = (direct, b) => direct ? b !== 'ha' : true;   // giao khoán: tấn, ha hoặc ngày công; trực tiếp: tấn hoặc ngày công
 const giaErrors = i => basisAllowed(isDirect(i), i.hinhThucLuong || 'sanluong') ? []
   : ['Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công (không tính theo ha): chọn lại ở tab Nhân công'];
-const hdldList = rec => isDirect(rec.info) ? rec.nc : [];   // giao khoán: thay bằng một Giấy ủy quyền (BM-20)
+/* thông tin (hình thức, đơn giá) áp cho MỘT người / MỘT đội: thông tin lô + hình thức của đội người đó (cấu trúc 2.0); hồ sơ cũ không có đội thì thông tin lô */
+const teamOfRow = (rec, r) => rec.doi ? (rec.doi.find(d => d.id === (r && r.doiId)) || null) : null;
+const infoTeam = (rec, d) => d ? Object.assign({}, rec.info, d.hinhThuc || {}) : rec.info;
+const infoRow = (rec, r) => infoTeam(rec, teamOfRow(rec, r));
+const teamInfos = rec => rec.doi && rec.doi.length ? rec.doi.map(d => infoTeam(rec, d)) : [rec.info];
+const allDirect = rec => teamInfos(rec).every(isDirect), anyGK = rec => teamInfos(rec).some(i => !isDirect(i));
+const giaErrorsRec = rec => rec.doi && rec.doi.length > 1 ? rec.doi.flatMap(d => giaErrors(infoTeam(rec, d)).map(e => 'Đội ' + (d.ten ? '“' + d.ten + '”' : '') + ': ' + e)) : giaErrors(rec.info);
+const hdldList = rec => rec.nc.filter(r => isDirect(infoRow(rec, r)));   // người của đội ký TRỰC TIẾP (giao khoán: thay bằng Giấy ủy quyền BM-20)
 /* ===== Nhiều đội: mỗi Tổ trưởng là một đội, ký hợp đồng giao khoán riêng (src/doi.js) =====
  * doiOf(rec): các đội cùng phần diện tích và khối lượng của lô chia theo số người. subRec(rec, d): hồ sơ của riêng đội d (nhân công của đội, diện tích và khối lượng phần của đội),
  * dùng chung các hàm lập biểu mẫu hiện có nên mỗi đội ra một bộ BM-01, BM-20, BM-08, BM-14 riêng. Lô chỉ một đội: giữ nguyên hồ sơ, không đổi gì. */
-const doiOf = rec => { const b = isDirect(rec.info) ? HAKDoi.single(rec.nc, isTT) : HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi);
+/* đội TƯỜNG MINH (cấu trúc 2.0): rec.doi + nhân công mang doiId. Đội không có Tổ trưởng không lập hồ sơ (như bản cũ). Diện tích đội: nhập ở đội; chưa nhập đủ thì chia theo số người */
+const doiTuongMinh = rec => {
+  const teams = rec.doi.map(t => { const m = (rec.nc || []).filter(r => r.doiId === t.id), tt = m.find(isTT); return tt ? {key: HAKDoi.keyOf(tt), id: t.id, team: t, ten: t.ten, tt, members: m.filter(r => r !== tt), n: m.length, share: 1} : null; }).filter(Boolean);
+  const b = {multi: teams.length > 1, doi: teams, errs: [], orphans: []}, total = teams.reduce((s, d) => s + d.n, 0) || 1;
+  if (b.multi) teams.forEach(d => { d.share = d.n / total; });
+  /* đội đã nhập diện tích dùng số đó; các đội còn lại chia phần diện tích còn lại của lô theo số người (không đội nào nhập: như bản cũ) */
+  const nhap = teams.filter(d => typeof d.team.dienTich === 'number'), con = teams.filter(d => typeof d.team.dienTich !== 'number');
+  let ha;
+  if (!nhap.length) ha = HAKDoi.chia(rec.info.dienTich, teams);
+  else { const du = typeof rec.info.dienTich === 'number' ? Math.round((rec.info.dienTich - nhap.reduce((s, d) => s + d.team.dienTich, 0)) * 1000) / 1000 : null, nCon = con.reduce((s, d) => s + d.n, 0) || 1;
+    const chiaCon = HAKDoi.chia(du, con.map(d => ({share: d.n / nCon}))); ha = teams.map(d => typeof d.team.dienTich === 'number' ? d.team.dienTich : chiaCon[con.indexOf(d)]); }
+  return {b, ha};
+};
+const doiOf = rec => { if (rec.doi) { const {b, ha} = doiTuongMinh(rec); return doiKl(rec, b, ha); }
+  const b = isDirect(rec.info) ? HAKDoi.single(rec.nc, isTT) : HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi); return doiKl(rec, b, ha); };
+const doiKl = (rec, b, ha) => {
   const kq = b.multi ? HAKDoi.khoiLuong(rec.info.khoiLuong, b.doi, rec.info.klDoi) : {vals: HAKDoi.chia(rec.info.khoiLuong, b.doi), nguon: 'songuoi', loi: ''};   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
   b.klNguon = kq.nguon; b.klLoi = kq.loi; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
-const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {_share: d.share, _klNhap: b.klNguon === 'nhap', _klLo: rec.info.khoiLuong, _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], info: Object.assign({}, rec.info, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
+/* hồ sơ cho một người theo đội của người đó (hợp đồng lao động của đội ký trực tiếp) */
+const recOfRow = (rec, r) => { if (!rec.doi) return rec; const B = doiOf(rec); if (!B.multi) return rec; const d = B.doi.find(x => x.id === r.doiId); return d ? subRec(rec, B, d) : rec; };
+const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {_share: d.share, _klNhap: b.klNguon === 'nhap', _klLo: rec.info.khoiLuong, _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], _team: d.team || null, exp: d.team && Object.keys(d.team.exp || {}).length ? Object.assign({}, rec.exp, d.team.exp) : rec.exp, info: Object.assign({}, rec.info, d.team ? d.team.hinhThuc : {}, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
 const ncList = rec => { const tt = rec.nc.find(isTT); return tt ? [tt, ...rec.nc.filter(r => r !== tt)] : rec.nc.slice(); };   // tổ trưởng đầu danh sách, rồi mọi người còn lại (kể cả các tổ trưởng khác)
 /* Lô nhiều đội: mỗi đội ký hợp đồng riêng nên số hợp đồng, giấy ủy quyền, biên bản nghiệm thu của mỗi đội thêm hậu tố .1, .2… ngay sau phần số (015 → 015.1, 015/2026-KT → 015.1/2026-KT).
  * Số để trống (chưa nhập) thì giữ nguyên chỗ trống để điền tay. Số xác nhận khối lượng và hợp đồng vận chuyển là của cả lô nên không đổi. */
 const soDoiSo = (x, k) => (x.thieuSo || !x.so) ? x : Object.assign({}, x, {so: /\//.test(x.so) ? x.so.replace('/', '.' + k + '/') : x.so + '.' + k});
-const exDoi = (ex, b, idx) => !b.multi ? ex : Object.assign({}, ex, {_so: Object.assign({}, ex._so, {kt: soDoiSo(ex._so.kt, idx + 1), uq: soDoiSo(ex._so.uq, idx + 1), nt: soDoiSo(ex._so.nt, idx + 1)})});
+const exDoi = (ex, b, idx) => {
+  if (!b.multi) return ex;
+  const d = b.doi[idx], te = (d && d.team && d.team.exp) || null, e = te && Object.keys(te).length ? Object.assign({}, ex, te) : ex;
+  const so = e === ex ? ex._so : HAKHopDong.numbers(e), chung = k => !d || !d.team || b.doi.filter(x => x.team && ((x.team.exp || {})[k] || '') === ((d.team.exp || {})[k] || '')).length > 1;
+  return Object.assign({}, e, {_so: Object.assign({}, so, {kt: chung('soKT') ? soDoiSo(so.kt, idx + 1) : so.kt, uq: chung('uqSo') ? soDoiSo(so.uq, idx + 1) : so.uq, nt: chung('ntSo') ? soDoiSo(so.nt, idx + 1) : so.nt})});
+};
 const doiLabel = d => (d.ten ? d.ten + ' — ' : '') + d.tt.ten;
-const ucList = rec => rec.nc.filter(r => !isTT(r));         // người ủy quyền cho Tổ trưởng (hình thức giao khoán)
+const ucList = rec => rec.nc.filter(r => !isTT(r) && !isDirect(infoRow(rec, r)));         // người ủy quyền cho Tổ trưởng (đội giao khoán)
 // Khối lượng dùng cho bảng lương: thực tế nếu có, không thì dự kiến (diện tích × định mức)
 const volumeOf = i => {
   if (typeof i.khoiLuong === 'number' && i.khoiLuong > 0) return {v: i.khoiLuong, src: 'thực tế'};
@@ -255,12 +285,12 @@ function rungText(i) {
 }
 
 function gate(rec) {
-  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrors(rec.info), ...HAKNhapLieu.kiemTra(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
+  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrorsRec(rec), ...HAKNhapLieu.kiemTra(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
   const nc = checkNC(rec);
   const dx = checkDX(rec);
   const vc = transportPrice(rec.info);
   const hasTT = rec.nc.some(isTT);
-  const direct = isDirect(rec.info), normErrs = normErrors(rec);
+  const direct = allDirect(rec), normErrs = normErrors(rec);
   const pc = checkPC(rec);
   return {
     pc, info, nc, dx, direct, normErrs, vc: vc.loi ? [vc.loi] : [],

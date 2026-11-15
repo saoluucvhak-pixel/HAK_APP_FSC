@@ -9,7 +9,7 @@ function viTriDangDung() {
   if (!HAKDinhBien.get(db).saved) HAKDinhMuc.allPositions(db).forEach(add);
   Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => {
     (f.nc || []).forEach(r => add(r.chucDanh));
-    const i = f.info || {}; ['donGiaTan', 'donGiaHa', 'donGiaNgay'].forEach(m => Object.entries(i[m] || {}).forEach(([k, v]) => { if (v > 0) add(k); }));
+    [f.info || {}, ...(f.doi || []).map(d => d.hinhThuc || {})].forEach(i => ['donGiaTan', 'donGiaHa', 'donGiaNgay'].forEach(m => Object.entries(i[m] || {}).forEach(([k, v]) => { if (v > 0) add(k); })));
   }));
   return out;
 }

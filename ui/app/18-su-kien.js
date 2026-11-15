@@ -5,7 +5,7 @@ document.addEventListener('click', async e => {
   const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick); return; }
   const dsh = t.closest('[data-dash]'); if (dsh) { const [oid, fid] = dsh.dataset.dash.split('|'); openRs(oid); return openForest(fid); }
   const open = t.closest('[data-open]'); if (open) return openRs(open.dataset.open);
-  const of = t.closest('[data-forest]'); if (of) return openForest(of.dataset.forest);
+  const of = t.closest('[data-forest]'); if (of) { curDoi = null; return openForest(of.dataset.forest); }
   const sf = t.closest('[data-sforest]'); if (sf) return openForest(sf.dataset.sforest);
   const tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; return render(); }
   const ftb = t.closest('[data-ftab]'); if (ftb) { ftab = ftb.dataset.ftab; return render(); }
@@ -16,6 +16,9 @@ document.addEventListener('click', async e => {
   if (act === 'delRs') return delRs(), render();
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
+  if (act === 'chonDoi') { curDoi = el.dataset.doi; return render(); }
+  if (act === 'themDoi') return themDoi();
+  if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();
   if (act === 'openSettings') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'settings'; setg.msg = null; return render(); }
   if (act === 'dataRetry') return issueAct('retry');
@@ -113,6 +116,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'infoForm') { e.preventDefault(); saveInfo(e.target); }
   if (e.target.id === 'forestForm') { e.preventDefault(); saveForest(e.target); }
   if (e.target.id === 'luongForm') { e.preventDefault(); saveLuong(e.target); }
+  if (e.target.id === 'doiForm') { e.preventDefault(); saveDoi(e.target); }
   if (e.target.id === 'stForm') { e.preventDefault(); stFinishRow(); }
   if (e.target.id === 'vcForm') { e.preventDefault(); saveVc(e.target); }
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
@@ -124,6 +128,7 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persist(); render(); return; }
   if (t.name === 'bienSo' && t.form && t.form.id === 'stForm' && t.value === '__new') { stRead(); stOpen('dx', null, null, {kind: stm.kind, id: stm.id, vals: Object.assign({}, stm.vals, {bienSo: ''})}); return; }   // thêm xe ngay trong lượt sửa phiếu: giữ nguyên các ô đã nhập
   if (t.name === 'vcMode' && t.form && t.form.id === 'vcForm') {
     t.form.querySelectorAll('[data-vcgrp]').forEach(g => { g.style.display = g.dataset.vcgrp === t.value ? '' : 'none'; });
@@ -146,7 +151,8 @@ document.addEventListener('change', e => {
   const f = curForest();
   if (t.dataset.exp && f) {
     f.exp = f.exp || {};
-    f.exp[t.dataset.exp] = trim(t.value);
+    const rest = ghiDoi(f, {[t.dataset.exp]: trim(t.value)}, 'exp');   // số văn bản của đội (HĐ giao khoán, ủy quyền, nghiệm thu, kỳ thanh toán) ghi vào đội
+    Object.assign(f.exp, rest);
     persist();
   }
 });
@@ -181,7 +187,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset && t.dataset.mamoi !== undefined) { impMaCheck(); return; }
   if (t.dataset && t.dataset.exp && curForest()) {   // xem trước số hợp đồng cập nhật ngay khi gõ
-    const rec = curRec(), exo = Object.assign({}, rec.exp, {[t.dataset.exp]: trim(t.value)});
+    const rec = curRec(), exo = Object.assign({}, rec.exp, rec.doi && rec.doi.length > 1 ? (curTeam() || {}).exp : {}, {[t.dataset.exp]: trim(t.value)});
     const a = document.getElementById('soPreviewHd'), b = document.getElementById('soPreviewVc');
     if (a) a.innerHTML = soPreviewHtml(rec, exo, 'hd'); if (b) b.innerHTML = soPreviewHtml(rec, exo, 'vc');
   }

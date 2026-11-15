@@ -9,7 +9,7 @@ function qtSig(rec, kind) {
 }
 function qtItems(rec) {
   const g = gate(rec), ok = kindOk(g), c = draftCtx(rec), Q = HAKQuyTrinh;
-  return Q.applicable(isDirect(rec.info) ? 'tructiep' : 'giaokhoan').map(f => {
+  return Q.applicable(allDirect(rec) ? 'tructiep' : 'giaokhoan').map(f => {
     const iss = HAKBanNhap.issues(f.code, c), ready = !ok[f.kind] ? 'thieu' : iss.length ? 'nhap' : 'du';
     let sig = ''; if (ok[f.kind]) { try { sig = qtSig(rec, f.kind); } catch (e) { sig = 'loi:' + e.message; } }
     return {code: f.code, ready, sig, why: iss.map(x => x.text).join('; ')};
@@ -64,7 +64,7 @@ function pcPrintCard(rec) {
 }
 function panelXuat(rec) {
   const g = gate(rec);
-  const ex = rec.exp || {};
+  const tSel = rec.doi && rec.doi.length > 1 ? curTeam() : null, ex = tSel ? Object.assign({}, rec.exp, tSel.exp) : (rec.exp || {});   // lô nhiều đội: ô số văn bản hiện và ghi của ĐỘI ĐANG CHỌN
   const dd = destOf(rec);
   const btn = (label, kind, idx, ok) => '<button class="btn sm ghost" ' + (ok ? '' : 'disabled') + ' data-act="dl" data-kind="' + kind + '"' + (idx != null ? ' data-idx="' + idx + '"' : '') + '>' + label + '</button>';
   const hdld = hdldList(rec);
@@ -76,7 +76,7 @@ function panelXuat(rec) {
   if (g.dx.errs.length) why.push('Vận chuyển: ' + g.dx.errs.length + ' lỗi');
   if (g.normErrs.length) why.push('BHLĐ: ' + g.normErrs.join('; '));
   if (g.vc.length) why.push('Vận chuyển: ' + g.vc.join('; '));
-  const params = (title, list) => '<div class="card"><h3 style="margin-top:0">' + title + ' <span class="mut" style="font-weight:400">· để trống thì in dòng chấm để điền tay</span></h3>' +
+  const params = (title, list) => '<div class="card"><h3 style="margin-top:0">' + title + (tSel && list.some(x => HAKModel.DOI_EXP.includes(x[0])) ? ' — đội “' + esc(tSel.ten || '') + '” (chọn đội ở tab Nhân công)' : '') + ' <span class="mut" style="font-weight:400">· để trống thì in dòng chấm để điền tay</span></h3>' +
     '<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">' +
     list.map(x => '<label>' + x[1] + '<input data-exp="' + x[0] + '" value="' + esc(ex[x[0]] || '') + '" placeholder="' + esc(x[2] || '') + '"></label>').join('') + '</div></div>';
   const row = (t, sub, b) => '<div class="docrow"><div><b>' + t + '</b><div class="mut">' + sub + '</div></div>' + b + '</div>';

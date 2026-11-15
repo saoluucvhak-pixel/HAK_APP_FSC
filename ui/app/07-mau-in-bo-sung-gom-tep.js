@@ -148,12 +148,14 @@ function buildFilesRaw0(rec, kind) {
   files.push = f => { let q = f.path, k = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + k++ + '.docx'); used.add(q); f.path = q; return Array.prototype.push.call(files, f); };
   /* In làm HAI ĐỢT khi chưa xong khai thác: 'dau' = hồ sơ làm được ngay (hợp đồng, lao động, vận chuyển, FSC...), 'cuoi' = phần chỉ làm được khi xong rừng (tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10, nghiệm thu BM-14); 'all' = tất cả một lần */
   const PHAN_CUOI = ['tc', 'nttl', 'xnvc', 'ttvc'], dau = kind === 'all' || kind === 'dau';
-  if ((kind === 'gk' || dau) && !isDirect(rec.info)) perDoi('01_HD_Giao_khoan', '01_HD_Giao_khoan', docGiaoKhoan);
-  if ((kind === 'uq' || (dau && gate(rec).canUQ)) && !isDirect(rec.info)) perDoi('20_Giay_uy_quyen', '20_Giay_uy_quyen', docUyQuyen, {skip: d => B.multi && !d.members.length});
+  const dTT = d => isDirect(infoTeam(rec, d.team));   // đội ký trực tiếp: không có hợp đồng giao khoán, giấy ủy quyền (lô có thể có cả hai loại đội)
+  if ((kind === 'gk' || dau) && anyGK(rec)) perDoi('01_HD_Giao_khoan', '01_HD_Giao_khoan', docGiaoKhoan, {skip: dTT});
+  if ((kind === 'uq' || (dau && gate(rec).canUQ)) && anyGK(rec)) perDoi('20_Giay_uy_quyen', '20_Giay_uy_quyen', docUyQuyen, {skip: d => dTT(d) || (B.multi && !d.members.length)});
   if (kind === 'bhld' || dau) files.push({path: '02_BHLD_' + s + '.docx', blocks: docBHLD(rec, ex)});
   if (kind === 'hdld' || dau) {
     hdldList(rec).forEach((cn, i) => {
-      files.push({path: '03_HDLD/' + String(i + 1).padStart(2, '0') + '_' + slug(cn.ten) + '.docx', blocks: docHDLD(rec, ex, cn)});
+      const di = B.multi ? B.doi.findIndex(d => d.id === cn.doiId) : -1, sr = di >= 0 ? subRec(rec, B, B.doi[di]) : rec;   // người của đội ký trực tiếp: đơn giá, ngày bắt đầu theo đội của người đó
+      files.push({path: '03_HDLD/' + String(i + 1).padStart(2, '0') + '_' + slug(cn.ten) + '.docx', blocks: docHDLD(sr, di >= 0 ? exDoi(ex, B, di) : ex, cn)});
     });
   }
   if (kind === 'hdvc' || dau) {

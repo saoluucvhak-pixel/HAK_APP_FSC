@@ -122,13 +122,13 @@ function runAutoBackup() {
 }
 
 const NO_STORE = () => 'Chưa mở được cơ sở dữ liệu' + (dataIssue ? ': ' + dataIssue.reason + ' (' + dataIssue.path + ')' : '') + '. Hãy xử lý ở màn hình thông báo trước.';
-/* Tự kiểm cấu trúc 2.0 (chỉ khi chạy từ mã nguồn, HAKQN_CHECK_MODEL=<file nhật ký>): sau mỗi lần lưu, chuyển dữ liệu sang cấu trúc bảng mẹ – bảng con
- * rồi dựng lại dạng cũ (src/model.js) phải ra y nguyên dữ liệu vừa lưu; sai lệch ghi vào file nhật ký. Chạy cả bộ e2e với biến này để kiểm trên mọi dữ liệu thử. */
+/* Tự kiểm cấu trúc 2.0 (chỉ khi chạy từ mã nguồn, HAKQN_CHECK_MODEL=<file nhật ký>): sau mỗi lần lưu, dữ liệu trong SQLite phải ĐÃ CHUẨN HÓA
+ * (mọi lô có đội, mọi nhân công có doiId: chuẩn hóa lại không đổi gì) và dựng lại dạng cũ không lỗi; sai lệch ghi vào file nhật ký. CI chạy cả bộ e2e với biến này. */
 function checkModel(where) {
   const f = process.env.HAKQN_CHECK_MODEL; if (!f || !store) return;
   try {
-    const M = require('./model'), db = store.load(), back = M.legacyDb(M.migrateDb(db, require('./dinhbien').MAC_DINH));
-    require('assert').deepStrictEqual(back, JSON.parse(JSON.stringify(db)));
+    const M = require('./model'), db = JSON.parse(JSON.stringify(store.load()));
+    require('assert').deepStrictEqual(M.ensureDb(db), db); M.legacyDb(db);
     fs.appendFileSync(f, 'OK ' + where + '\n');
   } catch (e) { fs.appendFileSync(f, 'LECH ' + where + ' ' + String(e.message).slice(0, 4000).replace(/\n/g, ' ⏎ ') + '\n'); }
 }

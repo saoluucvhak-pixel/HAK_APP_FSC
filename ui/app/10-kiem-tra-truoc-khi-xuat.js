@@ -124,16 +124,15 @@ function cuLyNote(i) {
 }
 /* Khối lượng thực tế từng đội (lô giao khoán nhiều đội): tùy chọn; trống hết thì chia theo số người (src/doi.js khoiLuong) */
 function klDoiField(f) {
-  const i = f.info || {}; if (isDirect(i)) return '';
-  const b = HAKDoi.build(f.nc || [], isTT); if (!b.multi) return '';
-  const kq = doiOf(Object.assign({nc: f.nc || []}, f)), m = i.klDoi || {};
+  const i = fInfo(f), r0 = {info: i, nc: f.nc || [], doi: f.doi || null};
+  const kq = doiOf(r0), b = kq, m = i.klDoi || {}; if (!b.multi) return '';
   return '<fieldset style="grid-column:1/-1;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px 12px"><legend class="mut">Khối lượng thực tế từng đội (tấn, tùy chọn)</legend>' +
     '<div class="row" style="gap:10px;flex-wrap:wrap">' + b.doi.map(d => '<label><span>' + esc(doiLabel(d)) + ' (' + d.n + ' người)</span><input data-kldoi="' + esc(d.key) + '" inputmode="decimal" value="' + esc(typeof m[d.key] === 'number' ? String(m[d.key]).replace('.', ',') : '') + '" placeholder="trống: theo số người"></label>').join('') + '</div>' +
     '<small class="mut">Phiếu cân không ghi đội nên mặc định sản lượng chia theo số người. Nếu năng suất các đội khác nhau, nhập đủ khối lượng thực tế của MỌI đội (tổng phải bằng khối lượng thực tế của lô); BM-08 và BM-14 của từng đội dùng số này.</small>' +
     (kq.klLoi ? '<div class="msg warn" style="margin-top:6px">' + esc(kq.klLoi) + '</div>' : kq.klNguon === 'nhap' ? '<div class="mut" style="margin-top:6px">Đang dùng khối lượng nhập riêng của từng đội.</div>' : '') + '</fieldset>';
 }
 function panelForest(f) {
-  const i = f.info || {};
+  const i = fInfo(f);
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
     '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['khoiLuong', 'dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
@@ -158,11 +157,11 @@ const luongOptions = (direct, cur) => {
   return all.map(([v, l]) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + l + '</option>').join('');
 };
 function panelLuong(rec) {
-  const i = rec.info, direct = isDirect(i), cur = i.hinhThucLuong || 'sanluong';
+  const f = curForest(), t = rec.doi && f ? curTeam(f) : null, i = t ? infoTeam(rec, rec.doi.find(d => d.id === t.id) || t) : rec.info, direct = isDirect(i), cur = i.hinhThucLuong || 'sanluong';
   const rate = (pre, map, unit, legacyTt) => chucDanhAll().map((cd, k) => '<label><span>Đơn giá ' + esc(cd) + ' (' + unit + ')</span><input name="' + pre + k + '" value="' +
     esc(((map || {})[cd]) ?? ((legacyTt && k === 0 && i.donGia > 0) ? i.donGia : '')) + '"></label>').join('');
   const grp = (name, html) => '<div class="grid" data-grp="' + name + '" style="grid-column:1/-1;' + (cur === name ? '' : 'display:none') + '">' + html + '</div>';
-  return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá</h3>' +
+  return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá' + (t && rec.doi.length > 1 ? ' — đội “' + esc(t.ten || '') + '”' : '') + '</h3>' +
     '<p class="mut" style="margin-top:0">Danh sách nhân công nạp từ file Excel. <b>Giao khoán</b>: chủ rừng ký với Tổ trưởng, công nhân ký một Giấy ủy quyền cho Tổ trưởng; tính theo tấn, ha hoặc ngày công. <b>Trực tiếp</b>: chủ rừng ký hợp đồng lao động với tất cả nhân công; tính theo tấn hoặc ngày công. Sản lượng (tấn, ha) hoặc số công chia đều cho mọi người; đơn giá theo từng vai trò.</p>' +
     '<form id="luongForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Hình thức hợp đồng</span><select name="moHinhKy">' +

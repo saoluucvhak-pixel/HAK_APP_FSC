@@ -134,9 +134,9 @@ test('nâng cấp v2 → v3 (bản 1.0.0 → 1.1.0): thêm bảng companies, có
   s.db.prepare("INSERT INTO meta(key,value) VALUES('norm','{\"x\":1}')").run(); s.close();
   assert.strictEqual(new Store(f, {migrations: MIGRATIONS.slice(0, 2)}).db.pragma('user_version', {simple: true}), 2);
   s = new Store(f);
-  assert.strictEqual(s.db.pragma('user_version', {simple: true}), 3);
+  assert.strictEqual(s.db.pragma('user_version', {simple: true}), MIGRATIONS.length);   // v2 → v3 (companies) → v4 (đội khai thác)
   assert.ok(s.db.prepare("SELECT name FROM sqlite_master WHERE name='companies'").get());
-  const bk = fs.readdirSync(path.join(d, 'backups')).filter(n => n.startsWith('truoc-nang-cap-v2-len-v3'));
+  const bk = fs.readdirSync(path.join(d, 'backups')).filter(n => n.startsWith('truoc-nang-cap-v2-len-v' + MIGRATIONS.length));
   assert.strictEqual(bk.length, 1);
   const old = new Store(path.join(d, 'backups', bk[0]), {migrations: MIGRATIONS.slice(0, 2)});   // bản sao lưu vẫn là cấu trúc cũ, đọc được
   assert.strictEqual(old.db.pragma('user_version', {simple: true}), 2); assert.strictEqual(old.db.prepare('SELECT COUNT(*) c FROM forests').get().c, 2);
@@ -152,9 +152,14 @@ test('nâng cấp từ cơ sở dữ liệu v1.0.0 THẬT (tests/fixtures/hakqn_
   assert.strictEqual(userVersion, 2); assert.ok(lkBefore > 0);
   const s = new Store(f);                                                                 // mở bằng bản mới: tự nâng cấp
   assert.strictEqual(s.db.pragma('user_version', {simple: true}), MIGRATIONS.length);
-  assert.ok(fs.readdirSync(path.join(d, 'backups')).some(n => n.startsWith('truoc-nang-cap-v2-len-v3')));   // có sao lưu trước khi nâng cấp
+  assert.ok(fs.readdirSync(path.join(d, 'backups')).some(n => n.startsWith('truoc-nang-cap-v2-len-v' + MIGRATIONS.length)));   // có sao lưu trước khi nâng cấp
   const db = s.load();
-  assert.strictEqual(JSON.stringify([s.db.prepare('SELECT id,data FROM owners ORDER BY id').all(), s.db.prepare('SELECT id,data FROM forests ORDER BY id').all()]), rowsBefore);   // MỌI hồ sơ giữ nguyên từng byte
+  // chủ rừng giữ nguyên từng byte; lô chuyển sang cấu trúc có ĐỘI (v4) và dựng lại dạng cũ đúng y nguyên — không mất dữ liệu nào
+  const M = require('../src/model'), [ownB, forB] = JSON.parse(rowsBefore);
+  assert.strictEqual(JSON.stringify(s.db.prepare('SELECT id,data FROM owners ORDER BY id').all()), JSON.stringify(ownB));
+  const forA = s.db.prepare('SELECT id,data FROM forests ORDER BY id').all();
+  assert.deepStrictEqual(forA.map(r => [r.id, M.legacyForest(JSON.parse(r.data))]), forB.map(r => [r.id, JSON.parse(r.data)]));
+  forA.forEach(r => { const x = JSON.parse(r.data); assert.ok(x.doi.length >= 1 && (x.nc || []).every(n => x.doi.some(t => t.id === n.doiId)), 'lô ' + r.id + ' có đội'); });
   const F = Object.fromEntries(Object.values(db.rs.own1.forests).map(x => [x.info.maRung, x]));
   assert.strictEqual(F['R-CU1'].exp.vcDiemDen, 'Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc');   // điểm đến nhập tay còn nguyên
   assert.strictEqual(F['R-CU1'].pc[1].noiGiao, 'Kho Điện Bàn');                           // nơi giao thực tế trên phiếu còn nguyên

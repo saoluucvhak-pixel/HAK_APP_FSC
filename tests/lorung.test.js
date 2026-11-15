@@ -9,8 +9,11 @@ const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-lo-'));
 const clone = o => JSON.parse(JSON.stringify(o));
 
 const pc = (so, kl, ngay = '05/10/2026') => ({_row: 2, stt: '1', ngay, bienSo: '92C-12345', soPhieu: so, kl, noiGiao: 'NM', ghiChu: ''});
-const lot = (id, ma, kl) => ({id, info: {maRung: ma, tenRung: 'Lô ' + ma, vanChuyen: {mode: 'coDinh', coDinh: 52000, bac: []}, muaHang: {congTyId: 'c9', ten: 'CÔNG TY MUA', mst: '', diaChiId: '', diaChiNhan: 'Địa chỉ công ty', diaChi: 'KCN X', xacNhan: '2026-10-01T00:00:00.000Z'}},
+/* từ cấu trúc 2.0 (giai đoạn 3) SQLite lưu lô đã chuẩn hóa (có đội, nhân công có doiId): dữ liệu thử dựng sẵn ở dạng đó để so sánh trực tiếp */
+const M = require('../src/model');
+const lot0 = (id, ma, kl) => ({id, info: {maRung: ma, tenRung: 'Lô ' + ma, vanChuyen: {mode: 'coDinh', coDinh: 52000, bac: []}, muaHang: {congTyId: 'c9', ten: 'CÔNG TY MUA', mst: '', diaChiId: '', diaChiNhan: 'Địa chỉ công ty', diaChi: 'KCN X', xacNhan: '2026-10-01T00:00:00.000Z'}},
   nc: [{ten: 'NV 1', chucDanh: 'Tổ trưởng'}], dx: [{bienSo: '92C-12345', chuXe: 'XE'}], pc: [pc('P1-' + ma, kl), pc('P2-' + ma, kl)], exp: {soVC: '07'}, ncFile: 'nc.xlsx', ncAt: '2026-10-02'});
+const lot = (id, ma, kl) => M.ensureForest(lot0(id, ma, kl));
 const base = () => ({v: 2, dinhMuc: {'Tổ trưởng': {qa: '1 bộ'}, 'Phụ': {qa: 'x'}}, bienAlias: {'92c12345': '92C-12345', 'khac': '11A-1'}, congTy: {}, rs: {
   o1: {id: 'o1', info: {ma: 'CR-1', ten: 'CHỦ MỘT', cccd: '049000000001'}, forests: {fa: lot('fa', 'LO-A', 10), fb: lot('fb', 'LO-B', 20)}},
   o2: {id: 'o2', info: {ma: 'CR-2', ten: 'CHỦ HAI', cccd: '049000000002'}, forests: {fc: lot('fc', 'LO-C', 30)}}}});

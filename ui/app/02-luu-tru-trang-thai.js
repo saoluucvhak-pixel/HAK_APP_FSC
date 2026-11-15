@@ -57,7 +57,10 @@ const hhmm = () => new Date().toLocaleTimeString('vi-VN');
  * Các lần lưu được xếp hàng (không chạy chồng); ảnh chụp lấy ngay trước khi gửi nên đúng với nội dung được ghi. */
 let saveCache = null, saveChain = Promise.resolve();
 window.__saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
+/* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
+function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); })); }   // tại chỗ: nơi đang giữ tham chiếu lô vẫn đúng
 async function saveOnce() {
+  chuanHoaDb();
   let r = null, snap = null;
   if (saveCache && HB.saveDelta) {
     snap = HAKDelta.snapshot(db);
@@ -116,9 +119,33 @@ const forestList = o => Object.values(o.forests || {});
 /* Điểm đến vận chuyển hiệu lực của rừng: bản chụp công ty mua hàng, nếu chưa chọn thì điểm đến nhập tay cũ (src/muahang.js) */
 const destOf = rec => HAKMuaHang.diemDen(rec.info, rec.exp);
 const curForest = () => { const o = curOwner(); return (o && curF && o.forests[curF]) || null; };
+/* Đội đang chọn của lô đang mở (bảng con “Nhân công khai thác”); chưa chọn / không còn: đội đầu */
+let curDoi = null;
+const curTeam = f => { f = f || curForest(); if (!f) return null; if (HAKModel.needsEnsure(f)) Object.assign(f, HAKModel.ensureForest(f)); return f.doi.find(d => d.id === curDoi) || f.doi[0]; };
+/* thông tin rừng + hình thức của đội đầu (để đọc ở form thông tin rừng; hồ sơ dùng jobView) */
+const fInfo = f => Object.assign({}, (f && f.info) || {}, (((f && f.doi) || [])[0] || {}).hinhThuc || {});
+/* ghi các trường của ĐỘI vào đội (mặc định đội đang chọn), còn lại vào lô; trả phần của lô */
+function ghiDoi(f, patch, kind, d) {
+  const keys = kind === 'exp' ? HAKModel.DOI_EXP : HAKModel.DOI_INFO, rest = {}, team = d || curTeam(f);
+  Object.entries(patch).forEach(([k, v]) => { if (keys.includes(k) && team) { const o = kind === 'exp' ? (team.exp = team.exp || {}) : (team.hinhThuc = team.hinhThuc || {}); o[k] = v; } else rest[k] = v; });
+  return rest;
+}
 // Hồ sơ làm việc của một rừng: thông tin chủ rừng + thông tin rừng, kèm nhân công/vận chuyển/thông tin xuất của rừng đó
+/* Cấu trúc 2.0 (giai đoạn 3): hình thức, cách tính, đơn giá, số văn bản nằm ở ĐỘI (f.doi, src/model.js). Hồ sơ của lô lấy của ĐỘI ĐẦU làm mặc định
+ * (lô một đội: đúng như bản cũ); từng đội dùng subRec(rec, doiOf(rec), đội) và từng người dùng infoRow(rec, người). */
+/* nhân công chưa có đội (vừa nạp Excel, thêm trong bản nháp): gán đúng như khi lưu — lô nhiều đội: người không ghi cột Đội vào ĐỘI ĐANG CHỌN;
+ * còn lại theo src/model.js (cột Đội khớp tên đội; lô một đội: đội đó; thay cả danh sách: chia đội theo cột Đội như bản cũ) */
+function ganDoi(doi, nc) {
+  if (!doi || !doi.length || !(nc || []).some(r => r && r.doiId === undefined)) return {doi, nc};
+  const t = doi.length > 1 ? (doi.find(d => d.id === curDoi) || doi[0]) : null;
+  const nc2 = t ? nc.map(r => r && r.doiId === undefined && !trim(r.doi) ? Object.assign({}, r, {doiId: t.id}) : r) : nc;
+  const x = HAKModel.ensureForest({doi, nc: nc2}); return {doi: x.doi, nc: x.nc};
+}
 function jobView(o, f) {
-  return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info), nc: f.nc, dx: f.dx, pc: f.pc || [], exp: f.exp, cc: f.cc || {},
+  if (!Array.isArray(f.doi) || !f.doi.length) Object.assign(f, HAKModel.ensureForest(f));   // lô mới tạo (chưa lưu lần nào): có đội ngay, như SQLite sẽ lưu
+  const d0 = (f.doi || [])[0], exp = d0 && Object.keys(d0.exp || {}).length ? Object.assign({}, f.exp, d0.exp) : f.exp;
+  const g = ganDoi(f.doi, f.nc);
+  return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info, d0 ? d0.hinhThuc : {}), nc: g.nc, dx: f.dx, pc: f.pc || [], exp, cc: f.cc || {}, doi: g.doi || null,
     ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
 }
 const curRec = () => { const o = curOwner(), f = curForest(); return o && f ? jobView(o, f) : null; };

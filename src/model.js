@@ -1,174 +1,147 @@
-/* Cấu trúc dữ liệu bảng mẹ – bảng con (bản 2.0, docs/THIET_KE_BANG_ME_CON.md) — GIAI ĐOẠN 1: chuyển dữ liệu và dựng lại dạng cũ.
- * Hàm thuần, không phụ thuộc giao diện, dùng chung ở giao diện (nhúng khi build) và kiểm thử Node.
+/* Cấu trúc dữ liệu bảng mẹ – bảng con (bản 2.0, docs/THIET_KE_BANG_ME_CON.md).
+ * Lưu dạng QUAN HỆ trong một lô: bảng con giữ khóa của bảng mẹ (như khóa ngoại), không lồng mảng.
  *
- * Lô rừng dạng mới (cauTruc: 2):
- *   info  : thông tin của RỪNG (các trường thuộc đội / hợp đồng vận chuyển đã chuyển đi)
- *   doi   : [Đội] — mỗi đội: {id, ten, ttKey, hinhThuc: {hinhThucLuong, moHinhKy, donGiaTan, donGiaHa, donGiaNgay, donGia, ngayBDLD}, dienTich (null = mặc định),
- *            exp: {số/ngày hợp đồng khai thác, ủy quyền, nghiệm thu, kỳ thanh toán}, nc: [nhân công], ncPos: [vị trí trong danh sách cũ], cc: {chấm công của đội}}
- *   hdvc  : [Hợp đồng vận chuyển] — {id, donViId, donVi: {bản chụp bên ký lúc ký}, cuoc: {vanChuyen, cuLy}, exp: {số/ngày hợp đồng VC, xác nhận khối lượng…},
- *            xe: [{xeId, row: bản chụp dòng xe}], xePos}
- *   pc    : phiếu cân (giữ ở lô) + doiId khi lô chỉ có một đội
- *   exp   : các số/ngày của lô (FSC, thẩm định, đào tạo, cấp phát…)
- *   _cu   : phần dữ liệu cũ không thuộc bảng nào (chấm công của người không còn trong danh sách) — giữ để không mất
- * Danh mục mới của db: dmViTri (vị trí), dmDonViVC (đơn vị vận chuyển), dmXe (xe).
+ * GIAI ĐOẠN 3 — ĐỘI KHAI THÁC:
+ *   lô.doi = [{id, ten, hinhThuc: {hinhThucLuong, moHinhKy, donGiaTan, donGiaHa, donGiaNgay, donGia, ngayBDLD}, dienTich (null = mặc định), exp: {số/ngày HĐ khai thác, ủy quyền, nghiệm thu, kỳ thanh toán}}]
+ *   lô.nc[i].doiId = id đội (bảng con “Nhân công” của đội); chấm công lô.cc theo người nên tự thuộc đội của người đó.
+ *   Các trường của đội KHÔNG còn nằm ở lô.info / lô.exp (một nguồn duy nhất).
+ * Hàm thuần, dùng chung ở giao diện (nhúng khi build), tiến trình chính và kiểm thử Node.
  *
- * Bất biến của giai đoạn này: legacyDb(migrateDb(db)) giống hệt db (mọi trường, mọi thứ tự dòng), nên biểu mẫu đọc dữ liệu y nguyên → bản in giống từng byte.
- * migrateDb chạy lại không đổi gì (lô đã cauTruc 2 bỏ qua; danh mục tính lại cùng kết quả). */
+ * Bất biến: lô cũ (1.4.x) sau khi chuẩn hóa rồi dựng lại dạng cũ (legacyForest) giống hệt ban đầu, và hồ sơ xuất ra không đổi.
+ * ensureForest chạy lại không đổi gì. */
 (function (root) {
   'use strict';
-  const CAU_TRUC = 2;
   const clone = x => x === undefined ? undefined : JSON.parse(JSON.stringify(x));
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
   const trim = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   const fold = s => trim(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
-  const digits = s => String(s == null ? '' : s).replace(/\D/g, '');
-  const bienKey = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
   const isTT = r => /^tổ trưởng/i.test((r && r.vaiTro) || '');
-  const personKey = r => String((r && (r.cccd || r.ten)) || '').trim();
-  const dateNum = v => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trim(v)); return m ? +m[3] * 10000 + +m[2] * 100 + +m[1] : 0; };
 
-  /* các trường của THÔNG TIN RỪNG chuyển về ĐỘI và về HỢP ĐỒNG VẬN CHUYỂN; các khóa của exp chuyển về đội / hợp đồng */
+  /* trường của ĐỘI (trước nằm ở thông tin rừng / thông số xuất của lô) */
   const DOI_INFO = ['hinhThucLuong', 'moHinhKy', 'donGiaTan', 'donGiaHa', 'donGiaNgay', 'donGia', 'ngayBDLD'];
-  const HD_INFO = ['vanChuyen', 'cuLy'];
   const DOI_EXP = ['soKT', 'uqSo', 'uqNgay', 'uqThuLao', 'ntSo', 'ntNgay', 'ntDaTT', 'tuNgayTT', 'denNgayTT', 'hdPhuCap', 'hdNangLuong'];
-  const HD_EXP = ['soVC', 'pcSo', 'pcNgay', 'pcNguoiLap', 'vcChiPhi'];
-  const CHUNG_EXP = ['ngayKy'];   // ngày ký chung của bản cũ: chép vào cả đội lẫn hợp đồng VC (bản mới mỗi văn bản một ngày ký)
   const pick = (o, keys) => { const out = {}; keys.forEach(k => { if (has(o, k)) out[k] = clone(o[k]); }); return out; };
-  const omit = (o, keys) => { const out = {}; Object.keys(o || {}).forEach(k => { if (!keys.includes(k)) out[k] = o[k]; }); return out; };
 
-  /* ===== Đội ===== chia nhân công thành đội đúng như src/doi.js (0–1 Tổ trưởng: một đội gồm mọi người; nhiều Tổ trưởng: theo cột Đội).
-   * Dòng chưa thuộc đội nào (lỗi dữ liệu cũ) vào đội đầu tiên để không mất; giao diện mới sẽ báo. */
-  function splitTeams(nc) {
+  /* Chia nhân công thành đội đúng như bản cũ (src/doi.js):
+   *  - trực tiếp (không có hợp đồng giao khoán) hoặc 0–1 Tổ trưởng: một đội gồm mọi người;
+   *  - giao khoán, nhiều Tổ trưởng: mỗi Tổ trưởng một đội theo cột Đội; người ghi đội không có Tổ trưởng → CHƯA THUỘC ĐỘI NÀO (bản cũ báo lỗi, bản mới cũng báo).
+   * Trả [{ten, idx: [chỉ số dòng]}] và danh sách chỉ số chưa thuộc đội. */
+  function splitTeams(nc, direct) {
     const tts = nc.map((r, i) => ({r, i})).filter(x => isTT(x.r));
-    if (tts.length <= 1) return [{ttKey: tts.length ? personKey(tts[0].r) : '', ten: tts.length ? trim(tts[0].r.doi) : '', idx: nc.map((_, i) => i)}];
-    const teams = [], byName = new Map();
-    tts.forEach(t => { const k = fold(t.r.doi); const d = {ttKey: personKey(t.r), ten: trim(t.r.doi), idx: [t.i]}; teams.push(d); if (k && !byName.has(k)) byName.set(k, d); });
-    nc.forEach((r, i) => { if (isTT(r)) return; const d = byName.get(fold(r.doi)) || teams[0]; d.idx.push(i); });
-    teams.forEach(d => d.idx.sort((a, b) => a - b));
-    return teams;
-  }
-  /* ===== Hợp đồng vận chuyển ===== gom xe theo người ký như bản cũ (groupsDX): người ký = tài xế nếu nguoiKy là “Tài xế”, không thì chủ xe */
-  const driverSigns = r => trim(r.nguoiKy) === 'Tài xế';
-  const signerOf = r => driverSigns(r)
-    ? {loai: 'canhan', vaiTro: 'Tài xế', ten: r.taiXe || '', cccd: r.cccdTx || '', ngaySinh: r.ngaySinhTx || '', ngayCap: r.ngayCapTx || '', noiCap: r.noiCapTx || '', diaChi: r.diaChiTx || '', sdt: r.sdt || ''}
-    : {loai: 'canhan', vaiTro: 'Chủ xe', ten: r.chuXe || '', cccd: r.cccd || '', ngaySinh: r.ngaySinh || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', diaChi: r.diaChi || '', sdt: r.sdt || ''};
-  const signerKeyOf = s => digits(s.cccd) || ('ten:' + fold(s.ten));
-  const donViIdOf = s => 'dv_' + signerKeyOf(s).replace(/[^a-z0-9]+/gi, '_');
-  const xeIdOf = r => 'xe_' + (bienKey(r.bienSo) || 'khongbien');
-
-  /* ===== chuyển một lô ===== */
-  function migrateForest(f) {
-    if (!f || f.cauTruc === CAU_TRUC) return clone(f);
-    const info = f.info || {}, exp = f.exp || {}, nc = f.nc || [], dx = f.dx || [];
-    const out = omit(clone(f), ['info', 'exp', 'nc', 'dx', 'cc']);
-    out.cauTruc = CAU_TRUC;
-    out.info = omit(clone(info), DOI_INFO.concat(HD_INFO));
-    out.exp = omit(clone(exp), DOI_EXP.concat(HD_EXP, CHUNG_EXP));
-    const hinhThuc = pick(info, DOI_INFO), doiExp = Object.assign(pick(exp, DOI_EXP), pick(exp, CHUNG_EXP));
-    const cc = clone(f.cc), ccLeft = clone(f.cc) || {};
-    out.doi = splitTeams(nc).map((t, k) => {
-      const rows = t.idx.map(i => clone(nc[i])), keys = new Set(rows.map(personKey));
-      let dcc; if (cc) { dcc = {}; Object.entries(cc).forEach(([ym, m]) => Object.entries(m || {}).forEach(([p, days]) => { if (keys.has(p)) { (dcc[ym] = dcc[ym] || {})[p] = clone(days); if (ccLeft[ym]) delete ccLeft[ym][p]; } })); }
-      return {id: 'doi' + (k + 1), ten: t.ten, ttKey: t.ttKey, hinhThuc: clone(hinhThuc), dienTich: null, exp: clone(doiExp), nc: rows, ncPos: t.idx.slice(), ...(dcc ? {cc: dcc} : {})};
-    });
-    if (cc) {
-      const left = {}; Object.entries(ccLeft).forEach(([ym, m]) => { if (m && Object.keys(m).length) left[ym] = m; });
-      out._cu = {ccKeys: Object.keys(cc), ...(Object.keys(left).length ? {cc: left} : {})};   // thứ tự tháng và chấm công của người không còn trong danh sách
-    }
-    out._cu = Object.assign(out._cu || {}, {ccCo: has(f, 'cc'), ncCo: has(f, 'nc'), dxCo: has(f, 'dx'), expCo: has(f, 'exp')});
-    const cuoc = pick(info, HD_INFO), hdExp = Object.assign(pick(exp, HD_EXP), pick(exp, CHUNG_EXP));
-    const groups = [], by = new Map();
-    dx.forEach((r, i) => { const s = signerOf(r), k = signerKeyOf(s); if (!by.has(k)) { const g = {s, idx: []}; by.set(k, g); groups.push(g); } by.get(k).idx.push(i); });
-    out.hdvc = groups.map((g, k) => ({id: 'hd' + (k + 1), donViId: donViIdOf(g.s), donVi: clone(g.s), cuoc: clone(cuoc), exp: clone(hdExp),
-      xe: g.idx.map(i => ({xeId: xeIdOf(dx[i]), row: clone(dx[i])})), xePos: g.idx.slice()}));
-    // lô chưa có xe nhưng đã khai cước / số hợp đồng VC: giữ ở một hợp đồng chưa chọn đơn vị để không mất
-    if (!out.hdvc.length && (Object.keys(cuoc).length || Object.keys(pick(exp, HD_EXP)).length)) out.hdvc.push({id: 'hd1', donViId: '', donVi: null, cuoc: clone(cuoc), exp: clone(hdExp), xe: [], xePos: [], _choDonVi: true});
-    out._cu.ngayKyO = has(exp, 'ngayKy') ? (out.doi.length ? 'doi' : 'hd') : '';
-    // phiếu cân: lô một đội thì gán luôn đội đó
-    if (Array.isArray(out.pc) && out.doi.length === 1) out.pc = out.pc.map(p => Object.assign({}, p, {doiId: out.doi[0].id, _doiTuDong: true}));
-    return out;
+    if (direct || tts.length <= 1) return {teams: [{ten: tts.length ? trim(tts[0].r.doi) : '', idx: nc.map((_, i) => i)}], orphans: []};
+    const teams = [], byName = new Map(), orphans = [];
+    tts.forEach(t => { const k = fold(t.r.doi), d = {ten: trim(t.r.doi), idx: [t.i]}; teams.push(d); if (k && !byName.has(k)) byName.set(k, d); });
+    nc.forEach((r, i) => { if (isTT(r)) return; const d = byName.get(fold(r.doi)); if (d) d.idx.push(i); else orphans.push(i); });
+    return {teams, orphans};
   }
 
-  /* ===== dựng lại một lô dạng cũ (cho biểu mẫu hiện có) ===== */
-  function legacyForest(f) {
-    if (!f || f.cauTruc !== CAU_TRUC) return clone(f);
-    const cu = f._cu || {}, out = omit(clone(f), ['cauTruc', 'doi', 'hdvc', '_cu', 'info', 'exp', 'pc']);
-    const d0 = (f.doi || [])[0] || {}, h0 = (f.hdvc || [])[0] || {};
-    out.info = Object.assign(clone(f.info) || {}, clone(d0.hinhThuc) || {}, clone(h0.cuoc) || {});
-    const exp = Object.assign(clone(f.exp) || {}, omit(clone(d0.exp) || {}, CHUNG_EXP), omit(clone(h0.exp) || {}, CHUNG_EXP));
-    const nk = cu.ngayKyO === 'doi' ? d0.exp : cu.ngayKyO === 'hd' ? h0.exp : null;
-    if (nk && has(nk, 'ngayKy')) exp.ngayKy = nk.ngayKy;
-    if (cu.expCo || Object.keys(exp).length) out.exp = exp;
-    // nhân công theo đúng thứ tự cũ; dòng thêm mới (không có vị trí cũ) xếp sau, theo thứ tự đội
-    const nc = [], extra = [];
-    (f.doi || []).forEach(d => (d.nc || []).forEach((r, j) => { const p = (d.ncPos || [])[j]; if (p == null) extra.push(clone(r)); else nc[p] = clone(r); }));
-    if (cu.ncCo || nc.length || extra.length) out.nc = nc.filter(x => x !== undefined).concat(extra);
-    const dx = [], dxExtra = [];
-    (f.hdvc || []).forEach(h => (h.xe || []).forEach((x, j) => { const p = (h.xePos || [])[j]; if (p == null) dxExtra.push(clone(x.row)); else dx[p] = clone(x.row); }));
-    if (cu.dxCo || dx.length || dxExtra.length) out.dx = dx.filter(x => x !== undefined).concat(dxExtra);
-    if (cu.ccCo) {
-      const cc = {}, order = cu.ccKeys || [];
-      const put = src => Object.entries(src || {}).forEach(([ym, m]) => Object.entries(m || {}).forEach(([p, days]) => { (cc[ym] = cc[ym] || {})[p] = clone(days); }));
-      (f.doi || []).forEach(d => put(d.cc)); put(cu.cc);
-      const ordered = {}; order.forEach(k => { ordered[k] = cc[k] || {}; }); Object.keys(cc).forEach(k => { if (!has(ordered, k)) ordered[k] = cc[k]; });
-      out.cc = ordered;
-    }
-    if (has(f, 'pc')) out.pc = Array.isArray(f.pc) ? f.pc.map(p => { const q = Object.assign({}, p); if (q._doiTuDong) { delete q.doiId; delete q._doiTuDong; } return clone(q); }) : clone(f.pc);
-    return out;
-  }
-
-  /* ===== danh mục ===== */
-  /* vị trí: một nguồn duy nhất. Gom từ định biên (đúng thứ tự định biên), ba vị trí mặc định của bản cũ, vị trí thêm, khóa của định mức BHLĐ và đơn giá, chức danh nhân công */
-  const BASE = ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa'];
-  function buildViTri(db, dinhBienMacDinh) {
-    const out = [], seen = new Map();
-    const add = (ten, o) => { ten = trim(ten); if (!ten) return; const k = ten.toLowerCase(); if (seen.has(k)) { if (o) Object.assign(seen.get(k), o); return; } const v = {id: 'vt_' + fold(ten).replace(/[^a-z0-9]+/g, '_'), ten, soNguoi: 0, kiemNhiem: '', nhiemVu: '', ...(o || {})}; seen.set(k, v); out.push(v); };
-    const db0 = Array.isArray(db.dinhBien) && db.dinhBien.length ? db.dinhBien : (dinhBienMacDinh || []);
-    db0.forEach(r => add(r.chucDanh, {soNguoi: r.soNguoi || 0, kiemNhiem: r.kiemNhiem || '', nhiemVu: r.nhiemVu || ''}));
-    BASE.forEach(t => add(t)); (db.chucDanhThem || []).forEach(t => add(t));
-    Object.keys(db.dinhMuc || {}).forEach(t => add(t)); (db.dinhMucBan || []).forEach(v => Object.keys(v.dm || {}).forEach(t => add(t)));
-    Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => {
-      const lots = f.cauTruc === CAU_TRUC ? (f.doi || []) : [{hinhThuc: f.info || {}, nc: f.nc || []}];
-      lots.forEach(d => { ['donGiaTan', 'donGiaHa', 'donGiaNgay'].forEach(m => Object.keys((d.hinhThuc || {})[m] || {}).forEach(t => add(t))); (d.nc || []).forEach(r => add(r.chucDanh)); });
-    }));
-    return out;
-  }
-  /* đơn vị vận chuyển và xe: gộp giữa các lô theo CCCD/MST và theo biển số; trùng thì giữ bản của lô có ngày bắt đầu khai thác mới nhất
-   * (hợp đồng của từng lô vẫn giữ bản chụp riêng nên bản in cũ không đổi) */
-  function buildVanChuyen(db, dvCu, xeCu) {
-    const dv = Object.assign({}, clone(dvCu) || {}), xe = Object.assign({}, clone(xeCu) || {}), stamp = {};
-    Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => {
-      if (f.cauTruc !== CAU_TRUC) return;
-      const when = dateNum((f.info || {}).tuNgay);
-      (f.hdvc || []).forEach(h => {
-        if (h.donViId && h.donVi && (!dv[h.donViId] || (stamp[h.donViId] || 0) <= when) && !(dvCu || {})[h.donViId]) { dv[h.donViId] = Object.assign({id: h.donViId}, clone(h.donVi)); stamp[h.donViId] = when; }
-        (h.xe || []).forEach(x => {
-          if (!x.xeId || (xeCu || {})[x.xeId]) return;
-          const r = x.row || {}, s = 'x:' + x.xeId;
-          if (!xe[x.xeId] || (stamp[s] || 0) <= when) { xe[x.xeId] = Object.assign({id: x.xeId, donViId: h.donViId}, omit(clone(r), ['_row', '_id', 'maRung', 'stt', '_src'])); stamp[s] = when; }
+  /* Chuẩn hóa một lô sang cấu trúc có ĐỘI. Lô đã có doi: chỉ bổ sung cho dòng nhân công thiếu doiId (lô một đội → đội đó; nhiều đội → '' = chưa thuộc đội). */
+  function ensureForest(f) {
+    if (!f || typeof f !== 'object') return clone(f);
+    const out = clone(f);
+    if (Array.isArray(out.doi) && out.doi.length) {
+      const nc = Array.isArray(out.nc) ? out.nc.filter(Boolean) : [];
+      if (nc.length && nc.every(r => !has(r, 'doiId'))) {
+        /* thay CẢ danh sách (nhập Excel cho cả lô): chia đội theo cột Đội như bản cũ; đội cùng tên (hoặc cùng vị trí) giữ nguyên id, hình thức, số văn bản */
+        const d0 = out.doi[0], sp = splitTeams(nc, (d0.hinhThuc || {}).moHinhKy === 'tructiep'), used = new Set();
+        const doi = sp.teams.map((t, k) => {
+          let d = out.doi.find(x => !used.has(x.id) && fold(x.ten) && fold(x.ten) === fold(t.ten)) || (out.doi[k] && !used.has(out.doi[k].id) && !fold(out.doi[k].ten) ? out.doi[k] : null);   // đội chưa đặt tên: dùng lại theo vị trí
+          if (!d) { d = {id: '', ten: t.ten, hinhThuc: clone(d0.hinhThuc) || {}, dienTich: null, exp: {}}; }
+          else if (!trim(d.ten) && t.ten) d = Object.assign({}, d, {ten: t.ten});
+          if (d.id) used.add(d.id);
+          return d;
         });
-      });
-    }));
-    return {dv, xe};
-  }
-
-  /* ===== cả cơ sở dữ liệu ===== dinhBienMacDinh: định biên mặc định (src/dinhbien.js MAC_DINH) khi db chưa lưu định biên */
-  function migrateDb(db, dinhBienMacDinh) {
-    const out = clone(db) || {}; out.rs = out.rs || {};
-    Object.values(out.rs).forEach(o => { Object.keys(o.forests || {}).forEach(k => { o.forests[k] = migrateForest(o.forests[k]); }); });
-    if (!has(out, '_cu2')) out._cu2 = {dmViTriCo: has(db, 'dmViTri'), dmDonViVCCo: has(db, 'dmDonViVC'), dmXeCo: has(db, 'dmXe')};
-    out.dmViTri = has(db, 'dmViTri') ? clone(db.dmViTri) : buildViTri(out, dinhBienMacDinh);
-    const vc = buildVanChuyen(out, db.dmDonViVC, db.dmXe); out.dmDonViVC = vc.dv; out.dmXe = vc.xe;
+        doi.filter(d => !d.id).forEach(d => { let k = 1; while (used.has('doi' + k)) k++; d.id = 'doi' + k; used.add(d.id); });
+        out.doi = doi;
+        sp.teams.forEach((t, k) => t.idx.forEach(i => { nc[i].doiId = doi[k].id; }));
+        sp.orphans.forEach(i => { nc[i].doiId = ''; });
+        return out;
+      }
+      /* thêm dòng lẻ: theo tên ở cột Đội nếu khớp đội; lô một đội → đội đó; còn lại chưa thuộc đội */
+      nc.forEach(r => { if (has(r, 'doiId')) return; const m = fold(r.doi) && out.doi.find(d => fold(d.ten) === fold(r.doi)); r.doiId = m ? m.id : out.doi.length === 1 ? out.doi[0].id : ''; });
+      return out;
+    }
+    const info = out.info || {}, exp = out.exp || {}, nc = Array.isArray(out.nc) ? out.nc : [];
+    const hinhThuc = pick(info, DOI_INFO), dexp = pick(exp, DOI_EXP);
+    const sp = splitTeams(nc, info.moHinhKy === 'tructiep');
+    out.doi = sp.teams.map((t, k) => ({id: 'doi' + (k + 1), ten: t.ten, hinhThuc: clone(hinhThuc), dienTich: null, exp: clone(dexp)}));
+    sp.teams.forEach((t, k) => t.idx.forEach(i => { nc[i].doiId = out.doi[k].id; }));
+    sp.orphans.forEach(i => { nc[i].doiId = ''; });
+    if (out.info) DOI_INFO.forEach(k => { delete out.info[k]; });
+    if (out.exp) DOI_EXP.forEach(k => { delete out.exp[k]; });
+    out._doiTu = {info: Object.keys(hinhThuc), exp: Object.keys(dexp)};   // khóa nào lấy từ dữ liệu cũ (để dựng lại dạng cũ đúng y nguyên)
     return out;
   }
-  function legacyDb(db2) {
-    const out = clone(db2) || {}, cu = out._cu2 || {};
-    Object.values(out.rs || {}).forEach(o => { Object.keys(o.forests || {}).forEach(k => { o.forests[k] = legacyForest(o.forests[k]); }); });
-    if (!cu.dmViTriCo) delete out.dmViTri; if (!cu.dmDonViVCCo) delete out.dmDonViVC; if (!cu.dmXeCo) delete out.dmXe;
-    delete out._cu2;
+
+  /* Dựng lại dạng 1.4.x của một lô (thông tin và số văn bản của đội đầu; bỏ doiId) — để kiểm chứng chuyển dữ liệu không mất gì */
+  function legacyForest(f) {
+    if (!f || !Array.isArray(f.doi)) return clone(f);
+    const out = clone(f), d0 = f.doi[0] || {}, tu = f._doiTu || {info: Object.keys(d0.hinhThuc || {}), exp: Object.keys(d0.exp || {})};
+    delete out.doi; delete out._doiTu;
+    if (tu.info.length) { out.info = out.info || {}; tu.info.forEach(k => { if (has(d0.hinhThuc, k)) out.info[k] = clone(d0.hinhThuc[k]); }); }
+    if (tu.exp.length) { out.exp = out.exp || {}; tu.exp.forEach(k => { if (has(d0.exp, k)) out.exp[k] = clone(d0.exp[k]); }); }
+    if (Array.isArray(out.nc)) out.nc.forEach(r => { if (r) delete r.doiId; });
     return out;
   }
 
-  const api = {CAU_TRUC, DOI_INFO, HD_INFO, DOI_EXP, HD_EXP, migrateForest, legacyForest, migrateDb, legacyDb, buildViTri, splitTeams, signerOf, donViIdOf, xeIdOf};
+  /* lô cần chuẩn hóa? (chưa có đội, hoặc có dòng nhân công thiếu doiId) — để chỉ chuẩn hóa lô cần, khỏi sao chép cả cơ sở dữ liệu mỗi lần lưu */
+  const needsEnsure = f => !!f && typeof f === 'object' && (!Array.isArray(f.doi) || !f.doi.length || (Array.isArray(f.nc) && f.nc.some(r => r && !has(r, 'doiId'))));
+  const eachForest = (db, fn) => { const out = clone(db) || {}; Object.values(out.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { o.forests[k] = fn(o.forests[k]); })); return out; };
+  const ensureDb = db => eachForest(db, ensureForest);
+  const legacyDb = db => eachForest(db, legacyForest);
+
+  /* ===== truy vấn ===== */
+  const teamOf = (f, r) => ((f && f.doi) || []).find(d => d.id === (r && r.doiId)) || null;
+  const membersOf = (f, d) => ((f && f.nc) || []).filter(r => r && r.doiId === d.id);
+  /* thông tin dùng cho người / đội: thông tin lô + hình thức của đội (đội không có thì đội đầu) */
+  const infoOf = (info, d) => Object.assign({}, info, (d && d.hinhThuc) || {});
+  /* lỗi cấu trúc đội của một lô: dòng chưa thuộc đội, đội không / nhiều Tổ trưởng (giao khoán), tên đội trống / trùng khi nhiều đội */
+  function teamErrors(f) {
+    const errs = [], doi = (f && f.doi) || [], nc = (f && f.nc) || [], multi = doi.length > 1;
+    nc.forEach(r => { if (!teamOf(f, r)) errs.push({row: r._row, text: '“' + (r.ten || '(không tên)') + '” chưa thuộc đội nào' + (multi ? ': chọn đội cho người này (lô có ' + doi.length + ' đội)' : '')}); });
+    const names = new Map();
+    doi.forEach((d, k) => {
+      const m = membersOf(f, d), tts = m.filter(isTT), direct = (d.hinhThuc || {}).moHinhKy === 'tructiep';
+      const lb = 'Đội ' + (d.ten ? '“' + d.ten + '”' : (k + 1));
+      if (multi && !trim(d.ten)) errs.push({text: lb + ' chưa có tên: lô có nhiều đội thì mỗi đội một tên'});
+      const nk = fold(d.ten); if (multi && nk) { if (names.has(nk)) errs.push({text: 'Tên đội “' + d.ten + '” trùng với đội khác'}); else names.set(nk, true); }
+      if (m.length && !tts.length) errs.push({text: lb + ' chưa có Tổ trưởng'});
+      if (!direct && tts.length > 1) errs.push({text: lb + ' có ' + tts.length + ' Tổ trưởng: mỗi đội giao khoán chỉ một Tổ trưởng (tách thành đội riêng)'});
+    });
+    return errs;
+  }
+
+  /* ===== thao tác trên đội (trả lô mới, không sửa đầu vào) ===== */
+  const newTeamId = f => { const used = new Set(((f && f.doi) || []).map(d => d.id)); let k = used.size + 1; while (used.has('doi' + k)) k++; return 'doi' + k; };
+  /* thêm đội: hình thức, cách tính, đơn giá chép từ đội `fromId` (mặc định đội đầu) để khỏi nhập lại; tên, số văn bản để trống */
+  function addTeam(f, ten, fromId) {
+    const out = ensureForest(f), src = out.doi.find(d => d.id === fromId) || out.doi[0] || {};
+    const d = {id: newTeamId(out), ten: trim(ten), hinhThuc: clone(src.hinhThuc) || {}, dienTich: null, exp: {}};
+    out.doi.push(d); return {f: out, id: d.id};
+  }
+  /* xóa đội: chặn nếu còn nhân công (chuyển hoặc xóa họ trước); không xóa đội cuối cùng */
+  function removeTeam(f, id) {
+    const out = ensureForest(f), d = out.doi.find(x => x.id === id);
+    if (!d) return {ok: false, error: 'Không có đội này'};
+    if (out.doi.length <= 1) return {ok: false, error: 'Lô phải có ít nhất một đội'};
+    const n = membersOf(out, d).length; if (n) return {ok: false, error: 'Đội còn ' + n + ' nhân công: chuyển họ sang đội khác hoặc xóa trước khi xóa đội'};
+    out.doi = out.doi.filter(x => x.id !== id); return {ok: true, f: out};
+  }
+  /* cập nhật thông tin đội (tên, hình thức, diện tích, số văn bản) */
+  function updateTeam(f, id, patch) {
+    const out = ensureForest(f), d = out.doi.find(x => x.id === id); if (!d) return {ok: false, error: 'Không có đội này'};
+    if (has(patch, 'ten')) d.ten = trim(patch.ten);
+    if (patch.hinhThuc) d.hinhThuc = Object.assign({}, d.hinhThuc, clone(patch.hinhThuc));
+    if (has(patch, 'dienTich')) d.dienTich = typeof patch.dienTich === 'number' && patch.dienTich >= 0 ? patch.dienTich : null;
+    if (patch.exp) d.exp = Object.assign({}, d.exp, clone(patch.exp));
+    return {ok: true, f: out};
+  }
+  /* chuyển nhân công (theo chỉ số dòng) sang đội khác */
+  function moveMembers(f, idxs, id) {
+    const out = ensureForest(f); if (!out.doi.some(d => d.id === id)) return {ok: false, error: 'Không có đội này'};
+    idxs.forEach(i => { if (out.nc && out.nc[i]) out.nc[i].doiId = id; }); return {ok: true, f: out};
+  }
+
+  const api = {DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKModel = api;
 })(typeof window !== 'undefined' ? window : globalThis);

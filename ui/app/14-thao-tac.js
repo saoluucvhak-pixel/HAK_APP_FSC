@@ -85,28 +85,52 @@ function forestFill(act, el) {
   const pick = ds.reduce((a, b) => (act === 'fillTu' ? (b.key < a.key ? b : a) : (b.key > a.key ? b : a)));
   setv(act === 'fillTu' ? 'tuNgay' : 'denNgay', HAKDates.format(pick)); hint('Đã điền ' + (act === 'fillTu' ? 'ngày cân nhỏ nhất ' : 'ngày cân lớn nhất ') + HAKDates.format(pick) + ' (từ ' + ds.length + ' phiếu cân). Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa ngày.');
 }
+/* trường của đội trên form thông tin rừng (đơn giá Tổ trưởng hồ sơ cũ) ghi vào ĐỘI ĐẦU; thông tin lô giữ phần còn lại */
+function ghiDoiLo(f, info0, rf) { const t = {}; HAKModel.DOI_INFO.forEach(k => { if (k in rf) t[k] = rf[k]; }); ghiDoi(f, t, 'info', f.doi && f.doi[0]); const out = Object.assign({}, info0); HAKModel.DOI_INFO.forEach(k => { delete out[k]; }); return out; }
 function saveForest(form) {
   const f = curForest(); if (!f) return;
-  const info = Object.assign({}, f.info, readForest(form));
+  const rf = readForest(form), info0 = Object.assign({}, f.info, rf), info = Object.assign({}, fInfo(f), rf);
   const errs = forestErrors(info, f.id);
   if (errs.length) { formMsg(form, 'Chưa lưu: ' + errs.join('; ')); return; }
   const maCu = trim(f.info.maRung);
   let msg = 'Đã lưu thông tin rừng.', kind = 'ok';
   if (maCu && maCu !== info.maRung) {   // đổi mã lô: nhân công, xe, phiếu cân mang mã cũ đổi theo để dữ liệu vẫn thuộc đúng lô
     const rn = HAKLoRung.renameLot(f, info.maRung);   // f còn mã cũ: các dòng mang mã cũ đổi theo mã mới
-    f.info = info; f.nc = rn.forest.nc; f.dx = rn.forest.dx; f.pc = rn.forest.pc;
+    f.nc = rn.forest.nc; f.dx = rn.forest.dx; f.pc = rn.forest.pc; f.info = ghiDoiLo(f, info0, rf);
     msg = 'Đã đổi mã lô ' + maCu + ' → ' + info.maRung + ' và đổi theo ' + rn.doi.nc + ' dòng nhân công, ' + rn.doi.dx + ' xe, ' + rn.doi.pc + ' phiếu cân.' + (rn.khac.length ? ' Còn ' + rn.khac.length + ' dòng mang mã khác (' + [...new Set(rn.khac.map(x => x.ma))].join(', ') + '), không tự đổi: kiểm tra ở tab Nhân công / Vận chuyển.' : '');
     if (rn.khac.length) kind = 'warn';
-  } else f.info = info;
+  } else f.info = ghiDoiLo(f, info0, rf);
   persist();
   note(msg, kind);
 }
 
+/* ===== đội khai thác (bảng con của lô) ===== */
+function themDoi() {
+  const f = curForest(); if (!f) return;
+  const inp = document.getElementById('doiMoiTen'), ten = trim(inp && inp.value) || 'Đội ' + ((f.doi || []).length + 1);   // hình thức, cách tính, đơn giá chép từ đội đang chọn; sửa lại sau nếu khác
+  if ((f.doi || []).some(d => HAKDoi.fold(d.ten) === HAKDoi.fold(ten))) return note('Chưa thêm: đã có đội tên “' + ten + '”.', 'warn');
+  const t0 = curTeam(f), r = HAKModel.addTeam(f, ten, t0 && t0.id);
+  if (f.doi.length === 1 && !trim(f.doi[0].ten)) r.f.doi[0].ten = 'Đội 1';   // lô có từ 2 đội: mỗi đội một tên
+  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); curDoi = r.id; persist(); note('Đã thêm đội “' + trim(ten) + '”. Thêm nhân công cho đội (tay hoặc nạp Excel) khi đội đang được chọn.'); render();
+}
+function xoaDoi() {
+  const f = curForest(), t = f && curTeam(f); if (!t) return;
+  const r = HAKModel.removeTeam(f, t.id); if (r.error) return note('Chưa xóa đội: ' + r.error, 'warn');
+  if (!confirm('Xóa đội “' + (t.ten || '') + '” (không còn nhân công)?')) return;
+  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); curDoi = null; persist(); note('Đã xóa đội “' + (t.ten || '') + '”.'); render();
+}
+function saveDoi(form) {
+  const f = curForest(), t = f && curTeam(f); if (!t) return;
+  const dt = trim(form.elements.dienTich.value), v = dt ? toDec(dt) : null;
+  if (dt && !(typeof v === 'number' && v > 0)) return formMsg(form, 'Chưa lưu: diện tích của đội phải là số lớn hơn 0 (ha) hoặc để trống');
+  const r = HAKModel.updateTeam(f, t.id, {ten: trim(form.elements.ten.value), dienTich: v}); if (r.error) return formMsg(form, 'Chưa lưu: ' + r.error);
+  f.doi = r.f.doi; persist(); note('Đã lưu đội “' + (trim(form.elements.ten.value) || 'đội') + '”.'); render();
+}
 function saveLuong(form) {
   const f = curForest(); if (!f) return;
   const nl = readLuong(form);
   if (nl.ngayBDLD && !parseVN(nl.ngayBDLD)) { formMsg(form, 'Chưa lưu: ngày bắt đầu phải đúng dd/mm/yyyy'); return; }
-  f.info = Object.assign({}, f.info, nl);
+  f.info = Object.assign({}, f.info, ghiDoi(f, nl, 'info'));
   persist();
   note('Đã lưu thông số hợp đồng lao động.');
 }

@@ -1,83 +1,92 @@
 'use strict';
-/* Giai đoạn 1 của cấu trúc bảng mẹ – bảng con (docs/THIET_KE_BANG_ME_CON.md): chuyển dữ liệu 1.4.x → 2.0 và dựng lại dạng cũ.
- * Bất biến: legacyDb(migrateDb(db)) giống hệt db, nên biểu mẫu đọc dữ liệu y nguyên (bản in giống từng byte). */
+/* Cấu trúc 2.0, giai đoạn 3 (docs/THIET_KE_BANG_ME_CON.md): đội khai thác là bảng con của lô, nhân công mang doiId.
+ * Bất biến: lô cũ chuẩn hóa rồi dựng lại dạng cũ giống hệt; chuẩn hóa chạy lại không đổi. */
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), os = require('os'), path = require('path');
 const M = require('../src/model');
 const {Store} = require('../src/store');
-const DB = require('../src/dinhbien');
 
 const clone = x => JSON.parse(JSON.stringify(x));
 const roundTrip = (db0, label) => {
-  const db = clone(db0);   // dữ liệu lưu thật luôn qua JSON (không có thuộc tính undefined)
-  const before = clone(db), m = M.migrateDb(db, DB.MAC_DINH);
-  assert.deepStrictEqual(db, before, label + ': không sửa đối tượng đầu vào');
-  assert.deepStrictEqual(M.legacyDb(m), before, label + ': dựng lại giống hệt');
-  assert.deepStrictEqual(M.migrateDb(m, DB.MAC_DINH), m, label + ': chạy lại không đổi gì');
+  const db = clone(db0), before = clone(db), m = M.ensureDb(db);
+  assert.deepStrictEqual(db, before, label + ': không sửa đầu vào');
+  assert.deepStrictEqual(M.legacyDb(m), before, label + ': dựng lại dạng cũ giống hệt');
+  assert.deepStrictEqual(M.ensureDb(m), m, label + ': chuẩn hóa lại không đổi');
   return m;
 };
-const fixtureDb = name => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-model-')), f = path.join(d, 'x.sqlite'); fs.copyFileSync(path.join(__dirname, 'fixtures', name), f); const s = new Store(f); const db = s.load(); s.close(); return db; };
-const nv = (i, vai, ten, cd, cccd, o) => Object.assign({_row: i + 1, vaiTro: vai, danhXung: 'Ông', ten, ngaySinh: '01/01/1985', cccd, ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: cd}, o || {});
-const xe = (bien, ky, o) => Object.assign({_row: 2, chuXe: 'CHỦ ' + bien, cccd: '0490000' + bien.replace(/\D/g, '').slice(-5), ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'ĐN', bienSo: bien, nguoiKy: ky || 'Chủ xe', sdt: '0905'}, o || {});
+const {MIGRATIONS} = require('../src/store');
+// mở fixture cũ CHỈ đến v3 (chưa chuyển đội) để có đúng dữ liệu dạng 1.4.x làm đầu vào
+const fixtureDb = name => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-model-')), f = path.join(d, 'x.sqlite'); fs.copyFileSync(path.join(__dirname, 'fixtures', name), f); const s = new Store(f, {migrations: MIGRATIONS.slice(0, 3)}); const db = s.load(); s.close(); return db; };
+const nv = (i, vai, ten, cd, cccd, o) => Object.assign({_row: i + 1, vaiTro: vai, danhXung: 'Ông', ten, ngaySinh: '01/01/1985', cccd, chucDanh: cd}, o || {});
+const lotOf = m => Object.values(m.rs)[0].forests[Object.keys(Object.values(m.rs)[0].forests)[0]];
 
-test('mô hình 2.0: cơ sở dữ liệu thật của bản 1.0.0 và 1.4.x — chuyển rồi dựng lại giống hệt, chạy lại không đổi', () => {
-  for (const f of ['hakqn_v1_0_0.sqlite', 'hakqn_v1_4.sqlite']) {
-    const m = roundTrip(fixtureDb(f), f);
-    Object.values(m.rs).forEach(o => Object.values(o.forests).forEach(l => { assert.strictEqual(l.cauTruc, 2); assert.ok(l.doi.length >= 1); }));
+test('đội khai thác: cơ sở dữ liệu thật 1.0.0, 1.4.x và dữ liệu e2e — chuẩn hóa rồi dựng lại giống hệt; mỗi lô có đội, mọi nhân công thuộc đội', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'e2e-inan2.js'), 'utf8');
+  const {lot, seed, PC, EXP0, EXP1} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed, PC, EXP0, EXP1};')();
+  const dbs = {'1.0.0': fixtureDb('hakqn_v1_0_0.sqlite'), '1.4.x': fixtureDb('hakqn_v1_4.sqlite'), e2e: seed([lot('fa', 'R-A', {exp: EXP0, pc: PC}), lot('fb', 'R-B', {exp: EXP1, pc: PC, kl: 40})]), perf: require('../scripts/perf-luu').sample(4, 2, 5)};
+  for (const [k, db] of Object.entries(dbs)) {
+    const m = roundTrip(db, k);
+    Object.values(m.rs).forEach(o => Object.values(o.forests).forEach(f => {
+      assert.ok(f.doi.length >= 1, k + ': có đội');
+      (f.nc || []).forEach(r => assert.ok(f.doi.some(d => d.id === r.doiId), k + ': nhân công thuộc đội'));
+      M.DOI_INFO.forEach(x => assert.ok(!(x in f.info), k + ': ' + x + ' không còn ở thông tin rừng'));
+    }));
   }
 });
 
-test('mô hình 2.0: dữ liệu dùng chung của các bộ e2e (e2e-inan2) và dữ liệu đo hiệu năng — dựng lại giống hệt', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'e2e-inan2.js'), 'utf8');
-  const {lot, seed, PC, EXP0, EXP1} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed, PC, EXP0, EXP1};')();
-  roundTrip(seed([lot('fa', 'R-A', {exp: EXP0, pc: PC}), lot('fb', 'R-B', {exp: EXP1, pc: PC, kl: 40})]), 'e2e-inan2');
-  roundTrip(require('../scripts/perf-luu').sample(5, 2, 10), 'perf-luu');
+test('đội khai thác: giao khoán nhiều Tổ trưởng → mỗi Tổ trưởng một đội theo cột Đội; hình thức, đơn giá, số văn bản chép vào từng đội; người ghi đội lạ chưa thuộc đội (báo lỗi như bản cũ)', () => {
+  const nc = [nv(1, 'Công nhân', 'A1', 'Công nhân cưa', '1', {doi: 'Đội 1'}), nv(2, 'Tổ trưởng', 'TT2', 'Tổ trưởng', '2', {doi: 'Đội 2'}), nv(3, 'Tổ trưởng', 'TT1', 'Tổ trưởng', '3', {doi: 'đội 1'}), nv(4, 'Công nhân', 'B1', 'Công nhân cưa', '4', {doi: 'ĐỘI 2'}), nv(5, 'Công nhân', 'LẠC', 'Công nhân cưa', '5', {doi: 'Không có'})];
+  const db = {v: 2, rs: {o: {id: 'o', info: {}, forests: {f: {id: 'f', info: {maRung: 'R', hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: {'Tổ trưởng': 1}, dienTich: 3}, nc, exp: {soKT: '01', ntNgay: '02/10/2026', fscNgay: '01/09/2026', ngayKy: '01/10/2026'}}}}}};
+  const f = lotOf(roundTrip(db, 'nhiều đội'));
+  assert.deepStrictEqual(f.doi.map(d => [d.id, d.ten]), [['doi1', 'Đội 2'], ['doi2', 'đội 1']]);
+  assert.deepStrictEqual(f.nc.map(r => r.ten + ':' + r.doiId), ['A1:doi2', 'TT2:doi1', 'TT1:doi2', 'B1:doi1', 'LẠC:']);
+  f.doi.forEach(d => { assert.deepStrictEqual(d.hinhThuc, {hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: {'Tổ trưởng': 1}}); assert.deepStrictEqual(d.exp, {soKT: '01', ntNgay: '02/10/2026'}); });
+  assert.deepStrictEqual(f.exp, {fscNgay: '01/09/2026', ngayKy: '01/10/2026'}, 'số/ngày của lô (và ngày ký chung) ở lại lô');
+  assert.deepStrictEqual(M.teamErrors(f).map(e => e.text), ['“LẠC” chưa thuộc đội nào: chọn đội cho người này (lô có 2 đội)']);
 });
 
-test('mô hình 2.0: lô nhiều đội — mỗi Tổ trưởng một đội theo cột Đội, giữ thứ tự cũ; hình thức, đơn giá, số văn bản chép vào từng đội', () => {
-  const nc = [nv(1, 'Công nhân', 'A1', 'Công nhân cưa', '049000000012', {doi: 'Đội 1'}), nv(2, 'Tổ trưởng', 'TT2', 'Tổ trưởng', '049000000021', {doi: 'Đội 2'}),
-    nv(3, 'Tổ trưởng', 'TT1', 'Tổ trưởng', '049000000011', {doi: 'đội 1'}), nv(4, 'Công nhân', 'B1', 'Công nhân khai thác', '049000000022', {doi: 'ĐỘI 2'}), nv(5, 'Công nhân', 'LẠC', 'Công nhân cưa', '049000000099', {doi: 'Không có'})];
-  const info = {maRung: 'R', hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: {'Tổ trưởng': 400000}, dienTich: 3, vanChuyen: {mode: 'coDinh', coDinh: 50000}, cuLy: 12};
-  const db = {v: 2, rs: {o: {id: 'o', info: {ten: 'C'}, forests: {f: {id: 'f', info, nc, dx: [], pc: [{soPhieu: 'P1', kl: 5}],
-    exp: {soKT: '01', ngayKy: '01/10/2026', soVC: '02', pcNgay: '05/10/2026', fscNgay: '01/09/2026'},
-    cc: {'2026-10': {'049000000012': {'1': 1}, '049000000021': {'2': 1}, '049000000777': {'3': 1}}, '2026-09': {}}}}}}};
-  const m = roundTrip(db, 'nhiều đội'), l = m.rs.o.forests.f;
-  assert.deepStrictEqual(l.doi.map(d => [d.ten, d.ttKey]), [['Đội 2', '049000000021'], ['đội 1', '049000000011']], 'mỗi Tổ trưởng một đội, theo thứ tự Tổ trưởng');
-  assert.deepStrictEqual(l.doi.map(d => d.nc.map(r => r.ten)), [['TT2', 'B1', 'LẠC'], ['A1', 'TT1']], 'người ghi đội không có Tổ trưởng vào đội đầu để không mất');
-  l.doi.forEach(d => { assert.deepStrictEqual(d.hinhThuc, {hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: {'Tổ trưởng': 400000}}); assert.deepStrictEqual(d.exp, {soKT: '01', ngayKy: '01/10/2026'}); });
-  assert.deepStrictEqual(l.doi[1].cc, {'2026-10': {'049000000012': {'1': 1}}}, 'chấm công theo người của đội');
-  assert.deepStrictEqual(l._cu.cc, {'2026-10': {'049000000777': {'3': 1}}}, 'chấm công của người không còn trong danh sách được giữ');
-  assert.ok(!('hinhThucLuong' in l.info) && !('vanChuyen' in l.info) && l.info.dienTich === 3, 'thông tin rừng chỉ còn trường của rừng');
-  assert.deepStrictEqual(l.exp, {fscNgay: '01/09/2026'}, 'exp của lô chỉ còn số/ngày của lô');
-  assert.ok(l.pc.every(p => !('doiId' in p)), 'lô nhiều đội: phiếu cân cũ chưa gán đội');
-  assert.deepStrictEqual(l.hdvc.map(h => [h._choDonVi, h.cuoc, h.exp]), [[true, {vanChuyen: {mode: 'coDinh', coDinh: 50000}, cuLy: 12}, {soVC: '02', pcNgay: '05/10/2026', ngayKy: '01/10/2026'}]], 'chưa có xe: cước giữ ở hợp đồng chờ chọn đơn vị');
+test('đội khai thác: hình thức trực tiếp có nhiều Tổ trưởng vẫn là MỘT đội (như bản cũ); lô không có nhân công vẫn có một đội', () => {
+  const nc = [nv(1, 'Tổ trưởng', 'T1', 'Tổ trưởng', '1', {doi: 'A'}), nv(2, 'Tổ trưởng', 'T2', 'Tổ trưởng', '2', {doi: 'B'})];
+  const f = lotOf(roundTrip({v: 2, rs: {o: {id: 'o', info: {}, forests: {f: {id: 'f', info: {moHinhKy: 'tructiep'}, nc}}}}}, 'trực tiếp'));
+  assert.strictEqual(f.doi.length, 1); assert.deepStrictEqual(M.teamErrors(f), []);
+  const g = lotOf(roundTrip({v: 2, rs: {o: {id: 'o', info: {}, forests: {g: {id: 'g', info: {maRung: 'X'}}}}}}, 'không nhân công'));
+  assert.deepStrictEqual(g.doi.map(d => d.id), ['doi1']);
 });
 
-test('mô hình 2.0: vận chuyển — mỗi người ký một hợp đồng (như bản cũ), xe giữ bản chụp; danh mục đơn vị và xe gộp giữa các lô, lô mới nhất thắng', () => {
-  const f1 = {id: 'f1', info: {maRung: 'R1', tuNgay: '01/01/2026', vanChuyen: {mode: 'tanKm', donGiaKm: 1000}}, nc: [], pc: [{soPhieu: 'P', bienSo: '92C-11111', kl: 3}],
-    dx: [xe('92C-11111', 'Chủ xe', {hanBH: '01/01/2026'}), xe('92C-22222', 'Tài xế', {taiXe: 'TÀI XẾ T', cccdTx: '049000000555'}), xe('92C-33333', 'Chủ xe', {chuXe: 'CHỦ 92C-11111', cccd: '049000011111'})]};
-  const f2 = {id: 'f2', info: {maRung: 'R2', tuNgay: '01/06/2026'}, nc: [], dx: [xe('92C-11111', 'Chủ xe', {hanBH: '01/12/2026'})]};
-  const db = {v: 2, rs: {a: {id: 'a', info: {}, forests: {f1}}, b: {id: 'b', info: {}, forests: {f2}}}};
-  const m = roundTrip(db, 'vận chuyển'), l1 = m.rs.a.forests.f1;
-  assert.deepStrictEqual(l1.hdvc.map(h => [h.donVi.vaiTro, h.donVi.ten, h.xe.map(x => x.row.bienSo)]), [['Chủ xe', 'CHỦ 92C-11111', ['92C-11111', '92C-33333']], ['Tài xế', 'TÀI XẾ T', ['92C-22222']]]);
-  assert.ok(l1.hdvc.every(h => h.cuoc.vanChuyen.mode === 'tanKm'), 'cước của lô chép vào từng hợp đồng');
-  assert.strictEqual(Object.keys(m.dmDonViVC).length, 2, 'người ký trùng CCCD giữa hai lô: một đơn vị');
-  assert.strictEqual(m.dmXe.xe_92C11111.hanBH, '01/12/2026', 'xe trùng biển số: danh mục giữ bản của lô mới nhất');
-  assert.strictEqual(l1.hdvc[0].xe[0].row.hanBH, '01/01/2026', 'hợp đồng của lô cũ giữ bản chụp riêng');
-  assert.ok(l1.pc[0].doiId === 'doi1', 'lô một đội: phiếu cân tự gán đội');
+test('đội khai thác: thêm, sửa, chuyển người, xóa đội; lỗi cấu trúc đội', () => {
+  let f = M.ensureForest({id: 'f', info: {hinhThucLuong: 'sanluong', donGiaTan: {'Tổ trưởng': 400000}}, nc: [nv(1, 'Tổ trưởng', 'T1', 'Tổ trưởng', '1'), nv(2, 'Công nhân', 'C1', 'Công nhân cưa', '2')]});
+  const a = M.addTeam(f, ' Đội 2 '); f = a.f;
+  assert.deepStrictEqual(f.doi[1], {id: 'doi2', ten: 'Đội 2', hinhThuc: {hinhThucLuong: 'sanluong', donGiaTan: {'Tổ trưởng': 400000}}, dienTich: null, exp: {}}, 'đội mới chép hình thức, đơn giá của đội đầu');
+  assert.ok(M.teamErrors(f).some(e => /chưa có tên/.test(e.text)), 'nhiều đội: đội đầu chưa có tên');
+  f = M.updateTeam(f, 'doi1', {ten: 'Đội 1', hinhThuc: {moHinhKy: 'tructiep', hinhThucLuong: 'ngaycong'}, dienTich: 1.5, exp: {soKT: '07'}}).f;
+  assert.deepStrictEqual([f.doi[0].hinhThuc.moHinhKy, f.doi[0].hinhThuc.hinhThucLuong, f.doi[0].dienTich, f.doi[0].exp.soKT, f.doi[1].hinhThuc.hinhThucLuong], ['tructiep', 'ngaycong', 1.5, '07', 'sanluong'], 'mỗi đội hình thức, cách tính riêng');
+  assert.match(M.removeTeam(f, 'doi1').error, /còn 2 nhân công/);
+  f = M.moveMembers(f, [1], 'doi2').f;
+  assert.deepStrictEqual(M.membersOf(f, f.doi[1]).map(r => r.ten), ['C1']);
+  assert.ok(M.teamErrors(f).some(e => /Đội “Đội 2” chưa có Tổ trưởng/.test(e.text)));
+  f = M.moveMembers(f, [1], 'doi1').f; const r = M.removeTeam(f, 'doi2'); assert.ok(r.ok); f = r.f;
+  assert.match(M.removeTeam(f, 'doi1').error, /ít nhất một đội/);
+  assert.deepStrictEqual(M.infoOf({maRung: 'R'}, f.doi[0]), {maRung: 'R', hinhThucLuong: 'ngaycong', donGiaTan: {'Tổ trưởng': 400000}, moHinhKy: 'tructiep'});
 });
 
-test('mô hình 2.0: danh mục vị trí là nguồn duy nhất — gom định biên (đúng thứ tự), vị trí mặc định cũ, vị trí thêm, định mức BHLĐ, đơn giá, chức danh nhân công', () => {
-  const db = {v: 2, chucDanhThem: ['Lái máy'], dinhMuc: {'Thợ phụ': {}}, rs: {o: {id: 'o', info: {}, forests: {f: {id: 'f', info: {donGiaTan: {'Bảo vệ': 1}}, nc: [nv(1, 'Công nhân', 'X', 'Nấu ăn', '049000000001')]}}}}};
-  const vt = M.migrateDb(db, DB.MAC_DINH).dmViTri;
-  assert.deepStrictEqual(vt.map(v => v.ten), ['Tổ trưởng', 'Công nhân cưa', 'Công nhân bóc vỏ', 'Công nhân bốc xếp', 'Công nhân khai thác', 'Lái máy', 'Thợ phụ', 'Bảo vệ', 'Nấu ăn']);
-  assert.deepStrictEqual(vt.slice(0, 4).map(v => v.soNguoi), [1, 2, 3, 2], 'số người theo định biên');
-  assert.ok(vt.slice(4).every(v => v.soNguoi === 0), 'vị trí ngoài định biên: số người 0');
-  assert.strictEqual(new Set(vt.map(v => v.id)).size, vt.length, 'mã vị trí không trùng');
+test('đội khai thác: dòng nhân công thêm sau (không có doiId) — lô một đội tự vào đội đó; nhiều đội để chưa thuộc đội', () => {
+  let f = M.ensureForest({id: 'f', info: {}, nc: [nv(1, 'Tổ trưởng', 'T', 'Tổ trưởng', '1')]});
+  f.nc.push(nv(2, 'Công nhân', 'MỚI', 'Công nhân cưa', '2'));
+  assert.strictEqual(M.ensureForest(f).nc[1].doiId, 'doi1');
+  f = M.addTeam(f, 'B').f; f.nc.push(nv(3, 'Công nhân', 'MỚI2', 'Công nhân cưa', '3'));
+  assert.strictEqual(M.ensureForest(f).nc[2].doiId, '');
 });
 
-test('mô hình 2.0: lô thiếu khóa (không có nc, dx, exp, cc) và lô rỗng vẫn dựng lại đúng', () => {
-  roundTrip({v: 2, rs: {o: {id: 'o', info: {}, forests: {f: {id: 'f', info: {maRung: 'X'}}, g: {id: 'g', info: {}, nc: [], dx: [], exp: {}, cc: {}, pc: []}}}}}, 'thiếu khóa');
-  roundTrip({v: 2, rs: {}}, 'rỗng');
+test('đội khai thác: nạp lại CẢ danh sách (mọi dòng chưa có doiId) — chia đội theo cột Đội như bản cũ, đội cùng tên giữ id, hình thức, số văn bản; dòng lẻ ghi đúng tên đội vào đội đó', () => {
+  let f = M.ensureForest({id: 'f', info: {hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan'}, exp: {soKT: '05'}, nc: [nv(1, 'Tổ trưởng', 'T1', 'Tổ trưởng', '1', {doi: 'A'})]});
+  f = M.updateTeam(f, 'doi1', {ten: 'A', dienTich: 2}).f;
+  const moi = [nv(1, 'Tổ trưởng', 'TB', 'Tổ trưởng', '9', {doi: 'B'}), nv(2, 'Tổ trưởng', 'T1', 'Tổ trưởng', '1', {doi: 'a'}), nv(3, 'Công nhân', 'C', 'Công nhân cưa', '3', {doi: 'B'})];
+  const g = M.ensureForest(Object.assign({}, f, {nc: moi}));
+  assert.deepStrictEqual(g.doi.map(d => [d.id, d.ten]), [['doi2', 'B'], ['doi1', 'A']], 'đội A giữ id doi1; đội B mới');
+  assert.deepStrictEqual([g.doi[1].dienTich, g.doi[1].exp.soKT, g.doi[0].hinhThuc.moHinhKy, g.doi[0].exp.soKT], [2, '05', 'giaokhoan', undefined], 'đội cũ giữ diện tích, số HĐ; đội mới chép hình thức, chưa có số');
+  assert.deepStrictEqual(g.nc.map(r => r.ten + ':' + r.doiId), ['TB:doi2', 'T1:doi1', 'C:doi2']);
+  assert.deepStrictEqual(M.ensureForest(g), g, 'chạy lại không đổi');
+  g.nc.push(nv(4, 'Công nhân', 'D', 'Công nhân cưa', '4', {doi: 'Ａ'.normalize('NFKC')}));
+  assert.strictEqual(M.ensureForest(g).nc[3].doiId, 'doi1', 'dòng lẻ ghi tên đội A → đội A');
 });
