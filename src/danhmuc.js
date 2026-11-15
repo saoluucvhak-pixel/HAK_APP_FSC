@@ -16,7 +16,9 @@
   const ngayKey = v => { const p = D.parse(trim(v)); return p ? p.key : 0; };
   const clone = x => JSON.parse(JSON.stringify(x));
   const LAO_DONG = ['ngayCapNhat', 'cccd', 'ten', 'gioiTinh', 'ngaySinh', 'diaChi', 'ngayCap', 'noiCap', 'sdt', 'chucVu', 'viTri'];
-  const XE = ['ngayCapNhat', 'bienSo', 'chuXe', 'taiXe', 'cccdTx', 'diaChiTx', 'ngayCapTx', 'noiCapTx', 'gplx', 'hanGplx', 'hanDangKiem', 'hanBaoHiem'];
+  /* thông tin CHỦ XE (người ký hợp đồng vận chuyển khi chủ xe là người ký): trùng tên với trường của dòng xe trong lô. Dữ liệu danh mục cũ thiếu các trường này vẫn đọc được (coi là trống). */
+  const CHU_XE = ['cccd', 'ngaySinh', 'ngayCap', 'noiCap', 'diaChi', 'sdt', 'loaiXe', 'cavet', 'nguoiKy'];
+  const XE = ['ngayCapNhat', 'bienSo', 'chuXe', 'taiXe', 'cccdTx', 'diaChiTx', 'ngayCapTx', 'noiCapTx', 'gplx', 'hanGplx', 'hanDangKiem', 'hanBaoHiem'].concat(CHU_XE);
 
   /* chọn dòng hiệu lực: ngày cập nhật lớn nhất; cùng ngày thì dòng ở vị trí sau (thêm sau) */
   function moiNhat(list, keyFn, k) {
@@ -55,6 +57,9 @@
     if (!bienKey(o.bienSo)) errs.push('thiếu biển số');
     if (!o.ngayCapNhat || !ngayKey(o.ngayCapNhat)) errs.push('ngày cập nhật phải đúng dd/mm/yyyy');
     if (o.taiXe && o.cccdTx.length !== 12) errs.push('tài xế phải có CCCD 12 chữ số');
+    o.cccd = cccdSo(o.cccd); if (o.cccd && o.cccd.length !== 12) errs.push('CCCD chủ xe phải đủ 12 chữ số');
+    if (o.nguoiKy && !['Chủ xe', 'Tài xế'].includes(o.nguoiKy)) errs.push('người ký hợp đồng vận chuyển là Chủ xe hoặc Tài xế');
+    ['ngaySinh', 'ngayCap', 'cavet'].forEach(k => { if (o[k] && !ngayKey(o[k])) errs.push(({ngaySinh: 'ngày sinh chủ xe', ngayCap: 'ngày cấp CCCD chủ xe', cavet: 'ngày cấp cà vẹt'})[k] + ' không có thật'); });
     ['ngayCapTx', 'hanGplx', 'hanDangKiem', 'hanBaoHiem'].forEach(k => { if (o[k] && !ngayKey(o[k])) errs.push(({ngayCapTx: 'ngày cấp CCCD tài xế', hanGplx: 'ngày hết hạn giấy phép', hanDangKiem: 'ngày hết hạn đăng kiểm', hanBaoHiem: 'ngày hết hạn bảo hiểm'})[k] + ' không có thật'); });
     return {ok: !errs.length, errs, row: o};
   }
@@ -70,23 +75,25 @@
   const themLaoDong = (list, row) => themDong(list, row, r => cccdSo(r.cccd));
   const themXe = (list, row) => themDong(list, row, r => bienKey(r.bienSo));
 
-  /* chép thông tin dòng mới nhất vào bản ghi nhân công của lô (bản chụp): họ tên, ngày sinh, CCCD, ngày cấp, nơi cấp, thường trú, chức danh = vị trí, vai trò = chức vụ */
-  function chupLaoDong(d, goc) {
-    const r = Object.assign({}, goc || {});
-    r.ten = d.ten; r.cccd = d.cccd; r.ngaySinh = d.ngaySinh; r.ngayCap = d.ngayCap; r.noiCap = d.noiCap; r.diaChi = d.diaChi;
-    if (d.viTri) r.chucDanh = d.viTri; if (d.chucVu) r.vaiTro = d.chucVu; if (d.sdt) r.sdt = d.sdt; if (d.gioiTinh) r.gioiTinh = d.gioiTinh;
-    return r;
-  }
-  /* chép dòng xe mới nhất vào bản ghi xe của lô: biển số, chủ xe, tài xế (CCCD, thường trú, ngày cấp, nơi cấp), giấy phép, hạn đăng kiểm, hạn bảo hiểm */
-  function chupXe(d, goc) {
-    const r = Object.assign({}, goc || {});
-    r.bienSo = d.bienSo; r.chuXe = d.chuXe || r.chuXe; r.taiXe = d.taiXe; r.cccdTx = d.cccdTx; r.diaChiTx = d.diaChiTx; r.ngayCapTx = d.ngayCapTx; r.noiCapTx = d.noiCapTx;
-    r.gplx = d.gplx; r.hanGplx = d.hanGplx; r.kdDen = d.hanDangKiem; r.hanBH = d.hanBaoHiem;
-    return r;
-  }
-  /* so bản chụp trong lô với dòng mới nhất của danh mục: các trường khác nhau (để nhắc “Cập nhật từ danh mục”) */
-  const khacLaoDong = (r, d) => [['ten', 'họ tên'], ['ngaySinh', 'ngày sinh'], ['ngayCap', 'ngày cấp'], ['noiCap', 'nơi cấp'], ['diaChi', 'thường trú']].filter(([k]) => trim(r[k]) !== trim(d[k])).map(x => x[1]);
-  const khacXe = (r, d) => [['taiXe', 'tài xế'], ['cccdTx', 'CCCD tài xế'], ['gplx', 'số giấy phép'], ['hanGplx', 'hạn giấy phép'], ['kdDen', 'hạn đăng kiểm', 'hanDangKiem'], ['hanBH', 'hạn bảo hiểm', 'hanBaoHiem']].filter(([k, , dk]) => trim(r[k]) !== trim(d[dk || k])).map(x => x[1]);
+  /* BẢN CHỤP: chỉ chép trường danh mục CÓ giá trị (trim khác rỗng); trường trống giữ nguyên giá trị đang có trong lô (không bao giờ ghi đè bằng ô trống).
+   * Mỗi dòng lô lưu NGÀY CHỤP (_dmNgay = ngày cập nhật của dòng danh mục đã chép) để chỉ đề nghị cập nhật khi danh mục mới hơn lần chụp. [khóa danh mục, khóa trong lô] */
+  const MAP_LD = [['ten', 'ten'], ['cccd', 'cccd'], ['ngaySinh', 'ngaySinh'], ['ngayCap', 'ngayCap'], ['noiCap', 'noiCap'], ['diaChi', 'diaChi'], ['viTri', 'chucDanh'], ['chucVu', 'vaiTro'], ['sdt', 'sdt'], ['gioiTinh', 'gioiTinh']];
+  const MAP_XE = [['bienSo', 'bienSo'], ['chuXe', 'chuXe'], ['taiXe', 'taiXe'], ['cccdTx', 'cccdTx'], ['diaChiTx', 'diaChiTx'], ['ngayCapTx', 'ngayCapTx'], ['noiCapTx', 'noiCapTx'], ['gplx', 'gplx'], ['hanGplx', 'hanGplx'], ['hanDangKiem', 'kdDen'], ['hanBaoHiem', 'hanBH']].concat(CHU_XE.map(k => [k, k]));
+  const chep = (d, goc, map) => { const r = Object.assign({}, goc || {}); map.forEach(([dk, lk]) => { if (trim(d[dk])) r[lk] = d[dk]; }); r._dmNgay = trim(d.ngayCapNhat); return r; };
+  const chupLaoDong = (d, goc) => chep(d, goc, MAP_LD);
+  const chupXe = (d, goc) => chep(d, goc, MAP_XE);
+  /* so bản chụp trong lô với dòng danh mục: chỉ các trường danh mục CÓ giá trị và khác lô (danh mục trống không bao giờ bị báo là “mới hơn”) */
+  const khacMap = (r, d, cols) => cols.filter(([dk, lk]) => trim(d[dk]) && trim(r[lk]) !== trim(d[dk])).map(x => x[2]);
+  const KHAC_LD = [['ten', 'ten', 'họ tên'], ['ngaySinh', 'ngaySinh', 'ngày sinh'], ['ngayCap', 'ngayCap', 'ngày cấp'], ['noiCap', 'noiCap', 'nơi cấp'], ['diaChi', 'diaChi', 'thường trú']];
+  const KHAC_XE = [['chuXe', 'chuXe', 'chủ xe'], ['cccd', 'cccd', 'CCCD chủ xe'], ['taiXe', 'taiXe', 'tài xế'], ['cccdTx', 'cccdTx', 'CCCD tài xế'], ['gplx', 'gplx', 'số giấy phép'], ['hanGplx', 'hanGplx', 'hạn giấy phép'], ['hanDangKiem', 'kdDen', 'hạn đăng kiểm'], ['hanBaoHiem', 'hanBH', 'hạn bảo hiểm']];
+  const khacLaoDong = (r, d) => khacMap(r, d, KHAC_LD);
+  const khacXe = (r, d) => khacMap(r, d, KHAC_XE);
+  /* dòng danh mục có ngày cập nhật MỚI HƠN lần chụp của dòng lô? (lô chưa có ngày chụp: coi là chụp từ rất lâu) */
+  const moiHonChup = (r, d) => ngayKey(d && d.ngayCapNhat) > ngayKey(r && r._dmNgay);
+  /* điều cần đề nghị cập nhật: chỉ khi danh mục mới hơn lần chụp VÀ có trường khác; lô sửa sau danh mục thì không đề nghị lùi về số cũ */
+  const lechLaoDong = (r, d) => moiHonChup(r, d) ? khacLaoDong(r, d) : [];
+  const lechXe = (r, d) => moiHonChup(r, d) ? khacXe(r, d) : [];
+  const boDmNgay = x => { const c = Object.assign({}, x); delete c._dmNgay; return JSON.stringify(c); };
 
   /* DỰNG danh mục từ dữ liệu 2.0 (nâng cấp SQLite v7, một chiều): mỗi nhân công / xe của mỗi lô thành một dòng có ngày cập nhật = ngày bắt đầu khai thác của lô (lô chưa có ngày: để trống = cũ nhất). Tham số `homNay` dành cho nơi gọi cần ngày mặc định.
    * Lô mới hơn cho dòng mới hơn; cùng ngày thì thay dòng cũ. rs = db.rs (chủ rừng → forests). Trả {laoDong, xe} (không ghi đè danh mục đã có: người gọi chỉ dùng khi chưa có). */
@@ -104,6 +111,7 @@
       (f.dx || []).forEach(r => {
         if (!r || !bienKey(r.bienSo)) return;
         const row = {ngayCapNhat: ngay, bienSo: trim(r.bienSo).toUpperCase(), chuXe: trim(r.chuXe), taiXe: trim(r.taiXe), cccdTx: cccdSo(r.cccdTx), diaChiTx: trim(r.diaChiTx), ngayCapTx: trim(r.ngayCapTx), noiCapTx: trim(r.noiCapTx), gplx: trim(r.gplx), hanGplx: trim(r.hanGplx), hanDangKiem: trim(r.kdDen), hanBaoHiem: trim(r.hanBH)};
+        CHU_XE.forEach(k => { row[k] = k === 'cccd' ? cccdSo(r[k]) : trim(r[k]); });
         xe = themXe(xe, row).list;
       });
     });
@@ -142,11 +150,11 @@
     let nguoi = 0, xe = 0;
     f.nc = (f.nc || []).map(r => {
       const x = Object.assign({}, r, {maRung: ma}); delete x._nguon; const m = layLaoDong(o.dmLaoDong || [], r.cccd);
-      if (!m) return x; const moi = chupLaoDong(m.row, x); moi.vaiTro = r.vaiTro; moi.chucDanh = r.chucDanh; if (JSON.stringify(moi) !== JSON.stringify(x)) nguoi++; return moi;
+      if (!m) return x; const moi = chupLaoDong(m.row, x); moi.vaiTro = r.vaiTro; moi.chucDanh = r.chucDanh; if (boDmNgay(moi) !== boDmNgay(x)) nguoi++; return moi;
     });
     f.dx = (f.dx || []).map(r => {
       const x = Object.assign({}, r, {maRung: ma}); delete x._nguon; const m = layXe(o.dmXe || [], r.bienSo);
-      if (!m) return x; const moi = chupXe(m.row, x); if (JSON.stringify(moi) !== JSON.stringify(x)) xe++; return moi;
+      if (!m) return x; const moi = chupXe(m.row, x); if (boDmNgay(moi) !== boDmNgay(x)) xe++; return moi;
     });
     return {f, nguoi, xe};
   }
@@ -182,6 +190,6 @@
     const sc = new Set(); dt = dt.filter(r => { if (r.loai === 'doanhnghiep') return true; const k = cccdSo(r.cccd); if (k === b && sc.has(k)) return false; if (k === b) sc.add(k); return true; });
     return {ok: true, db: {dmLaoDong: ld, dmXeVC: xe, dmDoiTac: dt}, so};
   }
-  const api = {KHUNG_LO, CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu, nguoiChung, timNguoi, gopNguoi};
+  const api = {KHUNG_LO, CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, lechLaoDong, lechXe, moiHonChup, CHU_XE, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu, nguoiChung, timNguoi, gopNguoi};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDanhMuc = api;
 })(typeof self !== 'undefined' ? self : this);
