@@ -112,7 +112,7 @@ function nhapTamKhoiPhuc() {
   render();
 }
 window.__nhapTamXoa = nhapTamXoa;
-setInterval(nhapTamGhi, 3000);
+setInterval(nhapTamGhi, 1000);   // và gọi ngay sau mỗi lần lưu / bỏ thay đổi: lưu xong thì xóa bản tạm tức thì (không để tải lại trang khôi phục bản cũ)
 setTimeout(nhapTamKhoiPhuc, 400);
 
 /* ========== Tạo lô từ lô cũ (bản 2.2, mục 11.3 điểm 8) ========== */

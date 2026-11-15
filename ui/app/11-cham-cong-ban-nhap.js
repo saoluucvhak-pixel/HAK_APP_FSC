@@ -81,7 +81,7 @@ async function luuLoTT(opt) {
   const had = loDirty.delete(f.id), r = await persistNow();
   if (!r || !r.ok) { if (had) loDirty.add(f.id); pushNote('Không lưu được: ' + ((r && r.error) || 'không rõ'), 'err'); render(); return r || {ok: false}; }
   if (had && !(opt && opt.tuKhung)) pushNote('Đã lưu dữ liệu vào lô ' + ((f.info || {}).maRung || '') + '.', 'ok');
-  render(); return {ok: true};
+  nhapTamGhi(); render(); return {ok: true};
 }
 /* Nút Lưu của từng khung trong lô = lưu cả lô (một cách lưu) */
 function luuLo() { persistLo(); return stSave({tuKhung: true}); }
@@ -268,7 +268,7 @@ async function stSave(opt) {
     f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).slice(-50);   // ghi vào lô cùng lần lưu (không kèm ảnh chụp hoàn tác)
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
     const r = await persistNow(); if (!r || !r.ok) throw new Error((r && r.error) || 'không rõ');
-    const nDm = dmGhiTuLo(st); delete stages[k]; stErrList = null; if (nDm) pushNote('Đã thêm ' + nDm + ' người / xe mới vào Danh mục.', 'ok'); pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
+    const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote('Đã thêm ' + nDm + ' người / xe mới vào Danh mục.', 'ok'); pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
     Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
@@ -276,7 +276,7 @@ async function stSave(opt) {
   } finally { stSaving = false; }
 }
 let stErrList = null;
-function stDiscard(silent) { const k = stKey(); if (!stages[k] && !loDirty.has(curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(curF); stErrList = null; if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.', 'warn'); render(); }
+function stDiscard(silent) { const k = stKey(); if (!stages[k] && !loDirty.has(curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(curF); nhapTamGhi(); stErrList = null; if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.', 'warn'); render(); }
 /* hỏi khi rời lô còn thay đổi chưa lưu: Lưu và tiếp tục / Bỏ thay đổi / Quay lại chỉnh sửa */
 let stBypass = false;
 function stGuard(proceed) {
