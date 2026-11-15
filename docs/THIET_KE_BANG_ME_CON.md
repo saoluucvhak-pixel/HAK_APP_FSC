@@ -184,3 +184,22 @@ Kiểm thử: `tests/model.test.js` (chuyển dữ liệu, chia đội như bả
 Chưa làm (giai đoạn 5): hạn giấy tờ xe so với ngày phiếu cân; phiếu cân gắn đội.
 
 **So bản in** với bản giai đoạn 2: **118/118 giống từng byte** (gồm 10 hợp đồng vận chuyển). Kiểm thử: `tests/model.test.js` (gom theo người ký, đổi người ký, doanh nghiệp, chuyển xe, cước/số riêng, chặn xóa), `scripts/e2e-hdvc.js`.
+
+## 16. Sau rà soát nhập liệu (15/11/2026): sửa mâu thuẫn, đội xe, mỗi đối tượng một màn, khối lượng từ phiếu cân, một cách lưu
+
+**Sửa mâu thuẫn**
+- Cột Đội (chữ) của nhân công đi theo đội thật khi chuyển người hoặc đổi tên đội; sửa người sau khi chuyển đội không về đội cũ.
+- Chấm công theo đội đang chọn (đúng hình thức của đội).
+- Màn Kiểm tra trước khi xuất kiểm đơn giá từng đội, so định mức nhân công theo đội thật, rà ngày/số cho từng đội và đội xe.
+- Bỏ ô "Số đội" nhập tay: số đội lấy từ danh sách đội.
+- Báo cáo Danh sách xe ghi người ký của đội xe.
+
+**Hợp đồng vận chuyển ký theo ĐỘI XE** (như đội khai thác): xe chọn từ danh mục xe hoặc nhập mới; xe thuộc một đội xe của lô và giữ đội đã chọn; mỗi đội xe một hợp đồng; người ký là một chủ xe / tài xế trong đội hoặc một doanh nghiệp trong danh mục. Xe mới vào đội xe đang chọn; chưa chọn đội thì mỗi người ký một đội như dữ liệu cũ. Xe không phải người ký của đội không bị bắt thông tin người ký.
+
+**Mỗi đối tượng một màn**: số/ngày văn bản của đội (giao khoán, ủy quyền, nghiệm thu, kỳ thanh toán, phụ cấp) ở màn đội (tab Nhân công, bảng nhân công lọc theo đội); số HĐ vận chuyển, xác nhận khối lượng chung ở tab Vận chuyển (đội xe đặt số riêng); tab Xuất hồ sơ chỉ còn ngày ký chung, mẫu chung của lô và phần in (xem trước số sẽ in, nút sang màn sửa). Thông tin chủ rừng ghi rõ "hợp đồng mua bán gỗ".
+
+**Khối lượng thực hiện chỉ từ phiếu cân**: khối lượng lô = tổng phiếu cân (ô nhập tay chỉ còn ở hồ sơ cũ đã nhập); phiếu cân gắn đội (lô một đội tự gán; nhiều đội gán tại dòng hoặc hàng loạt theo ngày, biển số, số phiếu, chỉ phiếu chưa gán); khối lượng đội = tổng phiếu cân của đội; còn phiếu chưa gán hoặc đội chưa có phiếu → BM-08/14 của đội là bản nháp; chưa gán phiếu nào (hồ sơ cũ) → tính như cũ và nhắc gán. Biểu mẫu đợt 1 (hợp đồng) vẫn theo sản lượng dự kiến.
+
+**Một cách lưu cho lô** (như chứng từ ERP): mọi thay đổi trong lô vào bản nháp; một nút "Lưu dữ liệu vào lô" (nút Lưu của từng khung làm cùng việc) lưu cả lô cùng các bảng nháp; "Bỏ thay đổi" về bản đã lưu; thanh "Chưa lưu" ở mọi tab của lô; xuất/in khóa, rời lô và đóng app hỏi khi còn thay đổi. Lưu danh mục, cài đặt, chủ rừng ghi ngay nhưng không kéo theo thay đổi chưa lưu của lô.
+
+Kiểm thử: `scripts/e2e-doikt.js`, `e2e-hdvc.js`, `e2e-phieudoi.js`, `e2e-motcachluu.js`, `tests/model.test.js`; so bản in với bản giai đoạn 2: 118/118 giống từng byte (bộ dữ liệu có khối lượng nhập).
