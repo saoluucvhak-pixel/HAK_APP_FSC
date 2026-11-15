@@ -64,6 +64,7 @@ let savedSnap = null;        // ảnh chụp đúng nội dung đã ghi thành c
 let nhapKhung = null;   // đang áp dụng một khung vào bản nháp: chỉ đánh dấu “Chưa lưu” khi dữ liệu của lô THỰC SỰ đổi (sự kiện change có thể chạy khi ô không đổi gì)
 function persistLo(f) {
   f = f || curForest(); if (!f) return;
+  if (typeof ktXoaNho === 'function') ktXoaNho();
   if (loKhoa(f)) { loVeBanDaLuu(f.id); loKhoaNote(f); return; }   // lô chỉ đọc: không bao giờ vào bản nháp (trả về bản đã lưu, không để trạng thái “Chưa lưu” treo)
   if (nhapKhung) { nhapKhung.can = true; return; }
   if (!savedSnap) savedSnap = (saveCache && saveCache.snap) || HAKDelta.snapshot(dbGhi());
@@ -141,6 +142,7 @@ function flushSave() {
   }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });
 }
 function persist() {
+  if (typeof ktXoaNho === 'function') ktXoaNho();
   if (dataIssueUi) return;   // chưa mở được cơ sở dữ liệu: không ghi gì
   if (HB) {
     showSave('… Đang lưu');

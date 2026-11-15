@@ -114,7 +114,7 @@ function renderMain() {
 }
 
 function checklistRung(job) {
-  const g = gate(job), ex = job.exp || {}, i = job.info, pay = payrollPlan(job, ex);
+  const g = gateRaw(job), ex = job.exp || {}, i = job.info, pay = payrollPlan(job, ex);
   const L = [];
   const add = (ok, label, hint, warn) => L.push({ok, label, hint: ok ? '' : hint, warn: !ok && !!warn});
   add(!g.info.length, 'Thông tin rừng đầy đủ', g.info.join('; '));

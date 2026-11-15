@@ -11,18 +11,18 @@ function d2Layout(f, rec) {
   return HAKInAn2.signature({land: !!o.landscape, tight: !!o.tight, footer: o.footer, xml: withMode('trong', () => bodyXml(blocks)), stats});
 }
 function d2Items(rec) {
-  const g = gate(rec), c = draftCtx(rec), IA = HAKInAn2, items = [];
+  const c = draftCtx(rec), IA = HAKInAn2, items = [];
   const miss = (code, keys) => HAKBanNhap.issues(code, c).filter(x => keys.includes(x.key)).map(x => ({text: x.text, where: x.where, go: D2_GO[x.key] || {ftab: 'xuat'}}));
-  const baseNC = g.canBHLD ? [] : [{text: 'chưa đủ thông tin chủ rừng hoặc nhân công: ' + [...g.info, ...g.nc.errs].slice(0, 3).join('; ') + (g.nc.errs.length + g.info.length > 3 ? '…' : ''), where: 'Thông tin rừng / Nhân công', go: {ftab: g.info.length ? 'finfo' : 'nc'}}];
-  const baseVC = g.canHDVC ? [] : [{text: 'chưa đủ thông tin chủ rừng, đội xe hoặc đơn giá vận chuyển: ' + [...g.info, ...g.dx.errs, ...g.vc].slice(0, 3).join('; '), where: 'Vận chuyển', go: {ftab: g.info.length ? 'finfo' : 'dx'}}];
-  const mk = (code, gkey, label, nen, full) => items.push({key: IA.keyOf(code, gkey), code, gkey: gkey || '', label, nenMissing: nen, fullMissing: [...nen, ...full], sig: '', info: null});
-  const BD = doiOf(rec), dk = d => BD.multi ? d.key : '', dl = d => BD.multi ? ' · ' + doiLabel(d) : '';
-  const trungMiss = g.pcTrung && g.pcTrung.length ? [{text: g.pcTrung.length + ' phiếu cân giống hệt phiếu ở lô khác (ví dụ phiếu ' + g.pcTrung[0].p.soPhieu + ' ↔ lô ' + g.pcTrung[0].ma + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'kt'}}] : [];
-  BD.doi.forEach(d => mk('08', dk(d), FORMS_D2['08'] + dl(d), baseNC.concat(miss('08', D2_NEN_NEED['08'])), trungMiss.concat(miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k))))));
-  groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = gr.cccd || gr.ten;
-    const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : g.pc && g.pc.errs.length ? [{text: 'phiếu cân còn lỗi (' + g.pc.errs.length + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : hanLoiOf(rec, gr).slice(0, 3).map(v => ({text: 'giấy tờ xe hết hạn lúc chạy ' + HAKGiayTo.text(v), where: 'Vận chuyển → Xe', go: {ftab: 'dx'}})).concat(hanLoiOf(rec, gr).length > 3 ? [{text: 'còn ' + (hanLoiOf(rec, gr).length - 3) + ' phiếu khác quá hạn giấy tờ', where: 'Vận chuyển → Xe', go: {ftab: 'dx'}}] : []);
-    ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + d2GroupLabel(rec, gr), baseVC.concat(miss(code, D2_NEN_NEED[code])), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))))); });
-  BD.doi.forEach(d => mk('14', dk(d), FORMS_D2['14'] + dl(d), baseNC.concat(miss('14', D2_NEN_NEED['14'])), trungMiss.concat(miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k))))));
+  const kt = exportCheck(rec), K = HAKKiemTra;
+  /* việc còn thiếu của một biểu mẫu = các mục CHẶN của exportCheck thuộc biểu mẫu đó (và đội / đội xe đó): cùng danh sách với nút tải, quy trình, gói ZIP. Nền: bỏ nhóm phiếu cân (tờ nền in được trước khi có phiếu cân). */
+  const chanMiss = (code, pham, nen) => K.chanCho(kt.chan, code, pham).filter(x => !(nen && ((K.NHOM[x.ma] || {}).pc))).slice(0, 3).map(x => ({text: x.nhom + ': ' + x.text, where: x.ref || x.nhom, go: x.noiSua || {ftab: 'kt'}}));
+  const mk = (code, gkey, label, nen, full, pham) => items.push({key: IA.keyOf(code, gkey), code, gkey: gkey || '', label, nenMissing: [...chanMiss(code, pham, true), ...nen], fullMissing: [...chanMiss(code, pham, false), ...nen, ...full], sig: '', info: null});
+  const BD = doiOf(rec), dk = d => BD.multi ? d.key : '', dl = d => BD.multi ? ' · ' + doiLabel(d) : '', ph = d => BD.multi ? {loai: 'doi', ten: trim(d.ten)} : null;
+  BD.doi.forEach(d => mk('08', dk(d), FORMS_D2['08'] + dl(d), miss('08', D2_NEN_NEED['08']), miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k))), ph(d)));
+  groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = gr.cccd || gr.ten, pg = groupsDX(rec).length > 1 ? {loai: 'doiXe', ten: trim(gr.ten)} : null;
+    const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : [];
+    ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + d2GroupLabel(rec, gr), miss(code, D2_NEN_NEED[code]), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))), pg)); });
+  BD.doi.forEach(d => mk('14', dk(d), FORMS_D2['14'] + dl(d), miss('14', D2_NEN_NEED['14']), miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k))), ph(d)));
   items.sort((a, b) => IA.ORDER.indexOf(a.code) - IA.ORDER.indexOf(b.code));
   // chữ ký bố cục từ chính file mẫu nền sẽ in (chỉ khi dựng được mẫu)
   try {
@@ -43,7 +43,7 @@ async function exportDot2(mode, keys) {
   const docM = {trang: 'day', nen: 'trong', de: 'de'}[mode], P_ = D2_PKG[mode];
   docMode = docM;
   try {
-    const files = dot2Files(rec, docM, keys);
+    const files = dot2Files(rec, docM, keys).filter(f => !f.biChan);
     if (!files.length) { note('Không có mẫu nào để tải.', 'warn'); return; }
     const nm = f => f.path.split('/').pop().replace(/\.docx$/, P_[1] + '.docx');
     if (files.length === 1) { download(await makeDocx(files[0].blocks, docOpts(files[0], rec)), nm(files[0])); return; }
@@ -153,7 +153,12 @@ function exportNotes(rec, g, kind) {
   return n;
 }
 /* Điều kiện đủ dữ liệu để xuất từng mẫu (dùng chung cho nút tải và bảng Quy trình hồ sơ) */
-const kindOk = g => ({gk: g.canGK, bhld: g.canPhat, hdld: g.canHDLD, uq: g.canUQ, hdvc: g.canHDVC, nttl: g.canTC, tdcr: !g.info.length, nkkt: g.canBHLD, fsc: g.canBHLD, stai: g.canBHLD, tbi: g.canBHLD, ckng: !g.info.length, cklc: g.canBHLD, kthn: g.canBHLD, xnvc: g.canPC, ttvc: g.canPC, cc: g.canBHLD, dsd: g.canBHLD, xn: g.canBHLD, tc: g.canTC, all: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, dau: (g.direct ? g.canHDLD : g.canGK) && g.canHDVC && !g.normErrs.length, cuoi: g.canBHLD});
+const kindOk = g => {
+  const o = {}, c = g.cauTruc; Object.keys(KIND_BM).forEach(k => { o[k] = !!gateKind(g, k); });
+  const ten = ['tc', 'nttl', 'xnvc', 'ttvc'], nen = (g.direct ? o.hdld : o.gk) && o.hdvc;   // gói: cần hợp đồng khai thác và hợp đồng vận chuyển xuất được; các mẫu khác bị chặn thì chỉ bị bỏ khỏi gói (có ghi chú)
+  o.all = !!(nen && Object.keys(KIND_BM).some(k => o[k])); o.dau = !!(nen && Object.keys(KIND_BM).some(k => !ten.includes(k) && o[k])); o.cuoi = ten.some(k => o[k]);
+  return o;
+};
 /* Tải toàn bộ / Đợt 2 khi đã có tờ nền đợt 2 in sẵn: hỏi dùng phần in đè hay in lại đầy đủ trên giấy trắng, và tách gói để không nạp nhầm giấy */
 const ALLQ_TXT = {de: 'Đủ dữ liệu: in đè phần bổ sung', kiemtra: 'Nền in từ trước: đối chiếu rồi in đè', cho: 'Chờ đủ dữ liệu để in đè', doibocuc: 'Bố cục đã đổi: phải in lại', trang: 'Chưa in nền', nen: 'Chưa in nền', thieu: 'Chưa đủ dữ liệu'};
 function exportAllAsk(kind, printed, E) {
@@ -184,8 +189,10 @@ async function exportKind(kind, idx, opt) {
   if (!ok) { note('Hồ sơ còn lỗi hoặc thiếu dữ liệu, chưa xuất. Xem tab Xuất hồ sơ.', 'err'); return; }
   docMode = 'day';
   try {
-    const files = buildFiles(rec, kind);
-    const pick = idx != null ? files.filter((f, i) => i === idx) : files;
+    const files = buildFiles(rec, kind), kt = exportCheck(rec);
+    const pick0 = idx != null ? files.filter((f, i) => i === idx) : files, pick = pick0.filter(f => !f.biChan), chan = pick0.filter(f => f.biChan);
+    if (!pick.length) { note('Chưa xuất được' + (chan.length ? ': ' + [...new Set(chan.map(f => { const m = /^(\d\d)_/.exec(f.path); return 'BM-' + (m ? m[1] : '') + ' — ' + HAKKiemTra.lyDoChan(kt.chan, m ? m[1] : '', 1); }))].join('; ') : ' (không có biểu mẫu nào)') + '. Xem tab Kiểm tra.', 'err'); return; }
+    if (chan.length) pushNote('Không có trong file: ' + [...new Set(chan.map(f => { const m = /^(\d\d)_/.exec(f.path); return (m ? 'BM-' + m[1] : f.path) + (f.pham && f.pham.ten ? ' (' + f.pham.ten + ')' : ''); }))].join(', ') + ' — đang bị chặn xuất (tab Kiểm tra).', 'warn');
     if (pick.length === 1) {
       const f = pick[0];
       download(await makeDocx(f.blocks, docOpts(f, rec)), f.path.split('/').pop());

@@ -27,3 +27,12 @@ test('tổng phiếu cân lệch sản lượng dự kiến quá 10% thì cảnh
   assert.equal(nhom(C.kiemTra(mk(l(21)), 'o1', 'a'), 'Chéo lô: lệch sản lượng dự kiến').length, 0);
   assert.equal(nhom(C.kiemTra(mk(l(25)), 'o1', 'a', {nguong: 30}), 'Chéo lô: lệch sản lượng dự kiến').length, 0);
 });
+
+test('chỉ mục chéo lô dùng lại cho nhiều lô cho kết quả giống hệt tính riêng từng lô (và nhanh hơn rõ khi nhiều lô)', () => {
+  const C = require('../src/cheolo'), mk = (id, ma, n, off) => ({id, info: {maRung: ma, tuNgay: '01/10/2026', denNgay: '30/11/2026'}, nc: [], pc: Array.from({length: n}, (_, i) => { const g = off + i; return {soPhieu: 'S' + g, ngay: String(1 + (g % 28)).padStart(g % 2 ? 2 : 1, '0') + '/11/2026', bienSo: '92C-' + (10000 + (g % 7)), gioCan1: '0' + (g % 9) + ':00', gioCan2: '0' + (g % 9) + ':45', kl: 5, _row: i + 2}; })});
+  const forests = {}; for (let i = 0; i < 12; i++) forests['f' + i] = mk('f' + i, 'R' + i, 60, i * 40);   // các lô chồng nhau 20 số phiếu
+  const db = {rs: {o: {id: 'o', forests}}}, cm = C.taoChiMuc(db);
+  Object.keys(forests).forEach(fid => { assert.deepStrictEqual(C.kiemTra(db, 'o', fid, {chiMuc: cm}), C.kiemTra(db, 'o', fid)); assert.deepStrictEqual(C.phieuTrung(db, 'o', fid, null, cm), C.phieuTrung(db, 'o', fid)); });
+  assert.ok(C.kiemTra(db, 'o', 'f1').some(x => x.nhom === 'Chéo lô: phiếu cân trùng'), 'dữ liệu thử có phiếu trùng thật');
+  assert.deepStrictEqual(C.phieuTrung(db, 'o', 'f1', null, C.taoChiMuc({rs: {}})), C.phieuTrung(db, 'o', 'f1'), 'chỉ mục của db khác bị bỏ qua, dựng lại đúng');
+});

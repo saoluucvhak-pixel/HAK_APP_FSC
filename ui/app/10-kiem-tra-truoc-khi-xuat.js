@@ -1,17 +1,43 @@
 /* ========== Kiểm tra hồ sơ trước khi xuất: dùng lại gate/checklist FSC, nhóm thành “chặn xuất” và “cần đối chiếu”, kèm số phiếu/trường và liên kết đến đúng tab ========== */
+/* exportCheck có nhớ tạm trong MỘT lượt xử lý (cùng đối tượng job, chưa có thay đổi dữ liệu nào xen vào): gate, nút tải, mục quy trình, gói ZIP cùng đọc một danh sách mà không tính lại */
+let ktNho = {job: null, kt: null, ver: -1}, ktVer = 0;
+let cheoNho = null;
+const ktXoaNho = () => { ktVer++; ktNho = {job: null, kt: null, ver: -1}; cheoNho = null; };
+/* chỉ mục chéo lô dựng MỘT lần cho cả db trong một lượt xử lý (duyệt nhiều lô không dựng lại mỗi lô) */
+function cheoCtx() { if (!cheoNho || cheoNho.db !== db) { cheoNho = {db, ctx: HAKCheoLo.taoChiMuc(db)}; Promise.resolve().then(ktXoaNho); } return cheoNho.ctx; }
 function exportCheck(job) {
-  const g = gate(job), ex = job.exp || {}, i = job.info, items = [];
+  if (ktNho.job === job && ktNho.ver === ktVer) return ktNho.kt;
+  const kt = exportCheckTinh(job); ktNho = {job, kt, ver: ktVer}; Promise.resolve().then(ktXoaNho);
+  return kt;
+}
+/* đối tượng xuất của một biểu mẫu: biểu mẫu theo đội khai thác → từng đội; theo đội xe → từng đội xe; còn lại cả lô (null) */
+function bmPham(rec, code) {
+  const K = HAKKiemTra;
+  if (K.BM_THEO.doi.includes(code)) { const B = doiOf(rec); return B.multi ? B.doi.map(d => ({loai: 'doi', ten: trim(d.ten)})) : [null]; }
+  if (K.BM_THEO.doiXe.includes(code)) { const gs = groupsDX(rec); return gs.length > 1 ? gs.map(x => ({loai: 'doiXe', ten: trim(x.ten)})) : [null]; }
+  return [null];
+}
+/* biểu mẫu `code` còn xuất được cho ít nhất một đội / đội xe (hoặc cho cả lô) — quyết định DUY NHẤT từ danh sách mục chặn của exportCheck */
+const bmConDuoc = (rec, kt, code) => bmPham(rec, code).some(p => !HAKKiemTra.chanCho(kt.chan, code, p).length);
+/* nút của MỘT đội xe (gr) cho biểu mẫu `code`: không bị chặn đối với đúng đội xe đó */
+const bmXeOk = (rec, code, gr) => !HAKKiemTra.chanCho(exportCheck(rec).chan, code, groupsDX(rec).length > 1 ? {loai: 'doiXe', ten: trim(gr.ten)} : null).length;
+/* file của một lần xuất bị chặn không? f.path bắt đầu bằng mã biểu mẫu (NN_); f.pham = {loai, ten} của đội / đội xe nếu có */
+function bmFileBiChan(kt, f) { const m = /^(\d\d)_/.exec(f && f.path || ''); return m ? HAKKiemTra.chanCho(kt.chan, m[1], f.pham || null).length > 0 : false; }
+/* đánh dấu file bị chặn (f.biChan): xuất lẻ và gói ZIP bỏ file này, đợt 2 không tải; vị trí file trong danh sách không đổi (nút của từng đội xe dùng chỉ số) */
+function bmDanhDau(rec, files) { const kt = exportCheck(rec); files.forEach(f => { if (bmFileBiChan(kt, f)) f.biChan = true; }); return files; }
+function exportCheckTinh(job) {
+  const g = gateRaw(job), ex = job.exp || {}, i = job.info, items = [];
   /* MỘT dạng mục cho mọi quy tắc (src/kiemtra.js): mức, nhóm, đối tượng (lô / đội / đội xe / dòng), biểu mẫu bị ảnh hưởng, nơi sửa. kind và go giữ cho các màn đang đọc tên cũ */
   const add = (kind, nhom, text, ref, go, doiTuong) => { const m = HAKKiemTra.muc({kind, nhom, text, ref, doiTuong, noiSua: go || {ftab: 'finfo'}}); items.push(Object.assign(m, {kind: m.muc, go: m.noiSua})); };
   const pcRow = n => (job.pc || []).find(r => String(r._row) === String(n));
   // thông tin chủ rừng, rừng, đơn giá
   infoErrors(i, job.id).forEach(e => add('chan', 'Thông tin chủ rừng', e, '', {tab: 'info'}));
   forestErrors(i, job.fid).forEach(e => add('chan', 'Thông tin rừng', e, '', {ftab: 'finfo'}));
-  giaErrorsRec(job).forEach(e => add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}));   // từng đội theo hình thức của đội
+  giaErrorsRec(job).forEach(e => { const m = /^Đội “([^”]*)”: /.exec(e); add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}, m ? {loai: 'doi', ten: m[1]} : null); });   // từng đội theo hình thức của đội
   // mã lô trùng ở dữ liệu cũ: liệt kê đủ các lô khớp để đối chiếu, không tự sửa
   HAKLoRung.duplicateGroups(db).filter(x => x.lots.some(l => l.forest === job.fid)).forEach(x => add('chan', 'Mã lô trùng (dữ liệu cũ)', 'Mã “' + x.ma + '” đang dùng cho ' + x.lots.length + ' lô: ' + x.lots.map(l => l.lo + ' (chủ ' + l.chu + '; ' + l.nc + ' nhân công, ' + l.dx + ' xe, ' + l.pc + ' phiếu cân)').join('; ') + '. Đổi mã các lô thừa ở tab Thông tin rừng, dữ liệu không bị đổi trước khi bạn xác nhận.', x.ma, {ftab: 'finfo'}));
   // chồng lấn giữa các lô (src/cheolo.js): phiếu cân trùng, xe trùng giờ, người ở hai lô, lệch sản lượng dự kiến
-  try { HAKCheoLo.kiemTra(db, job.id, job.fid).filter(x => x.nhom !== 'Chéo lô: phiếu cân trùng').forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go)); } catch (e) { /* không kiểm được chéo lô: bỏ qua, không chặn */ }
+  try { HAKCheoLo.kiemTra(db, job.id, job.fid, {chiMuc: cheoCtx()}).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go)); } catch (e) { /* không kiểm được chéo lô: bỏ qua, không chặn */ }
   try { HAKSoVB.trung(db, job.id, job.fid).forEach(x => add('doi', 'Số văn bản trùng', 'Số “' + x.so + '” cũng đang dùng ở lô ' + x.ma + ': hai văn bản không được trùng số.', x.so, {ftab: 'xuat'})); } catch (e) { /* bỏ qua */ }
   try { HAKSoVB.trungTrongLo(curForest() && curForest().id === job.fid ? curForest() : ((db.rs[job.id] || {}).forests || {})[job.fid] || {}).forEach(x => add('doi', 'Số văn bản trùng', 'Hai đội của lô cùng dùng số “' + x.so + '” (đội “' + x.ten + '”): kiểm tra, số của đội đã xóa có thể bị cấp lại ở dữ liệu cũ.', x.so, {ftab: 'xuat'})); } catch (e) { /* bỏ qua */ }
   // nhân công, định mức, tuổi
@@ -27,6 +53,7 @@ function exportCheck(job) {
   // phiếu cân: thiếu/sai ngày, trùng, biển số chưa ghép, khối lượng…
   g.pc.errs.forEach(e => {
     const m = /^Dòng (\d+): (.*)$/.exec(e), r = m && pcRow(m[1]), so = r ? (r.soPhieu || '(không số)') : '', msg = m ? m[2] : e;
+    if (/giống hệt phiếu đã có ở lô/.test(msg)) return;   // đã có mục “Chéo lô: phiếu cân trùng” (src/cheolo.js)
     const nhom = /ngày|dd\/mm|không có thật/i.test(msg) ? 'Phiếu cân: ngày thiếu hoặc sai' : /trùng/i.test(msg) ? 'Phiếu cân trùng số' : /Biển|biển/.test(msg) ? 'Phiếu cân: biển số chưa ghép với xe' : 'Phiếu cân';
     add('chan', nhom, m ? 'Dòng ' + m[1] + ': ' + msg : msg, so ? 'Phiếu ' + so : '', {ftab: 'dx', focus: 'pc'});
   });
@@ -45,7 +72,7 @@ function exportCheck(job) {
       if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}, u.ten ? {loai: 'doi', ten: u.ten} : null); }); }
   { const L = tgLechOf(i, job.pc, nDoiOf(i, job.nc)); if (L && L.canhBao) add('doi', 'Thời gian khai thác', tgLechText(i, L), 'Thời gian khai thác', {ftab: 'finfo'}); }
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
-  nhapLieuAll(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));   // của lô, từng đội và từng đội xe
+  g.nhapLieu.forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go, x.doiTuong));   // của lô, từng đội và từng đội xe
   // các mục checklist FSC còn lại chưa được xét ở trên
   const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo chức danh', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
   const goOf = lb => /Tọa độ|Giấy tờ pháp lý|Thời gian/.test(lb) ? {ftab: 'finfo'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo'};

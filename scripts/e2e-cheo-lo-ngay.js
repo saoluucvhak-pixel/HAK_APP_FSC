@@ -28,7 +28,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const d = {tc: await dis('tc'), xnvc: await dis('xnvc'), ttvc: await dis('ttvc'), nttl: await dis('nttl')};
   ok('xuất riêng: mọi nút BM-08, BM-09, BM-10, BM-14 của lô B (nếu có) đều bị khóa; nút BM-14 hiện và bị khóa', Object.values(d).every(a => a.every(Boolean)) && d.nttl.length > 0, JSON.stringify(d));
   const d2 = (await w.evaluate(() => window.__d2Missing())).filter(x => ['08', '14'].includes(x.code)).map(x => x.code + ': ' + x.full.join(' | '));
-  ok('in bổ sung đợt 2 (bản đầy đủ): BM-08 và BM-14 của lô B bị chặn vì phiếu giống hệt lô khác', d2.length >= 2 && d2.every(x => /giống hệt phiếu ở lô khác/.test(x)), d2.join(' || '));
+  ok('in bổ sung đợt 2 (bản đầy đủ): BM-08 và BM-14 của lô B bị chặn vì phiếu giống hệt lô khác', d2.length >= 2 && d2.every(x => /phiếu cân giống hệt/.test(x)), d2.join(' || '));
   // 3. theo gói
   let names = await zipNames();
   ok('xuất theo gói “Toàn bộ hồ sơ”: không có BM-08, 09, 10, 14 của lô B', !names.some(n => /(08_Bang_thanh_toan|09_XN_khoi_luong|10_TT_tien_VC|14_BB_nghiem_thu)/.test(n)), names.join(', '));
