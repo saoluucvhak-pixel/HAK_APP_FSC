@@ -49,7 +49,7 @@ function qtPanel(rec) {
 function qtMarkAct(codes, on) {
   const f = curForest(), rec = curRec(); if (!f || !rec) return; const st = HAKQuyTrinh.stateOf(f), now = new Date().toISOString(), all = qtItems(rec);
   codes.forEach(c => { if (!on) HAKQuyTrinh.unmark(st, c); else { const it = all.find(x => x.code === c); if (it && it.ready !== 'thieu') HAKQuyTrinh.mark(st, c, it.sig, now); } });
-  persist();
+  if (loDirty.has(f.id)) persistLo(f); else persist();   // ghi nhận đã làm: ghi ngay khi lô không có thay đổi chưa lưu
 }
 /* In phiếu cân theo rừng (giống xuất hồ sơ): dùng đúng phiếu cân của rừng đang mở, bất kể phiếu đến từ file nhập ở rừng, Tra cứu Google Sheets hay cập nhật biển số */
 function pcPrintCard(rec) {

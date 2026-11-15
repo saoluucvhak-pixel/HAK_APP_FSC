@@ -51,7 +51,7 @@ document.addEventListener('click', async e => {
     if (!r || !inp) return;
     const v = trim(inp.value);
     if (!HAKDates.isValid(v)) { note('Chưa sửa phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(v) + '.', 'err'); return; }
-    const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persist(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
+    const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persistLo(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
   }
   if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
   if (act === 'openSetGs') { cur = null; curF = null; view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
@@ -64,7 +64,7 @@ document.addEventListener('click', async e => {
   if (act === 'mhCancel') { mh.open = false; return render(); }
   if (act === 'mhConfirm') {
     const f = curForest(), snap = mhSnapshotNow(); if (!f || !snap) return;
-    f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false; persist();
+    f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false; persistLo();
     mh.msg = {kind: 'ok', text: 'Đã lưu công ty mua hàng và địa điểm vận chuyển đến cho rừng này: ' + snap.ten + ' – ' + snap.diaChi + '.'}; return render();
   }
   if (act === 'guide') return document.getElementById('guideBox').classList.add('on');
@@ -89,7 +89,7 @@ document.addEventListener('click', async e => {
     if (el.dataset.kind === 'nc') { f.nc = []; f.ncFile = ''; f.ncAt = ''; }
     else if (el.dataset.kind === 'pc') { f.pc = []; f.pcFile = ''; f.pcAt = ''; }
     else { f.dx = []; f.dxFile = ''; f.dxAt = ''; }
-    persist(); note('Đã xóa dữ liệu.'); return;
+    persistLo(); note('Đã xóa dữ liệu (chưa lưu: bấm “Lưu dữ liệu vào lô” để ghi, “Bỏ thay đổi” để hoàn lại).'); return;
   }
   if (act === 'qtMark' || act === 'qtUnmark') { qtMarkAct((el.dataset.codes || '').split(',').filter(Boolean), act === 'qtMark'); return render(); }
   if ((act === 'd2dl' || act === 'd2confirm' || act === 'd2legacy' || act === 'd2undo') && stBlockNote()) return;
@@ -138,10 +138,10 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
-  if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persist(); render(); return; }
-  if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persist(); render(); return; }
+  if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persistLo(); render(); return; }
+  if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persistLo(); render(); return; }
   if (t.id === 'xeDm' && t.value) { const x = xeDanhMuc().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); ST_FIELDS.dx.forEach(([k]) => { if (x[k] != null && k !== 'stt') stm.vals[k] = stStr(x[k]); }); stRender(); } return; }
-  if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persist(); render(); return; }
+  if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persistLo(); render(); return; }
   if (t.name === 'bienSo' && t.form && t.form.id === 'stForm' && t.value === '__new') { stRead(); stOpen('dx', null, null, {kind: stm.kind, id: stm.id, vals: Object.assign({}, stm.vals, {bienSo: ''})}); return; }   // thêm xe ngay trong lượt sửa phiếu: giữ nguyên các ô đã nhập
   if (t.name === 'vcMode' && t.form && t.form.id === 'vcForm') {
     t.form.querySelectorAll('[data-vcgrp]').forEach(g => { g.style.display = g.dataset.vcgrp === t.value ? '' : 'none'; });
@@ -166,7 +166,7 @@ document.addEventListener('change', e => {
     f.exp = f.exp || {};
     const rest = ghiDoi(f, {[t.dataset.exp]: trim(t.value)}, 'exp');   // số văn bản của đội (HĐ giao khoán, ủy quyền, nghiệm thu, kỳ thanh toán) ghi vào đội
     Object.assign(f.exp, rest);
-    persist();
+    persistLo(f);
   }
 });
 

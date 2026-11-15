@@ -55,15 +55,17 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
 
   // theo tấn: 200 tấn chia đều 4 người = 50 tấn/người
+  // khối lượng THỰC TẾ (BM-08, BM-14) = tổng phiếu cân (một nguồn); hợp đồng (BM-01) vẫn theo sản lượng dự kiến 200 tấn
+  const PCT = await w.evaluate(() => { const o = Object.values(window.hak.loadSync().db.rs)[0], f = Object.values(o.forests)[0]; return Math.round(f.pc.reduce((a, p) => a + Math.round(p.kl * 1000), 0)) / 1000; });
   let f = await exp('gk', '.docx'), t = await docText(f);
   ok('BM-01 giao khoán theo tấn: đơn giá từng vai trò (đồng/tấn) và sản lượng chia đều ' + N + ' người', /Đơn giá khoán theo vai trò \(đồng\/tấn\)/.test(t) && TAN.every(v => t.includes(fmt(v))) && new RegExp('chia đều cho ' + N + ' người').test(t), t.slice(t.indexOf('Điều 2'), t.indexOf('Điều 2') + 400));
   ok('BM-01: tổng tiền khoán dự tính = Σ (50 tấn × đơn giá vai trò) = ' + fmt(total(200, TAN)) + ' đồng', t.includes(fmt(total(200, TAN)) + ' đồng'));
   ok('BM-01: nêu việc có Giấy ủy quyền của tất cả người lao động trong tổ', /Giấy ủy quyền của toàn bộ người lao động/.test(t));
   f = await exp('tc', '.docx'); t = await docText(f);
-  ok('BM-08 theo tấn: mỗi người 50 tấn × đơn giá vai trò; tổng cộng khớp (Tổ trưởng cũng có dòng tiền)', t.includes('Sản lượng chia đều (tấn)') && t.includes('Đơn giá (đồng/tấn)') && t.includes('TỔNG CỘNG') && t.includes(fmt(total(200, TAN))) && t.includes(TT.ten.toUpperCase()), t.slice(0, 500));
+  ok('BM-08 theo tấn: mỗi người (tổng phiếu cân ÷ 4) × đơn giá vai trò; tổng cộng khớp (Tổ trưởng cũng có dòng tiền)', t.includes('Sản lượng chia đều (tấn)') && t.includes('Đơn giá (đồng/tấn)') && t.includes('TỔNG CỘNG') && t.includes(fmt(total(PCT, TAN))) && t.includes(TT.ten.toUpperCase()), t.slice(0, 500));
   ok('BM-08: có đủ ' + N + ' người và không còn ghi chú “Tổ trưởng nhận tiền theo hợp đồng giao khoán, không tính trong bảng này”', PEOPLE.every(p => t.includes(p.ten.toUpperCase())) && !/không tính trong bảng này/.test(t));
   f = await exp('nttl', '.docx'); t = await docText(f);
-  ok('BM-14 giao khoán: đơn giá theo vai trò, chia đều và thành tiền = tổng theo vai trò', /Đơn giá khoán theo vai trò \(đồng\/tấn\)/.test(t) && t.includes('Thành tiền: ' + fmt(total(200, TAN)) + ' đồng'), t.slice(t.indexOf('Điều 3'), t.indexOf('Điều 3') + 400));
+  ok('BM-14 giao khoán: đơn giá theo vai trò, chia đều và thành tiền = tổng theo vai trò', /Đơn giá khoán theo vai trò \(đồng\/tấn\)/.test(t) && t.includes('Thành tiền: ' + fmt(total(PCT, TAN)) + ' đồng'), t.slice(t.indexOf('Điều 3'), t.indexOf('Điều 3') + 400));
 
   // theo ha: 2,5 ha chia đều 4 người = 0,625 ha/người
   await w.click('[data-ftab=nc]'); await w.selectOption('#luongForm [name=hinhThucLuong]', 'ha'); await price('ha_', HA); await save(); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
@@ -99,7 +101,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   ok('gói tất cả (trực tiếp): ' + N + ' hợp đồng lao động (BM-03) của tất cả nhân công, không có Giấy ủy quyền', names.filter(n => /^03_HDLD\/.+\.docx$/.test(n)).length === N && !names.some(n => /^20_Giay_uy_quyen/.test(n)), names.join(', '));
   await w.click('[data-ftab=nc]'); await w.selectOption('#luongForm [name=hinhThucLuong]', 'sanluong'); await price('dt_', TAN); await save();
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]'); f = await exp('tc', '.docx'); t = await docText(f);
-  ok('trực tiếp theo tấn: 50 tấn/người × đơn giá vai trò, tổng khớp', t.includes('Sản lượng chia đều (tấn)') && t.includes(fmt(total(200, TAN))));
+  ok('trực tiếp theo tấn: (tổng phiếu cân ÷ 4) mỗi người × đơn giá vai trò, tổng khớp', t.includes('Sản lượng chia đều (tấn)') && t.includes(fmt(total(PCT, TAN))));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('; '));
   await app.close();
 

@@ -25,14 +25,14 @@ function panelChamCong(rec) {
     '<div class="msg ' + (has ? 'ok' : '') + '" id="ccNote" style="margin:8px 0">' + (has ? 'Đã có số công chấm tay: BM-08 dùng tổng công của từng người.' : 'Chưa chấm công: BM-08 dùng số công dự tính theo thời gian khai thác.') + '</div>' +
     '<div class="wrap"><table class="ccTbl"><thead><tr><th>Họ và tên</th>' + th + '<th>Tháng</th><th>Cả đợt</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
 }
-function ccCommit(note_) { persist(); const n = document.getElementById('ccNote'); if (n) { n.className = 'msg ok'; n.textContent = note_ || 'Đã có số công chấm tay: BM-08 dùng tổng công của từng người.'; } }
+function ccCommit(note_) { persistLo(); const n = document.getElementById('ccNote'); if (n) { n.className = 'msg ok'; n.textContent = note_ || 'Đã có số công chấm tay: BM-08 dùng tổng công của từng người.'; } }
 function ccRefreshTotals(f, k) {
   const CC = HAKChamCong; document.querySelectorAll('#ccCard tr[data-ccp]').forEach(tr => { const pk = tr.dataset.ccp; const a = tr.querySelector('[data-ccm]'), b = tr.querySelector('[data-cca]'); if (a) a.textContent = fmtCong(CC.monthTotal(f.cc, k, pk)); if (b) b.innerHTML = '<b>' + fmtCong(CC.total(f.cc, pk)) + '</b>'; });
 }
 function ccAct(act) {
   const f = curForest(), rec = curRec(); if (!f || !rec) return; f.cc = f.cc || {}; const CC = HAKChamCong, k = ccCur(rec); if (!k) return;
-  if (act === 'ccFill') { CC.fillWork(f.cc, k, ccPersons(rec).map(CC.personKey), parseVN(rec.info.tuNgay), parseVN(rec.info.denNgay)); persist(); return render(); }
-  if (act === 'ccClear') { CC.clearMonth(f.cc, k); persist(); return render(); }
+  if (act === 'ccFill') { CC.fillWork(f.cc, k, ccPersons(rec).map(CC.personKey), parseVN(rec.info.tuNgay), parseVN(rec.info.denNgay)); persistLo(); return render(); }
+  if (act === 'ccClear') { CC.clearMonth(f.cc, k); persistLo(); return render(); }
   if (act === 'ccPrint') return ccExport(rec, k);
 }
 async function ccExport(rec, k) {
@@ -57,8 +57,8 @@ let dbEpoch = 0;   // tăng mỗi khi toàn bộ dữ liệu bị thay (khôi ph
 const stages = {};   // 'mã chủ rừng|mã lô' → bản nháp
 const stKeyOf = (o, f) => o + '|' + f, stKey = () => stKeyOf(cur, curF);
 const stCur = () => stages[stKey()] || null;
-const stDirtyOf = k => !!stages[k] && HAKStage.dirty(stages[k]);
-const stDirtyList = () => Object.keys(stages).filter(stDirtyOf);
+const stDirtyOf = k => (!!stages[k] && HAKStage.dirty(stages[k])) || loDirty.has(k.split('|')[1]);   // bảng nháp hoặc thay đổi khác của lô
+const stDirtyList = () => [...new Set([...Object.keys(stages), ...Object.values(db.rs || {}).flatMap(o => Object.values(o.forests || {}).filter(f => loDirty.has(f.id)).map(f => stKeyOf(o.id, f.id)))])].filter(stDirtyOf);
 const stDirtyCur = () => stDirtyOf(stKey());
 function stGetFor(oid, fid, make) { const k = stKeyOf(oid, fid), o = db.rs[oid], f = o && o.forests && o.forests[fid]; if (!f) return null; if (!stages[k] && make) stages[k] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); return stages[k] || null; }
 function stGet(make) { const k = stKey(); if (!stages[k] && make) { const f = curForest(); if (!f) return null; stages[k] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); } return stages[k] || null; }
@@ -68,11 +68,23 @@ const ST_LABEL = {nc: 'nhân công', dx: 'xe', pc: 'phiếu cân'}, ST_CHECK = {
 const ST_TAB = {nc: 'nc', dx: 'dx', pc: 'dx'};
 /* Lý do chặn tạo, xuất, in hồ sơ khi lô còn thay đổi chưa lưu ('' nếu được phép) */
 function stBlockText() {
-  const st = stCur(); if (!st || !HAKStage.dirty(st)) return '';
-  const ks = HAKStage.dirtyKinds(st);
-  return 'Lô này còn thay đổi chưa lưu ở ' + ks.map(k => ST_LABEL[k]).join(', ') + '. Bấm “Lưu dữ liệu vào lô” (hoặc “Bỏ thay đổi”) rồi mới tạo, xuất, in hồ sơ.';
+  const st = stCur(), lo = loDirty.has(curF); if ((!st || !HAKStage.dirty(st)) && !lo) return '';
+  const ks = st && HAKStage.dirty(st) ? HAKStage.dirtyKinds(st) : [];
+  return 'Lô này còn thay đổi chưa lưu ở ' + [...(lo ? ['thông tin lô (đội, đội xe, số văn bản, chấm công…)'] : []), ...ks.map(k => ST_LABEL[k])].join(', ') + '. Bấm “Lưu dữ liệu vào lô” (hoặc “Bỏ thay đổi”) rồi mới tạo, xuất, in hồ sơ.';
 }
-function stBlockNote() { const t = stBlockText(); if (t) { pushNote(t, 'err'); const st = stCur(), k = HAKStage.dirtyKinds(st)[0]; if (k) ftab = ST_TAB[k]; render(); } return !!t; }
+function stBlockNote() { const t = stBlockText(); if (t) { pushNote(t, 'err'); const st = stCur(), k = st && HAKStage.dirty(st) ? HAKStage.dirtyKinds(st)[0] : null; if (k) ftab = ST_TAB[k]; render(); } return !!t; }
+/* thanh “Chưa lưu” của cả lô (mọi tab của lô) */
+function loBar() { const st = stCur(), chiBang = !loDirty.has(curF) && st && HAKStage.dirty(st) && (ftab === 'nc' || ftab === 'dx'); const t = chiBang ? '' : stBlockText(); return t ? '<div class="msg warn" id="loDirtyBar"><b>Chưa lưu</b> — ' + esc(t.replace(/ Bấm .*$/, '')) + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : ''; }
+/* lưu phần thông tin lô (khi không có bảng nháp) */
+async function luuLoTT() {
+  const f = curForest(); if (!f) return {ok: false};
+  const had = loDirty.delete(f.id), r = await persistNow();
+  if (!r || !r.ok) { if (had) loDirty.add(f.id); pushNote('Không lưu được: ' + ((r && r.error) || 'không rõ'), 'err'); render(); return r || {ok: false}; }
+  if (had) pushNote('Đã lưu dữ liệu vào lô ' + ((f.info || {}).maRung || '') + '.', 'ok');
+  render(); return {ok: true};
+}
+/* Nút Lưu của từng khung trong lô = lưu cả lô (một cách lưu) */
+function luuLo() { persistLo(); return stSave({tuKhung: true}); }
 function stErrBox() { return stErrList && stErrList.length ? '<div class="msg err" id="stErrBox"><b>Chưa lưu được vì còn lỗi (' + stErrList.length + '):</b><ul class="issues">' + stErrList.slice(0, 30).map(e => '<li>' + esc(e) + '</li>').join('') + (stErrList.length > 30 ? '<li>… còn ' + (stErrList.length - 30) + ' lỗi</li>' : '') + '</ul></div>' : ''; }
 function stBar(kind, rec) {
   const st = stCur(), o = curOwner(), c = st ? HAKStage.counts(st, kind) : null, dk = st ? HAKStage.dirtyKinds(st) : [];
@@ -225,7 +237,7 @@ function stDelete(kind, i) {
 const CONFIG_ERR = /chưa có đơn giá/;
 let stSaving = false;
 async function stSave(opt) {
-  const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
+  const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { if (loDirty.has(curF)) return luuLoTT(); if (!(opt && opt.tuKhung)) note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
   if (stSaving) return {ok: false, error: 'đang lưu'};
   const o = db.rs[cur], f = o && o.forests && o.forests[curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
   const pend = HAKStage.pendingOf(st);   // cùng quy tắc với bước xem trước: dòng cần đối chiếu chưa xử lý thì chưa lưu
@@ -252,15 +264,17 @@ async function stSave(opt) {
     if (dk.includes('nc')) { f.ncAt = at; if (st.src.nc && /^Excel: /.test(st.src.nc)) f.ncFile = st.src.nc.slice(7); }
     if (dk.includes('dx')) { f.dxAt = at; if (st.src.dx && /^Excel: /.test(st.src.dx)) f.dxFile = st.src.dx.slice(7); }
     if (dk.includes('pc')) { f.pcAt = at; if (st.src.pc && /^Excel: /.test(st.src.pc)) f.pcFile = st.src.pc.slice(7); else if (st.src.pc && /Google/.test(st.src.pc) && !f.pcFile) f.pcFile = 'Tra cứu Google Sheets'; }
+    var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
     const r = await persistNow(); if (!r || !r.ok) throw new Error((r && r.error) || 'không rõ');
     delete stages[k]; stErrList = null; pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
   } catch (e) {
+    if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
     Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
     pushNote('Không lưu được, dữ liệu đã lưu giữ nguyên và bản nháp vẫn còn để thử lại: ' + e.message, 'err'); render(); return {ok: false, error: e.message};
   } finally { stSaving = false; }
 }
 let stErrList = null;
-function stDiscard(silent) { const k = stKey(); if (!stages[k]) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; stErrList = null; if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.', 'warn'); render(); }
+function stDiscard(silent) { const k = stKey(); if (!stages[k] && !loDirty.has(curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(curF); stErrList = null; if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.', 'warn'); render(); }
 /* hỏi khi rời lô còn thay đổi chưa lưu: Lưu và tiếp tục / Bỏ thay đổi / Quay lại chỉnh sửa */
 let stBypass = false;
 function stGuard(proceed) {

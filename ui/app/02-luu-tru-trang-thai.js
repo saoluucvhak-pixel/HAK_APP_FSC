@@ -56,6 +56,30 @@ const hhmm = () => new Date().toLocaleTimeString('vi-VN');
  * (dữ liệu đã đổi từ nơi khác: khôi phục, đổi thư mục...) / MISMATCH (lệch số chủ / lô) thì lưu TOÀN BỘ như trước — không mất thay đổi nào.
  * Các lần lưu được xếp hàng (không chạy chồng); ảnh chụp lấy ngay trước khi gửi nên đúng với nội dung được ghi. */
 let saveCache = null, saveChain = Promise.resolve();
+/* MỘT CÁCH LƯU CHO LÔ (như chứng từ ERP): mọi thay đổi trong lô (thông tin, đội, đội xe, số văn bản, chấm công, gán phiếu cân…) vào BẢN NHÁP của lô;
+ * nút “Lưu dữ liệu vào lô” (và nút Lưu của từng khung) lưu cả lô cùng các bảng nháp nhân công / xe / phiếu cân; “Bỏ thay đổi” về bản đã lưu.
+ * Lưu danh mục, cài đặt, thông tin chủ rừng vẫn ghi ngay nhưng KHÔNG kéo theo thay đổi chưa lưu của lô (lô đó ghi theo bản đã lưu). */
+const loDirty = new Set();   // id lô còn thay đổi chưa lưu ngoài các bảng nháp
+let savedSnap = null;        // ảnh chụp đúng nội dung đã ghi thành công gần nhất (bản đã lưu của từng lô)
+function persistLo(f) {
+  f = f || curForest(); if (!f) return;
+  if (!savedSnap) savedSnap = (saveCache && saveCache.snap) || HAKDelta.snapshot(dbGhi());
+  loDirty.add(f.id); showSave('Lô ' + ((f.info || {}).maRung || '') + ' còn thay đổi chưa lưu — bấm “Lưu dữ liệu vào lô”');
+}
+/* nội dung sẽ ghi: lô còn thay đổi chưa lưu giữ bản đã lưu (chưa có bản đã lưu — lô mới — thì ghi như hiện tại) */
+function dbGhi() {
+  if (!loDirty.size || !savedSnap) return db;
+  const out = Object.assign({}, db, {rs: {}});
+  Object.entries(db.rs || {}).forEach(([oid, o]) => { if (!o || typeof o !== 'object') { out.rs[oid] = o; return; } const fs = {}; Object.entries(o.forests || {}).forEach(([fid, f]) => { const b = loDirty.has(f && f.id || fid) && savedSnap.forests.get(f && f.id || fid); fs[fid] = b ? JSON.parse(b.json) : f; }); out.rs[oid] = Object.assign({}, o, {forests: fs}); });
+  return out;
+}
+/* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu */
+function loHoan(fid) {
+  if (!loDirty.has(fid)) return false; loDirty.delete(fid);
+  const b = savedSnap && savedSnap.forests.get(fid); if (!b) return true;
+  Object.values(db.rs || {}).forEach(o => { const k = Object.keys(o.forests || {}).find(x => (o.forests[x].id || x) === fid); if (k) { const f = o.forests[k], v = JSON.parse(b.json); Object.keys(f).forEach(x => { delete f[x]; }); Object.assign(f, v); } });
+  return true;
+}
 window.__saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
 /* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
 function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); })); }   // tại chỗ: nơi đang giữ tham chiếu lô vẫn đúng
@@ -63,22 +87,23 @@ async function saveOnce() {
   chuanHoaDb();
   let r = null, snap = null;
   if (saveCache && HB.saveDelta) {
-    snap = HAKDelta.snapshot(db);
+    const W = dbGhi(); snap = HAKDelta.snapshot(W);
     if (!snap.dup) {
       const d = HAKDelta.diff(saveCache.snap, snap);
-      d.rev = saveCache.rev; d.side = HAKDelta.side(db); d.counts = snap.counts;
+      d.rev = saveCache.rev; d.side = HAKDelta.side(W); d.counts = snap.counts;
       r = await HB.saveDelta(d);
       if (r && !r.ok && (r.code === 'STALE' || r.code === 'MISMATCH')) { window.__saveStats.fallback++; r = null; }
       else if (r && r.ok) window.__saveStats.delta++;
     }
   }
   if (!r) {
-    snap = HAKDelta.snapshot(db);                    // chụp lại ngay trước khi gửi: db có thể đã đổi trong lúc chờ
-    r = await HB.save(db);
+    const W = dbGhi(); snap = HAKDelta.snapshot(W);   // chụp lại ngay trước khi gửi: db có thể đã đổi trong lúc chờ
+    r = await HB.save(W);
     if (r && r.ok) window.__saveStats.full++;
   }
   window.__saveStats.last = r && r.ok ? r.mode || 'full' : 'error';
   saveCache = r && r.ok && r.rev && !snap.dup ? {rev: r.rev, snap} : null;
+  if (r && r.ok && !snap.dup) savedSnap = snap;
   return r;
 }
 function storeSave() { const p = saveChain.then(saveOnce, saveOnce); saveChain = p.catch(() => {}); return p; }
@@ -97,7 +122,7 @@ function persist() {
     saveTimer = setTimeout(flushSave, 250);
     return;
   }
-  try { localStorage.setItem(KEY, JSON.stringify(db)); storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
+  try { localStorage.setItem(KEY, JSON.stringify(dbGhi())); storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
   catch (e) { storeOk = false; showSave('Trình duyệt không lưu được', true); }
 }
 if (HB) window.addEventListener('beforeunload', () => { if (saveTimer) { clearTimeout(saveTimer); flushSave(); } });
@@ -110,6 +135,7 @@ let xtab = 'hd';     // trong tab Xuất hồ sơ: hd | ld | vc | fsc | all
 let ftab = 'finfo';  // trong rừng: finfo | nc | dx | xuat
 let notes = [];      // thông báo tạm thời
 let view = 'owner';  // owner | norm (định mức BHLĐ)
+try { savedSnap = HAKDelta.snapshot(db); } catch (e) { savedSnap = null; }   // bản đã lưu lúc mở app
 if (migrated) { persist(); notes.push({text: 'Đã chuyển dữ liệu sang cấu trúc Rừng. Dữ liệu cũ vẫn được giữ trong trình duyệt.', kind: 'ok'}); }
 
 const note = (text, kind = 'ok') => { notes.push({text, kind}); render(); };

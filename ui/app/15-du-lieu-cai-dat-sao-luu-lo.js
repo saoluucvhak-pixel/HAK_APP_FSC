@@ -165,7 +165,7 @@ async function restoreAll(file) {
     if (!o || typeof o !== 'object' || !o.rs) throw new Error('File không đúng định dạng sao lưu.');
     if (HB) return importWithPreview(withDefaults(o.v === 2 ? o : migrateV1(o)));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
-    db = withDefaults(o.v === 2 ? o : migrateV1(o)); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); persist(); cur = null; curF = null;
+    db = withDefaults(o.v === 2 ? o : migrateV1(o)); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); savedSnap = null; persist(); cur = null; curF = null;
     note('Đã khôi phục ' + Object.keys(db.rs).length + ' hồ sơ chủ rừng.');
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
 }
