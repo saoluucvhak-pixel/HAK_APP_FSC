@@ -339,6 +339,51 @@ jobs:
           $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ($r.version -ne $ver) { throw "Sau khi cài đè vẫn chạy phiên bản $($r.version), mong đợi $ver" }
           Copy-Item $out dist/smoke-upgrade1438.json
+      - name: Nâng cấp từ bản dựng 2.0.0 (dựng từ commit cố định b8808be, dữ liệu do chính bản đó tạo) lên bản mới, kiểm tra dữ liệu (SQLite v6 sang v7, danh mục lao động và xe)
+        shell: pwsh
+        env:
+          OLD_SHA: b8808be5bd7fe88b3543971efa58d0e410d0e44f
+        run: |
+          . ./scripts/ci-install.ps1
+          # dựng bộ cài của đúng commit 2.0.0 ở thư mục riêng (cùng máy chạy, cùng Electron của commit đó)
+          $oldSrc = Join-Path $env:RUNNER_TEMP 'src-200'
+          git fetch -q --depth 1 origin $env:OLD_SHA
+          if ($LASTEXITCODE -ne 0) { Write-Host "::warning::Không tải được commit $env:OLD_SHA (đã bị dọn) nên bỏ qua bước nâng cấp từ bản dựng 2.0.0. Hãy cập nhật bước này."; exit 0 }
+          git worktree add -f $oldSrc FETCH_HEAD
+          Push-Location $oldSrc
+          npm ci --silent; if ($LASTEXITCODE -ne 0) { throw 'npm ci của bản 2.0.0 lỗi' }
+          npm run build:html; if ($LASTEXITCODE -ne 0) { throw 'build:html của bản 2.0.0 lỗi' }
+          npm run dist; if ($LASTEXITCODE -ne 0) { throw 'dựng bộ cài bản 2.0.0 lỗi' }
+          $oldSetup = (Get-ChildItem dist -Filter '*Setup*.exe' | Select-Object -First 1).FullName
+          Pop-Location
+          if (-not $oldSetup) { throw 'Không thấy bộ cài của bản 2.0.0 vừa dựng' }
+          $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade200'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade200-userdata'
+          $ec = Install-Setup -Setup $oldSetup -Dir $dir -Tag 'upgrade-v200-old'
+          if ($ec -ne 0) { throw "Cài bản 2.0.0 lỗi, mã thoát $ec" }
+          $oldApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          if (-not $oldApp) { throw 'Không thấy file chạy của bản 2.0.0 sau khi cài' }
+          $env:HAKQN_USERDATA = $ud; $env:HAKQN_SMOKE = Join-Path $env:RUNNER_TEMP 'smoke-v200-old.json'; $env:HAKQN_SMOKE_PHASE = 'create'
+          $pr = Start-Process -FilePath $oldApp.FullName -PassThru
+          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'Bản 2.0.0: ứng dụng không tự thoát sau 120 giây' }
+          if ($pr.ExitCode -ne 0) { throw "Bản 2.0.0 không tạo được dữ liệu thử (mã thoát $($pr.ExitCode))" }
+          $oldRes = Get-Content $env:HAKQN_SMOKE -Raw | ConvertFrom-Json
+          if ($oldRes.version -ne '2.0.0') { throw "Bản cũ chạy không đúng phiên bản: $($oldRes.version)" }
+          # cài đè bản mới lên đúng thư mục
+          $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
+          $ec = Install-Setup -Setup $setup -Dir $dir -Tag 'upgrade-v200-new'
+          if ($ec -ne 0) { throw "Cài đè bản mới lên 2.0.0 lỗi, mã thoát $ec" }
+          $newApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          $out = Join-Path $env:RUNNER_TEMP 'smoke-upgrade200.json'
+          $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = 'verify'
+          $pr = Start-Process -FilePath $newApp.FullName -PassThru
+          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'Nâng cấp 2.0.0: ứng dụng không tự thoát sau 120 giây' }
+          if (-not (Test-Path $out)) { throw "Nâng cấp 2.0.0: không có file kết quả (mã thoát $($pr.ExitCode))" }
+          Get-Content $out -Raw
+          if ($pr.ExitCode -ne 0) { throw "Nâng cấp 2.0.0: kiểm tra dữ liệu thất bại (mã thoát $($pr.ExitCode))" }
+          $r = Get-Content $out -Raw | ConvertFrom-Json
+          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($r.version -ne $ver) { throw "Sau khi cài đè vẫn chạy phiên bản $($r.version), mong đợi $ver" }
+          Copy-Item $out dist/smoke-upgrade200.json
       - name: Thu thập chẩn đoán cài đặt (chỉ khi một bước ở trên thất bại)
         if: failure()
         shell: pwsh
