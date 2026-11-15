@@ -1,5 +1,24 @@
 # Nhật ký thay đổi
 
+## Chưa phát hành — toàn vẹn hồ sơ đã chốt và nghiệm thu in đợt 2 (mốc tái hiện cce3907)
+
+### Sửa lỗi
+| # | Lỗi (trước) | Sửa (sau) |
+| --- | --- | --- |
+| T1 | Chốt lô rồi đổi riêng `f.chot.hash`: `nguyenVen()` vẫn trả `true` (dấu vân tay của gói không được kiểm) | `src/vongdoi.js` kiểm **riêng hai điều kiện**: (1) gói lưu lúc chốt đúng cấu trúc và dấu vân tay tính từ **chính chuỗi gói** khớp `chot.hash`; (2) dữ liệu nghiệp vụ hiện tại khớp bản chụp. Đổi `chot.hash` → “Dấu vân tay không khớp” |
+| T2 | `f.chot.goi = "{"` (JSON cắt dở): `nguyenVen()` ném `SyntaxError`, màn hình lô hỏng | Không bao giờ ném lỗi: “Gói hỏng (JSON)”; lô vẫn mở được ở chế độ chỉ đọc, các lô khác không ảnh hưởng |
+
+Kết quả kiểm (`kiemToanVen`): `nguyen-ven`, `chua-chot`, `thieu-goi`, `thieu-hash`, `json-hong`, `sai-cau-truc`, `hash-khong-khop`, `du-lieu-khac`; `nguyenVen()` vẫn là boolean cho nơi cũ. Dữ liệu so bằng chuỗi chuẩn (khóa sắp thứ tự) sau khi chuẩn hóa cấu trúc đội, bỏ các khóa vòng đời (`chot`, `luuTru`, `dung`, `nhatKy`): gói do bản cũ tạo (lô chưa có đội, nhật ký trong gói) không bị báo nhầm; ghi nhật ký, lưu trữ sau khi chốt vẫn là nguyên vẹn.
+
+### Thay đổi hành vi người dùng cần biết
+- **Lô đã chốt có gói bất thường:** dải đỏ nêu mã lô, phiên bản chốt và lý do; lô vẫn mở chỉ đọc để đối chiếu. Phần mềm **không** tự mở khóa, tự chốt lại hay tính dấu vân tay mới cho gói cũ (`hashDL` chỉ ghi khi gói qua kiểm). Mở khóa vẫn bắt buộc lý do và ghi nhật ký.
+- **Khôi phục một lô / khôi phục toàn bộ:** lô đã chốt trong file có gói hỏng, dấu vân tay sai, sai cấu trúc hoặc dữ liệu khác bản chụp → dừng ở bước xem trước (không có nút ghi; khôi phục toàn bộ khóa mọi cách xử lý, kể cả thay toàn bộ); tiến trình chính cũng từ chối (mã `GOI_HONG`) trước khi sao lưu hay ghi. Hồ sơ trên máy, các lô khác và file nguồn giữ nguyên; chọn bản sao lưu khác để đối chiếu.
+- **Sao lưu một lô có gói hỏng:** vẫn ghi file (để đối chiếu) nhưng báo rõ file đó sẽ không khôi phục được.
+
+### Kiểm thử
+- `tests/toanven.test.js` (12 ca, gồm hồi quy T1, T2 và khôi phục thất bại); `scripts/e2e-toanven.js` (Electron + SQLite thật: hỏng gói ngay trong SQLite, đóng mở lại, sáu loại gói sao lưu, gói bản cũ, khôi phục toàn bộ).
+- `scripts/e2e-nghiemthu-dot2.js`: nghiệm thu in đợt 2 (BM-08, 09, 10, 14) bằng dữ liệu đã lưu — ca in cả bộ trên giấy trắng; ca in nền → xác nhận → đóng mở → bổ sung → đóng mở → in đè đúng mẫu, đúng đội xe; bảng kê BM-09 trang riêng; không có “BẢN NHÁP”; đổi PDF bằng LibreOffice và chồng ảnh nền + in đè (CI tải lên artifact).
+
 ## Chưa phát hành — sửa lỗi A1–A4 và hiệu năng B5–B7 (nền: nhánh sửa năm mục)
 
 ### Sửa lỗi
