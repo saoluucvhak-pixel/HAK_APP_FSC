@@ -82,7 +82,7 @@ const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml'
   d = clone(BASE); lotOf(d).info.donGia = 340000; lotOf(d).info.donGiaTan = {'Công nhân khai thác': 330000, 'Công nhân cưa': 380000}; await load(d, 'finfo');
   { const h = await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc);
     ok('hồ sơ cũ có đơn giá Tổ trưởng (SQLite v6): không còn ô cũ ở Thông tin rừng; giá 340.000 chuyển vào bảng đơn giá theo vị trí của đội và donGia bị bỏ', !/Đơn giá Tổ trưởng của hồ sơ cũ/.test(await w.innerText('#main')) && !(await w.$('#forestForm [name=donGia]')) && h.donGiaTan['Tổ trưởng'] === 340000 && !('donGia' in h), JSON.stringify(h)); }
-  await w.click('#forestForm [type=submit]'); await w.waitForTimeout(500);
+  await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(500);
   ok('lưu Thông tin rừng: giá Tổ trưởng vẫn ở bảng đơn giá của đội, không sinh lại donGia', (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc.donGiaTan['Tổ trưởng'])) === 340000 && !(await w.evaluate(() => 'donGia' in window.hak.loadSync().db.rs.own1.forests.fa.info)));
 
   // 6. vị trí của định mức nhân công có trong bảng đơn giá

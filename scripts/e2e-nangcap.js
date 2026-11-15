@@ -19,7 +19,7 @@ const openForest = async (w, fid, ftab) => { await w.click('[data-open=own1]'); 
   const info = await w.evaluate(() => { const r = window.hak.loadSync(); return {schema: r.schema, version: r.version}; });
   const bk = path.join(dir, 'backups'), backups = fs.existsSync(bk) ? fs.readdirSync(bk) : [];
   ok('nâng cấp cấu trúc có sao lưu tự động trước khi đổi', backups.some(f => /^truoc-nang-cap-v2-len-v\d+-.*\.sqlite$/.test(f)), JSON.stringify(backups));
-  ok('phiên bản ứng dụng mới', /^1\.[2-9]/.test(info.version), info.version);
+  ok('phiên bản ứng dụng mới', /^(1\.[2-9]|[2-9]\.)/.test(info.version), info.version);
   let db = await dbOf(w); const o = db.rs.own1, F = o.forests;
   ok('một chủ ba lô còn đủ', Object.keys(db.rs).length === 1 && o.info.ten === 'CHỦ RỪNG CŨ' && Object.keys(F).length === 3);
   ok('số bản ghi cũ còn đủ (xe 2+2+2, phiếu 2+1+3)', ['f1', 'f2', 'f3'].map(k => F[k].dx.length).join() === '2,2,2' && ['f1', 'f2', 'f3'].map(k => F[k].pc.length).join() === '2,1,3');

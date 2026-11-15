@@ -30,7 +30,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   await w.waitForSelector('#side');
   const clear = () => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); };
   const exp = async (kind, ext) => { clear(); await w.click(`button[data-act=dl][data-kind=${kind}]`); for (let i = 0; i < 80; i++) { const f = fs.existsSync(out) && fs.readdirSync(out).find(x => x.endsWith(ext)); if (f) { await w.waitForTimeout(300); return path.join(out, f); } await w.waitForTimeout(100); } throw new Error('không có file ' + ext + ' cho ' + kind); };
-  const save = async () => { await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(250); };
+  const save = async () => { await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(250); };
   const opts = () => w.$$eval('#luongForm [name=hinhThucLuong] option', o => o.map(x => x.value));
   const price = async (pre, v) => { for (let k = 0; k < 3; k++) await w.fill(`#luongForm [name=${pre}${k}]`, String(v[k])); };
 
@@ -41,9 +41,9 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   await w.click('[data-tab=rung]'); await w.click('text=+ Rừng mới');
   await w.fill('#forestForm [name=diaDiem]', 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng'); await w.fill('#forestForm [name=cuLy]', '45');
   await w.fill('#forestForm [name=lat]', '15.9'); await w.fill('#forestForm [name=lng]', '108.1'); await w.fill('#forestForm [name=dienTich]', '2,5'); await w.fill('#forestForm [name=dinhMucTanHa]', '80');
-  await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026'); await w.click('#forestForm button[type=submit]');
+  await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026'); await w.$eval('#forestForm', f => f.requestSubmit());
   await w.click('[data-ftab=nc]'); await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(500); await stSave(w);
-  await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.click('#vcForm button[type=submit]');   // vận chuyển: để gói “tải tất cả” đủ điều kiện
+  await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.$eval('#vcForm', f => f.requestSubmit());   // vận chuyển: để gói “tải tất cả” đủ điều kiện
   await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.click('[data-ftab=nc]');

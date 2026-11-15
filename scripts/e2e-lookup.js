@@ -68,7 +68,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   // Ô đã có dữ liệu khác: bắt buộc chọn
   // một cách lưu: phiếu nhập lại còn ở bản nháp (xe chưa có) thì nút Lưu của khung bị chặn cùng cả lô — bỏ bản nháp phiếu trước bước sau
   await w.evaluate(() => { const b = document.querySelector('[data-act=stDiscard]'); if (b) b.click(); }); await w.waitForTimeout(300);
-  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=diaDiem]', 'Địa điểm do người dùng nhập'); await w.click('#forestForm button[type=submit]');
+  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=diaDiem]', 'Địa điểm do người dùng nhập'); await w.$eval('#forestForm', f => f.requestSubmit());
   await w.click('#forestForm [data-act=lkOpen]'); await w.fill('#lkQ', '1001/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(150);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.click('[data-act=lkApply]'); await w.waitForTimeout(150);
   ok('ô đã có giá trị khác: chưa chọn thì không cho lưu', /Chưa lưu: Rừng: chọn giữ hay thay “Địa điểm khai thác/.test(await w.innerText('#lkBody')));

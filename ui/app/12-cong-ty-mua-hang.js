@@ -117,7 +117,7 @@ function panelHdvc(rec) {
       '<label><span>Chi phí khác (trống = chung)</span><input name="vcChiPhi" value="' + esc(e.vcChiPhi || '') + '"></label>' +
       '<label><span>Số biên bản xác nhận KL (trống = chung)</span><input name="pcSo" value="' + esc(e.pcSo || '') + '"></label>' +
       '<label><span>Ngày lập xác nhận KL (trống = chung)</span><input name="pcNgay" value="' + esc(e.pcNgay || '') + '"></label>' +
-      '<div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Lưu đội xe</button>' + (!xe ? '<button class="btn danger sm" type="button" data-act="xoaHd">Xóa đội xe</button>' : '') + '</div></form>';
+      '<div class="row" style="grid-column:1/-1"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (!xe ? '<button class="btn danger sm" type="button" data-act="xoaHd">Xóa đội xe</button>' : '') + '</div></form>';
   }
   return html + '</div>';
 }

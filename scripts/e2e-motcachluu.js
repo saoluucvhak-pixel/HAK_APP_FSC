@@ -46,7 +46,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 7. nút Lưu của một khung = lưu cả lô (kể cả thay đổi tại chỗ trước đó)
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
   await w.fill('#doiKT input[data-exp=uqSo]', '55'); await w.dispatchEvent('#doiKT input[data-exp=uqSo]', 'change'); await w.waitForTimeout(200);
-  await w.fill('#doiForm [name=dienTich]', '1,5'); await w.click('#doiForm [type=submit]'); await w.waitForTimeout(500); d = await db();
+  await w.fill('#doiForm [name=dienTich]', '1,5'); await w.$eval('#doiForm', f => f.requestSubmit()); await w.waitForTimeout(500); d = await db();
   ok('nút “Lưu đội” lưu cả lô: diện tích đội 1,5 và số giấy ủy quyền 55 cùng được ghi', d.rs.own1.forests.fa.doi[0].dienTich === 1.5 && d.rs.own1.forests.fa.doi[0].exp.uqSo === '55', JSON.stringify(d.rs.own1.forests.fa.doi[0]));
   // 8. rời lô khi còn thay đổi: hỏi; chọn Lưu và tiếp tục
   await w.fill('#doiKT input[data-exp=ntSo]', '66'); await w.dispatchEvent('#doiKT input[data-exp=ntSo]', 'change'); await w.waitForTimeout(200);

@@ -42,7 +42,7 @@ const BAD = [[/\bNaN\b/, 'NaN'], [/\bundefined\b/, 'undefined'], [/\bnull\b/, 'n
   await w.click('[data-open=own1]'); await check('Chủ rừng');
   await w.click('[data-tab=rung]'); await check('Các rừng');
   await w.click('[data-forest=fa]');
-  for (const [k, label] of [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công'], ['dx', 'Vận chuyển và phiếu cân']]) { await w.click('[data-ftab=' + k + ']'); await check(label + ' (R-A)'); if (k === 'finfo') ok('ô số thập phân ở Thông tin rừng hiện kiểu Việt Nam (dấu phẩy): khối lượng 29,75; tọa độ giữ dấu chấm', (await w.inputValue('#forestForm [name=khoiLuong]')) === '29,75' && (await w.inputValue('#forestForm [name=lat]')) === '15.6'); }
+  for (const [k, label] of [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công'], ['dx', 'Vận chuyển và phiếu cân']]) { await w.click('[data-ftab=' + k + ']'); await check(label + ' (R-A)'); if (k === 'finfo') ok('ô số thập phân ở Thông tin rừng hiện kiểu Việt Nam (dấu phẩy): khối lượng 29,75; tọa độ giữ dấu chấm', /29,75 tấn/.test(await w.innerText('#klCu')) && (await w.inputValue('#forestForm [name=lat]')) === '15.6'); }
   await w.click('[data-ftab=xuat]');
   for (const x of await w.$$eval('[data-xtab]', b => b.map(e => e.dataset.xtab))) { await w.click('[data-xtab=' + x + ']'); await check('Xuất hồ sơ · ' + x); }
   await w.click('[data-forest=fb]'); for (const k of ['finfo', 'nc', 'dx', 'xuat']) { await w.click('[data-ftab=' + k + ']'); await check('Rừng trống R-B · ' + k); }

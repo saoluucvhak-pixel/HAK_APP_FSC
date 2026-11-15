@@ -61,8 +61,10 @@ let saveCache = null, saveChain = Promise.resolve();
  * Lưu danh mục, cài đặt, thông tin chủ rừng vẫn ghi ngay nhưng KHÔNG kéo theo thay đổi chưa lưu của lô (lô đó ghi theo bản đã lưu). */
 const loDirty = new Set();   // id lô còn thay đổi chưa lưu ngoài các bảng nháp
 let savedSnap = null;        // ảnh chụp đúng nội dung đã ghi thành công gần nhất (bản đã lưu của từng lô)
+let nhapKhung = null;   // đang áp dụng một khung vào bản nháp: chỉ đánh dấu “Chưa lưu” khi dữ liệu của lô THỰC SỰ đổi (sự kiện change có thể chạy khi ô không đổi gì)
 function persistLo(f) {
   f = f || curForest(); if (!f) return;
+  if (nhapKhung) { nhapKhung.can = true; return; }
   if (!savedSnap) savedSnap = (saveCache && saveCache.snap) || HAKDelta.snapshot(dbGhi());
   loDirty.add(f.id); showSave('Lô ' + ((f.info || {}).maRung || '') + ' còn thay đổi chưa lưu — bấm “Lưu dữ liệu vào lô”');
   if (typeof loBar === 'function') {   // hiện thanh “Chưa lưu” ngay, không vẽ lại cả trang (giữ ô đang nhập)

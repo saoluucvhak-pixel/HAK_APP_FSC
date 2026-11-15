@@ -52,6 +52,16 @@ function exportCheck(job) {
   if (!(job.pc || []).length) add('doi', 'Phiếu cân', 'Chưa nạp phiếu cân của lô.', '', {ftab: 'dx', focus: 'pc'});
   return {items, chan: items.filter(x => x.muc === 'chan'), doi: items.filter(x => x.muc === 'doi'), g, tomTat: HAKKiemTra.tomTat(items), bieuMauBiChan: HAKKiemTra.bieuMauBiChan(items)};
 }
+/* Đường dẫn: Chủ rừng › Lô › màn đang xem › Đội / Đội xe đang chọn (nhân công thuộc đội; xe thuộc đội xe) */
+function loCrumb(job) {
+  const o = curOwner(), f = curForest(); if (!o || !f) return '';
+  const man = {finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', kt: 'Kiểm tra trước khi xuất', xuat: 'Xuất hồ sơ'}[ftab] || '';
+  let doi = '';
+  if (ftab === 'nc' && job.doi && curTeam(f)) { const t = curTeam(f); doi = 'Đội “' + esc(trim(t.ten) || 'Đội ' + (job.doi.findIndex(d => d.id === t.id) + 1)) + '”'; }
+  if (ftab === 'dx' && job.hdvc) { const h = job.hdvc.find(x => x.id === curHd); if (h) { const k = job.hdvc.indexOf(h); doi = 'Đội xe “' + esc(trim(h.ten) || 'Đội xe ' + (k + 1)) + '”'; } }
+  const part = [['Chủ rừng “' + esc(o.info.ten || '') + '”', ''], ['Lô <b>' + esc(f.info.maRung || '(chưa có mã)') + '</b>', 'finfo'], man ? [man, ftab] : null, doi ? [doi, ''] : null].filter(Boolean);
+  return '<nav class="crumb" id="loCrumb" aria-label="Đường dẫn" style="font-size:13px;color:var(--mut,#667);margin:2px 0 6px">' + part.map(([t, k], i) => (i ? ' <span aria-hidden="true">›</span> ' : '') + (k && i < part.length - 1 ? '<button type="button" class="linkbtn" data-ftab="' + k + '">' + t + '</button>' : '<span>' + t + '</span>')).join('') + '</nav>';
+}
 function panelKiemTra(job) {
   const c = exportCheck(job), nhom = list => [...new Set(list.map(x => x.nhom))];
   const block = (title, cls, list) => !list.length ? '' : '<div class="card"><h3 style="margin:0 0 8px">' + title + ' (' + list.length + ')</h3>' + nhom(list).map(n => '<div style="margin-bottom:10px"><b>' + esc(n) + '</b>' +
@@ -76,7 +86,7 @@ function panelRung(own) {
   const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'], ['xuat', 'Xuất hồ sơ']];
   return list +
     '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
-    panelTienDo(job) + loBar() + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
+    loCrumb(job) + panelTienDo(job) + loBar() + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
     (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(stJob(job)) : ftab === 'dx' ? panelDX(stJob(job)) + panelPhieuCan(stJob(job)) : ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu</b>.' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + panelXuat(job));
 }
 
@@ -149,7 +159,7 @@ function panelForest(f) {
     klDoiField(f) + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p>' +
     /* Ô cũ “Đơn giá giao khoán Tổ trưởng”: chỉ còn hiện ở hồ sơ cũ đã có giá trị (để hợp đồng đã in không đổi). Lô mới nhập đơn giá Tổ trưởng ở bảng đơn giá theo vị trí (tab Nhân công);
      * đơn giá khoán của cả tổ luôn suy ra từ định biên. Xóa trống ô này thì ô biến mất và hợp đồng chuyển sang cách tính mới. */
-    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
+    '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
 
 const luongOptions = (direct, cur) => {
@@ -171,7 +181,7 @@ function panelLuong(rec) {
     '<label style="grid-column:1/-1"><span>Cơ sở tính đơn giá</span><select name="hinhThucLuong">' + luongOptions(direct, cur) + '</select></label>' +
     grp('sanluong', rate('dt_', i.donGiaTan, 'đ/tấn', true)) + grp('ha', rate('ha_', i.donGiaHa, 'đ/ha')) + grp('ngaycong', rate('dn_', i.donGiaNgay, 'đ/công')) +
     '<label><span>Hợp đồng lao động từ ngày (dd/mm/yyyy)</span><input name="ngayBDLD" value="' + esc(i.ngayBDLD ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
-    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số</button></div></form></div>';
+    '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></div></form></div>';
 }
 
 const vcOptions = cur => {
@@ -191,7 +201,7 @@ function panelVc(rec) {
     '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + (HAKCuLy.eff(i).nguon === 'tự tính' ? ', đường chim bay' : '') + ')' : 'chưa có') + '</b> · xem và sửa ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;}">tab Thông tin rừng → Cự ly vận chuyển (km)</button></div>' +
     '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
-    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số vận chuyển</button></div></form>' +
+    '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></div></form>' +
     '<h4 style="margin:12px 0 4px">Số văn bản chung của các đội xe <span class="mut" style="font-weight:400">· đội xe đặt số riêng ở bảng Đội xe bên dưới; để trống thì in dòng chấm</span></h4>' +
     expInputs([['soVC', 'Số HĐ vận chuyển (phần số hoặc số đầy đủ)', 'năm lấy từ ngày ký các hợp đồng của lô'], ['vcChiPhi', 'HĐVC: chi phí khác (cầu đường, bốc xếp, thuế)', 'trống = dòng chấm'],
       ['pcSo', 'Xác nhận KL vận chuyển: số biên bản', 'năm lấy từ ngày lập biên bản'], ['pcNgay', 'Xác nhận KL, thanh toán: ngày lập', 'dd/mm/yyyy'],
@@ -213,7 +223,7 @@ function panelGiay(f) {
     '<button type="button" class="btn ghost sm" data-act="addGiay">+ Thêm giấy tờ</button></div>' +
     '<p class="mut">Chỉ lưu thông tin giấy tờ (loại, số, ngày cấp, cơ quan cấp), không lưu file scan.</p>' +
     '<form id="giayForm"><div id="giayList">' + (list.map(giayRowHtml).join('') || '<p class="mut">Chưa có giấy tờ.</p>') + '</div>' +
-    '<button class="btn" type="submit">Lưu giấy tờ</button></form></div>';
+    '<button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></form></div>';
 }
 
 let normSel = 'b';   // bản định mức đang xem/sửa ('b' = bản gốc, 'i0', 'i1'… = các bản hiệu lực từ ngày muộn hơn)

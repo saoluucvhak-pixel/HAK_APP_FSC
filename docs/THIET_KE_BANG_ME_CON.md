@@ -203,3 +203,18 @@ Chưa làm (giai đoạn 5): hạn giấy tờ xe so với ngày phiếu cân; p
 **Một cách lưu cho lô** (như chứng từ ERP): mọi thay đổi trong lô vào bản nháp; một nút "Lưu dữ liệu vào lô" (nút Lưu của từng khung làm cùng việc) lưu cả lô cùng các bảng nháp; "Bỏ thay đổi" về bản đã lưu; thanh "Chưa lưu" ở mọi tab của lô; xuất/in khóa, rời lô và đóng app hỏi khi còn thay đổi. Lưu danh mục, cài đặt, chủ rừng ghi ngay nhưng không kéo theo thay đổi chưa lưu của lô.
 
 Kiểm thử: `scripts/e2e-doikt.js`, `e2e-hdvc.js`, `e2e-phieudoi.js`, `e2e-motcachluu.js`, `tests/model.test.js`; so bản in với bản giai đoạn 2: 118/118 giống từng byte (bộ dữ liệu có khối lượng nhập).
+
+## 17. Giai đoạn 5 — hoàn tất khối lượng, xe và nhập Excel theo bảng con (đã làm)
+
+- **Hạn giấy tờ xe theo ngày phiếu cân** (`src/giayto.js`): so kiểm định, bảo hiểm, GPLX của chính xe chạy phiếu với ngày cân của phiếu (cân đúng ngày hết hạn vẫn hợp lệ; không so với hôm nay). Phiếu chạy khi giấy tờ hết hạn → lỗi chặn **BM-09, BM-10 của đội xe đó** (các đội xe khác vẫn xuất). Màn xe giữ cảnh báo "sắp hết hạn" theo hôm nay.
+- **Phiếu cân → xe → đội xe**: đội xe suy ra từ biển số (chỉ xem, hiện dưới biển số; lô một đội xe không hiện); khung gán đội hàng loạt có lọc theo đội xe; biển không thuộc xe nào của lô và xe thuộc đội xe chưa có người ký đều báo.
+- **Nhập Excel theo bảng con**: nhân công vào đội đang chọn (cột Đội tùy chọn, tên lạ → lỗi dòng); xe có cột **Đội xe** (khớp tên đội xe, tên đơn vị hoặc tên người ký); phiếu cân có cột **Đội**. `src/xlsxmau.js` và `tests/xlsxmau.test.js` cập nhật; file cũ không có cột mới nạp như trước. Nạp lại cùng file không bị tính là "cập nhật" (chữ ở cột gợi ý chỉ dùng cho dòng mới).
+- **Danh mục người lao động** (`HAKModel.nguoiDanhMuc`): gộp theo CCCD 12 số của mọi lô, lô có ngày bắt đầu khai thác mới nhất thắng; tính từ dữ liệu (không bảng riêng), chọn khi thêm nhân công, thông tin chụp lại trong lô.
+- **Báo cáo**: Sản lượng theo đội (đội, số phiếu, tấn, đơn giá bình quân đ/tấn, thành tiền, phiếu chưa gán), Vận chuyển theo đội xe (người ký, số xe, số chuyến, tấn, cước, thành tiền), Danh sách lao động có cột Đội.
+
+## 18. Giai đoạn 6 — dọn trường cũ, một bộ kiểm tra, giao diện một cách lưu (đã làm; xem CHANGELOG.md)
+
+- **SQLite v6** (`src/store.js`, `HAKModel.xoaTruongCu`): bỏ `soDoi`, `khoiLuong` nhập tay (→ `klHoSoCu`), `klDoi` (→ `doi[].klHoSoCu`), `donGia` Tổ trưởng cũ (→ bảng đơn giá của đội), cước bậc (→ tấn/km + `bacCu`), chữ ở cột Đội / Đội xe của dòng đã có đội. Chạy một chiều sau khi sao lưu file; chạy lại không đổi gì. `ensureForest` cũng áp dụng (nhập, khôi phục sao lưu cũ). Tự kiểm `HAKQN_CHECK_MODEL` kiểm "dữ liệu đã chuẩn hóa" sau mỗi lần lưu; bất biến "dựng lại dạng cũ giống hệt" thay bằng test chuyển dữ liệu từng trường (`tests/model.test.js`, `tests/store.test.js`).
+- **So bản in** (`scripts/so-ban-in.js --root <mã> --out a.json`, rồi `--so a.json b.json`): băm `document.xml` của mọi .docx trong gói "Toàn bộ hồ sơ" của 8 bộ lô thử. Kết quả trước/sau v6: giống từng byte, trừ BM-01 (2.2), BM-08, BM-20 của lô còn đơn giá Tổ trưởng cũ (số tiền không đổi).
+- **Một bộ kiểm tra** (`src/kiemtra.js`): dạng mục chung {mức, nhóm, đối tượng, biểu mẫu bị chặn, nơi sửa}, `tomTat`, `bieuMauBiChan`, `lyDoChan`, `theoDoiTuong`; `exportCheck` sinh mục theo dạng này; màn Kiểm tra trước khi xuất hiện đối tượng và biểu mẫu bị chặn; bước Chuẩn bị của quy trình hồ sơ đọc số mục chặn từ đây. Chưa làm: chuyển các hàm quy tắc (`checkNC`, `checkDX`, `checkPC`, `gate`) sang hàm thuần trong `src/`.
+- **Giao diện**: breadcrumb; sửa ô ở các khung của lô vào bản nháp (sự kiện `change`), khung không còn nút Lưu riêng (giữ nút ẩn để Enter lưu), một nút "Lưu dữ liệu vào lô". Chưa làm: sắp xếp lại mọi màn đối tượng theo cùng bố cục.

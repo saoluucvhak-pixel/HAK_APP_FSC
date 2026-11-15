@@ -120,6 +120,15 @@ document.addEventListener('click', async e => {
   }
 });
 
+/* MỘT cách lưu cho lô: sửa một ô ở khung nào thì thay đổi vào BẢN NHÁP của lô (hiện thanh “Chưa lưu”); khung không còn nút Lưu riêng. Enter trong ô hoặc nút “Lưu dữ liệu vào lô” mới ghi SQLite. */
+const KHUNG_LO = {forestForm: 'saveForest', luongForm: 'saveLuong', vcForm: 'saveVc', giayForm: 'saveGiay', doiForm: 'saveDoi', hdForm: 'saveHd'};
+document.addEventListener('change', e => {
+  const t = e.target, fm = t && t.form; if (!fm || !KHUNG_LO[fm.id] || t.id === 'xeDm' || t.id === 'ncDm') return;
+  const fn = {saveForest, saveLuong, saveVc, saveGiay, saveDoi, saveHd}[KHUNG_LO[fm.id]]; if (!fn) return;
+  const f = curForest(), truoc = f ? JSON.stringify(f) : '';
+  nhapKhung = {can: false};
+  try { fn(fm, true); } finally { const can = nhapKhung.can; nhapKhung = null; if (can && f && JSON.stringify(f) !== truoc) persistLo(f); }
+});
 document.addEventListener('submit', e => {
   if (e.target.id === 'infoForm') { e.preventDefault(); saveInfo(e.target); }
   if (e.target.id === 'forestForm') { e.preventDefault(); saveForest(e.target); }

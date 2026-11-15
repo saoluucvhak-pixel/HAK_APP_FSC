@@ -451,3 +451,15 @@ Một lô có thể giao khoán cho **nhiều đội**, mỗi tổ trưởng là
 - Vị trí đang có người giữ tự có trong danh mục; không xóa được vị trí còn nhân công giữ.
 - Màn Định mức BHLĐ không còn ô thêm/xóa vị trí riêng.
 - Hợp đồng liệt kê đơn giá của các vị trí đang có người hoặc đã có đơn giá.
+
+## Bản 2.0: quy trình nhập theo đội, đội xe và phiếu cân
+
+1. **Lô** → tab **Nhân công**: bảng "Nhân công khai thác" liệt kê các **đội**; bấm một đội để chọn. Thêm người (tay, Excel — cột **Đội** tùy chọn, hoặc **Chọn người đã có** theo CCCD) vào đội đang chọn. Hình thức hợp đồng, đơn giá, số văn bản nằm ở đội.
+2. Tab **Vận chuyển**: **đội xe** (mỗi đội xe một hợp đồng vận chuyển). Thêm xe (chọn xe đã có trong danh mục hoặc nhập mới; cột **Đội xe** trong Excel tùy chọn) vào đội xe đang chọn; chọn người ký của đội (chủ xe, tài xế hoặc doanh nghiệp trong danh mục).
+3. **Phiếu cân**: nạp Excel hoặc tra cứu Google Sheets (cột **Đội** tùy chọn). Lô một đội: phiếu tự thuộc đội. Lô nhiều đội: gán ở từng dòng, hoặc **hàng loạt** theo ngày, biển số, số phiếu, **đội xe**. Bảng phiếu cân hiện đội xe dưới biển số.
+4. **Khối lượng chỉ lấy từ phiếu cân**: lô = tổng phiếu cân; đội = tổng phiếu của đội. Lô cũ còn **khối lượng hồ sơ cũ** (hiển thị ở Thông tin rừng) vẫn được dùng cho đến khi bấm **Bỏ số hồ sơ cũ, lấy theo phiếu cân**.
+5. **Một cách lưu**: sửa ô ở bất kỳ khung nào của lô đều vào bản nháp; thanh **Chưa lưu** có nút **Lưu dữ liệu vào lô** (Enter trong ô cũng lưu). Không còn nút Lưu riêng ở từng khung.
+6. **Kiểm tra trước khi xuất**: mỗi mục chặn ghi đối tượng (đội, đội xe, dòng) và **biểu mẫu bị chặn**. Phiếu cân chạy khi giấy tờ xe (kiểm định, bảo hiểm, GPLX) đã hết hạn chặn **BM-09, BM-10 của đội xe đó**; các đội xe khác vẫn xuất.
+7. **Xuất hồ sơ** theo đội và đội xe: BM-01, 05, 06, 07, 08, 14, 20 mỗi đội một bộ (số hợp đồng thêm .1, .2…); BM-04, 09, 10 mỗi đội xe một bộ.
+8. **Báo cáo**: Sản lượng theo đội khai thác, Vận chuyển theo đội xe, Danh sách lao động (có cột Đội).
+9. **Nâng cấp từ 1.4.x**: phần mềm tự sao lưu file dữ liệu trước khi chuyển; các trường cũ được chuyển như trong CHANGELOG.md.

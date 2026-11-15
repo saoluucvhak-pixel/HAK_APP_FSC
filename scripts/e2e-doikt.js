@@ -40,11 +40,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // đội 2: trực tiếp, ngày công
   await w.selectOption('#luongForm select[name=moHinhKy]', 'tructiep'); await w.selectOption('#luongForm select[name=hinhThucLuong]', 'ngaycong');
   await w.fill('#luongForm input[name=dn_0]', '500000'); await w.fill('#luongForm input[name=dn_1]', '350000');
-  await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(300); f = await dbNow();
+  await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(300); f = await dbNow();
   ok('lưu thông số khi đội 2 đang chọn: chỉ đội 2 đổi sang trực tiếp, ngày công; đội 1 vẫn giao khoán', f.doi[1].hinhThuc.moHinhKy === 'tructiep' && f.doi[1].hinhThuc.hinhThucLuong === 'ngaycong' && f.doi[0].hinhThuc.moHinhKy === 'giaokhoan' && f.doi[0].hinhThuc.hinhThucLuong !== 'ngaycong', JSON.stringify(f.doi.map(d => d.hinhThuc)));
   ok('tiêu đề thông số ghi rõ đội đang chọn', /đội “Đội Hai”/.test(await w.innerText('#luongForm >> xpath=..')));
   // diện tích đội
-  await w.fill('#doiForm input[name=dienTich]', '1,2'); await w.click('#doiForm button[type=submit]'); await w.waitForTimeout(300); f = await dbNow();
+  await w.fill('#doiForm input[name=dienTich]', '1,2'); await w.$eval('#doiForm', f => f.requestSubmit()); await w.waitForTimeout(300); f = await dbNow();
   ok('lưu diện tích của đội 2: 1,2 ha', f.doi[1].dienTich === 1.2, JSON.stringify(f.doi[1]));
   // Tổ trưởng cho đội 2 qua bản nháp (không ghi cột Đội → vào đội đang chọn)
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
