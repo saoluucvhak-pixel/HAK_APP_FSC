@@ -47,3 +47,10 @@ test('kiểu ô chuẩn: ngày gõ nhanh thành dd/mm/yyyy, chỉ khi ra ngày c
   assert.deepStrictEqual(['310226', '31/02/2026', 'abc', '', '  '].map(N.chuanHoaNgay), ['310226', '31/02/2026', 'abc', '', ''], 'ngày không có thật hoặc không nhận ra: giữ nguyên');
   assert.deepStrictEqual(['049 085 007 001', '049.085.007.001', '049085007001', '12', 'abc'].map(N.chuanHoaCccd), ['049085007001', '049085007001', '049085007001', '12', 'abc']);
 });
+
+test('giấy ủy quyền phải cùng ngày hoặc trước hợp đồng giao khoán: sau thì chặn; cùng ngày hoặc trước thì không báo', () => {
+  const j = u => Object.assign(base(), {exp: {ngayKy: '02/10/2026', uqNgay: u}});
+  const th = items => items.filter(x => x.nhom === 'Ủy quyền sau hợp đồng');
+  assert.equal(th(N.kiemTra(j('03/10/2026'))).length, 1); assert.equal(th(N.kiemTra(j('03/10/2026')))[0].kind, 'chan');
+  assert.equal(th(N.kiemTra(j('02/10/2026'))).length, 0); assert.equal(th(N.kiemTra(j('01/10/2026'))).length, 0); assert.equal(th(N.kiemTra(j(''))).length, 0);
+});

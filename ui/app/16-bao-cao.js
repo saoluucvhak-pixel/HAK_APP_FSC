@@ -27,10 +27,13 @@ function rpRecords(ownerFilter = rp.owner) {
       try { const pr = progressOf(jobView(o, f)); pct = pr.pct; thieu = pr.L.filter(x => !x.ok).map(x => ({label: x.label, hint: x.hint, warn: x.warn})); }
       catch (e) { thieu = [{label: 'Không tính được tiến độ', hint: e.message}]; }
       const i = f.info || {}, jr = jobView(o, f);   // đơn giá, cách tính theo đội của từng người (cấu trúc 2.0)
+      let vd = {trangThai: '', trangThaiTen: '', noIn: 0, chuaKy: 0};   // vòng đời lô (src/vongdoi.js): trạng thái, số mẫu còn nợ in, số mẫu đã in chưa ký
+      try { const q = qtEval(jr, f), tt = HAKVongDoi.trangThai(f, q.sum), a = q.sum.dot1, b = q.sum.dot2; vd = {trangThai: tt, trangThaiTen: HAKVongDoi.TEN[tt], noIn: a.chuaIn + a.doi + b.chuaIn + b.doi, chuaKy: (a.daIn - a.daKy) + (b.daIn - b.daKy)}; } catch (e) { /* không tính được: để trống */ }
       out.push({oid: o.id, fid: f.id, chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
         dienTich: i.dienTich, dinhMuc: i.dinhMucTanHa, khoiLuongTT: i.klHoSoCu, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
         diemDen: destOf(jobView(o, f)),
         pc: (f.pc || []).map(p => ({doiId: p.doiId, ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null, can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
+        trangThai: vd.trangThai, trangThaiTen: vd.trangThaiTen, noIn: vd.noIn, chuaKy: vd.chuaKy, ngayChot: f.chot ? f.chot.at : '', congTy: (i.muaHang && i.muaHang.ten) || '', soDoi: (f.doi || []).length, soDoiXe: (f.hdvc || []).length,
         nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu, doiList: rpDoiList(jr), hdList: rpHdList(jr),
         ncList: (f.nc || []).map(r => ({doi: tenDoiOf(jr, r.doiId), vaiTro: r.vaiTro, stt: r.stt, danhXung: r.danhXung, ten: r.ten, chucDanh: r.chucDanh, ngaySinh: r.ngaySinh, cccd: r.cccd, diaChi: r.diaChi, ngayCap: r.ngayCap, noiCap: r.noiCap, rate: rateOf(infoRow(jr, r), r)})), donVi: basisOf(jr.info).short,
         dxList: (f.dx || []).map((r, xi) => ({ky: kyBaoCao(jr, jr.dx[xi]), bienSo: r.bienSo, loaiXe: r.loaiXe, chuXe: r.chuXe, nguoiKy: r.nguoiKy, taiXe: r.taiXe, cccd: r.cccd, cccdTx: r.cccdTx, sdt: r.sdt, hanBH: r.hanBH, hanGplx: r.hanGplx}))});
@@ -40,6 +43,7 @@ function rpRecords(ownerFilter = rp.owner) {
 }
 /* ===== Bộ lọc thông minh (HAK Smart Filter) cho mẫu báo cáo: tìm nhanh, lô rừng, điều kiện riêng từng mẫu, chip điều kiện, bộ lọc đã lưu ===== */
 const RP_EXTRA = {
+  sohoso: {fields: [{key: 'trangThai', label: 'Trạng thái', opts: () => Object.values(HAKVongDoi.TEN)}, {key: 'nam', label: 'Năm khai thác', opts: () => rpUniq(rpRecords().map(r => (String(r.tuNgay || '').match(/\/(\d{4})$/) || [])[1]))}], flags: [['onlyNoIn', 'Chỉ lô còn mẫu chưa in hoặc chưa ký']], hint: 'mã lô, chủ rừng, địa điểm'},
   laodong: {fields: [{key: 'chucDanh', label: 'Chức danh', opts: () => chucDanhAll()}, {key: 'vaiTro', label: 'Vai trò', opts: () => ['Tổ trưởng', 'Công nhân']}], flags: [['onlyMinors', 'Chỉ người dưới 18 tuổi'], ['onlyMissing', 'Chỉ hồ sơ cần bổ sung (thiếu ngày sinh, CCCD)']], hint: 'họ tên, CCCD, chức danh, địa chỉ, mã rừng, chủ rừng'},
   danhsachxe: {fields: [{key: 'nguoiKy', label: 'Người ký HĐ vận chuyển', opts: () => ['Chủ xe', 'Tài xế']}], flags: [['onlyNoPhone', 'Chỉ xe chưa có số điện thoại'], ['onlyTrips', 'Chỉ xe có chuyến trong kỳ'], ['onlyNoTrips', 'Chỉ xe chưa có chuyến trong kỳ']], hint: 'biển số, chủ xe, tài xế, SĐT, loại xe, mã rừng'},
   phieucan: {fields: [], flags: [], hint: 'số phiếu, biển số, khách hàng, nơi giao, mã rừng, chủ rừng'},
@@ -89,6 +93,8 @@ function rpData() {
       const trips = k => (r.pc || []).filter(p => plate(p.bienSo) === k && HAKDates.isValid(p.ngay) && HAKDates.inRange(p.ngay, rp.from, rp.to)).length;
       x = {...r, dxList: (r.dxList || []).filter(d => (lot || hit(d.bienSo, d.chuXe, d.taiXe, d.sdt, d.loaiXe, d.cccd, d.cccdTx)) && (!o.nguoiKy || (d.nguoiKy || 'Chủ xe') === o.nguoiKy) && (!fl.onlyNoPhone || !d.sdt) && (!fl.onlyTrips || trips(plate(d.bienSo)) > 0) && (!fl.onlyNoTrips || trips(plate(d.bienSo)) === 0))};
       if (active && !x.dxList.length) return;
+    } else if (id === 'sohoso') {
+      if ((o.trangThai && r.trangThaiTen !== o.trangThai) || (o.nam && !String(r.tuNgay || '').endsWith('/' + o.nam)) || (fl.onlyNoIn && !(r.noIn || r.chuaKy)) || (words.length && !lot)) return;
     } else if (words.length && !lot) {
       x = {...r, pc: (r.pc || []).filter(p => hit(p.soPhieu, p.bienSo, p.khachHang, p.noiGiao)), bienLog: (r.bienLog || []).filter(e => hit(e.soPhieu, e.cu, e.moi))};
       if (!x.pc.length && !x.bienLog.length) return;

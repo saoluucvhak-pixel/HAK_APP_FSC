@@ -33,6 +33,7 @@
     // 4. Thứ tự các văn bản
     const ky = ok(ex.ngayKy) ? ex.ngayKy : ok(i.ngayKyHopDong) ? i.ngayKyHopDong : '';
     if (ky && ok(i.tuNgay) && k(ky) > k(i.tuNgay)) add('doi', 'Thứ tự ngày', 'Ngày ký hợp đồng ' + ky + ' sau ngày bắt đầu khai thác ' + i.tuNgay + '.', 'Ngày ký hợp đồng', {ftab: 'xuat'});
+    if (ky && ok(ex.uqNgay) && k(ex.uqNgay) > k(ky)) add('chan', 'Ủy quyền sau hợp đồng', 'Ngày lập giấy ủy quyền ' + ex.uqNgay + ' sau ngày ký hợp đồng ' + ky + ': giấy ủy quyền phải cùng ngày hoặc trước hợp đồng giao khoán.', 'Giấy ủy quyền', {ftab: 'xuat'});
     if (ky && ok(ex.ntNgay) && k(ex.ntNgay) < k(ky)) add('doi', 'Thứ tự ngày', 'Ngày lập biên bản nghiệm thu ' + ex.ntNgay + ' trước ngày ký hợp đồng ' + ky + '.', 'Nghiệm thu', {ftab: 'xuat'});
     if (ok(ex.ntNgay) && ok(i.denNgay) && k(ex.ntNgay) < k(i.denNgay)) add('doi', 'Thứ tự ngày', 'Ngày lập biên bản nghiệm thu ' + ex.ntNgay + ' trước ngày kết thúc khai thác ' + i.denNgay + '.', 'Nghiệm thu', {ftab: 'xuat'});
     const dates = pc.map(r => D.key(r.ngay)).filter(Boolean), last = dates.length ? Math.max(...dates) : 0, first = dates.length ? Math.min(...dates) : 0;

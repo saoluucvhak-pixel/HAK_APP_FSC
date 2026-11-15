@@ -18,7 +18,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
   const x1 = {...xe('92C-12345', '049000000077', 'LÊ VĂN MỘT'), ...hang, kdDen: '06/10/2026'}, x2 = {...xe('92C-67890', '049000000078', 'TRẦN VĂN HAI'), ...hang};
   const PCS = [P(1, '05/10/2026', '92C-12345', 'PA1', 12.5), P(2, '06/10/2026', '92C-67890', 'PA2', 9.25), P(3, '07/10/2026', '92C-12345', 'PA3', 8)];
   const A = lot('fa', 'R-A', {exp: {soKT: '015', ngayKy: '02/10/2026', soVC: '07', ntSo: '03', pcSo: '09', pcNgay: '20/12/2026', ntNgay: '20/12/2026'}, pc: PCS, dx: [x1, x2], kl: 29.75});
-  const B = lot('fb', 'R-B', {exp: {soKT: '016', ngayKy: '02/10/2026', soVC: '08', ntSo: '04', pcSo: '10', pcNgay: '20/12/2026', ntNgay: '20/12/2026'}, pc: PCS.map(p => ({...p, maRung: 'R-B'})), dx: [{...x1, kdDen: '07/10/2026', maRung: 'R-B'}, {...x2, maRung: 'R-B'}], kl: 29.75});
+  const B = lot('fb', 'R-B', {exp: {soKT: '016', ngayKy: '02/10/2026', soVC: '08', ntSo: '04', pcSo: '10', pcNgay: '20/12/2026', ntNgay: '20/12/2026'}, pc: PCS.map(p => ({...p, maRung: 'R-B', soPhieu: 'B-' + p.soPhieu})), dx: [{...x1, kdDen: '07/10/2026', maRung: 'R-B'}, {...x2, maRung: 'R-B'}], kl: 29.75});
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'}));
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');
   const open = async fid => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.waitForTimeout(300); };

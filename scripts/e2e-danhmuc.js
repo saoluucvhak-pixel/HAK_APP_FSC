@@ -12,7 +12,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const tab = async k => { await w.click('[data-dmtab=' + k + ']'); await w.waitForTimeout(150); };
   const gui = async (form, vals) => { await w.evaluate(([f, v]) => { const fm = document.getElementById(f); for (const k in v) fm.elements[k].value = v[k]; fm.requestSubmit(); }, [form, vals]); await w.waitForTimeout(250); };
   await w.click('#navDm'); await w.waitForSelector('#dmTabs');
-  ok('nút Danh mục mở màn có 5 tab', (await w.$$('#dmTabs button')).length === 5);
+  ok('nút Danh mục mở màn có 6 tab (thêm Người chung)', (await w.$$('#dmTabs button')).length === 6);
   // chức vụ / vị trí
   await tab('chucvu'); const cv = await w.innerText('#dmBody');
   ok('tab Chức vụ/vị trí: Tổ trưởng, Công nhân và bảng vị trí', /Tổ trưởng/.test(cv) && /Công nhân/.test(cv) && (await w.$$('#dmViTriTbl tbody tr')).length > 0);

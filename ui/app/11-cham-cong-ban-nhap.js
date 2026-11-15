@@ -238,6 +238,7 @@ function stDelete(kind, i) {
 const CONFIG_ERR = /chưa có đơn giá/;
 let stSaving = false;
 async function stSave(opt) {
+  { const f0 = curForest(); if (f0 && loKhoa(f0)) return loKhoaNote(f0); }
   const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { if (loDirty.has(curF)) return luuLoTT(opt); if (!(opt && opt.tuKhung)) note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
   if (stSaving) return {ok: false, error: 'đang lưu'};
   const o = db.rs[cur], f = o && o.forests && o.forests[curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
