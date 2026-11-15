@@ -9,7 +9,8 @@ const M = require('../src/model');
 const root = path.join(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-stt-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
-const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
+const lotDir = path.join(dir, 'lot'); fs.mkdirSync(lotDir, {recursive: true});
+const launch = (env = {}, name = 'd') => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, name + '.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud-' + name), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out'), HAKQN_LOT_DIR: lotDir, ...env}});
 (async () => {
   // dữ liệu giả lập: lô R-A có Đội 1 (trống) và Đội 2 (đủ người), Đội xe 1 (trống) và Đội xe 2 (các xe)
   let f = M.ensureForest(lot('fa', 'R-A', {exp: {ngayKy: '02/10/2026'}, kl: null, pc: [], nc: [nv(1, 'Tổ trưởng', 'TT HAI', 'Tổ trưởng', '049085009001'), nv(2, 'Công nhân', 'CN A', 'Công nhân khai thác', '049085009002')].map(r => ({...r, maRung: 'R-A'}))}));
@@ -46,6 +47,20 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   const moi = F.doi.find(d => d.ten === 'Đội mới'), cu = F.doi.find(d => d.ten !== 'Đội mới'), xm = F.hdvc.find(d => d.ten === 'Xe mới');
   ok('xác nhận điền: đội mới STT 3 và số 03; đội 02 giữ nguyên số và STT', moi.stt === 3 && /^03\/2026\/HĐGK-RA$/.test(moi.exp.soKT) && cu.stt === 2 && cu.exp.soKT === so2 && xm.stt === 3 && /^03\/2026\/HĐVC-RA$/.test(xm.exp.soVC), JSON.stringify([moi.stt, moi.exp.soKT, cu.stt, cu.exp.soKT, xm.stt, xm.exp.soVC]));
   ok('lịch sử STT cập nhật [1, 2, 3] cho cả hai nhóm', F.sttDaCap.doi.join() === '1,2,3' && F.sttDaCap.doiXe.join() === '1,2,3', JSON.stringify(F.sttDaCap));
+  // 5. sao lưu RIÊNG lô, khôi phục sang bản dữ liệu khác: lịch sử STT đi theo; đội mới tiếp theo nhận 04 (không cấp lại 01)
+  await open('finfo'); await w.click('#lotBackupBtn'); await w.waitForTimeout(700);
+  const file = fs.readdirSync(lotDir).find(x => /^HAKQN_LoRung_R-A_.*\.json$/.test(x)); ok('sao lưu riêng lô ra file', !!file, JSON.stringify(fs.readdirSync(lotDir)));
+  const pkg = JSON.parse(fs.readFileSync(path.join(lotDir, file), 'utf8')); ok('file sao lưu mang lịch sử STT [1, 2, 3] của cả đội khai thác và đội xe', pkg.lo.sttDaCap && pkg.lo.sttDaCap.doi.join() === '1,2,3' && pkg.lo.sttDaCap.doiXe.join() === '1,2,3', JSON.stringify(pkg.lo.sttDaCap));
+  await app.close(); app = await launch({HAKQN_LOT_FILE: path.join(lotDir, file)}, 'may2'); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(900);
+  const idsR = Object.keys((await w.evaluate(() => window.hak.loadSync().db)).rs); ok('khôi phục lô vào máy khác thành công', idsR.length === 1);
+  const ownR = idsR[0], lotR = async () => Object.values((await w.evaluate(() => window.hak.loadSync().db)).rs[ownR].forests)[0];
+  let G = await lotR(); ok('sau khôi phục: lịch sử STT còn [1, 2, 3] cả hai nhóm, đội 02 giữ số', G.sttDaCap.doi.join() === '1,2,3' && G.sttDaCap.doiXe.join() === '1,2,3' && G.doi.some(d => d.exp.soKT === so2), JSON.stringify(G.sttDaCap));
+  await w.click('[data-open=' + ownR + ']'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + G.id + ']'); await w.click('[data-ftab=nc]'); await w.fill('#doiMoiTen', 'Đội sau khôi phục'); await w.click('[data-act=themDoi]'); await w.waitForTimeout(500);
+  await w.click('[data-ftab=dx]'); await w.fill('#hdMoiTen', 'Xe sau khôi phục'); await w.click('[data-act=themHd]'); await w.waitForTimeout(500); await save();
+  await w.click('[data-ftab=xuat]'); await w.waitForSelector('#soVanBan'); await w.click('[data-act=svbDien]'); await w.waitForTimeout(500); await save(); G = await lotR();
+  const dmK = G.doi.find(d => d.ten === 'Đội sau khôi phục'), xmK = G.hdvc.find(d => d.ten === 'Xe sau khôi phục');
+  ok('sau khôi phục: đội khai thác mới nhận 04, đội xe mới nhận 04 (không cấp lại 01 hay 03)', dmK.stt === 4 && /^04\//.test(dmK.exp.soKT) && xmK.stt === 4 && /^04\//.test(xmK.exp.soVC), JSON.stringify([dmK.stt, dmK.exp.soKT, xmK.stt, xmK.exp.soVC]));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
