@@ -284,23 +284,30 @@ function rungText(i) {
   return parts.length ? ' (' + parts.join('; ') + ')' : '';
 }
 
+/* lỗi cước vận chuyển: theo từng hợp đồng có xe (cước riêng hoặc cước chung của lô); hồ sơ cũ: cước của lô */
+function vcLoi(rec) {
+  if (!rec.hdvc) { const v = transportPrice(rec.info); return v.loi ? [v.loi] : []; }
+  const gs = groupsDX(rec); if (!gs.length) { const v = transportPrice(rec.info); return v.loi ? [v.loi] : []; }
+  const out = []; gs.forEach(g => { const v = transportPrice(vcInfo(rec, g.hd)); if (v.loi) out.push(g.hd.cuoc ? 'Hợp đồng với ' + (g.ten || '(chưa có tên)') + ': ' + v.loi : v.loi); });
+  return [...new Set(out)];
+}
 function gate(rec) {
   const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrorsRec(rec), ...HAKNhapLieu.kiemTra(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
   const nc = checkNC(rec);
   const dx = checkDX(rec);
-  const vc = transportPrice(rec.info);
+  const vcL = vcLoi(rec);
   const hasTT = rec.nc.some(isTT);
   const direct = allDirect(rec), normErrs = normErrors(rec);
   const pc = checkPC(rec);
   return {
-    pc, info, nc, dx, direct, normErrs, vc: vc.loi ? [vc.loi] : [],
+    pc, info, nc, dx, direct, normErrs, vc: vcL,
     canGK: !direct && !info.length && !nc.errs.length && hasTT,
     canBHLD: !info.length && !nc.errs.length && hasTT,
     canPhat: !info.length && !nc.errs.length && hasTT && !normErrs.length,
     canHDLD: !info.length && !nc.errs.length && hasTT && hdldList(rec).length > 0,
     canUQ: !direct && !info.length && !nc.errs.length && hasTT && ucList(rec).length > 0 && !minorsOf(rec).length,   // người ủy quyền phải từ đủ 18 tuổi (Điều 18 BLLĐ 2019)
-    canHDVC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vc.loi,
-    canPC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vc.loi && (rec.pc || []).length > 0 && !pc.errs.length
+    canHDVC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vcL.length,
+    canPC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vcL.length && (rec.pc || []).length > 0 && !pc.errs.length
   };
 }
 

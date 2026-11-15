@@ -90,3 +90,32 @@ test('đội khai thác: nạp lại CẢ danh sách (mọi dòng chưa có doiI
   g.nc.push(nv(4, 'Công nhân', 'D', 'Công nhân cưa', '4', {doi: 'Ａ'.normalize('NFKC')}));
   assert.strictEqual(M.ensureForest(g).nc[3].doiId, 'doi1', 'dòng lẻ ghi tên đội A → đội A');
 });
+
+const xe = (bien, chu, cccd, o) => Object.assign({bienSo: bien, chuXe: chu, cccd, nguoiKy: 'Chủ xe'}, o || {});
+test('hợp đồng vận chuyển: mỗi người ký một hợp đồng như bản cũ (chủ xe hoặc tài xế), thứ tự theo xe đầu tiên; đổi người ký thì xe sang hợp đồng mới; chạy lại không đổi', () => {
+  const f = M.ensureForest({id: 'f', info: {}, dx: [xe('A', 'An', '0491'), xe('B', 'Bình', '0492'), xe('C', 'An', '049-1'), xe('D', 'Chủ D', '0499', {nguoiKy: 'Tài xế', taiXe: 'Tâm', cccdTx: '0777'})]});
+  assert.deepStrictEqual(f.hdvc.map(h => [h.id, h.key]), [['hd1', '0491'], ['hd2', '0492'], ['hd3', '0777']]);
+  assert.deepStrictEqual(f.dx.map(r => r.hdvcId), ['hd1', 'hd2', 'hd1', 'hd3']);
+  assert.deepStrictEqual(M.ensureForest(f), f); assert.ok(!M.needsEnsure(f));
+  const g = JSON.parse(JSON.stringify(f)); g.dx[1].cccd = '0491';
+  assert.ok(M.needsEnsure(g)); const h = M.ensureForest(g);
+  assert.deepStrictEqual([h.dx[1].hdvcId, h.hdvc.map(x => x.id)], ['hd1', ['hd1', 'hd3']], 'Bình đổi CCCD trùng An: xe B vào hợp đồng của An; hợp đồng trống không có gì riêng thì bỏ');
+  assert.deepStrictEqual(M.legacyForest(h).dx.map(r => 'hdvcId' in r), [false, false, false, false]);
+});
+
+test('hợp đồng vận chuyển: hợp đồng với doanh nghiệp (danh mục), chuyển xe, cước và số riêng, chặn xóa khi còn xe', () => {
+  let f = M.ensureForest({id: 'f', info: {vanChuyen: {mode: 'coDinh', coDinh: 50000}}, dx: [xe('A', 'An', '0491'), xe('B', 'Bình', '0492')]});
+  const dv = {id: 'dn1', loai: 'doanhnghiep', ten: 'Công ty VT Hòa Phát', mst: '0401234567', diaChi: 'Đà Nẵng', daiDien: 'Lê Văn D', chucVu: 'Giám đốc'};
+  const a = M.addHdDonVi(f, dv); f = a.f;
+  assert.deepStrictEqual(f.hdvc.find(h => h.id === a.id).ben, dv, 'chụp lại thông tin đơn vị lúc chọn');
+  f = M.moveXe(f, [0, 1], a.id).f;
+  assert.deepStrictEqual([f.dx.map(r => r.hdvcId), f.hdvc.map(h => h.id)], [[a.id, a.id], [a.id]], 'xe vào hợp đồng doanh nghiệp; hợp đồng cá nhân không còn xe thì bỏ');
+  f = M.updateHd(f, a.id, {cuoc: {mode: 'tanKm', donGiaKm: 1500}, exp: {soVC: '07', pcSo: ''}}).f;
+  assert.deepStrictEqual([f.hdvc[0].cuoc, f.hdvc[0].exp], [{mode: 'tanKm', donGiaKm: 1500}, {soVC: '07'}]);
+  assert.match(M.removeHd(f, a.id).error, /còn 2 xe/);
+  assert.deepStrictEqual(M.ensureForest(f), f, 'xe trong hợp đồng doanh nghiệp không bị gom lại theo người ký');
+  f = M.moveXe(f, [1], '').f;
+  const hB = M.hdOf(f, f.dx[1]);
+  assert.ok(f.dx[0].hdvcId === a.id && hB && !hB.donViId && hB.key === '0492', 'xe B về hợp đồng theo người ký (Bình)');
+  assert.deepStrictEqual(M.hdOrder(f).map(h => h.id), [a.id, hB.id]);
+});

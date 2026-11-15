@@ -181,7 +181,7 @@ const vcOptions = cur => {
 function panelVc(rec) {
   const i = rec.info, vc = i.vanChuyen || {}, tp = transportPrice(i), cur = vc.mode || 'tanKm';
   const show = m => cur === m ? '' : 'display:none';
-  return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng vận chuyển (chủ rừng trả bên vận chuyển)</h3>' +
+  return '<div class="card"><h3 style="margin-top:0">Cước vận chuyển chung của lô (chủ rừng trả bên vận chuyển)</h3><p class="mut" style="margin-top:0">Áp cho mọi hợp đồng vận chuyển không đặt cước riêng.</p>' +
     '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + ')' : 'chưa có') + '</b> (mặc định tự tính từ tọa độ rừng đến nơi giao, hoặc nhập tay ở tab Thông tin rừng; chỉ cần khi tính theo tấn/km).</p>' +
     '<form id="vcForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Cách tính đơn giá vận chuyển</span><select name="vcMode">' + vcOptions(cur) + '</select></label>' +

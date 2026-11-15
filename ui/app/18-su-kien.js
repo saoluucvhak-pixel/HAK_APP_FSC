@@ -5,7 +5,7 @@ document.addEventListener('click', async e => {
   const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick); return; }
   const dsh = t.closest('[data-dash]'); if (dsh) { const [oid, fid] = dsh.dataset.dash.split('|'); openRs(oid); return openForest(fid); }
   const open = t.closest('[data-open]'); if (open) return openRs(open.dataset.open);
-  const of = t.closest('[data-forest]'); if (of) { curDoi = null; return openForest(of.dataset.forest); }
+  const of = t.closest('[data-forest]'); if (of) { curDoi = null; curHd = null; return openForest(of.dataset.forest); }
   const sf = t.closest('[data-sforest]'); if (sf) return openForest(sf.dataset.sforest);
   const tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; return render(); }
   const ftb = t.closest('[data-ftab]'); if (ftb) { ftab = ftb.dataset.ftab; return render(); }
@@ -17,6 +17,11 @@ document.addEventListener('click', async e => {
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
   if (act === 'chonDoi') { curDoi = el.dataset.doi; return render(); }
+  if (act === 'chonHd') { curHd = curHd === el.dataset.hd ? null : el.dataset.hd; return render(); }
+  if (act === 'themHdDv') return themHdDv();
+  if (act === 'xoaHd') return xoaHd();
+  if (act === 'hdCapNhatDv') return hdCapNhatDv();
+  if (act === 'suaDv') { const d = (db.dmDonViVC || {})[el.dataset.dv], fm = document.getElementById('dvForm'); if (d && fm) fm.outerHTML = dvForm(d); return; }
   if (act === 'themDoi') return themDoi();
   if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();
@@ -117,6 +122,8 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'forestForm') { e.preventDefault(); saveForest(e.target); }
   if (e.target.id === 'luongForm') { e.preventDefault(); saveLuong(e.target); }
   if (e.target.id === 'doiForm') { e.preventDefault(); saveDoi(e.target); }
+  if (e.target.id === 'hdForm') { e.preventDefault(); saveHd(e.target); }
+  if (e.target.id === 'dvForm') { e.preventDefault(); saveDv(e.target); }
   if (e.target.id === 'stForm') { e.preventDefault(); stFinishRow(); }
   if (e.target.id === 'vcForm') { e.preventDefault(); saveVc(e.target); }
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
@@ -128,6 +135,8 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persist(); render(); return; }
+  if (t.id === 'xeDm' && t.value) { const x = xeDanhMuc().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); ST_FIELDS.dx.forEach(([k]) => { if (x[k] != null && k !== 'stt') stm.vals[k] = stStr(x[k]); }); stRender(); } return; }
   if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persist(); render(); return; }
   if (t.name === 'bienSo' && t.form && t.form.id === 'stForm' && t.value === '__new') { stRead(); stOpen('dx', null, null, {kind: stm.kind, id: stm.id, vals: Object.assign({}, stm.vals, {bienSo: ''})}); return; }   // thêm xe ngay trong lượt sửa phiếu: giữ nguyên các ô đã nhập
   if (t.name === 'vcMode' && t.form && t.form.id === 'vcForm') {

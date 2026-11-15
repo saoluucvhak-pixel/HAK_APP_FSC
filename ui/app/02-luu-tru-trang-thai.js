@@ -120,7 +120,7 @@ const forestList = o => Object.values(o.forests || {});
 const destOf = rec => HAKMuaHang.diemDen(rec.info, rec.exp);
 const curForest = () => { const o = curOwner(); return (o && curF && o.forests[curF]) || null; };
 /* Đội đang chọn của lô đang mở (bảng con “Nhân công khai thác”); chưa chọn / không còn: đội đầu */
-let curDoi = null;
+let curDoi = null, curHd = null;   // đội / hợp đồng vận chuyển đang chọn của lô đang mở
 const curTeam = f => { f = f || curForest(); if (!f) return null; if (HAKModel.needsEnsure(f)) Object.assign(f, HAKModel.ensureForest(f)); return f.doi.find(d => d.id === curDoi) || f.doi[0]; };
 /* thông tin rừng + hình thức của đội đầu (để đọc ở form thông tin rừng; hồ sơ dùng jobView) */
 const fInfo = f => Object.assign({}, (f && f.info) || {}, (((f && f.doi) || [])[0] || {}).hinhThuc || {});
@@ -141,11 +141,18 @@ function ganDoi(doi, nc) {
   const nc2 = t ? nc.map(r => r && r.doiId === undefined && !trim(r.doi) ? Object.assign({}, r, {doiId: t.id}) : r) : nc;
   const x = HAKModel.ensureForest({doi, nc: nc2}); return {doi: x.doi, nc: x.nc};
 }
+/* xe chưa thuộc hợp đồng vận chuyển (vừa nạp, thêm trong bản nháp): gán như khi lưu (src/model.js: theo người ký; xe trong hợp đồng với đơn vị giữ nguyên) */
+function ganVC(hdvc, dx) {
+  if (!hdvc) return {hdvc, dx};
+  const F = {doi: [{id: '_'}], nc: [], hdvc, dx};
+  if (!HAKModel.needsEnsure(F)) return {hdvc, dx};
+  const x = HAKModel.ensureForest(F); return {hdvc: x.hdvc, dx: x.dx};
+}
 function jobView(o, f) {
   if (!Array.isArray(f.doi) || !f.doi.length) Object.assign(f, HAKModel.ensureForest(f));   // lô mới tạo (chưa lưu lần nào): có đội ngay, như SQLite sẽ lưu
   const d0 = (f.doi || [])[0], exp = d0 && Object.keys(d0.exp || {}).length ? Object.assign({}, f.exp, d0.exp) : f.exp;
-  const g = ganDoi(f.doi, f.nc);
-  return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info, d0 ? d0.hinhThuc : {}), nc: g.nc, dx: f.dx, pc: f.pc || [], exp, cc: f.cc || {}, doi: g.doi || null,
+  const g = ganDoi(f.doi, f.nc), v = ganVC(f.hdvc || null, f.dx);
+  return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info, d0 ? d0.hinhThuc : {}), nc: g.nc, dx: v.dx, pc: f.pc || [], exp, cc: f.cc || {}, doi: g.doi || null, hdvc: v.hdvc || null,
     ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
 }
 const curRec = () => { const o = curOwner(), f = curForest(); return o && f ? jobView(o, f) : null; };

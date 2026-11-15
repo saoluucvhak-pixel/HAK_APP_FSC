@@ -80,12 +80,63 @@ function panelMua(rec) {
     '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở <b>Cài đặt → Công ty</b> (menu ngang trên cùng); mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
     (msg ? '<div class="msg ' + msg.kind + '">' + esc(msg.text) + '</div>' : '') + cur + ddBox + drift + misBox + pick + '</div>';
 }
+/* Bảng con “Hợp đồng vận chuyển” của lô; xe là bảng con của hợp đồng (src/model.js). Hợp đồng theo người ký (chủ xe / tài xế) tự lập như bản cũ;
+ * hợp đồng với doanh nghiệp chọn từ danh mục đơn vị vận chuyển (db.dmDonViVC) rồi chuyển xe vào. Cước, số văn bản: riêng từng hợp đồng hoặc dùng của lô. */
+const dmVC = () => Object.values(db.dmDonViVC || {}).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
+const cuocText = (rec, h) => { const t = transportPrice(vcInfo(rec, h)); return (t.loi ? '<span class="pill err">' + esc(t.loi) + '</span>' : esc(fmt(t.gia) + ' đ/tấn')) + (h.cuoc ? ' <span class="pill">riêng</span>' : ' <span class="mut">(cước chung)</span>'); };
+function panelHdvc(rec) {
+  if (!rec.hdvc) return '';
+  const F = {dx: rec.dx, hdvc: rec.hdvc}, list = HAKModel.hdOrder(F), gs = groupsDX(rec), gOf = h => gs.find(g => g.hd === h);
+  const sel = list.find(h => h.id === curHd) || null;
+  const ten = h => h.donViId ? ((h.ben || {}).ten || '(đơn vị)') : ((gOf(h) || {}).ten || '(chưa có xe)');
+  const vai = h => h.donViId ? vaiTroDV(h.ben) : ((gOf(h) || {}).vaiTro || '');
+  const row = h => '<tr data-act="chonHd" data-hd="' + esc(h.id) + '" style="cursor:pointer' + (sel && sel.id === h.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(ten(h)) + '</b>' + (sel && sel.id === h.id ? ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + esc(vai(h)) + '</td><td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td><td>' + cuocText(rec, h) + '</td><td>' + esc((h.exp || {}).soVC || '') + (h.exp && h.exp.soVC ? '' : ' <span class="mut">(số chung)</span>') + '</td></tr>';
+  const dv = dmVC();
+  let html = '<div class="card" id="hdvcKT"><h3 style="margin-top:0">Hợp đồng vận chuyển: ' + list.length + ' hợp đồng</h3>' +
+    '<p class="mut" style="margin-top:0">Mỗi người ký (chủ xe hoặc tài xế) một hợp đồng, tự lập theo danh sách xe. Ký với <b>doanh nghiệp</b> vận chuyển: chọn đơn vị trong danh mục, thêm hợp đồng rồi chọn hợp đồng cho từng xe ở cột “Hợp đồng”. Bấm một hợp đồng để đặt cước, số hợp đồng riêng.</p>' +
+    (list.length ? '<div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Bên vận chuyển</th><th>Vai trò</th><th>Số xe</th><th>Cước</th><th>Số HĐ</th></tr></thead><tbody>' + list.map(row).join('') + '</tbody></table></div>' : '<p class="mut">Chưa có hợp đồng: thêm xe hoặc thêm hợp đồng với doanh nghiệp.</p>') +
+    '<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:8px"><select id="hdDvSel"><option value="">— chọn đơn vị trong danh mục —</option>' + dv.map(d => '<option value="' + esc(d.id) + '">' + esc(d.ten + (d.mst ? ' · MST ' + d.mst : '')) + '</option>').join('') + '</select><button class="btn ghost sm" data-act="themHdDv">+ Hợp đồng với đơn vị</button></div>' +
+    '<details style="margin-top:8px"' + (dv.length ? '' : ' open') + '><summary>Danh mục đơn vị vận chuyển (dùng chung mọi lô)' + (dv.length ? ': ' + dv.length + ' đơn vị' : '') + '</summary>' +
+    (dv.length ? '<ul style="margin:6px 0">' + dv.map(d => '<li>' + esc(d.ten) + (d.mst ? ' · MST ' + esc(d.mst) : '') + (d.daiDien ? ' · đại diện ' + esc(d.daiDien) : '') + ' <button class="btn ghost sm" data-act="suaDv" data-dv="' + esc(d.id) + '">Sửa</button></li>').join('') + '</ul>' : '') +
+    dvForm() + '</details>';
+  if (sel) {
+    const c = sel.cuoc || {}, mode = c.mode || ((rec.info.vanChuyen || {}).mode) || 'tanKm', e = sel.exp || {}, xe = HAKModel.xeOf(F, sel).length;
+    const doi = sel.donViId && db.dmDonViVC && db.dmDonViVC[sel.donViId] && JSON.stringify(db.dmDonViVC[sel.donViId]) !== JSON.stringify(sel.ben);
+    html += '<form id="hdForm" class="grid" style="margin-top:10px;border-top:1px solid var(--line,#ddd);padding-top:10px"><h4 style="grid-column:1/-1;margin:0">Hợp đồng với ' + esc(ten(sel)) + '</h4>' +
+      (doi ? '<div class="msg warn" style="grid-column:1/-1">Danh mục đã sửa thông tin đơn vị này sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button class="btn ghost sm" type="button" data-act="hdCapNhatDv">Cập nhật theo danh mục</button></div>' : '') +
+      '<label style="grid-column:1/-1"><span><input type="checkbox" name="rieng"' + (sel.cuoc ? ' checked' : '') + '> Cước riêng cho hợp đồng này (bỏ chọn = dùng cước chung của lô)</span></label>' +
+      '<label><span>Cách tính</span><select name="vcMode">' + vcOptions(mode) + '</select></label>' +
+      '<label><span>Đơn giá cố định (đồng/tấn)</span><input name="vcCoDinh" value="' + esc(c.coDinh ?? '') + '"></label>' +
+      '<label><span>Đơn giá tấn/km (đồng/tấn/km)</span><input name="vcKm" value="' + esc(c.donGiaKm ?? '') + '"></label>' +
+      '<label><span>Vận chuyển từ ngày</span><input name="vcTu" value="' + esc(c.tuNgay ?? '') + '"></label>' +
+      '<label><span>Số HĐ vận chuyển (trống = số chung ở tab Xuất)</span><input name="soVC" value="' + esc(e.soVC || '') + '"></label>' +
+      '<label><span>Chi phí khác (trống = chung)</span><input name="vcChiPhi" value="' + esc(e.vcChiPhi || '') + '"></label>' +
+      '<label><span>Số biên bản xác nhận KL (trống = chung)</span><input name="pcSo" value="' + esc(e.pcSo || '') + '"></label>' +
+      '<label><span>Ngày lập xác nhận KL (trống = chung)</span><input name="pcNgay" value="' + esc(e.pcNgay || '') + '"></label>' +
+      '<div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Lưu hợp đồng</button>' + (sel.donViId && !xe ? '<button class="btn danger sm" type="button" data-act="xoaHd">Xóa hợp đồng</button>' : '') + '</div></form>';
+  }
+  return html + '</div>';
+}
+function dvForm(d) {
+  d = d || {};
+  const f = (k, l) => '<label><span>' + l + '</span><input name="' + k + '" value="' + esc(d[k] || '') + '"></label>';
+  return '<form id="dvForm" class="grid" style="margin-top:6px"><input type="hidden" name="dvId" value="' + esc(d.id || '') + '"><h4 style="grid-column:1/-1;margin:0">' + (d.id ? 'Sửa đơn vị' : 'Thêm doanh nghiệp vận chuyển') + '</h4>' +
+    f('ten', 'Tên doanh nghiệp') + f('mst', 'Mã số thuế') + f('diaChi', 'Địa chỉ trụ sở') + f('daiDien', 'Người đại diện') + f('chucVu', 'Chức vụ') + f('sdt', 'Điện thoại') +
+    '<div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Lưu vào danh mục</button></div></form>';
+}
+/* cột Hợp đồng của bảng xe: lô có hợp đồng với đơn vị (không trong bản nháp) chọn hợp đồng ngay tại dòng */
+function hdCell(rec, r) {
+  if (!rec.hdvc) return '';
+  const F = {dx: rec.dx, hdvc: rec.hdvc}, h = HAKModel.hdOf(F, r), dvs = rec.hdvc.filter(x => x.donViId), ix = (rec.dx || []).indexOf(r);
+  if (!dvs.length || stCur() || ix < 0) return h && h.donViId ? esc((h.ben || {}).ten || '') : 'Theo người ký';
+  return '<select data-xehd="' + ix + '"><option value=""' + (h && !h.donViId ? ' selected' : '') + '>Theo người ký</option>' + dvs.map(x => '<option value="' + esc(x.id) + '"' + (h === x ? ' selected' : '') + '>' + esc((x.ben || {}).ten || x.id) + '</option>').join('') + '</select>';
+}
 function panelDX(rec) {
   const c = checkDX(rec);
-  const head = panelMua(rec) + panelVc(rec) + panelImport('dx', rec) + stBar('dx', rec) + stErrBox();
+  const head = panelMua(rec) + panelVc(rec) + panelHdvc(rec) + panelImport('dx', rec) + stBar('dx', rec) + stErrBox();
   if (!rec.dx.length && !stCur()) return head + '<div class="empty">Chưa có danh sách vận chuyển. Bấm “+ Thêm xe”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>';
-  return head + issuesBox(c.errs, c.warns) + stTable('dx', rec, ['Chủ xe', 'Biển kiểm soát', 'Loại xe', 'Người ký HĐ', 'Tài xế', 'Số GPLX', 'Hạn GPLX', 'Hạn bảo hiểm', 'Kiểm định'],
-    r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c);
+  return head + issuesBox(c.errs, c.warns) + stTable('dx', rec, ['Chủ xe', 'Biển kiểm soát', 'Loại xe', 'Người ký HĐ', 'Hợp đồng', 'Tài xế', 'Số GPLX', 'Hạn GPLX', 'Hạn bảo hiểm', 'Kiểm định'],
+    r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + hdCell(rec, r) + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c);
 }
 
 /* Ngày cân 2: số đã nhập thì hiện nguyên; không có thì suy từ ngày cân 1 và giờ cân (giờ cân 2 sớm hơn giờ cân 1 = qua nửa đêm, +1 ngày) và ghi “suy ra” */

@@ -171,3 +171,16 @@ Kiểm thử: `tests/model.test.js` (cơ sở dữ liệu thật 1.0.0 và 1.4.x
 **So bản in** với bản giai đoạn 2 (5 bộ dữ liệu, thêm một lô giao khoán hai đội; 118 tài liệu Word): **118/118 giống từng byte**.
 
 Kiểm thử: `tests/model.test.js` (chuyển dữ liệu, chia đội như bản cũ, thao tác đội, dòng thêm sau, nạp lại cả danh sách), `scripts/e2e-doikt.js` (thêm đội, hai hình thức trong một lô, nhập tay vào đội đang chọn, chuyển người, số văn bản theo đội, ZIP đúng giấy tờ từng đội, chặn xóa đội còn người, mở lại app giữ nguyên), tự kiểm `HAKQN_CHECK_MODEL` sau mọi lần lưu của cả bộ e2e (`ensureDb(db) = db` và dựng lại dạng cũ chạy được).
+
+## 15. Giai đoạn 4 — hợp đồng vận chuyển, danh mục đơn vị và xe (đã làm)
+
+**Lưu quan hệ trong lô**: `lô.hdvc = [{id, key, donViId, ben, cuoc, exp}]`, mỗi xe mang `hdvcId`. SQLite v5 chuyển dữ liệu (`truoc-nang-cap-*` trước khi chuyển).
+
+- **Hợp đồng theo người ký** (`donViId` trống): mỗi chủ xe / tài xế ký một hợp đồng, xe tự vào hợp đồng có cùng người ký (CCCD) — đúng như bản cũ gom xe theo người ký; đổi người ký của xe thì xe sang hợp đồng của người đó; hợp đồng không còn xe và không có gì riêng thì bỏ. Thứ tự in theo xe đầu tiên.
+- **Hợp đồng với đơn vị trong danh mục** (doanh nghiệp vận chuyển): danh mục dùng chung `db.dmDonViVC` (tên, MST 10 số, địa chỉ trụ sở, người đại diện, chức vụ, điện thoại; MST không trùng). Thêm hợp đồng = chọn đơn vị; thông tin đơn vị **chụp lại lúc chọn** — sửa danh mục sau đó không đổi hợp đồng, chỉ báo và cho “Cập nhật theo danh mục”. Xe chọn hợp đồng ở cột “Hợp đồng” của bảng xe. Biểu mẫu BM-04/09/10 in bên B là doanh nghiệp (MST, trụ sở, đại diện, chức vụ). Xóa hợp đồng còn xe: chặn.
+- **Cước và số văn bản theo hợp đồng**: mỗi hợp đồng có thể có cước riêng (cố định hoặc tấn/km, ngày bắt đầu) và số HĐ vận chuyển, chi phí khác, số/ngày biên bản xác nhận khối lượng riêng; **để trống = dùng của lô** (ô “Cước vận chuyển chung của lô”, số ở tab Xuất hồ sơ). Dữ liệu cũ không có gì riêng nên bản in không đổi. Kiểm tra chặn xuất theo cước của từng hợp đồng có xe.
+- **Danh mục xe**: xe đã nhập ở mọi lô, gộp theo biển số (lô có ngày bắt đầu khai thác mới nhất thắng); khi thêm xe chọn “xe đã có” để điền sẵn chủ xe, tài xế, giấy tờ. Mỗi xe vẫn được chụp lại trong lô (xe là bảng con của hợp đồng của lô đó), nên một xe chạy được nhiều lô.
+
+Chưa làm (giai đoạn 5): hạn giấy tờ xe so với ngày phiếu cân; phiếu cân gắn đội.
+
+**So bản in** với bản giai đoạn 2: **118/118 giống từng byte** (gồm 10 hợp đồng vận chuyển). Kiểm thử: `tests/model.test.js` (gom theo người ký, đổi người ký, doanh nghiệp, chuyển xe, cước/số riêng, chặn xóa), `scripts/e2e-hdvc.js`.

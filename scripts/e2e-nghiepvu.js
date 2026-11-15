@@ -82,7 +82,7 @@ const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml'
   d = clone(BASE); lotOf(d).info.donGia = 340000; await load(d, 'finfo');
   ok('hồ sơ cũ có đơn giá Tổ trưởng: vẫn hiện ô (ghi rõ là ô của bản cũ) với giá trị cũ', /Đơn giá Tổ trưởng của hồ sơ cũ/.test(await w.innerText('#main')) && (await w.inputValue('#forestForm [name=donGia]')) === '340.000');
   await w.click('#forestForm [type=submit]'); await w.waitForTimeout(500);
-  ok('lưu Thông tin rừng của hồ sơ cũ: giữ nguyên đơn giá cũ', (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.donGia)) === 340000);
+  ok('lưu Thông tin rừng của hồ sơ cũ: giữ nguyên đơn giá cũ (nằm ở đội của lô, cấu trúc 2.0)', (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc.donGia)) === 340000);
 
   // 6. vị trí của định mức nhân công có trong bảng đơn giá
   await load(clone(BASE), 'nc');

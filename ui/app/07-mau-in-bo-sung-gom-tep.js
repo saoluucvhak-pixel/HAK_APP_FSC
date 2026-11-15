@@ -81,7 +81,28 @@ function docXNDaoTao(rec, ex) {
 /* ========== Gom các tệp cần xuất ========== */
 /* khóa người ký: chỉ lấy chữ số CCCD (viết 049… hay 49… có dấu cách vẫn là một người) */
 const signerKey = c => String(c == null ? '' : c).replace(/\D/g, '');
+/* cước của MỘT hợp đồng vận chuyển: cước riêng của hợp đồng (nếu có) thay cho cước chung của lô */
+const vcInfo = (rec, h) => h && h.cuoc ? Object.assign({}, rec.info, {vanChuyen: Object.assign({}, rec.info.vanChuyen || {}, h.cuoc)}) : rec.info;
+/* hồ sơ và số văn bản cho biểu mẫu của một hợp đồng vận chuyển (BM-04, BM-09, BM-10): cước, số HĐ, chi phí, số/ngày xác nhận khối lượng của hợp đồng; trống = của lô */
+function vcCtx(rec, ex, g) {
+  const h = g && g.hd; if (!h) return [rec, ex];
+  const r2 = h.cuoc ? Object.assign({}, rec, {info: vcInfo(rec, h)}) : rec;
+  if (!Object.keys(h.exp || {}).length) return [r2, ex];
+  const e = Object.assign({}, ex, h.exp), n = HAKHopDong.numbers(e); e._so = Object.assign({}, ex._so, {vc: n.vc, xn: n.xn}); return [r2, e];
+}
+const vaiTroDV = b => (b && b.loai === 'doanhnghiep') ? 'Doanh nghiệp' : 'Đơn vị vận chuyển';
 function groupsDX(rec) {
+  if (rec.hdvc) {   // cấu trúc 2.0: mỗi hợp đồng vận chuyển một nhóm, thứ tự theo xe đầu tiên (như bản cũ gom theo người ký)
+    const F = {dx: rec.dx, hdvc: rec.hdvc};
+    return HAKModel.hdOrder(F).map(h => {
+      const xs = HAKModel.xeOf(F, h); if (!xs.length) return null;
+      const r = xs[0], tx = driverSigns(r), gia = transportPrice(vcInfo(rec, h)).gia;
+      const base = h.donViId ? Object.assign({}, h.ben || {}, {vaiTro: vaiTroDV(h.ben)})
+        : tx ? {cccd: r.cccdTx, ten: r.taiXe, ngaySinh: r.ngaySinhTx, ngayCap: r.ngayCapTx, noiCap: r.noiCapTx, diaChi: r.diaChiTx, vaiTro: 'Tài xế'}
+          : {cccd: r.cccd, ten: r.chuXe, ngaySinh: r.ngaySinh, ngayCap: r.ngayCap, noiCap: r.noiCap, diaChi: r.diaChi, vaiTro: 'Chủ xe'};
+      return Object.assign(base, {donGia: gia, xe: xs, hd: h});
+    }).filter(Boolean);
+  }
   const out = [], by = {}, price = transportPrice(rec.info).gia;
   rec.dx.forEach(r => {
     const tx = driverSigns(r), key = signerKey(tx ? r.cccdTx : r.cccd) || (tx ? r.cccdTx : r.cccd);

@@ -44,6 +44,15 @@ const MIGRATIONS = [
       const f = JSON.parse(r.data); if (!M.needsEnsure(f)) return;
       const data = JSON.stringify(M.ensureForest(f)); up.run(data, sha(data), r.id);
     });
+  },
+  /* v5 (giai đoạn 4): HỢP ĐỒNG VẬN CHUYỂN là bảng con của lô, xe mang hdvcId (src/model.js). Mỗi người ký (chủ xe / tài xế) một hợp đồng như bản cũ;
+   * cước, số hợp đồng để trống = dùng của lô nên bản in không đổi. Chỉ đổi cột data của forests. */
+  function v5(db) {
+    const M = require('./model'), up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    db.prepare('SELECT id, data FROM forests').all().forEach(r => {
+      const f = JSON.parse(r.data); if (!M.needsEnsure(f)) return;
+      const data = JSON.stringify(M.ensureForest(f)); up.run(data, sha(data), r.id);
+    });
   }
 ];
 

@@ -20,6 +20,13 @@ const buyerName = rec => ((rec.info.muaHang || {}).ten || (theCompany() || {}).t
 const ngayLine = ex => ex.ngayKy ? 'ngày ' + ex.ngayKy : HAKHopDong.ngayTrong();
 
 function partyBlock(label, p, fullName, o = {}) {   // o.noSinh: không in năm sinh (chủ rừng không còn khai ngày sinh)
+  if (p && p.loai === 'doanhnghiep') return [   // bên vận chuyển là doanh nghiệp (danh mục đơn vị vận chuyển)
+    P('**' + label + ': ' + upper(fullName) + '**', {after: 60}),
+    P('Mã số thuế: ' + (p.mst || '…………'), {ind: 360, after: 40}),
+    P('Địa chỉ trụ sở: ' + (p.diaChi || '…………'), {ind: 360, after: 40}),
+    P('Người đại diện: ' + (p.daiDien || '…………') + (p.chucVu ? ' – Chức vụ: ' + p.chucVu : ''), {ind: 360, after: p.sdt ? 40 : 160}),
+    ...(p.sdt ? [P('Điện thoại: ' + p.sdt, {ind: 360, after: 160})] : [])
+  ];
   return [
     P('**' + label + ': ' + upper(fullName) + '**', {after: 60}),
     ...(o.noSinh ? [] : [P('Sinh năm: ' + (p.ngaySinh || '…………'), {ind: 360, after: 40})]),
@@ -488,6 +495,7 @@ function docKiemTraHienTruong(rec, ex) {
 }
 
 function docXNKLVC(rec, ex, g) {
+  [rec, ex] = vcCtx(rec, ex, g);
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tr = tripsOf(rec, g), kg = totalKg(tr);
   const hdNo = ex._so.vc.so;
   const ngSame = new Set(tr.map(r => r.noiGiao || '')).size <= 1;   // cùng một nơi giao thì Bảng kê đính kèm ghi một dòng, không đặt trong khung bảng
@@ -529,6 +537,7 @@ function docXNKLVC(rec, ex, g) {
   ];
 }
 function docTTVC(rec, ex, g) {
+  [rec, ex] = vcCtx(rec, ex, g);
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), py = payVC(rec, g), tp = transportPrice(rs);
   const hdNo = ex._so.vc.so;
   const tr = tripsOf(rec, g);
@@ -568,6 +577,7 @@ function docTTVC(rec, ex, g) {
   ];
 }
 function docHDVC(rec, ex, g) {
+  [rec, ex] = vcCtx(rec, ex, g);
   const rs = rec.info;
   const rsName = personName(rs.danhXung, rs.ten);
   return [

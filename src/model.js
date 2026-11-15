@@ -36,7 +36,7 @@
   }
 
   /* Chuẩn hóa một lô sang cấu trúc có ĐỘI. Lô đã có doi: chỉ bổ sung cho dòng nhân công thiếu doiId (lô một đội → đội đó; nhiều đội → '' = chưa thuộc đội). */
-  function ensureForest(f) {
+  function ensureDoi(f) {
     if (!f || typeof f !== 'object') return clone(f);
     const out = clone(f);
     if (Array.isArray(out.doi) && out.doi.length) {
@@ -73,6 +73,41 @@
     return out;
   }
 
+  /* GIAI ĐOẠN 4 — HỢP ĐỒNG VẬN CHUYỂN (bảng con của lô; xe là bảng con của hợp đồng):
+   *   lô.hdvc = [{id, key, donViId, ben, cuoc, exp}], lô.dx[i].hdvcId.
+   *   - Hợp đồng CÁ NHÂN (donViId null): bên ký là chủ xe hoặc tài xế của xe (như bản cũ); xe tự vào hợp đồng có cùng người ký (key = CCCD người ký),
+   *     đổi người ký của xe thì xe sang hợp đồng của người đó. Thứ tự hợp đồng khi in = thứ tự xe đầu tiên (như bản cũ).
+   *   - Hợp đồng với ĐƠN VỊ trong danh mục (donViId = id trong db.dmDonViVC, ví dụ doanh nghiệp): ben = thông tin đơn vị chụp lại lúc chọn; xe gán tay.
+   *   - cuoc (null = dùng cước chung của lô: info.vanChuyen) và exp (số HĐ, chi phí khác, số/ngày xác nhận khối lượng; trống = dùng của lô): riêng từng hợp đồng.
+   *   Hợp đồng cá nhân không còn xe và không có gì riêng thì bỏ. */
+  const vcKey = r => { const raw = trim(r && r.nguoiKy) === 'Tài xế' ? r.cccdTx : r.cccd; return String(String(raw == null ? '' : raw).replace(/\D/g, '') || raw); };
+  const HD_EXP = ['soVC', 'vcChiPhi', 'pcSo', 'pcNgay'];
+  const hdRieng = h => !!(h && (h.donViId || h.cuoc || Object.keys(h.exp || {}).length));
+  function ensureVC(out) {
+    const dx = Array.isArray(out.dx) ? out.dx : [];
+    let hd = Array.isArray(out.hdvc) ? out.hdvc : [];
+    const byId = new Map(hd.map(h => [h.id, h])), used = new Set(hd.map(h => h.id));
+    const nid = () => { let k = 1; while (used.has('hd' + k)) k++; used.add('hd' + k); return 'hd' + k; };
+    dx.forEach(r => {
+      if (!r) return;
+      const cur = byId.get(r.hdvcId); if (cur && cur.donViId) return;
+      const k = vcKey(r); if (cur && cur.key === k) return;
+      let h = hd.find(x => !x.donViId && x.key === k);
+      if (!h) { h = {id: nid(), key: k, donViId: null, ben: null, cuoc: null, exp: {}}; hd.push(h); byId.set(h.id, h); }
+      r.hdvcId = h.id;
+    });
+    const co = new Set(dx.map(r => r && r.hdvcId));
+    out.hdvc = hd.filter(h => co.has(h.id) || hdRieng(h));
+    return out;
+  }
+  const needsVC = f => {
+    if (!Array.isArray(f.hdvc)) return true;
+    const byId = new Map(f.hdvc.map(h => [h.id, h])), dx = Array.isArray(f.dx) ? f.dx : [];
+    if (dx.some(r => { if (!r) return false; const h = byId.get(r.hdvcId); return !h || (!h.donViId && h.key !== vcKey(r)); })) return true;
+    const co = new Set(dx.map(r => r && r.hdvcId)); return f.hdvc.some(h => !co.has(h.id) && !hdRieng(h));
+  };
+  function ensureForest(f) { const out = ensureDoi(f); if (out && typeof out === 'object' && needsVC(out)) ensureVC(out); return out; }
+
   /* Dựng lại dạng 1.4.x của một lô (thông tin và số văn bản của đội đầu; bỏ doiId) — để kiểm chứng chuyển dữ liệu không mất gì */
   function legacyForest(f) {
     if (!f || !Array.isArray(f.doi)) return clone(f);
@@ -81,11 +116,12 @@
     if (tu.info.length) { out.info = out.info || {}; tu.info.forEach(k => { if (has(d0.hinhThuc, k)) out.info[k] = clone(d0.hinhThuc[k]); }); }
     if (tu.exp.length) { out.exp = out.exp || {}; tu.exp.forEach(k => { if (has(d0.exp, k)) out.exp[k] = clone(d0.exp[k]); }); }
     if (Array.isArray(out.nc)) out.nc.forEach(r => { if (r) delete r.doiId; });
+    delete out.hdvc; if (Array.isArray(out.dx)) out.dx.forEach(r => { if (r) delete r.hdvcId; });
     return out;
   }
 
   /* lô cần chuẩn hóa? (chưa có đội, hoặc có dòng nhân công thiếu doiId) — để chỉ chuẩn hóa lô cần, khỏi sao chép cả cơ sở dữ liệu mỗi lần lưu */
-  const needsEnsure = f => !!f && typeof f === 'object' && (!Array.isArray(f.doi) || !f.doi.length || (Array.isArray(f.nc) && f.nc.some(r => r && !has(r, 'doiId'))));
+  const needsEnsure = f => !!f && typeof f === 'object' && (!Array.isArray(f.doi) || !f.doi.length || (Array.isArray(f.nc) && f.nc.some(r => r && !has(r, 'doiId'))) || needsVC(f));
   const eachForest = (db, fn) => { const out = clone(db) || {}; Object.values(out.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { o.forests[k] = fn(o.forests[k]); })); return out; };
   const ensureDb = db => eachForest(db, ensureForest);
   const legacyDb = db => eachForest(db, legacyForest);
@@ -142,6 +178,35 @@
     idxs.forEach(i => { if (out.nc && out.nc[i]) out.nc[i].doiId = id; }); return {ok: true, f: out};
   }
 
-  const api = {DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
+  /* ===== hợp đồng vận chuyển ===== */
+  const hdOf = (f, r) => ((f && f.hdvc) || []).find(h => h.id === (r && r.hdvcId)) || null;
+  const xeOf = (f, h) => ((f && f.dx) || []).filter(r => r && r.hdvcId === h.id);
+  /* hợp đồng theo thứ tự in: xe đầu tiên của hợp đồng (như bản cũ gom xe theo người ký); hợp đồng chưa có xe ở cuối */
+  const hdOrder = f => { const hd = (f && f.hdvc) || [], dx = (f && f.dx) || [], first = h => { const i = dx.findIndex(r => r && r.hdvcId === h.id); return i < 0 ? Infinity : i; }; return hd.map((h, k) => ({h, k, i: first(h)})).sort((a, b) => a.i - b.i || a.k - b.k).map(x => x.h); };
+  /* hợp đồng với một đơn vị trong danh mục (doanh nghiệp…): chụp lại thông tin đơn vị lúc chọn */
+  function addHdDonVi(f, dv) {
+    const out = ensureForest(f), used = new Set(out.hdvc.map(h => h.id)); let k = 1; while (used.has('hd' + k)) k++;
+    const h = {id: 'hd' + k, key: '', donViId: dv.id, ben: clone(dv), cuoc: null, exp: {}}; out.hdvc.push(h); return {f: out, id: h.id};
+  }
+  function updateHd(f, id, patch) {
+    const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có hợp đồng này'};
+    if (has(patch, 'cuoc')) h.cuoc = patch.cuoc ? clone(patch.cuoc) : null;
+    if (patch.exp) { h.exp = Object.assign({}, h.exp); Object.entries(patch.exp).forEach(([k, v]) => { if (trim(v)) h.exp[k] = trim(v); else delete h.exp[k]; }); }
+    if (has(patch, 'ben') && h.donViId) h.ben = clone(patch.ben);
+    return {ok: true, f: ensureForest(out)};
+  }
+  /* chuyển xe (chỉ số dòng) vào hợp đồng với đơn vị; id '' = về hợp đồng theo người ký của xe */
+  function moveXe(f, idxs, id) {
+    const out = ensureForest(f), h = id ? out.hdvc.find(x => x.id === id) : null; if (id && (!h || !h.donViId)) return {ok: false, error: 'Chỉ chuyển được xe vào hợp đồng với đơn vị trong danh mục'};
+    idxs.forEach(i => { const r = out.dx && out.dx[i]; if (!r) return; if (h) r.hdvcId = h.id; else delete r.hdvcId; });
+    return {ok: true, f: ensureForest(out)};
+  }
+  function removeHd(f, id) {
+    const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có hợp đồng này'};
+    const n = xeOf(out, h).length; if (n) return {ok: false, error: 'Hợp đồng còn ' + n + ' xe: chuyển xe sang hợp đồng khác trước'};
+    out.hdvc = out.hdvc.filter(x => x !== h); return {ok: true, f: out};
+  }
+
+  const api = {HD_EXP, vcKey, hdOf, xeOf, hdOrder, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKModel = api;
 })(typeof window !== 'undefined' ? window : globalThis);
