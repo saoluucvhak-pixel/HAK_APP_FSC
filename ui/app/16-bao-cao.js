@@ -2,6 +2,22 @@
 const rp = {id: 'dieuhanh', from: '', to: '', owner: '', detail: false, msg: null, folded: {}, q: '', one: {}, flag: {}, presetSel: '', conds: []};
 const isoToVi = v => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
 const viToIso = v => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v || ''); return m ? m[3] + '-' + m[2] + '-' + m[1] : ''; };
+/* theo đội khai thác (cấu trúc 2.0): tên đội, Tổ trưởng, số người, đơn giá bình quân đ/tấn = tổng tiền công của đội ÷ khối lượng phiếu cân của đội */
+const tenDoiOf = (jr, id) => { const d = (jr.doi || []).find(x => x.id === id); return d ? (trim(d.ten) || 'Đội ' + (jr.doi.indexOf(d) + 1)) : ''; };
+function rpDoiList(jr) {
+  try {
+    const B = doiOf(jr), ex = exOf(jr, 'day');
+    return B.doi.map((d, i) => {
+      const sr = subRec(jr, B, d), tan = klPhieu((jr.pc || []).filter(p => p.doiId === d.id)); let tien = null; try { tien = payRows(sr, ex).sum; } catch (e) { /* chưa đủ dữ liệu tính tiền */ }
+      const bs = basisOf(sr.info);
+      return {id: d.id, ten: trim(d.ten) || 'Đội ' + (i + 1), tt: (d.tt || {}).ten || '', nguoi: d.n, tienTrenTan: bs.qty === 'tấn' && tan > 0 && tien ? tien / tan : null, cachTinh: bs.unit};
+    });
+  } catch (e) { return []; }
+}
+/* theo đội xe (hợp đồng vận chuyển): tên đội xe, người ký, các xe, cước đ/tấn */
+function rpHdList(jr) {
+  try { return groupsDX(jr).map((g, i) => ({ten: trim(g.hd && g.hd.ten) || 'Đội xe ' + (i + 1), ky: g.ten || '', vai: g.vaiTro || '', bien: g.xe.map(x => x.bienSo), donGia: typeof g.donGia === 'number' ? g.donGia : null})); } catch (e) { return []; }
+}
 function rpRecords(ownerFilter = rp.owner) {
   const out = [];
   Object.values(db.rs).forEach(o => {
@@ -14,9 +30,9 @@ function rpRecords(ownerFilter = rp.owner) {
       out.push({oid: o.id, fid: f.id, chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
         dienTich: i.dienTich, dinhMuc: i.dinhMucTanHa, khoiLuongTT: i.khoiLuong, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
         diemDen: destOf(jobView(o, f)),
-        pc: (f.pc || []).map(p => ({ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null, can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
-        nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu,
-        ncList: (f.nc || []).map(r => ({vaiTro: r.vaiTro, stt: r.stt, danhXung: r.danhXung, ten: r.ten, chucDanh: r.chucDanh, ngaySinh: r.ngaySinh, cccd: r.cccd, diaChi: r.diaChi, ngayCap: r.ngayCap, noiCap: r.noiCap, rate: rateOf(infoRow(jr, r), r)})), donVi: basisOf(jr.info).short,
+        pc: (f.pc || []).map(p => ({doiId: p.doiId, ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null, can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
+        nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu, doiList: rpDoiList(jr), hdList: rpHdList(jr),
+        ncList: (f.nc || []).map(r => ({doi: tenDoiOf(jr, r.doiId), vaiTro: r.vaiTro, stt: r.stt, danhXung: r.danhXung, ten: r.ten, chucDanh: r.chucDanh, ngaySinh: r.ngaySinh, cccd: r.cccd, diaChi: r.diaChi, ngayCap: r.ngayCap, noiCap: r.noiCap, rate: rateOf(infoRow(jr, r), r)})), donVi: basisOf(jr.info).short,
         dxList: (f.dx || []).map((r, xi) => ({ky: kyBaoCao(jr, jr.dx[xi]), bienSo: r.bienSo, loaiXe: r.loaiXe, chuXe: r.chuXe, nguoiKy: r.nguoiKy, taiXe: r.taiXe, cccd: r.cccd, cccdTx: r.cccdTx, sdt: r.sdt, hanBH: r.hanBH, hanGplx: r.hanGplx}))});
     });
   });
