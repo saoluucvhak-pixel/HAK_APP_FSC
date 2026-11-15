@@ -43,3 +43,31 @@ function chotAct(act) {
   if (!r.ok) return note('Chưa thực hiện được: ' + r.error, 'err');
   persist(); note({chotLo: 'Đã chốt hồ sơ: lô khóa chỉ đọc, gói đóng băng đã lưu.', chotMoKhoa: 'Đã mở khóa lô. Sửa xong phải chốt lại (phiên bản mới).', chotLuuTru: 'Đã lưu trữ lô.', chotBoLuuTru: 'Đã bỏ lưu trữ.', chotDung: 'Đã dừng lô (chỉ đọc).', chotMoLai: 'Đã mở lại lô.'}[act], 'ok'); render();
 }
+
+/* ========== MỘT CỬA KHÓA CHỈ ĐỌC cho mọi đường ghi của lô (bản 2.2 sửa lỗi) ==========
+ * Lô đã chốt hoặc đã dừng không nhận thay đổi dữ liệu từ BẤT KỲ đường nào, không chỉ ô nhập: kiemKhoa(f) được gọi ở mọi handler ghi lô (cửa chặn sự kiện bên dưới và trong từng hàm ghi),
+ * persistLo trả lô về bản đã lưu, saveOnce (giao diện) và Store.save / saveDelta (tiến trình chính, mã LOCKED) từ chối thay đổi dữ liệu của lô khóa.
+ * Ngoại lệ duy nhất: thao tác vòng đời (chốt, mở khóa, lưu trữ, bỏ lưu trữ, dừng, mở lại: chotAct) và các khóa chot / luuTru / dung / nhatKy. */
+function kiemKhoa(f) { f = f || curForest(); if (!loKhoa(f)) return false; loKhoaNote(f); return true; }
+const ACT_GHI_LO = /^(themDoi|xoaDoi|themHd|xoaHd|hdCapNhatDv|pcGanLoat|addGiay|delGiay|luongLay|fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk|ccFill|ccClear|stAdd|stAddXe|stEdit|stDel|stRestore|stPend|stSave|d2confirm|d2legacy|d2undo|clear|pcFixDate|mhConfirm|dmCapNhatLo|svbDien|napHoanTac|qtKy|qtHuyKy|qtMark|qtUnmark|delForest)$/;
+const NHAP_GHI_LO = '[data-exp],[data-pcdoi],[data-xehd],[data-ncdoi],[data-pcfix],.ccIn';
+document.addEventListener('click', e => {
+  const el = e.target && e.target.closest && e.target.closest('[data-act]'); if (!el) return;
+  const act = el.dataset.act, f = curForest();
+  if (act === 'delRs') { const o = curOwner(); if (o && Object.values(o.forests || {}).some(x => loKhoa(x))) { e.stopPropagation(); e.preventDefault(); note('Chủ rừng còn lô đã chốt hoặc đã dừng (chỉ đọc): mở khóa hoặc mở lại lô trước khi xóa.', 'warn'); } return; }
+  if (!ACT_GHI_LO.test(act) || !f || !loKhoa(f)) return;
+  e.stopPropagation(); e.preventDefault(); loKhoaNote(f);
+}, true);
+['change', 'submit'].forEach(ev => document.addEventListener(ev, e => {
+  const t = e.target, f = curForest(); if (!t || !f || !loKhoa(f)) return;
+  const fm = t.id ? t : t.form, ghi = (t.matches && t.matches(NHAP_GHI_LO)) || (fm && fm.id && (typeof KHUNG_LO !== 'undefined' && KHUNG_LO[fm.id] || fm.id === 'stForm'));
+  if (!ghi) return;
+  e.stopPropagation(); e.preventDefault(); loKhoaNote(f);
+}, true));
+/* sau mỗi lần vẽ: ô nhập và nút ghi của lô khóa bị vô hiệu (tab Xuất hồ sơ vẫn tải và in được bản đã chốt) */
+function loKhoaVoHieu() {
+  const f = curForest(); if (!f || !loKhoa(f)) return;
+  document.querySelectorAll('#main ' + NHAP_GHI_LO.split(',').join(', #main ')).forEach(x => { x.disabled = true; x.title = 'Lô chỉ đọc'; });
+  document.querySelectorAll('#main [data-act]').forEach(b => { if (ACT_GHI_LO.test(b.dataset.act)) { b.disabled = true; b.title = 'Lô chỉ đọc'; } });
+}
+window.__khoaTest = {lo: () => curForest(), persistLo: f => persistLo(f), persist: () => persist(), chuaLuu: () => loDirty.size};   // chỉ cho kiểm thử đầu-cuối

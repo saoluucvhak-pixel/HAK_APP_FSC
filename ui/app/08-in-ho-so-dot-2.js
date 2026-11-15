@@ -53,7 +53,7 @@ async function exportDot2(mode, keys) {
   } finally { docMode = 'day'; }
 }
 function d2Confirm(keys, legacy) {
-  const f = curForest(), rec = curRec(); if (!f || !rec) return;
+  const f = curForest(), rec = curRec(); if (!f || !rec) return; if (kiemKhoa(f)) return;
   const st = HAKInAn2.stateOf(f), now = new Date().toISOString(), all = d2Items(rec);
   keys.forEach(k => { const it = all.find(x => x.key === k); if (it && it.nenMissing.length === 0) (legacy ? HAKInAn2.confirmLegacy : HAKInAn2.confirm)(st, it, now); });
   persist();

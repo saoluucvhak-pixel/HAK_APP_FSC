@@ -182,5 +182,6 @@ function render() {
   renderMain();
   renderCtx();
   stApplyGate();
+  loKhoaVoHieu();
 }
 

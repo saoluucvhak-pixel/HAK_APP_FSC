@@ -182,6 +182,20 @@ class Store {
     if (goneO.length >= 2 && !opts.allowBulkDelete) throw Object.assign(new Error('Lần lưu này sẽ xóa ' + goneO.length + ' hồ sơ chủ rừng cùng lúc nên đã bị chặn để tránh mất dữ liệu. Xóa từng chủ rừng, hoặc dùng Khôi phục toàn bộ nếu muốn thay toàn bộ dữ liệu.'), {code: 'BULK_DELETE'});
     if (goneO.length || goneF.length) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
   }
+  /* KHÓA CHỈ ĐỌC Ở TẦNG LƯU (mã LOCKED): lô đang chốt hoặc dừng trong cơ sở dữ liệu không nhận thay đổi dữ liệu, trừ các khóa vòng đời (chot, luuTru, dung, nhatKy: chốt, mở khóa,
+   * lưu trữ, dừng, mở lại). rowsF: các lô sẽ ghi {id, data}. Gọi TRƯỚC khi ghi: có vi phạm thì không ghi gì. */
+  _kiemKhoa(rowsF, xoaF, xoaO) {
+    const V = require('./vongdoi'), M = require('./model'), get = this.db.prepare('SELECT data FROM forests WHERE id=?'), bad = [];
+    const gone = new Set((xoaF || []).map(String));   // xóa lô (hoặc cả chủ rừng) đang chốt / dừng cũng phải mở khóa trước
+    (xoaO || []).forEach(oid => this.db.prepare('SELECT id FROM forests WHERE owner_id=?').all(String(oid)).forEach(r => gone.add(r.id)));
+    gone.forEach(id => { const row = get.get(id); if (!row) return; try { const f = JSON.parse(row.data); if (V.chiDoc(f)) bad.push((f.info && f.info.maRung) || id); } catch (e) { /* dòng hỏng: không chặn */ } });
+    rowsF.forEach(r => {
+      const row = get.get(r.id); if (!row) return;
+      let cu, moi; try { cu = JSON.parse(row.data); moi = JSON.parse(r.data); } catch (e) { return; }
+      if (V.viPhamKhoa(M.needsEnsure(cu) ? M.ensureForest(cu) : cu, moi)) bad.push((moi.info && moi.info.maRung) || r.id);
+    });
+    if (bad.length) throw Object.assign(new Error('Lô ' + bad.slice(0, 5).join(', ') + (bad.length > 5 ? '…' : '') + ' đã chốt hoặc đã dừng (chỉ đọc): không ghi thay đổi dữ liệu. Mở khóa (nhập lý do) hoặc mở lại lô trước khi sửa.'), {code: 'LOCKED', lots: bad});
+  }
   /* Phiên bản dữ liệu trong phiên làm việc: đổi sau MỖI lần ghi hồ sơ (save, saveDelta, khôi phục...). Giao diện chỉ được lưu theo phần thay đổi
    * khi ảnh chụp của nó ứng đúng phiên bản này (src/delta.js); khác thì lưu toàn bộ. */
   _bump() { this.rev = crypto.randomUUID(); return this.rev; }
@@ -198,6 +212,7 @@ class Store {
     const keepO = new Set(rows.owners.map(o => o.id)), keepF = new Set(rows.forests.map(f => f.id));
     const goneO = [...have.keys()].filter(id => !keepO.has(id)), goneF = [...haveF.keys()].filter(id => !keepF.has(id));
     this._guardDelete(goneO, goneF, opts);
+    if (!opts.boQuaKhoa) this._kiemKhoa(rows.forests.filter(f => haveF.has(f.id) && haveF.get(f.id) !== f.hash + '|' + f.owner_id), goneF, goneO);
     const st = this._stmts(), t = now(); let changed = 0;
     this.db.transaction(() => {
       changed += this._writeSide(db, t);
@@ -238,6 +253,7 @@ class Store {
     });
     if (delF.some(id => id in upF) || delO.some(id => id in upO)) bad('vừa sửa vừa xóa cùng một dòng');
     this._guardDelete(delO, delF, opts);
+    if (!opts.boQuaKhoa) this._kiemKhoa(rowsF, delF, delO);
     const st = this._stmts(), t = now(); let changed = 0;
     const tx = this.db.transaction(() => {
       changed += this._writeSide(side, t);
@@ -314,7 +330,7 @@ class Store {
       Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
     }
     const backup = this.snapshotFile('truoc-khoi-phuc');
-    this.save(next, {allowBulkDelete: strategy === 'replace'});
+    this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace'});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
     return {backup, counts: Store.counts(this.load())};
   }
 

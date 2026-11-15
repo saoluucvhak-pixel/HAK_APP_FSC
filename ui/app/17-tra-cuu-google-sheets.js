@@ -344,6 +344,7 @@ function lkRender() {
 /* ----- Ghi vào hồ sơ: kiểm tra đủ lựa chọn, áp dụng một lần, lưu trong một giao dịch ----- */
 async function lkApply() {
   const c = lk.cand, F = c.forests[lk.fi], s = lk.sel, errs = [];
+  { const T0 = lk.mode === 'fill' ? lkTarget() : null; if (T0 && T0.f && loKhoa(T0.f)) { lk.msg = {kind: 'err', text: 'Chưa ghi: lô ' + ((T0.f.info || {}).maRung || '') + ' đã ' + (T0.f.dung ? 'dừng' : 'chốt') + ' (chỉ đọc). Mở khóa (nhập lý do) hoặc mở lại lô ở tab Xuất hồ sơ trước khi áp bản tra cứu. Hồ sơ giữ nguyên.'}; return lkRender(); } }
   Object.entries(s.owner).forEach(([k, v]) => { if (v == null) errs.push('Chủ rừng: chọn giữ hay thay “' + c.owner.fields.find(x => x.key === k).label + '”'); });
   Object.entries(s.forest).forEach(([k, v]) => { if (v == null) errs.push('Rừng: chọn giữ hay thay “' + F.fields.find(x => x.key === k).label + '”'); });
   if (F.area.length && s.area == null) errs.push('Chọn giá trị diện tích');

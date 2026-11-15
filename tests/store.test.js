@@ -236,3 +236,53 @@ test('hồi quy: chuyển lô sang chủ rừng khác mà nội dung lô không 
   assert.deepStrictEqual([Object.keys(o.rs.a.forests), Object.keys(o.rs.b.forests)], [[], ['fx']]);
   s.close();
 });
+
+test('khóa chỉ đọc ở tầng lưu: lô đã chốt hoặc dừng không nhận thay đổi dữ liệu (save và saveDelta, mã LOCKED), thao tác vòng đời vẫn ghi được', () => {
+  const V = require('../src/vongdoi'), D = require('../src/delta');
+  const s = new Store(':memory:'), d = sample(); s.save(d);
+  let db = s.load(); const f = db.rs.r1.forests.f1;
+  // chốt (thao tác vòng đời) ghi được
+  assert.ok(V.chot(f, 'KT', '2026-11-01T00:00:00Z', []).ok); s.save(db);
+  assert.ok(s.load().rs.r1.forests.f1.chot, 'chốt được ghi');
+  // sửa dữ liệu lô đã chốt: save bị từ chối, SQLite không đổi
+  db = s.load(); db.rs.r1.forests.f1.exp = {soKT: '99'};
+  assert.throws(() => s.save(db), e => e.code === 'LOCKED' && /R-1/.test(e.message));
+  assert.deepStrictEqual(s.load().rs.r1.forests.f1.exp, {}, 'không ghi gì');
+  // lô khác (không khóa) vẫn lưu được; lô khóa không đổi thì không bị chặn
+  db = s.load(); db.rs.r1.forests.f2.exp = {soKT: '7'}; s.save(db); assert.strictEqual(s.load().rs.r1.forests.f2.exp.soKT, '7');
+  // saveDelta cũng chặn
+  db = s.load(); const snap0 = D.snapshot(db); db.rs.r1.forests.f1.nc = [{ten: 'SỬA'}]; db.rs.r1.forests.f1.exp = {x: 1};
+  const dl = D.diff(snap0, D.snapshot(db)); dl.rev = s.rev; dl.side = D.side(db); dl.counts = D.snapshot(db).counts;
+  assert.throws(() => s.saveDelta(dl), e => e.code === 'LOCKED');
+  // mở khóa (có lý do) = thao tác vòng đời: được ghi; sau đó sửa được
+  db = s.load(); assert.ok(V.moKhoa(db.rs.r1.forests.f1, 'sửa số phiếu', 'KT', '2026-11-02T00:00:00Z').ok); s.save(db);
+  db = s.load(); assert.ok(!db.rs.r1.forests.f1.chot && db.rs.r1.forests.f1.nhatKy.length === 2);
+  db.rs.r1.forests.f1.exp = {soKT: '99'}; s.save(db); assert.strictEqual(s.load().rs.r1.forests.f1.exp.soKT, '99');
+  // dừng lô: chỉ đọc; mở lại lô mới sửa được
+  db = s.load(); assert.ok(V.dung(db.rs.r1.forests.f1, 'ngừng', '01/11/2026', 'KT', '2026-11-03T00:00:00Z').ok); s.save(db);
+  db = s.load(); db.rs.r1.forests.f1.info.diaDiem = 'X'; assert.throws(() => s.save(db), e => e.code === 'LOCKED');
+  db = s.load(); assert.ok(V.moLai(db.rs.r1.forests.f1, 'tiếp tục', 'KT', '2026-11-04T00:00:00Z').ok); s.save(db);
+  // chỉ khác thứ tự khóa: không tính là thay đổi
+  db = s.load(); V.chot(db.rs.r1.forests.f1, 'KT', '2026-11-05T00:00:00Z', []); s.save(db);
+  db = s.load(); const g = db.rs.r1.forests.f1, re = {}; Object.keys(g).reverse().forEach(k => { re[k] = g[k]; }); db.rs.r1.forests.f1 = re; s.save(db);
+  // khôi phục lô (applyLot overwrite) lên lô đang khóa bị chặn
+  assert.throws(() => { const c = s.load(); c.rs.r1.forests.f1.info.diaDiem = 'KHÁC'; s.save(c); }, e => e.code === 'LOCKED');
+});
+test('khóa chỉ đọc: viPhamKhoa chỉ tính thay đổi ngoài khóa vòng đời, lô chưa khóa không bao giờ vi phạm', () => {
+  const V = require('../src/vongdoi'), a = {id: 'x', info: {a: 1}, chot: {at: 1}, nhatKy: []};
+  assert.strictEqual(V.viPhamKhoa(a, Object.assign({}, a, {nhatKy: [{hanh: 'luutru'}], luuTru: {at: 2}})), false);
+  assert.strictEqual(V.viPhamKhoa(a, Object.assign({}, a, {info: {a: 2}})), true);
+  assert.strictEqual(V.viPhamKhoa(a, {id: 'x', info: {a: 1}}), false, 'mở khóa (bỏ chot) không đổi dữ liệu');
+  assert.strictEqual(V.viPhamKhoa({id: 'x', info: {a: 1}}, {id: 'x', info: {a: 2}}), false, 'lô chưa khóa');
+  assert.strictEqual(V.viPhamKhoa({id: 'x', dung: {at: 1}, info: {a: 1}}, {id: 'x', dung: {at: 1}, info: {a: 2}}), true, 'lô đã dừng');
+});
+
+test('khóa chỉ đọc: xóa lô hoặc chủ rừng có lô đang chốt bị chặn (LOCKED); khôi phục thay toàn bộ vẫn được', () => {
+  const V = require('../src/vongdoi'), s = new Store(':memory:'); s.save(sample());
+  let db = s.load(); V.chot(db.rs.r1.forests.f1, 'KT', '2026-11-01T00:00:00Z', []); s.save(db);
+  db = s.load(); delete db.rs.r1.forests.f1; assert.throws(() => s.save(db), e => e.code === 'LOCKED');
+  db = s.load(); delete db.rs.r1; assert.throws(() => s.save(db), e => e.code === 'LOCKED');
+  db = s.load(); delete db.rs.r1.forests.f2; s.save(db); assert.ok(!('f2' in s.load().rs.r1.forests), 'lô không khóa xóa được');
+  const t = sample(); assert.doesNotThrow(() => s.applyImport(t, 'replace'));
+  assert.ok(!s.load().rs.r1.forests.f1.chot);
+});

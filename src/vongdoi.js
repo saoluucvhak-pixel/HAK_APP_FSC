@@ -65,6 +65,13 @@
     f.dung = {at: now, ngay: s(ngay), lyDo: s(lyDo)}; ghi(f, 'dung', lyDo, nguoi, now); return {ok: true};
   }
   function moLai(f, lyDo, nguoi, now) { if (!f || !f.dung) return {ok: false, error: 'Lô chưa dừng'}; if (!s(lyDo)) return {ok: false, error: 'Phải nhập lý do mở lại lô'}; ghi(f, 'molai', lyDo, nguoi, now); delete f.dung; return {ok: true}; }
-  const api = {TEN, CHI_DOC, trangThai, chiDoc, dieuKienChot, chot, moKhoa, nguyenVen, luuTru, boLuuTru, dung, moLai, bam, phienBanKe};
+  /* KHÓA CHỈ ĐỌC Ở TẦNG LƯU: lô đang chốt hoặc dừng (bản ĐÃ LƯU) không được đổi dữ liệu so với bản đã lưu, ngoại trừ các khóa vòng đời. Hai bản so bằng chuỗi chuẩn (khóa sắp thứ tự)
+   * nên chỉ khác thứ tự khóa không bị tính là thay đổi. Dùng ở giao diện (trước khi gửi) và ở Store (trước khi ghi). */
+  const KHOA_VONG_DOI = ['chot', 'luuTru', 'dung', 'nhatKy'];
+  const chuan = v => Array.isArray(v) ? '[' + v.map(chuan).join(',') + ']' : v && typeof v === 'object' ? '{' + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + chuan(v[k])).join(',') + '}' : JSON.stringify(v === undefined ? null : v);
+  const boVongDoi = f => { const c = Object.assign({}, f); KHOA_VONG_DOI.forEach(k => { delete c[k]; }); return c; };
+  const doiNgoaiVongDoi = (cu, moi) => chuan(boVongDoi(cu)) !== chuan(boVongDoi(moi));
+  const viPhamKhoa = (cu, moi) => !!cu && chiDoc(cu) && !!moi && doiNgoaiVongDoi(cu, moi);
+  const api = {KHOA_VONG_DOI, doiNgoaiVongDoi, viPhamKhoa, TEN, CHI_DOC, trangThai, chiDoc, dieuKienChot, chot, moKhoa, nguyenVen, luuTru, boLuuTru, dung, moLai, bam, phienBanKe};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKVongDoi = api;
 })(typeof self !== 'undefined' ? self : this);

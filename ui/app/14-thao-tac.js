@@ -291,7 +291,7 @@ function confirmImport(kind, f, rows, fileName) {
   return confirm(lines.join('\n') + '\n\nGhi vào hồ sơ?');
 }
 async function importFile(kind, file) {
-  const f0 = curForest(); if (!f0) return;
+  const f0 = curForest(); if (!f0) return; if (kiemKhoa(f0)) return;
   const tgt = {o: cur, f: curF, ma: f0.info.maRung, epoch: dbEpoch};   // lô đích cố định ngay khi chọn file: không phụ thuộc lô đang mở khi đọc xong
   try {
     const spec = {nc: ['NHAN_CONG', H_NC, NC_REQ, normNC], dx: ['DOI_XE', H_DX, DX_REQ, normDX], pc: ['PHIEU_CAN', H_PC, PC_REQ, normPC, PC_ALIAS]}[kind];

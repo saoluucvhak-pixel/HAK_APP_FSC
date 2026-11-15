@@ -64,6 +64,7 @@ let savedSnap = null;        // ảnh chụp đúng nội dung đã ghi thành c
 let nhapKhung = null;   // đang áp dụng một khung vào bản nháp: chỉ đánh dấu “Chưa lưu” khi dữ liệu của lô THỰC SỰ đổi (sự kiện change có thể chạy khi ô không đổi gì)
 function persistLo(f) {
   f = f || curForest(); if (!f) return;
+  if (loKhoa(f)) { loVeBanDaLuu(f.id); loKhoaNote(f); return; }   // lô chỉ đọc: không bao giờ vào bản nháp (trả về bản đã lưu, không để trạng thái “Chưa lưu” treo)
   if (nhapKhung) { nhapKhung.can = true; return; }
   if (!savedSnap) savedSnap = (saveCache && saveCache.snap) || HAKDelta.snapshot(dbGhi());
   loDirty.add(f.id); showSave('Lô ' + ((f.info || {}).maRung || '') + ' còn thay đổi chưa lưu — bấm “Lưu dữ liệu vào lô”');
@@ -81,17 +82,34 @@ function dbGhi() {
   return out;
 }
 /* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu */
-function loHoan(fid) {
-  if (!loDirty.has(fid)) return false; loDirty.delete(fid);
-  const b = savedSnap && savedSnap.forests.get(fid); if (!b) return true;
+function loHoan(fid) { return loDirty.has(fid) ? loVeBanDaLuu(fid) || true : false; }
+function loVeBanDaLuu(fid) {
+  loDirty.delete(fid);
+  const b = savedSnap && savedSnap.forests.get(fid); if (!b) return false;
   Object.values(db.rs || {}).forEach(o => { const k = Object.keys(o.forests || {}).find(x => (o.forests[x].id || x) === fid); if (k) { const f = o.forests[k], v = JSON.parse(b.json); Object.keys(f).forEach(x => { delete f[x]; }); Object.assign(f, v); } });
   return true;
 }
 window.__saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
 /* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
 function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); })); }   // tại chỗ: nơi đang giữ tham chiếu lô vẫn đúng
+/* lô đã chốt / dừng (theo bản ĐÃ LƯU) mà trong bộ nhớ đã khác ngoài các khóa vòng đời: [mã lô]. Chỉ giải mã JSON của lô khóa. */
+function loKhoaViPham() {
+  const out = [];
+  if (!savedSnap || !savedSnap.forests) return out;
+  Object.values(db.rs || {}).forEach(o => Object.entries((o && o.forests) || {}).forEach(([fk, f]) => {
+    const id = (f && f.id) || fk, b = savedSnap.forests.get(id); if (!b || !/"(chot|dung)":\{/.test(b.json)) return;
+    let cu; try { cu = JSON.parse(b.json); } catch (e) { return; }
+    if (HAKVongDoi.viPhamKhoa(cu, f)) out.push(id);
+  }));
+  return out;
+}
 async function saveOnce() {
   chuanHoaDb();
+  { const kh = loKhoaViPham(); if (kh.length) {   // tầng lưu của giao diện: không gửi thay đổi dữ liệu của lô khóa; trả về bản đã lưu
+    const ma = kh.map(id => { let m = id; Object.values(db.rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => { if (f && f.id === id) m = (f.info || {}).maRung || id; })); return m; });
+    kh.forEach(id => loVeBanDaLuu(id));
+    return {ok: false, code: 'LOCKED', error: 'Lô ' + ma.join(', ') + ' đã chốt hoặc đã dừng (chỉ đọc): không ghi thay đổi dữ liệu. Mở khóa (nhập lý do) hoặc mở lại lô trước khi sửa; thay đổi vừa rồi đã được bỏ.'};
+  } }
   let r = null, snap = null;
   if (saveCache && HB.saveDelta) {
     const W = dbGhi(); snap = HAKDelta.snapshot(W);
@@ -118,6 +136,7 @@ function flushSave() {
   saveTimer = null;
   storeSave().then(r => {
     if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); }
+    else if (r && r.code === 'LOCKED') { storeOk = true; showSave('Lô chỉ đọc: không ghi thay đổi', true); pushNote(r.error, 'err'); render(); }
     else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
   }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });
 }
