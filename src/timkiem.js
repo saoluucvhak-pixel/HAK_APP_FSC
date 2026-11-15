@@ -24,13 +24,13 @@
     Object.entries((db && db.rs) || {}).forEach(([oid, o]) => {
       const oi = (o && o.info) || {};
       const dChu = Math.max(best(q, [[oi.ten, 't'], [oi.ma, 't'], [oi.cccd, 'so'], [oi.sdt, 'so']]), tuy([oi.ten, oi.ma, oi.diaChi]) ? 1 : 0);
-      add('Chủ rừng', dChu, {nhan: oi.ten || '(chưa đặt tên)', ngu: 'CCCD ' + s(oi.cccd) + (oi.ma ? ' · mã ' + oi.ma : ''), dich: {to: 'chu', oid}});
+      add('Chủ rừng', dChu, {nhan: oi.ten || '(chưa đặt tên)', ngu: 'CCCD ' + s(oi.cccd) + (oi.ma ? ' · mã ' + oi.ma : ''), dich: {to: 'chu', oid}, th: {loai: 'chu', key: oid}});
       Object.entries((o && o.forests) || {}).forEach(([fid, f]) => {
         const i = f.info || {}, ma = s(i.maRung), ctx = 'lô ' + (ma || fid) + ' · ' + (oi.ten || '');
         add('Lô', Math.max(best(q, [[i.maRung, 't'], [i.tenRung, 't'], [i.diaDiem, 't']]), tuy([i.maRung, i.tenRung, i.diaDiem, oi.ten]) ? 1 : 0), {nhan: ma || '(chưa có mã)', ngu: (i.tenRung || '') + (i.diaDiem ? ' · ' + i.diaDiem : '') + ' · chủ ' + (oi.ten || ''), dich: {to: 'lo', oid, fid, ftab: 'finfo'}});
-        (f.nc || []).forEach(r => add('Người', best(q, [[r.ten, 't'], [r.cccd, 'so']]), {nhan: s(r.ten), ngu: 'CCCD ' + s(r.cccd) + ' · ' + s(r.chucDanh || r.vaiTro) + ' · ' + ctx, dich: {to: 'lo', oid, fid, ftab: 'nc'}}));
+        (f.nc || []).forEach(r => add('Người', best(q, [[r.ten, 't'], [r.cccd, 'so']]), {nhan: s(r.ten), ngu: 'CCCD ' + s(r.cccd) + ' · ' + s(r.chucDanh || r.vaiTro) + ' · ' + ctx, dich: {to: 'lo', oid, fid, ftab: 'nc'}, th: digits(r.cccd).length === 12 ? {loai: 'nguoi', key: digits(r.cccd)} : null}));
         (f.dx || []).forEach(r => {
-          add('Xe', best(q, [[r.bienSo, 'bien'], [r.chuXe, 't'], [r.taiXe, 't'], [r.cccd, 'so'], [r.cccdTx, 'so']]), {nhan: s(r.bienSo), ngu: 'chủ xe ' + s(r.chuXe) + (r.taiXe ? ' · tài xế ' + r.taiXe : '') + ' · ' + ctx, dich: {to: 'lo', oid, fid, ftab: 'dx'}});
+          add('Xe', best(q, [[r.bienSo, 'bien'], [r.chuXe, 't'], [r.taiXe, 't'], [r.cccd, 'so'], [r.cccdTx, 'so']]), {nhan: s(r.bienSo), ngu: 'chủ xe ' + s(r.chuXe) + (r.taiXe ? ' · tài xế ' + r.taiXe : '') + ' · ' + ctx, dich: {to: 'lo', oid, fid, ftab: 'dx'}, th: {loai: 'xe', key: s(r.bienSo)}});
         });
         (f.pc || []).forEach(r => add('Phiếu cân', best(q, [[r.soPhieu, 'so'], [r.soPhieu, 't'], [r.bienSo, 'bien']]), {nhan: 'Phiếu ' + s(r.soPhieu), ngu: s(r.ngay) + ' · ' + s(r.bienSo) + ' · ' + (typeof r.kl === 'number' ? String(r.kl).replace('.', ',') + ' tấn' : '') + ' · ' + ctx, dich: {to: 'lo', oid, fid, ftab: 'dx'}}));
         const vb = []; const num = (e, ten) => Object.entries(e || {}).forEach(([k, v]) => { if (/^(so|uqSo|ntSo|pcSo)/.test(k) && s(v)) vb.push([k, s(v), ten]); });
@@ -38,9 +38,9 @@
         vb.forEach(([k, v, ten]) => add('Văn bản', best(q, [[v, 't']]), {nhan: 'Số ' + v, ngu: ({soKT: 'hợp đồng khai thác', uqSo: 'giấy ủy quyền', ntSo: 'nghiệm thu', soVC: 'hợp đồng vận chuyển', pcSo: 'phiếu cân'}[k] || k) + (ten ? ' (' + ten + ')' : '') + ' · ' + ctx, dich: {to: 'lo', oid, fid, ftab: 'xuat'}}));
       });
     });
-    (db.dmLaoDong || []).forEach(r => add('Người', best(q, [[r.ten, 't'], [r.cccd, 'so']]), {nhan: s(r.ten), ngu: 'Danh mục lao động · CCCD ' + s(r.cccd) + ' · ' + s(r.viTri), dich: {to: 'dm', tab: 'laodong', q: s(r.cccd) || s(r.ten)}}));
-    (db.dmXeVC || []).forEach(r => add('Xe', best(q, [[r.bienSo, 'bien'], [r.chuXe, 't'], [r.taiXe, 't'], [r.cccdTx, 'so']]), {nhan: s(r.bienSo), ngu: 'Danh mục xe · chủ xe ' + s(r.chuXe) + ' · tài xế ' + s(r.taiXe), dich: {to: 'dm', tab: 'xe', q: s(r.bienSo)}}));
-    (db.dmDoiTac || []).forEach(r => add('Đối tác', best(q, [[r.ten, 't'], [r.cccd, 'so'], [r.mst, 'so']]), {nhan: s(r.ten), ngu: 'Danh mục đối tác · ' + (r.mst ? 'MST ' + r.mst : 'CCCD ' + s(r.cccd)), dich: {to: 'dm', tab: 'doitac', q: s(r.ten)}}));
+    (db.dmLaoDong || []).forEach(r => add('Người', best(q, [[r.ten, 't'], [r.cccd, 'so']]), {nhan: s(r.ten), ngu: 'Danh mục lao động · CCCD ' + s(r.cccd) + ' · ' + s(r.viTri), dich: {to: 'dm', tab: 'laodong', q: s(r.cccd) || s(r.ten)}, th: digits(r.cccd).length === 12 ? {loai: 'nguoi', key: digits(r.cccd)} : null}));
+    (db.dmXeVC || []).forEach(r => add('Xe', best(q, [[r.bienSo, 'bien'], [r.chuXe, 't'], [r.taiXe, 't'], [r.cccdTx, 'so']]), {nhan: s(r.bienSo), ngu: 'Danh mục xe · chủ xe ' + s(r.chuXe) + ' · tài xế ' + s(r.taiXe), dich: {to: 'dm', tab: 'xe', q: s(r.bienSo)}, th: {loai: 'xe', key: s(r.bienSo)}}));
+    (db.dmDoiTac || []).forEach(r => add('Đối tác', best(q, [[r.ten, 't'], [r.cccd, 'so'], [r.mst, 'so']]), {nhan: s(r.ten), ngu: 'Danh mục đối tác · ' + (r.mst ? 'MST ' + r.mst : 'CCCD ' + s(r.cccd)), dich: {to: 'dm', tab: 'doitac', q: s(r.ten)}, th: {loai: 'doitac', key: r.id}}));
     Object.values(db.dmDonViVC || {}).forEach(r => add('Đối tác', best(q, [[r.ten, 't'], [r.mst, 'so'], [r.daiDien, 't']]), {nhan: s(r.ten), ngu: 'Doanh nghiệp vận chuyển' + (r.mst ? ' · MST ' + r.mst : ''), dich: {to: 'dm', tab: 'doitac', q: s(r.ten)}}));
     // gộp trùng (cùng nhãn + nguồn), xếp theo điểm rồi theo nhãn, cắt mỗi nhóm
     return NHOM.map(n => { const seen = new Set(); const ds = out[n].filter(x => { const k = x.nhan + '|' + x.ngu; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => b.d - a.d || a.nhan.localeCompare(b.nhan, 'vi')); return {nhom: n, tong: ds.length, ds: ds.slice(0, lim)}; });

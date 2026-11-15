@@ -32,6 +32,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const dmIdx = await w.$$eval('.tkItem', els => els.findIndex(e => /Danh mục lao động/.test(e.innerText)));
   await w.click('.tkItem >> nth=' + dmIdx); await w.waitForTimeout(500);
   ok('bấm kết quả danh mục: mở màn Danh mục tab Lao động đã lọc', /Danh mục/.test(await w.innerText('#main')) && (await w.$$('#dmLdTbl tbody tr')).length === 1);
+  // trang tổng hợp theo đối tượng
+  await w.keyboard.press('Control+k'); await w.waitForSelector('#tkInput'); await w.fill('#tkInput', '92c12345'); await w.waitForTimeout(300);
+  await w.click('[data-tkth] >> nth=0'); await w.waitForSelector('#thPanel');
+  const th = await w.innerText('#thPanel');
+  ok('nút Tổng hợp ở kết quả xe: mở trang tổng hợp xe 92C-12345 với lô đã chạy, số chuyến, khối lượng', /Xe 92C-12345/.test(th) && /Các lô và đội xe đã chạy/.test(th) && /R-A/.test(th) && /12,5/.test(th), th.slice(0, 400));
+  await w.keyboard.press('Escape'); await w.waitForTimeout(200); ok('Esc đóng trang tổng hợp', !(await w.$('#thBox')));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
