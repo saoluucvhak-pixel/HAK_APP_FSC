@@ -124,6 +124,7 @@ async function lotBackup() {
   let pkg; try { pkg = HAKLoRung.exportLot(db, o.id, f.id, {version: (dbInfo && dbInfo.version) || ''}); } catch (e) { return note('Không sao lưu được lô: ' + e.message, 'err'); }
   const r = await HB.lotSave(pkg);
   if (r.canceled) return;
+  if (r.ok && r.canhBao) pushNote('Cảnh báo: ' + r.canhBao, 'err');
   note(r.ok ? 'Đã sao lưu lô ' + pkg.maLo + ' (' + pkg.kiemTra.nc + ' nhân công, ' + pkg.kiemTra.dx + ' xe, ' + pkg.kiemTra.pc + ' phiếu cân) vào: ' + r.file : 'Không sao lưu được lô: ' + r.error, r.ok ? 'ok' : 'err');
 }
 const lotCnt = c => c ? c.nc + ' nhân công, ' + c.dx + ' xe, ' + c.pc + ' phiếu cân, ' + fmtTan(c.kl) + ' tấn' : '';
@@ -146,7 +147,7 @@ async function lotRestoreOpen(filePath) {
     '<table><tr><th>Chủ rừng</th><td><b>' + esc(P.chu.ten) + '</b> · mã ' + esc(P.chu.ma) + '</td></tr><tr><th>Mã lô</th><td><b>' + esc(P.maLo) + '</b> ' + esc(P.tenLo) + '</td></tr>' +
     '<tr><th>Thời điểm sao lưu</th><td>' + esc(fmtDT(P.xuatLuc)) + '</td></tr></table>' + lotFigTable(P) +
     (P.ok ? '<div class="msg ' + (exists ? 'warn' : 'ok') + '">' + (P.chu.state === 'co' ? 'Chủ rừng <b>đã có</b> trên máy: lô sẽ được ' + (exists ? 'xử lý theo lựa chọn bên dưới' : 'thêm vào đúng chủ này') + '.' : 'Chủ rừng <b>chưa có</b> trên máy: sẽ tạo chủ mới từ thông tin trong file rồi thêm lô.') +
-      (exists ? ' Lô này <b>đã tồn tại</b> trên máy.' : ' Lô <b>chưa có</b> trên máy.') + '</div>' : '<div class="msg err"><b>Dừng: không xác định được lô đích, cần đối chiếu.</b> Chưa ghi gì.<br>' + P.conflicts.map(c => '• ' + esc(c.moTa)).join('<br>') + '</div>') +
+      (exists ? ' Lô này <b>đã tồn tại</b> trên máy.' : ' Lô <b>chưa có</b> trên máy.') + '</div>' : '<div class="msg err" id="lotDung"><b>' + (P.conflicts.some(c => c.loai === 'toanVen') ? 'Dừng: hồ sơ đã chốt trong file không toàn vẹn — không khôi phục từ file này.</b> Chưa ghi gì; hồ sơ trên máy, các lô khác và file nguồn giữ nguyên. Bấm Hủy rồi chọn bản sao lưu khác để đối chiếu.' : 'Dừng: không xác định được lô đích, cần đối chiếu.</b> Chưa ghi gì.') + '<br>' + P.conflicts.map(c => '• ' + esc(c.moTa)).join('<br>') + '</div>') +
     (P.giuTrongChu.length ? '<p class="mut">Các lô khác của chủ này trên máy giữ nguyên: ' + P.giuTrongChu.map(x => esc(x.ma)).join(', ') + '.</p>' : '') +
     (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn"><b>Thiết lập dùng chung: máy đích giữ nguyên thiết lập của mình</b>, chỉ bổ sung mục máy chưa có.<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x.text) + '<br><small class="mut">Phần hồ sơ có thể khác: ' + esc(x.anhHuong) + '</small>').join('<br>') + '</div>' : '<p class="mut">Thiết lập dùng chung (định mức BHLĐ, ánh xạ biển số) của lô trùng với máy đích.</p>') +
     P.ghiChu.map(x => '<p class="mut">' + esc(x) + '</p>').join('') +

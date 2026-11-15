@@ -224,12 +224,15 @@
     out.doi.push(d); return {f: out, id: d.id};
   }
   /* xóa đội: chặn nếu còn nhân công (chuyển hoặc xóa họ trước); không xóa đội cuối cùng */
+  /* lịch sử STT văn bản đã cấp theo lô và theo nhóm (doi | doiXe), cùng quy tắc src/sovb.js: f.sttDaCap = {doi: [..], doiXe: [..]} */
+  function ghiSttDaCap(f, nhom, stt) { if (!(stt > 0)) return; f.sttDaCap = f.sttDaCap && typeof f.sttDaCap === 'object' ? f.sttDaCap : {}; const l = Array.isArray(f.sttDaCap[nhom]) ? f.sttDaCap[nhom] : []; if (!l.includes(stt)) l.push(stt); l.sort((a, b) => a - b); f.sttDaCap[nhom] = l; }
   function removeTeam(f, id) {
     const out = ensureForest(f), d = out.doi.find(x => x.id === id);
     if (!d) return {ok: false, error: 'Không có đội này'};
     if (out.doi.length <= 1) return {ok: false, error: 'Lô phải có ít nhất một đội'};
     const n = membersOf(out, d).length; if (n) return {ok: false, error: 'Đội còn ' + n + ' nhân công: chuyển họ sang đội khác hoặc xóa trước khi xóa đội'};
     const np = (out.pc || []).filter(r => r && r.doiId === id).length; if (np) return {ok: false, error: 'Đội còn ' + np + ' phiếu cân: gán phiếu sang đội khác trước khi xóa đội'};
+    ghiSttDaCap(out, 'doi', d.stt);   // đội bị xóa vẫn giữ STT đã cấp: đội mới không nhận lại số này
     out.doi = out.doi.filter(x => x.id !== id); return {ok: true, f: out};
   }
   /* cập nhật thông tin đội (tên, hình thức, diện tích, số văn bản) */
@@ -278,6 +281,7 @@
   function removeHd(f, id) {
     const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có đội xe này'};
     const n = xeOf(out, h).length; if (n) return {ok: false, error: 'Đội xe còn ' + n + ' xe: chuyển xe sang đội khác trước'};
+    ghiSttDaCap(out, 'doiXe', h.stt);
     out.hdvc = out.hdvc.filter(x => x !== h); return {ok: true, f: out};
   }
   /* những người ký được của đội xe: chủ xe và tài xế (có CCCD) của các xe trong đội, không trùng */
@@ -299,6 +303,22 @@
     })));
     return [...by.values()].map(x => x.r).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
   }
-  const api = {hdTenKhop, xoaTruongCu, coTruongCu, nguoiDanhMuc, cccdSo, assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
+  /* TRẠNG THÁI IN ĐỢT 2 CỦA BM-09 / BM-10 THEO ĐỘI XE (A3): khóa mới 'hd:<id đội xe>' (đổi người ký, đổi tên doanh nghiệp không mất lịch sử in);
+   * khóa cũ là CCCD (hoặc tên) của người ký, đúng như ui/app/07 groupsDX dựng: doanh nghiệp / đối tác → ben.cccd || ben.ten; người trong đội → CCCD (hoặc tên) chủ xe / tài xế ký. */
+  const khoaInVC = h => 'hd:' + h.id;
+  function khoaInCuVC(f, h) {
+    const xs = xeOf(f, h); if (!xs.length) return '';
+    if (h.donViId) { const b = h.ben || {}; return String(b.cccd || b.ten || ''); }
+    const sg = signerOf(xs, h.key), r = sg ? sg.r : xs[0], tx = sg ? sg.tx : trim(r.nguoiKy) === 'Tài xế';
+    return String((tx ? r.cccdTx : r.cccd) || (tx ? r.taiXe : r.chuXe) || '');
+  }
+  /* đổi khóa cũ sang khóa đội xe trong f.inDot2 (sửa trực tiếp f; trả số mục đã đổi). Lô đã chốt / đã dừng: không đổi (giữ dấu vân tay; giao diện vẫn đọc được khóa cũ). Chạy lại không đổi. */
+  function doiKhoaInVC(f) {
+    if (!f || f.chot || f.dung || !f.inDot2 || !f.inDot2.items || !Array.isArray(f.hdvc)) return 0;
+    const it = f.inDot2.items; let n = 0;
+    f.hdvc.forEach(h => { const cu = khoaInCuVC(f, h); if (!cu) return; ['09', '10'].forEach(code => { const a = code + ':' + cu, b = code + ':' + khoaInVC(h); if (has(it, a) && !has(it, b)) { it[b] = it[a]; delete it[a]; n++; } }); });
+    return n;
+  }
+  const api = {khoaInVC, khoaInCuVC, doiKhoaInVC, hdTenKhop, xoaTruongCu, coTruongCu, nguoiDanhMuc, cccdSo, assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKModel = api;
 })(typeof window !== 'undefined' ? window : globalThis);

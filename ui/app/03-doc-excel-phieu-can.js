@@ -112,6 +112,8 @@ function checkPC(rec) {
   const errs = [], warns = [], state = {}, pc = rec.pc || [];
   const mark = (r, k, m) => { (k === 'err' ? errs : warns).push('Dòng ' + r._row + ': ' + m); if (k === 'err' || !state[r._row]) state[r._row] = k; };
   const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seen = {}, thieuKy = rec.hdvc ? doiXeThieuKy(rec) : new Set();
+  /* phiếu GIỐNG HỆT phiếu ở lô khác (cùng số phiếu, ngày lịch, biển số): chặn BM-08, 09, 10, 14 ở mọi đường xuất; không tự xóa hay chuyển phiếu (src/cheolo.js) */
+  try { HAKCheoLo.phieuTrung(db, rec.id, rec.fid, pc, cheoCtx()).forEach(x => mark(x.p, 'err', 'Phiếu ' + (x.p.soPhieu || '') + ' (' + x.p.ngay + ', ' + x.p.bienSo + ') giống hệt phiếu đã có ở lô ' + x.ma + ' (cùng số phiếu, ngày cân, biển số): một phiếu cân chỉ thuộc một lô')); } catch (e) { /* không kiểm được chéo lô: bỏ qua */ }
   pc.forEach(r => {
     if (trim(r.doi) && rec.doi && rec.doi.length > 1 && !rec.doi.some(d => d.id === r.doiId) && !rec.doi.some(d => keyName(d.ten) === keyName(r.doi))) mark(r, 'err', 'Đội “' + trim(r.doi) + '” không có trong lô (tên đội ở tab Nhân công): sửa tên đội hoặc để trống ô Đội');
     { const d = thieuKy.size ? doiXeOfPc(rec, r) : null; if (d && d.hd && thieuKy.has(d.hd.id)) mark(r, 'err', 'Biển ' + r.bienSo + ' thuộc đội xe chưa có người ký (chủ xe hoặc tài xế): vào tab Vận chuyển chọn người ký cho đội xe này'); }
@@ -138,9 +140,16 @@ function checkPC(rec) {
   }
   return {errs, warns, state};
 }
+/* phiếu cân của lô sắp theo ngày (sắp ổn định) và khóa biển số: dựng MỘT lần cho mỗi mảng phiếu và phiên bản dữ liệu (B7) — lọc sau khi sắp cho cùng thứ tự như sắp sau khi lọc */
+const pcSapNho = new WeakMap();
+function pcSapTheoNgay(pc) {
+  const c = pcSapNho.get(pc); if (c && c.ver === dataVer && c.n === pc.length) return c.ds;
+  const ds = pc.map((r, i) => ({r, i, d: dateKey(r.ngay), k: bienKey(r.bienSo)})).sort((a, b) => (a.d - b.d) || (a.i - b.i));
+  pcSapNho.set(pc, {ver: dataVer, n: pc.length, ds}); return ds;
+}
 function tripsOf(rec, g) {
   const ks = new Set(g.xe.map(x => bienKey(x.bienSo)));
-  return (rec.pc || []).filter(r => ks.has(bienKey(r.bienSo))).sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay));
+  return pcSapTheoNgay(rec.pc || []).filter(x => ks.has(x.k)).map(x => x.r);
 }
 function payVC(rec, g) {
   const rows = g.xe.map(x => {
@@ -169,6 +178,14 @@ function doiXeThieuKy(rec) {
   return out;
 }
 /* Giấy tờ xe của một đội xe so với NGÀY CỦA TỪNG PHIẾU CÂN (src/giayto.js): phiếu chạy khi kiểm định, bảo hiểm hoặc GPLX đã hết hạn chặn BM-09 và BM-10 của đội xe đó */
-const hanLoiOf = (rec, g) => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g));
+/* nhớ tạm theo (mảng phiếu cân, phiên bản dữ liệu): kết quả tính từ phiếu cân của một đội xe không đổi khi dữ liệu không đổi (B7) */
+const pcTheoDoiNho = new WeakMap();
+function nhoTheoPc(pc, ten, khoa, fn) {
+  let c = pcTheoDoiNho.get(pc); if (!c || c.ver !== dataVer || c.n !== pc.length) { c = {ver: dataVer, n: pc.length, m: new Map()}; pcTheoDoiNho.set(pc, c); }
+  const k = ten + '|' + khoa; if (c.m.has(k)) return c.m.get(k);
+  const v = fn(); c.m.set(k, v); return v;
+}
+const khoaXe = g => JSON.stringify(g.xe.map(x => [String(x.bienSo || ''), x.kdDen || '', x.hanBH || '', x.hanGplx || '', x.taiXe || '']));
+const hanLoiOf = (rec, g) => nhoTheoPc(rec.pc || [], 'han', khoaXe(g), () => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g)));
 const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
 

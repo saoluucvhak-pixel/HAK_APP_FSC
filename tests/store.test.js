@@ -8,6 +8,7 @@ const sample = () => ({v: 2, norm: {x: 1}, rs: {
   r1: {id: 'r1', info: {ma: 'CR-001', ten: 'NGUYỄN A', cccd: '049000000001'}, forests: {
     f1: {id: 'f1', info: {maRung: 'R-1', tenRung: 'Rừng 1'}, nc: [{ten: 'A'}], dx: [{bien: '92C-1'}], pc: [{so: '1'}, {so: '2'}], exp: {}},
     f2: {id: 'f2', info: {maRung: 'R-2', tenRung: 'Rừng 2'}, nc: [], dx: [], pc: [], exp: {}}}}}});
+const boNgayChup = x => JSON.parse(JSON.stringify(x, (k, v) => k === '_dmNgay' ? undefined : v));   // _dmNgay (A4, SQLite v11) là ngày chụp danh mục, không in ra biểu mẫu
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-'));
 
 test('lưu và đọc lại đúng từng rừng, giữ CCCD dạng chuỗi có số 0 đầu', () => {
@@ -160,7 +161,7 @@ test('nâng cấp từ cơ sở dữ liệu v1.0.0 THẬT (tests/fixtures/hakqn_
   const forA = s.db.prepare('SELECT id,data FROM forests ORDER BY id').all();
   /* so từng lô trước/sau: giống từng trường, TRỪ các trường đã chuyển ở v6 (đơn giá Tổ trưởng cũ vào bảng đơn giá theo vị trí, cước bậc sang tấn/km + bacCu) — kiểm riêng bên dưới */
   const sanCu = o => { const c = JSON.parse(JSON.stringify(o)); ['donGia', 'donGiaTan', 'soDoi', 'khoiLuong', 'klHoSoCu', 'klDoi'].forEach(k => delete (c.info || {})[k]); if (c.info && c.info.vanChuyen) ['mode', 'bac', 'bacCu'].forEach(k => delete c.info.vanChuyen[k]); return c; };
-  assert.deepStrictEqual(forA.map(r => [r.id, sanCu(M.legacyForest(JSON.parse(r.data)))]), forB.map(r => [r.id, sanCu(JSON.parse(r.data))]));
+  assert.deepStrictEqual(forA.map(r => [r.id, sanCu(boNgayChup(M.legacyForest(JSON.parse(r.data))))]), forB.map(r => [r.id, sanCu(JSON.parse(r.data))]));
   forB.forEach(rb => { const b = JSON.parse(rb.data), x = JSON.parse(forA.find(z => z.id === rb.id).data);   // đơn giá Tổ trưởng cũ nay nằm ở bảng đơn giá theo vị trí của đội; số cũ không còn ở thông tin rừng
     assert.ok(!('donGia' in x.info) && !('donGia' in x.doi[0].hinhThuc));
     if (b.info.donGia > 0 && (!b.info.hinhThucLuong || b.info.hinhThucLuong === 'sanluong')) assert.strictEqual(x.doi[0].hinhThuc.donGiaTan['Tổ trưởng'], (b.info.donGiaTan || {})['Tổ trưởng'] > 0 ? b.info.donGiaTan['Tổ trưởng'] : b.info.donGia); });
@@ -234,5 +235,112 @@ test('hồi quy: chuyển lô sang chủ rừng khác mà nội dung lô không 
   assert.strictEqual(r.changed, 1);
   s.close(); s = new Store(f); const o = s.load();
   assert.deepStrictEqual([Object.keys(o.rs.a.forests), Object.keys(o.rs.b.forests)], [[], ['fx']]);
+  s.close();
+});
+
+test('khóa chỉ đọc ở tầng lưu: lô đã chốt hoặc dừng không nhận thay đổi dữ liệu (save và saveDelta, mã LOCKED), thao tác vòng đời vẫn ghi được', () => {
+  const V = require('../src/vongdoi'), D = require('../src/delta');
+  const s = new Store(':memory:'), d = sample(); s.save(d);
+  let db = s.load(); const f = db.rs.r1.forests.f1;
+  // chốt (thao tác vòng đời) ghi được
+  assert.ok(V.chot(f, 'KT', '2026-11-01T00:00:00Z', []).ok); s.save(db);
+  assert.ok(s.load().rs.r1.forests.f1.chot, 'chốt được ghi');
+  // sửa dữ liệu lô đã chốt: save bị từ chối, SQLite không đổi
+  db = s.load(); db.rs.r1.forests.f1.exp = {soKT: '99'};
+  assert.throws(() => s.save(db), e => e.code === 'LOCKED' && /R-1/.test(e.message));
+  assert.deepStrictEqual(s.load().rs.r1.forests.f1.exp, {}, 'không ghi gì');
+  // lô khác (không khóa) vẫn lưu được; lô khóa không đổi thì không bị chặn
+  db = s.load(); db.rs.r1.forests.f2.exp = {soKT: '7'}; s.save(db); assert.strictEqual(s.load().rs.r1.forests.f2.exp.soKT, '7');
+  // saveDelta cũng chặn
+  db = s.load(); const snap0 = D.snapshot(db); db.rs.r1.forests.f1.nc = [{ten: 'SỬA'}]; db.rs.r1.forests.f1.exp = {x: 1};
+  const dl = D.diff(snap0, D.snapshot(db)); dl.rev = s.rev; dl.side = D.side(db); dl.counts = D.snapshot(db).counts;
+  assert.throws(() => s.saveDelta(dl), e => e.code === 'LOCKED');
+  // mở khóa (có lý do) = thao tác vòng đời: được ghi; sau đó sửa được
+  db = s.load(); assert.ok(V.moKhoa(db.rs.r1.forests.f1, 'sửa số phiếu', 'KT', '2026-11-02T00:00:00Z').ok); s.save(db);
+  db = s.load(); assert.ok(!db.rs.r1.forests.f1.chot && db.rs.r1.forests.f1.nhatKy.length === 2);
+  db.rs.r1.forests.f1.exp = {soKT: '99'}; s.save(db); assert.strictEqual(s.load().rs.r1.forests.f1.exp.soKT, '99');
+  // dừng lô: chỉ đọc; mở lại lô mới sửa được
+  db = s.load(); assert.ok(V.dung(db.rs.r1.forests.f1, 'ngừng', '01/11/2026', 'KT', '2026-11-03T00:00:00Z').ok); s.save(db);
+  db = s.load(); db.rs.r1.forests.f1.info.diaDiem = 'X'; assert.throws(() => s.save(db), e => e.code === 'LOCKED');
+  db = s.load(); assert.ok(V.moLai(db.rs.r1.forests.f1, 'tiếp tục', 'KT', '2026-11-04T00:00:00Z').ok); s.save(db);
+  // chỉ khác thứ tự khóa: không tính là thay đổi
+  db = s.load(); V.chot(db.rs.r1.forests.f1, 'KT', '2026-11-05T00:00:00Z', []); s.save(db);
+  db = s.load(); const g = db.rs.r1.forests.f1, re = {}; Object.keys(g).reverse().forEach(k => { re[k] = g[k]; }); db.rs.r1.forests.f1 = re; s.save(db);
+  // khôi phục lô (applyLot overwrite) lên lô đang khóa bị chặn
+  assert.throws(() => { const c = s.load(); c.rs.r1.forests.f1.info.diaDiem = 'KHÁC'; s.save(c); }, e => e.code === 'LOCKED');
+});
+test('khóa chỉ đọc: viPhamKhoa chỉ tính thay đổi ngoài khóa vòng đời, lô chưa khóa không bao giờ vi phạm', () => {
+  const V = require('../src/vongdoi'), a = {id: 'x', info: {a: 1}, chot: {at: 1}, nhatKy: []};
+  assert.strictEqual(V.viPhamKhoa(a, Object.assign({}, a, {nhatKy: [{hanh: 'luutru'}], luuTru: {at: 2}})), false);
+  assert.strictEqual(V.viPhamKhoa(a, Object.assign({}, a, {info: {a: 2}})), true);
+  assert.strictEqual(V.viPhamKhoa(a, {id: 'x', info: {a: 1}}), false, 'mở khóa (bỏ chot) không đổi dữ liệu');
+  assert.strictEqual(V.viPhamKhoa({id: 'x', info: {a: 1}}, {id: 'x', info: {a: 2}}), false, 'lô chưa khóa');
+  assert.strictEqual(V.viPhamKhoa({id: 'x', dung: {at: 1}, info: {a: 1}}, {id: 'x', dung: {at: 1}, info: {a: 2}}), true, 'lô đã dừng');
+});
+
+test('khóa chỉ đọc: xóa lô hoặc chủ rừng có lô đang chốt bị chặn (LOCKED); khôi phục thay toàn bộ vẫn được', () => {
+  const V = require('../src/vongdoi'), s = new Store(':memory:'); s.save(sample());
+  let db = s.load(); V.chot(db.rs.r1.forests.f1, 'KT', '2026-11-01T00:00:00Z', []); s.save(db);
+  db = s.load(); delete db.rs.r1.forests.f1; assert.throws(() => s.save(db), e => e.code === 'LOCKED');
+  db = s.load(); delete db.rs.r1; assert.throws(() => s.save(db), e => e.code === 'LOCKED');
+  db = s.load(); delete db.rs.r1.forests.f2; s.save(db); assert.ok(!('f2' in s.load().rs.r1.forests), 'lô không khóa xóa được');
+  const t = sample(); assert.doesNotThrow(() => s.applyImport(t, 'replace'));
+  assert.ok(!s.load().rs.r1.forests.f1.chot);
+});
+
+test('v10: đối tác một nguồn — dữ liệu 2.2 có cả danh mục đơn vị vận chuyển lẫn đối tác được gộp, không mất dòng, đội xe vẫn trỏ đúng, bản chụp bên B và lô không đổi', () => {
+  const DM = require('../src/danhmuc'), d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v10-')), file = path.join(d, 'x.sqlite');
+  const f = {id: 'f', info: {maRung: 'R-1', tenRung: 'R'}, nc: [], dx: [{bienSo: '92C-1', hdvcId: 'h1', cccd: '049000000001', chuXe: 'AN'}], hdvc: [{id: 'h1', ten: 'Đội xe 1', key: '', donViId: 'dv1', ben: {id: 'dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI CŨ', mst: '0400111222'}, cuoc: null, exp: {}}], exp: {}};
+  const s9 = new Store(file, {migrations: MIGRATIONS.slice(0, 9)}); s9.save({v: 2, dmDonViVC: {dv1: {id: 'dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI SỬA', mst: '0400111222', daiDien: 'ÔNG A'}, dv2: {id: 'dv2', loai: 'doanhnghiep', ten: 'CTY HAI'}},
+    dmDoiTac: [{id: 'dn:dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI CŨ (bản chép lúc v8)', mst: '0400111222'}, {id: 'ct:049000000001', loai: 'nguoiKyVC', ten: 'AN', cccd: '049000000001'}],
+    rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C', cccd: '049067005459'}, forests: {f}}}}); const truoc = JSON.stringify(s9.load().rs); s9.close();
+  assert.ok(MIGRATIONS.length >= 10);
+  const s10 = new Store(file), db = s10.load();
+  assert.ok(!('dmDonViVC' in db), 'dmDonViVC không còn: doanh nghiệp chỉ ở một nơi');
+  assert.deepStrictEqual(db.dmDoiTac.map(x => x.id).sort(), ['ct:049000000001', 'dn:dv1', 'dn:dv2'], 'không mất dòng nào, không thêm trùng');
+  const dv1 = db.dmDoiTac.find(x => x.id === 'dn:dv1'); assert.strictEqual(dv1.ten, 'CTY VẬN TẢI SỬA', 'doanh nghiệp lấy theo nơi từng cho sửa (danh mục đơn vị vận chuyển)'); assert.strictEqual(dv1.daiDien, 'ÔNG A');
+  assert.strictEqual(JSON.stringify(boNgayChup(s10.load().rs)), truoc, 'không đổi lô nào (ngoài ngày chụp danh mục của v11)');
+  const h = db.rs.o.forests.f.hdvc[0]; assert.strictEqual(DM.timDoiTac(db.dmDoiTac, h.donViId).id, 'dn:dv1', 'đội xe vẫn trỏ đúng đối tác'); assert.strictEqual(DM.doiTacKey(h), 'dn:dv1'); assert.strictEqual(h.ben.ten, 'CTY VẬN TẢI CŨ', 'bản chụp bên B giữ nguyên (bản in không đổi)');
+  s10.close();
+  const s = new Store(file); assert.strictEqual(s.load().dmDoiTac.length, 3, 'mở lại không gộp thêm'); s.close();
+});
+test('hopNhatDoiTac: thêm doanh nghiệp mới, cập nhật dòng cùng mã, giữ cá nhân, không sửa đầu vào, idempotent', () => {
+  const DM = require('../src/danhmuc'), dv = {dv1: {id: 'dv1', ten: 'A', mst: '1'}, dv2: {id: 'dv2', ten: 'B'}, dv3: {id: 'dv3', ten: ''}}, dt = [{id: 'ct:1', loai: 'nguoiKyVC', ten: 'X', cccd: '1'}, {id: 'dn:dv1', loai: 'doanhnghiep', ten: 'A cũ'}];
+  const t = JSON.stringify([dv, dt]), r = DM.hopNhatDoiTac(dv, dt);
+  assert.strictEqual(JSON.stringify([dv, dt]), t); assert.deepStrictEqual([r.gop, r.them, r.lech, r.list.length], [2, 1, 1, 3]);
+  assert.strictEqual(DM.hopNhatDoiTac({}, dt).list.length, 2); assert.deepStrictEqual(DM.hopNhatDoiTac(dv, r.list).list, r.list);
+  assert.strictEqual(DM.chuanDoiTacId('dv7'), 'dn:dv7'); assert.strictEqual(DM.chuanDoiTacId('dn:dv7'), 'dn:dv7'); assert.strictEqual(DM.chuanDoiTacId('ct:0490'), 'ct:0490'); assert.strictEqual(DM.chuanDoiTacId(''), '');
+  assert.strictEqual(DM.doiTacKey({donViId: 'dv9'}), 'dn:dv9'); assert.strictEqual(DM.doiTacKey({donViId: 'ct:1'}), 'ct:1'); assert.strictEqual(DM.doiTacKey({key: '0490 00000001'}), 'ct:049000000001');
+});
+
+test('v11 (A4): dòng nhân công / xe cũ chưa có ngày chụp danh mục được gán ngày cập nhật của dòng danh mục hiện hành (không có thì ngày nâng cấp); chạy lại không đổi; dòng đã có giữ nguyên', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v11-')), file = path.join(d, 'x.sqlite');
+  const f = {id: 'f', info: {maRung: 'R-1', tenRung: 'R'}, exp: {},
+    nc: [{_row: 2, ten: 'AN', cccd: '049000000001'}, {_row: 3, ten: 'BÌNH', cccd: '049000000002'}, {_row: 4, ten: 'CŨ', cccd: '049000000003', _dmNgay: '01/02/2026'}],
+    dx: [{_row: 2, bienSo: '92C-1', chuXe: 'X'}, {_row: 3, bienSo: '92C-9', chuXe: 'Y'}]};
+  const s10 = new Store(file, {migrations: MIGRATIONS.slice(0, 10)});
+  s10.save({v: 2, dmLaoDong: [{ngayCapNhat: '05/03/2026', cccd: '049000000001', ten: 'AN'}, {ngayCapNhat: '', cccd: '049000000003', ten: 'CŨ'}], dmXeVC: [{ngayCapNhat: '07/03/2026', bienSo: '92C1', chuXe: 'X'}],
+    rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C', cccd: '049067005459'}, forests: {f}}}}); s10.close();
+  const s = new Store(file), lo = s.load().rs.o.forests.f, d0 = new Date(), hom = String(d0.getDate()).padStart(2, '0') + '/' + String(d0.getMonth() + 1).padStart(2, '0') + '/' + d0.getFullYear();
+  assert.deepStrictEqual(lo.nc.map(r => r._dmNgay), ['05/03/2026', hom, '01/02/2026'], 'khớp danh mục: ngày của dòng danh mục; không khớp: ngày nâng cấp; đã có: giữ');
+  assert.deepStrictEqual(lo.dx.map(r => r._dmNgay), ['07/03/2026', hom], 'biển số khớp bỏ dấu chấm, gạch');
+  const DM = require('../src/danhmuc'), c = JSON.parse(JSON.stringify(lo));
+  assert.strictEqual(DM.ganNgayChup(c, [], [], '01/01/2030'), 0, 'chạy lại không đổi');
+  const khoa = {id: 'k', chot: {at: 'x'}, nc: [{cccd: '049000000001', ten: 'AN'}]}, dung = {id: 'd', dung: {at: 'x'}, dx: [{bienSo: '92C-1'}]};
+  assert.deepStrictEqual([DM.ganNgayChup(khoa, [], [], '01/01/2030'), '_dmNgay' in khoa.nc[0], DM.ganNgayChup(dung, [], [], '01/01/2030'), '_dmNgay' in dung.dx[0]], [0, false, 0, false], 'lô đã chốt / đã dừng: không đổi (giữ dấu vân tay, không vướng khóa)');
+  assert.deepStrictEqual(DM.lechLaoDong(Object.assign({}, lo.nc[0], {ten: 'AN SỬA TAY'}), {ngayCapNhat: '05/03/2026', cccd: '049000000001', ten: 'AN'}), [], 'sửa tay trong lô, danh mục không mới hơn lần chụp: không đề nghị lùi về số cũ');
+  assert.deepStrictEqual(DM.lechLaoDong(lo.nc[0], {ngayCapNhat: '10/03/2026', cccd: '049000000001', ten: 'AN MỚI'}), ['họ tên'], 'danh mục có dòng mới hơn: đề nghị đúng trường');
+  s.close();
+});
+
+test('v12 (A3): SQLite đổi khóa trạng thái in đợt 2 của BM-09/10 sang id đội xe; lô đã chốt giữ nguyên', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v12-')), file = path.join(d, 'x.sqlite');
+  const f = {id: 'f', info: {maRung: 'R-1', tenRung: 'R'}, exp: {}, nc: [], dx: [{_row: 2, bienSo: '92C-1', chuXe: 'AN', cccd: '049000000001', nguoiKy: 'Chủ xe', hdvcId: 'hd1'}],
+    hdvc: [{id: 'hd1', ten: '', key: '049000000001', donViId: null, ben: null, cuoc: null, exp: {}}], inDot2: {v: 1, items: {'09:049000000001': {at: 'a', sig: 's'}}}};
+  const g = JSON.parse(JSON.stringify(f)); g.id = 'g'; g.info.maRung = 'R-2'; g.chot = {at: 'x', phienBan: 1, hash: 'h', goi: '{}'};
+  const s11 = new Store(file, {migrations: MIGRATIONS.slice(0, 11)}); s11.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C', cccd: '049067005459'}, forests: {f, g}}}}); s11.close();
+  const s = new Store(file), F = s.load().rs.o.forests;
+  assert.deepStrictEqual(Object.keys(F.f.inDot2.items), ['09:hd:hd1']);
+  assert.deepStrictEqual(Object.keys(F.g.inDot2.items), ['09:049000000001'], 'lô đã chốt giữ nguyên');
   s.close();
 });

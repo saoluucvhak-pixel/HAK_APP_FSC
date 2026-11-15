@@ -39,7 +39,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('[data-ftab=dx]'); await w.waitForTimeout(200);
   await w.fill('#dvForm [name=ten]', 'CÔNG TY VT THỬ'); await w.click('#dvForm [type=submit]'); await w.waitForTimeout(500);
   let d = await db();
-  ok('lưu danh mục khi lô còn thay đổi: danh mục đã ghi, số HĐ của lô CHƯA ghi', Object.values(d.dmDonViVC || {}).some(x => x.ten === 'CÔNG TY VT THỬ') && d.rs.own1.forests.fa.doi[0].exp.soKT === soKT0, JSON.stringify(d.rs.own1.forests.fa.doi[0].exp));
+  ok('lưu danh mục khi lô còn thay đổi: danh mục đã ghi, số HĐ của lô CHƯA ghi', (d.dmDoiTac || []).some(x => x.ten === 'CÔNG TY VT THỬ') && d.rs.own1.forests.fa.doi[0].exp.soKT === soKT0, JSON.stringify(d.rs.own1.forests.fa.doi[0].exp));
   // 6. một nút Lưu: ghi cả lô
   await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(500); d = await db();
   ok('“Lưu dữ liệu vào lô”: ghi số 077, hết thanh “Chưa lưu”', d.rs.own1.forests.fa.doi[0].exp.soKT === '077' && !(await w.$('#loDirtyBar')));

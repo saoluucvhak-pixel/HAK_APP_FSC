@@ -18,8 +18,10 @@
   const clone = x => JSON.parse(JSON.stringify(x));
   /* PHIÊN BẢN theo ngày hiệu lực (bản 2.2): db.dinhBien là BẢN GỐC (áp dụng cho lô bắt đầu trước mọi phiên bản có ngày); db.dinhBienVer = [{tuNgay, rows}] là các phiên bản có ngày.
    * Lô dùng phiên bản có hiệu lực tại ngày bắt đầu khai thác của lô (không có ngày thì dùng bản mới nhất). Chưa có phiên bản có ngày thì mọi thứ như trước (bản in lô cũ không đổi). */
-  const dkey = v => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trim(v)); return m ? (+m[3]) * 10000 + (+m[2]) * 100 + (+m[1]) : 0; };
-  const dayOk = v => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trim(v)); if (!m) return false; const d = new Date(+m[3], +m[2] - 1, +m[1]); return d.getFullYear() === +m[3] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[1]; };
+  /* ngày lịch dùng CHUNG (src/dates.js): chỉ ngày có thật mới có khóa; ngày thiếu hoặc không có thật cho 0. Tải chậm để chạy được cả trình duyệt (HAKDates) lẫn Node. */
+  const Dt = () => (typeof require !== 'undefined' ? require('./dates') : root.HAKDates);
+  const dkey = v => Dt().key(trim(v));
+  const dayOk = v => Dt().isValid(trim(v));
   function versions(db) {
     const l = Array.isArray(db && db.dinhBien) && db.dinhBien.length ? db.dinhBien : null;
     const out = [{id: 'goc', tuNgay: '', rows: clone(l || MAC_DINH), saved: !!l}];
@@ -27,9 +29,18 @@
     return out;
   }
   /* phiên bản hiệu lực tại ngày ref (ref rỗng: mới nhất) */
-  function pick(db, ref) { const vs = versions(db), k = dkey(ref); if (!k) return vs[vs.length - 1]; let r = vs[0]; vs.forEach(v => { if (v.tuNgay && dkey(v.tuNgay) <= k) r = v; }); return r; }
+  /* phiên bản hiệu lực tại ngày ref. Ref TRỐNG: bản mới nhất. Ref đã nhập nhưng KHÔNG CÓ THẬT (ví dụ 31/11/2026): trả null khi có nhiều phiên bản (không âm thầm chọn bản gốc hay bản mới nhất);
+   * kể cả khi chỉ có bản gốc (xác thực ngày TRƯỚC khi xét số phiên bản). */
+  function pick(db, ref) {
+    const vs = versions(db), t = trim(ref); if (!t) return vs[vs.length - 1]; const k = dkey(t); if (!k) return null; if (vs.length === 1) return vs[0];
+    let r = vs[0]; vs.forEach(v => { if (v.tuNgay && dkey(v.tuNgay) <= k) r = v; }); return r;
+  }
   /* định biên đang dùng: bản đã lưu, chưa lưu thì mặc định. saved = đã lưu thật. ref = ngày bắt đầu khai thác của lô (tùy chọn) */
-  function get(db, ref) { const v = pick(db, ref); return {rows: clone(v.rows), saved: versions(db)[0].saved || v.id !== 'goc', tuNgay: v.tuNgay, id: v.id}; }
+  function get(db, ref) {
+    const v = pick(db, ref), goc = versions(db)[0];
+    if (!v) return {rows: [], saved: goc.saved || (db && db.dinhBienVer && db.dinhBienVer.length > 0), tuNgay: '', id: '', ngayLoi: 'Ngày bắt đầu khai thác “' + trim(ref) + '” không có thật (hoặc sai dd/mm/yyyy) nên chưa chọn được phiên bản định mức nhân công: sửa ngày ở Thông tin rừng'};
+    return {rows: clone(v.rows), saved: goc.saved || v.id !== 'goc', tuNgay: v.tuNgay, id: v.id};
+  }
   /* thêm phiên bản từ ngày tuNgay: sao chép phiên bản đang hiệu lực tại ngày đó rồi sửa sau */
   function addVersion(db, tuNgay) {
     const t = trim(tuNgay); if (!dayOk(t)) return {ok: false, error: 'Ngày hiệu lực phải đúng dd/mm/yyyy và là ngày có thật'};
@@ -44,12 +55,15 @@
     v.rows = c.rows; return {ok: true, them: []};
   }
   function delVersion(db, id) { if (id === 'goc') return {ok: false, error: 'Không xóa được bản gốc'}; db.dinhBienVer = (db.dinhBienVer || []).filter(x => trim(x.tuNgay) !== id); return {ok: true}; }
-  /* lô bị ảnh hưởng bởi phiên bản id: lô có ngày bắt đầu từ ngày của phiên bản đến trước phiên bản kế tiếp. lots = [{maRung, tuNgay}] */
-  function anhHuong(db, id, lots) {
-    const vs = versions(db), i = vs.findIndex(v => v.id === id); if (i < 0) return [];
+  /* lô bị ảnh hưởng bởi phiên bản id: lô có ngày bắt đầu từ ngày của phiên bản đến trước phiên bản kế tiếp; lô để TRỐNG ngày bắt đầu dùng bản mới nhất. Lô có ngày đã nhập nhưng không có thật
+   * KHÔNG được tính vào đâu (chưa chọn được phiên bản): trả riêng ở anhHuongChiTiet. lots = [{maRung, tuNgay}] */
+  function anhHuongChiTiet(db, id, lots) {
+    const vs = versions(db), i = vs.findIndex(v => v.id === id), out = {lo: [], ngayLoi: []}; if (i < 0) return out;
     const lo = vs[i].tuNgay ? dkey(vs[i].tuNgay) : 0, hi = vs[i + 1] ? dkey(vs[i + 1].tuNgay) : Infinity;
-    return (lots || []).filter(l => { const k = dkey(l.tuNgay); return k ? (k >= lo && k < hi) : i === vs.length - 1; });
+    (lots || []).forEach(l => { const t = trim(l.tuNgay), k = dkey(t); if (!t) { if (i === vs.length - 1) out.lo.push(l); } else if (!k) out.ngayLoi.push(l); else if (k >= lo && k < hi) out.lo.push(l); });
+    return out;
   }
+  const anhHuong = (db, id, lots) => anhHuongChiTiet(db, id, lots).lo;
   const tong = rows => rows.reduce((s, r) => s + (typeof r.soNguoi === 'number' ? r.soNguoi : 0), 0);
   /* kiểm tra danh sách nhập; trả {ok, error (nêu số dòng), rows (đã chuẩn hóa)} */
   function check(raw) {
@@ -59,6 +73,8 @@
     for (let i = 0; i < list.length; i++) {
       const r = list[i], at = 'Dòng ' + (i + 1) + ': ', cd = trim(r.chucDanh), n = typeof r.soNguoi === 'number' ? r.soNguoi : Number(String(r.soNguoi).replace(',', '.'));
       if (!cd) return {ok: false, error: at + 'thiếu tên vị trí'};
+      const trong = r.soNguoi == null || (typeof r.soNguoi === 'string' && !trim(r.soNguoi));   // ô TRỐNG khác số 0: 0 = vị trí ngoài định biên chuẩn, do người dùng chủ động nhập
+      if (trong) return {ok: false, error: at + 'chưa nhập số người của “' + cd + '” (nhập 0 nếu vị trí nằm ngoài định biên chuẩn của một đội)'};
       if (cd.length > 60) return {ok: false, error: at + 'tên vị trí tối đa 60 ký tự'};
       if (seen.has(cd.toLowerCase())) return {ok: false, error: at + 'vị trí “' + cd + '” bị trùng'}; seen.add(cd.toLowerCase());
       if (!isFinite(n) || !Number.isInteger(n) || n < 0 || n > 50) return {ok: false, error: at + 'số người của “' + cd + '” phải là số nguyên từ 0 đến 50 (0 = vị trí ngoài định biên chuẩn của một đội)'};
@@ -106,10 +122,10 @@
     const g = get(db), rows = [], seen = new Set();
     const add = r => { const k = trim(r.chucDanh).toLowerCase(); if (!k || seen.has(k)) return; seen.add(k); rows.push({chucDanh: trim(r.chucDanh), soNguoi: typeof r.soNguoi === 'number' ? r.soNguoi : 0, kiemNhiem: r.kiemNhiem || '', nhiemVu: r.nhiemVu || ''}); };
     const def = name => MAC_DINH.find(x => x.chucDanh.toLowerCase() === trim(name).toLowerCase()) || {chucDanh: name, soNguoi: 0};
-    if (g.saved) { g.rows.forEach(add); (ten || []).forEach(t => add({chucDanh: t})); }
+    if (g.saved) { g.rows.forEach(add); versions(db).forEach(v => (v.rows || []).forEach(r => add({chucDanh: r.chucDanh}))); (ten || []).forEach(t => add({chucDanh: t})); }   // danh mục vị trí = hợp các phiên bản (sửa bản gốc không làm mất vị trí chỉ có ở bản gốc)
     else { add(def(TO_TRUONG)); (ten || []).forEach(t => add(def(t))); MAC_DINH.forEach(add); }
     return {rows, saved: g.saved};
   }
-  const api = {MAC_DINH, TO_TRUONG, get, versions, pick, addVersion, setVersion, delVersion, anhHuong, tong, check, soSanh, lechText, set, danhMuc};
+  const api = {MAC_DINH, TO_TRUONG, get, versions, pick, addVersion, setVersion, delVersion, anhHuong, anhHuongChiTiet, tong, check, soSanh, lechText, set, danhMuc};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDinhBien = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -16,8 +16,10 @@ function viTriDangDung() {
 let _cdNho = null;   // gọi rất nhiều lần trong một lượt vẽ (mỗi dòng nhân công): nhớ trong một lượt, xóa ở lượt sự kiện kế tiếp
 /* định mức nhân công của MỘT LÔ: phiên bản có hiệu lực tại ngày bắt đầu khai thác của lô (chưa có phiên bản có ngày thì đúng như viTriRows) */
 function viTriRowsTai(ref, rowsVer) {
-  const rows = viTriRows(); if (!rowsVer && HAKDinhBien.versions(db).length < 2) return rows;
-  const ver = rowsVer || HAKDinhBien.get(db, ref).rows, by = new Map(ver.map(v => [v.chucDanh.toLowerCase(), v]));
+  const rows = viTriRows(), gv = rowsVer ? null : HAKDinhBien.get(db, ref);   // xác thực ngày TRƯỚC khi xét số phiên bản (ngày sai báo lỗi cả khi chỉ có bản gốc)
+  if (gv && gv.ngayLoi) { rows.ngayLoi = gv.ngayLoi; return rows; }
+  if (!rowsVer && HAKDinhBien.versions(db).length < 2) return rows;   // ngày bắt đầu sai: KHÔNG chọn bản nào (không so sánh, người gọi hiện lỗi để sửa ngày)
+  const ver = rowsVer || gv.rows, by = new Map(ver.map(v => [v.chucDanh.toLowerCase(), v]));
   rows.forEach(r => { const v = by.get(r.chucDanh.toLowerCase()); r.soNguoi = v ? v.soNguoi : 0; if (v) { r.kiemNhiem = v.kiemNhiem; r.nhiemVu = v.nhiemVu; } });
   return rows;
 }
@@ -45,7 +47,9 @@ function dinhMucMacDinh() {
   const base = {qa: '1 bộ', giay: '1 đôi', mu: '1 cái', gang: '3 đôi', nut: '', kinh: ''};
   return {'Tổ trưởng': {...base}, 'Công nhân khai thác': {...base}, 'Công nhân cưa': {...base, nut: '2 đôi', kinh: '3 cái'}};
 }
-function withDefaults(o) { if (!o.dinhMuc) o.dinhMuc = dinhMucMacDinh(); if (!o.congTy) o.congTy = {}; return o; }
+const ngayHomNay = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };   // dùng được ngay lúc nạp dữ liệu (trước module 06)
+function withDefaults(o) { if (o && o.rs) Object.values(o.rs).forEach(ow => Object.values((ow && ow.forests) || {}).forEach(f => { HAKDanhMuc.ganNgayChup(f, o.dmLaoDong, o.dmXeVC, ngayHomNay()); HAKModel.doiKhoaInVC(f); HAKVongDoi.ganHashDL(f); }));   // B5: lô đã chốt từ bản cũ có dấu vân tay phần dữ liệu (như SQLite v14)   // A3: trạng thái in BM-09/10 theo đội xe (như SQLite v12)   // A4: dòng cũ chưa có ngày chụp danh mục (sao lưu cũ nạp vào: như SQLite v11)
+  if (!o.dinhMuc) o.dinhMuc = dinhMucMacDinh(); if (!o.congTy) o.congTy = {}; if (o.dmDonViVC) { o.dmDoiTac = HAKDanhMuc.hopNhatDoiTac(o.dmDonViVC, o.dmDoiTac || []).list; delete o.dmDonViVC; } return o; }   // dữ liệu cũ (sao lưu, localStorage): danh mục đơn vị vận chuyển gộp vào Đối tác — MỘT nguồn
 
 /* ========== Tiện ích ========== */
 const $ = s => document.querySelector(s);

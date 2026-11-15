@@ -36,7 +36,7 @@ const app0 = () => electron.launch({executablePath: require('electron'), args: [
   const clean = () => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); };
   const grab = async sel => { clean(); await menus(); await w.click(sel); let f = null; for (let i = 0; i < 100 && !f; i++) { f = fs.existsSync(out) && fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x) && !x.endsWith('.part')); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(200); f = fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); const full = path.join(out, f); const docs = /\.zip$/.test(f) ? await readZip(full) : null; return {name: f, docs}; };
   const noDraft = r => !/BAN_NHAP/.test(r.name) && (!r.docs || Object.keys(r.docs).every(n => !/BAN_NHAP/.test(n) && !/BẢN NHÁP/.test(plain(r.docs[n].xml)) && !/BẢN NHÁP/.test(plain(r.docs[n].foot))));
-  const K77 = '09:049000000077', K78 = '09:049000000078', J77 = '10:049000000077', J78 = '10:049000000078';
+  const K77 = '09:hd:hd1', K78 = '09:hd:hd2', J77 = '10:hd:hd1', J78 = '10:hd:hd2';   // trạng thái in BM-09/10 theo ĐỘI XE (hd1: xe 92C-12345 của 049000000077, hd2: xe 92C-67890 của 049000000078)
   const btnOn = async sel => { const b = await w.$(sel); return !!b && !(await b.isDisabled()); };
 
   // ===== 1. Cả hai cách chưa dùng được vì thiếu dữ liệu =====

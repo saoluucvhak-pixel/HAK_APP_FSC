@@ -64,7 +64,7 @@
    *         'de' (đủ dữ liệu, đã in nền, bố cục khớp → in đè) | 'cho' (đã in nền, chờ đủ dữ liệu) | 'kiemtra' (nền in từ trước, cần đối chiếu)
    *         'doibocuc' (đã in nền nhưng bố cục đã đổi → in lại nền hoặc in đầy đủ giấy trắng) */
   function evaluate(it, st) {
-    const rec = st && st.items ? st.items[it.key] : null;
+    const rec = st && st.items ? (st.items[it.key] || (it.keyCu ? st.items[it.keyCu] : null) || null) : null;   // khóa cũ (theo người ký) còn ở lô đã chốt: vẫn đọc được
     const nenReady = !(it.nenMissing || []).length, fullReady = !(it.fullMissing || []).length, printed = !!rec;
     const o = Object.assign({}, it, {printed, nenReady, fullReady, diff: [], legacy: !!(rec && rec.legacy), at: rec ? rec.at : '', crossChecked: !!(rec && rec.crossChecked)});
     if (!printed) { o.advice = fullReady ? 'trang' : nenReady ? 'nen' : 'thieu'; return o; }

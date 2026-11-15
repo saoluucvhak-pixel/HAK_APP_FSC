@@ -27,3 +27,25 @@ test('tổng phiếu cân lệch sản lượng dự kiến quá 10% thì cảnh
   assert.equal(nhom(C.kiemTra(mk(l(21)), 'o1', 'a'), 'Chéo lô: lệch sản lượng dự kiến').length, 0);
   assert.equal(nhom(C.kiemTra(mk(l(25)), 'o1', 'a', {nguong: 30}), 'Chéo lô: lệch sản lượng dự kiến').length, 0);
 });
+
+test('chỉ mục chéo lô dùng lại cho nhiều lô cho kết quả giống hệt tính riêng từng lô (và nhanh hơn rõ khi nhiều lô)', () => {
+  const C = require('../src/cheolo'), mk = (id, ma, n, off) => ({id, info: {maRung: ma, tuNgay: '01/10/2026', denNgay: '30/11/2026'}, nc: [], pc: Array.from({length: n}, (_, i) => { const g = off + i; return {soPhieu: 'S' + g, ngay: String(1 + (g % 28)).padStart(g % 2 ? 2 : 1, '0') + '/11/2026', bienSo: '92C-' + (10000 + (g % 7)), gioCan1: '0' + (g % 9) + ':00', gioCan2: '0' + (g % 9) + ':45', kl: 5, _row: i + 2}; })});
+  const forests = {}; for (let i = 0; i < 12; i++) forests['f' + i] = mk('f' + i, 'R' + i, 60, i * 40);   // các lô chồng nhau 20 số phiếu
+  const db = {rs: {o: {id: 'o', forests}}}, cm = C.taoChiMuc(db);
+  Object.keys(forests).forEach(fid => { assert.deepStrictEqual(C.kiemTra(db, 'o', fid, {chiMuc: cm}), C.kiemTra(db, 'o', fid)); assert.deepStrictEqual(C.phieuTrung(db, 'o', fid, null, cm), C.phieuTrung(db, 'o', fid)); });
+  assert.ok(C.kiemTra(db, 'o', 'f1').some(x => x.nhom === 'Chéo lô: phiếu cân trùng'), 'dữ liệu thử có phiếu trùng thật');
+  assert.deepStrictEqual(C.phieuTrung(db, 'o', 'f1', null, C.taoChiMuc({rs: {}})), C.phieuTrung(db, 'o', 'f1'), 'chỉ mục của db khác bị bỏ qua, dựng lại đúng');
+});
+
+test('A2: lệch sản lượng dự kiến dùng CÙNG định nghĩa với giao diện: lô chưa tự điền định mức dùng định mức gỗ keo mặc định theo ngày bắt đầu; tổng phiếu làm tròn từng phiếu theo kg', () => {
+  const DM = require('../src/dinhmuc');
+  const l = lo('a', 'A', {info: {dinhMucTanHa: null}, pc: [pc('1', '05/10/2026', '92C-1', '', '', 30)]}), db = mk(l);
+  assert.equal(nhom(C.kiemTra(db, 'o1', 'a'), 'Chéo lô: lệch sản lượng dự kiến').length, 0, 'chưa có định mức nào: không kiểm');
+  db.dinhMucKeo = [{tuNgay: '01/01/2026', tanHa: 10}];   // dự kiến 2 ha × 10 = 20 tấn; phiếu 30 tấn lệch 50%
+  const r = nhom(C.kiemTra(db, 'o1', 'a'), 'Chéo lô: lệch sản lượng dự kiến');
+  assert.equal(r.length, 1, 'lô dùng định mức gỗ keo mặc định cũng được kiểm');
+  assert.equal(DM.sanLuongDuKien(db, l.info), 20);
+  assert.equal(DM.tongPhieuTan([{kl: 1.0004}, {kl: 1.0004}, {kl: 'x'}, {kl: -1}]), 2, 'làm tròn từng phiếu theo kg (1,0004 tấn = 1.000 kg)');
+  db.dinhMucKeo = [{tuNgay: '01/12/2026', tanHa: 10}];   // định mức chỉ hiệu lực sau ngày bắt đầu: không có định mức cho lô
+  assert.equal(nhom(C.kiemTra(db, 'o1', 'a'), 'Chéo lô: lệch sản lượng dự kiến').length, 0);
+});

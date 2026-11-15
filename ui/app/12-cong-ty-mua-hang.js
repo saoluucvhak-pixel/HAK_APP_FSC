@@ -82,7 +82,11 @@ function panelMua(rec) {
 }
 /* Bảng con “Hợp đồng vận chuyển” của lô; xe là bảng con của hợp đồng (src/model.js). Hợp đồng theo người ký (chủ xe / tài xế) tự lập như bản cũ;
  * hợp đồng với doanh nghiệp chọn từ danh mục đơn vị vận chuyển (db.dmDonViVC) rồi chuyển xe vào. Cước, số văn bản: riêng từng hợp đồng hoặc dùng của lô. */
-const dmVC = () => Object.values(db.dmDonViVC || {}).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
+/* ĐỐI TÁC là MỘT nguồn (db.dmDoiTac): doanh nghiệp (loai 'doanhnghiep') và người ký cá nhân (loai 'nguoiKyVC'); đội xe cũ trỏ 'dv1' được hiểu là 'dn:dv1' */
+const dmDoiTacAll = () => db.dmDoiTac || [];
+const dmVC = () => dmDoiTacAll().filter(x => x && x.loai === 'doanhnghiep').sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
+const dmCaNhan = () => dmDoiTacAll().filter(x => x && x.loai !== 'doanhnghiep').sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
+const doiTacCua = h => h && h.donViId ? HAKDanhMuc.timDoiTac(dmDoiTacAll(), h.donViId) : null;
 const cuocText = (rec, h) => { const t = transportPrice(vcInfo(rec, h)); return (t.loi ? '<span class="pill err">' + esc(t.loi) + '</span>' : esc(fmt(t.gia) + ' đ/tấn')) + (h.cuoc ? ' <span class="pill">riêng</span>' : ' <span class="mut">(cước chung)</span>'); };
 function panelHdvc(rec) {
   if (!rec.hdvc) return '';
@@ -101,11 +105,11 @@ function panelHdvc(rec) {
     dvForm() + '</details>';
   if (sel) {
     const k = list.indexOf(sel), c = sel.cuoc || {}, mode = c.mode || ((rec.info.vanChuyen || {}).mode) || 'tanKm', e = sel.exp || {}, xe = HAKModel.xeOf(F, sel).length;
-    const doi = sel.donViId && db.dmDonViVC && db.dmDonViVC[sel.donViId] && JSON.stringify(db.dmDonViVC[sel.donViId]) !== JSON.stringify(sel.ben);
-    const ppl = HAKModel.signersOf(F, sel), cur = sel.donViId ? 'd:' + sel.donViId : 'p:' + sel.key;
-    const opts = ppl.map(x => '<option value="p:' + esc(x.key) + '"' + ('p:' + x.key === cur ? ' selected' : '') + '>' + esc(x.ten + ' · ' + x.vaiTro + ' xe ' + x.bienSo) + '</option>').join('') + dv.map(d => '<option value="d:' + esc(d.id) + '"' + ('d:' + d.id === cur ? ' selected' : '') + '>' + esc(d.ten + ' · doanh nghiệp') + '</option>').join('');
+    const dtNow = doiTacCua(sel), doi = !!(dtNow && JSON.stringify(Object.assign({}, dtNow, {id: (sel.ben || {}).id})) !== JSON.stringify(sel.ben));
+    const ppl = HAKModel.signersOf(F, sel), cur = sel.donViId ? 'd:' + HAKDanhMuc.chuanDoiTacId(sel.donViId) : 'p:' + sel.key;
+    const opts = ppl.map(x => '<option value="p:' + esc(x.key) + '"' + ('p:' + x.key === cur ? ' selected' : '') + '>' + esc(x.ten + ' · ' + x.vaiTro + ' xe ' + x.bienSo) + '</option>').join('') + dv.map(d => '<option value="d:' + esc(d.id) + '"' + ('d:' + d.id === cur ? ' selected' : '') + '>' + esc(d.ten + ' · doanh nghiệp (Đối tác)') + '</option>').join('') + dmCaNhan().map(d => '<option value="d:' + esc(d.id) + '"' + ('d:' + d.id === cur ? ' selected' : '') + '>' + esc(d.ten + ' · CCCD ' + (d.cccd || '') + ' · người ký (Đối tác)') + '</option>').join('');
     html += '<form id="hdForm" class="grid" style="margin-top:10px;border-top:1px solid var(--line,#ddd);padding-top:10px"><h4 style="grid-column:1/-1;margin:0">' + esc(tenDoi(sel, k)) + ': hợp đồng vận chuyển</h4>' +
-      (doi ? '<div class="msg warn" style="grid-column:1/-1">Danh mục đã sửa thông tin đơn vị này sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button class="btn ghost sm" type="button" data-act="hdCapNhatDv">Cập nhật theo danh mục</button></div>' : '') +
+      (doi ? '<div class="msg warn" style="grid-column:1/-1">Danh mục Đối tác đã sửa thông tin đối tác này sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button class="btn ghost sm" type="button" data-act="hdCapNhatDv">Cập nhật theo danh mục</button></div>' : '') +
       '<label><span>Tên đội xe</span><input name="ten" value="' + esc(sel.ten || '') + '"></label>' +
       '<label><span>Người ký hợp đồng của đội</span><select name="ky">' + (opts || '<option value="">— đội chưa có xe, chưa có đơn vị trong danh mục —</option>') + '</select></label>' +
       '<label style="grid-column:1/-1"><span><input type="checkbox" name="rieng"' + (sel.cuoc ? ' checked' : '') + '> Cước riêng cho đội xe này (bỏ chọn = dùng cước chung của lô)</span></label>' +

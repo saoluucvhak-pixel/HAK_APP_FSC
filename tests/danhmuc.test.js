@@ -47,7 +47,7 @@ test('bản chụp vào lô và so với danh mục: chức vụ → vai trò, v
   assert.deepStrictEqual(M.khacLaoDong({ten: 'LÊ A', ngaySinh: '01/01/1985', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Cũ'}, d), ['thường trú']);
   const x = xe('92C-1', '01/09/2026', {hanDangKiem: '01/12/2027'}), rx = M.chupXe(x, {stt: '1', nguoiKy: 'Chủ xe'});
   assert.deepStrictEqual([rx.kdDen, rx.hanBH, rx.taiXe, rx.stt, rx.nguoiKy], ['01/12/2027', '01/06/2027', 'B', '1', 'Chủ xe']);
-  assert.deepStrictEqual(M.khacXe({taiXe: 'B', cccdTx: '049000000001', gplx: '', hanGplx: '01/01/2030', kdDen: '01/06/2027', hanBH: '01/06/2027'}, x), ['hạn đăng kiểm']);
+  assert.deepStrictEqual(M.khacXe({chuXe: 'A', taiXe: 'B', cccdTx: '049000000001', gplx: '', hanGplx: '01/01/2030', kdDen: '01/06/2027', hanBH: '01/06/2027'}, x), ['hạn đăng kiểm']);
 });
 
 test('dựng danh mục từ lô (v7): một dòng mỗi lô cho mỗi CCCD / biển số, ngày cập nhật = ngày bắt đầu khai thác, lô mới hơn thắng, lô chưa có ngày thì dòng chưa rõ ngày (cũ nhất)', () => {
@@ -95,4 +95,51 @@ test('người chung: một CCCD = một người dù là lao động, tài xế
   assert.deepStrictEqual([g.so.xe, g.db.dmXeVC[1].cccdTx], [1, '049085007001']);
   assert.strictEqual(M.nguoiChung(Object.assign({}, db, g.db)).length, 1, 'sau gộp chỉ còn một người');
   assert.strictEqual(g.db.dmLaoDong.length, 2, 'lịch sử lao động giữ nguyên');
+});
+
+test('tạo lô từ lô đã chốt: lô mới không mang vòng đời, nhật ký, in/ký, tham chiếu, lịch sử STT; lô nguồn không đổi', () => {
+  const M = require('../src/danhmuc'), V = require('../src/vongdoi');
+  const src = {id: 'a', info: {maRung: 'R-A', giayTo: []}, doi: [{id: 'd1', ten: 'Đội 1', stt: 1, exp: {soKT: '01/2026/HĐGK-RA'}}], hdvc: [{id: 'h1', stt: 1, exp: {}}], nc: [], dx: [], pc: [{soPhieu: 'P1'}],
+    chot: {at: 1, nguoi: 'x', phienBan: 1, hash: 'h', goi: '{}'}, luuTru: {at: 2}, dung: {at: 3, ngay: '01/01/2026', lyDo: 'x'}, nhatKy: [{hanh: 'chot'}], nhatKyNap: [{at: 1}], ref: {at: 1}, inAn: {items: {}}, inDot2: {a: 1}, bienLog: [1], qt: {x: 1}, sttDaCap: {doi: [1], doiXe: [1]}, khoaLa: 1};
+  const truoc = JSON.stringify(src), f = M.loTuLoCu(src, {id: 'b', maRung: 'R-B', tenRung: 'B', dmLaoDong: [], dmXe: []}).f;
+  assert.strictEqual(JSON.stringify(src), truoc);
+  ['chot', 'luuTru', 'dung', 'nhatKy', 'nhatKyNap', 'ref', 'inAn', 'inDot2', 'bienLog', 'qt', 'sttDaCap', 'khoaLa'].forEach(k => assert.ok(!(k in f), k));
+  assert.strictEqual(V.chiDoc(f), false); assert.strictEqual(V.trangThai(f, {}), 'dang-lap');
+  assert.ok(!('stt' in f.doi[0]) && !('stt' in f.hdvc[0]) && f.doi[0].exp.soKT === undefined && f.pc.length === 0);
+  assert.deepStrictEqual(Object.keys(f).filter(k => !M.KHUNG_LO.includes(k)).sort(), ['exp', 'pc']);
+});
+
+test('mục 2: chép từ danh mục không ghi đè bằng ô trống; so lệch không báo trường trống; chỉ đề nghị cập nhật khi danh mục mới hơn lần chụp', () => {
+  const M = require('../src/danhmuc');
+  // xe: danh mục không có tài xế, lô đã có tài xế Tư
+  const lo = {bienSo: '92C-1', taiXe: 'Tư', cccdTx: '049000000009', gplx: 'G1', hanGplx: '01/01/2030', kdDen: '01/01/2027', hanBH: '01/01/2027', chuXe: 'Chủ', cccd: '049000000011', diaChi: 'Quế Sơn', sdt: '0905', loaiXe: 'Ben', cavet: '01/01/2020', nguoiKy: 'Tài xế'};
+  const dm = {ngayCapNhat: '01/11/2026', bienSo: '92C-1', chuXe: '', taiXe: '', cccdTx: '', diaChiTx: '', ngayCapTx: '', noiCapTx: '', gplx: '', hanGplx: '', hanDangKiem: '01/06/2027', hanBaoHiem: '   '};
+  const r = M.chupXe(dm, lo);
+  ['taiXe', 'cccdTx', 'gplx', 'hanGplx', 'chuXe', 'cccd', 'diaChi', 'sdt', 'loaiXe', 'cavet', 'nguoiKy', 'hanBH'].forEach(k => assert.strictEqual(r[k], lo[k], k));
+  assert.strictEqual(r.kdDen, '01/06/2027', 'trường danh mục có giá trị thì chép'); assert.strictEqual(r._dmNgay, '01/11/2026');
+  assert.deepStrictEqual(M.khacXe(lo, dm), ['hạn đăng kiểm'], 'danh mục trống không bị báo');
+  // từng trường của danh mục thiếu → lô giữ nguyên trường đó (xe)
+  ['chuXe', 'taiXe', 'cccdTx', 'diaChiTx', 'ngayCapTx', 'noiCapTx', 'gplx', 'hanGplx', 'hanDangKiem', 'hanBaoHiem', 'cccd', 'ngaySinh', 'ngayCap', 'noiCap', 'diaChi', 'sdt', 'loaiXe', 'cavet', 'nguoiKy'].forEach(k => {
+    const d = Object.assign({ngayCapNhat: '01/11/2026', bienSo: '92C-1'}, Object.fromEntries(M.XE.filter(x => x !== 'ngayCapNhat' && x !== 'bienSo').map(x => [x, 'GT'])), {[k]: ''});
+    const lk = {chuXe: 'chuXe', hanDangKiem: 'kdDen', hanBaoHiem: 'hanBH'}[k] || k, g = {[lk]: 'GIỮ'}, c = M.chupXe(d, g); assert.strictEqual(c[lk], 'GIỮ', 'xe: giữ ' + k);
+  });
+  // lao động
+  const ld = {ngayCapNhat: '01/11/2026', cccd: '049085000001', ten: 'AN', gioiTinh: '', ngaySinh: '', diaChi: '', ngayCap: '', noiCap: '', sdt: '', chucVu: '', viTri: ''};
+  const l = M.chupLaoDong(ld, {ten: 'AN CŨ', cccd: '049085000001', ngaySinh: '01/01/1985', diaChi: 'Đại Lộc', ngayCap: '01/01/2021', noiCap: 'CA', sdt: '0905', chucDanh: 'Công nhân cưa', vaiTro: 'Công nhân'});
+  assert.deepStrictEqual([l.ten, l.ngaySinh, l.diaChi, l.ngayCap, l.noiCap, l.sdt, l.chucDanh, l.vaiTro], ['AN', '01/01/1985', 'Đại Lộc', '01/01/2021', 'CA', '0905', 'Công nhân cưa', 'Công nhân']);
+  assert.deepStrictEqual(M.khacLaoDong({ten: 'AN', ngaySinh: '01/01/1985', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đại Lộc'}, ld), []);
+  // đề nghị cập nhật chỉ khi danh mục mới hơn lần chụp
+  const dm2 = Object.assign({}, ld, {ngayCapNhat: '01/11/2026', diaChi: 'Mới'}), loSua = {ten: 'AN', ngaySinh: '', ngayCap: '', noiCap: '', diaChi: 'Sửa sau danh mục', _dmNgay: '01/11/2026'};
+  assert.deepStrictEqual(M.lechLaoDong(loSua, dm2), [], 'lô sửa sau danh mục: không đề nghị lùi về số cũ');
+  assert.deepStrictEqual(M.lechLaoDong(Object.assign({}, loSua, {_dmNgay: '01/10/2026'}), dm2), ['thường trú'], 'danh mục mới hơn lần chụp thì đề nghị');
+  assert.deepStrictEqual(M.lechLaoDong({ten: 'AN', diaChi: 'X'}, dm2), ['thường trú'], 'dữ liệu cũ chưa có ngày chụp: coi là chụp từ rất lâu');
+  assert.deepStrictEqual(M.lechXe(Object.assign({}, lo, {_dmNgay: '01/11/2026'}), dm), []);
+  // kiểm tra dòng xe: dữ liệu cũ thiếu trường mới vẫn đọc được; trường chủ xe được chuẩn hóa
+  const k = M.kiemXe({ngayCapNhat: '01/11/2026', bienSo: '92c-1', cccd: '049 000 000 011', ngaySinh: '31/11/1985', nguoiKy: 'Khác'});
+  assert.strictEqual(k.ok, false); assert.ok(k.errs.some(e => /ngày sinh chủ xe/.test(e)) && k.errs.some(e => /người ký/.test(e)));
+  assert.strictEqual(M.kiemXe({ngayCapNhat: '01/11/2026', bienSo: '92c-1'}).ok, true, 'dòng cũ thiếu trường mới vẫn hợp lệ');
+  assert.strictEqual(M.kiemXe({ngayCapNhat: '01/11/2026', bienSo: '92c-1', cccd: '049000000011', ngaySinh: '01/01/1980', nguoiKy: 'Chủ xe'}).row.cccd, '049000000011');
+  // tạo lô từ lô cũ: danh mục thiếu tài xế không làm lô mất tài xế
+  const f = M.loTuLoCu({id: 'a', info: {maRung: 'R-A'}, doi: [], hdvc: [], nc: [], dx: [{bienSo: '92C-1', taiXe: 'Tư', cccdTx: '049000000009'}]}, {id: 'b', maRung: 'R-B', dmLaoDong: [], dmXe: [Object.assign({}, dm, {bienSo: '92C1'})]}).f;
+  assert.deepStrictEqual([f.dx[0].taiXe, f.dx[0].cccdTx], ['Tư', '049000000009']);
 });

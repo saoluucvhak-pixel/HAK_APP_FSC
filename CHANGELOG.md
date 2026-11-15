@@ -1,5 +1,95 @@
 # Nhật ký thay đổi
 
+## Chưa phát hành — toàn vẹn hồ sơ đã chốt và nghiệm thu in đợt 2 (mốc tái hiện cce3907)
+
+### Sửa lỗi
+| # | Lỗi (trước) | Sửa (sau) |
+| --- | --- | --- |
+| T1 | Chốt lô rồi đổi riêng `f.chot.hash`: `nguyenVen()` vẫn trả `true` (dấu vân tay của gói không được kiểm) | `src/vongdoi.js` kiểm **riêng hai điều kiện**: (1) gói lưu lúc chốt đúng cấu trúc và dấu vân tay tính từ **chính chuỗi gói** khớp `chot.hash`; (2) dữ liệu nghiệp vụ hiện tại khớp bản chụp. Đổi `chot.hash` → “Dấu vân tay không khớp” |
+| T2 | `f.chot.goi = "{"` (JSON cắt dở): `nguyenVen()` ném `SyntaxError`, màn hình lô hỏng | Không bao giờ ném lỗi: “Gói hỏng (JSON)”; lô vẫn mở được ở chế độ chỉ đọc, các lô khác không ảnh hưởng |
+
+Kết quả kiểm (`kiemToanVen`): `nguyen-ven`, `chua-chot`, `thieu-goi`, `thieu-hash`, `json-hong`, `sai-cau-truc`, `hash-khong-khop`, `du-lieu-khac`; `nguyenVen()` vẫn là boolean cho nơi cũ. Dữ liệu so bằng chuỗi chuẩn (khóa sắp thứ tự) sau khi chuẩn hóa cấu trúc đội, bỏ các khóa vòng đời (`chot`, `luuTru`, `dung`, `nhatKy`): gói do bản cũ tạo (lô chưa có đội, nhật ký trong gói) không bị báo nhầm; ghi nhật ký, lưu trữ sau khi chốt vẫn là nguyên vẹn.
+
+### Thay đổi hành vi người dùng cần biết
+- **Lô đã chốt có gói bất thường:** dải đỏ nêu mã lô, phiên bản chốt và lý do; lô vẫn mở chỉ đọc để đối chiếu. Phần mềm **không** tự mở khóa, tự chốt lại hay tính dấu vân tay mới cho gói cũ (`hashDL` chỉ ghi khi gói qua kiểm). Mở khóa vẫn bắt buộc lý do và ghi nhật ký.
+- **Khôi phục một lô / khôi phục toàn bộ:** lô đã chốt trong file có gói hỏng, dấu vân tay sai, sai cấu trúc hoặc dữ liệu khác bản chụp → dừng ở bước xem trước (không có nút ghi; khôi phục toàn bộ khóa mọi cách xử lý, kể cả thay toàn bộ); tiến trình chính cũng từ chối (mã `GOI_HONG`) trước khi sao lưu hay ghi. Hồ sơ trên máy, các lô khác và file nguồn giữ nguyên; chọn bản sao lưu khác để đối chiếu.
+- **Sao lưu một lô có gói hỏng:** vẫn ghi file (để đối chiếu) nhưng báo rõ file đó sẽ không khôi phục được.
+
+### Kiểm thử
+- `tests/toanven.test.js` (12 ca, gồm hồi quy T1, T2 và khôi phục thất bại); `scripts/e2e-toanven.js` (Electron + SQLite thật: hỏng gói ngay trong SQLite, đóng mở lại, sáu loại gói sao lưu, gói bản cũ, khôi phục toàn bộ).
+- `scripts/e2e-nghiemthu-dot2.js`: nghiệm thu in đợt 2 (BM-08, 09, 10, 14) bằng dữ liệu đã lưu — ca in cả bộ trên giấy trắng; ca in nền → xác nhận → đóng mở → bổ sung → đóng mở → in đè đúng mẫu, đúng đội xe; bảng kê BM-09 trang riêng; không có “BẢN NHÁP”; đổi PDF bằng LibreOffice và chồng ảnh nền + in đè (CI tải lên artifact).
+
+## Chưa phát hành — sửa lỗi A1–A4 và hiệu năng B5–B7 (nền: nhánh sửa năm mục)
+
+### Sửa lỗi
+| # | Lỗi (trước) | Sửa (sau) |
+| --- | --- | --- |
+| A1 | Lô nhiều đội: bảng so định mức nhân công so định biên với **cả lô**, nên đội nào cũng bị báo lệch hoặc lệch bị che | So với **từng đội**: bảng định biên ở tab Nhân công so với đội đang chọn (ghi rõ tên đội), tab Kiểm tra báo “Số người của đội “X” khác định mức” theo đội; lô một đội giữ như cũ (`scripts/e2e-dinhbien-doi.js`) |
+| A2 | Kiểm tra chéo lô tính sản lượng dự kiến và tổng phiếu cân bằng công thức riêng (bỏ qua định mức keo mặc định, làm tròn khác màn hình) | Dùng chung `HAKDinhMuc.sanLuongDuKien`, `dinhMucLo`, `tongPhieuTan` (`src/dinhmuc.js`) cho màn hình và `src/cheolo.js`: cùng định mức (kể cả mặc định), cùng cách làm tròn |
+| A3 | Trạng thái in đợt 2 của BM-09 / BM-10 lưu theo CCCD (hoặc tên) người ký: đổi người ký của đội xe (ví dụ sang doanh nghiệp) làm mất lịch sử “đã in” | Khóa theo **đội xe** (`09:hd:<id đội xe>`). SQLite **v12** đổi khóa cũ sang khóa mới (lô đã chốt / đã dừng giữ nguyên, giao diện vẫn đọc khóa cũ); bản sao lưu cũ nạp vào cũng đổi (`withDefaults`) (`scripts/e2e-inkhoa-doixe.js`) |
+| A4 | Dòng nhân công / xe nhập trước khi có ngày chụp danh mục (`_dmNgay`) bị coi là chụp từ rất lâu: gặp danh mục khác là đề nghị “cập nhật” lùi về số cũ, kể cả khi lô đã sửa tay sau đó | SQLite **v11** gán ngày chụp cho dòng cũ = ngày cập nhật của dòng danh mục hiện hành (không có thì ngày nâng cấp); chỉ dòng chưa có ngày chụp, không đụng lô đã chốt / dừng; bản sao lưu cũ nạp vào cũng gán (`scripts/e2e-ngaychup.js`) |
+
+### Hiệu năng
+Đo bằng `scripts/perf-dulieu.js` (Electron thật, SQLite thật): 50 lô × 2.000 phiếu cân, mỗi lô 30 nhân công và 15 xe, danh mục 1.500 người và 300 xe × 3 dòng lịch sử, 10 lô đã chốt; file SQLite ~35 MB. Số đo lưu ở `reports/perf/` (`truoc-B.json`, `sau-B7.json`, `sau-B6.json`, `sau-B5.json`). Thời gian vẽ là số nhỏ nhất của 3 lần, máy CI 4 nhân; các lần đo lặp lại dao động khoảng ±30 %.
+
+| Chỉ số | Trước | Sau B7 | Sau B6 | Sau B5 |
+| --- | --- | --- | --- | --- |
+| Vẽ tab Thông tin rừng (mở lô) | 1.141 ms | 10 ms | 9 ms | 10 ms |
+| Vẽ tab Nhân công | 1.169 ms | 23 ms | 27 ms | 32 ms |
+| Vẽ tab Vận chuyển | 1.207 ms | 154 ms | 216 ms | 271 ms |
+| Vẽ tab Kiểm tra | 1.032 ms | 8 ms | 10 ms | 11 ms |
+| Vẽ tab Xuất hồ sơ (tất cả) | 1.899 ms | 249 ms | 254 ms | 253 ms |
+| Phần ngoài hồ sơ gửi kèm mỗi lần lưu | 1.267.208 byte | 1.267.208 byte | **19 byte** | 19 byte |
+| Sửa một dòng danh mục rồi lưu | (gửi cả danh mục) | — | 325 byte, 369 ms | 325 byte, 423 ms |
+| Tổng JSON các lô đọc lên giao diện | 33,2 MB | 33,2 MB | 33,2 MB | **26,8 MB** |
+| Lô lớn nhất (lô đã chốt) | 1,18 MB | 1,18 MB | 1,18 MB | **0,54 MB** |
+
+- **B7 — nhớ tạm theo phiên bản dữ liệu.** `dataVer` (ui/app/02) tăng ở mọi đường đổi dữ liệu (`persist`, `persistLo`, `persistNow`, `loVeBanDaLuu`, mọi thao tác bản nháp `HAKStage`, thêm / bỏ bản nháp). Kết quả kiểm tra (`exportCheck`), `gateRaw`, tiến độ từng lô ở danh sách bên trái, chỉ mục chéo lô, phiếu cân sắp theo ngày, hạn giấy tờ xe nhớ theo (khóa hồ sơ, `dataVer`, db): vẽ lại khi dữ liệu không đổi thì không tính lại. Trước đây danh sách lô tính lại kiểm tra của **cả 50 lô** mỗi lần vẽ. `tests/datacver.test.js` quét mã: hàm giao diện nào sửa lô / db mà không tăng phiên bản thì test hỏng (ngoại lệ ghi lý do); `scripts/e2e-nhotam.js` kiểm nhớ tạm trúng / tính lại đúng lúc.
+- **B6 — danh mục ra bảng SQLite riêng.** SQLite **v13** chuyển `dmLaoDong`, `dmXeVC`, `dmDoiTac` từ bảng meta (một chuỗi JSON lớn) sang bảng `danh_muc` (mỗi mục một dòng, có băm) và `danh_muc_bang`; đọc lên vẫn là mảng như trước, danh mục rỗng vẫn là `[]`. Lưu toàn bộ chỉ ghi dòng có băm khác; lưu theo phần thay đổi gửi `sideD` (chỉ dòng danh mục, khóa meta, công ty đã đổi), sai dạng thì báo `MISMATCH` và giao diện lưu toàn bộ (`tests/danhmuc-bang.test.js`).
+- **B5 — gói đóng băng ra bảng riêng.** SQLite **v14** chuyển `chot.goi` (bản chụp cả lô lúc chốt) sang bảng `chot_goi` (một dòng mỗi lô × phiên bản chốt, giữ cả các phiên bản cũ). JSON lô chỉ còn `chot = {at, nguoi, phienBan, hash, hashDL}`; `hashDL` là dấu vân tay phần dữ liệu nên kiểm “còn nguyên” (`nguyenVen`) không cần nạp gói. Đọc gói qua IPC `db:goiChot`; sao lưu toàn bộ và sao lưu một lô vẫn mang gói như trước; khóa chỉ đọc (`LOCKED`) giữ nguyên (`tests/chotgoi.test.js`, `scripts/e2e-chot-ho-so.js`).
+
+### Nâng cấp dữ liệu
+- v11–v14 chạy sau khi sao lưu file (`backups/truoc-nang-cap-v…-len-v14-….sqlite`), một chiều, chạy lại không đổi; bản sao lưu JSON cũ nạp vào được xử lý như migration (`withDefaults`). `scripts/e2e-nangcap-v14.js` dựng dữ liệu ở cấu trúc v8 (main 2.2) rồi mở bằng bản mới; CI chạy bài này ở job Ubuntu.
+- Bản in giống từng byte với mốc cce3907: `scripts/so-ban-in.js` cho 198/198 tài liệu giống, 0 khác.
+
+### Giới hạn
+- Thời gian **lưu** chưa giảm nhiều (lần lưu đầu sau khi mở app ~2,4–3,7 s, các lần sau ~1,2–2,0 s ở dữ liệu đo): phần lớn là giao diện tuần tự hóa cả 50 lô để so ảnh chụp, việc này nằm ngoài B5–B7.
+- Tab Vận chuyển dao động 150–270 ms, tab Xuất 250–420 ms giữa các lần đo trên máy CI; mục tiêu < 300 ms đạt ở số nhỏ nhất của 3 lần nhưng có lần vượt.
+- Bản chạy trong trình duyệt (không có Electron) vẫn giữ gói trong lô (lưu vào bộ nhớ trình duyệt như trước).
+
+## Chưa phát hành — sửa năm mục (nền: main 2.2 + bốn lỗi ở mục trên)
+
+### Sửa lỗi
+| # | Lỗi (trước) | Sửa (sau) |
+| --- | --- | --- |
+| 1 | `loTuLoCu` chép luôn `chot`, `luuTru`, `dung`, `nhatKy`, `ref`… của lô nguồn: lô mới tạo từ lô đã chốt bị khóa chỉ đọc ngay, mang gói đóng băng và nhật ký của lô cũ | Chỉ chép **khung lô** theo danh sách trắng (`info` đã lọc, đội, nhân công, đội xe, xe); không bao giờ mang vòng đời, nhật ký, trạng thái in/ký, tham chiếu tra cứu, lịch sử STT, tệp nhập; STT của đội, đội xe cũng không chép |
+| 2 | `chupXe`, `chupLaoDong` gán thẳng giá trị danh mục, dòng danh mục thiếu trường làm lô mất dữ liệu (xe có tài xế “Tư” mà danh mục không có tài xế → lô mất tài xế); “mới hơn” báo cả khi danh mục trống; lô sửa sau danh mục vẫn bị đề nghị lùi về số cũ | Chỉ chép trường danh mục **có giá trị**; so lệch chỉ nêu trường danh mục có giá trị và khác lô; mỗi dòng lô lưu **ngày chụp** (`_dmNgay`), chỉ đề nghị cập nhật khi danh mục **mới hơn** lần chụp; thêm thông tin chủ xe cho danh mục xe (CCCD, ngày sinh, ngày cấp, nơi cấp, thường trú, SĐT, loại xe, cà vẹt, người ký) ở form, nhập Excel, chọn từ danh mục |
+| 3 | Khóa chỉ đọc chỉ là `fieldset` ở ba tab: sửa được ô tab Xuất hồ sơ vào bản nháp rồi kẹt “Chưa lưu”; áp bản tra cứu Google Sheets ghi thẳng vào lô đã chốt; tầng lưu không biết lô bị khóa | `kiemKhoa(f)` ở mọi đường ghi (cửa chặn sự kiện, `persistLo`, `saveOnce`, tra cứu, nạp Excel, ghi nhận in/ký…); ô nhập và nút ghi bị vô hiệu (tải và in vẫn được); `saveOnce` và `Store.save`/`saveDelta` từ chối thay đổi dữ liệu (kể cả xóa lô) của lô đang chốt/dừng với mã **LOCKED**, trừ khóa vòng đời (`chot`, `luuTru`, `dung`, `nhatKy`) |
+| 4 | Mục chặn từ kiểm tra chéo lô và nhiều mục chặn khác chỉ hiện ở màn Kiểm tra; nút tải, gói ZIP, đợt 2 tính riêng bằng `gate()` nên biểu mẫu “bị chặn” vẫn tải được; `bieuMauBiChan` không ai dùng | Nút tải, mục quy trình, gói ZIP, đợt 2 quyết định bằng `HAKKiemTra.chanCho` trên **cùng danh sách** của `exportCheck` (kèm phạm vi đội / đội xe); `gate()` chỉ còn sinh lỗi và điều kiện cấu trúc; mã nhóm cố định trong `src/kiemtra.js` (`NHOM`), test quét mã nguồn buộc mọi nhóm có khai biểu mẫu |
+| 5 | Doanh nghiệp ở hai nơi (`dmDonViVC` và `dmDoiTac` chép lúc v8) nên sửa một nơi thì nơi kia lệch; người ký cá nhân của Đối tác không chọn được cho đội xe; nút Sửa doanh nghiệp | Migration **v10** gộp `dmDonViVC` vào `dmDoiTac` (một nguồn); đội xe chọn được người trong đội, người ký cá nhân và doanh nghiệp của Đối tác (chụp lại vào `ben`); sửa đối tác sau đó báo “danh mục đã đổi” và cập nhật có chủ ý; nút Sửa ở Danh mục mở form ngay tại màn đó |
+
+### Thay đổi hành vi người dùng cần biết
+- **Lô đã chốt hoặc đã dừng:** ô tab Xuất hồ sơ bị khóa; mọi thao tác ghi (kể cả tra cứu Google Sheets, nạp Excel, xóa lô, khôi phục lô trùng) báo “lô chỉ đọc”. Mở khóa (nhập lý do) hoặc mở lại lô trước khi sửa.
+- **Chặn xuất theo từng đội:** lỗi riêng của một đội khai thác chỉ chặn biểu mẫu của đội đó (BM-01, 05, 06, 07, 08, 14, 20); lỗi riêng của một đội xe chỉ chặn biểu mẫu của đội xe đó (BM-04, 09, 10). Biểu mẫu một file cho cả lô (ví dụ BM-02) bị chặn bởi lỗi của bất kỳ đội nào. Gói ZIP bỏ các file bị chặn và nói rõ file nào bị bỏ.
+- **Thay đổi mức chặn so với trước (ghi rõ):** lỗi “Hình thức, đơn giá” nay chỉ chặn BM-01, 03, 08, 14, 20 (trước chặn mọi biểu mẫu); lỗi định mức BHLĐ chỉ chặn BM-02 (trước chặn cả gói); mục “Mã lô trùng (dữ liệu cũ)” nay chặn xuất ở mọi nút (trước chỉ hiện ở màn Kiểm tra). Bản in của lô không có mục chặn **giống từng byte** so với main: `scripts/so-ban-in.js` (198 tài liệu của 9 lô thử, số phiếu riêng từng lô) cho 198/198 giống, 0 khác. Lưu ý: nếu hai lô có phiếu cân giống hệt nhau thì BM-08, 09, 10, 14 của chúng nay thật sự bị chặn (trước đây chỉ hiện ở màn Kiểm tra).
+- **Danh mục xe** có thêm thông tin chủ xe; dòng danh mục cũ thiếu các trường này vẫn đọc được.
+- **Đối tác:** doanh nghiệp vận chuyển nay nằm ở một danh mục (Danh mục → Đối tác); tab Vận chuyển đọc và sửa cùng nơi đó.
+
+### Giới hạn
+- Dòng lô nhập trước bản này chưa có ngày chụp danh mục: coi là chụp từ rất lâu, nên gặp danh mục có ngày mới hơn và khác vẫn được đề nghị cập nhật một lần.
+- Khôi phục **thay toàn bộ** dữ liệu (nhập bản sao lưu) là thao tác chủ động nên không bị khóa chỉ đọc chặn; khôi phục từng lô đè lên lô đang chốt thì bị chặn.
+
+## Chưa phát hành — sửa bốn lỗi (mốc tái hiện 2d2b3e2)
+
+| # | Lỗi (trước) | Sửa (sau) |
+| --- | --- | --- |
+| 1 | `src/sovb.js`: xóa đội 01 rồi thêm đội mới thì cấp lại STT 01, dù đã có lịch sử | Lịch sử STT đã cấp lưu theo lô và theo nhóm (`sttDaCap.doi`, `sttDaCap.doiXe`); xóa đội vẫn giữ; đội mới nhận 03. Xem trước và xác nhận điền dùng cùng hàm `capStt`; chỉ điền ô số trống, giữ STT, số nhập tay và số đã in. SQLite **v9** khởi tạo lịch sử từ STT đang lưu và số văn bản dạng `NN/NĂM/…`, không đánh lại số cũ |
+| 2 | `src/cheolo.js`: phiếu P1 cùng biển số, cùng ngày nhưng ghi `1/11/2026` và `01/11/2026` không bị phát hiện trùng | Khóa đối chiếu dùng tiện ích ngày lịch chung (`src/dates.js`), số phiếu và biển số chuẩn hóa; ngày thiếu hoặc không có thật không được dùng để kết luận trùng (lỗi ngày vẫn báo ở kiểm tra phiếu cân). Phiếu trùng chặn BM-08, 09, 10, 14 ở xuất riêng, xuất theo gói và in bổ sung đợt 2; không tự xóa hay chuyển phiếu |
+| 3 | `src/dinhbien.js`: ô Số người trống hoặc khoảng trắng bị đổi thành 0 | Ô trống bị từ chối kèm số dòng và tên vị trí, giữ nguyên định mức đã lưu (bản gốc và phiên bản có ngày); số 0 do người dùng chủ động nhập vẫn hợp lệ |
+| 4 | `src/dinhbien.js`: ngày bắt đầu `31/11/2026` vẫn chọn được bản gốc | Dùng ngày lịch chung. Ngày trống: bản mới nhất; ngày hợp lệ: đúng phiên bản (kể cả đúng ngày hiệu lực); ngày sai khi có nhiều phiên bản: báo rõ ở tab Nhân công, Kiểm tra (chặn BM-06) và màn Định mức, không chọn bản nào, không đổi giá trị ngày gốc |
+
+**Giới hạn khi nâng cấp (v9):** đội khai thác hoặc đội xe đã bị xóa **trước** bản này không có lịch sử; nếu số văn bản của đội đó không còn ở văn bản nào thì STT đó có thể bị cấp lại. Phần mềm không tự đánh lại số cũ và cảnh báo số trùng trong lô và giữa các lô (mục “Số văn bản trùng” ở tab Kiểm tra).
+
 ## 2.1.0 — Danh mục dùng chung: nhập một lần, lô chỉ chọn và chụp lại
 
 Quy trình mới nhằm hết nhập trùng và chồng lấn số liệu (thiết kế: `docs/THIET_KE_QUY_TRINH_2_1.md`). Dữ liệu 2.0.0 được nâng cấp tự động (SQLite v7, có sao lưu file `truoc-nang-cap-v6-len-v7`; **không đụng tới dữ liệu rừng**, chỉ dựng thêm danh mục).

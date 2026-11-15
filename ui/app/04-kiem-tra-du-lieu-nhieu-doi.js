@@ -323,30 +323,46 @@ function vcLoi(rec) {
 /* rà mâu thuẫn ngày, số (src/nhaplieu.js) cho lô, cho TỪNG ĐỘI (hình thức, số văn bản của đội) và TỪNG ĐỘI XE có số / cước riêng; trùng thì chỉ báo một lần */
 function nhapLieuAll(rec) {
   const out = [], seen = new Set(), base = HAKNhapLieu.kiemTra(rec), baseT = new Set(base.map(x => x.text));
-  const add = (x, pre) => { const t = pre ? Object.assign({}, x, {text: pre + x.text}) : x, k = t.kind + '|' + t.text; if (!seen.has(k)) { seen.add(k); out.push(t); } };
+  const add = (x, pre, dt) => { const t = pre ? Object.assign({}, x, {text: pre + x.text, doiTuong: dt}) : x, k = t.kind + '|' + t.text; if (!seen.has(k)) { seen.add(k); out.push(t); } };
   base.forEach(x => add(x));
-  if (rec.doi && rec.doi.length > 1) { const B = doiOf(rec); if (B.multi) B.doi.forEach(d => HAKNhapLieu.kiemTra(subRec(rec, B, d)).forEach(x => { if (!baseT.has(x.text)) add(x, 'Đội “' + (d.ten || '') + '”: '); })); }
+  if (rec.doi && rec.doi.length > 1) { const B = doiOf(rec); if (B.multi) B.doi.forEach(d => HAKNhapLieu.kiemTra(subRec(rec, B, d)).forEach(x => { if (!baseT.has(x.text)) add(x, 'Đội “' + (d.ten || '') + '”: ', {loai: 'doi', ten: d.ten || ''}); })); }
   if (rec.hdvc) groupsDX(rec).forEach(g => { const h = g.hd; if (!h || (!h.cuoc && !Object.keys(h.exp || {}).length)) return; const [r2, e2] = vcCtx(rec, Object.assign({}, rec.exp, {_so: {}}), g);
-    HAKNhapLieu.kiemTra(Object.assign({}, r2, {exp: e2})).forEach(x => { if (!baseT.has(x.text)) add(x, 'Đội xe “' + (g.ten || '') + '”: '); }); });
+    HAKNhapLieu.kiemTra(Object.assign({}, r2, {exp: e2})).forEach(x => { if (!baseT.has(x.text)) add(x, 'Đội xe “' + (g.ten || '') + '”: ', {loai: 'doiXe', ten: g.ten || ''}); }); });
   return out;
 }
-function gate(rec) {
-  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrorsRec(rec), ...nhapLieuAll(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
+/* gateRaw: NGUỒN SINH MỤC KIỂM TRA (danh sách lỗi theo nhóm, không còn cờ canX riêng). exportCheck biến chúng thành mục có nhóm, biểu mẫu, đối tượng; mọi quyết định “được xuất biểu mẫu nào” đọc từ
+ * HAKKiemTra.chanCho trên CÙNG danh sách đó (xem gate bên dưới). Chỉ giữ ở đây các điều kiện CẤU TRÚC (có tổ trưởng, có danh sách ủy quyền…), không phải lỗi dữ liệu. */
+function gateRaw(rec) {
+  const nl = nhapLieuAll(rec);
+  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrorsRec(rec), ...nl.filter(x => x.kind === 'chan').map(x => x.text)];
   const nc = checkNC(rec);
   const dx = checkDX(rec);
   const vcL = vcLoi(rec);
   const hasTT = rec.nc.some(isTT);
   const direct = allDirect(rec), normErrs = normErrors(rec);
   const pc = checkPC(rec);
-  return {
-    pc, info, nc, dx, direct, normErrs, vc: vcL,
-    canGK: !direct && !info.length && !nc.errs.length && hasTT,
-    canBHLD: !info.length && !nc.errs.length && hasTT,
-    canPhat: !info.length && !nc.errs.length && hasTT && !normErrs.length,
-    canHDLD: !info.length && !nc.errs.length && hasTT && hdldList(rec).length > 0,
-    canUQ: !direct && !info.length && !nc.errs.length && hasTT && ucList(rec).length > 0 && !minorsOf(rec).length,   // người ủy quyền phải từ đủ 18 tuổi (Điều 18 BLLĐ 2019)
-    canHDVC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vcL.length,
-    canPC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vcL.length && (rec.pc || []).length > 0 && !pc.errs.length
-  };
+  let pcTrung = []; try { pcTrung = HAKCheoLo.phieuTrung(db, rec.id, rec.fid, rec.pc || [], cheoCtx()); } catch (e) { /* không kiểm được chéo lô: không chặn */ }
+  return {pc, pcTrung, info, nc, dx, direct, normErrs, vc: vcL, hasTT, nhapLieu: nl,
+    cauTruc: {gk: !direct && hasTT, get uq() { const v = !direct && hasTT && ucList(rec).length > 0 && !minorsOf(rec).length; Object.defineProperty(this, 'uq', {value: v}); return v; },   // tính khi cần (danh sách lô lớn không phải tính ủy quyền, HĐLĐ cho từng lô)
+      get hdld() { const v = hasTT && hdldList(rec).length > 0; Object.defineProperty(this, 'hdld', {value: v}); return v; }, nhanCong: hasTT, vanChuyen: rec.dx.length > 0, phieuCan: rec.dx.length > 0 && (rec.pc || []).length > 0}};
+}
+/* gate: gateRaw + CÁC CỜ canX SUY RA từ danh sách mục kiểm tra (exportCheck) bằng HAKKiemTra.chanCho: biểu mẫu nào còn ít nhất một đội / đội xe không bị chặn thì nút xuất còn dùng được;
+ * file của đội / đội xe bị chặn được loại khỏi từng bản xuất (xem bmLoaiFile). Một nguồn duy nhất cho nút tải, mục quy trình, gói ZIP, đợt 2, in bổ sung. */
+function gate(rec) {
+  const kt = exportCheck(rec), g = kt.g, c = g.cauTruc, ok = code => bmConDuoc(rec, kt, code);
+  const out = Object.assign({}, g, {
+    canGK: c.gk && ok('01'), canBHLD: c.nhanCong && ok('02') && ok('06'), canPhat: c.nhanCong && ok('02'), canTC: c.nhanCong && ok('08'),
+    canHDLD: c.hdld && ok('03'), canUQ: c.uq && ok('20'), canHDVC: c.vanChuyen && ok('04'),
+    canPC: c.phieuCan && ok('09') && ok('10'),
+    bm: ok
+  });
+  out.ok = kind => !!kindOk(out)[kind];   // nút / mục của một biểu mẫu: còn xuất được cho ít nhất một đội (hoặc cả lô)
+  return out;
+}
+/* kind của nút xuất → biểu mẫu; điều kiện cấu trúc theo loại; dùng chung cho nút tải, mục quy trình, đợt 2 */
+const KIND_BM = {gk: ['01'], uq: ['20'], hdld: ['03'], bhld: ['02'], hdvc: ['04'], cc: ['05'], dsd: ['06'], xn: ['07'], tc: ['08'], xnvc: ['09'], ttvc: ['10'], ckng: ['11'], cklc: ['12'], kthn: ['13'], nttl: ['14'], stai: ['15'], tbi: ['16'], tdcr: ['17'], nkkt: ['18'], fsc: ['19']};
+function gateKind(g, kind) {
+  const c = g.cauTruc, cau = {gk: c.gk, uq: c.uq, hdld: c.hdld, hdvc: c.vanChuyen, xnvc: c.phieuCan, ttvc: c.phieuCan, tdcr: true, ckng: true}[kind];
+  return (cau === undefined ? c.nhanCong : cau) && KIND_BM[kind].every(code => g.bm(code));
 }
 

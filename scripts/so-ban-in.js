@@ -32,9 +32,9 @@ const clone = x => JSON.parse(JSON.stringify(x));
   L.moi = lot('f7', 'R-7', {exp: EXP1, pc: PC, kl: null}); delete L.moi.info.donGia; L.moi.info.khoiLuong = null;   // lô không có trường cũ nào: bản in phải giống từng byte
   L.moi2 = clone(L.hai); L.moi2.id = 'f8'; L.moi2.info.maRung = 'R-8'; delete L.moi2.info.donGia;
   const names = Object.keys(L); names.forEach(k => { L[k] = clone(L[k]); });   // nhân công, xe, phiếu cân của e2e dùng chung một mảng: tách riêng từng lô
-  names.forEach(k => { L[k].nc.forEach(r => { r.maRung = L[k].info.maRung; }); L[k].dx.forEach(r => { r.maRung = L[k].info.maRung; }); (L[k].pc || []).forEach(r => { r.maRung = L[k].info.maRung; }); });
+  names.forEach(k => { L[k].nc.forEach(r => { r.maRung = L[k].info.maRung; }); L[k].dx.forEach(r => { r.maRung = L[k].info.maRung; }); (L[k].pc || []).forEach(r => { r.maRung = L[k].info.maRung; r.soPhieu = k + '-' + r.soPhieu; }); });   // số phiếu riêng từng lô: các lô thử không được có phiếu giống hệt nhau (kiểm tra chéo lô chặn BM-08, 09, 10, 14)
   const data = seed(names.map(k => L[k]));
-  data.dmDonViVC = data.dmDonViVC || {};
+  data.dmDoiTac = data.dmDoiTac || [];
   const app = await electron.launch({executablePath: require(path.join(root, 'node_modules', 'electron')), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: dl}});
   const w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), data); await w.reload(); await w.waitForSelector('#side');

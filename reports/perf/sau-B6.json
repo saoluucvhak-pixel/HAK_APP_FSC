@@ -1,0 +1,43 @@
+{
+ "duLieu": {
+  "lo": 50,
+  "phieuMoiLo": 2000,
+  "nhanCong": 30,
+  "xe": 15,
+  "danhMucNguoi": 4500,
+  "danhMucXe": 900,
+  "loChot": 10
+ },
+ "fileSQLiteMB": 35,
+ "moAppMs": 11374,
+ "veMs": {
+  "thongTinRung": 9,
+  "nhanCong": 27,
+  "vanChuyen": 216,
+  "kiemTra": 10,
+  "xuatHoSo": 254
+ },
+ "dungLuong": {
+  "side": 1267208,
+  "tongLo": 33239430,
+  "loLonNhat": 1179467
+ },
+ "luuMotO": {
+  "ok": true,
+  "ms": 3008,
+  "cach": "full",
+  "tongMs": 3070
+ },
+ "luuLanHai": {
+  "ok": true,
+  "ms": 1380,
+  "cach": "delta",
+  "sideBytes": 19
+ },
+ "luuDanhMuc": {
+  "ok": true,
+  "ms": 369,
+  "cach": "delta",
+  "sideBytes": 325
+ }
+}

@@ -62,6 +62,7 @@ function panelHome() {
   const kp = (v, l, f, acc) => '<div' + (acc ? ' class="acc"' : '') + '><b>' + esc(F(v, f)) + '</b>' + esc(l) + '</div>';
   return '<div class="hero"><div><h2>Tổng quan</h2><p class="mut">' + todayStr() + ' · dữ liệu lưu ' + (HB ? 'trong SQLite trên máy' : 'trong trình duyệt') + '</p></div>' +
     '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Tra cứu</button>' : '') + '</div></div>' +
+    viecCanLamBox(recs) +
     '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(H.T.du * 10) / 10, 'Sản lượng dự kiến (tấn)', 'n1') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)', 'n3') + kp(Math.round(H.T.tt * 1000) / 1000, 'Khối lượng thực tế nhập tay (tấn)', 'n3') + kp(H.T.du ? Math.round(tot.t / H.T.du * 1000) / 10 : 0, 'Đã cân so với dự kiến', 'pct') + kp(tot.n, 'Số chuyến', 'n0') + kp(H.T.nc, 'Lao động', 'n0') + kp(H.T.dx, 'Số xe', 'n0') + kp(avg, 'Tiến độ hồ sơ TB', 'pct', true) + '</div>' +
     '<div class="grid2"><div class="card"><h3>Hồ sơ cần hoàn thiện</h3>' + (todo.length ? '<div class="dlist">' + todo.map(r => '<button class="drow" data-dash="' + esc(r.oid + '|' + r.fid) + '"><span><b>' + esc(r.tenRung || r.maRung || '(rừng chưa đặt tên)') + '</b> <span class="mut">· ' + esc(r.chuRung) + '</span><small>' + esc((r.thieu || []).slice(0, 2).map(x => x.label).join('; ') || '') + ((r.thieu || []).length > 2 ? ' và ' + ((r.thieu || []).length - 2) + ' mục khác' : '') + '</small></span><span class="ring ' + ringCls(r.pct) + '" style="--p:' + r.pct + '"><i>' + Math.round(r.pct) + '%</i></span></button>').join('') + '</div>' : '<p class="mut">Tất cả hồ sơ đã đạt 100%.</p>') + '</div>' +
     '<div class="card"><h3>Phiếu cân gần đây</h3>' + (recent.length ? '<div class="wrap" style="max-height:none"><table><tr><th>Ngày</th><th>Số phiếu</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th></tr>' + recent.map(p => '<tr><td>' + esc(p.ngay) + '</td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + esc(F(+p.kl || 0, 'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Tra cứu Google Sheets' : '') + '.</p>') + '</div></div>' +
@@ -113,7 +114,7 @@ function renderMain() {
 }
 
 function checklistRung(job) {
-  const g = gate(job), ex = job.exp || {}, i = job.info, pay = payrollPlan(job, ex);
+  const g = gateRaw(job), ex = job.exp || {}, i = job.info, pay = payrollPlan(job, ex);
   const L = [];
   const add = (ok, label, hint, warn) => L.push({ok, label, hint: ok ? '' : hint, warn: !ok && !!warn});
   add(!g.info.length, 'Thông tin rừng đầy đủ', g.info.join('; '));
@@ -133,7 +134,7 @@ function checklistRung(job) {
   add(!!ex.dtNgay, 'Biên bản ATLĐ có ngày đào tạo', 'Nhập ở tab Xuất hồ sơ', true);
   return L;
 }
-const progressOf = job => { const L = checklistRung(job); return {L, pct: Math.round(100 * L.filter(x => x.ok).length / L.length)}; };
+const progressOf = job => nhoTam('tienDo', job, () => { const L = checklistRung(job); return {L, pct: Math.round(100 * L.filter(x => x.ok).length / L.length)}; });   // nhớ tạm theo phiên bản dữ liệu (B7)
 function panelTienDo(job) {
   const {L, pct} = progressOf(job);
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Tiến độ hồ sơ rừng · checklist FSC</h3><b>' + pct + '%</b></div>' +

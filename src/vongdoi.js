@@ -2,7 +2,7 @@
  * 7 trạng thái: 4 trạng thái đầu tự suy ra từ dữ liệu; 3 trạng thái cuối do người dùng bấm.
  *   dang-lap (đợt 1 chưa in xong và ký) → da-ky-dot1 (mọi mẫu đợt 1 đã in, đã ký, còn khớp; chưa có phiếu cân) → dang-khai-thac (đã có phiếu cân)
  *   → cho-quyet-toan (đã nhập ngày kết thúc khai thác, đợt 2 chưa in xong và ký) ; da-chot | luu-tru | da-dung (chỉ đọc).
- * Dữ liệu lô: f.chot = {at, nguoi, phienBan, hash, goi} ; f.luuTru = {at} ; f.dung = {at, ngay, lyDo} ; f.nhatKy = [{at, hanh, lyDo, nguoi, phienBan}]. */
+ * Dữ liệu lô: f.chot = {at, nguoi, phienBan, hash, hashDL, goi} (B5: SQLite giữ goi ở bảng chot_goi, lô đọc lên không có goi; hashDL = dấu vân tay phần dữ liệu để kiểm nguyenVen) ; f.luuTru = {at} ; f.dung = {at, ngay, lyDo} ; f.nhatKy = [{at, hanh, lyDo, nguoi, phienBan}]. */
 (function (root) {
   const s = v => String(v == null ? '' : v).trim();
   const TEN = {'dang-lap': 'Đang lập', 'da-ky-dot1': 'Đã ký đợt 1', 'dang-khai-thac': 'Đang khai thác', 'cho-quyet-toan': 'Chờ quyết toán', 'da-chot': 'Đã chốt', 'luu-tru': 'Lưu trữ', 'da-dung': 'Đã dừng'};
@@ -36,6 +36,49 @@
     return ((h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0'));
   }
   const phienBanKe = f => ((f && f.nhatKy) || []).filter(x => x.hanh === 'chot').length + 1;
+  /* PHẦN DỮ LIỆU NGHIỆP VỤ của lô để so với bản chụp lúc chốt: bỏ các khóa vòng đời (chot, luuTru, dung, nhatKy — được phép đổi sau khi chốt), chuẩn hóa cấu trúc đội
+   * (src/model.js ensureForest: gói do bản cũ tạo chưa có đội vẫn so được, không báo nhầm) rồi lấy chuỗi chuẩn (khóa sắp thứ tự: chỉ khác thứ tự khóa không tính là khác). */
+  const MD = () => (typeof require === 'function' ? require('./model') : root.HAKModel);
+  function duLieuChuan(g) {
+    const c = JSON.parse(typeof g === 'string' ? g : JSON.stringify(g)); KHOA_VONG_DOI.forEach(k => { delete c[k]; });
+    const M = MD(), x = M && M.needsEnsure && M.needsEnsure(c) ? M.ensureForest(c) : c;
+    return chuan(x);
+  }
+  const bamDuLieu = g => bam(duLieuChuan(g));
+  /* KIỂM GÓI ĐÃ LƯU LÚC CHỐT (không cần dữ liệu lô hiện tại). chot = f.chot; goi = chuỗi JSON gói. Trả {ok, ma, lyDo, bamDL}:
+   *  thieu-goi | thieu-hash | json-hong | sai-cau-truc | hash-khong-khop (dấu vân tay tính từ CHÍNH chuỗi gói ≠ chot.hash, hoặc hashDL ghi trong lô ≠ gói) | ok.
+   * Không bao giờ ném lỗi; không sửa gì. */
+  function kiemGoi(chot, goi, fid) {
+    const r = (ma, lyDo, x) => Object.assign({ok: ma === 'ok', ma, lyDo}, x || {});
+    if (!chot) return r('thieu-goi', 'Lô không có thông tin chốt');
+    if (typeof goi !== 'string' || !goi) return r('thieu-goi', 'Không tìm thấy gói đóng băng lưu lúc chốt');
+    if (!s(chot.hash)) return r('thieu-hash', 'Thông tin chốt không có dấu vân tay của gói');
+    let g; try { g = JSON.parse(goi); } catch (e) { return r('json-hong', 'Gói đóng băng không đọc được (JSON hỏng hoặc bị cắt dở: ' + goi.length + ' ký tự)'); }
+    if (!g || typeof g !== 'object' || Array.isArray(g)) return r('sai-cau-truc', 'Gói đóng băng không phải bản chụp một lô');
+    if (!g.info || typeof g.info !== 'object' || Array.isArray(g.info)) return r('sai-cau-truc', 'Gói đóng băng thiếu thông tin lô (info)');
+    const sai = ['nc', 'dx', 'pc', 'doi', 'hdvc'].filter(k => g[k] != null && !Array.isArray(g[k]));
+    if (sai.length) return r('sai-cau-truc', 'Gói đóng băng sai cấu trúc ở ' + sai.join(', ') + ' (phải là danh sách)');
+    if (['chot', 'luuTru', 'dung'].some(k => k in g)) return r('sai-cau-truc', 'Gói đóng băng chứa trạng thái vòng đời (không phải bản chụp lúc chốt)');
+    if (fid != null && g.id != null && String(g.id) !== String(fid)) return r('sai-cau-truc', 'Gói đóng băng là của lô khác (mã nội bộ ' + g.id + ')');
+    if (bam(goi) !== s(chot.hash)) return r('hash-khong-khop', 'Dấu vân tay của gói (' + bam(goi) + ') khác dấu vân tay ghi lúc chốt (' + s(chot.hash) + ')');
+    let bamDL; try { bamDL = bamDuLieu(g); } catch (e) { return r('sai-cau-truc', 'Gói đóng băng không chuẩn hóa được: ' + e.message); }
+    if (chot.hashDL && chot.hashDL !== bamDL) return r('hash-khong-khop', 'Dấu vân tay phần dữ liệu ghi trong lô khác gói đóng băng');
+    return r('ok', '', {bamDL});
+  }
+  const TEN_KT = {'nguyen-ven': 'Nguyên vẹn', 'chua-chot': 'Chưa chốt', 'thieu-goi': 'Thiếu gói đóng băng', 'thieu-hash': 'Thiếu dấu vân tay', 'json-hong': 'Gói hỏng (JSON)', 'sai-cau-truc': 'Gói sai cấu trúc', 'hash-khong-khop': 'Dấu vân tay không khớp', 'du-lieu-khac': 'Dữ liệu khác bản đã chốt'};
+  /* KIỂM TOÀN VẸN HỒ SƠ ĐÃ CHỐT: (1) gói lưu lúc chốt đúng cấu trúc, dấu vân tay tính từ chính chuỗi gói khớp chot.hash; (2) dữ liệu nghiệp vụ hiện tại khớp bản chụp.
+   * goi: chuỗi gói (bỏ trống → f.chot.goi); kg: kết quả kiemGoi đã tính sẵn (tiến trình chính, gói ở bảng chot_goi) thay cho goi.
+   * Trả {ok, ma, ten, lyDo, maLo, phienBan}. Không ném lỗi, không sửa lô (không mở khóa, không chốt lại, không tính lại dấu vân tay). */
+  function kiemToanVen(f, goi, kg) {
+    const maLo = s(f && f.info && f.info.maRung) || s(f && f.id), out = (ma, lyDo) => ({ok: ma === 'nguyen-ven' || ma === 'chua-chot', ma, ten: TEN_KT[ma], lyDo: lyDo || '', maLo, phienBan: f && f.chot ? f.chot.phienBan || null : null});
+    if (!f || !f.chot) return out('chua-chot');
+    const k = kg || kiemGoi(f.chot, goi != null ? goi : f.chot.goi, f.id);
+    if (!k.ok) return out(k.ma, k.lyDo);
+    let h; try { h = bamDuLieu(f); } catch (e) { return out('du-lieu-khac', 'Dữ liệu lô hiện tại không đọc được: ' + e.message); }
+    return h === k.bamDL ? out('nguyen-ven') : out('du-lieu-khac', 'Dữ liệu nghiệp vụ hiện tại (thông tin lô, đội, nhân công, xe, phiếu cân, số văn bản…) khác bản chụp lúc chốt');
+  }
+  /* lô đã chốt từ bản cũ (có goi, chưa có hashDL): ghi hashDL CHỈ KHI gói qua kiểm (đúng cấu trúc, khớp chot.hash) — gói hỏng không được "hợp thức hóa". Sửa trực tiếp f; trả true nếu có đổi. Chạy lại không đổi. */
+  function ganHashDL(f) { if (!f || !f.chot || f.chot.hashDL || typeof f.chot.goi !== 'string') return false; const k = kiemGoi(f.chot, f.chot.goi, f.id); if (!k.ok) return false; f.chot.hashDL = k.bamDL; return true; }
   const ghi = (f, hanh, lyDo, nguoi, now, extra) => { f.nhatKy = Array.isArray(f.nhatKy) ? f.nhatKy : []; f.nhatKy.push(Object.assign({at: now, hanh, lyDo: s(lyDo), nguoi: s(nguoi)}, extra || {})); return f; };
   /* CHỐT: lưu gói đóng băng (bản chụp dữ liệu lô) kèm dấu vân tay; sửa trực tiếp f. Trả {ok, error, chot}. */
   function chot(f, nguoi, now, thieu) {
@@ -43,7 +86,7 @@
     if (chiDoc(f)) return {ok: false, error: 'Lô đã chốt hoặc đã dừng'};
     const copy = JSON.parse(JSON.stringify(f)); delete copy.chot; delete copy.luuTru; delete copy.dung;
     const goi = JSON.stringify(copy), pb = phienBanKe(f);
-    f.chot = {at: now, nguoi: s(nguoi), phienBan: pb, hash: bam(goi), goi}; ghi(f, 'chot', '', nguoi, now, {phienBan: pb, hash: f.chot.hash});
+    f.chot = {at: now, nguoi: s(nguoi), phienBan: pb, hash: bam(goi), hashDL: bamDuLieu(copy), goi}; ghi(f, 'chot', '', nguoi, now, {phienBan: pb, hash: f.chot.hash});
     return {ok: true, chot: f.chot};
   }
   /* MỞ KHÓA: bắt buộc nhập lý do, ghi nhật ký; gói cũ giữ trong nhật ký (hash). Sau khi sửa phải chốt lại (phiên bản kế tiếp). */
@@ -52,11 +95,8 @@
     if (!s(lyDo)) return {ok: false, error: 'Phải nhập lý do mở khóa'};
     ghi(f, 'mokhoa', lyDo, nguoi, now, {phienBan: f.chot.phienBan, hash: f.chot.hash}); delete f.chot; delete f.luuTru; return {ok: true};
   }
-  /* kiểm gói đã chốt còn nguyên không (dữ liệu lô hiện tại so với bản chụp lúc chốt) */
-  function nguyenVen(f) {
-    if (!f || !f.chot) return true; const copy = JSON.parse(JSON.stringify(f)); delete copy.chot; delete copy.luuTru; delete copy.dung; delete copy.nhatKy;
-    const goc = JSON.parse(f.chot.goi); delete goc.nhatKy; return bam(JSON.stringify(copy)) === bam(JSON.stringify(goc));
-  }
+  /* dạng boolean (tương thích nơi cũ): true khi chưa chốt hoặc nguyên vẹn. Gói không có trong bộ nhớ (SQLite giữ ở chot_goi) thì truyền goi hoặc dùng kiemToanVen với kg. */
+  const nguyenVen = (f, goi, kg) => kiemToanVen(f, goi, kg).ok;
   function luuTru(f, now) { if (!f || !f.chot) return {ok: false, error: 'Chỉ lưu trữ lô đã chốt'}; f.luuTru = {at: now}; ghi(f, 'luutru', '', '', now); return {ok: true}; }
   function boLuuTru(f, now) { if (f && f.luuTru) { delete f.luuTru; ghi(f, 'boluutru', '', '', now); } return {ok: true}; }
   function dung(f, lyDo, ngay, nguoi, now) {
@@ -65,6 +105,13 @@
     f.dung = {at: now, ngay: s(ngay), lyDo: s(lyDo)}; ghi(f, 'dung', lyDo, nguoi, now); return {ok: true};
   }
   function moLai(f, lyDo, nguoi, now) { if (!f || !f.dung) return {ok: false, error: 'Lô chưa dừng'}; if (!s(lyDo)) return {ok: false, error: 'Phải nhập lý do mở lại lô'}; ghi(f, 'molai', lyDo, nguoi, now); delete f.dung; return {ok: true}; }
-  const api = {TEN, CHI_DOC, trangThai, chiDoc, dieuKienChot, chot, moKhoa, nguyenVen, luuTru, boLuuTru, dung, moLai, bam, phienBanKe};
+  /* KHÓA CHỈ ĐỌC Ở TẦNG LƯU: lô đang chốt hoặc dừng (bản ĐÃ LƯU) không được đổi dữ liệu so với bản đã lưu, ngoại trừ các khóa vòng đời. Hai bản so bằng chuỗi chuẩn (khóa sắp thứ tự)
+   * nên chỉ khác thứ tự khóa không bị tính là thay đổi. Dùng ở giao diện (trước khi gửi) và ở Store (trước khi ghi). */
+  const KHOA_VONG_DOI = ['chot', 'luuTru', 'dung', 'nhatKy'];
+  const chuan = v => Array.isArray(v) ? '[' + v.map(chuan).join(',') + ']' : v && typeof v === 'object' ? '{' + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + chuan(v[k])).join(',') + '}' : JSON.stringify(v === undefined ? null : v);
+  const boVongDoi = f => { const c = Object.assign({}, f); KHOA_VONG_DOI.forEach(k => { delete c[k]; }); return c; };
+  const doiNgoaiVongDoi = (cu, moi) => chuan(boVongDoi(cu)) !== chuan(boVongDoi(moi));
+  const viPhamKhoa = (cu, moi) => !!cu && chiDoc(cu) && !!moi && doiNgoaiVongDoi(cu, moi);
+  const api = {KHOA_VONG_DOI, doiNgoaiVongDoi, viPhamKhoa, TEN, CHI_DOC, trangThai, chiDoc, dieuKienChot, chot, moKhoa, nguyenVen, luuTru, boLuuTru, dung, moLai, bam, phienBanKe, bamDuLieu, ganHashDL, kiemGoi, kiemToanVen, TEN_KT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKVongDoi = api;
 })(typeof self !== 'undefined' ? self : this);

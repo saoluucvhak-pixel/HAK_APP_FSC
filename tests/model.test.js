@@ -21,6 +21,7 @@ const roundTrip = (db0, label) => {
   assert.deepStrictEqual(M.ensureDb(m), m, label + ': chuẩn hóa lại không đổi');
   return m;
 };
+const boNgayChup = x => JSON.parse(JSON.stringify(x, (k, v) => k === '_dmNgay' ? undefined : v));   // _dmNgay (A4, SQLite v11) là ngày chụp danh mục, không in ra biểu mẫu
 const {MIGRATIONS} = require('../src/store');
 // mở fixture cũ CHỈ đến v3 (chưa chuyển đội) để có đúng dữ liệu dạng 1.4.x làm đầu vào
 const fixtureDb = name => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-model-')), f = path.join(d, 'x.sqlite'); fs.copyFileSync(path.join(__dirname, 'fixtures', name), f); const s = new Store(f, {migrations: MIGRATIONS.slice(0, 3)}); const db = s.load(); s.close(); return db; };
@@ -202,7 +203,7 @@ test('v7: SQLite dựng danh mục lao động và danh mục xe từ dữ liệ
   s6.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C1', cccd: '049067005459'}, forests: {f}}}}); const truoc = JSON.stringify(s6.load().rs); s6.close();
   const s7 = new Store(file), db = s7.load();
   assert.strictEqual(s7.db.pragma('user_version', {simple: true}), MIGRATIONS.length); assert.ok(MIGRATIONS.length >= 7);
-  assert.strictEqual(JSON.stringify(db.rs), truoc, 'hồ sơ lô không đổi');
+  assert.strictEqual(JSON.stringify(boNgayChup(db.rs)), truoc, 'hồ sơ lô không đổi (ngoài ngày chụp danh mục của v11)');
   assert.deepStrictEqual(db.dmLaoDong.map(r => [r.cccd, r.ngayCapNhat, r.viTri]), [['111111111111', '01/10/2026', 'Tổ trưởng'], ['222222222222', '01/10/2026', 'Công nhân khai thác']]);
   assert.deepStrictEqual([db.dmXeVC.length, db.dmXeVC[0].bienSo, db.dmXeVC[0].hanDangKiem], [1, '92C-1', '01/12/2027']); s7.close();
 });
@@ -214,7 +215,25 @@ test('v8: SQLite dựng danh mục Đối tác từ người ký của đội xe
   s7.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C1', cccd: '049067005459'}, forests: {f}}}, dmDonViVC: {d1: {id: 'd1', ten: 'CÔNG TY VẬN TẢI', mst: '0400000000', daiDien: 'ÔNG X'}}}); const truoc = JSON.stringify(s7.load().rs); s7.close();
   const s8 = new Store(file), db = s8.load();
   assert.strictEqual(s8.db.pragma('user_version', {simple: true}), MIGRATIONS.length); assert.ok(MIGRATIONS.length >= 8);
-  assert.strictEqual(JSON.stringify(db.rs), truoc, 'hồ sơ lô không đổi');
+  assert.strictEqual(JSON.stringify(boNgayChup(db.rs)), truoc, 'hồ sơ lô không đổi (ngoài ngày chụp danh mục của v11)');
   const ids = db.dmDoiTac.map(x => x.id).sort(); assert.deepStrictEqual(ids, ['ct:049000000001', 'dn:d1']);
   const ct = db.dmDoiTac.find(x => x.id === 'ct:049000000001'); assert.deepStrictEqual([ct.ten, ct.noiCap, ct.loai], ['A', 'CA', 'nguoiKyVC']); s8.close();
+});
+
+test('A3: trạng thái in đợt 2 BM-09/10 theo ĐỘI XE — khóa cũ (CCCD / tên người ký) đổi sang hd:<id>; đổi người ký sau đó không mất; lô đã chốt giữ nguyên; chạy lại không đổi', () => {
+  const xe = (bien, chu, cccd, o) => Object.assign({bienSo: bien, chuXe: chu, cccd, nguoiKy: 'Chủ xe'}, o || {});
+  const f = M.ensureForest({id: 'f', info: {}, dx: [xe('A', 'An', '049000000001'), xe('B', 'Chủ B', '049000000002', {nguoiKy: 'Tài xế', taiXe: 'Tư', cccdTx: '049000000009'})]});
+  f.hdvc.push({id: 'hd9', ten: 'DN', key: '', donViId: 'dn:dv1', ben: {id: 'dn:dv1', loai: 'doanhnghiep', ten: 'CTY VT'}, cuoc: null, exp: {}});
+  f.dx.push(xe('C', 'Chủ C', '049000000003', {hdvcId: 'hd9'}));
+  f.inDot2 = {v: 1, items: {'09:049000000001': {at: 'a', sig: 's1'}, '10:049000000009': {at: 'b', sig: 's2'}, '09:CTY VT': {at: 'c', sig: 's3'}, '14:x': {at: 'd'}}};
+  const h1 = f.dx[0].hdvcId, h2 = f.dx[1].hdvcId;
+  assert.deepStrictEqual([M.khoaInCuVC(f, f.hdvc.find(h => h.id === h1)), M.khoaInCuVC(f, f.hdvc.find(h => h.id === h2)), M.khoaInCuVC(f, f.hdvc.find(h => h.id === 'hd9'))], ['049000000001', '049000000009', 'CTY VT'], 'khóa cũ đúng như giao diện dựng (chủ xe, tài xế ký, doanh nghiệp)');
+  assert.strictEqual(M.doiKhoaInVC(f), 3);
+  assert.deepStrictEqual(Object.keys(f.inDot2.items).sort(), ['09:hd:' + h1, '09:hd:hd9', '10:hd:' + h2, '14:x'].sort());
+  assert.strictEqual(f.inDot2.items['09:hd:' + h1].sig, 's1', 'giữ nguyên nội dung trạng thái');
+  assert.strictEqual(M.doiKhoaInVC(f), 0, 'chạy lại không đổi');
+  f.dx[0].cccd = '049000000777';   // đổi người ký của đội xe: khóa mới không phụ thuộc người ký
+  assert.ok(f.inDot2.items['09:hd:' + M.ensureForest(f).dx[0].hdvcId]);
+  const k = {id: 'k', chot: {at: 'x'}, dx: [xe('A', 'An', '049000000001', {hdvcId: 'h1'})], hdvc: [{id: 'h1', key: '049000000001', cuoc: null, exp: {}}], inDot2: {v: 1, items: {'09:049000000001': {at: 'a'}}}};
+  assert.deepStrictEqual([M.doiKhoaInVC(k), Object.keys(k.inDot2.items)], [0, ['09:049000000001']], 'lô đã chốt: không đổi dữ liệu');
 });

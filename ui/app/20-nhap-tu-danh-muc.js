@@ -9,7 +9,7 @@ const dmNguonLd = () => {
 };
 const dmNguonXe = () => {
   const dm = HAKDanhMuc.xeHieuLuc(db.dmXeVC || []), co = new Set(dm.map(r => HAKDanhMuc.bienKey(r.bienSo)));
-  const them = xeDanhMuc().filter(r => !co.has(HAKDanhMuc.bienKey(r.bienSo))).map(r => ({ngayCapNhat: '', bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || '', _goc: r}));   // _goc: các trường riêng của xe ở lô cũ (chủ xe, loại xe…) để điền sẵn
+  const them = xeDanhMuc().filter(r => !co.has(HAKDanhMuc.bienKey(r.bienSo))).map(r => ({ngayCapNhat: '', bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || '', loaiXe: r.loaiXe || '', cccd: r.cccd || '', ngaySinh: r.ngaySinh || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', diaChi: r.diaChi || '', sdt: r.sdt || '', cavet: r.cavet || '', nguoiKy: r.nguoiKy || '', _goc: r}));   // _goc: các trường riêng của xe ở lô cũ (chủ xe, loại xe…) để điền sẵn
   return dm.concat(them).sort((a, b) => String(a.bienSo).localeCompare(String(b.bienSo)));
 };
 /* điền ô hộp thoại thêm người từ một dòng danh mục */
@@ -17,33 +17,39 @@ function dmDienNguoi(d) {
   const goc = Object.assign({}, stm.vals), r = HAKDanhMuc.chupLaoDong(d, goc);
   ['ten', 'cccd', 'ngaySinh', 'ngayCap', 'noiCap', 'diaChi', 'vaiTro', 'chucDanh'].forEach(k => { if (r[k] != null) stm.vals[k] = stStr(r[k]); });
   if (d.gioiTinh) stm.vals.danhXung = d.gioiTinh === 'Nữ' ? 'Bà' : 'Ông';
+  stm.vals._dmNgay = trim(d.ngayCapNhat);   // ngày của dòng danh mục vừa chọn (dòng lô lưu lại để biết khi nào danh mục mới hơn)
 }
 function dmDienXe(d) {
   const r = HAKDanhMuc.chupXe(d, Object.assign({}, stm.vals));
   if (d._goc) ST_FIELDS.dx.forEach(([k]) => { if (k !== 'stt' && d._goc[k] != null && d._goc[k] !== '') stm.vals[k] = stStr(d._goc[k]); });
-  ['bienSo', 'chuXe', 'taiXe', 'cccdTx', 'diaChiTx', 'ngayCapTx', 'noiCapTx', 'gplx', 'hanGplx', 'kdDen', 'hanBH'].forEach(k => { if (r[k] != null && r[k] !== '') stm.vals[k] = stStr(r[k]); });
+  ['bienSo', 'chuXe', 'taiXe', 'cccdTx', 'diaChiTx', 'ngayCapTx', 'noiCapTx', 'gplx', 'hanGplx', 'kdDen', 'hanBH'].concat(HAKDanhMuc.CHU_XE).forEach(k => { if (r[k] != null && r[k] !== '') stm.vals[k] = stStr(r[k]); });
+  stm.vals._dmNgay = trim(d.ngayCapNhat);
 }
 /* người / xe mới của lô (chưa có trong danh mục) → ghi vào danh mục; trả số dòng thêm */
 function dmGhiTuLo(st) {
-  let n = 0; const hom = todayStr(), baseIds = k => new Set(st.base[k].map(b => b._id));
+  let n = 0; const daGhi = {nc: [], dx: []}, hom = todayStr(), baseIds = k => new Set(st.base[k].map(b => b._id));
   const bn = baseIds('nc'), bx = baseIds('dx'); let ld = db.dmLaoDong || [], xe = db.dmXeVC || [];
   st.cur.nc.forEach(r => {
     if (bn.has(r._id)) return; const k = HAKDanhMuc.cccdSo(r.cccd); if (k.length !== 12 || !trim(r.ten) || HAKDanhMuc.layLaoDong(ld, k)) return;
-    const t = HAKDanhMuc.themLaoDong(ld, {ngayCapNhat: hom, cccd: k, ten: r.ten, gioiTinh: r.danhXung === 'Bà' ? 'Nữ' : r.danhXung === 'Ông' ? 'Nam' : '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '', chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}); ld = t.list; n++;
+    const t = HAKDanhMuc.themLaoDong(ld, {ngayCapNhat: hom, cccd: k, ten: r.ten, gioiTinh: r.danhXung === 'Bà' ? 'Nữ' : r.danhXung === 'Ông' ? 'Nam' : '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '', chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}); ld = t.list; n++; daGhi.nc.push(r._id);
   });
   st.cur.dx.forEach(r => {
     if (bx.has(r._id)) return; if (!HAKDanhMuc.bienKey(r.bienSo) || HAKDanhMuc.layXe(xe, r.bienSo)) return;
-    const t = HAKDanhMuc.themXe(xe, {ngayCapNhat: hom, bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || ''}); xe = t.list; n++;
+    const t = HAKDanhMuc.themXe(xe, {ngayCapNhat: hom, bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || '', loaiXe: trim(r.loaiXe), cccd: HAKDanhMuc.cccdSo(r.cccd), ngaySinh: trim(r.ngaySinh), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), diaChi: trim(r.diaChi), sdt: trim(r.sdt), cavet: trim(r.cavet), nguoiKy: trim(r.nguoiKy)}); xe = t.list; n++; daGhi.dx.push(r._id);
   });
-  if (n) { db.dmLaoDong = ld; db.dmXeVC = xe; persist(); }
+  if (n) {
+    db.dmLaoDong = ld; db.dmXeVC = xe;
+    const f = curForest(); if (f) ['nc', 'dx'].forEach(k => (f[k] || []).forEach(r => { if (daGhi[k].includes(r._id)) r._dmNgay = hom; }));   // dòng lô vừa ghi vào danh mục = bản chụp của ngày hôm nay
+    persist();
+  }
   return n;
 }
 /* dòng của lô khác bản chụp so với dòng mới nhất của danh mục: [{row, d, khac}] */
 function dmLechLo(kind, rows) {
   const out = [];
   (rows || []).forEach(r => {
-    if (kind === 'nc') { const m = HAKDanhMuc.layLaoDong(db.dmLaoDong || [], r.cccd); if (!m) return; const k = HAKDanhMuc.khacLaoDong(r, m.row); if (k.length) out.push({row: r, d: m.row, khac: k}); }
-    else { const m = HAKDanhMuc.layXe(db.dmXeVC || [], r.bienSo); if (!m) return; const k = HAKDanhMuc.khacXe(r, m.row); if (k.length) out.push({row: r, d: m.row, khac: k}); }
+    if (kind === 'nc') { const m = HAKDanhMuc.layLaoDong(db.dmLaoDong || [], r.cccd); if (!m) return; const k = HAKDanhMuc.lechLaoDong(r, m.row); if (k.length) out.push({row: r, d: m.row, khac: k}); }
+    else { const m = HAKDanhMuc.layXe(db.dmXeVC || [], r.bienSo); if (!m) return; const k = HAKDanhMuc.lechXe(r, m.row); if (k.length) out.push({row: r, d: m.row, khac: k}); }
   });
   return out;
 }

@@ -54,7 +54,7 @@ document.addEventListener('change', e => {
 /* ========== Bản nháp “Chưa lưu” của nhân công, xe, phiếu cân (src/stage.js) ========== */
 /* Mọi nguồn (nhập tay, Excel, bản tra cứu) chỉ đổi BẢN NHÁP của lô đang mở. Hồ sơ lô (SQLite) chỉ đổi khi bấm “Lưu dữ liệu vào lô”; tạo, xuất, in hồ sơ chỉ dùng dữ liệu đã lưu. */
 let dbEpoch = 0;   // tăng mỗi khi toàn bộ dữ liệu bị thay (khôi phục, nạp lại): lượt nhập đang chờ không còn đích hợp lệ
-const stages = {};   // 'mã chủ rừng|mã lô' → bản nháp
+const stages = new Proxy({}, {set(t, k, v) { t[k] = v; doiDuLieu(); return true; }, deleteProperty(t, k) { delete t[k]; doiDuLieu(); return true; }});   // 'mã chủ rừng|mã lô' → bản nháp; thêm / bỏ bản nháp tăng phiên bản dữ liệu (B7)
 const stKeyOf = (o, f) => o + '|' + f, stKey = () => stKeyOf(cur, curF);
 const stCur = () => stages[stKey()] || null;
 const stDirtyOf = k => (!!stages[k] && HAKStage.dirty(stages[k])) || loDirty.has(k.split('|')[1]);   // bảng nháp hoặc thay đổi khác của lô
@@ -63,7 +63,7 @@ const stDirtyCur = () => stDirtyOf(stKey());
 function stGetFor(oid, fid, make) { const k = stKeyOf(oid, fid), o = db.rs[oid], f = o && o.forests && o.forests[fid]; if (!f) return null; if (!stages[k] && make) stages[k] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); return stages[k] || null; }
 function stGet(make) { const k = stKey(); if (!stages[k] && make) { const f = curForest(); if (!f) return null; stages[k] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); } return stages[k] || null; }
 /* hồ sơ lô với ba danh sách là bản nháp (nếu có): dùng để hiển thị và kiểm tra khi xem trước */
-function stJob(rec) { const st = stCur(); if (!st) return rec; const g = ganDoi(rec.doi, st.cur.nc), v = ganVC(rec.hdvc, st.cur.dx), pc = ganPC(g.doi, st.cur.pc); return Object.assign({}, rec, {nc: g.nc, doi: g.doi, dx: v.dx, hdvc: v.hdvc, pc, info: Object.assign({}, rec.info, {_klPC: klPhieu(pc)})}); }
+function stJob(rec) { const st = stCur(); if (!st) return rec; const g = ganDoi(rec.doi, st.cur.nc), v = ganVC(rec.hdvc, st.cur.dx), pc = ganPC(g.doi, st.cur.pc); return ganKhoaHoSo(Object.assign({}, rec, {nc: g.nc, doi: g.doi, dx: v.dx, hdvc: v.hdvc, pc, info: Object.assign({}, rec.info, {_klPC: klPhieu(pc)})}), rec.fid + '|nhap'); }
 const ST_LABEL = {nc: 'nhân công', dx: 'xe', pc: 'phiếu cân'}, ST_CHECK = {nc: checkNC, dx: checkDX, pc: checkPC};
 const ST_TAB = {nc: 'nc', dx: 'dx', pc: 'dx'};
 /* Lý do chặn tạo, xuất, in hồ sơ khi lô còn thay đổi chưa lưu ('' nếu được phép) */
@@ -220,6 +220,7 @@ function stFinishRow() {
     if (lk.length && !confirm('Đổi biển số xe ' + old.bienSo + ' → ' + row.bienSo + ' sẽ đổi biển số của ' + lk.length + ' phiếu cân liên kết:\n' + lk.slice(0, 12).map(p => '• ' + p.soPhieu + ' (' + p.ngay + ', ' + fmtT(Math.round((+p.kl || 0) * 1000)) + ' tấn)').join('\n') + (lk.length > 12 ? '\n• … và ' + (lk.length - 12) + ' phiếu khác' : '') + '\n\nSố chuyến, khối lượng và tiền không đổi. Tiếp tục?')) return;
   }
   row._nguon = old && old._nguon ? old._nguon : 'Nhập tay';
+  { const dmN = vals._dmNgay != null ? vals._dmNgay : old && old._dmNgay; if (dmN != null && (kind === 'nc' || kind === 'dx')) row._dmNgay = dmN; }   // ngày chụp danh mục: giữ khi sửa tay, mới khi chọn từ danh mục
   if (old) HAKStage.updateRow(st, kind, old._id, row); else HAKStage.addRow(st, kind, row);
   st.src[kind] = st.src[kind] || 'Nhập tay';
   stErrList = null; const parent = stm.parent; stm.errs = []; $('#stBox').classList.remove('on');
@@ -304,10 +305,14 @@ document.addEventListener('click', e => {
 
 /* So sánh số người thực tế (bản đang xem, kể cả bản nháp) với định mức nhân công; liệt kê nhiệm vụ từng vị trí */
 function dinhBienPanel(rec) {
-  const g = {rows: viTriRowsTai((rec.info || {}).tuNgay)}, bd = doiOf(rec), sc = HAKDinhBien.soSanh(g.rows, bd.multi ? [bd.doi[0].tt, ...bd.doi[0].members] : rec.nc || []), lt = HAKDinhBien.lechText(sc);
+  const g = {rows: viTriRowsTai((rec.info || {}).tuNgay)}, bd = doiOf(rec);
+  if (g.rows.ngayLoi) return '<div class="msg err" id="dbNgayLoi"><b>Định mức nhân công:</b> ' + esc(g.rows.ngayLoi) + '.</div>';
+  // lô nhiều đội: bảng vị trí so với ĐỘI ĐANG CHỌN (không phải đội đầu); cảnh báo lệch hiện cho từng đội ở dưới
+  const tc = bd.multi ? (curTeam() || {}) : null, dc = bd.multi ? (bd.doi.find(d => d.id === tc.id) || bd.doi[0]) : null;
+  const sc = HAKDinhBien.soSanh(g.rows, dc ? [dc.tt, ...dc.members] : rec.nc || []), lt = HAKDinhBien.lechText(sc);
   const stDoi = bd.multi ? bd.doi.map(d => { const x = HAKDinhBien.soSanh(g.rows, [d.tt, ...d.members]), t = HAKDinhBien.lechText(x); return t ? '<div class="msg warn dbLechDoi"><b>Đội “' + esc(d.ten) + '” — lệch định mức nhân công (1 đội ' + x.can + ' người, hiện có ' + x.co + '):</b> ' + esc(t) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok dbLechDoi">Đội “' + esc(d.ten) + '” đúng định mức nhân công: ' + x.co + ' người.</div>'; }).join('') : '';
   const st = bd.multi ? stDoi : !(rec.nc || []).length ? '' : lt ? '<div class="msg warn" id="dbLech"><b>Lệch định mức nhân công (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '):</b> ' + esc(lt) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok" id="dbLech">Đúng định mức nhân công: ' + sc.co + ' người.</div>';
-  return '<details class="card" id="dbPanel"><summary><b>Định mức nhân công và nhiệm vụ từng vị trí</b> — 1 đội ' + sc.can + ' người' + (g.saved ? '' : ' (mặc định)') + '</summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Định mức</th><th>Hiện có</th><th>Nhiệm vụ</th></tr></thead><tbody>' +
+  return '<details class="card" id="dbPanel"><summary><b>Định mức nhân công và nhiệm vụ từng vị trí</b> — 1 đội ' + sc.can + ' người' + (g.saved ? '' : ' (mặc định)') + (dc ? ' · bảng so với đội “' + esc(dc.ten) + '” (đội đang chọn)' : '') + '</summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Định mức</th><th>Hiện có' + (dc ? ' (' + esc(dc.ten) + ')' : '') + '</th><th>Nhiệm vụ</th></tr></thead><tbody>' +
     sc.vt.map((v, i) => '<tr><td><b>' + esc(v.chucDanh) + '</b>' + (v.kiemNhiem ? '<br><small class="mut">kiêm ' + esc(v.kiemNhiem) + '</small>' : '') + '</td><td style="text-align:center">' + v.can + '</td><td style="text-align:center">' + (v.lech === 0 ? v.co : '<b style="color:var(--warn)">' + v.co + '</b>') + '</td><td>' + esc(g.rows[i].nhiemVu) + '</td></tr>').join('') + '</tbody></table></div></details>' + st;
 }
 /* Các đội của lô: mỗi Tổ trưởng một đội, mỗi đội một hợp đồng giao khoán, sản lượng chia theo số người */

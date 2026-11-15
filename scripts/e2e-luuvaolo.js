@@ -27,12 +27,12 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   const body = () => w.innerText('#main');
 
   // ===== 1. thêm tay một nhân công vào lô A =====
-  await openLot('fa', 'nc'); const a0 = await forest('fa'), b0 = await forest('fb'), snapB = JSON.stringify(b0);
+  await openLot('fa', 'nc'); const a0 = await forest('fa'), b0 = await forest('fb'), boNgayChup = x => JSON.stringify(x, (k, v) => k === '_dmNgay' ? undefined : v), snapB = boNgayChup(b0);   // A4: ngày chụp danh mục gán khi nạp (dữ liệu thử ghi thẳng, chưa qua SQLite v11) được ghi ở lần lưu đầu
   ok('trên tab Nhân công có nút Thêm nhân công, hiện chủ rừng và mã lô đang thao tác', !!(await w.$('[data-act=stAdd][data-kind=nc]')) && /Chủ rừng: NGUYỄN VĂN MỘT/.test(await body()) && /Lô: R-A/.test(await body()));
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
   await fillForm({vaiTro: 'Công nhân', danhXung: 'Ông', ten: 'NGUYỄN THÊM', ngaySinh: '01/01/1990', cccd: '049090000010', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: 'Công nhân khai thác'});
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
-  ok('nhân công thêm tay vào BẢN NHÁP: có dòng “Thêm mới”, thanh “Chưa lưu”; dữ liệu đã lưu và lô B không đổi', /NGUYỄN THÊM/.test(await body()) && !!(await w.$('#stDirty')) && /Thêm mới/.test(await body()) && (await forest('fa')).nc.length === a0.nc.length && JSON.stringify(await forest('fb')) === snapB);
+  ok('nhân công thêm tay vào BẢN NHÁP: có dòng “Thêm mới”, thanh “Chưa lưu”; dữ liệu đã lưu và lô B không đổi', /NGUYỄN THÊM/.test(await body()) && !!(await w.$('#stDirty')) && /Thêm mới/.test(await body()) && (await forest('fa')).nc.length === a0.nc.length && boNgayChup(await forest('fb')) === snapB);
   // thử dòng lỗi: thiếu ngày sinh bị chặn ngay trong hộp thoại
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm'); await fillForm({ten: 'LỖI', cccd: '049090000011'}); await w.click('#stForm [type=submit]'); await w.waitForTimeout(200);
   ok('dòng thiếu thông tin bị giữ lại trong hộp thoại kèm lý do, chưa vào bản nháp', /Chưa đưa vào bản nháp/.test(await w.innerText('#stBody')) && /thiếu Ngày sinh/.test(await w.innerText('#stBody')));
@@ -102,7 +102,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   await w.click('#stDirty [data-act=stSave]'); await w.waitForTimeout(900); t = await body();
   const fa = await forest('fa');
   const exTong = Math.round((12.5 + 9.25 + 8 + 12 + 8 + 7) * 1000) / 1000;   // PA1 12,5 (giữ); PA2 9,25 (Excel chỉ đổi khách hàng; khối lượng khác sẽ phải đối chiếu); PA3 8; PX1 12; PE1 8; PE2 7
-  ok('đã lưu: lô A có 6 phiếu, 4 nhân công, 3 xe; tổng khối lượng khớp tính tay ' + exTong + ' tấn; lô B giữ nguyên', fa.pc.length === 6 && fa.nc.length === 4 && fa.dx.length === 3 && klTong(fa) === exTong && JSON.stringify(await forest('fb')) === snapB && /Đã lưu dữ liệu vào lô/.test(t), JSON.stringify([fa.pc.length, fa.nc.length, fa.dx.length, klTong(fa)]));
+  ok('đã lưu: lô A có 6 phiếu, 4 nhân công, 3 xe; tổng khối lượng khớp tính tay ' + exTong + ' tấn; lô B giữ nguyên', fa.pc.length === 6 && fa.nc.length === 4 && fa.dx.length === 3 && klTong(fa) === exTong && boNgayChup(await forest('fb')) === snapB && /Đã lưu dữ liệu vào lô/.test(t), JSON.stringify([fa.pc.length, fa.nc.length, fa.dx.length, klTong(fa)]));
   ok('liên kết xe–phiếu: mọi phiếu có biển số thuộc đội xe của lô; nhật ký đổi biển ghi PA1 và PA3 (92C-12345 → 92C-54321, “Sửa biển số xe”)', fa.pc.every(p => fa.dx.some(x => x.bienSo.toUpperCase().replace(/[\s.\-]/g, '') === p.bienSo.toUpperCase().replace(/[\s.\-]/g, ''))) && (fa.bienLog || []).length === 2 && fa.bienLog.every(e => e.cu === '92C-12345' && e.moi === '92C-54321' && e.nguon === 'Sửa biển số xe'), JSON.stringify(fa.bienLog));
   ok('sau khi lưu hết thanh “Chưa lưu”; hồ sơ lô có dữ liệu đã lưu', !(await w.$('#stDirty')));
   await w.click('[data-ftab=xuat]'); await w.waitForTimeout(300);

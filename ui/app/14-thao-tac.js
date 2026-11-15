@@ -114,7 +114,7 @@ function xoaDoi() {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
   const r = HAKModel.removeTeam(f, t.id); if (r.error) return note('Chưa xóa đội: ' + r.error, 'warn');
   if (!confirm('Xóa đội “' + (t.ten || '') + '” (không còn nhân công)?')) return;
-  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); curDoi = null; persistLo(); note('Đã xóa đội “' + (t.ten || '') + '”.'); render();
+  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; curDoi = null; persistLo(); note('Đã xóa đội “' + (t.ten || '') + '”.'); render();
 }
 function saveDoi(form, nhap) {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
@@ -129,11 +129,12 @@ function saveDv(form) {
   const fd = new FormData(form), g = k => trim(fd.get(k));
   if (!g('ten')) return formMsg(form, 'Chưa lưu: cần tên doanh nghiệp');
   if (g('mst') && !/^\d{10}(-\d{3})?$/.test(g('mst'))) return formMsg(form, 'Chưa lưu: mã số thuế gồm 10 chữ số (hoặc 10 số - 3 số chi nhánh)');
-  db.dmDonViVC = db.dmDonViVC || {};
-  const dup = Object.values(db.dmDonViVC).find(d => d.id !== g('dvId') && g('mst') && d.mst === g('mst')); if (dup) return formMsg(form, 'Chưa lưu: mã số thuế đã có trong danh mục (' + dup.ten + ')');
-  let id = g('dvId'); if (!id) { let k = Object.keys(db.dmDonViVC).length + 1; while (db.dmDonViVC['dv' + k]) k++; id = 'dv' + k; }
-  db.dmDonViVC[id] = {id, loai: 'doanhnghiep', ten: g('ten'), mst: g('mst'), diaChi: g('diaChi'), daiDien: g('daiDien'), chucVu: g('chucVu'), sdt: g('sdt')};
-  persist(); note('Đã lưu “' + g('ten') + '” vào danh mục đơn vị vận chuyển.'); render();
+  const list = (db.dmDoiTac || []).slice();   // ĐỐI TÁC: một nguồn cho doanh nghiệp vận chuyển, ở mọi màn
+  const dup = list.find(d => d.loai === 'doanhnghiep' && d.id !== g('dvId') && g('mst') && d.mst === g('mst')); if (dup) return formMsg(form, 'Chưa lưu: mã số thuế đã có trong danh mục (' + dup.ten + ')');
+  let id = g('dvId'); if (!id) { let k = list.filter(d => d.loai === 'doanhnghiep').length + 1; while (list.some(d => d.id === 'dn:dv' + k)) k++; id = 'dn:dv' + k; }
+  const row = {id, loai: 'doanhnghiep', ten: g('ten'), mst: g('mst'), diaChi: g('diaChi'), daiDien: g('daiDien'), chucVu: g('chucVu'), sdt: g('sdt')}, ix = list.findIndex(d => d.id === id);
+  if (ix >= 0) list[ix] = row; else list.push(row);
+  db.dmDoiTac = list; persist(); note('Đã lưu “' + g('ten') + '” vào danh mục Đối tác.'); render();
 }
 function themHd() {
   const f = curForest(); if (!f) return;
@@ -155,20 +156,20 @@ function saveHd(form, nhap) {
   if (g('pcNgay') && !parseVN(g('pcNgay'))) e.push('ngày lập xác nhận khối lượng phải đúng dd/mm/yyyy');
   if (e.length) return formMsg(form, chuaLuu(nhap) + e.join('; '));
   clearFormMsg(form);
-  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? (db.dmDonViVC || {})[ky.slice(2)] : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
+  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? HAKDanhMuc.timDoiTac(db.dmDoiTac || [], ky.slice(2)) : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
   const patch = {ten: g('ten'), cuoc, exp: {soVC: g('soVC'), vcChiPhi: g('vcChiPhi'), pcSo: g('pcSo'), pcNgay: g('pcNgay')}};
-  if (dv) { if (cur.donViId !== dv.id) patch.donVi = dv; } else if (ky.startsWith('p:')) patch.key = ky.slice(2);   // người ký: người trong đội hoặc doanh nghiệp
+  if (dv) { if (HAKDanhMuc.chuanDoiTacId(cur.donViId) !== dv.id) patch.donVi = dv; } else if (ky.startsWith('p:')) patch.key = ky.slice(2);   // người ký: người trong đội hoặc doanh nghiệp
   const r = HAKModel.updateHd(f, curHd, patch); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
   Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); if (nhap) { persistLo(); return; } render(); luuLo().then(x => { if (x && x.ok) note('Đã lưu đội xe và hợp đồng vận chuyển.'); });
 }
 function xoaHd() {
   const f = curForest(); if (!f || !curHd) return;
   const r = HAKModel.removeHd(f, curHd); if (r.error) return note('Chưa xóa: ' + r.error, 'warn');
-  Object.assign(f, {hdvc: r.f.hdvc}); curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
+  Object.assign(f, {hdvc: r.f.hdvc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
 }
 function hdCapNhatDv() {
-  const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === curHd), dv = h && (db.dmDonViVC || {})[h.donViId]; if (!dv) return;
-  const r = HAKModel.updateHd(f, h.id, {ben: dv}); Object.assign(f, {hdvc: r.f.hdvc}); persistLo(); note('Đã cập nhật thông tin đơn vị theo danh mục.'); render();
+  const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === curHd), dv = h && HAKDanhMuc.timDoiTac(db.dmDoiTac || [], h.donViId); if (!dv) return;
+  const r = HAKModel.updateHd(f, h.id, {ben: dv}); Object.assign(f, {hdvc: r.f.hdvc}); persistLo(); note('Đã cập nhật thông tin đối tác theo danh mục.'); render();
 }
 /* gán đội cho các phiếu cân đang lọc (ngày, biển số, số phiếu, chỉ phiếu chưa gán) */
 function pcGanLoat() {
@@ -291,7 +292,7 @@ function confirmImport(kind, f, rows, fileName) {
   return confirm(lines.join('\n') + '\n\nGhi vào hồ sơ?');
 }
 async function importFile(kind, file) {
-  const f0 = curForest(); if (!f0) return;
+  const f0 = curForest(); if (!f0) return; if (kiemKhoa(f0)) return;
   const tgt = {o: cur, f: curF, ma: f0.info.maRung, epoch: dbEpoch};   // lô đích cố định ngay khi chọn file: không phụ thuộc lô đang mở khi đọc xong
   try {
     const spec = {nc: ['NHAN_CONG', H_NC, NC_REQ, normNC], dx: ['DOI_XE', H_DX, DX_REQ, normDX], pc: ['PHIEU_CAN', H_PC, PC_REQ, normPC, PC_ALIAS]}[kind];
@@ -369,16 +370,17 @@ async function importWithPreview(inc) {
   const p = await HB.importPreview(inc, {strategy: 'both', maMoi: {}});
   if (!p.ok) return note('Không đọc được bản sao lưu: ' + p.error, 'err');
   const row = (l, a, b) => '<tr><td>' + l + '</td><td style="text-align:right">' + fmt(a) + '</td><td style="text-align:right">' + fmt(b) + '</td></tr>';
-  const I = p.incoming, E = p.existing, blocked = p.plan.conflicts.length > 0;
+  const I = p.incoming, E = p.existing, blocked = p.plan.conflicts.length > 0, hong = p.plan.conflicts.some(c => c.loai === 'toanVen');   // hồ sơ đã chốt trong file không toàn vẹn: không cách xử lý nào được ghi
   $('#impBody').innerHTML = '<h2>Khôi phục bản sao lưu toàn bộ</h2><table><tr><th></th><th style="text-align:right">Trong file</th><th style="text-align:right">Đang có trên máy</th></tr>' +
     row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' + impPlanHtml(p.plan) +
     '<p><b>Cách xử lý:</b></p>' +
+    (hong ? '<div class="msg err" id="impToanVen"><b>Không khôi phục được từ file này: có hồ sơ đã chốt không toàn vẹn</b> (xem danh sách trên). Mọi cách xử lý, kể cả thay toàn bộ, đều bị dừng; chưa ghi gì. Bấm Hủy rồi chọn bản sao lưu khác để đối chiếu.</div>' : '') +
     '<label><input type="radio" name="impStrat" value="skip"' + (blocked ? ' disabled' : ' checked') + '> Giữ bản trên máy, chỉ thêm lô/chủ mới</label>' +
     '<label><input type="radio" name="impStrat" value="overwrite"' + (blocked ? ' disabled' : '') + '> Ghi đè các lô TRÙNG bằng dữ liệu trong file (lô khác của chủ được giữ)</label>' +
     '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> Giữ cả hai (lô trùng trong file được thêm thành lô MỚI với <b>mã lô mới do bạn xác nhận</b>)</label>' + impMaHtml(p.plan) +
-    '<hr><label><input type="radio" name="impStrat" value="replace"' + (blocked ? ' checked' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
+    '<hr><label><input type="radio" name="impStrat" value="replace"' + (hong ? ' disabled' : blocked ? ' checked' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi và ghi trong một giao dịch: lỗi giữa chừng thì không đổi gì. Bản tra cứu Google Sheets không bị đổi.</p>' +
-    '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button><button class="btn" data-act="impGo">Thực hiện</button></div>';
+    '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button>' + (hong ? '' : '<button class="btn" data-act="impGo">Thực hiện</button>') + '</div>';
   window.__imp = inc; window.__plan = p.plan; $('#impBox').classList.add('on');
 }
 async function importGo() {

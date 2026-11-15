@@ -42,7 +42,7 @@ function docDSDoi(rec, ex) {
 }
 /* Phân công nhiệm vụ theo vị trí (định mức nhân công): chỉ in khi đã lưu định mức nhân công, nên hồ sơ cũ không đổi */
 function nhiemVuBlocks(rec) {
-  const g = HAKDinhBien.get(db, (rec.info || {}).tuNgay); if (!g.saved) return [];
+  const g = HAKDinhBien.get(db, (rec.info || {}).tuNgay); if (g.ngayLoi || !g.saved) return [];   // ngày bắt đầu sai: không chọn được phiên bản, không in phần phân công (đã báo ở Kiểm tra)
   const sc = HAKDinhBien.soSanh(g.rows, rec.nc || []);
   return [P('**PHÂN CÔNG NHIỆM VỤ THEO VỊ TRÍ**', {al: 'center', sz: 22, before: 200, after: 80, keep: true}),
     T([2600, 1200, 1200, 9900], [['VỊ TRÍ', 'ĐỊNH BIÊN', 'THỰC TẾ', 'NHIỆM VỤ'], ...sc.vt.map(v => [v.chucDanh + (v.kiemNhiem ? ' (kiêm ' + v.kiemNhiem.toLowerCase() + ')' : ''), String(v.can), String(v.co), v.nhiemVu || ''])],   // nhiệm vụ của đúng vị trí đó (không ghép theo số dòng: danh mục có vị trí 0 người)
@@ -90,7 +90,10 @@ function vcCtx(rec, ex, g) {
   if (!Object.keys(h.exp || {}).length) return [r2, ex];
   const e = Object.assign({}, ex, h.exp), n = HAKHopDong.numbers(e); e._so = Object.assign({}, ex._so, {vc: n.vc, xn: n.xn}); return [r2, e];
 }
-const vaiTroDV = b => (b && b.loai === 'doanhnghiep') ? 'Doanh nghiệp' : 'Đơn vị vận chuyển';
+const vaiTroDV = b => (b && b.loai === 'doanhnghiep') ? 'Doanh nghiệp' : (b && b.loai === 'nguoiKyVC' && ['Chủ xe', 'Tài xế'].includes(b.vaiTro)) ? b.vaiTro : 'Đơn vị vận chuyển';   // người ký cá nhân từ Đối tác: giữ vai trò đã khai (Chủ xe, Tài xế) để lời văn hợp đồng đúng
+/* khóa trạng thái in đợt 2 của BM-09 / BM-10: theo ĐỘI XE (đổi người ký không mất lịch sử in); hồ sơ cũ không có đội xe: theo người ký như trước */
+const vcGKey = g => g.hd ? HAKModel.khoaInVC(g.hd) : (g.cccd || g.ten);
+const vcGKeyCu = g => g.cccd || g.ten;
 function groupsDX(rec) {
   if (rec.hdvc) {   // cấu trúc 2.0: mỗi hợp đồng vận chuyển một nhóm, thứ tự theo xe đầu tiên (như bản cũ gom theo người ký)
     const F = {dx: rec.dx, hdvc: rec.hdvc};
@@ -148,21 +151,21 @@ function exOf(rec, mode) {
 const dot2Files = (rec, mode, keys) => viNum(() => dot2Files0(rec, mode, keys));
 function dot2Files0(rec, mode, keys) {
   const ex = exOf(rec, mode), s = slug(rec.info.ten), IA = HAKInAn2, files = [], used = new Set();
-  const want = k => !keys || keys.includes(k), B = doiOf(rec);
+  const want = k => !keys || keys.includes(k), B = doiOf(rec), nXe = groupsDX(rec).length, phXe = g => nXe > 1 ? {loai: 'doiXe', ten: trim(g.ten)} : null;
   const push = f => { let q = f.path, n = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + n++ + '.docx'); used.add(q); f.path = q; files.push(f); };
   B.doi.forEach((d, di) => { const sr = subRec(rec, B, d), exd = exDoi(ex, B, di), k8 = IA.keyOf('08', B.multi ? d.key : ''), k14 = IA.keyOf('14', B.multi ? d.key : '');
-    if (want(k8)) push({key: k8, path: B.multi ? '08_Bang_thanh_toan_tien_cong/' + slug(d.ten) + '.docx' : '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(sr, exd), land: true});
-    if (want(k14)) push({key: k14, path: B.multi ? '14_BB_nghiem_thu_thanh_ly/' + slug(d.ten) + '.docx' : '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(sr, exd)}); });
-  groupsDX(rec).forEach(g => { const k = IA.keyOf('09', g.cccd || g.ten); if (want(k)) push({key: k, path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}); });
-  groupsDX(rec).forEach(g => { const k = IA.keyOf('10', g.cccd || g.ten); if (want(k)) push({key: k, path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}); });
-  return files;
+    if (want(k8)) push({key: k8, pham: B.multi ? {loai: 'doi', ten: trim(d.ten)} : null, path: B.multi ? '08_Bang_thanh_toan_tien_cong/' + slug(d.ten) + '.docx' : '08_Bang_thanh_toan_tien_cong_' + s + '.docx', blocks: docTienCong(sr, exd), land: true});
+    if (want(k14)) push({key: k14, pham: B.multi ? {loai: 'doi', ten: trim(d.ten)} : null, path: B.multi ? '14_BB_nghiem_thu_thanh_ly/' + slug(d.ten) + '.docx' : '14_BB_nghiem_thu_thanh_ly_' + s + '.docx', blocks: docNghiemThu(sr, exd)}); });
+  groupsDX(rec).forEach(g => { const k = IA.keyOf('09', vcGKey(g)); if (want(k)) push({key: k, pham: phXe(g), path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}); });
+  groupsDX(rec).forEach(g => { const k = IA.keyOf('10', vcGKey(g)); if (want(k)) push({key: k, pham: phXe(g), path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}); });
+  return bmDanhDau(rec, files);
 }
 const buildFilesRaw = (rec, kind) => viNum(() => buildFilesRaw0(rec, kind));
 function buildFilesRaw0(rec, kind) {
   const ex = exOf(rec, 'day'); ex._kind = kind;
   const s = slug(rec.info.ten), B = doiOf(rec);
   /* Mỗi đội (mỗi Tổ trưởng) một bộ riêng. Lô một đội: một file như cũ; nhiều đội: thư mục con, mỗi đội một file tên theo đội */
-  const perDoi = (dir, base, fn, o) => B.doi.forEach((d, di) => { const sr = subRec(rec, B, d); if (o && o.skip && o.skip(d)) return; files.push(Object.assign({path: B.multi ? dir + '/' + slug(d.ten) + '.docx' : base + '_' + s + '.docx', blocks: fn(sr, exDoi(ex, B, di))}, o && o.land ? {land: true} : {})); });
+  const perDoi = (dir, base, fn, o) => B.doi.forEach((d, di) => { const sr = subRec(rec, B, d); if (o && o.skip && o.skip(d)) return; files.push(Object.assign({pham: B.multi ? {loai: 'doi', ten: trim(d.ten)} : null, path: B.multi ? dir + '/' + slug(d.ten) + '.docx' : base + '_' + s + '.docx', blocks: fn(sr, exDoi(ex, B, di))}, o && o.land ? {land: true} : {})); });
   const files = [], used = new Set();
   /* Hai người ký trùng tên (khác CCCD) không được ghi đè file của nhau trong ZIP: thêm hậu tố _2, _3… */
   files.push = f => { let q = f.path, k = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + k++ + '.docx'); used.add(q); f.path = q; return Array.prototype.push.call(files, f); };
@@ -170,7 +173,7 @@ function buildFilesRaw0(rec, kind) {
   const PHAN_CUOI = ['tc', 'nttl', 'xnvc', 'ttvc'], dau = kind === 'all' || kind === 'dau';
   const dTT = d => isDirect(infoTeam(rec, d.team));   // đội ký trực tiếp: không có hợp đồng giao khoán, giấy ủy quyền (lô có thể có cả hai loại đội)
   if ((kind === 'gk' || dau) && anyGK(rec)) perDoi('01_HD_Giao_khoan', '01_HD_Giao_khoan', docGiaoKhoan, {skip: dTT});
-  if ((kind === 'uq' || (dau && gate(rec).canUQ)) && anyGK(rec)) perDoi('20_Giay_uy_quyen', '20_Giay_uy_quyen', docUyQuyen, {skip: d => dTT(d) || (B.multi && !d.members.length)});
+  if ((kind === 'uq' || (dau && gate(rec).cauTruc.uq)) && anyGK(rec)) perDoi('20_Giay_uy_quyen', '20_Giay_uy_quyen', docUyQuyen, {skip: d => dTT(d) || (B.multi && !d.members.length)});
   if (kind === 'bhld' || dau) files.push({path: '02_BHLD_' + s + '.docx', blocks: docBHLD(rec, ex)});
   if (kind === 'hdld' || dau) {
     hdldList(rec).forEach((cn, i) => {
@@ -179,10 +182,10 @@ function buildFilesRaw0(rec, kind) {
     });
   }
   if (kind === 'hdvc' || dau) {
-    groupsDX(rec).forEach(g => files.push({path: '04_HDVC/' + slug(g.ten) + '.docx', blocks: docHDVC(rec, ex, g)}));
+    { const gs = groupsDX(rec); gs.forEach(g => files.push({pham: gs.length > 1 ? {loai: 'doiXe', ten: trim(g.ten)} : null, path: '04_HDVC/' + slug(g.ten) + '.docx', blocks: docHDVC(rec, ex, g)})); }
   }
-  const want = k => kind === k || kind === 'all' || (kind === 'dau' && !PHAN_CUOI.includes(k)) || (kind === 'cuoi' && PHAN_CUOI.includes(k));
-  const wantPC = k => kind === k || ((kind === 'all' || kind === 'cuoi') && gate(rec).canPC);
+  const want = k => (kind === k || kind === 'all' || (kind === 'dau' && !PHAN_CUOI.includes(k)) || (kind === 'cuoi' && PHAN_CUOI.includes(k)));
+  const wantPC = k => kind === k || ((kind === 'all' || kind === 'cuoi') && gate(rec).cauTruc.phieuCan);
   if (want('tdcr')) files.push({path: '17_Phieu_tham_dinh_chu_rung_' + s + '.docx', blocks: docThamDinh(rec, ex)});
   if (want('nkkt')) files.push({path: '18_Nhat_ky_khai_thac_' + s + '.docx', blocks: docNhatKy(rec, ex), land: true});
   if (want('fsc')) files.push({path: '19_BB_pho_bien_chinh_sach_FSC_' + s + '.docx', blocks: docPhoBienFSC(rec, ex)});
@@ -192,11 +195,12 @@ function buildFilesRaw0(rec, kind) {
   if (want('ckng')) files.push({path: '11_Cam_ket_nguon_goc_' + s + '.docx', blocks: docCamKetNguonGoc(rec, ex)});
   if (want('cklc')) files.push({path: '12_Cam_ket_lao_dong_' + s + '.docx', blocks: docCamKetLaoDong(rec, ex)});
   if (want('kthn')) files.push({path: '13_BB_kiem_tra_hien_truong_' + s + '.docx', blocks: docKiemTraHienTruong(rec, ex), land: true});
-  if (wantPC('xnvc')) groupsPC(rec).forEach(g => files.push({path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}));
-  if (wantPC('ttvc')) groupsPC(rec).forEach(g => files.push({path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}));
+  const gpc = groupsPC(rec), nXeAll = groupsDX(rec).length, phPc = g => nXeAll > 1 ? {loai: 'doiXe', ten: trim(g.ten)} : null;   // phạm vi theo số ĐỘI XE của lô (không theo số nhóm có chuyến cân)
+  if (wantPC('xnvc')) gpc.forEach(g => files.push({pham: phPc(g), path: '09_XN_khoi_luong_VC/' + slug(g.ten) + '.docx', blocks: docXNKLVC(rec, ex, g)}));
+  if (wantPC('ttvc')) gpc.forEach(g => files.push({pham: phPc(g), path: '10_TT_tien_VC/' + slug(g.ten) + '.docx', blocks: docTTVC(rec, ex, g)}));
   if (want('cc')) perDoi('05_Bang_cham_cong', '05_Bang_cham_cong', docChamCong, {land: true});
   if (want('dsd')) perDoi('06_DS_doi_khai_thac', '06_DS_doi_khai_thac', docDSDoi, {land: true});
   if (want('xn')) perDoi('07_XN_dao_tao_ATLD', '07_XN_dao_tao_ATLD', docXNDaoTao, {land: true});
   if (want('tc')) perDoi('08_Bang_thanh_toan_tien_cong', '08_Bang_thanh_toan_tien_cong', docTienCong, {land: true});
-  return files;
+  return bmDanhDau(rec, files);
 }
