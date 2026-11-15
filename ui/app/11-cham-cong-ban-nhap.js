@@ -76,11 +76,11 @@ function stBlockNote() { const t = stBlockText(); if (t) { pushNote(t, 'err'); c
 /* thanh “Chưa lưu” của cả lô (mọi tab của lô) */
 function loBar() { const st = stCur(), chiBang = !loDirty.has(curF) && st && HAKStage.dirty(st) && (ftab === 'nc' || ftab === 'dx'); const t = chiBang ? '' : stBlockText(); return t ? '<div class="msg warn" id="loDirtyBar"><b>Chưa lưu</b> — ' + esc(t.replace(/ Bấm .*$/, '')) + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : ''; }
 /* lưu phần thông tin lô (khi không có bảng nháp) */
-async function luuLoTT() {
+async function luuLoTT(opt) {
   const f = curForest(); if (!f) return {ok: false};
   const had = loDirty.delete(f.id), r = await persistNow();
   if (!r || !r.ok) { if (had) loDirty.add(f.id); pushNote('Không lưu được: ' + ((r && r.error) || 'không rõ'), 'err'); render(); return r || {ok: false}; }
-  if (had) pushNote('Đã lưu dữ liệu vào lô ' + ((f.info || {}).maRung || '') + '.', 'ok');
+  if (had && !(opt && opt.tuKhung)) pushNote('Đã lưu dữ liệu vào lô ' + ((f.info || {}).maRung || '') + '.', 'ok');
   render(); return {ok: true};
 }
 /* Nút Lưu của từng khung trong lô = lưu cả lô (một cách lưu) */
@@ -237,7 +237,7 @@ function stDelete(kind, i) {
 const CONFIG_ERR = /chưa có đơn giá/;
 let stSaving = false;
 async function stSave(opt) {
-  const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { if (loDirty.has(curF)) return luuLoTT(); if (!(opt && opt.tuKhung)) note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
+  const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { if (loDirty.has(curF)) return luuLoTT(opt); if (!(opt && opt.tuKhung)) note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
   if (stSaving) return {ok: false, error: 'đang lưu'};
   const o = db.rs[cur], f = o && o.forests && o.forests[curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
   const pend = HAKStage.pendingOf(st);   // cùng quy tắc với bước xem trước: dòng cần đối chiếu chưa xử lý thì chưa lưu

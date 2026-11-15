@@ -164,6 +164,8 @@ document.addEventListener('change', e => {
   const f = curForest();
   if (t.dataset.exp && f) {
     f.exp = f.exp || {};
+    const k = t.dataset.exp, dt = HAKModel.DOI_EXP.includes(k) ? curTeam(f) : null, cu = dt ? ((dt.exp || {})[k] ?? '') : (f.exp[k] ?? '');
+    if (String(cu) === trim(t.value)) return;   // không đổi (ví dụ ô mất tiêu điểm sau khi đã lưu): không đánh dấu chưa lưu
     const rest = ghiDoi(f, {[t.dataset.exp]: trim(t.value)}, 'exp');   // số văn bản của đội (HĐ giao khoán, ủy quyền, nghiệm thu, kỳ thanh toán) ghi vào đội
     Object.assign(f.exp, rest);
     persistLo(f);

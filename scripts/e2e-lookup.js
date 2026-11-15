@@ -52,7 +52,8 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   ok('thanh ngữ cảnh: mã rừng 20260110_001', /20260110_001/.test(await w.innerText('#ctxForest')));
   const finfo = await w.$eval('#forestForm', f => Object.fromEntries(new FormData(f)));
   ok('diện tích 2,5 ha; tọa độ chỉ điền khi người dùng chọn', finfo.dienTich === '2,5' && finfo.lat === '');
-  ok('khối lượng thực tế = tổng 2 phiếu đã chọn (2,84 + 4,44 = 7,28)', finfo.khoiLuong === '7,28');
+  const klT = await w.innerText('#klPC').catch(() => '');
+  ok('khối lượng thực tế không ghi số nhập tay từ bản tra cứu: lấy theo phiếu cân đã lưu (2 phiếu vừa chọn đang ở bản nháp của lô)', !('khoiLuong' in finfo) && /phiếu cân/.test(klT), klT);
   await w.click('[data-ftab=dx]'); const vc = await w.innerText('#main');
   ok('2 phiếu cân ghi vào rừng, biển ghép từ tên xe', /1001\/2026\/NK/.test(vc) && /1002\/2026\/NK/.test(vc) && /92C-99999/.test(vc) && !/1003\/2026\/NK/.test(vc));
   // Nhập lại cùng nguồn vào rừng đang mở: không tạo bản trùng
@@ -65,6 +66,8 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   await w.click('[data-ftab=dx]');
   ok('nhập lại không tạo phiếu trùng', ((await w.innerText('#main')).match(/1001\/2026\/NK/g) || []).length === 1);
   // Ô đã có dữ liệu khác: bắt buộc chọn
+  // một cách lưu: phiếu nhập lại còn ở bản nháp (xe chưa có) thì nút Lưu của khung bị chặn cùng cả lô — bỏ bản nháp phiếu trước bước sau
+  await w.evaluate(() => { const b = document.querySelector('[data-act=stDiscard]'); if (b) b.click(); }); await w.waitForTimeout(300);
   await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=diaDiem]', 'Địa điểm do người dùng nhập'); await w.click('#forestForm button[type=submit]');
   await w.click('#forestForm [data-act=lkOpen]'); await w.fill('#lkQ', '1001/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(150);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.click('[data-act=lkApply]'); await w.waitForTimeout(150);
