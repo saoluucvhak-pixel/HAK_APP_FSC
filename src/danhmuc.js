@@ -119,14 +119,28 @@
   }
   /* ĐỐI TÁC (bản 2.2, mục 1 điểm 3): mọi đội xe có MỘT đối tác ký. Doanh nghiệp: dòng của danh mục đơn vị vận chuyển (id 'dn:<donViId>'); cá nhân: người ký (chủ xe hoặc tài xế) theo CCCD (id 'ct:<CCCD>').
    * `doiTacKey(h)` suy ra khóa đối tác của một đội xe mà KHÔNG ghi gì vào lô (bản in không đổi). */
-  const doiTacKey = h => !h ? '' : h.donViId ? 'dn:' + h.donViId : (cccdSo(h.key) ? 'ct:' + cccdSo(h.key) : '');
+  /* id đối tác: 'dn:<mã>' doanh nghiệp, 'ct:<CCCD>' hoặc 'dt<N>' cá nhân. Đội xe cũ trỏ id của danh mục đơn vị vận chuyển ('dv1'): chuanDoiTacId đưa về 'dn:dv1', nên đội xe cũ vẫn trỏ đúng sau khi gộp mà KHÔNG phải sửa lô nào. */
+  const chuanDoiTacId = id => { const v = trim(id); return /^dv\d+$/.test(v) ? 'dn:' + v : v; };
+  const timDoiTac = (list, id) => { const k = chuanDoiTacId(id); return k ? (list || []).find(x => x && x.id === k) || null : null; };
+  const doiTacKey = h => !h ? '' : h.donViId ? chuanDoiTacId(h.donViId) : (cccdSo(h.key) ? 'ct:' + cccdSo(h.key) : '');
+  /* MỘT NGUỒN cho đối tác (bản 2.2 sửa lỗi, migration v10): doanh nghiệp của danh mục đơn vị vận chuyển cũ (dmDonViVC) được gộp vào dmDoiTac (id 'dn:<mã>') rồi dmDonViVC bỏ đi.
+   * dmDonViVC là nơi duy nhất từng cho SỬA doanh nghiệp nên dòng 'dn:' có cùng mã được cập nhật theo nó (không mất dòng nào, không thêm trùng). Không sửa đầu vào. Trả {list, gop, them, lech}. */
+  function hopNhatDoiTac(dmDonVi, dmDoiTac) {
+    const list = clone(dmDoiTac || []), o = {list, gop: 0, them: 0, lech: 0};
+    Object.entries(dmDonVi || {}).forEach(([k, d]) => {
+      if (!d || !trim(d.ten)) return; const id = 'dn:' + trim(d.id || k), row = {id, loai: 'doanhnghiep', ten: trim(d.ten), mst: trim(d.mst), daiDien: trim(d.daiDien), chucVu: trim(d.chucVu), diaChi: trim(d.diaChi), sdt: trim(d.sdt)};
+      const i = list.findIndex(x => x && x.id === id); o.gop++;
+      if (i < 0) { list.push(row); o.them++; } else { if (JSON.stringify(list[i]) !== JSON.stringify(row)) o.lech++; list[i] = row; }
+    });
+    return o;
+  }
   function dungDoiTac(rs, dmDonVi, hienCo) {
     const list = (hienCo || []).slice(), co = new Set(list.map(x => x.id)), cc = new Set(list.map(x => cccdSo(x.cccd)).filter(Boolean));
     Object.values(dmDonVi || {}).forEach(d => { if (!d || !trim(d.ten)) return; const id = 'dn:' + d.id; if (co.has(id)) return; co.add(id); list.push({id, loai: 'doanhnghiep', ten: trim(d.ten), mst: trim(d.mst), daiDien: trim(d.daiDien), chucVu: trim(d.chucVu), diaChi: trim(d.diaChi), sdt: trim(d.sdt)}); });
     Object.values(rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => (f.hdvc || []).forEach(h => {
       if (!h || h.donViId) return; const k = cccdSo(h.key); if (k.length !== 12 || cc.has(k)) return;
       const xs = (f.dx || []).filter(r => r && r.hdvcId === h.id); let p = null;
-      xs.forEach(r => { if (p) return; if (cccdSo(r.cccd) === k && trim(r.chuXe)) p = {ten: trim(r.chuXe), ngaySinh: trim(r.ngaySinh), diaChi: trim(r.diaChi), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), sdt: trim(r.sdt)}; else if (cccdSo(r.cccdTx) === k && trim(r.taiXe)) p = {ten: trim(r.taiXe), ngaySinh: trim(r.ngaySinhTx), diaChi: trim(r.diaChiTx), ngayCap: trim(r.ngayCapTx), noiCap: trim(r.noiCapTx), sdt: ''}; });
+      xs.forEach(r => { if (p) return; if (cccdSo(r.cccd) === k && trim(r.chuXe)) p = {ten: trim(r.chuXe), ngaySinh: trim(r.ngaySinh), diaChi: trim(r.diaChi), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), sdt: trim(r.sdt), vaiTro: 'Chủ xe'}; else if (cccdSo(r.cccdTx) === k && trim(r.taiXe)) p = {ten: trim(r.taiXe), ngaySinh: trim(r.ngaySinhTx), diaChi: trim(r.diaChiTx), ngayCap: trim(r.ngayCapTx), noiCap: trim(r.noiCapTx), sdt: '', vaiTro: 'Tài xế'}; });
       if (!p) return; cc.add(k); list.push(Object.assign({id: 'ct:' + k, loai: 'nguoiKyVC', cccd: k}, p));
     })));
     return list;
@@ -190,6 +204,6 @@
     const sc = new Set(); dt = dt.filter(r => { if (r.loai === 'doanhnghiep') return true; const k = cccdSo(r.cccd); if (k === b && sc.has(k)) return false; if (k === b) sc.add(k); return true; });
     return {ok: true, db: {dmLaoDong: ld, dmXeVC: xe, dmDoiTac: dt}, so};
   }
-  const api = {KHUNG_LO, CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, lechLaoDong, lechXe, moiHonChup, CHU_XE, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu, nguoiChung, timNguoi, gopNguoi};
+  const api = {chuanDoiTacId, timDoiTac, hopNhatDoiTac, KHUNG_LO, CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, lechLaoDong, lechXe, moiHonChup, CHU_XE, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu, nguoiChung, timNguoi, gopNguoi};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDanhMuc = api;
 })(typeof self !== 'undefined' ? self : this);

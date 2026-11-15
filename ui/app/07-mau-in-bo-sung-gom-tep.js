@@ -90,7 +90,7 @@ function vcCtx(rec, ex, g) {
   if (!Object.keys(h.exp || {}).length) return [r2, ex];
   const e = Object.assign({}, ex, h.exp), n = HAKHopDong.numbers(e); e._so = Object.assign({}, ex._so, {vc: n.vc, xn: n.xn}); return [r2, e];
 }
-const vaiTroDV = b => (b && b.loai === 'doanhnghiep') ? 'Doanh nghiệp' : 'Đơn vị vận chuyển';
+const vaiTroDV = b => (b && b.loai === 'doanhnghiep') ? 'Doanh nghiệp' : (b && b.loai === 'nguoiKyVC' && ['Chủ xe', 'Tài xế'].includes(b.vaiTro)) ? b.vaiTro : 'Đơn vị vận chuyển';   // người ký cá nhân từ Đối tác: giữ vai trò đã khai (Chủ xe, Tài xế) để lời văn hợp đồng đúng
 function groupsDX(rec) {
   if (rec.hdvc) {   // cấu trúc 2.0: mỗi hợp đồng vận chuyển một nhóm, thứ tự theo xe đầu tiên (như bản cũ gom theo người ký)
     const F = {dx: rec.dx, hdvc: rec.hdvc};

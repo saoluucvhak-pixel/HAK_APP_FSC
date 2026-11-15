@@ -129,11 +129,12 @@ function saveDv(form) {
   const fd = new FormData(form), g = k => trim(fd.get(k));
   if (!g('ten')) return formMsg(form, 'Chưa lưu: cần tên doanh nghiệp');
   if (g('mst') && !/^\d{10}(-\d{3})?$/.test(g('mst'))) return formMsg(form, 'Chưa lưu: mã số thuế gồm 10 chữ số (hoặc 10 số - 3 số chi nhánh)');
-  db.dmDonViVC = db.dmDonViVC || {};
-  const dup = Object.values(db.dmDonViVC).find(d => d.id !== g('dvId') && g('mst') && d.mst === g('mst')); if (dup) return formMsg(form, 'Chưa lưu: mã số thuế đã có trong danh mục (' + dup.ten + ')');
-  let id = g('dvId'); if (!id) { let k = Object.keys(db.dmDonViVC).length + 1; while (db.dmDonViVC['dv' + k]) k++; id = 'dv' + k; }
-  db.dmDonViVC[id] = {id, loai: 'doanhnghiep', ten: g('ten'), mst: g('mst'), diaChi: g('diaChi'), daiDien: g('daiDien'), chucVu: g('chucVu'), sdt: g('sdt')};
-  persist(); note('Đã lưu “' + g('ten') + '” vào danh mục đơn vị vận chuyển.'); render();
+  const list = (db.dmDoiTac || []).slice();   // ĐỐI TÁC: một nguồn cho doanh nghiệp vận chuyển, ở mọi màn
+  const dup = list.find(d => d.loai === 'doanhnghiep' && d.id !== g('dvId') && g('mst') && d.mst === g('mst')); if (dup) return formMsg(form, 'Chưa lưu: mã số thuế đã có trong danh mục (' + dup.ten + ')');
+  let id = g('dvId'); if (!id) { let k = list.filter(d => d.loai === 'doanhnghiep').length + 1; while (list.some(d => d.id === 'dn:dv' + k)) k++; id = 'dn:dv' + k; }
+  const row = {id, loai: 'doanhnghiep', ten: g('ten'), mst: g('mst'), diaChi: g('diaChi'), daiDien: g('daiDien'), chucVu: g('chucVu'), sdt: g('sdt')}, ix = list.findIndex(d => d.id === id);
+  if (ix >= 0) list[ix] = row; else list.push(row);
+  db.dmDoiTac = list; persist(); note('Đã lưu “' + g('ten') + '” vào danh mục Đối tác.'); render();
 }
 function themHd() {
   const f = curForest(); if (!f) return;
@@ -155,9 +156,9 @@ function saveHd(form, nhap) {
   if (g('pcNgay') && !parseVN(g('pcNgay'))) e.push('ngày lập xác nhận khối lượng phải đúng dd/mm/yyyy');
   if (e.length) return formMsg(form, chuaLuu(nhap) + e.join('; '));
   clearFormMsg(form);
-  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? (db.dmDonViVC || {})[ky.slice(2)] : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
+  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? HAKDanhMuc.timDoiTac(db.dmDoiTac || [], ky.slice(2)) : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
   const patch = {ten: g('ten'), cuoc, exp: {soVC: g('soVC'), vcChiPhi: g('vcChiPhi'), pcSo: g('pcSo'), pcNgay: g('pcNgay')}};
-  if (dv) { if (cur.donViId !== dv.id) patch.donVi = dv; } else if (ky.startsWith('p:')) patch.key = ky.slice(2);   // người ký: người trong đội hoặc doanh nghiệp
+  if (dv) { if (HAKDanhMuc.chuanDoiTacId(cur.donViId) !== dv.id) patch.donVi = dv; } else if (ky.startsWith('p:')) patch.key = ky.slice(2);   // người ký: người trong đội hoặc doanh nghiệp
   const r = HAKModel.updateHd(f, curHd, patch); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
   Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); if (nhap) { persistLo(); return; } render(); luuLo().then(x => { if (x && x.ok) note('Đã lưu đội xe và hợp đồng vận chuyển.'); });
 }
@@ -167,8 +168,8 @@ function xoaHd() {
   Object.assign(f, {hdvc: r.f.hdvc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
 }
 function hdCapNhatDv() {
-  const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === curHd), dv = h && (db.dmDonViVC || {})[h.donViId]; if (!dv) return;
-  const r = HAKModel.updateHd(f, h.id, {ben: dv}); Object.assign(f, {hdvc: r.f.hdvc}); persistLo(); note('Đã cập nhật thông tin đơn vị theo danh mục.'); render();
+  const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === curHd), dv = h && HAKDanhMuc.timDoiTac(db.dmDoiTac || [], h.donViId); if (!dv) return;
+  const r = HAKModel.updateHd(f, h.id, {ben: dv}); Object.assign(f, {hdvc: r.f.hdvc}); persistLo(); note('Đã cập nhật thông tin đối tác theo danh mục.'); render();
 }
 /* gán đội cho các phiếu cân đang lọc (ngày, biển số, số phiếu, chỉ phiếu chưa gán) */
 function pcGanLoat() {

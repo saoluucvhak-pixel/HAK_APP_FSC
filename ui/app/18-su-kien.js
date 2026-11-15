@@ -24,7 +24,7 @@ document.addEventListener('click', async e => {
   if (act === 'pcGanLoat') return pcGanLoat();
   if (act === 'xoaHd') return xoaHd();
   if (act === 'hdCapNhatDv') return hdCapNhatDv();
-  if (act === 'suaDv') { const d = (db.dmDonViVC || {})[el.dataset.dv], fm = document.getElementById('dvForm'); if (d && fm) fm.outerHTML = dvForm(d); return; }
+  if (act === 'suaDv') { const d = HAKDanhMuc.timDoiTac(db.dmDoiTac || [], el.dataset.dv), fm = document.getElementById('dvForm'); if (d && fm) { fm.outerHTML = dvForm(d); const nf = document.getElementById('dvForm'); if (nf) { nf.scrollIntoView({block: 'nearest'}); const i0 = nf.querySelector('[name=ten]'); if (i0) i0.focus(); } } return; }
   if (act === 'themDoi') return themDoi();
   if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();

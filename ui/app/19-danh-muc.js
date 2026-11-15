@@ -21,7 +21,7 @@ function dmTabLaoDong() {
   const rows = dmLoc(tay, r => [r.ten, r.cccd, r.diaChi, r.sdt, r.chucVu, r.viTri].join(' '));
   const form = '<form id="dmLdForm" class="grid" style="margin-top:6px"><h4 style="grid-column:1/-1;margin:0">' + (dmSuaLd ? 'Cập nhật thông tin lao động (thêm dòng mới theo ngày cập nhật)' : 'Thêm lao động') + '</h4>' +
     dmFld('ngayCapNhat', 'Ngày cập nhật (dd/mm/yyyy)', e.ngayCapNhat || todayStr(), {req: true}) + dmFld('cccd', 'Số CCCD (mã công nhân)', e.cccd, {req: true}) + dmFld('ten', 'Họ và tên', e.ten, {req: true}) +
-    '<label><span>Giới tính</span>' + dmSelect('gioiTinh', ['Nam', 'Nữ'], e.gioiTinh) + '</label>' + dmFld('ngaySinh', 'Ngày sinh', e.ngaySinh) + dmFld('diaChi', 'Nơi thường trú', e.diaChi) + dmFld('ngayCap', 'Ngày cấp CCCD', e.ngayCap) + dmFld('noiCap', 'Nơi cấp CCCD', e.noiCap) + dmFld('sdt', 'Số điện thoại', e.sdt) +
+    '<label><span>Giới tính</span>' + dmSelect('gioiTinh', ['Nam', 'Nữ'], e.gioiTinh) + '</label>' + dmFld('ngaySinh', 'Ngày sinh', e.ngaySinh) + dmFld('diaChi', 'Nơi thường trú', e.diaChi) + dmFld('ngayCap', 'Ngày cấp CCCD', e.ngayCap) + dmFld('noiCap', 'Nơi cấp CCCD', e.noiCap) + dmFld('sdt', 'Số điện thoại', e.sdt) + '<label><span>Vai trò khi ký</span>' + dmSelect('vaiTro', ['Chủ xe', 'Tài xế'], e.vaiTro || '', '— không nêu —') + '</label>' +
     '<label><span>Chức vụ</span>' + dmSelect('chucVu', HAKDanhMuc.CHUC_VU, e.chucVu) + '</label><label><span>Vị trí (danh mục vị trí)</span>' + dmSelect('viTri', chucDanhAll(), e.viTri) + '</label>' +
     '<div class="row" style="grid-column:1/-1"><button class="btn" type="submit">' + (dmSuaLd ? 'Lưu dòng cập nhật' : 'Thêm vào danh mục') + '</button>' + (dmSuaLd ? '<button class="btn ghost" type="button" data-dmhuy="ld">Hủy</button>' : '') + '</div></form>';
   const ls = dmLs && dmLs.loai === 'ld' ? HAKDanhMuc.lichSuLaoDong(dmLd(), dmLs.key) : null;
@@ -105,7 +105,7 @@ function dmLuuDt(form) {
   if (dmDt().some(x => x.id !== o.id && HAKDanhMuc.cccdSo(x.cccd) === cccd)) e.push('CCCD đã có trong danh mục đối tác');
   if (e.length) return formMsg(form, 'Chưa lưu: ' + e.join('; '));
   const list = dmDt().slice(); let id = o.id; if (!id) { let n = list.length + 1; while (list.some(x => x.id === 'dt' + n)) n++; id = 'dt' + n; }
-  const row = {id, loai: 'nguoiKyVC', ten: o.ten, cccd, ngaySinh: o.ngaySinh, diaChi: o.diaChi, ngayCap: o.ngayCap, noiCap: o.noiCap, sdt: o.sdt}, i = list.findIndex(x => x.id === id);
+  const row = {id, loai: 'nguoiKyVC', ten: o.ten, cccd, ngaySinh: o.ngaySinh, diaChi: o.diaChi, ngayCap: o.ngayCap, noiCap: o.noiCap, sdt: o.sdt, vaiTro: ['Chủ xe', 'Tài xế'].includes(o.vaiTro) ? o.vaiTro : ''}, i = list.findIndex(x => x.id === id);
   if (i >= 0) list[i] = row; else list.push(row);
   db.dmDoiTac = list; dmSuaDt = null; persist(); note('Đã lưu người ký vận chuyển ' + o.ten + '.');
 }
@@ -153,3 +153,4 @@ document.addEventListener('change', e => {
   if (t.id === 'dmQ') { dmQ = trim(t.value); return render(); }
   if (t.dataset && t.dataset.dmfile && t.files && t.files[0]) { const f = t.files[0]; t.value = ''; dmNap(t.dataset.dmfile, f).then(() => render()); }
 });
+window.__doiTac = () => ({co: 'dmDonViVC' in db, dt: (db.dmDoiTac || []).map(x => x.id + ':' + x.ten)});   // chỉ cho kiểm thử đầu-cuối

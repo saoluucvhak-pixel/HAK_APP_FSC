@@ -33,8 +33,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('mã số thuế sai: không lưu, nêu rõ', /mã số thuế gồm 10 chữ số/.test(await w.innerText('#dvForm')));
   await w.fill('#dvForm [name=mst]', '0401234567'); await w.fill('#dvForm [name=diaChi]', 'Hòa Khánh, Đà Nẵng'); await w.fill('#dvForm [name=daiDien]', 'NGUYỄN VĂN ĐẠI'); await w.fill('#dvForm [name=chucVu]', 'Giám đốc');
   await w.click('#dvForm [type=submit]'); await w.waitForTimeout(400);
-  const dm = (await w.evaluate(() => window.hak.loadSync().db)).dmDonViVC || {};
-  ok('lưu doanh nghiệp vào danh mục dùng chung (db.dmDonViVC)', Object.values(dm).length === 1 && Object.values(dm)[0].mst === '0401234567', JSON.stringify(dm));
+  const dbx = (await w.evaluate(() => window.hak.loadSync().db)), dm = Object.fromEntries((dbx.dmDoiTac || []).filter(x => x.loai === 'doanhnghiep').map(x => [x.id, x]));
+  ok('lưu doanh nghiệp vào danh mục Đối tác (một nguồn: db.dmDoiTac, không còn db.dmDonViVC)', Object.values(dm).length === 1 && Object.values(dm)[0].mst === '0401234567' && !('dmDonViVC' in dbx), JSON.stringify(dm))
   // đội xe mới, ký với doanh nghiệp
   await w.fill('#hdMoiTen', 'Đội xe Hòa Phát'); await w.click('[data-act=themHd]'); await w.waitForTimeout(300); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   t = await w.innerText('#hdvcKT'); f = await lotDb('fa');

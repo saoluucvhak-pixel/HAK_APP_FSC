@@ -286,3 +286,28 @@ test('khóa chỉ đọc: xóa lô hoặc chủ rừng có lô đang chốt bị
   const t = sample(); assert.doesNotThrow(() => s.applyImport(t, 'replace'));
   assert.ok(!s.load().rs.r1.forests.f1.chot);
 });
+
+test('v10: đối tác một nguồn — dữ liệu 2.2 có cả danh mục đơn vị vận chuyển lẫn đối tác được gộp, không mất dòng, đội xe vẫn trỏ đúng, bản chụp bên B và lô không đổi', () => {
+  const DM = require('../src/danhmuc'), d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v10-')), file = path.join(d, 'x.sqlite');
+  const f = {id: 'f', info: {maRung: 'R-1', tenRung: 'R'}, nc: [], dx: [{bienSo: '92C-1', hdvcId: 'h1', cccd: '049000000001', chuXe: 'AN'}], hdvc: [{id: 'h1', ten: 'Đội xe 1', key: '', donViId: 'dv1', ben: {id: 'dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI CŨ', mst: '0400111222'}, cuoc: null, exp: {}}], exp: {}};
+  const s9 = new Store(file, {migrations: MIGRATIONS.slice(0, 9)}); s9.save({v: 2, dmDonViVC: {dv1: {id: 'dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI SỬA', mst: '0400111222', daiDien: 'ÔNG A'}, dv2: {id: 'dv2', loai: 'doanhnghiep', ten: 'CTY HAI'}},
+    dmDoiTac: [{id: 'dn:dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI CŨ (bản chép lúc v8)', mst: '0400111222'}, {id: 'ct:049000000001', loai: 'nguoiKyVC', ten: 'AN', cccd: '049000000001'}],
+    rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C', cccd: '049067005459'}, forests: {f}}}}); const truoc = JSON.stringify(s9.load().rs); s9.close();
+  assert.ok(MIGRATIONS.length >= 10);
+  const s10 = new Store(file), db = s10.load();
+  assert.ok(!('dmDonViVC' in db), 'dmDonViVC không còn: doanh nghiệp chỉ ở một nơi');
+  assert.deepStrictEqual(db.dmDoiTac.map(x => x.id).sort(), ['ct:049000000001', 'dn:dv1', 'dn:dv2'], 'không mất dòng nào, không thêm trùng');
+  const dv1 = db.dmDoiTac.find(x => x.id === 'dn:dv1'); assert.strictEqual(dv1.ten, 'CTY VẬN TẢI SỬA', 'doanh nghiệp lấy theo nơi từng cho sửa (danh mục đơn vị vận chuyển)'); assert.strictEqual(dv1.daiDien, 'ÔNG A');
+  assert.strictEqual(JSON.stringify(s10.load().rs), truoc, 'không đổi lô nào');
+  const h = db.rs.o.forests.f.hdvc[0]; assert.strictEqual(DM.timDoiTac(db.dmDoiTac, h.donViId).id, 'dn:dv1', 'đội xe vẫn trỏ đúng đối tác'); assert.strictEqual(DM.doiTacKey(h), 'dn:dv1'); assert.strictEqual(h.ben.ten, 'CTY VẬN TẢI CŨ', 'bản chụp bên B giữ nguyên (bản in không đổi)');
+  s10.close();
+  const s = new Store(file); assert.strictEqual(s.load().dmDoiTac.length, 3, 'mở lại không gộp thêm'); s.close();
+});
+test('hopNhatDoiTac: thêm doanh nghiệp mới, cập nhật dòng cùng mã, giữ cá nhân, không sửa đầu vào, idempotent', () => {
+  const DM = require('../src/danhmuc'), dv = {dv1: {id: 'dv1', ten: 'A', mst: '1'}, dv2: {id: 'dv2', ten: 'B'}, dv3: {id: 'dv3', ten: ''}}, dt = [{id: 'ct:1', loai: 'nguoiKyVC', ten: 'X', cccd: '1'}, {id: 'dn:dv1', loai: 'doanhnghiep', ten: 'A cũ'}];
+  const t = JSON.stringify([dv, dt]), r = DM.hopNhatDoiTac(dv, dt);
+  assert.strictEqual(JSON.stringify([dv, dt]), t); assert.deepStrictEqual([r.gop, r.them, r.lech, r.list.length], [2, 1, 1, 3]);
+  assert.strictEqual(DM.hopNhatDoiTac({}, dt).list.length, 2); assert.deepStrictEqual(DM.hopNhatDoiTac(dv, r.list).list, r.list);
+  assert.strictEqual(DM.chuanDoiTacId('dv7'), 'dn:dv7'); assert.strictEqual(DM.chuanDoiTacId('dn:dv7'), 'dn:dv7'); assert.strictEqual(DM.chuanDoiTacId('ct:0490'), 'ct:0490'); assert.strictEqual(DM.chuanDoiTacId(''), '');
+  assert.strictEqual(DM.doiTacKey({donViId: 'dv9'}), 'dn:dv9'); assert.strictEqual(DM.doiTacKey({donViId: 'ct:1'}), 'ct:1'); assert.strictEqual(DM.doiTacKey({key: '0490 00000001'}), 'ct:049000000001');
+});

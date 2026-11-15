@@ -40,8 +40,7 @@
     });
     (db.dmLaoDong || []).forEach(r => add('Người', best(q, [[r.ten, 't'], [r.cccd, 'so']]), {nhan: s(r.ten), ngu: 'Danh mục lao động · CCCD ' + s(r.cccd) + ' · ' + s(r.viTri), dich: {to: 'dm', tab: 'laodong', q: s(r.cccd) || s(r.ten)}, th: digits(r.cccd).length === 12 ? {loai: 'nguoi', key: digits(r.cccd)} : null}));
     (db.dmXeVC || []).forEach(r => add('Xe', best(q, [[r.bienSo, 'bien'], [r.chuXe, 't'], [r.taiXe, 't'], [r.cccdTx, 'so']]), {nhan: s(r.bienSo), ngu: 'Danh mục xe · chủ xe ' + s(r.chuXe) + ' · tài xế ' + s(r.taiXe), dich: {to: 'dm', tab: 'xe', q: s(r.bienSo)}, th: {loai: 'xe', key: s(r.bienSo)}}));
-    (db.dmDoiTac || []).forEach(r => add('Đối tác', best(q, [[r.ten, 't'], [r.cccd, 'so'], [r.mst, 'so']]), {nhan: s(r.ten), ngu: 'Danh mục đối tác · ' + (r.mst ? 'MST ' + r.mst : 'CCCD ' + s(r.cccd)), dich: {to: 'dm', tab: 'doitac', q: s(r.ten)}, th: {loai: 'doitac', key: r.id}}));
-    Object.values(db.dmDonViVC || {}).forEach(r => add('Đối tác', best(q, [[r.ten, 't'], [r.mst, 'so'], [r.daiDien, 't']]), {nhan: s(r.ten), ngu: 'Doanh nghiệp vận chuyển' + (r.mst ? ' · MST ' + r.mst : ''), dich: {to: 'dm', tab: 'doitac', q: s(r.ten)}}));
+    (db.dmDoiTac || []).forEach(r => add('Đối tác', best(q, [[r.ten, 't'], [r.cccd, 'so'], [r.mst, 'so'], [r.daiDien, 't']]), {nhan: s(r.ten), ngu: 'Danh mục đối tác · ' + (r.mst ? 'MST ' + r.mst : 'CCCD ' + s(r.cccd)), dich: {to: 'dm', tab: 'doitac', q: s(r.ten)}, th: {loai: 'doitac', key: r.id}}));
     // gộp trùng (cùng nhãn + nguồn), xếp theo điểm rồi theo nhãn, cắt mỗi nhóm
     return NHOM.map(n => { const seen = new Set(); const ds = out[n].filter(x => { const k = x.nhan + '|' + x.ngu; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => b.d - a.d || a.nhan.localeCompare(b.nhan, 'vi')); return {nhom: n, tong: ds.length, ds: ds.slice(0, lim)}; });
   }

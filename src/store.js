@@ -89,6 +89,15 @@ const MIGRATIONS = [
       const f = JSON.parse(r.data); if (!SV.khoiTaoLichSu(f)) return;
       const data = JSON.stringify(f); up.run(data, sha(data), r.id);
     });
+  },
+  /* v10 (bản 2.2 sửa lỗi): ĐỐI TÁC MỘT NGUỒN. Gộp danh mục đơn vị vận chuyển cũ (meta dmDonViVC) vào dmDoiTac (id 'dn:<mã>') rồi bỏ dmDonViVC: doanh nghiệp chỉ còn ở một nơi, mọi màn đọc và sửa cùng nơi đó.
+   * dmDonViVC là nơi duy nhất từng cho sửa doanh nghiệp nên dòng 'dn:' cùng mã lấy theo nó. KHÔNG đổi lô nào: đội xe cũ trỏ 'dv1' được hiểu là 'dn:dv1' (src/danhmuc.js chuanDoiTacId), bản chụp bên B (ben) giữ nguyên nên bản in không đổi. Chạy sau khi sao lưu file. */
+  function v10(db) {
+    const DM = require('./danhmuc'), g = k => { const r = db.prepare('SELECT value FROM meta WHERE key=?').get(k); return r ? JSON.parse(r.value) : null; };
+    const dv = g('dmDonViVC'); if (dv == null) return;
+    const r = DM.hopNhatDoiTac(dv, g('dmDoiTac') || []);
+    db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('dmDoiTac', JSON.stringify(r.list));
+    db.prepare("DELETE FROM meta WHERE key='dmDonViVC'").run();
   }
 ];
 
