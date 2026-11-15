@@ -49,7 +49,7 @@ function qtPanel(rec) {
 }
 /* Đánh dấu đã ký / bỏ ký: ghi vào Sổ in của lô */
 function qtKyAct(codes, on) {
-  const f = curForest(), rec = curRec(); if (!f || !rec) return; const st = HAKQuyTrinh.stateOf(f), now = new Date().toISOString(), all = qtItems(rec);
+  const f = curForest(), rec = curRec(); if (!f || !rec) return; if (loKhoa(f)) return loKhoaNote(f); const st = HAKQuyTrinh.stateOf(f), now = new Date().toISOString(), all = qtItems(rec);
   codes.forEach(c => { if (!on) HAKQuyTrinh.huyKy(st, c, now); else { const it = all.find(x => x.code === c); if (it) HAKQuyTrinh.ky(st, c, it.sig, now); } });
   if (loDirty.has(f.id)) persistLo(f); else persist();
 }
@@ -61,7 +61,7 @@ function soInBox(rec) {
     (ds.length ? '<table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Thời điểm</th><th>Mẫu</th><th>Hành động</th><th>Lý do</th></tr></thead><tbody>' + ds.slice().reverse().slice(0, 100).map(x => '<tr><td>' + esc(new Date(x.at).toLocaleString('vi-VN')) + '</td><td>BM-' + esc(x.ma) + '</td><td>' + esc(HANH[x.hanh] || x.hanh) + '</td><td>' + esc(x.lyDo || '') + '</td></tr>').join('') + '</tbody></table>' : '<p class="mut">Chưa có dòng nào.</p>') + '</details>';
 }
 function qtMarkAct(codes, on) {
-  const f = curForest(), rec = curRec(); if (!f || !rec) return; const st = HAKQuyTrinh.stateOf(f), now = new Date().toISOString(), all = qtItems(rec);
+  const f = curForest(), rec = curRec(); if (!f || !rec) return; if (loKhoa(f)) return loKhoaNote(f); const st = HAKQuyTrinh.stateOf(f), now = new Date().toISOString(), all = qtItems(rec);
   codes.forEach(c => { if (!on) HAKQuyTrinh.unmark(st, c, now); else { const it = all.find(x => x.code === c); if (it && it.ready !== 'thieu') HAKQuyTrinh.mark(st, c, it.sig, now); } });
   if (loDirty.has(f.id)) persistLo(f); else persist();   // ghi nhận đã làm: ghi ngay khi lô không có thay đổi chưa lưu
 }

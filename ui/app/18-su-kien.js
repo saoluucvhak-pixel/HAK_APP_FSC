@@ -101,6 +101,7 @@ document.addEventListener('click', async e => {
     else { f.dx = []; f.dxFile = ''; f.dxAt = ''; }
     persistLo(); note('Đã xóa dữ liệu (chưa lưu: bấm “Lưu dữ liệu vào lô” để ghi, “Bỏ thay đổi” để hoàn lại).'); return;
   }
+  if (/^chot(Lo|MoKhoa|LuuTru|BoLuuTru|Dung|MoLai)$/.test(act)) return chotAct(act);
   if (act === 'qtKy' || act === 'qtHuyKy') { qtKyAct((el.dataset.codes || '').split(',').filter(Boolean), act === 'qtKy'); return render(); }
   if (act === 'qtMark' || act === 'qtUnmark') { qtMarkAct((el.dataset.codes || '').split(',').filter(Boolean), act === 'qtMark'); return render(); }
   if ((act === 'd2dl' || act === 'd2confirm' || act === 'd2legacy' || act === 'd2undo') && stBlockNote()) return;
