@@ -4,7 +4,7 @@ const assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const JSZip = require('jszip'), XLSX = require('xlsx');
 const M = require('../src/xlsxmau');
-const html = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app.src.html'), 'utf8');
+const html = require('../scripts/build-html').appSource();   // khung ui/app.src.html + các module ui/app/*.js
 const headOf = name => { const m = new RegExp('const ' + name + ' = (\\{[\\s\\S]*?\\});').exec(html); return Object.keys(eval('(' + m[1] + ')')); };
 const reqOf = name => eval(new RegExp('const ' + name + " = (\\[[^\\]]*\\]);").exec(html)[1]);
 const HEAD = {nc: headOf('H_NC'), dx: headOf('H_DX'), pc: headOf('H_PC')}, REQ = {nc: reqOf('NC_REQ'), dx: reqOf('DX_REQ'), pc: reqOf('PC_REQ')};

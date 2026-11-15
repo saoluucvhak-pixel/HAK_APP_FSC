@@ -128,7 +128,7 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
   ok('các lần sao lưu liên tiếp không ghi đè nhau (mỗi lần một cặp file riêng)', r2.ok && r3.ok && names.length === 3 && new Set(names).size === 3, names.join(','));
   const last1 = readCfg(udB).lastBackup; ok('ghi nhận mốc sao lưu gần nhất', !!last1);
   await app.close();
-  const counts = () => fs.readdirSync(bkB).filter(n => /\.(json|sqlite)$/.test(n)).length;
+  const counts = () => fs.readdirSync(bkB).filter(n => /\.(json|sqlite)$/.test(n) && !/^tu-dong-/.test(n)).length;   // bản tự sao lưu hằng ngày (src/autobackup.js) không phải file của Sao lưu toàn bộ
   for (const [mode, expectFiles, re] of [['sqlite', 1, /SQLite/], ['json', 1, /JSON/], ['enospc', 1, /hết dung lượng/], ['space', 0, /không đủ chỗ trống/]]) {
     const before = counts();
     ({app, w} = await open(udB, {HAKQN_TEST_BACKUP_FAIL: mode})); await w.waitForSelector('#side');

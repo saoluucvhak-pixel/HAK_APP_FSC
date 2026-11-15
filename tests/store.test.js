@@ -168,3 +168,61 @@ test('nâng cấp từ cơ sở dữ liệu v1.0.0 THẬT (tests/fixtures/hakqn_
   assert.strictEqual(s.save(db).changed, 0);                                              // ghi lại không làm đổi dòng nào
   s.close(); const again = new Store(f); assert.strictEqual(fs.readdirSync(path.join(d, 'backups')).length, 1); again.close();   // mở lại không sao lưu/nâng cấp lần nữa
 });
+
+/* Hồi quy rà soát 14/11/2026: chống mất dữ liệu ở lớp lưu */
+test('hồi quy: lưu đối tượng không có danh sách chủ rừng ({} / null / rs mảng) bị từ chối, không xóa gì', () => {
+  const s = new Store(':memory:'); s.save(sample());
+  for (const bad of [{}, null, {v: 2}, {v: 2, rs: []}, {v: 2, rs: 'x'}]) assert.throws(() => s.save(bad), /không hợp lệ/);
+  assert.strictEqual(Object.keys(s.load().rs).length, 1);
+  assert.strictEqual(Object.keys(s.load().rs.r1.forests).length, 2);
+});
+
+test('hồi quy: xóa từ 2 chủ rừng trở lên trong một lần lưu bị chặn; xóa 1 chủ vẫn được; allowBulkDelete cho phép', () => {
+  const s = new Store(':memory:'), o = (id) => ({id, info: {ten: 'CHỦ ' + id}, forests: {}});
+  s.save({v: 2, rs: {a: o('a'), b: o('b'), c: o('c')}});
+  assert.throws(() => s.save({v: 2, rs: {a: o('a')}}), e => e.code === 'BULK_DELETE');
+  assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['a', 'b', 'c']);
+  s.save({v: 2, rs: {a: o('a'), b: o('b')}});
+  assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['a', 'b']);
+  s.save({v: 2, rs: {}}, {allowBulkDelete: true});
+  assert.strictEqual(Object.keys(s.load().rs).length, 0);
+});
+
+test('hồi quy: khôi phục "replace" vẫn thay được toàn bộ dữ liệu nhiều chủ rừng', () => {
+  const d = tmp(), s = new Store(path.join(d, 'r.sqlite')), o = (id) => ({id, info: {ten: id}, forests: {}});
+  s.save({v: 2, rs: {a: o('a'), b: o('b'), c: o('c')}});
+  s.applyImport({v: 2, rs: {z: o('z')}}, 'replace');
+  assert.deepStrictEqual(Object.keys(s.load().rs), ['z']);
+});
+
+test('hồi quy: lần lưu có xóa chủ/lô rừng tự sao lưu file trước, chỉ giữ 20 bản gần nhất', () => {
+  const d = tmp(), bk = path.join(d, 'bk'), s = new Store(path.join(d, 'x.sqlite'), {backupDir: bk});
+  s.save(sample());
+  const snaps = () => (fs.existsSync(bk) ? fs.readdirSync(bk) : []).filter(n => n.startsWith('truoc-xoa-'));
+  const one = sample(); delete one.rs.r1.forests.f2; s.save(one);
+  assert.strictEqual(snaps().length, 1);
+  const back = new Store(path.join(bk, snaps()[0])); assert.strictEqual(Object.keys(back.load().rs.r1.forests).length, 2); back.close();
+  for (let i = 0; i < 25; i++) { s.save(sample()); s.save(one); }
+  assert.strictEqual(snaps().length, 20);
+  fs.writeFileSync(path.join(bk, 'truoc-khoi-phuc-2026.sqlite'), 'x');   // bản sao lưu loại khác không bị xóa
+  s.save(sample()); s.save(one);
+  assert.ok(fs.existsSync(path.join(bk, 'truoc-khoi-phuc-2026.sqlite')));
+});
+
+test('hồi quy: hai chủ rừng có lô trùng mã nội bộ → báo lỗi DUP_ID, không ghi đè mất lô', () => {
+  const s = new Store(':memory:'), F = (ma) => ({id: 'f1', info: {maRung: ma}, nc: [], dx: [], pc: []});
+  s.save({v: 2, rs: {A: {id: 'A', info: {ten: 'A'}, forests: {f1: F('R1')}}}});
+  assert.throws(() => s.save({v: 2, rs: {A: {id: 'A', info: {ten: 'A'}, forests: {f1: F('R1')}}, B: {id: 'B', info: {ten: 'B'}, forests: {f1: F('R2')}}}}), e => e.code === 'DUP_ID' && /f1/.test(e.message));
+  const o = s.load(); assert.strictEqual(o.rs.A.forests.f1.info.maRung, 'R1'); assert.ok(!o.rs.B);
+});
+
+test('hồi quy: chuyển lô sang chủ rừng khác mà nội dung lô không đổi — lưu toàn bộ vẫn cập nhật chủ của lô, mở lại không quay về chủ cũ', () => {
+  const d = tmp(), f = path.join(d, 'mv.sqlite'), lot = {id: 'fx', info: {maRung: 'RX'}, nc: [], dx: [], pc: [{soPhieu: 'P1', kl: 10}]};
+  let s = new Store(f);
+  s.save({v: 2, rs: {a: {id: 'a', info: {ten: 'A'}, forests: {fx: lot}}, b: {id: 'b', info: {ten: 'B'}, forests: {}}}});
+  const r = s.save({v: 2, rs: {a: {id: 'a', info: {ten: 'A'}, forests: {}}, b: {id: 'b', info: {ten: 'B'}, forests: {fx: lot}}}});
+  assert.strictEqual(r.changed, 1);
+  s.close(); s = new Store(f); const o = s.load();
+  assert.deepStrictEqual([Object.keys(o.rs.a.forests), Object.keys(o.rs.b.forests)], [[], ['fx']]);
+  s.close();
+});

@@ -42,9 +42,10 @@ const exp = {ngayKy: '02/10/2026', soKT: '015', soVC: '07'};
   if (soffice) {
     const n10 = names.find(n => n.startsWith('10_')), dd = path.join(dir, 'pdf'); fs.mkdirSync(dd); const f10 = path.join(dd, 'bm10.docx'); fs.writeFileSync(f10, await z.file(n10).async('nodebuffer'));
     cp.execFileSync(soffice, ['--headless', '--convert-to', 'pdf', '--outdir', dd, f10], {timeout: 120000, stdio: 'ignore'});
-    let txt = ''; try { txt = cp.execFileSync('pdftotext', ['-layout', path.join(dd, 'bm10.pdf'), '-'], {encoding: 'utf8'}); } catch (e) { txt = ''; }
-    ok('BM-10: “Đà Nẵng, ngày … tháng … năm …” nằm trên một dòng, không bị xuống dòng', !txt || /Đà Nẵng, ngày[^\n]*tháng[^\n]*năm/.test(txt), txt.slice(-600));
-  }
+    let txt = null; try { txt = cp.execFileSync('pdftotext', ['-layout', path.join(dd, 'bm10.pdf'), '-'], {encoding: 'utf8'}); } catch (e) { txt = null; }
+    if (txt === null) console.log('BỎ QUA  không có pdftotext (poppler-utils) để đọc PDF BM-10');
+    else ok('BM-10: “Đà Nẵng, ngày … tháng … năm …” nằm trên một dòng, không bị xuống dòng', /Đà Nẵng, ngày[^\n]*tháng[^\n]*năm/.test(txt), txt.slice(-600));
+  } else console.log('BỎ QUA  không có LibreOffice để dựng thử PDF BM-10');
   // BM-11: “Kính gửi” tự điền tên Công ty mua hàng
   const COMP = {c1: {id: 'c1', ten: 'CÔNG TY TNHH DĂM AN PHÁT', mst: '', diaChi: 'KCN Điện Nam, Quảng Nam', nguoiDaiDien: '', chucVu: '', sdt: '', email: '', diaChiGiao: [], ghiChu: ''}};
   const base = await w.evaluate(() => window.hak.loadSync().db);

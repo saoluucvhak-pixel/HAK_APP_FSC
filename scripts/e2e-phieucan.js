@@ -14,6 +14,7 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
 const P = (stt, so, bien, c1, c2, kg, kh, g1, g2, gia, tien) => ({donGia: gia === undefined ? 1250000 : gia, thanhTien: tien === undefined ? Math.floor(kg * 1250 / 1000) * 1000 : tien, _row: stt + 1, maRung: 'R-A', stt: String(stt), ngay: '0' + (4 + stt) + '/10/2026', gioCan1: g1, gioCan2: g2, bienSo: bien, soPhieu: so, can1: c1, can2: c2, klKg: kg, kl: kg / 1000, khachHang: kh, noiGiao: 'KCN Điện Nam', ghiChu: ''});
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'p.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  const csp = []; app.on('window', p => p.on('console', m => { if (/Content Security Policy/i.test(m.text())) csp.push(m.text().slice(0, 200)); }));   // vi phạm CSP ở mọi cửa sổ (kể cả công cụ in)
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const L = lot('fa', 'R-A', {exp: {}, pc: [P(1, 'PA1', '92C-12345', 40400, 15000, 25400, 'NGUYỄN VĂN AN', '08:15:00', '09:40:00'), P(2, 'PA2', '92C-67890', 39600, 15000, 24600, 'NGUYỄN VĂN AN', '10:05:00', '11:20:00'), P(3, 'PA3', '92C-12345', 35000, 15000, 20000, '', '13:00:00', '14:10:00')]});
   const D = seed([L]); D.congTy = {c1: {id: 'c1', ten: 'CÔNG TY TNHH MẪU PHÁT', mst: '', diaChi: '12 Đường Số 3, KCN Điện Nam, Quảng Nam', nguoiDaiDien: '', chucVu: '', sdt: '0235 3811 222', fax: '0235 3811 333', noiLap: 'Điện Bàn', email: '', diaChiGiao: [], ghiChu: ''}};
@@ -73,5 +74,16 @@ const P = (stt, so, bien, c1, c2, kg, kh, g1, g2, gia, tien) => ({donGia: gia ==
   await w.$eval('[data-act=guide]', b => b.click()); const gd = await w.innerText('#guideBox');
   ok('Hướng dẫn sử dụng trong phần mềm đã nói về giao khoán trả theo ngày công, chấm công thực tế, quy trình theo đợt, in đợt 2 (giấy trắng hoặc nền + in đè), mẫu Excel phiếu cân đầy đủ trường, đổi biển số khi đưa qua và in phiếu cân', /tấn, ha hoặc ngày công/.test(gd) && /Chấm công thực tế/.test(gd) && /Quy trình hồ sơ theo đợt/.test(gd) && /giấy trắng/.test(gd) && /Một file mẫu Excel đầy đủ trường/.test(gd) && /sửa biển số ngay trong bảng xem trước/.test(gd) && /nguyên bản công cụ PhieuCan/.test(gd) && /8a\. Đổi biển số xe của phiếu cân/.test(gd) && /Chỉ đổi biển số/.test(gd) && /tích sẵn/.test(gd) && /8b\. In phiếu cân/.test(gd) && /Tải PDF PhieuCan/.test(gd) && !/Bước 1 – Mẫu trống/.test(gd), gd.slice(0, 200));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
+  // CSP của cửa sổ in (header do src/main.js thêm cho đúng file PhieuCan.html, file gốc không đổi): chặn mã chèn, không vi phạm khi dùng bình thường
+  const pcw = await tool(() => w.$eval('#pcPrintCard [data-act=pcPrint]', b => b.click()));
+  await pcw.waitForFunction(() => document.querySelectorAll('#tb tr.row').length === 4, null, {timeout: 15000});   // dữ liệu lúc này: 4 phiếu (D2)
+  if (pcw) {
+    const before = csp.length;
+    await pcw.evaluate(() => { document.body.insertAdjacentHTML('beforeend', '<img src="x" onerror="window.__pcx=1">'); const s = document.createElement('script'); s.textContent = 'window.__pcy=1'; document.body.appendChild(s); });
+    await pcw.waitForTimeout(400);
+    const ran = await pcw.evaluate(() => [!!window.__pcx, !!window.__pcy]);
+    ok('CSP cửa sổ in phiếu cân: mã chèn vào trang (thuộc tính sự kiện, thẻ script mới) không chạy', !ran[0] && !ran[1] && csp.length > before, JSON.stringify(ran));
+    ok('CSP cửa sổ in phiếu cân: dùng công cụ (nạp phiếu, in, tải PDF) không có vi phạm CSP nào', before === 0, csp.slice(0, before).join(' | '));
+  } else ok('còn cửa sổ công cụ in để kiểm tra CSP', false);
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

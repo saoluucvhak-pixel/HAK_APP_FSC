@@ -36,11 +36,25 @@
     if (typeof vol !== 'number' || !(vol > 0) || !doi.length) return doi.map(() => null);
     let used = 0; return doi.map((d, i) => { const v = i === doi.length - 1 ? Math.round((vol - used) * 1000) / 1000 : Math.round(vol * d.share * 1000) / 1000; used += v; return v; });
   }
+  /* Khối lượng thực tế của từng đội. Phiếu cân không ghi đội nên MẶC ĐỊNH chia theo số người (chia).
+   * Nếu năng suất các đội khác nhau, người dùng nhập khối lượng thực tế riêng từng đội: klDoi = {khóa Tổ trưởng (keyOf): tấn}.
+   * Chỉ dùng số nhập khi đủ MỌI đội và tổng khớp khối lượng thực tế của lô (lệch ≤ 1 kg); thiếu hoặc lệch thì vẫn chia theo số người và trả `loi` để báo.
+   * Trả {vals: [tấn hoặc null theo thứ tự doi], nguon: 'nhap' | 'songuoi', loi: ''} */
+  function khoiLuong(vol, doi, klDoi) {
+    const m = klDoi || {}, given = doi.map(d => typeof m[d.key] === 'number' && isFinite(m[d.key]) && m[d.key] >= 0 ? m[d.key] : null), n = given.filter(v => v != null).length;
+    const fallback = loi => ({vals: chia(vol, doi), nguon: 'songuoi', loi});
+    if (!n || !doi.length) return fallback('');
+    if (n < doi.length) return fallback('mới nhập khối lượng thực tế cho ' + n + '/' + doi.length + ' đội: nhập đủ mọi đội hoặc để trống hết (đang chia theo số người)');
+    const sum = Math.round(given.reduce((s, v) => s + v, 0) * 1000) / 1000;
+    if (!(typeof vol === 'number' && vol > 0)) return fallback('đã nhập khối lượng từng đội (tổng ' + String(sum).replace('.', ',') + ' tấn) nhưng chưa có khối lượng thực tế của cả lô để đối chiếu');
+    if (Math.abs(sum - vol) > 0.001) return fallback('tổng khối lượng thực tế các đội ' + String(sum).replace('.', ',') + ' tấn khác khối lượng thực tế của lô ' + String(vol).replace('.', ',') + ' tấn (đang chia theo số người)');
+    return {vals: given.map(v => Math.round(v * 1000) / 1000), nguon: 'nhap', loi: ''};
+  }
   /* Hình thức trực tiếp không có hợp đồng giao khoán nên không chia đội: coi cả lô là một đội (Tổ trưởng đầu tiên, mọi người còn lại) */
   function single(nc, isTT) {
     nc = nc || []; const t = nc.find(isTT);
     return {multi: false, doi: t ? [{key: keyOf(t), ten: trim(t.doi), tt: t, members: nc.filter(r => r !== t), n: nc.length, share: 1}] : [], errs: [], orphans: []};
   }
-  const api = {build, single, chia, keyOf, fold};
+  const api = {build, single, chia, khoiLuong, keyOf, fold};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDoi = api;
 })(typeof self !== 'undefined' ? self : this);
