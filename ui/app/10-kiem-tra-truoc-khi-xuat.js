@@ -1,7 +1,8 @@
 /* ========== Kiểm tra hồ sơ trước khi xuất: dùng lại gate/checklist FSC, nhóm thành “chặn xuất” và “cần đối chiếu”, kèm số phiếu/trường và liên kết đến đúng tab ========== */
 function exportCheck(job) {
   const g = gate(job), ex = job.exp || {}, i = job.info, items = [];
-  const add = (kind, nhom, text, ref, go) => items.push({kind, nhom, text, ref: ref || '', go: go || {ftab: 'finfo'}});
+  /* MỘT dạng mục cho mọi quy tắc (src/kiemtra.js): mức, nhóm, đối tượng (lô / đội / đội xe / dòng), biểu mẫu bị ảnh hưởng, nơi sửa. kind và go giữ cho các màn đang đọc tên cũ */
+  const add = (kind, nhom, text, ref, go, doiTuong) => { const m = HAKKiemTra.muc({kind, nhom, text, ref, doiTuong, noiSua: go || {ftab: 'finfo'}}); items.push(Object.assign(m, {kind: m.muc, go: m.noiSua})); };
   const pcRow = n => (job.pc || []).find(r => String(r._row) === String(n));
   // thông tin chủ rừng, rừng, đơn giá
   infoErrors(i, job.id).forEach(e => add('chan', 'Thông tin chủ rừng', e, '', {tab: 'info'}));
@@ -15,7 +16,7 @@ function exportCheck(job) {
   // người dưới 18 tuổi: đã là lỗi của từng dòng nhân công (checkNC) nên chặn mọi biểu mẫu có tên người đó
   // vận chuyển
   g.dx.errs.forEach(e => add('chan', 'Đội xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
-  groupsDX(job).forEach(gr => hanLoiOf(job, gr).forEach(v => add('chan', 'Giấy tờ xe hết hạn lúc chạy phiếu', 'Đội xe “' + gr.ten + '”: ' + HAKGiayTo.text(v) + '. BM-09 và BM-10 của đội xe này bị chặn: sửa hạn giấy tờ của xe hoặc ngày cân của phiếu nếu nhập sai.', 'Phiếu ' + (v.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'})));
+  groupsDX(job).forEach(gr => hanLoiOf(job, gr).forEach(v => add('chan', 'Giấy tờ xe hết hạn lúc chạy phiếu', 'Đội xe “' + gr.ten + '”: ' + HAKGiayTo.text(v) + '. BM-09 và BM-10 của đội xe này bị chặn: sửa hạn giấy tờ của xe hoặc ngày cân của phiếu nếu nhập sai.', 'Phiếu ' + (v.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}, {loai: 'doiXe', ten: gr.ten})));
   g.dx.warns.forEach(e => add('doi', 'Giấy tờ xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
   const vcm = (i.vanChuyen || {}).mode;
   g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'dx'}));
@@ -36,8 +37,8 @@ function exportCheck(job) {
   { const bd = doiOf(job); if (bd.pcChuaGan) add('doi', 'Phiếu cân chưa gán đội', 'Lô có ' + bd.doi.length + ' đội nhưng ' + bd.pcChuaGan + ' phiếu cân chưa gán đội: khối lượng từng đội đang ' + (bd.klNguon === 'nhap' ? 'theo số nhập tay của hồ sơ cũ' : 'chia theo số người') + '. Gán đội cho phiếu cân (gán hàng loạt theo bộ lọc) để khối lượng đội lấy đúng theo phiếu cân.', '', {ftab: 'dx', focus: 'pc'}); }
   { const bd = doiOf(job); if (bd.klLoi) add('doi', 'Số đội', 'Khối lượng thực tế từng đội: ' + bd.klLoi + '. BM-08 và BM-14 của từng đội sẽ là bản nháp cho đến khi sửa.', 'Khối lượng thực tế từng đội', {ftab: 'finfo'}); }
   { const rows = viTriRows(), bd = doiOf(job);   // theo ĐỘI THẬT (bảng Nhân công khai thác), không chia lại theo cột chữ
-    (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
-      if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}); }); }
+    (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', ten: d.ten, nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
+      if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}, u.ten ? {loai: 'doi', ten: u.ten} : null); }); }
   { const L = tgLechOf(i, job.pc, nDoiOf(i, job.nc)); if (L && L.canhBao) add('doi', 'Thời gian khai thác', tgLechText(i, L), 'Thời gian khai thác', {ftab: 'finfo'}); }
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
   nhapLieuAll(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));   // của lô, từng đội và từng đội xe
@@ -49,12 +50,12 @@ function exportCheck(job) {
   if (!job.nc.length) add('doi', 'Nhân công', 'Chưa nạp nhân công của lô.', '', {ftab: 'nc'});
   if (!job.dx.length) add('doi', 'Đội xe', 'Chưa nạp đội xe của lô.', '', {ftab: 'dx'});
   if (!(job.pc || []).length) add('doi', 'Phiếu cân', 'Chưa nạp phiếu cân của lô.', '', {ftab: 'dx', focus: 'pc'});
-  return {items, chan: items.filter(x => x.kind === 'chan'), doi: items.filter(x => x.kind === 'doi'), g};
+  return {items, chan: items.filter(x => x.muc === 'chan'), doi: items.filter(x => x.muc === 'doi'), g, tomTat: HAKKiemTra.tomTat(items), bieuMauBiChan: HAKKiemTra.bieuMauBiChan(items)};
 }
 function panelKiemTra(job) {
   const c = exportCheck(job), nhom = list => [...new Set(list.map(x => x.nhom))];
   const block = (title, cls, list) => !list.length ? '' : '<div class="card"><h3 style="margin:0 0 8px">' + title + ' (' + list.length + ')</h3>' + nhom(list).map(n => '<div style="margin-bottom:10px"><b>' + esc(n) + '</b>' +
-    list.filter(x => x.nhom === n).map(x => '<div class="row" style="align-items:flex-start;gap:8px;margin-top:4px"><span class="pill ' + cls + '">' + (x.ref ? esc(x.ref) : '•') + '</span><span style="flex:1">' + esc(x.text) + '</span><button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(x.go)) + '">Mở để sửa</button></div>').join('') + '</div>').join('') + '</div>';
+    list.filter(x => x.nhom === n).map(x => '<div class="row" style="align-items:flex-start;gap:8px;margin-top:4px"><span class="pill ' + cls + '">' + (x.ref ? esc(x.ref) : '•') + '</span><span style="flex:1">' + (x.doiTuong && x.doiTuong.ten ? '<small class="mut">' + (x.doiTuong.loai === 'doiXe' ? 'Đội xe' : 'Đội') + ' “' + esc(x.doiTuong.ten) + '”</small> ' : '') + esc(x.text) + (x.muc === 'chan' && x.bieuMau.length && x.bieuMau.length < HAKKiemTra.TAT_CA.length ? ' <small class="mut" data-bm="' + esc(x.bieuMau.join(',')) + '">· chặn ' + x.bieuMau.map(b => 'BM-' + b).join(', ') + '</small>' : '') + '</span><button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(x.go)) + '">Mở để sửa</button></div>').join('') + '</div>').join('') + '</div>';
   const ok = !c.chan.length;
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Kiểm tra hồ sơ trước khi xuất</h3><span class="pill ' + (ok ? 'ok' : 'err') + '">' + (ok ? 'Không có mục chặn xuất' : c.chan.length + ' mục chặn xuất') + '</span></div>' +
     '<p class="mut" style="margin:6px 0 0">Dùng lại checklist FSC và quy tắc kiểm tra của phần mềm. <b>Chặn xuất</b>: làm nút xuất hồ sơ bị khóa hoặc hồ sơ sai. <b>Cần đối chiếu</b>: vẫn xuất được nhưng nên kiểm tra. Bấm “Mở để sửa” để đến đúng tab.</p>' +

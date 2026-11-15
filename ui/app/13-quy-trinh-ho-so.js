@@ -21,6 +21,7 @@ function qtPrep(rec) {
   if (!(theCompany() || {}).ten) miss.push('chưa khai Công ty mua hàng (Cài đặt → Công ty)');
   if (g.info.length) miss.push('thông tin chủ rừng, rừng còn thiếu hoặc lỗi (' + g.info.length + ' mục)');
   if (g.normErrs.length) miss.push('định mức BHLĐ chưa đủ');
+  { const t = HAKKiemTra.tomTat(exportCheck(rec).items); if (t.chan && !g.info.length && !g.normErrs.length) miss.push('còn ' + t.chan + ' mục chặn xuất ở Kiểm tra trước khi xuất'); }   // cùng một bộ kiểm tra với màn Kiểm tra
   return miss;
 }
 function qtPanel(rec) {

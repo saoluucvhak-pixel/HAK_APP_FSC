@@ -26,6 +26,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
   // 1. lô A: phiếu P3 cân 07/10 khi kiểm định xe 92C-12345 đã hết hạn 06/10
   await open('fa'); await w.click('[data-ftab=kt]'); await w.waitForTimeout(400); const kt = await w.innerText('#main');
   ok('Kiểm tra trước khi xuất: lỗi chặn nêu đội xe, số phiếu, ngày cân, giấy tờ và ngày hết hạn', /Giấy tờ xe hết hạn lúc chạy phiếu/.test(kt) && /LÊ VĂN MỘT/.test(kt) && /phiếu PA3 ngày 07\/10\/2026/.test(kt) && /kiểm định đã hết hạn từ 06\/10\/2026/.test(kt), kt.slice(0, 600));
+  ok('bộ kiểm tra chung: mục chặn ghi đối tượng (Đội xe “LÊ VĂN MỘT”) và biểu mẫu bị chặn (chỉ BM-09, BM-10; không chặn BM-04)', /Đội xe “LÊ VĂN MỘT”/.test(kt) && /chặn BM-09, BM-10/.test(kt) && !/chặn BM-04/.test(kt), kt.slice(0, 500));
   ok('phiếu cân đúng hạn (PA1 05/10, PA2 của xe đủ hạn) không bị nêu', !/phiếu PA1 ngày/.test(kt) && !/phiếu PA2 ngày/.test(kt));
   let names = await zipNames(); const vc9 = names.filter(n => /09_XN_khoi_luong_VC\//.test(n)), vc10 = names.filter(n => /10_TT_tien_VC\//.test(n));
   ok('BM-09 và BM-10 chỉ còn của đội xe đủ hạn (TRẦN VĂN HAI); đội xe có giấy tờ hết hạn bị chặn', vc9.length === 1 && vc10.length === 1 && /TRAN_VAN_HAI|TRẦN_VĂN_HAI|TRAN-VAN-HAI|TRAN VAN HAI/i.test(vc9[0].normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/Đ/g, 'D')), names.join(', '));
