@@ -131,3 +131,26 @@ function loTuLoCuTao() {
   o.forests[id] = r.f; curF = id; ftab = 'finfo'; tab = 'rung'; persist();
   note('Đã tạo lô ' + code + ' từ lô ' + (src.info.maRung || '?') + ': ' + (r.f.nc || []).length + ' nhân công, ' + (r.f.dx || []).length + ' xe (làm mới từ Danh mục: ' + r.nguoi + ' người, ' + r.xe + ' xe). Nhập thông tin rừng, thời gian khai thác rồi Lưu; phiếu cân và số/ngày văn bản nhập mới.', 'ok'); render();
 }
+
+/* ========== Nhật ký nạp và hoàn tác lần nạp (bản 2.2, mục 11.3 điểm 10) ==========
+ * Mỗi lần nạp Excel vào bản nháp ghi: nguồn, thời điểm, số dòng thêm / cập nhật / giữ nguyên / lỗi, kèm ảnh chụp bản nháp TRƯỚC khi nạp để hoàn tác cả lần nạp.
+ * Hoàn tác chỉ làm được khi chưa lưu vào lô (bản nháp còn); lưu rồi thì lần nạp ghi vào nhật ký của lô (f.nhatKyNap, 50 lần gần nhất). */
+const NK_COPY = x => JSON.parse(JSON.stringify(x === undefined ? null : x));
+function nhatKyNapChup(st, kind) { return {cur: NK_COPY(st.cur), src: NK_COPY(st.src), pending: NK_COPY(st.pending), report: NK_COPY(st.report), seq: st.seq}; }
+function nhatKyNapGhi(st, kind, nguon, rep, snap) {
+  st.nhatKy = st.nhatKy || [];
+  st.nhatKy.push({at: new Date().toISOString(), kind, nguon, them: rep.add || 0, capNhat: rep.upd || 0, giu: rep.same || 0, loi: rep.errors || 0, truoc: snap});
+  if (st.nhatKy.length > 20) st.nhatKy.shift();
+}
+function nhatKyNapBox(kind) {
+  const st = stCur(), ds = st && (st.nhatKy || []).filter(x => x.kind === kind); if (!ds || !ds.length) return '';
+  const g = ds[ds.length - 1];
+  return '<div class="card" id="nhatKyNap" style="margin-top:8px"><b>Nhật ký nạp (' + ds.length + ' lần, chưa lưu vào lô)</b><ul style="margin:4px 0 6px">' + ds.slice(-5).reverse().map(x => '<li>' + esc(new Date(x.at).toLocaleTimeString('vi-VN')) + ' · ' + esc(x.nguon) + ': thêm ' + x.them + ', cập nhật ' + x.capNhat + ', giữ nguyên ' + x.giu + ', lỗi ' + x.loi + '</li>').join('') + '</ul>' +
+    '<button class="btn ghost sm" data-act="napHoanTac" data-kind="' + kind + '">Hoàn tác lần nạp gần nhất (' + esc(g.nguon) + ')</button> <span class="mut">Trả bản nháp về như trước lần nạp đó; các sửa tay sau đó cũng mất.</span></div>';
+}
+function nhatKyNapHoanTac(kind) {
+  const st = stCur(); if (!st) return; const i = (st.nhatKy || []).map(x => x.kind).lastIndexOf(kind); if (i < 0) return;
+  const g = st.nhatKy[i]; if (!confirm('Hoàn tác lần nạp “' + g.nguon + '”?\nBản nháp trở về như trước lần nạp này; mọi thay đổi sau đó (kể cả sửa tay) trong bản nháp sẽ mất. Dữ liệu đã lưu vào lô không bị ảnh hưởng.')) return;
+  const t = g.truoc; st.cur = NK_COPY(t.cur); st.src = NK_COPY(t.src); st.pending = NK_COPY(t.pending); st.report = NK_COPY(t.report); st.seq = t.seq;
+  st.nhatKy = st.nhatKy.slice(0, i); stErrList = null; note('Đã hoàn tác lần nạp “' + g.nguon + '”: bản nháp về như trước đó.', 'ok'); render();
+}

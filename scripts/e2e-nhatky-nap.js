@@ -1,0 +1,40 @@
+'use strict';
+/* Nhật ký nạp Excel và hoàn tác lần nạp (bản 2.2): ghi mỗi lần nạp, hoàn tác từng lần khi chưa lưu, ghi nhật ký vào lô khi lưu (Electron thật, SQLite thật).
+ * Chạy: xvfb-run -a node scripts/e2e-nhatky-nap.js */
+const {_electron: electron} = require('playwright-core');
+const path = require('path'), fs = require('fs'), os = require('os');
+const XLSX = require('xlsx');
+const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
+const {nv, xe, lot, seed} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {nv, xe, lot, seed};')();
+const root = path.join(__dirname, '..');
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-nknap-'));
+let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
+const book = (sheet, rows, name) => { const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheet); const f = path.join(dir, name); XLSX.writeFile(wb, f); return f; };
+(async () => {
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
+  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const A = lot('fa', 'R-A', {exp: {}, kl: null, pc: [], nc: [nv(1, 'Tổ trưởng', 'TT A', 'Tổ trưởng', '049085006001')]});
+  await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.waitForSelector('#side');
+  const open = async () => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300); };
+  const db = async () => (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fa;
+  const person = (stt, ten, cccd, doi) => { const o = {'Vai trò': 'Công nhân', 'STT': stt, 'Danh xưng': 'Ông', 'Họ và tên': ten, 'Ngày sinh': '01/01/1990', 'CCCD': cccd, 'Ngày cấp CCCD': '01/01/2021', 'Nơi cấp CCCD': 'CA', 'Địa chỉ thường trú': 'Đà Nẵng', 'Chức danh': 'Công nhân khai thác'}; if (doi !== undefined) o['Đội'] = doi; return o; };
+  await open();
+  const dem = async () => (await w.$$eval('#main table tbody tr', r => r.length));
+  await w.setInputFiles('input[data-file="nc"]', book('NHAN_CONG', [person(2, 'LÊ HAI', '049085006002'), person(3, 'PHẠM BA', '049085006003')], 'n1.xlsx')); await w.waitForTimeout(900);
+  ok('nạp lần 1: nhật ký ghi 1 lần (thêm 2)', /Nhật ký nạp \(1 lần/.test(await w.innerText('#nhatKyNap')) && /thêm 2/.test(await w.innerText('#nhatKyNap')));
+  await w.setInputFiles('input[data-file="nc"]', book('NHAN_CONG', [person(4, 'ĐỖ BỐN', '049085006004')], 'n2.xlsx')); await w.waitForTimeout(900);
+  ok('nạp lần 2: nhật ký ghi 2 lần', /Nhật ký nạp \(2 lần/.test(await w.innerText('#nhatKyNap')));
+  const sau2 = (await w.innerText('#main')).includes('ĐỖ BỐN');
+  await w.click('[data-act=napHoanTac]'); await w.waitForTimeout(500);
+  const t = await w.innerText('#main');
+  ok('hoàn tác lần nạp gần nhất: ĐỖ BỐN biến mất, hai người nạp lần 1 còn', sau2 && !t.includes('ĐỖ BỐN') && t.includes('LÊ HAI') && t.includes('PHẠM BA'));
+  ok('nhật ký còn 1 lần; chưa ghi vào SQLite', /Nhật ký nạp \(1 lần/.test(await w.innerText('#nhatKyNap')) && (await db()).nc.length === 1);
+  await w.click('[data-act=napHoanTac]'); await w.waitForTimeout(500);
+  ok('hoàn tác tiếp: bản nháp về như trước mọi lần nạp, hết khung nhật ký', !(await w.$('#nhatKyNap')) && !(await w.innerText('#main')).includes('LÊ HAI'));
+  await w.setInputFiles('input[data-file="nc"]', book('NHAN_CONG', [person(2, 'LÊ HAI', '049085006002')], 'n3.xlsx')); await w.waitForTimeout(900);
+  await w.click('button[data-act=stSave]'); await w.waitForTimeout(700);
+  const f = await db();
+  ok('lưu vào lô: có người nạp, nhật ký nạp được ghi vào lô (1 lần, nguồn n3.xlsx)', f.nc.length === 2 && (f.nhatKyNap || []).length === 1 && /n3\.xlsx/.test(f.nhatKyNap[0].nguon) && f.nhatKyNap[0].them === 1 && !('truoc' in f.nhatKyNap[0]), JSON.stringify(f.nhatKyNap));
+  ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
+  await app.close(); process.exit(fail ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });

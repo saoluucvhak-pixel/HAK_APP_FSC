@@ -37,6 +37,7 @@ document.addEventListener('click', async e => {
   if (act === 'setBackup' || act === 'setBackupDefault') return settingsBackup(act === 'setBackupDefault');
   if (act === 'setOpenBackup') return HB.settings.openBackup();
   if (act === 'setOpenData') return HB.openDataFolder();
+  if (act === 'napHoanTac') return nhatKyNapHoanTac(el.dataset.kind);
   if (act === 'luongLay') return luongLayDonGia();
   if (act === 'loTuLoCu') return loTuLoCuTao();
   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
