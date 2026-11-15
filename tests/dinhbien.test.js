@@ -10,9 +10,10 @@ test('định biên mặc định: 1 đội 8 người = 1 Tổ trưởng (kiêm
   assert.strictEqual(DB.check(g.rows).ok, true);
   const copy = DB.get({}); copy.rows[0].soNguoi = 9; assert.strictEqual(DB.get({}).rows[0].soNguoi, 1);   // bản mặc định không bị sửa
 });
-test('kiểm tra định mức nhân công: tên, số người nguyên 1–50, trùng, nhiệm vụ bắt buộc, đúng một Tổ trưởng 1 người, kiêm nhiệm hợp lệ', () => {
+test('kiểm tra định mức nhân công: tên, số người nguyên 0–50 (0 = ngoài định biên chuẩn), trùng, nhiệm vụ bắt buộc khi có người, đúng một Tổ trưởng 1 người, kiêm nhiệm hợp lệ', () => {
   const ok = () => DB.get({}).rows, bad = (f, re) => { const r = ok(); f(r); const c = DB.check(r); assert.strictEqual(c.ok, false); assert.match(c.error, re); };
-  bad(r => { r[1].soNguoi = 0; }, /Dòng 2: số người .* từ 1 đến 50/); bad(r => { r[1].soNguoi = 1.5; }, /số nguyên/); bad(r => { r[2].soNguoi = 51; }, /Dòng 3/);
+  bad(r => { r[1].soNguoi = -1; }, /Dòng 2: số người .* từ 0 đến 50/); bad(r => { r[1].soNguoi = 1.5; }, /số nguyên/);
+  { const r = ok(); r[1].soNguoi = 0; r[1].nhiemVu = ''; assert.strictEqual(DB.check(r).ok, true, 'vị trí 0 người (ngoài định biên chuẩn) không bắt buộc nhiệm vụ'); } bad(r => { r[2].soNguoi = 51; }, /Dòng 3/);
   bad(r => { r[3].chucDanh = 'công nhân cưa'; }, /bị trùng/); bad(r => { r[2].nhiemVu = ''; }, /chưa ghi nhiệm vụ của “Công nhân bóc vỏ”/);
   bad(r => { r[0].soNguoi = 2; }, /đúng một vị trí “Tổ trưởng” và chỉ 1 người/); bad(r => { r.shift(); }, /đúng một vị trí “Tổ trưởng”/);
   bad(r => { r[0].kiemNhiem = 'Công nhân nấu ăn'; }, /không có trong định mức/); bad(r => { r[1].kiemNhiem = 'Công nhân cưa'; }, /không thể kiêm chính/);
@@ -27,10 +28,18 @@ test('so sánh nhân công thực tế với định biên: thiếu, thừa, v�
   assert.strictEqual(DB.lechText(b), 'thiếu 1 Công nhân bóc vỏ; thừa 1 Công nhân bốc xếp; 1 người giữ vị trí “Công nhân khai thác” không có trong định mức');
   const c = DB.soSanh(rows, []); assert.strictEqual(DB.lechText(c), 'thiếu 1 Tổ trưởng; thiếu 2 Công nhân cưa; thiếu 3 Công nhân bóc vỏ; thiếu 2 Công nhân bốc xếp');
 });
-test('lưu định mức nhân công: tự thêm vị trí mới vào danh sách chức danh; lỗi thì không ghi gì', () => {
+test('lưu định mức nhân công: là danh mục vị trí (không còn ghi riêng vào danh sách chức danh); báo vị trí mới; lỗi thì không ghi gì', () => {
   const db = {}; assert.deepStrictEqual(DM.allPositions(db), ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa']);
   const r = DB.set(db, DB.get(db).rows, DM); assert.strictEqual(r.ok, true); assert.deepStrictEqual(r.them, ['Công nhân bóc vỏ', 'Công nhân bốc xếp']);
-  assert.deepStrictEqual(DM.allPositions(db), ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa', 'Công nhân bóc vỏ', 'Công nhân bốc xếp']); assert.strictEqual(DB.get(db).saved, true);
-  assert.strictEqual(DB.set(db, DB.get(db).rows, DM).them.length, 0);   // lưu lại không thêm trùng
-  const before = JSON.stringify(db), rows = DB.get(db).rows; rows[1].soNguoi = 0; assert.strictEqual(DB.set(db, rows, DM).ok, false); assert.strictEqual(JSON.stringify(db), before);
+  assert.ok(!db.chucDanhThem, 'không ghi vào danh sách chức danh riêng'); assert.strictEqual(DB.get(db).saved, true);
+  assert.deepStrictEqual(DB.danhMuc(db, ['Công nhân khai thác']).rows.map(r => r.chucDanh + ':' + r.soNguoi), ['Tổ trưởng:1', 'Công nhân cưa:2', 'Công nhân bóc vỏ:3', 'Công nhân bốc xếp:2', 'Công nhân khai thác:0'], 'đã lưu: đúng các dòng đã lưu + vị trí còn dùng (0 người)');
+  const before = JSON.stringify(db), rows = DB.get(db).rows; rows[1].soNguoi = -1; assert.strictEqual(DB.set(db, rows, DM).ok, false); assert.strictEqual(JSON.stringify(db), before);
+});
+
+test('danh mục vị trí chưa lưu: Tổ trưởng, vị trí cũ theo đúng thứ tự cũ, rồi định biên mặc định; vị trí 0 người so sánh là ngoài định biên chuẩn', () => {
+  const m = DB.danhMuc({}, ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa', 'Lái máy']).rows;
+  assert.deepStrictEqual(m.map(r => r.chucDanh + ':' + r.soNguoi), ['Tổ trưởng:1', 'Công nhân khai thác:0', 'Công nhân cưa:2', 'Lái máy:0', 'Công nhân bóc vỏ:3', 'Công nhân bốc xếp:2']);
+  const sc = DB.soSanh(m, [{chucDanh: 'Tổ trưởng'}, {chucDanh: 'Công nhân khai thác'}]);
+  assert.strictEqual(sc.can, 8); assert.ok(sc.vt.every(v => v.can > 0));
+  assert.match(DB.lechText(sc), /1 người giữ vị trí “Công nhân khai thác” ngoài định biên chuẩn \(số người 0\)/);
 });

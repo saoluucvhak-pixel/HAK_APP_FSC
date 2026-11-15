@@ -47,7 +47,7 @@ const normDX0 = o => ({
   bienSo: trim(o.bienSo).toUpperCase(), cavet: normDate(o.cavet), loaiXe: trim(o.loaiXe), nguoiKy: normNK(o.nguoiKy),
   taiXe: trim(o.taiXe), ngaySinhTx: normDate(o.ngaySinhTx), cccdTx: normCccd(o.cccdTx), ngayCapTx: normDate(o.ngayCapTx),
   noiCapTx: trim(o.noiCapTx), diaChiTx: trim(o.diaChiTx), gplx: trim(o.gplx), hanGplx: normDate(o.hanGplx),
-  hanBH: normDate(o.hanBH), kdTu: normDate(o.kdTu), kdDen: normDate(o.kdDen), sdt: trim(o.sdt)
+  hanBH: normDate(o.hanBH), kdTu: normDate(o.kdTu), kdDen: normDate(o.kdDen), sdt: trim(o.sdt), doiXe: trim(o.doiXe)
 });
 const normDX = o => {
   const r = normDX0(Object.assign({}, o, {ngaySinh: noneVal(o.ngaySinh), cccd: noneVal(o.cccd), ngayCap: noneVal(o.ngayCap), noiCap: noneVal(o.noiCap)}));
@@ -78,7 +78,7 @@ const normPC = o => {
   return {
     _row: o._row, maRung: trim(o.maRung), stt: trim(o.stt), ngay: normDate(o.ngay), ngay2: o.ngay2 == null || trim(o.ngay2) === '' ? '' : normDate(o.ngay2), gioCan1: timeCell(o.gioCan1), gioCan2: timeCell(o.gioCan2), bienSo: trim(o.bienSo).toUpperCase(),
     soPhieu: typeof o.soPhieu === 'number' ? String(Math.round(o.soPhieu)) : trim(o.soPhieu), can1: c1, can2: c2, klKg,
-    kl, khachHang: trim(o.khachHang), diaChi: trim(o.diaChi), nguonGoc: trim(o.nguonGoc), soCT: trim(o.soCT), trangThai: trim(o.trangThai), donGia, thanhTien: moneyCell(o.thanhTien), giaLoi, noiGiao: trim(o.noiGiao), ghiChu: trim(o.ghiChu)
+    kl, khachHang: trim(o.khachHang), diaChi: trim(o.diaChi), nguonGoc: trim(o.nguonGoc), soCT: trim(o.soCT), trangThai: trim(o.trangThai), donGia, thanhTien: moneyCell(o.thanhTien), giaLoi, noiGiao: trim(o.noiGiao), ghiChu: trim(o.ghiChu), doi: trim(o.doi)
   };
 };
 
@@ -111,8 +111,10 @@ const PC_NGUONG_MAC_DINH = 1;   // % lệch tối đa giữa khối lượng th�
 function checkPC(rec) {
   const errs = [], warns = [], state = {}, pc = rec.pc || [];
   const mark = (r, k, m) => { (k === 'err' ? errs : warns).push('Dòng ' + r._row + ': ' + m); if (k === 'err' || !state[r._row]) state[r._row] = k; };
-  const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seen = {};
+  const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seen = {}, thieuKy = rec.hdvc ? doiXeThieuKy(rec) : new Set();
   pc.forEach(r => {
+    if (trim(r.doi) && rec.doi && rec.doi.length > 1 && !rec.doi.some(d => d.id === r.doiId) && !rec.doi.some(d => keyName(d.ten) === keyName(r.doi))) mark(r, 'err', 'Đội “' + trim(r.doi) + '” không có trong lô (tên đội ở tab Nhân công): sửa tên đội hoặc để trống ô Đội');
+    { const d = thieuKy.size ? doiXeOfPc(rec, r) : null; if (d && d.hd && thieuKy.has(d.hd.id)) mark(r, 'err', 'Biển ' + r.bienSo + ' thuộc đội xe chưa có người ký (chủ xe hoặc tài xế): vào tab Vận chuyển chọn người ký cho đội xe này'); }
     if (r.maRung && r.maRung !== rec.info.maRung) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
     if (!HAKDates.isValid(r.ngay)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(r.ngay).replace(/^thiếu ngày$/, 'thiếu ngày cân'));
     if (!r.bienSo) mark(r, 'err', 'Thiếu biển kiểm soát'); else if (!keys.has(bienKey(r.bienSo))) mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)');
@@ -147,5 +149,26 @@ function payVC(rec, g) {
   }).filter(r => r.n);
   return {rows, n: rows.reduce((a, r) => a + r.n, 0), kg: rows.reduce((a, r) => a + r.kg, 0), tien: rows.reduce((a, r) => a + r.tien, 0)};
 }
-const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length);
+/* Tên một đội xe để so với cột “Đội xe” của file: tên đội xe đã đặt, tên đơn vị vận chuyển (doanh nghiệp) hoặc tên người ký (chủ xe / tài xế) */
+const hdTenKhop = (F, h, ten) => HAKModel.hdTenKhop(F, h, ten);
+/* Phiếu cân → xe (khớp biển số) → đội xe (hợp đồng vận chuyển) của lô. Trả {hd, xe} hoặc null khi biển không thuộc xe nào của lô; lô cũ chưa có hdvc thì hd = null */
+function doiXeOfPc(rec, r) {
+  const x = (rec.dx || []).find(v => bienKey(v.bienSo) === bienKey(r.bienSo)); if (!x) return null;
+  return {xe: x, hd: (rec.hdvc || []).find(h => h.id === x.hdvcId) || null};
+}
+/* tên đội xe để hiện ở bảng phiếu cân: đơn vị vận chuyển / người ký của đội xe */
+function doiXeTen(rec, d) {
+  if (!d || !d.hd) return '';
+  const h = d.hd, gs = typeof groupsDX === 'function' ? groupsDX(rec) : [], g = gs.find(x => x.hd === h);
+  return g ? g.ten : (h.ben && h.ben.ten) || h.ten || '';
+}
+/* đội xe chưa có người ký: hợp đồng theo người ký mà trong đội không xác định được chủ xe / tài xế ký (src/model.js signerOf) */
+function doiXeThieuKy(rec) {
+  const F = {dx: rec.dx || [], hdvc: rec.hdvc || []}, out = new Set();
+  (rec.hdvc || []).forEach(h => { if (h.donViId) return; const xs = HAKModel.xeOf(F, h); if (xs.length && !HAKModel.signerOf(xs, h.key)) out.add(h.id); });
+  return out;
+}
+/* Giấy tờ xe của một đội xe so với NGÀY CỦA TỪNG PHIẾU CÂN (src/giayto.js): phiếu chạy khi kiểm định, bảo hiểm hoặc GPLX đã hết hạn chặn BM-09 và BM-10 của đội xe đó */
+const hanLoiOf = (rec, g) => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g));
+const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
 

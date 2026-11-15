@@ -79,10 +79,11 @@ const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml'
   // 5. ô đơn giá Tổ trưởng cũ
   await load(clone(BASE), 'finfo');
   ok('lô mới: không còn ô “Đơn giá giao khoán Tổ trưởng”', !/Đơn giá giao khoán Tổ trưởng|Đơn giá Tổ trưởng của hồ sơ cũ/.test(await w.innerText('#main')));
-  d = clone(BASE); lotOf(d).info.donGia = 340000; await load(d, 'finfo');
-  ok('hồ sơ cũ có đơn giá Tổ trưởng: vẫn hiện ô (ghi rõ là ô của bản cũ) với giá trị cũ', /Đơn giá Tổ trưởng của hồ sơ cũ/.test(await w.innerText('#main')) && (await w.inputValue('#forestForm [name=donGia]')) === '340.000');
-  await w.click('#forestForm [type=submit]'); await w.waitForTimeout(500);
-  ok('lưu Thông tin rừng của hồ sơ cũ: giữ nguyên đơn giá cũ', (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.donGia)) === 340000);
+  d = clone(BASE); lotOf(d).info.donGia = 340000; lotOf(d).info.donGiaTan = {'Công nhân khai thác': 330000, 'Công nhân cưa': 380000}; await load(d, 'finfo');
+  { const h = await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc);
+    ok('hồ sơ cũ có đơn giá Tổ trưởng (SQLite v6): không còn ô cũ ở Thông tin rừng; giá 340.000 chuyển vào bảng đơn giá theo vị trí của đội và donGia bị bỏ', !/Đơn giá Tổ trưởng của hồ sơ cũ/.test(await w.innerText('#main')) && !(await w.$('#forestForm [name=donGia]')) && h.donGiaTan['Tổ trưởng'] === 340000 && !('donGia' in h), JSON.stringify(h)); }
+  await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(500);
+  ok('lưu Thông tin rừng: giá Tổ trưởng vẫn ở bảng đơn giá của đội, không sinh lại donGia', (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc.donGiaTan['Tổ trưởng'])) === 340000 && !(await w.evaluate(() => 'donGia' in window.hak.loadSync().db.rs.own1.forests.fa.info)));
 
   // 6. vị trí của định mức nhân công có trong bảng đơn giá
   await load(clone(BASE), 'nc');
@@ -103,7 +104,7 @@ const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml'
     nv(3, 'Tổ trưởng', 'TRẦN ĐỘI HAI', 'Tổ trưởng', '049085000021', {doi: 'Đội 2'}), nv(4, 'Công nhân', 'LÊ HAI', 'Công nhân khai thác', '049085000022', {doi: 'Đội 2'})];
   d = clone(BASE); Object.assign(lotOf(d), {nc: NC2, pc: [P(1, 20), P(2, 10)]}); Object.assign(lotOf(d).info, {khoiLuong: 30, soDoi: 2});
   await load(d, 'finfo');
-  ok('lô 2 đội: Thông tin rừng có ô khối lượng thực tế từng đội (trống = theo số người)', (await w.$$('[data-kldoi]')).length === 2 && /Khối lượng thực tế từng đội/.test(await w.innerText('#main')));
+  ok('lô 2 đội chưa nhập khối lượng từng đội: không còn ô nhập (khối lượng đội = phiếu cân của đội)', (await w.$$('[data-kldoi]')).length === 0);
   card = await draftCard(d);
   ok('chưa nhập khối lượng từng đội: không có điều kiện khối lượng đội (chia theo số người như cũ)', !/khối lượng thực tế từng đội/.test(card));
   lotOf(d).info.klDoi = {'049085000011': 20}; card = await draftCard(d);
@@ -115,12 +116,16 @@ const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml'
   lotOf(d).info.klDoi = {'049085000011': 20, '049085000021': 10};
   card = await draftCard(d);
   ok('nhập đủ và khớp tổng (20 + 10 = 30): hết điều kiện khối lượng đội', !/khối lượng thực tế từng đội nhập chưa đủ/.test(card));
+  if (process.env.DBG) console.log('DOI>>', JSON.stringify(await w.evaluate(() => { const f = window.hak.loadSync().db.rs.own1.forests.fa; return {doi: f.doi, info: f.info.klHoSoCu, klDoi: f.info.klDoi, nc: f.nc.map(r => [r.ten, r.cccd, r.doiId])}; })));
   const f = await grab('nttl', 'hd'), z = f && /\.zip$/.test(f) ? await JSZip.loadAsync(fs.readFileSync(f)) : null;
   const docs = z ? await Promise.all(Object.keys(z.files).filter(n => /\.docx$/.test(n)).map(async n => docText(await z.file(n).async('nodebuffer')))) : (f ? [await docText(fs.readFileSync(f))] : []);
   if (process.env.DBG) docs.forEach(x => console.log('DOC', (x.match(/.{0,60}tấn.{0,40}/g) || []).slice(0, 6).join(' | ')));
   ok("BM-14 từng đội dùng khối lượng nhập riêng ở cả mục 2.1 và 2.2: đội 1 ghi 20 tấn, đội 2 ghi 10 tấn (không phải 15/15 theo số người)", docs.length === 2 && docs.some(x => /TRẦN ĐỘI MỘT/.test(x) && /20,000/.test(x) && !/15,000/.test(x)) && docs.some(x => /TRẦN ĐỘI HAI/.test(x) && /10,000/.test(x) && !/15,000/.test(x)), docs.length + ' tài liệu');
-  await w.click('[data-ftab=finfo]'); await w.fill('[data-kldoi="049085000021"]', '12,5'); await w.click('#forestForm [type=submit]'); await w.waitForTimeout(500);
-  ok('lưu Thông tin rừng ghi khối lượng từng đội đã sửa', JSON.stringify(await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.klDoi)) === JSON.stringify({'049085000011': 20, '049085000021': 12.5}));
+  await w.click('[data-ftab=finfo]'); await w.waitForTimeout(300); { const t = await w.innerText('#forestForm');
+    ok('khối lượng từng đội của hồ sơ cũ chỉ hiển thị (không còn ô nhập): Đội 1 = 20 tấn, Đội 2 = 10 tấn, có nút bỏ số hồ sơ cũ', /Khối lượng thực tế từng đội của hồ sơ cũ/.test(t) && !(await w.$('[data-kldoi]')) && /20 tấn/.test(t) && /10 tấn/.test(t) && !!(await w.$('[data-act=boKlCu]')), t.slice(0, 400)); }
+  await w.click('[data-act=boKlCu]'); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(600);
+  { const F = await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa);
+    ok('bỏ số hồ sơ cũ: khối lượng lô và đội lấy theo phiếu cân (klHoSoCu của lô và của đội bị xóa)', !('klHoSoCu' in F.info) && F.doi.every(x => !('klHoSoCu' in x)), JSON.stringify(F.info.klHoSoCu)); }
 
   await app.close();
   ok('không có lỗi JavaScript', errs.length === 0, errs.join(' | '));

@@ -14,7 +14,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const A = lot('fa', 'R-A', {exp: {}, pc: []}); A.info.dienTich = 2.5; A.info.dinhMucTanHa = null; A.info.tuNgay = ''; A.info.denNgay = '';
   await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.waitForSelector('#side');
   const db = () => w.evaluate(() => window.hak.loadSync().db);
-  const openInfo = async () => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=finfo]'); await w.waitForSelector('#forestForm'); };
+  const roi = async sel => { await w.click(sel); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop'); };   // một cách lưu: rời lô còn thay đổi chưa lưu thì hỏi; bài này chỉ xem nên bỏ thay đổi
+  const openInfo = async () => { await roi('[data-open=own1]'); await roi('[data-tab=rung]'); await roi('[data-forest=fa]'); await w.click('[data-ftab=finfo]'); await w.waitForSelector('#forestForm'); };
   const note = () => w.innerText('#tgNote');
   // 1. chưa có định mức: nêu rõ cần gì
   await openInfo();
@@ -38,7 +39,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('nhập ngày bắt đầu 01/10/2026: hiện ngay kết thúc dự kiến 15/10/2026 (13 ngày khai thác, bỏ Chủ nhật 04, 11/10)', /kết thúc dự kiến 15\/10\/2026/.test(n), n);
   await w.click('[data-act=fillDenDk]'); await w.waitForTimeout(200);
   ok('bấm “Điền ngày kết thúc dự kiến”: ô đến ngày = 15/10/2026 (chưa lưu cho đến khi bấm Lưu)', (await w.inputValue('#forestForm [name=denNgay]')) === '15/10/2026' && !(await db()).rs.own1.forests.fa.info.denNgay);
-  await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);
   ok('lưu thông tin rừng: từ ngày 01/10/2026, đến ngày 15/10/2026 trong SQLite', (await db()).rs.own1.forests.fa.info.tuNgay === '01/10/2026' && (await db()).rs.own1.forests.fa.info.denNgay === '15/10/2026');
   await openInfo(); n = await note();
   ok('mở lại: ô đến ngày trùng ngày dự kiến thì không nhắc khác biệt', /kết thúc dự kiến 15\/10\/2026/.test(n) && !/đang là/.test(n), n);
@@ -51,11 +52,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 6. định mức riêng của rừng ưu tiên; dùng mặc định trở lại; số sai bị báo
   await w.fill('#forestForm [name=dinhMucNgayHa]', '2'); await w.waitForTimeout(250); n = await note();
   ok('rừng tự điền 2 ngày/ha: 2,5 × 2 = 5 ngày, số riêng được ưu tiên', /5 ngày/.test(n) && /2,5 ha × 2 ngày\/ha/.test(n), n);
-  await w.fill('#forestForm [name=dinhMucNgayHa]', 'abc'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  await w.fill('#forestForm [name=dinhMucNgayHa]', 'abc'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);
   ok('định mức ngày/ha gõ chữ: bị báo lỗi, không lưu', /Định mức thời gian khai thác \(ngày\/ha\) không phải là số/.test(await w.innerText('#main')) && (await db()).rs.own1.forests.fa.info.dinhMucNgayHa == null);
-  await w.fill('#forestForm [name=dinhMucNgayHa]', '2'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  await w.fill('#forestForm [name=dinhMucNgayHa]', '2'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);
   ok('lưu định mức riêng 2 ngày/ha của rừng vào SQLite', (await db()).rs.own1.forests.fa.info.dinhMucNgayHa === 2);
-  await openInfo(); await w.click('[data-act=tgDefault]'); await w.waitForTimeout(200); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  await openInfo(); await w.click('[data-act=tgDefault]'); await w.waitForTimeout(200); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);
   ok('“Dùng mặc định”: xóa số riêng, quay về 5 ngày/ha (13 ngày)', (await db()).rs.own1.forests.fa.info.dinhMucNgayHa == null && /13 ngày/.test(await (async () => { await openInfo(); return note(); })()));
   // 7. định mức hiệu lực theo ngày bắt đầu: bản mới 4 ngày/ha từ 01/07/2026
   await w.click('#navNorm'); await w.waitForSelector('#tgForm'); await w.fill('#tgForm tr[data-tg=new] [name=t_tu]', '01/07/2026'); await w.fill('#tgForm tr[data-tg=new] [name=t_ngay]', '4'); await w.click('#tgForm button[type=submit]'); await w.waitForTimeout(300);
@@ -71,12 +72,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('đến ngày 13/10/2026 (11 ngày, lệch +1 trong ngưỡng 3): không còn cảnh báo', !(await w.$('#tgLech')));
   await w.fill('#forestForm [name=denNgay]', '07/10/2026'); await w.waitForTimeout(300); lech = await w.innerText('#tgLech').catch(() => '');
   ok('đến ngày 07/10/2026 (6 ngày, ngắn hơn 4): cũng cảnh báo “NGẮN hơn”', /NGẮN hơn dự kiến 10 ngày: -4 ngày/.test(lech), lech);
-  await w.fill('#forestForm [name=denNgay]', '31/10/2026'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  await w.fill('#forestForm [name=denNgay]', '31/10/2026'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);
   await w.click('[data-ftab=kt]'); await w.waitForTimeout(400); const kt = await w.innerText('#main');
   ok('Kiểm tra trước khi xuất: có mục “Thời gian khai thác” (cần đối chiếu) nêu độ lệch; không chặn xuất hồ sơ', /Thời gian khai thác/.test(kt) && /thực tế 27 ngày/.test(kt) && /dự kiến 10 ngày/.test(kt));
   await w.click('#navHome'); await w.waitForSelector('#homeSys'); await w.waitForTimeout(500); const home = await w.innerText('#main');
   ok('Tổng quan: cảnh báo “Rừng có thời gian khai thác thực tế lệch nhiều so với dự kiến” nêu rừng và số ngày', /Rừng có thời gian khai thác thực tế lệch nhiều so với dự kiến/.test(home) && /thực tế 27 ngày, dự kiến 10 ngày \(\+17\)/.test(home), home.slice(0, 400));
-  await openInfo(); await w.fill('#forestForm [name=denNgay]', ''); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  await openInfo(); await w.fill('#forestForm [name=denNgay]', ''); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);
   ok('xóa ô đến ngày, chưa có phiếu cân: không có gì để so, không cảnh báo', !(await w.$('#tgLech')));
   // chưa có ngày kết thúc nhưng đã có phiếu cân: so với ngày cân cuối cùng
   { const d0 = await db(); d0.rs.own1.forests.fa.pc = [{_row: 2, maRung: 'R-A', stt: '1', ngay: '30/10/2026', bienSo: '92C-12345', soPhieu: 'Z1', kl: 5, noiGiao: 'KCN', ghiChu: ''}, {_row: 3, maRung: 'R-A', stt: '2', ngay: '31/10/2026', bienSo: '92C-12345', soPhieu: 'Z2', kl: 5, noiGiao: 'KCN', ghiChu: ''}]; await w.evaluate(x => window.hak.save(x), d0); await w.reload(); await w.waitForSelector('#side'); }

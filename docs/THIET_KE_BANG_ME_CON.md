@@ -146,3 +146,75 @@ Mỗi giai đoạn một commit (hoặc vài commit) có kiểm thử chạy th�
 - Chưa đổi giao diện và cách lưu: dữ liệu vẫn lưu dạng 1.4.x cho đến giai đoạn 3.
 
 Kiểm thử: `tests/model.test.js` (cơ sở dữ liệu thật 1.0.0 và 1.4.x, dữ liệu e2e dùng chung, nhiều đội, nhiều người ký, gộp danh mục, vị trí, lô thiếu khóa); tự kiểm `HAKQN_CHECK_MODEL` chạy `legacyDb(migrateDb(db)) = db` sau **mọi lần lưu** của cả bộ e2e.
+
+## 13. Giai đoạn 2 — danh mục vị trí thống nhất (đã làm)
+
+- **Nguồn duy nhất**: bảng Định mức nhân công (`db.dinhBien`, `HAKDinhBien.danhMuc`). Chức danh nhân công, định mức BHLĐ, bảng đơn giá theo vị trí và hợp đồng đều lấy vị trí từ đây (`chucDanhAll` → `viTriRows`).
+- **Số người 0** = vị trí ngoài định biên chuẩn của một đội: vẫn chọn được, có định mức BHLĐ và đơn giá; không tính vào “1 đội = N người”; nhiệm vụ không bắt buộc; so sánh định biên báo người giữ vị trí này là “ngoài định biên chuẩn”.
+- **Chưa lưu định mức nhân công**: danh mục = Tổ trưởng + các vị trí cũ theo đúng thứ tự cũ (ba vị trí mặc định, vị trí thêm, khóa định mức BHLĐ) + định biên mặc định; không ghi gì vào dữ liệu cho đến khi người dùng bấm Lưu.
+- **Đã lưu**: đúng các dòng đã lưu + vị trí còn được nhân công / đơn giá dùng mà chưa có (0 người).
+- Màn Định mức BHLĐ **bỏ** ô thêm vị trí và nút xóa vị trí; thêm / đổi tên / xóa vị trí ở Định mức nhân công; xóa vị trí còn nhân công giữ thì không cho lưu.
+- **Hợp đồng** (BM-01, BM-14, BM-20, BM-08) liệt kê vị trí đang có người hoặc đã có đơn giá (trước: luôn liệt kê ba vị trí mặc định cũ).
+- Sửa kèm: BM-06 “Phân công nhiệm vụ theo vị trí” ghép nhiệm vụ theo **tên vị trí** (trước ghép theo số dòng — sẽ lệch khi danh mục có vị trí 0 người).
+
+**So bản in với `main`** (4 bộ dữ liệu: giao khoán theo tấn, theo ha, trực tiếp, có vị trí thêm; 89 tài liệu Word): 87 giống từng byte; 2 khác (BM-01, BM-14 của lô có vị trí mặc định cũ không người và không đơn giá: không còn in dòng “……… (hiện chưa có người)” của vị trí đó) — đúng quy tắc mới.
+
+## 14. Giai đoạn 3 — đội khai thác, bảng con “Nhân công khai thác” (đã làm)
+
+**Lưu dạng quan hệ ngay trong lô** (thay cho cách dựng lại từ giai đoạn 1): `lô.doi = [{id, ten, hinhThuc, dienTich, exp}]`, mỗi dòng nhân công mang `doiId`. Các trường của đội (`hinhThucLuong, moHinhKy, donGiaTan, donGiaHa, donGiaNgay, donGia, ngayBDLD` và số/ngày HĐ giao khoán, ủy quyền, nghiệm thu, kỳ thanh toán, phụ cấp) **không còn** ở `lô.info` / `lô.exp` — một nguồn duy nhất. Chấm công `lô.cc` theo người nên tự thuộc đội của người đó.
+
+- **Chuyển dữ liệu**: SQLite v4 (`src/store.js`): mỗi lô chia đội đúng như bản cũ (`src/doi.js`): trực tiếp hoặc 0–1 Tổ trưởng → một đội gồm mọi người; giao khoán nhiều Tổ trưởng → mỗi Tổ trưởng một đội theo cột Đội; người ghi đội lạ → chưa thuộc đội (bản cũ báo lỗi, bản mới cũng báo). Hình thức, đơn giá, số văn bản chép vào mọi đội. `legacyForest` dựng lại dạng 1.4.x giống hệt (kiểm trên cơ sở dữ liệu thật 1.0.0, 1.4.x và dữ liệu e2e). Bản sao `truoc-nang-cap-v2-len-v4` trước khi chuyển.
+- **Ghi**: tiến trình chính chuẩn hóa mọi lô khi lưu (lưu toàn bộ và lưu theo phần thay đổi); giao diện chuẩn hóa tại chỗ trước khi lưu. Gán đội cho người chưa có đội dùng chung một quy tắc (`ganDoi`) ở bản nháp, kiểm tra và lúc lưu: cột Đội khớp tên đội → đội đó; sửa người cũ → giữ đội; người mới không ghi cột Đội → **đội đang chọn**; thay cả danh sách (nạp Excel cho cả lô) → chia theo cột Đội như bản cũ, đội cùng tên giữ id, hình thức, số văn bản.
+- **Hồ sơ**: mỗi đội lập hồ sơ theo hình thức của chính đội: đội giao khoán có HĐ giao khoán (BM-01) và giấy ủy quyền (BM-20); người của đội trực tiếp có HĐ lao động (BM-03) với đơn giá, ngày bắt đầu của đội; **một lô có thể có cả hai loại đội**. Số văn bản của đội nhập riêng thì dùng số đó; các đội dùng chung một số thì thêm hậu tố .1, .2 như cũ. Diện tích đội: đội đã nhập dùng số đó, các đội còn lại chia phần còn lại của lô theo số người; không đội nào nhập thì như cũ.
+- **Giao diện** (tab Nhân công): bảng “Nhân công khai thác: N đội” (Tổ trưởng, số người, hình thức · cách tính, diện tích); bấm một đội để chọn; **+ Thêm đội khai thác** (chép hình thức, đơn giá của đội đang chọn); sửa tên, diện tích, xóa đội (chặn khi còn người, không xóa đội cuối). Thông số hợp đồng, đơn giá và số văn bản ở tab Xuất hồ sơ là của **đội đang chọn**. Cột Đội của bảng nhân công chọn được đội ngay tại dòng (lô nhiều đội).
+
+**So bản in** với bản giai đoạn 2 (5 bộ dữ liệu, thêm một lô giao khoán hai đội; 118 tài liệu Word): **118/118 giống từng byte**.
+
+Kiểm thử: `tests/model.test.js` (chuyển dữ liệu, chia đội như bản cũ, thao tác đội, dòng thêm sau, nạp lại cả danh sách), `scripts/e2e-doikt.js` (thêm đội, hai hình thức trong một lô, nhập tay vào đội đang chọn, chuyển người, số văn bản theo đội, ZIP đúng giấy tờ từng đội, chặn xóa đội còn người, mở lại app giữ nguyên), tự kiểm `HAKQN_CHECK_MODEL` sau mọi lần lưu của cả bộ e2e (`ensureDb(db) = db` và dựng lại dạng cũ chạy được).
+
+## 15. Giai đoạn 4 — hợp đồng vận chuyển, danh mục đơn vị và xe (đã làm)
+
+**Lưu quan hệ trong lô**: `lô.hdvc = [{id, key, donViId, ben, cuoc, exp}]`, mỗi xe mang `hdvcId`. SQLite v5 chuyển dữ liệu (`truoc-nang-cap-*` trước khi chuyển).
+
+- **Hợp đồng theo người ký** (`donViId` trống): mỗi chủ xe / tài xế ký một hợp đồng, xe tự vào hợp đồng có cùng người ký (CCCD) — đúng như bản cũ gom xe theo người ký; đổi người ký của xe thì xe sang hợp đồng của người đó; hợp đồng không còn xe và không có gì riêng thì bỏ. Thứ tự in theo xe đầu tiên.
+- **Hợp đồng với đơn vị trong danh mục** (doanh nghiệp vận chuyển): danh mục dùng chung `db.dmDonViVC` (tên, MST 10 số, địa chỉ trụ sở, người đại diện, chức vụ, điện thoại; MST không trùng). Thêm hợp đồng = chọn đơn vị; thông tin đơn vị **chụp lại lúc chọn** — sửa danh mục sau đó không đổi hợp đồng, chỉ báo và cho “Cập nhật theo danh mục”. Xe chọn hợp đồng ở cột “Hợp đồng” của bảng xe. Biểu mẫu BM-04/09/10 in bên B là doanh nghiệp (MST, trụ sở, đại diện, chức vụ). Xóa hợp đồng còn xe: chặn.
+- **Cước và số văn bản theo hợp đồng**: mỗi hợp đồng có thể có cước riêng (cố định hoặc tấn/km, ngày bắt đầu) và số HĐ vận chuyển, chi phí khác, số/ngày biên bản xác nhận khối lượng riêng; **để trống = dùng của lô** (ô “Cước vận chuyển chung của lô”, số ở tab Xuất hồ sơ). Dữ liệu cũ không có gì riêng nên bản in không đổi. Kiểm tra chặn xuất theo cước của từng hợp đồng có xe.
+- **Danh mục xe**: xe đã nhập ở mọi lô, gộp theo biển số (lô có ngày bắt đầu khai thác mới nhất thắng); khi thêm xe chọn “xe đã có” để điền sẵn chủ xe, tài xế, giấy tờ. Mỗi xe vẫn được chụp lại trong lô (xe là bảng con của hợp đồng của lô đó), nên một xe chạy được nhiều lô.
+
+Chưa làm (giai đoạn 5): hạn giấy tờ xe so với ngày phiếu cân; phiếu cân gắn đội.
+
+**So bản in** với bản giai đoạn 2: **118/118 giống từng byte** (gồm 10 hợp đồng vận chuyển). Kiểm thử: `tests/model.test.js` (gom theo người ký, đổi người ký, doanh nghiệp, chuyển xe, cước/số riêng, chặn xóa), `scripts/e2e-hdvc.js`.
+
+## 16. Sau rà soát nhập liệu (15/11/2026): sửa mâu thuẫn, đội xe, mỗi đối tượng một màn, khối lượng từ phiếu cân, một cách lưu
+
+**Sửa mâu thuẫn**
+- Cột Đội (chữ) của nhân công đi theo đội thật khi chuyển người hoặc đổi tên đội; sửa người sau khi chuyển đội không về đội cũ.
+- Chấm công theo đội đang chọn (đúng hình thức của đội).
+- Màn Kiểm tra trước khi xuất kiểm đơn giá từng đội, so định mức nhân công theo đội thật, rà ngày/số cho từng đội và đội xe.
+- Bỏ ô "Số đội" nhập tay: số đội lấy từ danh sách đội.
+- Báo cáo Danh sách xe ghi người ký của đội xe.
+
+**Hợp đồng vận chuyển ký theo ĐỘI XE** (như đội khai thác): xe chọn từ danh mục xe hoặc nhập mới; xe thuộc một đội xe của lô và giữ đội đã chọn; mỗi đội xe một hợp đồng; người ký là một chủ xe / tài xế trong đội hoặc một doanh nghiệp trong danh mục. Xe mới vào đội xe đang chọn; chưa chọn đội thì mỗi người ký một đội như dữ liệu cũ. Xe không phải người ký của đội không bị bắt thông tin người ký.
+
+**Mỗi đối tượng một màn**: số/ngày văn bản của đội (giao khoán, ủy quyền, nghiệm thu, kỳ thanh toán, phụ cấp) ở màn đội (tab Nhân công, bảng nhân công lọc theo đội); số HĐ vận chuyển, xác nhận khối lượng chung ở tab Vận chuyển (đội xe đặt số riêng); tab Xuất hồ sơ chỉ còn ngày ký chung, mẫu chung của lô và phần in (xem trước số sẽ in, nút sang màn sửa). Thông tin chủ rừng ghi rõ "hợp đồng mua bán gỗ".
+
+**Khối lượng thực hiện chỉ từ phiếu cân**: khối lượng lô = tổng phiếu cân (ô nhập tay chỉ còn ở hồ sơ cũ đã nhập); phiếu cân gắn đội (lô một đội tự gán; nhiều đội gán tại dòng hoặc hàng loạt theo ngày, biển số, số phiếu, chỉ phiếu chưa gán); khối lượng đội = tổng phiếu cân của đội; còn phiếu chưa gán hoặc đội chưa có phiếu → BM-08/14 của đội là bản nháp; chưa gán phiếu nào (hồ sơ cũ) → tính như cũ và nhắc gán. Biểu mẫu đợt 1 (hợp đồng) vẫn theo sản lượng dự kiến.
+
+**Một cách lưu cho lô** (như chứng từ ERP): mọi thay đổi trong lô vào bản nháp; một nút "Lưu dữ liệu vào lô" (nút Lưu của từng khung làm cùng việc) lưu cả lô cùng các bảng nháp; "Bỏ thay đổi" về bản đã lưu; thanh "Chưa lưu" ở mọi tab của lô; xuất/in khóa, rời lô và đóng app hỏi khi còn thay đổi. Lưu danh mục, cài đặt, chủ rừng ghi ngay nhưng không kéo theo thay đổi chưa lưu của lô.
+
+Kiểm thử: `scripts/e2e-doikt.js`, `e2e-hdvc.js`, `e2e-phieudoi.js`, `e2e-motcachluu.js`, `tests/model.test.js`; so bản in với bản giai đoạn 2: 118/118 giống từng byte (bộ dữ liệu có khối lượng nhập).
+
+## 17. Giai đoạn 5 — hoàn tất khối lượng, xe và nhập Excel theo bảng con (đã làm)
+
+- **Hạn giấy tờ xe theo ngày phiếu cân** (`src/giayto.js`): so kiểm định, bảo hiểm, GPLX của chính xe chạy phiếu với ngày cân của phiếu (cân đúng ngày hết hạn vẫn hợp lệ; không so với hôm nay). Phiếu chạy khi giấy tờ hết hạn → lỗi chặn **BM-09, BM-10 của đội xe đó** (các đội xe khác vẫn xuất). Màn xe giữ cảnh báo "sắp hết hạn" theo hôm nay.
+- **Phiếu cân → xe → đội xe**: đội xe suy ra từ biển số (chỉ xem, hiện dưới biển số; lô một đội xe không hiện); khung gán đội hàng loạt có lọc theo đội xe; biển không thuộc xe nào của lô và xe thuộc đội xe chưa có người ký đều báo.
+- **Nhập Excel theo bảng con**: nhân công vào đội đang chọn (cột Đội tùy chọn, tên lạ → lỗi dòng); xe có cột **Đội xe** (khớp tên đội xe, tên đơn vị hoặc tên người ký); phiếu cân có cột **Đội**. `src/xlsxmau.js` và `tests/xlsxmau.test.js` cập nhật; file cũ không có cột mới nạp như trước. Nạp lại cùng file không bị tính là "cập nhật" (chữ ở cột gợi ý chỉ dùng cho dòng mới).
+- **Danh mục người lao động** (`HAKModel.nguoiDanhMuc`): gộp theo CCCD 12 số của mọi lô, lô có ngày bắt đầu khai thác mới nhất thắng; tính từ dữ liệu (không bảng riêng), chọn khi thêm nhân công, thông tin chụp lại trong lô.
+- **Báo cáo**: Sản lượng theo đội (đội, số phiếu, tấn, đơn giá bình quân đ/tấn, thành tiền, phiếu chưa gán), Vận chuyển theo đội xe (người ký, số xe, số chuyến, tấn, cước, thành tiền), Danh sách lao động có cột Đội.
+
+## 18. Giai đoạn 6 — dọn trường cũ, một bộ kiểm tra, giao diện một cách lưu (đã làm; xem CHANGELOG.md)
+
+- **SQLite v6** (`src/store.js`, `HAKModel.xoaTruongCu`): bỏ `soDoi`, `khoiLuong` nhập tay (→ `klHoSoCu`), `klDoi` (→ `doi[].klHoSoCu`), `donGia` Tổ trưởng cũ (→ bảng đơn giá của đội), cước bậc (→ tấn/km + `bacCu`), chữ ở cột Đội / Đội xe của dòng đã có đội. Chạy một chiều sau khi sao lưu file; chạy lại không đổi gì. `ensureForest` cũng áp dụng (nhập, khôi phục sao lưu cũ). Tự kiểm `HAKQN_CHECK_MODEL` kiểm "dữ liệu đã chuẩn hóa" sau mỗi lần lưu; bất biến "dựng lại dạng cũ giống hệt" thay bằng test chuyển dữ liệu từng trường (`tests/model.test.js`, `tests/store.test.js`).
+- **So bản in** (`scripts/so-ban-in.js --root <mã> --out a.json`, rồi `--so a.json b.json`): băm `document.xml` của mọi .docx trong gói "Toàn bộ hồ sơ" của 8 bộ lô thử. Kết quả trước/sau v6: giống từng byte, trừ BM-01 (2.2), BM-08, BM-20 của lô còn đơn giá Tổ trưởng cũ (số tiền không đổi).
+- **Một bộ kiểm tra** (`src/kiemtra.js`): dạng mục chung {mức, nhóm, đối tượng, biểu mẫu bị chặn, nơi sửa}, `tomTat`, `bieuMauBiChan`, `lyDoChan`, `theoDoiTuong`; `exportCheck` sinh mục theo dạng này; màn Kiểm tra trước khi xuất hiện đối tượng và biểu mẫu bị chặn; bước Chuẩn bị của quy trình hồ sơ đọc số mục chặn từ đây. Chưa làm: chuyển các hàm quy tắc (`checkNC`, `checkDX`, `checkPC`, `gate`) sang hàm thuần trong `src/`.
+- **Giao diện**: breadcrumb; sửa ô ở các khung của lô vào bản nháp (sự kiện `change`), khung không còn nút Lưu riêng (giữ nút ẩn để Enter lưu), một nút "Lưu dữ liệu vào lô". Chưa làm: sắp xếp lại mọi màn đối tượng theo cùng bố cục.

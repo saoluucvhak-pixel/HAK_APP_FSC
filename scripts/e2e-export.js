@@ -18,14 +18,14 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   await w.fill('#forestForm [name=diaDiem]', 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng'); await w.fill('#forestForm [name=cuLy]', '45');
   await w.fill('#forestForm [name=lat]', '15.9'); await w.fill('#forestForm [name=lng]', '108.1'); await w.fill('#forestForm [name=dienTich]', '2,5'); await w.fill('#forestForm [name=dinhMucTanHa]', '80');
   await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026');
-  await w.click('#forestForm button[type=submit]');
-  await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.click('#vcForm button[type=submit]');
-  await w.click('[data-ftab=nc]'); await w.fill('#luongForm [name=dt_0]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(150);
+  await w.$eval('#forestForm', f => f.requestSubmit());
+  await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.$eval('#vcForm', f => f.requestSubmit());
+  await w.click('[data-ftab=nc]'); await w.fill('#luongForm [name=dt_0]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(150);
   await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
-  for (const [k, v] of [['soKT', '07'], ['soVC', '09'], ['ngayKy', '01/10/2026']]) { if (await w.$(`[data-exp=${k}]`)) { await w.fill(`[data-exp=${k}]`, v); await w.dispatchEvent(`[data-exp=${k}]`, 'change'); } }
+  for (const [k, v] of [['soKT', '07'], ['soVC', '09'], ['ngayKy', '01/10/2026']]) await require('./lib-stage').setExp(w, k, v);
   const btns = await w.$$('button[data-act=dl]'); let done = 0; const disabled = [];
   for (let bi = 0; bi < btns.length; bi++) {
     const b = (await w.$$('button[data-act=dl]'))[bi];   // lấy lại nút mỗi lần: sau khi tải, thông báo cảnh báo làm giao diện vẽ lại

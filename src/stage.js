@@ -87,6 +87,7 @@
     if (msgs.length) next.giaLoi = msgs; else if (old.giaLoi && old.giaLoi.length) next.giaLoi = [];
     return {next, fields};
   }
+  const HINT_NHAP = {nc: ['doi'], pc: ['doi'], dx: ['doiXe']};
   function merge(st, kind, rows, opt) {
     opt = opt || {}; const list = st.cur[kind], key = KEY[kind], rep = {add: 0, upd: 0, same: 0, kept: 0, ids: [], dupInFile: [], changes: [], pending: 0, errors: 0};
     const seenInFile = new Map(), touched = new Set(); st.pending = st.pending || [];
@@ -108,6 +109,9 @@
         }
       } else target = matches.find(m => !identDiffs(m, r).length) || matches[0];
       touched.add(target._id);
+      /* chữ ở cột Đội (nhân công, phiếu cân) và Đội xe (xe) chỉ là GỢI Ý lúc nhập: sau khi dòng đã có đội, chữ này được bỏ (SQLite v6). Dòng đã có thì không đổi đội theo chữ,
+       * nên nạp lại cùng file không được tính là “cập nhật”; dòng cũ còn giữ chữ (chưa thuộc đội, đang báo lỗi) vẫn được cập nhật. */
+      (HINT_NHAP[kind] || []).forEach(h => { if (target[h] === undefined) delete r[h]; });
       const {next, fields} = applyInto(kind, target, r, Object.assign({}, opt, {suy, suyFn: opt.suyNgay2}));
       // trường tạo nên khóa chỉ khác cách viết (hoa/thường, dấu chấm, số 0 đầu) thì giữ cách viết đã lưu: không coi là thay đổi
       const kf = kind === 'pc' ? 'soPhieu' : kind === 'dx' ? 'bienSo' : (cccd(r.cccd) ? 'cccd' : 'ten'); if (target[kf] !== undefined && target[kf] !== '') next[kf] = target[kf];
@@ -148,6 +152,7 @@
   function updateRow(st, kind, id, row) {
     const i = st.cur[kind].findIndex(x => x._id === id); if (i < 0) return {ok: false, error: 'Không tìm thấy dòng.'};
     const old = st.cur[kind][i], next = Object.assign({}, clone(row), {_id: id}); if (old._row != null && next._row == null) next._row = old._row;
+    if (old.doiId !== undefined && next.doiId === undefined) next.doiId = old.doiId;   // nhân công: sửa một người không làm người đó rời đội (cấu trúc 2.0)
     const tay = new Set(old._tay || []); Object.keys(next).forEach(f => { if (f[0] !== '_' && f !== 'giaLoi' && !same(old[f], next[f])) tay.add(f); }); if (tay.size) next._tay = [...tay];   // trường sửa tay: nhập file sau đó không ghi đè
     if (kind === 'dx' && bienKey(old.bienSo) !== bienKey(next.bienSo)) {   // đổi biển số xe: các phiếu cân liên kết đổi theo, số chuyến và khối lượng không đổi
       const linked = linkedPc(st, old.bienSo); linked.forEach(p => { p.bienSo = next.bienSo; p._plateSrc = 'Sửa biển số xe'; });

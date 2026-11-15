@@ -19,7 +19,7 @@ function d2Items(rec) {
   const BD = doiOf(rec), dk = d => BD.multi ? d.key : '', dl = d => BD.multi ? ' · ' + doiLabel(d) : '';
   BD.doi.forEach(d => mk('08', dk(d), FORMS_D2['08'] + dl(d), baseNC.concat(miss('08', D2_NEN_NEED['08'])), miss('08', HAKBanNhap.FORMS['08'].need.filter(k => !D2_NEN_NEED['08'].includes(k)))));
   groupsDX(rec).forEach(gr => { const n = tripsOf(rec, gr).length, k = gr.cccd || gr.ten;
-    const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : g.pc && g.pc.errs.length ? [{text: 'phiếu cân còn lỗi (' + g.pc.errs.length + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : [];
+    const pcMiss = !n ? [{text: 'chưa có phiếu cân hợp lệ của ' + gr.ten, where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : g.pc && g.pc.errs.length ? [{text: 'phiếu cân còn lỗi (' + g.pc.errs.length + ')', where: 'Vận chuyển → Phiếu cân', go: {ftab: 'dx'}}] : hanLoiOf(rec, gr).slice(0, 3).map(v => ({text: 'giấy tờ xe hết hạn lúc chạy ' + HAKGiayTo.text(v), where: 'Vận chuyển → Xe', go: {ftab: 'dx'}})).concat(hanLoiOf(rec, gr).length > 3 ? [{text: 'còn ' + (hanLoiOf(rec, gr).length - 3) + ' phiếu khác quá hạn giấy tờ', where: 'Vận chuyển → Xe', go: {ftab: 'dx'}}] : []);
     ['09', '10'].forEach(code => mk(code, k, FORMS_D2[code] + ' · ' + d2GroupLabel(rec, gr), baseVC.concat(miss(code, D2_NEN_NEED[code])), pcMiss.concat(miss(code, HAKBanNhap.FORMS[code].need.filter(x => !D2_NEN_NEED[code].includes(x)))))); });
   BD.doi.forEach(d => mk('14', dk(d), FORMS_D2['14'] + dl(d), baseNC.concat(miss('14', D2_NEN_NEED['14'])), miss('14', HAKBanNhap.FORMS['14'].need.filter(k => !D2_NEN_NEED['14'].includes(k)))));
   items.sort((a, b) => IA.ORDER.indexOf(a.code) - IA.ORDER.indexOf(b.code));
@@ -137,7 +137,7 @@ function docUyQuyen(rec, ex) {
 }
 /* Cảnh báo theo từng trường hợp sau khi tải: mục nào CHƯA đủ dữ liệu thì biểu mẫu tương ứng thiếu hoặc còn chấm; hồ sơ đủ thì không có cảnh báo */
 function exportNotes(rec, g, kind) {
-  const n = [], i = rec.info, ex = Object.assign({}, rec.exp || {}); if (!ex.ngayKy && i.ngayKyHopDong) ex.ngayKy = i.ngayKyHopDong;
+  const n = [], i = rec.info, ex = expLo(rec);
   const tail = kind === 'all' || kind === 'cuoi', head = kind === 'all' || kind === 'dau', vol = volumeOf(i);
   if (tail) {
     if (!g.canPC) n.push('BM-09 (xác nhận khối lượng) và BM-10 (thanh toán vận chuyển) KHÔNG có trong file vì chưa đủ phiếu cân hợp lệ (nạp phiếu cân ở tab Vận chuyển, xem mục “Phiếu cân” ở tab Kiểm tra trước khi xuất).');

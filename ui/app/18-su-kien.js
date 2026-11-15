@@ -5,7 +5,7 @@ document.addEventListener('click', async e => {
   const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick); return; }
   const dsh = t.closest('[data-dash]'); if (dsh) { const [oid, fid] = dsh.dataset.dash.split('|'); openRs(oid); return openForest(fid); }
   const open = t.closest('[data-open]'); if (open) return openRs(open.dataset.open);
-  const of = t.closest('[data-forest]'); if (of) return openForest(of.dataset.forest);
+  const of = t.closest('[data-forest]'); if (of) { curDoi = null; curHd = null; return openForest(of.dataset.forest); }
   const sf = t.closest('[data-sforest]'); if (sf) return openForest(sf.dataset.sforest);
   const tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; return render(); }
   const ftb = t.closest('[data-ftab]'); if (ftb) { ftab = ftb.dataset.ftab; return render(); }
@@ -16,6 +16,17 @@ document.addEventListener('click', async e => {
   if (act === 'delRs') return delRs(), render();
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
+  if (act === 'chonDoi') { curDoi = el.dataset.doi; return render(); }
+  if (act === 'ncTatCa') { ncTatCa = true; return render(); }
+  if (act === 'ncTheoDoi') { ncTatCa = false; return render(); }
+  if (act === 'chonHd') { curHd = curHd === el.dataset.hd ? null : el.dataset.hd; return render(); }
+  if (act === 'themHd') return themHd();
+  if (act === 'pcGanLoat') return pcGanLoat();
+  if (act === 'xoaHd') return xoaHd();
+  if (act === 'hdCapNhatDv') return hdCapNhatDv();
+  if (act === 'suaDv') { const d = (db.dmDonViVC || {})[el.dataset.dv], fm = document.getElementById('dvForm'); if (d && fm) fm.outerHTML = dvForm(d); return; }
+  if (act === 'themDoi') return themDoi();
+  if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();
   if (act === 'openSettings') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'settings'; setg.msg = null; return render(); }
   if (act === 'dataRetry') return issueAct('retry');
@@ -27,7 +38,7 @@ document.addEventListener('click', async e => {
   if (act === 'setOpenData') return HB.openDataFolder();
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
-  if (/^(fillTu|fillDen|fillKl|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
+  if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
   if (act === 'pcPrint') { if (stBlockNote()) return; const rec = curRec(); if (!rec) return; const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(HAKPhieuCan.aoa(rec), HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
@@ -40,7 +51,7 @@ document.addEventListener('click', async e => {
     if (!r || !inp) return;
     const v = trim(inp.value);
     if (!HAKDates.isValid(v)) { note('Chưa sửa phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(v) + '.', 'err'); return; }
-    const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persist(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
+    const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persistLo(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
   }
   if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
   if (act === 'openSetGs') { cur = null; curF = null; view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
@@ -53,7 +64,7 @@ document.addEventListener('click', async e => {
   if (act === 'mhCancel') { mh.open = false; return render(); }
   if (act === 'mhConfirm') {
     const f = curForest(), snap = mhSnapshotNow(); if (!f || !snap) return;
-    f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false; persist();
+    f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false; luuLo();   // nút Xác nhận của khung = lưu cả lô
     mh.msg = {kind: 'ok', text: 'Đã lưu công ty mua hàng và địa điểm vận chuyển đến cho rừng này: ' + snap.ten + ' – ' + snap.diaChi + '.'}; return render();
   }
   if (act === 'guide') return document.getElementById('guideBox').classList.add('on');
@@ -78,7 +89,7 @@ document.addEventListener('click', async e => {
     if (el.dataset.kind === 'nc') { f.nc = []; f.ncFile = ''; f.ncAt = ''; }
     else if (el.dataset.kind === 'pc') { f.pc = []; f.pcFile = ''; f.pcAt = ''; }
     else { f.dx = []; f.dxFile = ''; f.dxAt = ''; }
-    persist(); note('Đã xóa dữ liệu.'); return;
+    persistLo(); note('Đã xóa dữ liệu (chưa lưu: bấm “Lưu dữ liệu vào lô” để ghi, “Bỏ thay đổi” để hoàn lại).'); return;
   }
   if (act === 'qtMark' || act === 'qtUnmark') { qtMarkAct((el.dataset.codes || '').split(',').filter(Boolean), act === 'qtMark'); return render(); }
   if ((act === 'd2dl' || act === 'd2confirm' || act === 'd2legacy' || act === 'd2undo') && stBlockNote()) return;
@@ -109,10 +120,22 @@ document.addEventListener('click', async e => {
   }
 });
 
+/* MỘT cách lưu cho lô: sửa một ô ở khung nào thì thay đổi vào BẢN NHÁP của lô (hiện thanh “Chưa lưu”); khung không còn nút Lưu riêng. Enter trong ô hoặc nút “Lưu dữ liệu vào lô” mới ghi SQLite. */
+const KHUNG_LO = {forestForm: 'saveForest', luongForm: 'saveLuong', vcForm: 'saveVc', giayForm: 'saveGiay', doiForm: 'saveDoi', hdForm: 'saveHd'};
+document.addEventListener('change', e => {
+  const t = e.target, fm = t && t.form; if (!fm || !KHUNG_LO[fm.id] || t.id === 'xeDm' || t.id === 'ncDm') return;
+  const fn = {saveForest, saveLuong, saveVc, saveGiay, saveDoi, saveHd}[KHUNG_LO[fm.id]]; if (!fn) return;
+  const f = curForest(), truoc = f ? JSON.stringify(f) : '';
+  nhapKhung = {can: false};
+  try { fn(fm, true); } finally { const can = nhapKhung.can; nhapKhung = null; if (can && f && JSON.stringify(f) !== truoc) persistLo(f); }
+});
 document.addEventListener('submit', e => {
   if (e.target.id === 'infoForm') { e.preventDefault(); saveInfo(e.target); }
   if (e.target.id === 'forestForm') { e.preventDefault(); saveForest(e.target); }
   if (e.target.id === 'luongForm') { e.preventDefault(); saveLuong(e.target); }
+  if (e.target.id === 'doiForm') { e.preventDefault(); saveDoi(e.target); }
+  if (e.target.id === 'hdForm') { e.preventDefault(); saveHd(e.target); }
+  if (e.target.id === 'dvForm') { e.preventDefault(); saveDv(e.target); }
   if (e.target.id === 'stForm') { e.preventDefault(); stFinishRow(); }
   if (e.target.id === 'vcForm') { e.preventDefault(); saveVc(e.target); }
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
@@ -124,6 +147,11 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persistLo(); render(); return; }
+  if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persistLo(); render(); return; }
+  if (t.id === 'ncDm' && t.value) { const x = HAKModel.nguoiDanhMuc(db.rs).find(z => HAKModel.cccdSo(z.cccd) === t.value); if (x) { stRead(); ['danhXung', 'ten', 'ngaySinh', 'cccd', 'ngayCap', 'noiCap', 'diaChi'].forEach(k => { if (x[k] != null) stm.vals[k] = stStr(x[k]); }); stRender(); } return; }
+  if (t.id === 'xeDm' && t.value) { const x = xeDanhMuc().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); ST_FIELDS.dx.forEach(([k]) => { if (x[k] != null && k !== 'stt') stm.vals[k] = stStr(x[k]); }); stRender(); } return; }
+  if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persistLo(); render(); return; }
   if (t.name === 'bienSo' && t.form && t.form.id === 'stForm' && t.value === '__new') { stRead(); stOpen('dx', null, null, {kind: stm.kind, id: stm.id, vals: Object.assign({}, stm.vals, {bienSo: ''})}); return; }   // thêm xe ngay trong lượt sửa phiếu: giữ nguyên các ô đã nhập
   if (t.name === 'vcMode' && t.form && t.form.id === 'vcForm') {
     t.form.querySelectorAll('[data-vcgrp]').forEach(g => { g.style.display = g.dataset.vcgrp === t.value ? '' : 'none'; });
@@ -146,8 +174,11 @@ document.addEventListener('change', e => {
   const f = curForest();
   if (t.dataset.exp && f) {
     f.exp = f.exp || {};
-    f.exp[t.dataset.exp] = trim(t.value);
-    persist();
+    const k = t.dataset.exp, dt = HAKModel.DOI_EXP.includes(k) ? curTeam(f) : null, cu = dt ? ((dt.exp || {})[k] ?? '') : (f.exp[k] ?? '');
+    if (String(cu) === trim(t.value)) return;   // không đổi (ví dụ ô mất tiêu điểm sau khi đã lưu): không đánh dấu chưa lưu
+    const rest = ghiDoi(f, {[t.dataset.exp]: trim(t.value)}, 'exp');   // số văn bản của đội (HĐ giao khoán, ủy quyền, nghiệm thu, kỳ thanh toán) ghi vào đội
+    Object.assign(f.exp, rest);
+    persistLo(f);
   }
 });
 
@@ -181,7 +212,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset && t.dataset.mamoi !== undefined) { impMaCheck(); return; }
   if (t.dataset && t.dataset.exp && curForest()) {   // xem trước số hợp đồng cập nhật ngay khi gõ
-    const rec = curRec(), exo = Object.assign({}, rec.exp, {[t.dataset.exp]: trim(t.value)});
+    const rec = curRec(), exo = Object.assign({}, rec.exp, rec.doi && rec.doi.length > 1 ? (curTeam() || {}).exp : {}, {[t.dataset.exp]: trim(t.value)});
     const a = document.getElementById('soPreviewHd'), b = document.getElementById('soPreviewVc');
     if (a) a.innerHTML = soPreviewHtml(rec, exo, 'hd'); if (b) b.innerHTML = soPreviewHtml(rec, exo, 'vc');
   }

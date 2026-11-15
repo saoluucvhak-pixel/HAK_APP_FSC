@@ -34,6 +34,35 @@ const MIGRATIONS = [
         id TEXT PRIMARY KEY, ten TEXT NOT NULL DEFAULT '', mst TEXT NOT NULL DEFAULT '',
         data TEXT NOT NULL, hash TEXT NOT NULL, updated_at TEXT NOT NULL);
       CREATE INDEX idx_companies_mst ON companies(mst);`);
+  },
+  /* v4 (cấu trúc 2.0, giai đoạn 3): ĐỘI KHAI THÁC là bảng con của lô (src/model.js). Mỗi lô: hình thức, cách tính, đơn giá, số văn bản của đội chuyển từ
+   * thông tin rừng / thông số xuất sang lô.doi; mỗi nhân công mang doiId. Chỉ đổi cột data của forests (và hash); không xóa dòng nào.
+   * Chạy trong giao dịch nâng cấp, sau khi đã sao lưu file (snapshotFile trước khi nâng cấp). */
+  function v4(db) {
+    const M = require('./model'), up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    db.prepare('SELECT id, data FROM forests').all().forEach(r => {
+      const f = JSON.parse(r.data); if (!M.needsEnsure(f)) return;
+      const data = JSON.stringify(M.ensureForest(f)); up.run(data, sha(data), r.id);
+    });
+  },
+  /* v5 (giai đoạn 4): HỢP ĐỒNG VẬN CHUYỂN là bảng con của lô, xe mang hdvcId (src/model.js). Mỗi người ký (chủ xe / tài xế) một hợp đồng như bản cũ;
+   * cước, số hợp đồng để trống = dùng của lô nên bản in không đổi. Chỉ đổi cột data của forests. */
+  function v5(db) {
+    const M = require('./model'), up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    db.prepare('SELECT id, data FROM forests').all().forEach(r => {
+      const f = JSON.parse(r.data); if (!M.needsEnsure(f)) return;
+      const data = JSON.stringify(M.ensureForest(f)); up.run(data, sha(data), r.id);
+    });
+  },
+  /* v6 (giai đoạn 6): BỎ TRƯỜNG CŨ ĐÃ ĐƯỢC THAY (src/model.js xoaTruongCu): info.soDoi, khối lượng nhập tay → klHoSoCu (chỉ hiển thị), klDoi → doi[].klHoSoCu,
+   * đơn giá Tổ trưởng hồ sơ cũ → bảng đơn giá theo vị trí của đội, cước bậc cự ly → tấn/km (giữ bậc ở bacCu), chữ ở cột Đội / Đội xe của dòng đã có đội. Một chiều;
+   * chạy sau khi sao lưu file (snapshotFile trước khi nâng cấp); chỉ đổi cột data của forests. */
+  function v6(db) {
+    const M = require('./model'), up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    db.prepare('SELECT id, data FROM forests').all().forEach(r => {
+      const f = JSON.parse(r.data); if (!M.needsEnsure(f)) return;
+      const data = JSON.stringify(M.ensureForest(f)); up.run(data, sha(data), r.id);
+    });
   }
 ];
 
@@ -173,11 +202,13 @@ class Store {
       const info = o.info || {};
       return {id, ma: String(info.ma || ''), ten: String(info.ten || ''), cccd: String(info.cccd || ''), data: json, hash: sha(json)};
     });
+    const M = require('./model');
     const rowsF = Object.entries(upF).map(([id, v]) => {
       let f; try { f = JSON.parse(v && v.json); } catch (e) { bad('lô ' + id); }
       if (!f || typeof f !== 'object' || (f.id || id) !== id || !v.owner || delO.includes(String(v.owner))) bad('lô ' + id);
+      const json = M.needsEnsure(f) ? JSON.stringify(f = M.ensureForest(f)) : v.json;   // chuẩn hóa đội như lưu toàn bộ
       const fi = f.info || {};
-      return {id, owner_id: String(v.owner), ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: v.json, hash: sha(v.json)};
+      return {id, owner_id: String(v.owner), ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: json, hash: sha(json)};
     });
     if (delF.some(id => id in upF) || delO.some(id => id in upO)) bad('vừa sửa vừa xóa cùng một dòng');
     this._guardDelete(delO, delF, opts);
@@ -197,6 +228,7 @@ class Store {
 
   /* Mã nội bộ (id) chủ rừng và lô rừng là khóa chính: trùng thì bản sau ghi đè bản trước trong SQLite → dừng và báo, không ghi gì */
   explode(db) {
+    const M = require('./model');
     const owners = [], forests = [], seenO = new Map(), seenF = new Map(), dups = [];
     Object.entries(db.rs || {}).forEach(([id, o]) => {
       if (!o || typeof o !== 'object') throw new Error('Hồ sơ chủ rừng "' + id + '" không hợp lệ. Không ghi gì.');
@@ -204,7 +236,8 @@ class Store {
       if (seenO.has(rest.id)) dups.push('chủ rừng ' + rest.id); seenO.set(rest.id, true);
       const data = JSON.stringify(rest), info = rest.info || {};
       owners.push({id: rest.id, ma: String(info.ma || ''), ten: String(info.ten || ''), cccd: String(info.cccd || ''), data, hash: sha(data)});
-      Object.entries(fs_ || {}).forEach(([fid, f]) => {
+      Object.entries(fs_ || {}).forEach(([fid, f0]) => {
+        const f = M.needsEnsure(f0) ? M.ensureForest(f0) : f0;   // mọi lô ghi xuống đều có đội và mọi nhân công có doiId (tiến trình chính là nơi có thẩm quyền)
         const fd = JSON.stringify(f), fi = f.info || {}, idF = f.id || fid;
         if (seenF.has(idF)) dups.push('lô ' + idF + ' (' + (fi.maRung || '') + ') ở chủ ' + seenF.get(idF) + ' và ' + rest.id); seenF.set(idF, rest.id);
         forests.push({id: idF, owner_id: rest.id, ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: fd, hash: sha(fd)});

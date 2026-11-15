@@ -44,12 +44,12 @@ async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(f
   // sản lượng dự kiến tự nhảy ngay khi gõ diện tích và định mức (chưa cần bấm Lưu)
   await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=dienTich]', '13.0076'); await w.fill('#forestForm [name=dinhMucTanHa]', '120');
   ok('sản lượng dự kiến tự tính ngay khi gõ: 13.0076 ha × 120 = 1.561 tấn', (await w.inputValue('#slDuKien')) === '1.561 tấn', await w.inputValue('#slDuKien'));
-  await w.fill('#forestForm [name=dienTich]', '2'); await w.fill('#forestForm [name=dinhMucTanHa]', '80'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400);
+  await w.fill('#forestForm [name=dienTich]', '2'); await w.fill('#forestForm [name=dinhMucTanHa]', '80'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);
   // cự ly ngay ở tab Vận chuyển
   await w.click('[data-ftab=dx]');
   ok('tab Vận chuyển (tấn/km): KHÔNG có ô nhập cự ly thứ hai, chỉ hiện lại số km đang có (nhập ở Thông tin rừng)', !(await w.$('#vcForm [name=vcCuLy]')) && /Cự ly vận chuyển: 45 km/.test(await w.innerText('#vcForm')), await w.innerText('#vcForm'));
   await w.click('#vcForm [data-act=ktGo]'); ok('nút trong tab Vận chuyển mở tab Thông tin rừng có ô cự ly', await w.isVisible('#forestForm [name=cuLy]'));
-  await w.fill('#forestForm [name=cuLy]', '60'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(500);
+  await w.fill('#forestForm [name=cuLy]', '60'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(500);
   await w.click('[data-ftab=dx]'); ok('đổi cự ly ở Thông tin rừng: tab Vận chuyển tính lại 60.000 đồng/tấn', /60\.000 đồng\/tấn \(1\.000 đồng\/tấn\/km × 60 km\)/.test(await w.innerText('#vcForm')) && /Cự ly vận chuyển: 60 km/.test(await w.innerText('#vcForm')) && (await dbOf()).forests.fa.info.cuLy === 60, (await w.innerText('#vcForm')).slice(-220));
   await w.click('[data-ftab=dx]'); await w.selectOption('#vcForm [name=vcMode]', 'coDinh');
   ok('cước cố định: dòng cự ly ở tab Vận chuyển ẩn (không cần)', !(await w.isVisible('#vcForm [data-vcgrp=tanKm]')));

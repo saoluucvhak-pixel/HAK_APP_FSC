@@ -19,12 +19,12 @@ const openForest = async (w, fid, ftab) => { await w.click('[data-open=own1]'); 
   const info = await w.evaluate(() => { const r = window.hak.loadSync(); return {schema: r.schema, version: r.version}; });
   const bk = path.join(dir, 'backups'), backups = fs.existsSync(bk) ? fs.readdirSync(bk) : [];
   ok('nâng cấp cấu trúc có sao lưu tự động trước khi đổi', backups.some(f => /^truoc-nang-cap-v2-len-v\d+-.*\.sqlite$/.test(f)), JSON.stringify(backups));
-  ok('phiên bản ứng dụng mới', /^1\.[2-9]/.test(info.version), info.version);
+  ok('phiên bản ứng dụng mới', /^(1\.[2-9]|[2-9]\.)/.test(info.version), info.version);
   let db = await dbOf(w); const o = db.rs.own1, F = o.forests;
   ok('một chủ ba lô còn đủ', Object.keys(db.rs).length === 1 && o.info.ten === 'CHỦ RỪNG CŨ' && Object.keys(F).length === 3);
   ok('số bản ghi cũ còn đủ (xe 2+2+2, phiếu 2+1+3)', ['f1', 'f2', 'f3'].map(k => F[k].dx.length).join() === '2,2,2' && ['f1', 'f2', 'f3'].map(k => F[k].pc.length).join() === '2,1,3');
   ok('điểm đến nhập tay cũ còn nguyên, chưa có bản chụp công ty', F.f1.exp.vcDiemDen === 'Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc' && !F.f1.info.muaHang && F.f2.exp.vcDiemDen === 'Cảng dăm Kỳ Hà');
-  ok('dữ liệu bậc cự ly cũ giữ nguyên', F.f2.info.vanChuyen.mode === 'tanDoan' && F.f2.info.vanChuyen.bac.length === 2);
+  ok('SQLite v6: cước bậc cự ly cũ chuyển sang tấn/km, dữ liệu bậc giữ ở bacCu', F.f2.info.vanChuyen.mode === 'tanKm' && F.f2.info.vanChuyen.bacCu.length === 2 && !('bac' in F.f2.info.vanChuyen));
   const lk = await w.evaluate(() => window.hak.lookup.status()); ok('bản tra cứu ba tab lưu offline còn nguyên sau nâng cấp', lk.ok && (lk.counts ? Object.values(lk.counts).every(n => n > 0) : JSON.stringify(lk).length > 20), JSON.stringify(lk).slice(0, 300));
 
   // địa chỉ cũ còn hiển thị; chỉ đổi sau khi xác nhận
@@ -42,7 +42,7 @@ const openForest = async (w, fid, ftab) => { await w.click('[data-open=own1]'); 
 
   // lô cước theo bậc và phiếu sai ngày
   await openForest(w, 'f2', 'kt'); main = await w.innerText('#main');
-  ok('lô R-CU2 (cước theo bậc): kiểm tra nêu phải chọn lại cước, dữ liệu bậc không mất', /Cước theo bậc cự ly \(hồ sơ cũ\)/.test(main) && (await dbOf(w)).rs.own1.forests.f2.info.vanChuyen.bac.length === 2);
+  ok('lô R-CU2 (cước bậc cũ): không còn mục “cước theo bậc” bắt chọn lại; thiếu đơn giá tấn/km thì kiểm tra nêu thiếu đơn giá, dữ liệu bậc không mất', !/Cước theo bậc cự ly \(hồ sơ cũ\)/.test(main) && (await dbOf(w)).rs.own1.forests.f2.info.vanChuyen.bacCu.length === 2);
   await openForest(w, 'f3', 'kt'); main = await w.innerText('#main');
   ok('lô R-CU3: phiếu 31/02/2026 được giữ, nêu số phiếu và lý do; 29/02/2028 không bị báo lỗi ngày', /PC-C1/.test(main) && /không có thật/.test(main) && !/Phiếu PC-C2: /.test(main), main.slice(0, 500));
   ok('không lỗi script giao diện', w.errs.length === 0, w.errs.join('|'));

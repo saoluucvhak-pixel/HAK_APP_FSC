@@ -5,9 +5,12 @@ const fs = require('fs'), os = require('os'), path = require('path');
 const {Store} = require('../src/store');
 const D = require('../src/delta');
 
-const F = (id, ma, n = 2) => ({id, info: {maRung: ma, tenRung: 'Rừng ' + ma}, nc: [], dx: [], pc: Array.from({length: n}, (_, i) => ({_id: 'p' + i, soPhieu: ma + '-' + i, kl: 10 + i}))});
+const F = (id, ma, n = 2) => MM.ensureForest({id, info: {maRung: ma, tenRung: 'Rừng ' + ma}, nc: [], dx: [], pc: Array.from({length: n}, (_, i) => ({_id: 'p' + i, soPhieu: ma + '-' + i, kl: 10 + i}))});
 const O = (id, forests) => ({id, info: {ma: 'CR-' + id, ten: 'CHỦ ' + id, cccd: '0490000000' + id.length}, forests: Object.fromEntries(forests.map(f => [f.id, f]))});
-const base = () => ({v: 2, rs: {a: O('a', [F('fa1', 'A1'), F('fa2', 'A2')]), b: O('b', [F('fb1', 'B1')]), c: O('c', [])}, congTy: {c1: {id: 'c1', ten: 'CTY', mst: '1'}}, norm: {x: 1}});
+/* cấu trúc 2.0 (giai đoạn 3): giao diện giữ dữ liệu đã chuẩn hóa (lô có đội), như SQLite lưu */
+const MM = require('../src/model');
+const base = () => MM.ensureDb(base0());
+const base0 = () => ({v: 2, rs: {a: O('a', [F('fa1', 'A1'), F('fa2', 'A2')]), b: O('b', [F('fb1', 'B1')]), c: O('c', [])}, congTy: {c1: {id: 'c1', ten: 'CTY', mst: '1'}}, norm: {x: 1}});
 const clone = x => JSON.parse(JSON.stringify(x));
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-delta-'));
 /* lưu theo phần thay đổi giống cách giao diện làm (ui/app/02-luu-tru-trang-thai.js) */

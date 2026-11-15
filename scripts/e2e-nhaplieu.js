@@ -16,7 +16,7 @@ const SEED = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01', ten: 'NGUYỄN V
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), SEED); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]');
-  const setP = async (k, v) => { await w.click('[data-ftab=xuat]'); await w.click(`[data-xtab=${/TT$/.test(k) ? 'ld' : 'hd'}]`); await w.fill(`[data-exp=${k}]`, v); await w.dispatchEvent(`[data-exp=${k}]`, 'change'); };
+  const setP = async (k, v) => { await w.click('[data-ftab=xuat]'); await w.click(`[data-xtab=${/TT$/.test(k) ? 'ld' : 'hd'}]`); await require('./lib-stage').setExp(w, k, v); };
   const kt = async () => { await w.click('[data-ftab=kt]'); return w.innerText('#main'); };
   await setP('ntNgay', '31/02/2026');
   let t = await kt();

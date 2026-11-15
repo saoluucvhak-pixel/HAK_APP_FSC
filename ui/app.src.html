@@ -321,6 +321,15 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li><b>Sao lưu lô rừng</b> (đầu hồ sơ lô): file <code>HAKQN_LoRung_&lt;MaLo&gt;_&lt;Ngày&gt;.json</code> chứa đúng một lô, kèm địa chỉ giao đã chốt; không chứa lô khác, tra cứu hay thông tin đăng nhập.</li>
 <li><b>⋯ Thêm → Khôi phục lô rừng…</b>: xem trước chủ, mã lô, thời điểm sao lưu, số nhân công/xe/phiếu cân/tổng tấn. Thêm vào đúng chủ đã có hoặc tạo chủ mới. Lô đã có: mặc định giữ bản hiện có; thay thì chỉ thay đúng lô đó và có bảng trước/sau. Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: máy đích giữ thiết lập của mình, màn hình nêu phần hồ sơ có thể khác. File hỏng, sai loại/phiên bản hoặc không xác định được lô đích thì báo lỗi và không ghi.</li>
 </ul>
+<h3>9b. Bản 2.0: đội khai thác, đội xe, phiếu cân, một cách lưu</h3>
+<ul>
+<li><b>Đội khai thác</b> (tab Nhân công): mỗi lô có một hoặc nhiều đội, mỗi đội một Tổ trưởng, hình thức, đơn giá và số văn bản riêng; thêm người vào <b>đội đang chọn</b> (tay, Excel cột <b>Đội</b> tùy chọn, hoặc <b>Chọn người đã có</b> theo CCCD).</li>
+<li><b>Đội xe</b> (tab Vận chuyển): mỗi đội xe một hợp đồng vận chuyển; người ký là chủ xe, tài xế hoặc doanh nghiệp trong danh mục; file xe có cột <b>Đội xe</b> tùy chọn.</li>
+<li><b>Phiếu cân</b> gắn đội (lô một đội tự gán; nhiều đội gán từng dòng hoặc hàng loạt, lọc được theo đội xe). Bảng phiếu cân hiện đội xe dưới biển số. <b>Khối lượng chỉ lấy từ phiếu cân</b>; số nhập tay của hồ sơ cũ chỉ hiển thị và có nút <b>Bỏ số hồ sơ cũ</b>.</li>
+<li><b>Một cách lưu</b>: sửa ô ở khung nào cũng vào bản nháp; bấm <b>Lưu dữ liệu vào lô</b> trên thanh “Chưa lưu” (hoặc Enter trong ô) để ghi. Không còn nút Lưu riêng ở từng khung.</li>
+<li><b>Kiểm tra trước khi xuất</b> nêu đối tượng (đội, đội xe, dòng) và biểu mẫu bị chặn. Phiếu cân chạy khi kiểm định, bảo hiểm hoặc GPLX của xe đã hết hạn chặn BM-09, BM-10 của <b>đội xe đó</b>.</li>
+<li><b>Báo cáo</b>: Sản lượng theo đội khai thác, Vận chuyển theo đội xe; Danh sách lao động có cột Đội.</li>
+</ul>
 <h3>10. Lỗi thường gặp</h3>
 <table><tr><th>Hiện tượng</th><th>Cách xử lý</th></tr>
 <tr><td>Nút tải bị khóa</td><td>Mở tab Kiểm tra trước khi xuất và xử lý mục chặn.</td></tr>
@@ -353,6 +362,9 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@CULY@@*/</script>
 <script>/*@@DINHBIEN@@*/</script>
 <script>/*@@DOI@@*/</script>
+<script>/*@@GIAYTO@@*/</script>
+<script>/*@@KIEMTRA@@*/</script>
+<script>/*@@MODEL@@*/</script>
 <script>/*@@DINHMUC@@*/</script>
 <script>/*@@QUYTRINH@@*/</script>
 <script>/*@@NHAPLIEU@@*/</script>

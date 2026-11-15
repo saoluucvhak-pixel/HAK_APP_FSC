@@ -20,6 +20,13 @@ const buyerName = rec => ((rec.info.muaHang || {}).ten || (theCompany() || {}).t
 const ngayLine = ex => ex.ngayKy ? 'ngày ' + ex.ngayKy : HAKHopDong.ngayTrong();
 
 function partyBlock(label, p, fullName, o = {}) {   // o.noSinh: không in năm sinh (chủ rừng không còn khai ngày sinh)
+  if (p && p.loai === 'doanhnghiep') return [   // bên vận chuyển là doanh nghiệp (danh mục đơn vị vận chuyển)
+    P('**' + label + ': ' + upper(fullName) + '**', {after: 60}),
+    P('Mã số thuế: ' + (p.mst || '…………'), {ind: 360, after: 40}),
+    P('Địa chỉ trụ sở: ' + (p.diaChi || '…………'), {ind: 360, after: 40}),
+    P('Người đại diện: ' + (p.daiDien || '…………') + (p.chucVu ? ' – Chức vụ: ' + p.chucVu : ''), {ind: 360, after: p.sdt ? 40 : 160}),
+    ...(p.sdt ? [P('Điện thoại: ' + p.sdt, {ind: 360, after: 160})] : [])
+  ];
   return [
     P('**' + label + ': ' + upper(fullName) + '**', {after: 60}),
     ...(o.noSinh ? [] : [P('Sinh năm: ' + (p.ngaySinh || '…………'), {ind: 360, after: 40})]),
@@ -54,7 +61,7 @@ function docGiaoKhoan(rec, ex) {
     P('Sau khi bàn bạc cụ thể, hai bên thống nhất ký hợp đồng khai thác gỗ keo rừng trồng với các điều khoản như sau:'),
     P('**Điều 1: Nội dung**', {keep: true}),
     P('Bên B đồng ý nhận và bên A đồng ý giao khai thác gỗ Keo Lai rừng trồng có kiểm soát tại địa chỉ: ' + rs.diaDiem + rungText(rs) + '.'),
-    ...(rec._doiTen ? [P('Lô được giao cho ' + rec._nDoi + ' đội khai thác làm song song, mỗi đội ký hợp đồng riêng. Phạm vi giao cho đội “' + rec._doiTen + '” (Tổ trưởng ' + ttName + '): ' + [typeof rs.dienTich === 'number' ? fmtTan(rs.dienTich) + ' ha' : '', typeof rs.khoiLuong === 'number' ? fmtTan(rs.khoiLuong) + ' tấn' : ''].filter(Boolean).join(', ') + ' (phần của lô chia theo số người của các đội).')] : []),
+    ...(rec._doiTen ? [P('Lô được giao cho ' + rec._nDoi + ' đội khai thác làm song song, mỗi đội ký hợp đồng riêng. Phạm vi giao cho đội “' + rec._doiTen + '” (Tổ trưởng ' + ttName + '): ' + [typeof rs.dienTich === 'number' ? fmtTan(rs.dienTich) + ' ha' : '', typeof rs.klHoSoCu === 'number' ? fmtTan(rs.klHoSoCu) + ' tấn' : ''].filter(Boolean).join(', ') + ' (phần của lô chia theo số người của các đội).')] : []),
     P('**Điều 2: Giá cả và phương thức thanh toán**', {keep: true}),
     P('2.1. Đơn giá khoán theo vai trò (' + bs.unit + '): ' + roleRates(rec).join('; ') + '.', {ind: 360}),
     ...(pr.plan.ngc ? [P('2.2. Hình thức trả theo ngày công: số công của từng người do Tổ trưởng chấm hằng ngày vào Bảng chấm công; tiền của mỗi người bằng số công thực tế nhân với đơn giá công theo vai trò ở mục 2.1. Bên B nhận thay cho cả tổ và chi trả lại cho từng người.' + (pr.sum && pr.plan.cong != null ? ' Dự tính ' + fmtCong(pr.plan.cong) + ' công mỗi người (theo thời gian khai thác, không tính Chủ nhật), tổng tiền công dự tính: ' + fmt(pr.sum) + ' đồng.' : ''), {ind: 360})] : [])
@@ -356,7 +363,7 @@ function docNghiemThu(rec, ex) {
   const daTT = toNum(ex.ntDaTT) || 0;
   const hd = direct ? 'các hợp đồng lao động đã ký giữa chủ rừng và người lao động' : 'Hợp đồng khai thác gỗ keo số ' + ex._so.kt.so;
   // lô nhiều đội: phiếu cân là của cả lô; phần của đội theo khối lượng thực tế từng đội đã nhập (nếu có, src/doi.js khoiLuong), không thì chia theo số người
-  const pcAll = totalKg(rec.pc || []), klTyLe = rec._klNhap && rec._klLo > 0 && typeof rs.khoiLuong === 'number' ? rs.khoiLuong / rec._klLo : null;
+  const pcAll = totalKg(rec.pc || []), klTyLe = rec._klNhap && rec._klLo > 0 && typeof rs.klHoSoCu === 'number' ? rs.klHoSoCu / rec._klLo : null;
   const pcKg = rec._share ? pcAll * (klTyLe != null ? klTyLe : rec._share) : pcAll, pcCach = klTyLe != null ? 'theo khối lượng thực tế từng đội' : 'chia theo số người';
   return [
     ...TITLE_HEAD(),
@@ -488,6 +495,7 @@ function docKiemTraHienTruong(rec, ex) {
 }
 
 function docXNKLVC(rec, ex, g) {
+  [rec, ex] = vcCtx(rec, ex, g);
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), tr = tripsOf(rec, g), kg = totalKg(tr);
   const hdNo = ex._so.vc.so;
   const ngSame = new Set(tr.map(r => r.noiGiao || '')).size <= 1;   // cùng một nơi giao thì Bảng kê đính kèm ghi một dòng, không đặt trong khung bảng
@@ -529,6 +537,7 @@ function docXNKLVC(rec, ex, g) {
   ];
 }
 function docTTVC(rec, ex, g) {
+  [rec, ex] = vcCtx(rec, ex, g);
   const rs = rec.info, rsName = personName(rs.danhXung, rs.ten), py = payVC(rec, g), tp = transportPrice(rs);
   const hdNo = ex._so.vc.so;
   const tr = tripsOf(rec, g);
@@ -568,6 +577,7 @@ function docTTVC(rec, ex, g) {
   ];
 }
 function docHDVC(rec, ex, g) {
+  [rec, ex] = vcCtx(rec, ex, g);
   const rs = rec.info;
   const rsName = personName(rs.danhXung, rs.ten);
   return [

@@ -24,10 +24,7 @@ function forestErrors(info, fid) {
   if (info.dienTich === 'x') e.push('Diện tích không phải là số');
   if (info.dinhMucTanHa === 'x') e.push('Định mức không phải là số');
   if (info.dinhMucNgayHa === 'x') e.push('Định mức thời gian khai thác (ngày/ha) không phải là số');
-  if (info.soDoi === 'x' || (typeof info.soDoi === 'number' && (!Number.isInteger(info.soDoi) || info.soDoi < 1 || info.soDoi > 20))) e.push('Số đội khai thác phải là số nguyên từ 1 đến 20');
   if (info.cuLy === 'x') e.push('Cự ly không phải là số');
-  if (info.khoiLuong === 'x') e.push('Khối lượng thực tế không phải là số');
-  if (typeof info.khoiLuong === 'number' && info.khoiLuong < 0) e.push('Khối lượng thực tế không được âm');
   if ((info.lat == null) !== (info.lng == null)) e.push('Nhập đủ vĩ độ và kinh độ (WGS84)');
   if (typeof info.lat === 'number' && Math.abs(info.lat) > 90) e.push('Vĩ độ phải nằm trong khoảng -90 đến 90');
   if (typeof info.lng === 'number' && Math.abs(info.lng) > 180) e.push('Kinh độ phải nằm trong khoảng -180 đến 180');
@@ -71,17 +68,26 @@ function checkNC(rec) {
     if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi chức danh "Tổ trưởng"');
     const ngc = rec.info.hinhThucLuong === 'ngaycong';
     if (chucDanhAll().includes(r.chucDanh)) {
-      const rate = rateOf(rec.info, r);
-      if (!(rate > 0)) bad('chưa có đơn giá ' + basisOf(rec.info).short + ' cho "' + r.chucDanh + '" trong mục Cơ sở tính đơn giá (tab Nhân công)');
+      const ir = infoRow(rec, r), rate = rateOf(ir, r);
+      if (!(rate > 0)) bad('chưa có đơn giá ' + basisOf(ir).short + ' cho "' + r.chucDanh + '" trong mục Cơ sở tính đơn giá (tab Nhân công)');
     }
   });
   if (tt < 1) errs.push('Cần ít nhất 1 tổ trưởng (hiện có ' + tt + ')');
+  else if (rec.doi) HAKModel.teamErrors({doi: rec.doi, nc: rec.nc}).forEach(e => { if (e.row != null) { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; } else errs.push(e.text); });   // cấu trúc đội (bảng con của lô): mỗi người thuộc một đội, mỗi đội một Tổ trưởng
   else if (tt > 1 && !isDirect(rec.info)) HAKDoi.build(rec.nc, isTT).errs.forEach(e => { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; });   // nhiều tổ trưởng = nhiều đội, mỗi người phải thuộc đúng một đội
   return {errs, warns, state};
 }
 
 const parseVN = v => { const p = HAKDates.parse(trim(v)); return p ? new Date(p.y, p.m - 1, p.d) : null; };
 const driverSigns = r => trim(r.nguoiKy) === 'Tài xế';
+/* người ký của xe trong cấu trúc đội xe: {tx} = xe này là nguồn thông tin người ký (chủ xe / tài xế); false = xe không ký (đội ký với doanh nghiệp hoặc người ký là người khác trong đội); null = hồ sơ cũ (mỗi xe tự ký) */
+function kyOfXe(rec, r) {
+  if (!rec.hdvc) return null;
+  const F = {dx: rec.dx, hdvc: rec.hdvc}, h = HAKModel.hdOf(F, r); if (!h) return null;
+  if (h.donViId) return false;
+  if (HAKModel.vcKey(r) === h.key) return {tx: driverSigns(r)};
+  const s = HAKModel.signerOf(HAKModel.xeOf(F, h), h.key); return s && s.r === r ? {tx: s.tx} : false;
+}
 function checkDX(rec) {
   const errs = [], warns = [], state = {}, plates = {};
   const n0 = new Date(), today = new Date(n0.getFullYear(), n0.getMonth(), n0.getDate());
@@ -89,12 +95,14 @@ function checkDX(rec) {
     const at = 'Dòng ' + r._row + ': ';
     const bad = m => { errs.push(at + m); state[r._row] = 'err'; };
     if (r.maRung && r.maRung !== rec.info.maRung) bad('Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
+    if (trim(r.doiXe) && rec.hdvc && !rec.hdvc.some(h => hdTenKhop({dx: rec.dx, hdvc: rec.hdvc}, h, r.doiXe))) bad('Đội xe “' + trim(r.doiXe) + '” không có trong lô: thêm đội xe ở tab Vận chuyển trước, hoặc để trống ô Đội xe');
     if (!r.chuXe) bad('thiếu Chủ xe');
     if (!r.bienSo) bad('thiếu Biển kiểm soát');
     else if (plates[r.bienSo]) bad('Biển kiểm soát trùng dòng ' + plates[r.bienSo]);
     else plates[r.bienSo] = r._row;
-    const nk = trim(r.nguoiKy), tx = driverSigns(r);
+    const nk = trim(r.nguoiKy), ky = kyOfXe(rec, r), tx = ky ? ky.tx : driverSigns(r);
     if (nk && nk !== 'Chủ xe' && nk !== 'Tài xế') bad('Người ký HĐ vận chuyển phải là "Chủ xe" hoặc "Tài xế" (đang là "' + nk + '")');
+    if (ky !== false) {   // xe là nguồn người ký (hoặc hồ sơ cũ: mỗi xe tự ký); xe trong đội ký với doanh nghiệp / người khác thì không bắt thông tin người ký
     // Chỉ người ký HĐ vận chuyển bắt buộc có CCCD, ngày cấp, thường trú, SĐT; người không ký thì không cần
     if (tx && !r.taiXe) bad('người ký là tài xế nhưng thiếu Tên tài xế');
     const sg = tx ? {c: r.cccdTx, nc: r.ngayCapTx, dc: r.diaChiTx, w: 'tài xế'} : {c: r.cccd, nc: r.ngayCap, dc: r.diaChi, w: 'chủ xe'};
@@ -105,12 +113,13 @@ function checkDX(rec) {
     if (trim(sgSinh) && !parseVN(sgSinh)) bad('Ngày sinh ' + sg.w + ' "' + sgSinh + '" không có thật hoặc sai dd/mm/yyyy');
     if (!trim(sg.dc)) bad('thiếu Thường trú ' + sg.w + ' (người ký)');
     if (!trim(r.sdt)) bad('thiếu SĐT người ký (' + sg.w + ')');
+    }
     // Cảnh báo, không chặn xuất hồ sơ
     const w = [];
     const need = tx ? [['ngaySinhTx', 'ngày sinh tài xế'], ['noiCapTx', 'nơi cấp CCCD tài xế']]
       : [['ngaySinh', 'ngày sinh chủ xe'], ['noiCap', 'nơi cấp CCCD chủ xe']];
     const miss = need.filter(([k]) => !trim(r[k])).map(x => x[1]);
-    if (miss.length) w.push('người ký còn thiếu ' + miss.join(', ') + ' (hợp đồng để trống)');
+    if (miss.length && ky !== false) w.push('người ký còn thiếu ' + miss.join(', ') + ' (hợp đồng để trống)');
     if (r.taiXe && !r.gplx) w.push('thiếu Số GPLX');
     const exp = (k, label, must) => {
       const v = trim(r[k]);
@@ -153,8 +162,7 @@ function transportPrice(i) {
 function rateOf(i, r) {
   const v = (i[basisOf(i).map] || {})[r.chucDanh];
   if (v > 0) return v;
-  // hồ sơ cũ: giá của Tổ trưởng chỉ nhập ở Thông tin rừng (info.donGia, đ/tấn)
-  return (basisOf(i) === BASIS.sanluong && r.chucDanh === 'Tổ trưởng' && i.donGia > 0) ? i.donGia : null;
+  return null;   // đơn giá Tổ trưởng hồ sơ cũ (info.donGia) đã chuyển vào bảng đơn giá theo vị trí của đội (SQLite v6)
 }
 const isDirect = i => i.moHinhKy === 'tructiep';
 /* Cơ sở tính đơn giá. Hợp đồng có 2 hình thức:
@@ -166,24 +174,75 @@ const basisOf = i => BASIS[i.hinhThucLuong] || BASIS.sanluong;
 const basisAllowed = (direct, b) => direct ? b !== 'ha' : true;   // giao khoán: tấn, ha hoặc ngày công; trực tiếp: tấn hoặc ngày công
 const giaErrors = i => basisAllowed(isDirect(i), i.hinhThucLuong || 'sanluong') ? []
   : ['Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công (không tính theo ha): chọn lại ở tab Nhân công'];
-const hdldList = rec => isDirect(rec.info) ? rec.nc : [];   // giao khoán: thay bằng một Giấy ủy quyền (BM-20)
+/* thông tin (hình thức, đơn giá) áp cho MỘT người / MỘT đội: thông tin lô + hình thức của đội người đó (cấu trúc 2.0); hồ sơ cũ không có đội thì thông tin lô */
+const teamOfRow = (rec, r) => rec.doi ? (rec.doi.find(d => d.id === (r && r.doiId)) || null) : null;
+const infoTeam = (rec, d) => d ? Object.assign({}, rec.info, d.hinhThuc || {}) : rec.info;
+const infoRow = (rec, r) => infoTeam(rec, teamOfRow(rec, r));
+const teamInfos = rec => rec.doi && rec.doi.length ? rec.doi.map(d => infoTeam(rec, d)) : [rec.info];
+const allDirect = rec => teamInfos(rec).every(isDirect), anyGK = rec => teamInfos(rec).some(i => !isDirect(i));
+const giaErrorsRec = rec => rec.doi && rec.doi.length > 1 ? rec.doi.flatMap(d => giaErrors(infoTeam(rec, d)).map(e => 'Đội ' + (d.ten ? '“' + d.ten + '”' : '') + ': ' + e)) : giaErrors(rec.info);
+const hdldList = rec => rec.nc.filter(r => isDirect(infoRow(rec, r)));   // người của đội ký TRỰC TIẾP (giao khoán: thay bằng Giấy ủy quyền BM-20)
 /* ===== Nhiều đội: mỗi Tổ trưởng là một đội, ký hợp đồng giao khoán riêng (src/doi.js) =====
  * doiOf(rec): các đội cùng phần diện tích và khối lượng của lô chia theo số người. subRec(rec, d): hồ sơ của riêng đội d (nhân công của đội, diện tích và khối lượng phần của đội),
  * dùng chung các hàm lập biểu mẫu hiện có nên mỗi đội ra một bộ BM-01, BM-20, BM-08, BM-14 riêng. Lô chỉ một đội: giữ nguyên hồ sơ, không đổi gì. */
-const doiOf = rec => { const b = isDirect(rec.info) ? HAKDoi.single(rec.nc, isTT) : HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi);
-  const kq = b.multi ? HAKDoi.khoiLuong(rec.info.khoiLuong, b.doi, rec.info.klDoi) : {vals: HAKDoi.chia(rec.info.khoiLuong, b.doi), nguon: 'songuoi', loi: ''};   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
-  b.klNguon = kq.nguon; b.klLoi = kq.loi; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
-const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, {_share: d.share, _klNhap: b.klNguon === 'nhap', _klLo: rec.info.khoiLuong, _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], info: Object.assign({}, rec.info, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {khoiLuong: d.khoiLuong} : {})});
+/* đội TƯỜNG MINH (cấu trúc 2.0): rec.doi + nhân công mang doiId. Đội không có Tổ trưởng không lập hồ sơ (như bản cũ). Diện tích đội: nhập ở đội; chưa nhập đủ thì chia theo số người */
+const doiTuongMinh = rec => {
+  const teams = rec.doi.map(t => { const m = (rec.nc || []).filter(r => r.doiId === t.id), tt = m.find(isTT); return tt ? {key: HAKDoi.keyOf(tt), id: t.id, team: t, ten: t.ten, tt, members: m.filter(r => r !== tt), n: m.length, share: 1} : null; }).filter(Boolean);
+  const b = {multi: teams.length > 1, doi: teams, errs: [], orphans: []}, total = teams.reduce((s, d) => s + d.n, 0) || 1;
+  if (b.multi) teams.forEach(d => { d.share = d.n / total; });
+  /* đội đã nhập diện tích dùng số đó; các đội còn lại chia phần diện tích còn lại của lô theo số người (không đội nào nhập: như bản cũ) */
+  const nhap = teams.filter(d => typeof d.team.dienTich === 'number'), con = teams.filter(d => typeof d.team.dienTich !== 'number');
+  let ha;
+  if (!nhap.length) ha = HAKDoi.chia(rec.info.dienTich, teams);
+  else { const du = typeof rec.info.dienTich === 'number' ? Math.round((rec.info.dienTich - nhap.reduce((s, d) => s + d.team.dienTich, 0)) * 1000) / 1000 : null, nCon = con.reduce((s, d) => s + d.n, 0) || 1;
+    const chiaCon = HAKDoi.chia(du, con.map(d => ({share: d.n / nCon}))); ha = teams.map(d => typeof d.team.dienTich === 'number' ? d.team.dienTich : chiaCon[con.indexOf(d)]); }
+  return {b, ha};
+};
+const doiOf = rec => { if (rec.doi) { const {b, ha} = doiTuongMinh(rec); return doiKl(rec, b, ha); }
+  const b = isDirect(rec.info) ? HAKDoi.single(rec.nc, isTT) : HAKDoi.build(rec.nc, isTT), ha = HAKDoi.chia(rec.info.dienTich, b.doi); return doiKl(rec, b, ha); };
+/* khối lượng của từng đội theo PHIẾU CÂN ĐÃ GÁN ĐỘI. null = chưa gán phiếu nào (hồ sơ cũ: tính như trước); còn phiếu chưa gán hoặc đội có người mà không có phiếu → loi (bản nháp) */
+function klTheoPhieu(rec, b) {
+  if (!rec.doi) return null;
+  const pcs = (rec.pc || []).filter(p => typeof p.kl === 'number' && p.kl > 0), ids = new Set(b.doi.map(d => d.id)), gan = pcs.filter(p => ids.has(p.doiId));
+  if (!gan.length) return pcs.length ? {chuaGan: pcs.length} : null;
+  const vals = b.doi.map(d => klPhieu(pcs.filter(p => p.doiId === d.id))), thieu = pcs.length - gan.length, rong = b.doi.filter((d, i) => !vals[i]);
+  const loi = thieu ? 'còn ' + thieu + '/' + pcs.length + ' phiếu cân chưa gán đội: gán ở bảng phiếu cân (tab Vận chuyển)' : rong.length ? 'đội ' + rong.map(d => '“' + (d.ten || '') + '”').join(', ') + ' chưa có phiếu cân nào' : '';
+  return {vals, nguon: 'phieucan', loi};
+}
+const doiKl = (rec, b, ha) => {
+  const kp = b.multi ? klTheoPhieu(rec, b) : null;
+  let kq = b.multi ? HAKDoi.khoiLuong(klLo(rec.info), b.doi, Object.fromEntries(b.doi.map(d => [d.key, d.team && d.team.klHoSoCu]))) : {vals: HAKDoi.chia(klLo(rec.info), b.doi), nguon: 'songuoi', loi: ''};
+  if (kp && kp.vals) kq = kp.loi ? Object.assign({}, kq, {loi: kp.loi}) : kp;   // gán đủ: khối lượng đội = phiếu cân của đội
+  else if (kp && kp.chuaGan && kq.nguon !== 'nhap') kq = Object.assign({}, kq, {chuaGan: kp.chuaGan});   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
+  b.klNguon = kq.nguon; b.klLoi = kq.loi; b.pcChuaGan = kq.chuaGan || 0; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
+/* hồ sơ của ĐỘI ĐANG CHỌN (màn Nhân công khai thác): nhân công và hình thức của đội; lô một đội: cả lô */
+const recDoiChon = rec => {
+  if (!rec.doi || rec.doi.length < 2) return rec;
+  const t = curTeam(); if (!t) return rec;
+  const d = rec.doi.find(x => x.id === t.id) || t;
+  return Object.assign({}, rec, {nc: rec.nc.filter(r => r.doiId === d.id), info: infoTeam(rec, d), _team: d, exp: Object.keys(d.exp || {}).length ? Object.assign({}, rec.exp, d.exp) : rec.exp});
+};
+/* hồ sơ cho một người theo đội của người đó (hợp đồng lao động của đội ký trực tiếp) */
+const recOfRow = (rec, r) => { if (!rec.doi) return rec; const B = doiOf(rec); if (!B.multi) return rec; const d = B.doi.find(x => x.id === r.doiId); return d ? subRec(rec, B, d) : rec; };
+const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, b.klNguon === 'phieucan' ? {pc: (rec.pc || []).filter(p => p.doiId === d.id)} : {}, {_share: b.klNguon === 'phieucan' ? null : d.share, _klNhap: b.klNguon === 'nhap', _klLo: klLo(rec.info), _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], _team: d.team || null, exp: d.team && Object.keys(d.team.exp || {}).length ? Object.assign({}, rec.exp, d.team.exp) : rec.exp, info: Object.assign({}, rec.info, d.team ? d.team.hinhThuc : {}, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {klHoSoCu: d.khoiLuong} : {})});
 const ncList = rec => { const tt = rec.nc.find(isTT); return tt ? [tt, ...rec.nc.filter(r => r !== tt)] : rec.nc.slice(); };   // tổ trưởng đầu danh sách, rồi mọi người còn lại (kể cả các tổ trưởng khác)
 /* Lô nhiều đội: mỗi đội ký hợp đồng riêng nên số hợp đồng, giấy ủy quyền, biên bản nghiệm thu của mỗi đội thêm hậu tố .1, .2… ngay sau phần số (015 → 015.1, 015/2026-KT → 015.1/2026-KT).
  * Số để trống (chưa nhập) thì giữ nguyên chỗ trống để điền tay. Số xác nhận khối lượng và hợp đồng vận chuyển là của cả lô nên không đổi. */
 const soDoiSo = (x, k) => (x.thieuSo || !x.so) ? x : Object.assign({}, x, {so: /\//.test(x.so) ? x.so.replace('/', '.' + k + '/') : x.so + '.' + k});
-const exDoi = (ex, b, idx) => !b.multi ? ex : Object.assign({}, ex, {_so: Object.assign({}, ex._so, {kt: soDoiSo(ex._so.kt, idx + 1), uq: soDoiSo(ex._so.uq, idx + 1), nt: soDoiSo(ex._so.nt, idx + 1)})});
+const exDoi = (ex, b, idx) => {
+  if (!b.multi) return ex;
+  const d = b.doi[idx], te = (d && d.team && d.team.exp) || null, e = te && Object.keys(te).length ? Object.assign({}, ex, te) : ex;
+  const so = e === ex ? ex._so : HAKHopDong.numbers(e), chung = k => !d || !d.team || b.doi.filter(x => x.team && ((x.team.exp || {})[k] || '') === ((d.team.exp || {})[k] || '')).length > 1;
+  return Object.assign({}, e, {_so: Object.assign({}, so, {kt: chung('soKT') ? soDoiSo(so.kt, idx + 1) : so.kt, uq: chung('uqSo') ? soDoiSo(so.uq, idx + 1) : so.uq, nt: chung('ntSo') ? soDoiSo(so.nt, idx + 1) : so.nt})});
+};
 const doiLabel = d => (d.ten ? d.ten + ' — ' : '') + d.tt.ten;
-const ucList = rec => rec.nc.filter(r => !isTT(r));         // người ủy quyền cho Tổ trưởng (hình thức giao khoán)
+const ucList = rec => rec.nc.filter(r => !isTT(r) && !isDirect(infoRow(rec, r)));         // người ủy quyền cho Tổ trưởng (đội giao khoán)
 // Khối lượng dùng cho bảng lương: thực tế nếu có, không thì dự kiến (diện tích × định mức)
+/* khối lượng thực tế của lô: số nhập tay (chỉ còn ở hồ sơ cũ) hoặc TỔNG PHIẾU CÂN (một nguồn); chưa có thì dự kiến */
+const klLo = i => typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0 ? i.klHoSoCu : (i._klPC > 0 ? i._klPC : null);   // số khối lượng nhập tay của hồ sơ cũ (klHoSoCu) còn thì vẫn là khối lượng lô; bỏ số này thì lấy tổng phiếu cân
 const volumeOf = i => {
-  if (typeof i.khoiLuong === 'number' && i.khoiLuong > 0) return {v: i.khoiLuong, src: 'thực tế'};
+  if (typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0) return {v: i.klHoSoCu, src: 'thực tế'};
+  if (i._klPC > 0) return {v: i._klPC, src: 'thực tế'};
   const y = forestYield(i);
   return y > 0 ? {v: y, src: 'dự kiến'} : null;
 };
@@ -228,15 +287,15 @@ function payRows(rec, ex) {
 /* Giao khoán, trường hợp 1 (Thông tin rừng KHÔNG có đơn giá Tổ trưởng): đơn giá khoán của tổ = đơn giá bình quân suy ra từ định biên nhân sự (số người từng vị trí ở sheet nhân công × đơn giá vị trí).
  * Trường hợp 2 (Thông tin rừng có đơn giá Tổ trưởng): làm như cũ. Trả null khi không áp dụng. */
 const khoanSuyRa = rec => {
-  const rs = rec.info; if (isDirect(rs) || rs.donGia > 0) return null;
+  const rs = rec.info; if (isDirect(rs)) return null;
   const pr = payRows(rec, {}); if (pr.plan.ngc || !pr.khoan.ok) return null;
-  const bs = basisOf(rs), pos = chucDanhAll().map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; return {cd, n, rate: rateOf(rs, {chucDanh: cd})}; }).filter(x => CHUCDANH.includes(x.cd) || x.n > 0);
+  const bs = basisOf(rs), pos = chucDanhAll().map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; return {cd, n, rate: rateOf(rs, {chucDanh: cd})}; }).filter(x => x.n > 0 || x.rate > 0);   // vị trí của danh mục đang có người hoặc đã có đơn giá
   const used = pos.filter(x => x.n > 0), k = pr.khoan;
   const formula = '(' + used.map(x => x.n + ' × ' + fmt(x.rate)).join(' + ') + ') ÷ ' + k.N + ' người = ' + HAKKhoan.fmtPrice(k.sumRates) + ' ÷ ' + k.N + ' = ' + HAKKhoan.fmtPrice(k.price) + ' ' + bs.unit;
   return {pr, k, bs, pos, used, formula, price: HAKKhoan.fmtPrice(k.price), qty: bs.qty === 'ha' ? 'diện tích' : 'sản lượng'};
 };
 /* Đơn giá khoán theo TỪNG vị trí: luôn liệt kê đủ cả ba vị trí (Tổ trưởng, Công nhân khai thác, Công nhân cưa), kể cả khi chưa có người ở vị trí đó */
-const roleRates = rec => chucDanhAll().filter(cd => CHUCDANH.includes(cd) || rec.nc.some(r => r.chucDanh === cd)).map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; const rate = rateOf(rec.info, {chucDanh: cd}); return cd + ': ' + (rate ? fmt(rate) : '………') + ' ' + basisOf(rec.info).unit + (n ? ' (' + n + ' người)' : ' (hiện chưa có người ở vị trí này)'); });
+const roleRates = rec => chucDanhAll().filter(cd => rec.nc.some(r => r.chucDanh === cd) || rateOf(rec.info, {chucDanh: cd}) > 0).map(cd => { const n = rec.nc.filter(r => r.chucDanh === cd).length; const rate = rateOf(rec.info, {chucDanh: cd}); return cd + ': ' + (rate ? fmt(rate) : '………') + ' ' + basisOf(rec.info).unit + (n ? ' (' + n + ' người)' : ' (hiện chưa có người ở vị trí này)'); });
 /* Ngày tham chiếu để chọn bản định mức BHLĐ có hiệu lực: danh sách cấp phát BM-02 theo ngày cấp phát (hoặc ngày bắt đầu khai thác); hợp đồng lao động BM-03 theo ngày bắt đầu hợp đồng, ngày ký, hoặc ngày bắt đầu khai thác */
 const normRefCapPhat = (rec, ex) => { const e = ex || rec.exp || {}; return HAKDates.isValid(e.capNgay) ? e.capNgay : (rec.info.tuNgay || ''); };
 const normRefHDLD = (rec, ex) => { const e = ex || rec.exp || {}; return [rec.info.ngayBDLD, e.ngayKy, rec.info.ngayKyHopDong, rec.info.tuNgay].find(x => HAKDates.isValid(x)) || ''; };
@@ -254,23 +313,40 @@ function rungText(i) {
   return parts.length ? ' (' + parts.join('; ') + ')' : '';
 }
 
+/* lỗi cước vận chuyển: theo từng hợp đồng có xe (cước riêng hoặc cước chung của lô); hồ sơ cũ: cước của lô */
+function vcLoi(rec) {
+  if (!rec.hdvc) { const v = transportPrice(rec.info); return v.loi ? [v.loi] : []; }
+  const gs = groupsDX(rec); if (!gs.length) { const v = transportPrice(rec.info); return v.loi ? [v.loi] : []; }
+  const out = []; gs.forEach(g => { const v = transportPrice(vcInfo(rec, g.hd)); if (v.loi) out.push(g.hd.cuoc ? 'Hợp đồng với ' + (g.ten || '(chưa có tên)') + ': ' + v.loi : v.loi); });
+  return [...new Set(out)];
+}
+/* rà mâu thuẫn ngày, số (src/nhaplieu.js) cho lô, cho TỪNG ĐỘI (hình thức, số văn bản của đội) và TỪNG ĐỘI XE có số / cước riêng; trùng thì chỉ báo một lần */
+function nhapLieuAll(rec) {
+  const out = [], seen = new Set(), base = HAKNhapLieu.kiemTra(rec), baseT = new Set(base.map(x => x.text));
+  const add = (x, pre) => { const t = pre ? Object.assign({}, x, {text: pre + x.text}) : x, k = t.kind + '|' + t.text; if (!seen.has(k)) { seen.add(k); out.push(t); } };
+  base.forEach(x => add(x));
+  if (rec.doi && rec.doi.length > 1) { const B = doiOf(rec); if (B.multi) B.doi.forEach(d => HAKNhapLieu.kiemTra(subRec(rec, B, d)).forEach(x => { if (!baseT.has(x.text)) add(x, 'Đội “' + (d.ten || '') + '”: '); })); }
+  if (rec.hdvc) groupsDX(rec).forEach(g => { const h = g.hd; if (!h || (!h.cuoc && !Object.keys(h.exp || {}).length)) return; const [r2, e2] = vcCtx(rec, Object.assign({}, rec.exp, {_so: {}}), g);
+    HAKNhapLieu.kiemTra(Object.assign({}, r2, {exp: e2})).forEach(x => { if (!baseT.has(x.text)) add(x, 'Đội xe “' + (g.ten || '') + '”: '); }); });
+  return out;
+}
 function gate(rec) {
-  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrors(rec.info), ...HAKNhapLieu.kiemTra(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
+  const info = [...infoErrors(rec.info, rec.id), ...forestErrors(rec.info, rec.fid), ...giaErrorsRec(rec), ...nhapLieuAll(rec).filter(x => x.kind === 'chan').map(x => x.text)];   // ngày sai/khoảng ngày đảo cũng chặn xuất: biểu mẫu sẽ in ra sai
   const nc = checkNC(rec);
   const dx = checkDX(rec);
-  const vc = transportPrice(rec.info);
+  const vcL = vcLoi(rec);
   const hasTT = rec.nc.some(isTT);
-  const direct = isDirect(rec.info), normErrs = normErrors(rec);
+  const direct = allDirect(rec), normErrs = normErrors(rec);
   const pc = checkPC(rec);
   return {
-    pc, info, nc, dx, direct, normErrs, vc: vc.loi ? [vc.loi] : [],
+    pc, info, nc, dx, direct, normErrs, vc: vcL,
     canGK: !direct && !info.length && !nc.errs.length && hasTT,
     canBHLD: !info.length && !nc.errs.length && hasTT,
     canPhat: !info.length && !nc.errs.length && hasTT && !normErrs.length,
     canHDLD: !info.length && !nc.errs.length && hasTT && hdldList(rec).length > 0,
     canUQ: !direct && !info.length && !nc.errs.length && hasTT && ucList(rec).length > 0 && !minorsOf(rec).length,   // người ủy quyền phải từ đủ 18 tuổi (Điều 18 BLLĐ 2019)
-    canHDVC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vc.loi,
-    canPC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vc.loi && (rec.pc || []).length > 0 && !pc.errs.length
+    canHDVC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vcL.length,
+    canPC: !info.length && !dx.errs.length && rec.dx.length > 0 && !vcL.length && (rec.pc || []).length > 0 && !pc.errs.length
   };
 }
 

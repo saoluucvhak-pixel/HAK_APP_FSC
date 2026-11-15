@@ -9,7 +9,7 @@ function qtSig(rec, kind) {
 }
 function qtItems(rec) {
   const g = gate(rec), ok = kindOk(g), c = draftCtx(rec), Q = HAKQuyTrinh;
-  return Q.applicable(isDirect(rec.info) ? 'tructiep' : 'giaokhoan').map(f => {
+  return Q.applicable(allDirect(rec) ? 'tructiep' : 'giaokhoan').map(f => {
     const iss = HAKBanNhap.issues(f.code, c), ready = !ok[f.kind] ? 'thieu' : iss.length ? 'nhap' : 'du';
     let sig = ''; if (ok[f.kind]) { try { sig = qtSig(rec, f.kind); } catch (e) { sig = 'loi:' + e.message; } }
     return {code: f.code, ready, sig, why: iss.map(x => x.text).join('; ')};
@@ -21,6 +21,7 @@ function qtPrep(rec) {
   if (!(theCompany() || {}).ten) miss.push('chưa khai Công ty mua hàng (Cài đặt → Công ty)');
   if (g.info.length) miss.push('thông tin chủ rừng, rừng còn thiếu hoặc lỗi (' + g.info.length + ' mục)');
   if (g.normErrs.length) miss.push('định mức BHLĐ chưa đủ');
+  { const t = HAKKiemTra.tomTat(exportCheck(rec).items); if (t.chan && !g.info.length && !g.normErrs.length) miss.push('còn ' + t.chan + ' mục chặn xuất ở Kiểm tra trước khi xuất'); }   // cùng một bộ kiểm tra với màn Kiểm tra
   return miss;
 }
 function qtPanel(rec) {
@@ -49,7 +50,7 @@ function qtPanel(rec) {
 function qtMarkAct(codes, on) {
   const f = curForest(), rec = curRec(); if (!f || !rec) return; const st = HAKQuyTrinh.stateOf(f), now = new Date().toISOString(), all = qtItems(rec);
   codes.forEach(c => { if (!on) HAKQuyTrinh.unmark(st, c); else { const it = all.find(x => x.code === c); if (it && it.ready !== 'thieu') HAKQuyTrinh.mark(st, c, it.sig, now); } });
-  persist();
+  if (loDirty.has(f.id)) persistLo(f); else persist();   // ghi nhận đã làm: ghi ngay khi lô không có thay đổi chưa lưu
 }
 /* In phiếu cân theo rừng (giống xuất hồ sơ): dùng đúng phiếu cân của rừng đang mở, bất kể phiếu đến từ file nhập ở rừng, Tra cứu Google Sheets hay cập nhật biển số */
 function pcPrintCard(rec) {
@@ -64,7 +65,7 @@ function pcPrintCard(rec) {
 }
 function panelXuat(rec) {
   const g = gate(rec);
-  const ex = rec.exp || {};
+  const tSel = rec.doi && rec.doi.length > 1 ? curTeam() : null, ex = tSel ? Object.assign({}, rec.exp, tSel.exp) : (rec.exp || {});   // lô nhiều đội: ô số văn bản hiện và ghi của ĐỘI ĐANG CHỌN
   const dd = destOf(rec);
   const btn = (label, kind, idx, ok) => '<button class="btn sm ghost" ' + (ok ? '' : 'disabled') + ' data-act="dl" data-kind="' + kind + '"' + (idx != null ? ' data-idx="' + idx + '"' : '') + '>' + label + '</button>';
   const hdld = hdldList(rec);
@@ -76,16 +77,15 @@ function panelXuat(rec) {
   if (g.dx.errs.length) why.push('Vận chuyển: ' + g.dx.errs.length + ' lỗi');
   if (g.normErrs.length) why.push('BHLĐ: ' + g.normErrs.join('; '));
   if (g.vc.length) why.push('Vận chuyển: ' + g.vc.join('; '));
-  const params = (title, list) => '<div class="card"><h3 style="margin-top:0">' + title + ' <span class="mut" style="font-weight:400">· để trống thì in dòng chấm để điền tay</span></h3>' +
+  const params = (title, list) => '<div class="card"><h3 style="margin-top:0">' + title + (tSel && list.some(x => HAKModel.DOI_EXP.includes(x[0])) ? ' — đội “' + esc(tSel.ten || '') + '” (chọn đội ở tab Nhân công)' : '') + ' <span class="mut" style="font-weight:400">· để trống thì in dòng chấm để điền tay</span></h3>' +
     '<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">' +
     list.map(x => '<label>' + x[1] + '<input data-exp="' + x[0] + '" value="' + esc(ex[x[0]] || '') + '" placeholder="' + esc(x[2] || '') + '"></label>').join('') + '</div></div>';
   const row = (t, sub, b) => '<div class="docrow"><div><b>' + t + '</b><div class="mut">' + sub + '</div></div>' + b + '</div>';
   const S = {};
-  S.hd = params('Thông số hợp đồng và nghiệm thu', [
-      ['ngayKy', 'Ngày ký hợp đồng (dùng chung cho cả hợp đồng vận chuyển)', rec.info.ngayKyHopDong ? 'mặc định: ' + rec.info.ngayKyHopDong + ' (ngày ký ở Thông tin chủ rừng)' : 'dd/mm/yyyy'], ['soKT', 'Số HĐ giao khoán (nhập phần số, VD 015; hoặc số đầy đủ VD 015/2026-KT)', 'năm lấy từ Ngày ký hợp đồng'],
-      ['hdPhuCap', 'HĐLĐ: phụ cấp, khoản bổ sung', 'mặc định: Không'], ['hdNangLuong', 'HĐLĐ: nâng bậc, nâng lương', 'mặc định: Không áp dụng'],
-      ['uqSo', 'Giấy ủy quyền (giao khoán): số (phần số hoặc số đầy đủ)', 'năm lấy từ ngày ký hợp đồng'], ['uqNgay', 'Giấy ủy quyền (giao khoán): ngày lập', 'trống = ngày ký hợp đồng'], ['ntSo', 'Nghiệm thu, thanh lý: số biên bản (phần số hoặc số đầy đủ)', 'năm lấy từ ngày lập biên bản'], ['ntNgay', 'Nghiệm thu, thanh lý: ngày lập', 'dd/mm/yyyy'],
-      ['ntDaTT', 'Nghiệm thu, thanh lý: số tiền đã thanh toán trước (đ)', 'VD: 50000000']]) +
+  const sua = (ftab, label) => '<button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify({ftab})) + '">' + label + '</button>';
+  S.hd = params('Ngày ký các hợp đồng của lô', [
+      ['ngayKy', 'Ngày ký hợp đồng khai thác và vận chuyển của lô', rec.info.ngayKyHopDong ? 'mặc định: ' + rec.info.ngayKyHopDong + ' (ngày ký HĐ mua bán gỗ ở Thông tin chủ rừng)' : 'dd/mm/yyyy']]) +
+    '<div class="card"><div class="row" style="justify-content:space-between"><b>Số HĐ giao khoán, giấy ủy quyền, nghiệm thu, kỳ thanh toán là của từng đội</b>' + sua('nc', 'Sửa ở màn đội (tab Nhân công)') + '</div></div>' +
     '<div class="card"><h3 style="margin-top:0">Số hợp đồng đầy đủ sẽ in (xem trước)</h3><div id="soPreviewHd">' + soPreviewHtml(rec, null, 'hd') + '</div></div>' +
     '<div class="card"><h3 style="margin-top:0">Hợp đồng khai thác và nghiệm thu</h3>' +
     (g.direct ? row('Hợp đồng khai thác (giao khoán)', 'Không dùng: chủ rừng ký hợp đồng lao động trực tiếp với từng người', '')
@@ -93,7 +93,7 @@ function panelXuat(rec) {
     row('Biên bản nghiệm thu, thanh lý khai thác', g.direct ? 'Chủ rừng và đại diện tổ khai thác · theo hợp đồng lao động' : 'Chủ rừng và tổ trưởng · sản lượng chia đều × đơn giá khoán theo vai trò', btn('Tải .docx', 'nttl', null, g.canBHLD)) + '</div>' +
     (g.direct
       ? '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng lao động (chủ rừng ký trực tiếp với từng người)</h3>' + btn('Tải tất cả (.zip)', 'hdld', null, g.canHDLD) + '</div>' +
-        (hdld.length ? hdld.map((r, i) => row(esc(personName(r.danhXung, r.ten)), esc(r.chucDanh) + ' · ' + fmt(rateOf(rec.info, r)) + ' ' + basisOf(rec.info).short, btn('.docx', 'hdld', i, g.canHDLD))).join('') : '<p class="mut">Chưa có nhân công.</p>') + '</div>'
+        (hdld.length ? hdld.map((r, i) => row(esc(personName(r.danhXung, r.ten)), esc(r.chucDanh) + ' · ' + fmt(rateOf(infoRow(rec, r), r)) + ' ' + basisOf(infoRow(rec, r)).short, btn('.docx', 'hdld', i, g.canHDLD))).join('') : '<p class="mut">Chưa có nhân công.</p>') + '</div>'
       : '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Giấy ủy quyền (công nhân ủy quyền cho Tổ trưởng)</h3>' + btn('Tải .docx', 'uq', null, g.canUQ) + '</div>' +
         '<p class="mut">Một giấy cho cả tổ: ' + ucList(rec).length + ' công nhân cùng ký (danh sách kèm họ tên, ngày sinh, giới tính, nơi cư trú, chữ ký). Người ủy quyền phải từ đủ 18 tuổi' + (minorsOf(rec).length ? ' — <b style="color:var(--err)">hiện có ' + minorsOf(rec).length + ' người dưới 18 tuổi, chưa xuất được</b>' : '') + '. Mẫu do phần mềm soạn theo Bộ luật Dân sự 2015 và Điều 18 Bộ luật Lao động 2019, cần đối chiếu pháp lý.</p></div>');
   S.ld = params('Thông số bảo hộ, đào tạo, kiểm tra thiết bị', [
@@ -106,18 +106,15 @@ function panelXuat(rec) {
     row('Biên bản xác nhận đào tạo ATLĐ', 'Người đào tạo: chủ rừng (theo mẫu)', btn('Tải .docx', 'xn', null, g.canBHLD)) +
     row('Danh sách đội khai thác', 'Lấy từ file nhân công', btn('Tải .docx', 'dsd', null, g.canBHLD)) +
     row('Bảng chấm công', 'Tháng <input data-exp="thang" value="' + esc(ex.thang || '') + '" style="width:70px" placeholder="MM hoặc MM/yyyy"> · nhập tháng (hoặc MM/yyyy để có năm) · bảng trống để chấm tay', btn('Tải .docx', 'cc', null, g.canBHLD)) +
-    '<div class="docrow"><div><b>Bảng thanh toán tiền công</b><div class="mut">Từ <input data-exp="tuNgayTT" value="' + esc(ex.tuNgayTT || '') + '" placeholder="' + esc(rec.info.tuNgay || 'dd/mm/yyyy') + '" style="width:110px"> đến <input data-exp="denNgayTT" value="' + esc(ex.denNgayTT || '') + '" placeholder="' + esc(rec.info.denNgay || 'dd/mm/yyyy') + '" style="width:110px"> · để trống thì lấy thời gian khai thác của rừng</div>' +
+    '<div class="docrow"><div><b>Bảng thanh toán tiền công</b><div class="mut">Từ ' + esc(ex.tuNgayTT || rec.info.tuNgay || '…') + ' đến ' + esc(ex.denNgayTT || rec.info.denNgay || '…') + ' (kỳ thanh toán của đội: sửa ở tab Nhân công) · để trống thì lấy thời gian khai thác của rừng</div>' +
       '<div class="' + (pay.issues.length ? 'msg warn' : 'mut') + '" style="margin-top:4px">' + (pay.issues.length ? 'Chưa tính được tiền: ' + esc(pay.issues.join('; ')) + '. Cột tiền sẽ để trống.'
         : pay.ngc ? 'Tự tính: ' + pay.cong + ' công (từ ' + esc(pay.tu) + ' đến ' + esc(pay.den) + ', trừ Chủ nhật)' : 'Tự tính: ' + fmtTan(pay.vol.v) + (pay.basis === 'ha' ? ' ha (' : ' tấn (') + pay.vol.src + ') chia đều ' + (rec.nc.length || 0) + ' người') + '</div></div>' + btn('Tải .docx', 'tc', null, g.canBHLD) + '</div>' +
     row('Sổ theo dõi tai nạn lao động, sự cố', 'Sổ trống để ghi tại hiện trường, có xác nhận cuối đợt (in ngang)', btn('Tải .docx', 'stai', null, g.canBHLD)) +
     row('Biên bản kiểm tra, bảo dưỡng thiết bị', 'Cưa xăng, phương tiện (lấy từ tab Vận chuyển), bình chữa cháy (in ngang)', btn('Tải .docx', 'tbi', null, g.canBHLD)) + '</div>';
-  S.vc = params('Thông số hợp đồng vận chuyển, khối lượng và thanh toán', [
-      ['soVC', 'Số HĐ vận chuyển (nhập phần số hoặc số đầy đủ)', 'năm lấy từ Ngày ký hợp đồng'], ['vcChiPhi', 'HĐVC: chi phí khác (cầu đường, bốc xếp, thuế)', 'trống = dòng chấm'],
-      ['pcSo', 'Xác nhận KL vận chuyển: số biên bản (phần số hoặc số đầy đủ)', 'năm lấy từ ngày lập biên bản'], ['pcNgay', 'Xác nhận KL, thanh toán: ngày lập', 'dd/mm/yyyy'],
-      ['pcNguoiLap', 'Thanh toán vận chuyển: người lập bảng', 'trống = để ký tay'], ['pcNguong', 'Cảnh báo lệch khối lượng (%)', 'VD: 5 · trống = không kiểm tra']]) +
+  S.vc = '<div class="card"><div class="row" style="justify-content:space-between"><b>Số HĐ vận chuyển, chi phí, xác nhận khối lượng: số chung và số riêng từng đội xe</b>' + sua('dx', 'Sửa ở tab Vận chuyển') + '</div></div>' +
     '<div class="card"><h3 style="margin-top:0">Số hợp đồng đầy đủ sẽ in (xem trước)</h3><div id="soPreviewVc">' + soPreviewHtml(rec, null, 'vc') + '</div></div>' +
     (g.dx.warns.length ? '<div class="msg warn">Vận chuyển có ' + g.dx.warns.length + ' dòng cần lưu ý (giấy tờ thiếu hoặc sắp hết hạn). Xem tab Vận chuyển, không chặn xuất hồ sơ.</div>' : '') +
-    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng vận chuyển (theo người ký)</h3>' + btn('Tải tất cả (.zip)', 'hdvc', null, g.canHDVC) + '</div>' +
+    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng vận chuyển (mỗi đội xe một hợp đồng)</h3>' + btn('Tải tất cả (.zip)', 'hdvc', null, g.canHDVC) + '</div>' +
     (groups.length ? groups.map((x, i) => row(esc(x.ten), x.vaiTro + ' ký · ' + x.xe.length + ' xe · ' + fmt(x.donGia) + ' đ/tấn', btn('.docx', 'hdvc', i, g.canHDVC))).join('') : '<p class="mut">Chưa có vận chuyển.</p>') + '</div>' +
     '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Xác nhận khối lượng và thanh toán tiền vận chuyển</h3>' + (gpc.length ? btn('Biên bản (.zip)', 'xnvc', null, g.canPC) + btn('Bảng thanh toán (.zip)', 'ttvc', null, g.canPC) : '') + '</div>' +
     (!(rec.pc || []).length ? '<p class="mut">Chưa có phiếu cân. Nạp file phiếu cân ở tab Vận chuyển (mỗi chuyến một dòng).</p>'

@@ -1,12 +1,13 @@
 /* ========== Kiểm tra hồ sơ trước khi xuất: dùng lại gate/checklist FSC, nhóm thành “chặn xuất” và “cần đối chiếu”, kèm số phiếu/trường và liên kết đến đúng tab ========== */
 function exportCheck(job) {
   const g = gate(job), ex = job.exp || {}, i = job.info, items = [];
-  const add = (kind, nhom, text, ref, go) => items.push({kind, nhom, text, ref: ref || '', go: go || {ftab: 'finfo'}});
+  /* MỘT dạng mục cho mọi quy tắc (src/kiemtra.js): mức, nhóm, đối tượng (lô / đội / đội xe / dòng), biểu mẫu bị ảnh hưởng, nơi sửa. kind và go giữ cho các màn đang đọc tên cũ */
+  const add = (kind, nhom, text, ref, go, doiTuong) => { const m = HAKKiemTra.muc({kind, nhom, text, ref, doiTuong, noiSua: go || {ftab: 'finfo'}}); items.push(Object.assign(m, {kind: m.muc, go: m.noiSua})); };
   const pcRow = n => (job.pc || []).find(r => String(r._row) === String(n));
   // thông tin chủ rừng, rừng, đơn giá
   infoErrors(i, job.id).forEach(e => add('chan', 'Thông tin chủ rừng', e, '', {tab: 'info'}));
   forestErrors(i, job.fid).forEach(e => add('chan', 'Thông tin rừng', e, '', {ftab: 'finfo'}));
-  giaErrors(i).forEach(e => add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}));
+  giaErrorsRec(job).forEach(e => add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}));   // từng đội theo hình thức của đội
   // mã lô trùng ở dữ liệu cũ: liệt kê đủ các lô khớp để đối chiếu, không tự sửa
   HAKLoRung.duplicateGroups(db).filter(x => x.lots.some(l => l.forest === job.fid)).forEach(x => add('chan', 'Mã lô trùng (dữ liệu cũ)', 'Mã “' + x.ma + '” đang dùng cho ' + x.lots.length + ' lô: ' + x.lots.map(l => l.lo + ' (chủ ' + l.chu + '; ' + l.nc + ' nhân công, ' + l.dx + ' xe, ' + l.pc + ' phiếu cân)').join('; ') + '. Đổi mã các lô thừa ở tab Thông tin rừng, dữ liệu không bị đổi trước khi bạn xác nhận.', x.ma, {ftab: 'finfo'}));
   // nhân công, định mức, tuổi
@@ -15,10 +16,10 @@ function exportCheck(job) {
   // người dưới 18 tuổi: đã là lỗi của từng dòng nhân công (checkNC) nên chặn mọi biểu mẫu có tên người đó
   // vận chuyển
   g.dx.errs.forEach(e => add('chan', 'Đội xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
+  groupsDX(job).forEach(gr => hanLoiOf(job, gr).forEach(v => add('chan', 'Giấy tờ xe hết hạn lúc chạy phiếu', 'Đội xe “' + gr.ten + '”: ' + HAKGiayTo.text(v) + '. BM-09 và BM-10 của đội xe này bị chặn: sửa hạn giấy tờ của xe hoặc ngày cân của phiếu nếu nhập sai.', 'Phiếu ' + (v.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}, {loai: 'doiXe', ten: gr.ten})));
   g.dx.warns.forEach(e => add('doi', 'Giấy tờ xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
   const vcm = (i.vanChuyen || {}).mode;
-  if (vcm === 'tanDoan') add('chan', 'Cước theo bậc cự ly (hồ sơ cũ)', 'Hồ sơ cũ còn dùng cước “theo bậc cự ly” (cách tính đã bỏ). Dữ liệu các bậc vẫn được giữ; hãy chọn lại cước cố định hoặc tấn/km.', 'Cách tính cước', {ftab: 'dx'});
-  else g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'dx'}));
+  g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'dx'}));
   // phiếu cân: thiếu/sai ngày, trùng, biển số chưa ghép, khối lượng…
   g.pc.errs.forEach(e => {
     const m = /^Dòng (\d+): (.*)$/.exec(e), r = m && pcRow(m[1]), so = r ? (r.soPhieu || '(không số)') : '', msg = m ? m[2] : e;
@@ -33,14 +34,14 @@ function exportCheck(job) {
   if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  { const bd = doiOf(job); if (bd.pcChuaGan) add('doi', 'Phiếu cân chưa gán đội', 'Lô có ' + bd.doi.length + ' đội nhưng ' + bd.pcChuaGan + ' phiếu cân chưa gán đội: khối lượng từng đội đang ' + (bd.klNguon === 'nhap' ? 'theo số nhập tay của hồ sơ cũ' : 'chia theo số người') + '. Gán đội cho phiếu cân (gán hàng loạt theo bộ lọc) để khối lượng đội lấy đúng theo phiếu cân.', '', {ftab: 'dx', focus: 'pc'}); }
   { const bd = doiOf(job); if (bd.klLoi) add('doi', 'Số đội', 'Khối lượng thực tế từng đội: ' + bd.klLoi + '. BM-08 và BM-14 của từng đội sẽ là bản nháp cho đến khi sửa.', 'Khối lượng thực tế từng đội', {ftab: 'finfo'}); }
-  { const ttN = (job.nc || []).filter(isTT).length, sd = job.info.soDoi; if (!isDirect(job.info) && typeof sd === 'number' && ttN >= 1 && sd !== ttN) add('doi', 'Số đội', 'Thông tin rừng khai ' + sd + ' đội làm song song nhưng tab Nhân công có ' + ttN + ' Tổ trưởng (' + ttN + ' đội): thời gian khai thác dự kiến tính theo ' + sd + ' đội, hồ sơ lập theo ' + ttN + ' đội.', 'Số đội khai thác', {ftab: 'finfo'}); }
-  { const rows = HAKDinhBien.get(db).rows, bd = HAKDoi.build(job.nc || [], isTT);
-    (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
-      if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}); }); }
+  { const rows = viTriRows(), bd = doiOf(job);   // theo ĐỘI THẬT (bảng Nhân công khai thác), không chia lại theo cột chữ
+    (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', ten: d.ten, nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
+      if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}, u.ten ? {loai: 'doi', ten: u.ten} : null); }); }
   { const L = tgLechOf(i, job.pc, nDoiOf(i, job.nc)); if (L && L.canhBao) add('doi', 'Thời gian khai thác', tgLechText(i, L), 'Thời gian khai thác', {ftab: 'finfo'}); }
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
-  HAKNhapLieu.kiemTra(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));
+  nhapLieuAll(job).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go));   // của lô, từng đội và từng đội xe
   // các mục checklist FSC còn lại chưa được xét ở trên
   const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo chức danh', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
   const goOf = lb => /Tọa độ|Giấy tờ pháp lý|Thời gian/.test(lb) ? {ftab: 'finfo'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo'};
@@ -49,12 +50,22 @@ function exportCheck(job) {
   if (!job.nc.length) add('doi', 'Nhân công', 'Chưa nạp nhân công của lô.', '', {ftab: 'nc'});
   if (!job.dx.length) add('doi', 'Đội xe', 'Chưa nạp đội xe của lô.', '', {ftab: 'dx'});
   if (!(job.pc || []).length) add('doi', 'Phiếu cân', 'Chưa nạp phiếu cân của lô.', '', {ftab: 'dx', focus: 'pc'});
-  return {items, chan: items.filter(x => x.kind === 'chan'), doi: items.filter(x => x.kind === 'doi'), g};
+  return {items, chan: items.filter(x => x.muc === 'chan'), doi: items.filter(x => x.muc === 'doi'), g, tomTat: HAKKiemTra.tomTat(items), bieuMauBiChan: HAKKiemTra.bieuMauBiChan(items)};
+}
+/* Đường dẫn: Chủ rừng › Lô › màn đang xem › Đội / Đội xe đang chọn (nhân công thuộc đội; xe thuộc đội xe) */
+function loCrumb(job) {
+  const o = curOwner(), f = curForest(); if (!o || !f) return '';
+  const man = {finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', kt: 'Kiểm tra trước khi xuất', xuat: 'Xuất hồ sơ'}[ftab] || '';
+  let doi = '';
+  if (ftab === 'nc' && job.doi && curTeam(f)) { const t = curTeam(f); doi = 'Đội “' + esc(trim(t.ten) || 'Đội ' + (job.doi.findIndex(d => d.id === t.id) + 1)) + '”'; }
+  if (ftab === 'dx' && job.hdvc) { const h = job.hdvc.find(x => x.id === curHd); if (h) { const k = job.hdvc.indexOf(h); doi = 'Đội xe “' + esc(trim(h.ten) || 'Đội xe ' + (k + 1)) + '”'; } }
+  const part = [['Chủ rừng “' + esc(o.info.ten || '') + '”', ''], ['Lô <b>' + esc(f.info.maRung || '(chưa có mã)') + '</b>', 'finfo'], man ? [man, ftab] : null, doi ? [doi, ''] : null].filter(Boolean);
+  return '<nav class="crumb" id="loCrumb" aria-label="Đường dẫn" style="font-size:13px;color:var(--mut,#667);margin:2px 0 6px">' + part.map(([t, k], i) => (i ? ' <span aria-hidden="true">›</span> ' : '') + (k && i < part.length - 1 ? '<button type="button" class="linkbtn" data-ftab="' + k + '">' + t + '</button>' : '<span>' + t + '</span>')).join('') + '</nav>';
 }
 function panelKiemTra(job) {
   const c = exportCheck(job), nhom = list => [...new Set(list.map(x => x.nhom))];
   const block = (title, cls, list) => !list.length ? '' : '<div class="card"><h3 style="margin:0 0 8px">' + title + ' (' + list.length + ')</h3>' + nhom(list).map(n => '<div style="margin-bottom:10px"><b>' + esc(n) + '</b>' +
-    list.filter(x => x.nhom === n).map(x => '<div class="row" style="align-items:flex-start;gap:8px;margin-top:4px"><span class="pill ' + cls + '">' + (x.ref ? esc(x.ref) : '•') + '</span><span style="flex:1">' + esc(x.text) + '</span><button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(x.go)) + '">Mở để sửa</button></div>').join('') + '</div>').join('') + '</div>';
+    list.filter(x => x.nhom === n).map(x => '<div class="row" style="align-items:flex-start;gap:8px;margin-top:4px"><span class="pill ' + cls + '">' + (x.ref ? esc(x.ref) : '•') + '</span><span style="flex:1">' + (x.doiTuong && x.doiTuong.ten ? '<small class="mut">' + (x.doiTuong.loai === 'doiXe' ? 'Đội xe' : 'Đội') + ' “' + esc(x.doiTuong.ten) + '”</small> ' : '') + esc(x.text) + (x.muc === 'chan' && x.bieuMau.length && x.bieuMau.length < HAKKiemTra.TAT_CA.length ? ' <small class="mut" data-bm="' + esc(x.bieuMau.join(',')) + '">· chặn ' + x.bieuMau.map(b => 'BM-' + b).join(', ') + '</small>' : '') + '</span><button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(x.go)) + '">Mở để sửa</button></div>').join('') + '</div>').join('') + '</div>';
   const ok = !c.chan.length;
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Kiểm tra hồ sơ trước khi xuất</h3><span class="pill ' + (ok ? 'ok' : 'err') + '">' + (ok ? 'Không có mục chặn xuất' : c.chan.length + ' mục chặn xuất') + '</span></div>' +
     '<p class="mut" style="margin:6px 0 0">Dùng lại checklist FSC và quy tắc kiểm tra của phần mềm. <b>Chặn xuất</b>: làm nút xuất hồ sơ bị khóa hoặc hồ sơ sai. <b>Cần đối chiếu</b>: vẫn xuất được nhưng nên kiểm tra. Bấm “Mở để sửa” để đến đúng tab.</p>' +
@@ -75,7 +86,7 @@ function panelRung(own) {
   const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'], ['xuat', 'Xuất hồ sơ']];
   return list +
     '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
-    panelTienDo(job) + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
+    loCrumb(job) + panelTienDo(job) + loBar() + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
     (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(stJob(job)) : ftab === 'dx' ? panelDX(stJob(job)) + panelPhieuCan(stJob(job)) : ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu</b>.' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + panelXuat(job));
 }
 
@@ -98,12 +109,10 @@ function dmTgField(i) {
 }
 /* Ô Số đội khai thác của rừng: các đội làm song song nên thời gian dự kiến chia cho số đội. Để trống thì lấy theo số Tổ trưởng ở tab Nhân công. */
 function soDoiNote(i, nc) {
-  const nn = nDoiNc(nc), own = typeof i.soDoi === 'number' && i.soDoi >= 1, tt = (nc || []).filter(isTT).length;
-  if (!own) return 'Để trống: lấy theo số Tổ trưởng ở tab Nhân công (hiện ' + nn + ' đội). Khai số đội ở đây để tính thời gian khai thác dự kiến.';
-  return 'Đang dùng <b>' + i.soDoi + ' đội</b> làm song song.' + (tt > 1 && tt !== i.soDoi ? ' <b style="color:var(--warn)">Tab Nhân công đang có ' + tt + ' Tổ trưởng (' + tt + ' đội): kiểm tra lại số đội.</b>' : '') + ' <button type="button" class="linkbtn" data-act="soDoiAuto">Theo nhân công</button>';
+  return 'Lô có <b>' + nDoiNc(nc) + ' đội</b> làm song song (lập ở bảng “Nhân công khai thác”, tab Nhân công): thời gian dự kiến chia cho số đội.';
 }
 function soDoiField(i, nc) {
-  return '<label><span>Số đội khai thác (làm song song)</span><input name="soDoi" inputmode="numeric" value="' + esc(typeof i.soDoi === 'number' ? String(i.soDoi) : (i.soDoi ?? '')) + '" placeholder="' + esc('theo nhân công: ' + nDoiNc(nc)) + '"><small class="mut" id="soDoiNote">' + soDoiNote(i, nc) + '</small></label>';
+  return '<label><span>Số đội khai thác</span><small class="mut" id="soDoiNote">' + soDoiNote(i, nc) + '</small></label>';
 }
 /* Thời gian khai thác dự kiến của rừng = diện tích × ngày/ha; có ngày bắt đầu thì hiện ngày kết thúc dự kiến (không tính Chủ nhật) */
 function tgDuKienHtml(i, pcs, nd) {
@@ -124,18 +133,18 @@ function cuLyNote(i) {
 }
 /* Khối lượng thực tế từng đội (lô giao khoán nhiều đội): tùy chọn; trống hết thì chia theo số người (src/doi.js khoiLuong) */
 function klDoiField(f) {
-  const i = f.info || {}; if (isDirect(i)) return '';
-  const b = HAKDoi.build(f.nc || [], isTT); if (!b.multi) return '';
-  const kq = doiOf(Object.assign({nc: f.nc || []}, f)), m = i.klDoi || {};
-  return '<fieldset style="grid-column:1/-1;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px 12px"><legend class="mut">Khối lượng thực tế từng đội (tấn, tùy chọn)</legend>' +
-    '<div class="row" style="gap:10px;flex-wrap:wrap">' + b.doi.map(d => '<label><span>' + esc(doiLabel(d)) + ' (' + d.n + ' người)</span><input data-kldoi="' + esc(d.key) + '" inputmode="decimal" value="' + esc(typeof m[d.key] === 'number' ? String(m[d.key]).replace('.', ',') : '') + '" placeholder="trống: theo số người"></label>').join('') + '</div>' +
-    '<small class="mut">Phiếu cân không ghi đội nên mặc định sản lượng chia theo số người. Nếu năng suất các đội khác nhau, nhập đủ khối lượng thực tế của MỌI đội (tổng phải bằng khối lượng thực tế của lô); BM-08 và BM-14 của từng đội dùng số này.</small>' +
-    (kq.klLoi ? '<div class="msg warn" style="margin-top:6px">' + esc(kq.klLoi) + '</div>' : kq.klNguon === 'nhap' ? '<div class="mut" style="margin-top:6px">Đang dùng khối lượng nhập riêng của từng đội.</div>' : '') + '</fieldset>';
+  const i = fInfo(f), r0 = {info: Object.assign({}, i, {_klPC: klPhieu(f.pc)}), nc: f.nc || [], doi: f.doi || null, pc: f.pc || []};
+  if (!(f.doi || []).some(d => typeof d.klHoSoCu === 'number')) return '';   // chỉ hồ sơ cũ đã nhập khối lượng từng đội; bản mới: khối lượng đội = phiếu cân của đội
+  const kq = doiOf(r0), b = kq; if (!b.multi) return '';
+  return '<fieldset style="grid-column:1/-1;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px 12px"><legend class="mut">Khối lượng thực tế từng đội của hồ sơ cũ (tấn) — chỉ hiển thị</legend>' +
+    '<div class="row" style="gap:10px;flex-wrap:wrap">' + b.doi.map(d => '<span><b>' + esc(doiLabel(d)) + '</b>: ' + (typeof d.team.klHoSoCu === 'number' ? fmtTan(d.team.klHoSoCu) + ' tấn' : '—') + '</span>').join('') + '</div>' +
+    '<small class="mut">Số nhập tay của bản cũ, đang dùng cho BM-08 và BM-14 của từng đội. Bỏ số hồ sơ cũ (nút ở ô khối lượng lô) thì khối lượng đội lấy theo phiếu cân đã gán đội.</small>' +
+    (kq.klLoi ? '<div class="msg warn" style="margin-top:6px">' + esc(kq.klLoi) + '</div>' : '') + '</fieldset>';
 }
 function panelForest(f) {
-  const i = f.info || {};
+  const i = fInfo(f);
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
-    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['khoiLuong', 'dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
+    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
   return '<div class="card"><h3 style="margin-top:0">Thông tin khai thác của rừng</h3>' +
     '<form id="forestForm" class="grid">' +
@@ -144,12 +153,13 @@ function panelForest(f) {
     inp('dienTich', 'Diện tích (ha)') + dmField(i) +
     dmTgField(i) + soDoiField(i, f.nc) + '<p class="mut" id="tgNote" style="grid-column:1/-1;margin:0">' + tgDuKienHtml(i, f.pc, nDoiOf(i, f.nc)) + '</p>' +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
-    inp('khoiLuong', 'Khối lượng khai thác thực tế (tấn)', {ph: 'để trống thì dùng sản lượng dự kiến', btn: fillBtn('fillKl', 'Lấy tổng từ phiếu cân')}) +
+    (typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0
+      ? '<label><span>Khối lượng thực tế của hồ sơ cũ (tấn) — chỉ hiển thị</span><div id="klCu"><b>' + fmtTan(i.klHoSoCu) + ' tấn</b> <span class="mut">— số nhập tay của bản cũ, đang được dùng làm khối lượng lô; tổng phiếu cân hiện là ' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn' : '—') + '.</span> <button type="button" class="linkbtn" data-act="boKlCu">Bỏ số hồ sơ cũ, lấy theo phiếu cân</button></div></label>'
+      : '<label><span>Khối lượng khai thác thực tế (tấn)</span><div id="klPC"><b>' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn</b> <span class="mut">— tổng ' + (f.pc || []).filter(p => p.kl > 0).length + ' phiếu cân (một nguồn duy nhất)</span>' : '—</b> <span class="mut">chưa có phiếu cân: hồ sơ dùng sản lượng dự kiến</span>') + '</div></label>') +
     klDoiField(f) + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p>' +
     /* Ô cũ “Đơn giá giao khoán Tổ trưởng”: chỉ còn hiện ở hồ sơ cũ đã có giá trị (để hợp đồng đã in không đổi). Lô mới nhập đơn giá Tổ trưởng ở bảng đơn giá theo vị trí (tab Nhân công);
      * đơn giá khoán của cả tổ luôn suy ra từ định biên. Xóa trống ô này thì ô biến mất và hợp đồng chuyển sang cách tính mới. */
-    (i.donGia > 0 ? '<label><span>Đơn giá Tổ trưởng của hồ sơ cũ (đồng/tấn)</span><input name="donGia" inputmode="numeric" style="text-align:right" value="' + esc(fmt(i.donGia)) + '"><small class="mut">Ô của bản cũ: chỉ dùng khi bảng đơn giá theo vị trí (tab Nhân công) chưa có giá Tổ trưởng, và khi còn giá trị thì hợp đồng không in đoạn “đơn giá khoán bình quân của tổ”. Nên chuyển giá này sang bảng đơn giá theo vị trí rồi xóa trống ô.</small></label>' : '<input type="hidden" name="donGia" value="">') +
-    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin rừng</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
+    '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
 }
 
 const luongOptions = (direct, cur) => {
@@ -158,11 +168,11 @@ const luongOptions = (direct, cur) => {
   return all.map(([v, l]) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + l + '</option>').join('');
 };
 function panelLuong(rec) {
-  const i = rec.info, direct = isDirect(i), cur = i.hinhThucLuong || 'sanluong';
+  const f = curForest(), t = rec.doi && f ? curTeam(f) : null, i = t ? infoTeam(rec, rec.doi.find(d => d.id === t.id) || t) : rec.info, direct = isDirect(i), cur = i.hinhThucLuong || 'sanluong';
   const rate = (pre, map, unit, legacyTt) => chucDanhAll().map((cd, k) => '<label><span>Đơn giá ' + esc(cd) + ' (' + unit + ')</span><input name="' + pre + k + '" value="' +
-    esc(((map || {})[cd]) ?? ((legacyTt && k === 0 && i.donGia > 0) ? i.donGia : '')) + '"></label>').join('');
+    esc(((map || {})[cd]) ?? '') + '"></label>').join('');
   const grp = (name, html) => '<div class="grid" data-grp="' + name + '" style="grid-column:1/-1;' + (cur === name ? '' : 'display:none') + '">' + html + '</div>';
-  return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá</h3>' +
+  return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá' + (t && rec.doi.length > 1 ? ' — đội “' + esc(t.ten || '') + '”' : '') + '</h3>' +
     '<p class="mut" style="margin-top:0">Danh sách nhân công nạp từ file Excel. <b>Giao khoán</b>: chủ rừng ký với Tổ trưởng, công nhân ký một Giấy ủy quyền cho Tổ trưởng; tính theo tấn, ha hoặc ngày công. <b>Trực tiếp</b>: chủ rừng ký hợp đồng lao động với tất cả nhân công; tính theo tấn hoặc ngày công. Sản lượng (tấn, ha) hoặc số công chia đều cho mọi người; đơn giá theo từng vai trò.</p>' +
     '<form id="luongForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Hình thức hợp đồng</span><select name="moHinhKy">' +
@@ -171,7 +181,7 @@ function panelLuong(rec) {
     '<label style="grid-column:1/-1"><span>Cơ sở tính đơn giá</span><select name="hinhThucLuong">' + luongOptions(direct, cur) + '</select></label>' +
     grp('sanluong', rate('dt_', i.donGiaTan, 'đ/tấn', true)) + grp('ha', rate('ha_', i.donGiaHa, 'đ/ha')) + grp('ngaycong', rate('dn_', i.donGiaNgay, 'đ/công')) +
     '<label><span>Hợp đồng lao động từ ngày (dd/mm/yyyy)</span><input name="ngayBDLD" value="' + esc(i.ngayBDLD ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
-    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số</button></div></form></div>';
+    '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></div></form></div>';
 }
 
 const vcOptions = cur => {
@@ -182,7 +192,7 @@ const vcOptions = cur => {
 function panelVc(rec) {
   const i = rec.info, vc = i.vanChuyen || {}, tp = transportPrice(i), cur = vc.mode || 'tanKm';
   const show = m => cur === m ? '' : 'display:none';
-  return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng vận chuyển (chủ rừng trả bên vận chuyển)</h3>' +
+  return '<div class="card"><h3 style="margin-top:0">Cước vận chuyển chung của lô (chủ rừng trả bên vận chuyển)</h3><p class="mut" style="margin-top:0">Áp cho mọi hợp đồng vận chuyển không đặt cước riêng.</p>' +
     '<p class="mut" style="margin-top:0">Hai cách tính đơn giá: <b>cố định</b> (một giá đồng/tấn) hoặc <b>tấn/km</b> (đơn giá × cự ly). Cự ly vận chuyển của rừng: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + ')' : 'chưa có') + '</b> (mặc định tự tính từ tọa độ rừng đến nơi giao, hoặc nhập tay ở tab Thông tin rừng; chỉ cần khi tính theo tấn/km).</p>' +
     '<form id="vcForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Cách tính đơn giá vận chuyển</span><select name="vcMode">' + vcOptions(cur) + '</select></label>' +
@@ -191,7 +201,11 @@ function panelVc(rec) {
     '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + (HAKCuLy.eff(i).nguon === 'tự tính' ? ', đường chim bay' : '') + ')' : 'chưa có') + '</b> · xem và sửa ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;}">tab Thông tin rừng → Cự ly vận chuyển (km)</button></div>' +
     '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
-    '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông số vận chuyển</button></div></form></div>';
+    '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></div></form>' +
+    '<h4 style="margin:12px 0 4px">Số văn bản chung của các đội xe <span class="mut" style="font-weight:400">· đội xe đặt số riêng ở bảng Đội xe bên dưới; để trống thì in dòng chấm</span></h4>' +
+    expInputs([['soVC', 'Số HĐ vận chuyển (phần số hoặc số đầy đủ)', 'năm lấy từ ngày ký các hợp đồng của lô'], ['vcChiPhi', 'HĐVC: chi phí khác (cầu đường, bốc xếp, thuế)', 'trống = dòng chấm'],
+      ['pcSo', 'Xác nhận KL vận chuyển: số biên bản', 'năm lấy từ ngày lập biên bản'], ['pcNgay', 'Xác nhận KL, thanh toán: ngày lập', 'dd/mm/yyyy'],
+      ['pcNguoiLap', 'Thanh toán vận chuyển: người lập bảng', 'trống = để ký tay'], ['pcNguong', 'Cảnh báo lệch khối lượng (%)', 'VD: 5 · trống = không kiểm tra']], expLo(rec)) + '</div>';
 }
 function giayRowHtml(g) {
   g = g || {};
@@ -209,7 +223,7 @@ function panelGiay(f) {
     '<button type="button" class="btn ghost sm" data-act="addGiay">+ Thêm giấy tờ</button></div>' +
     '<p class="mut">Chỉ lưu thông tin giấy tờ (loại, số, ngày cấp, cơ quan cấp), không lưu file scan.</p>' +
     '<form id="giayForm"><div id="giayList">' + (list.map(giayRowHtml).join('') || '<p class="mut">Chưa có giấy tờ.</p>') + '</div>' +
-    '<button class="btn" type="submit">Lưu giấy tờ</button></form></div>';
+    '<button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></form></div>';
 }
 
 let normSel = 'b';   // bản định mức đang xem/sửa ('b' = bản gốc, 'i0', 'i1'… = các bản hiệu lực từ ngày muộn hơn)
@@ -218,8 +232,8 @@ function panelNorm() {
   const vs = HAKDinhMuc.versions(db); if (!vs.some(v => v.id === normSel)) normSel = vs[vs.length - 1].id;
   const cur = HAKDinhMuc.byId(db, normSel), pos = chucDanhAll();
   const rows = pos.map((cd, k) => {
-    const n = cur.dm[cd] || {}, extra = !CHUCDANH.includes(cd);
-    return '<tr data-pos="' + esc(cd) + '"><td><b>' + esc(cd) + '</b>' + (extra ? ' <button class="btn ghost sm" type="button" data-act="normDelPos" data-name="' + esc(cd) + '" title="Xóa vị trí này (chỉ khi chưa có nhân công giữ vị trí)">Xóa</button>' : '') + '</td>' +
+    const n = cur.dm[cd] || {};
+    return '<tr data-pos="' + esc(cd) + '"><td><b>' + esc(cd) + '</b></td>' +
       BHLD_ITEMS.map(([key]) => '<td><input name="n_' + k + '_' + key + '" value="' + esc(n[key] || '') + '"></td>').join('') + '</tr>';
   }).join('');
   const label = v => (v.tuNgay ? 'Hiệu lực từ ' + v.tuNgay : 'Bản gốc (chưa đặt ngày hiệu lực)');
@@ -231,7 +245,7 @@ function panelNorm() {
     '<div class="wrap" style="margin-top:8px"><table class="normTbl"><thead><tr><th>Vị trí (chức danh)</th>' + BHLD_ITEMS.map(x => '<th>' + x[1] + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu bản định mức này</button></div></form>' +
     '<div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm bản mới, hiệu lực từ ngày</span><input id="normNewDate" placeholder="dd/mm/yyyy" style="width:160px"></label><button class="btn ghost" type="button" data-act="normAddVer">Thêm bản mới (sao chép bản đang chọn)</button></div>' +
-    '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm vị trí mới (áp dụng cho mọi bản)</span><input id="normNewPos" placeholder="VD: Công nhân phụ" style="width:260px"></label><button class="btn ghost" type="button" data-act="normAddPos">Thêm vị trí</button></div></div>' + dbCard() + keoCard() + tgCard();
+    '<p class="mut" style="margin-top:12px">Danh sách vị trí lấy từ <b>Định mức nhân công</b> (bên dưới): thêm, đổi tên hoặc xóa vị trí ở đó; vị trí số người 0 là vị trí ngoài định biên chuẩn (vẫn có định mức BHLĐ và đơn giá).</p></div>' + dbCard() + keoCard() + tgCard();
 }
 /* Định mức gỗ keo: 1 ha = ? tấn, có hiệu lực từ ngày. Rừng lấy làm mặc định theo ngày bắt đầu khai thác; rừng tự điền số khác thì dùng số riêng */
 function keoCard() {
@@ -244,7 +258,7 @@ function keoCard() {
 }
 /* Định mức nhân công: định biên một đội khai thác, số người và NHIỆM VỤ từng vị trí (src/dinhbien.js) */
 function dbCard() {
-  const g = HAKDinhBien.get(db), tong = HAKDinhBien.tong(g.rows);
+  const g = {rows: viTriRows(), saved: HAKDinhBien.get(db).saved}, tong = HAKDinhBien.tong(g.rows);   // hiện ĐỦ danh mục vị trí (kể cả vị trí 0 người đang được dùng)
   const row = (r, n) => '<tr data-db="' + n + '"><td><input name="b_cd" value="' + esc(r.chucDanh) + '" placeholder="VD: Công nhân bóc vỏ" style="width:190px"' + (r.chucDanh === HAKDinhBien.TO_TRUONG ? ' readonly title="Vị trí Tổ trưởng cố định: 1 người"' : '') + '></td>' +
     '<td><input name="b_so" value="' + esc(r.soNguoi == null ? '' : r.soNguoi) + '" placeholder="VD: 3" style="width:70px;text-align:right"' + (r.chucDanh === HAKDinhBien.TO_TRUONG ? ' readonly' : '') + '></td>' +
     '<td><input name="b_km" value="' + esc(r.kiemNhiem || '') + '" placeholder="(không)" style="width:170px" list="dbPos"></td>' +
@@ -258,6 +272,9 @@ function dbCard() {
 }
 function saveDb(form) {
   const rows = [...form.querySelectorAll('tr[data-db]')].map(tr => ({chucDanh: trim(tr.querySelector('[name=b_cd]').value), soNguoi: trim(tr.querySelector('[name=b_so]').value), kiemNhiem: trim(tr.querySelector('[name=b_km]').value), nhiemVu: trim(tr.querySelector('[name=b_nv]').value)}));
+  const giu = new Set(rows.filter(x => x.chucDanh).map(x => x.chucDanh.toLowerCase())), dung = viTriDangDung().filter(n => HAKDinhBien.get(db).saved || normUsed(n));
+  const bo = dung.filter(n => !giu.has(n.toLowerCase()) && normUsed(n));
+  if (bo.length) { note('Chưa lưu định mức nhân công: còn nhân công giữ vị trí ' + bo.map(x => '“' + x + '”').join(', ') + ' — chuyển họ sang vị trí khác trước khi xóa vị trí.', 'err'); return; }
   const r = HAKDinhBien.set(db, rows, HAKDinhMuc); if (!r.ok) { note('Chưa lưu định mức nhân công: ' + r.error, 'err'); return; }
   persist(); note('Đã lưu định mức nhân công: 1 đội ' + HAKDinhBien.tong(db.dinhBien) + ' người.' + (r.them.length ? ' Đã thêm vị trí vào danh sách chức danh: ' + r.them.join(', ') + '. Khai định mức BHLĐ và đơn giá cho các vị trí này.' : ''), r.them.length ? 'warn' : 'ok');
 }
@@ -293,16 +310,14 @@ function saveNorm(form) {
 function normAction(act, el) {
   if (act === 'normAddVer') { const r = HAKDinhMuc.addVersion(db, ($('#normNewDate') || {}).value, normSel); if (!r.ok) return note(r.error, 'err'); normSel = r.id; persist(); return note('Đã thêm bản định mức mới, sao chép từ bản trước. Sửa nội dung rồi bấm Lưu.'); }
   if (act === 'normDelVer') { const r = HAKDinhMuc.removeVersion(db, normSel); if (!r.ok) return note(r.error, 'err'); normSel = 'b'; persist(); return note('Đã xóa bản định mức.'); }
-  if (act === 'normAddPos') { const r = HAKDinhMuc.addPosition(db, ($('#normNewPos') || {}).value); if (!r.ok) return note(r.error, 'err'); persist(); return note('Đã thêm vị trí “' + r.name + '”. Nhập định mức BHLĐ và đơn giá cho vị trí này.'); }
-  if (act === 'normDelPos') { const r = HAKDinhMuc.removePosition(db, el.dataset.name, normUsed); if (!r.ok) return note(r.error, 'err'); persist(); return note('Đã xóa vị trí “' + el.dataset.name + '”.'); }
 }
 
 const INFO_FIELDS = [
   ['ma', 'Mã chủ rừng', 'text', true],
   ['danhXung', 'Danh xưng', 'select', true],
   ['ten', 'Họ và tên', 'text', true],
-  ['soHopDong', 'Số hợp đồng', 'text', false],
-  ['ngayKyHopDong', 'Ngày ký hợp đồng (dd/mm/yyyy)', 'text', false],
+  ['soHopDong', 'Số hợp đồng mua bán gỗ (căn cứ in trong các hợp đồng)', 'text', false],
+  ['ngayKyHopDong', 'Ngày ký hợp đồng mua bán gỗ (dd/mm/yyyy; mặc định ngày ký các hợp đồng của lô)', 'text', false],
   ['cccd', 'CCCD', 'text', true],
   ['ngayCap', 'Ngày cấp CCCD', 'text', true],
   ['noiCap', 'Nơi cấp CCCD', 'text', true],

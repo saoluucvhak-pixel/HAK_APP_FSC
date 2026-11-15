@@ -54,6 +54,8 @@ const RATE = {'Tổ trưởng': 400000, 'Công nhân khai thác': 300000, 'Công
   await setCell('049085000001', 9, '4'); cells = await congCells();
   ok('số công quá 3 trong một ngày bị từ chối', cells[0].vals[8] === '1' && cells[0].m === '5,5');
   await w.waitForTimeout(800);
+  ok('chấm công vào BẢN NHÁP của lô (một cách lưu): có thanh “Chưa lưu”; bấm Lưu dữ liệu vào lô', !!(await w.$('#loDirtyBar [data-act=stSave], #stDirty [data-act=stSave]')));
+  await w.click('#loDirtyBar [data-act=stSave], #stDirty [data-act=stSave]'); await w.waitForTimeout(600);
 
   // ===== sau khi chấm công =====
   await openF('nc');

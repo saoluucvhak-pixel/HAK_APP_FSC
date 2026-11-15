@@ -45,7 +45,7 @@ function nhiemVuBlocks(rec) {
   const g = HAKDinhBien.get(db); if (!g.saved) return [];
   const sc = HAKDinhBien.soSanh(g.rows, rec.nc || []);
   return [P('**PHÂN CÔNG NHIỆM VỤ THEO VỊ TRÍ**', {al: 'center', sz: 22, before: 200, after: 80, keep: true}),
-    T([2600, 1200, 1200, 9900], [['VỊ TRÍ', 'ĐỊNH BIÊN', 'THỰC TẾ', 'NHIỆM VỤ'], ...sc.vt.map((v, i) => [v.chucDanh + (v.kiemNhiem ? ' (kiêm ' + v.kiemNhiem.toLowerCase() + ')' : ''), String(v.can), String(v.co), g.rows[i].nhiemVu])],
+    T([2600, 1200, 1200, 9900], [['VỊ TRÍ', 'ĐỊNH BIÊN', 'THỰC TẾ', 'NHIỆM VỤ'], ...sc.vt.map(v => [v.chucDanh + (v.kiemNhiem ? ' (kiêm ' + v.kiemNhiem.toLowerCase() + ')' : ''), String(v.can), String(v.co), v.nhiemVu || ''])],   // nhiệm vụ của đúng vị trí đó (không ghép theo số dòng: danh mục có vị trí 0 người)
       {head: true, borders: true, sz: 18, rowH: 380, alignCols: ['left', 'center', 'center', 'left']})];
 }
 function docXNDaoTao(rec, ex) {
@@ -81,7 +81,28 @@ function docXNDaoTao(rec, ex) {
 /* ========== Gom các tệp cần xuất ========== */
 /* khóa người ký: chỉ lấy chữ số CCCD (viết 049… hay 49… có dấu cách vẫn là một người) */
 const signerKey = c => String(c == null ? '' : c).replace(/\D/g, '');
+/* cước của MỘT hợp đồng vận chuyển: cước riêng của hợp đồng (nếu có) thay cho cước chung của lô */
+const vcInfo = (rec, h) => h && h.cuoc ? Object.assign({}, rec.info, {vanChuyen: Object.assign({}, rec.info.vanChuyen || {}, h.cuoc)}) : rec.info;
+/* hồ sơ và số văn bản cho biểu mẫu của một hợp đồng vận chuyển (BM-04, BM-09, BM-10): cước, số HĐ, chi phí, số/ngày xác nhận khối lượng của hợp đồng; trống = của lô */
+function vcCtx(rec, ex, g) {
+  const h = g && g.hd; if (!h) return [rec, ex];
+  const r2 = h.cuoc ? Object.assign({}, rec, {info: vcInfo(rec, h)}) : rec;
+  if (!Object.keys(h.exp || {}).length) return [r2, ex];
+  const e = Object.assign({}, ex, h.exp), n = HAKHopDong.numbers(e); e._so = Object.assign({}, ex._so, {vc: n.vc, xn: n.xn}); return [r2, e];
+}
+const vaiTroDV = b => (b && b.loai === 'doanhnghiep') ? 'Doanh nghiệp' : 'Đơn vị vận chuyển';
 function groupsDX(rec) {
+  if (rec.hdvc) {   // cấu trúc 2.0: mỗi hợp đồng vận chuyển một nhóm, thứ tự theo xe đầu tiên (như bản cũ gom theo người ký)
+    const F = {dx: rec.dx, hdvc: rec.hdvc};
+    return HAKModel.hdOrder(F).map(h => {
+      const xs = HAKModel.xeOf(F, h); if (!xs.length) return null;
+      const sg = HAKModel.signerOf(xs, h.key), r = sg ? sg.r : xs[0], tx = sg ? sg.tx : driverSigns(r), gia = transportPrice(vcInfo(rec, h)).gia;   // người ký của ĐỘI XE
+      const base = h.donViId ? Object.assign({}, h.ben || {}, {vaiTro: vaiTroDV(h.ben)})
+        : tx ? {cccd: r.cccdTx, ten: r.taiXe, ngaySinh: r.ngaySinhTx, ngayCap: r.ngayCapTx, noiCap: r.noiCapTx, diaChi: r.diaChiTx, vaiTro: 'Tài xế'}
+          : {cccd: r.cccd, ten: r.chuXe, ngaySinh: r.ngaySinh, ngayCap: r.ngayCap, noiCap: r.noiCap, diaChi: r.diaChi, vaiTro: 'Chủ xe'};
+      return Object.assign(base, {donGia: gia, xe: xs, hd: h});
+    }).filter(Boolean);
+  }
   const out = [], by = {}, price = transportPrice(rec.info).gia;
   rec.dx.forEach(r => {
     const tx = driverSigns(r), key = signerKey(tx ? r.cccdTx : r.cccd) || (tx ? r.cccdTx : r.cccd);
@@ -97,7 +118,7 @@ function groupsDX(rec) {
 }
 /* Điều kiện dữ liệu cho quy tắc BẢN NHÁP (src/bannhap.js): true = đủ */
 function draftCtx(rec) {
-  const i = rec.info, ex = Object.assign({}, rec.exp || {}); if (!ex.ngayKy && i.ngayKyHopDong) ex.ngayKy = i.ngayKyHopDong;
+  const i = rec.info, ex = expLo(rec);
   const vol = volumeOf(i); let ngc = false; try { ngc = !!payRows(rec, ex).plan.ngc; } catch (e) { /* chưa đủ dữ liệu tính tiền công */ }
   const has = v => !!v && HAKDates.isValid(v);
   const vcm = (i.vanChuyen || {}).mode || 'tanKm';
@@ -117,8 +138,7 @@ function buildFiles(rec, kind) {
 }
 /* Thông số xuất của lô + chế độ in: dùng chung cho xuất hồ sơ và cho luồng in đợt 2 */
 function exOf(rec, mode) {
-  const ex = Object.assign({}, rec.exp || {}, {vcDiemDen: destOf(rec).text});
-  if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong;   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
+  const ex = Object.assign(expLo(rec), {vcDiemDen: destOf(rec).text});   // ngày ký hợp đồng khai ở thông tin chủ rừng làm mặc định
   ex._so = HAKHopDong.numbers(ex);                                                // MỘT quy tắc số hợp đồng cho BM-01, BM-04, BM-09, BM-10, BM-14, BM-20 (src/hopdong.js)
   ex._mode = mode || 'day';
   return ex;
@@ -148,12 +168,14 @@ function buildFilesRaw0(rec, kind) {
   files.push = f => { let q = f.path, k = 2; while (used.has(q)) q = f.path.replace(/\.docx$/, '_' + k++ + '.docx'); used.add(q); f.path = q; return Array.prototype.push.call(files, f); };
   /* In làm HAI ĐỢT khi chưa xong khai thác: 'dau' = hồ sơ làm được ngay (hợp đồng, lao động, vận chuyển, FSC...), 'cuoi' = phần chỉ làm được khi xong rừng (tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10, nghiệm thu BM-14); 'all' = tất cả một lần */
   const PHAN_CUOI = ['tc', 'nttl', 'xnvc', 'ttvc'], dau = kind === 'all' || kind === 'dau';
-  if ((kind === 'gk' || dau) && !isDirect(rec.info)) perDoi('01_HD_Giao_khoan', '01_HD_Giao_khoan', docGiaoKhoan);
-  if ((kind === 'uq' || (dau && gate(rec).canUQ)) && !isDirect(rec.info)) perDoi('20_Giay_uy_quyen', '20_Giay_uy_quyen', docUyQuyen, {skip: d => B.multi && !d.members.length});
+  const dTT = d => isDirect(infoTeam(rec, d.team));   // đội ký trực tiếp: không có hợp đồng giao khoán, giấy ủy quyền (lô có thể có cả hai loại đội)
+  if ((kind === 'gk' || dau) && anyGK(rec)) perDoi('01_HD_Giao_khoan', '01_HD_Giao_khoan', docGiaoKhoan, {skip: dTT});
+  if ((kind === 'uq' || (dau && gate(rec).canUQ)) && anyGK(rec)) perDoi('20_Giay_uy_quyen', '20_Giay_uy_quyen', docUyQuyen, {skip: d => dTT(d) || (B.multi && !d.members.length)});
   if (kind === 'bhld' || dau) files.push({path: '02_BHLD_' + s + '.docx', blocks: docBHLD(rec, ex)});
   if (kind === 'hdld' || dau) {
     hdldList(rec).forEach((cn, i) => {
-      files.push({path: '03_HDLD/' + String(i + 1).padStart(2, '0') + '_' + slug(cn.ten) + '.docx', blocks: docHDLD(rec, ex, cn)});
+      const di = B.multi ? B.doi.findIndex(d => d.id === cn.doiId) : -1, sr = di >= 0 ? subRec(rec, B, B.doi[di]) : rec;   // người của đội ký trực tiếp: đơn giá, ngày bắt đầu theo đội của người đó
+      files.push({path: '03_HDLD/' + String(i + 1).padStart(2, '0') + '_' + slug(cn.ten) + '.docx', blocks: docHDLD(sr, di >= 0 ? exDoi(ex, B, di) : ex, cn)});
     });
   }
   if (kind === 'hdvc' || dau) {

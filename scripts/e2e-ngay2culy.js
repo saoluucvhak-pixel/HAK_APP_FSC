@@ -83,15 +83,15 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   await w.click('[data-ftab=dx]'); const dxText = await w.innerText('#main');
   ok('cước tấn/km: 1.000 đồng/tấn/km × ' + kmTxt + ' km = ' + cuoc.toLocaleString('vi-VN') + ' đồng/tấn (cự ly tự tính được dùng để tính)', dxText.replace(/\./g, '').includes(String(cuoc)) || dxText.includes(cuoc.toLocaleString('vi-VN')), dxText.slice(dxText.indexOf('tấn/km') - 100, dxText.indexOf('tấn/km') + 200));
   // nhập tay ưu tiên
-  await open('finfo'); await w.fill('#forestForm [name=cuLy]', '60'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400); await open('finfo');
+  await open('finfo'); await w.fill('#forestForm [name=cuLy]', '60'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400); await open('finfo');
   note = await w.innerText('#cuLyNote');
   ok('nhập tay 60 km: ưu tiên số nhập tay, vẫn nêu số tự tính để so sánh, lưu vào hồ sơ', /nhập tay 60 km/.test(note) && new RegExp('Tự tính từ tọa độ: ' + kmTxt + ' km').test(note) && (await db()).rs.own1.forests.fa.info.cuLy === 60, note);
   await w.click('[data-ftab=dx]'); ok('tab Vận chuyển: cự ly 60 km (nhập tay), cước = 1.000 × 60 = 60.000', /Cự ly vận chuyển: 60 km \(nhập tay\)/.test(await w.innerText('#main')) && /60\.000 đồng\/tấn/.test(await w.innerText('#main')));
   // xóa số nhập tay: trở về tự tính
-  await open('finfo'); await w.fill('#forestForm [name=cuLy]', ''); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400); await open('finfo');
+  await open('finfo'); await w.fill('#forestForm [name=cuLy]', ''); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400); await open('finfo');
   ok('xóa ô cự ly: quay về tự tính ' + kmTxt + ' km, hồ sơ lưu cự ly trống', new RegExp('tự tính ' + kmTxt + ' km').test(await w.innerText('#cuLyNote')) && (await db()).rs.own1.forests.fa.info.cuLy == null);
   // đổi tọa độ rừng: cự ly tự cập nhật
-  await w.fill('#forestForm [name=lat]', '15.5'); await w.fill('#forestForm [name=lng]', '108.1'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400); await open('finfo');
+  await w.fill('#forestForm [name=lat]', '15.5'); await w.fill('#forestForm [name=lng]', '108.1'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400); await open('finfo');
   const n2 = await w.innerText('#cuLyNote'); const m2 = /tự tính ([\d,]+) km/.exec(n2);
   ok('cự ly mới ≈ ' + (Math.round(km * 3 / 4 * 10) / 10) + ' km (0,3 độ kinh độ so với 0,4)', !!m2 && Math.abs(parseFloat(m2[1].replace(',', '.')) - km * 3 / 4) < 0.3, n2);
   // đóng và mở lại: dữ liệu và tọa độ còn

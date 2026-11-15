@@ -122,13 +122,13 @@ function runAutoBackup() {
 }
 
 const NO_STORE = () => 'Chưa mở được cơ sở dữ liệu' + (dataIssue ? ': ' + dataIssue.reason + ' (' + dataIssue.path + ')' : '') + '. Hãy xử lý ở màn hình thông báo trước.';
-/* Tự kiểm cấu trúc 2.0 (chỉ khi chạy từ mã nguồn, HAKQN_CHECK_MODEL=<file nhật ký>): sau mỗi lần lưu, chuyển dữ liệu sang cấu trúc bảng mẹ – bảng con
- * rồi dựng lại dạng cũ (src/model.js) phải ra y nguyên dữ liệu vừa lưu; sai lệch ghi vào file nhật ký. Chạy cả bộ e2e với biến này để kiểm trên mọi dữ liệu thử. */
+/* Tự kiểm cấu trúc 2.0 (chỉ khi chạy từ mã nguồn, HAKQN_CHECK_MODEL=<file nhật ký>): sau mỗi lần lưu, dữ liệu trong SQLite phải ĐÃ CHUẨN HÓA
+ * (mọi lô có đội, mọi nhân công có doiId: chuẩn hóa lại không đổi gì) và dựng lại dạng cũ không lỗi; sai lệch ghi vào file nhật ký. CI chạy cả bộ e2e với biến này. */
 function checkModel(where) {
   const f = process.env.HAKQN_CHECK_MODEL; if (!f || !store) return;
   try {
-    const M = require('./model'), db = store.load(), back = M.legacyDb(M.migrateDb(db, require('./dinhbien').MAC_DINH));
-    require('assert').deepStrictEqual(back, JSON.parse(JSON.stringify(db)));
+    const M = require('./model'), db = JSON.parse(JSON.stringify(store.load()));
+    require('assert').deepStrictEqual(M.ensureDb(db), db); M.legacyDb(db);
     fs.appendFileSync(f, 'OK ' + where + '\n');
   } catch (e) { fs.appendFileSync(f, 'LECH ' + where + ' ' + String(e.message).slice(0, 4000).replace(/\n/g, ' ⏎ ') + '\n'); }
 }
@@ -452,7 +452,7 @@ async function smoke() {
       r.checks.upThreeForests = Object.keys(F).length === 3;
       r.checks.upRecords = ['f1', 'f2', 'f3'].map(k => F[k] ? F[k].dx.length + '/' + F[k].pc.length : '').join() === '2/2,2/1,2/3';
       r.checks.upTypedDestination = !!F.f1 && F.f1.exp.vcDiemDen === 'Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc' && !F.f1.info.muaHang;   // địa chỉ cũ còn nguyên, chưa tự đổi
-      r.checks.upBacSauCu = !!F.f2 && F.f2.info.vanChuyen.mode === 'tanDoan' && F.f2.info.vanChuyen.bac.length === 2;
+      r.checks.upBacSauCu = !!F.f2 && F.f2.info.vanChuyen.mode === 'tanKm' && F.f2.info.vanChuyen.bacCu.length === 2 && !('bac' in F.f2.info.vanChuyen);   // v6: cước bậc cự ly chuyển sang tấn/km, giữ dữ liệu bậc ở bacCu
       r.checks.upBackup = bk.some(f => /^truoc-nang-cap-v2-len-v\d+-/.test(f));
       r.checks.upSchema = store.db.pragma('user_version', {simple: true}) === SCHEMA_VERSION;
       const lk = lookup.status(); r.checks.upLookup = !!lk && JSON.stringify(lk).length > 20;

@@ -18,6 +18,8 @@ const clone = o => JSON.parse(JSON.stringify(o));
 
 const xe = (bien, ma) => ({_row: 2, maRung: ma, stt: '1', chuXe: 'CHỦ XE ' + bien, ngaySinh: '01/01/1980', cccd: bien === '92C-12345' ? '049000000077' : '049000000078', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', bienSo: bien, loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'});
 const P = (stt, ngay, bien, so, kl) => ({_row: stt + 1, stt: String(stt), ngay, bienSo: bien, soPhieu: so, kl, noiGiao: 'Cảng dăm Kỳ Hà', ghiChu: ''});
+/* các trường đã bỏ ở SQLite v6 không còn trong dạng dựng lại: so phần còn lại */
+const boCuF = f => { const c = JSON.parse(JSON.stringify(f)); ['soDoi', 'khoiLuong', 'klHoSoCu', 'klDoi', 'donGia', 'donGiaTan'].forEach(k => { if (c.info) delete c.info[k]; }); (c.nc || []).forEach(r => { delete r.doi; }); (c.pc || []).forEach(r => { delete r.doi; }); (c.dx || []).forEach(r => { delete r.doiXe; }); if (c.info && c.info.vanChuyen) ['mode', 'bac', 'bacCu'].forEach(k => delete c.info.vanChuyen[k]); return c; };
 const forest = (id, ma, ten, pc) => ({id, info: {hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', donGiaTan: {'Tổ trưởng': 420000, 'Công nhân khai thác': 330000, 'Công nhân cưa': 380000}, khoiLuong: 21.75, maRung: ma, tenRung: ten, diaDiem: 'Thôn ' + ma, lat: 15.6, lng: 108.1, dienTich: 2, dinhMucTanHa: 80, cuLy: 45, tuNgay: '01/10/2026', denNgay: '30/11/2026', donGia: 340000, giayTo: [], vanChuyen: {mode: 'coDinh', coDinh: 52000, bac: []},
   muaHang: {congTyId: 'cX', ten: 'CÔNG TY TNHH DĂM AN PHÁT', mst: '0401234567', diaChiId: '', diaChiNhan: 'Địa chỉ công ty', diaChi: 'KCN Điện Nam – Điện Ngọc, Quảng Nam', nguoiDaiDien: '', chucVu: '', sdt: '', xacNhan: '2026-10-01T00:00:00.000Z'}},
   nc: ma === 'R-A' ? NC_A : [], dx: [xe('92C-12345', ma), xe('92C-67890', ma)], pc, exp: {soVC: '07'}});
@@ -101,7 +103,9 @@ const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
   ok('xem trước toàn bộ: nêu lô A TRÙNG và lô B được GIỮ', /TRÙNG/.test(box) && /GIỮ/.test(box) && /R-B/.test(box), box.slice(0, 600));
   await w.check('input[name=impStrat][value=overwrite]'); await w.click('[data-act=impGo]'); await w.waitForTimeout(700);
   d2 = await dbOf(w);
-  ok('ghi đè từ bản sao lưu chỉ có A: A về bản cũ', JSON.stringify(d2.rs.own1.forests.fa) === JSON.stringify(SEED.rs.own1.forests.fa));
+  { const M = require('../src/model'), A2 = d2.rs.own1.forests.fa;   // bản sao lưu dạng 1.4.x: khôi phục rồi chuẩn hóa sang dạng có đội (cấu trúc 2.0)
+  const same = (x, y) => { try { require('assert').deepStrictEqual(x, y); return true; } catch (e) { return false; } };   // thứ tự khóa trong JSON không quan trọng
+  ok('ghi đè từ bản sao lưu chỉ có A: A về bản cũ (đã chuẩn hóa có đội; dựng lại dạng cũ giống hệt)', same(A2, M.ensureForest(SEED.rs.own1.forests.fa)) && same(boCuF(M.legacyForest(A2)), boCuF(SEED.rs.own1.forests.fa)), JSON.stringify(A2).slice(0, 300)); }
   ok('B không bị xóa và còn bản đã sửa; chủ khác giữ nguyên', JSON.stringify(d2.rs.own1.forests.fb) === JSON.stringify(editedDb.rs.own1.forests.fb) && JSON.stringify(d2.rs.own2) === JSON.stringify(editedDb.rs.own2));
   // bản sao lưu toàn bộ + "Thay toàn bộ" phải nêu rõ phạm vi
   let said = ''; w.removeAllListeners('dialog'); w.on('dialog', async dlg => { said = dlg.message(); await dlg.dismiss(); });

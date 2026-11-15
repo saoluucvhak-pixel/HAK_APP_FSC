@@ -72,14 +72,15 @@
         {n: 'Ngày đến hạn bảo hiểm', req: N, fmt: 'dd/mm/yyyy', ex: '30/06/2027', note: 'Quá hạn hoặc còn dưới 30 ngày thì cảnh báo.'},
         {n: 'Kiểm định từ ngày', req: K, fmt: 'dd/mm/yyyy', ex: '01/07/2026', note: 'Có thì phải là ngày có thật.'},
         {n: 'Kiểm định đến ngày', req: N, fmt: 'dd/mm/yyyy', ex: '01/07/2027', note: 'Quá hạn hoặc còn dưới 30 ngày thì cảnh báo.'},
-        {n: 'SĐT', req: A, fmt: 'Văn bản (số điện thoại)', ex: '0905123456', note: 'Số điện thoại của NGƯỜI KÝ hợp đồng; thiếu thì báo lỗi.'}],
+        {n: 'SĐT', req: A, fmt: 'Văn bản (số điện thoại)', ex: '0905123456', note: 'Số điện thoại của NGƯỜI KÝ hợp đồng; thiếu thì báo lỗi.'},
+        {n: 'Đội xe', req: K, fmt: 'Văn bản (tên đội xe)', ex: '', note: 'Tùy chọn. Ghi tên một đội xe đã có trong lô (tên đội xe, tên đơn vị vận chuyển hoặc tên người ký) thì xe vào đội xe đó. Để trống: xe vào đội xe đang chọn ở tab Vận chuyển; chưa chọn đội xe thì xe vào hợp đồng của chính người ký như trước. Tên chưa có trong lô báo lỗi dòng.'}],
       rules: ['Mỗi biển kiểm soát chỉ một dòng.', 'Người ký chỉ nhận “Chủ xe” hoặc “Tài xế”. Người ký phải có CCCD 12 số, ngày cấp có thật, thường trú và SĐT.',
         'Người ký là Tài xế thì phải có tên tài xế và thông tin CCCD của tài xế.', 'Ngày giấy tờ (GPLX, bảo hiểm, kiểm định) quá hạn hoặc còn dưới 30 ngày: cảnh báo, không chặn.'],
       errors: [['Biển kiểm soát trùng dòng n', 'Mỗi xe chỉ khai một lần; xóa dòng trùng.'], ['người ký là tài xế nhưng thiếu Tên tài xế', 'Điền Tên tài xế hoặc đổi người ký thành “Chủ xe”.'],
         ['CCCD … (người ký) phải đủ 12 chữ số', 'Sửa CCCD của người đang là người ký (chủ xe hoặc tài xế).'], ['thiếu SĐT người ký', 'Điền cột SĐT.'],
         ['Người ký HĐ vận chuyển phải là "Chủ xe" hoặc "Tài xế"', 'Chọn trong danh sách của ô.'], ['… đã hết hạn / sắp hết hạn (cảnh báo)', 'Cập nhật ngày mới hoặc bỏ qua nếu đã gia hạn ngoài file.']],
-      example: [['1', 'LÊ VĂN XE', '10/10/1980', '049080000011', '01/01/2021', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 5, xã Quế Sơn, TP Đà Nẵng', '92C-123.45', '05/03/2020', 'Xe tải thùng', 'Chủ xe', '', '', '', '', '', '', '', '', '30/06/2027', '01/07/2026', '01/07/2027', '0905123456'],
-        ['2', 'CÔNG TY VẬN TẢI MẪU', '', '', '', '', 'Số 1 đường mẫu, TP Đà Nẵng', '92C-678.90', '12/08/2021', 'Xe tải thùng', 'Tài xế', 'PHẠM VĂN LÁI', '03/04/1988', '049088000022', '05/05/2021', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 1, xã Quế Sơn, TP Đà Nẵng', 'B2-0123456', '20/09/2028', '30/06/2027', '15/07/2026', '15/07/2027', '0905987654']]
+      example: [['1', 'LÊ VĂN XE', '10/10/1980', '049080000011', '01/01/2021', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 5, xã Quế Sơn, TP Đà Nẵng', '92C-123.45', '05/03/2020', 'Xe tải thùng', 'Chủ xe', '', '', '', '', '', '', '', '', '30/06/2027', '01/07/2026', '01/07/2027', '0905123456', ''],
+        ['2', 'CÔNG TY VẬN TẢI MẪU', '', '', '', '', 'Số 1 đường mẫu, TP Đà Nẵng', '92C-678.90', '12/08/2021', 'Xe tải thùng', 'Tài xế', 'PHẠM VĂN LÁI', '03/04/1988', '049088000022', '05/05/2021', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 1, xã Quế Sơn, TP Đà Nẵng', 'B2-0123456', '20/09/2028', '30/06/2027', '15/07/2026', '15/07/2027', '0905987654', '']]
     },
     pc: {
       sheet: 'PHIEU_CAN', file: 'HAK_Mau_PhieuCan.xlsx', title: 'MẪU NHẬP PHIẾU CÂN VẬN CHUYỂN', tab: 'tab Vận chuyển',
@@ -111,13 +112,14 @@
         {n: 'Trạng thái', req: K, fmt: 'Văn bản', ex: 'OK', note: 'OK hoặc để trống = in. Giá trị khác OK thì phiếu mặc định không được chọn khi in phiếu cân.'},
         {n: 'Thành tiền', req: K, fmt: 'Số lớn hơn 0', ex: '31750000', note: 'Thành tiền (đồng). Bỏ trống thì khi in tự tính = khối lượng × đơn giá, làm tròn xuống nghìn đồng.'},
         {n: 'Nơi giao (nhà máy)', req: K, fmt: 'Văn bản', ex: 'Nhà máy dăm A', note: 'Ghi đúng như trên phiếu của nhà máy; phần mềm giữ nguyên và chỉ cảnh báo nếu khác địa chỉ giao hàng đã chốt của lô.'},
-        {n: 'Ghi chú', req: K, fmt: 'Văn bản', ex: '', note: 'Ghi chú tùy ý.'}],
+        {n: 'Ghi chú', req: K, fmt: 'Văn bản', ex: '', note: 'Ghi chú tùy ý.'},
+        {n: 'Đội', req: K, fmt: 'Văn bản (tên đội khai thác)', ex: '', note: 'Tùy chọn. Chỉ dùng khi lô có từ 2 đội khai thác: ghi tên đội thì phiếu thuộc đội đó (tên phải trùng tên đội ở tab Nhân công; tên chưa có thì báo lỗi dòng); để trống thì phiếu chưa gán đội, gán sau ở bảng phiếu cân (từng dòng hoặc hàng loạt). Lô chỉ có 1 đội thì phiếu tự thuộc đội đó, cột này không cần điền.'}],
       rules: ['Biển số có trong danh sách xe (tab Vận chuyển).', 'Ngày cân là ngày có thật theo lịch (có tính năm nhuận).', 'Số phiếu không trùng; khối lượng là số lớn hơn 0 (từ cột KL, tấn hoặc Cân 1 − Cân 2).',
         'Cảnh báo (không chặn) khi tổng phiếu cân lệch khối lượng khai thác quá ngưỡng đã đặt ở tab Xuất hồ sơ.'],
       errors: [['Biển … chưa có trong danh sách xe', 'Thêm xe vào file đội xe, nạp lại đội xe rồi nạp phiếu cân.'], ['Ngày … không có thật / thiếu ngày cân', 'Sửa ngày đúng dd/mm/yyyy với ngày có thật (ví dụ 28/02/2026) rồi nạp lại.'],
         ['Số phiếu cân … trùng với dòng n', 'Kiểm tra phiếu nhập hai lần; xóa hoặc sửa số phiếu.'], ['Khối lượng không hợp lệ / thiếu khối lượng', 'Nhập số tấn lớn hơn 0 (25,4).'],
         ['Mã rừng "…" khác lô đang mở', 'Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng.'], ['File thiếu cột: ...', 'Dùng đúng file mẫu, không sửa dòng tiêu đề.']],
-      example: [['1', 'PC001', '05/10/2026', '08:15:00', '05/10/2026', '09:40:00', '92C-123.45', '40400', '15000', '25400', '25,4', 'DT_ĐL', 'NGUYỄN VĂN AN', 'Thôn A, xã B', '1250000', '101/2026/NK', '', 'OK', '31750000', 'Nhà máy dăm A', ''], ['2', 'PC002', '06/10/2026', '08:30:00', '06/10/2026', '10:05:00', '92C-678.90', '39600', '15000', '', '', 'DT_ĐL', 'NGUYỄN VĂN AN', 'Thôn A, xã B', '1250000', '102/2026/NK', '', 'OK', '', 'Nhà máy dăm A', 'KL tự tính = Cân 1 − Cân 2'], ['3', 'PC003', '29/02/2028', '', '', '', '92C-123.45', '', '', '', '26,1', '', '', '', '', '', '', '', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ']]
+      example: [['1', 'PC001', '05/10/2026', '08:15:00', '05/10/2026', '09:40:00', '92C-123.45', '40400', '15000', '25400', '25,4', 'DT_ĐL', 'NGUYỄN VĂN AN', 'Thôn A, xã B', '1250000', '101/2026/NK', '', 'OK', '31750000', 'Nhà máy dăm A', '', ''], ['2', 'PC002', '06/10/2026', '08:30:00', '06/10/2026', '10:05:00', '92C-678.90', '39600', '15000', '', '', 'DT_ĐL', 'NGUYỄN VĂN AN', 'Thôn A, xã B', '1250000', '102/2026/NK', '', 'OK', '', 'Nhà máy dăm A', 'KL tự tính = Cân 1 − Cân 2', ''], ['3', 'PC003', '29/02/2028', '', '', '', '92C-123.45', '', '', '', '26,1', '', '', '', '', '', '', '', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ', '']]
     }
   };
 

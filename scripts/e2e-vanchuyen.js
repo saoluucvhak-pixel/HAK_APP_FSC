@@ -31,7 +31,7 @@ async function zipTexts(file) {
   await w.waitForSelector('#side');
   const clear = () => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); };
   const exp = async (kind, ext) => { clear(); await w.click(`button[data-act=dl][data-kind=${kind}]`); for (let i = 0; i < 80; i++) { const f = fs.existsSync(out) && fs.readdirSync(out).find(x => x.endsWith(ext)); if (f) { await w.waitForTimeout(300); return path.join(out, f); } await w.waitForTimeout(100); } throw new Error('không có file ' + ext + ' cho ' + kind); };
-  const saveVc = async () => { await w.click('#vcForm button[type=submit]'); await w.waitForTimeout(250); };
+  const saveVc = async () => { await w.$eval('#vcForm', f => f.requestSubmit()); await w.waitForTimeout(250); };
   const status = () => w.innerText('#vcForm');
   const chk = () => w.innerText('.chk');
 
@@ -41,10 +41,10 @@ async function zipTexts(file) {
   await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]');
   await w.click('[data-tab=rung]'); await w.click('text=+ Rừng mới');
   await w.fill('#forestForm [name=diaDiem]', 'Thôn Hòa Phú'); await w.fill('#forestForm [name=cuLy]', '45'); await w.fill('#forestForm [name=lat]', '15.9'); await w.fill('#forestForm [name=lng]', '108.1');
-  await w.fill('#forestForm [name=dienTich]', '2,5'); await w.fill('#forestForm [name=dinhMucTanHa]', '80'); await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026'); await w.click('#forestForm button[type=submit]');
+  await w.fill('#forestForm [name=dienTich]', '2,5'); await w.fill('#forestForm [name=dinhMucTanHa]', '80'); await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026'); await w.$eval('#forestForm', f => f.requestSubmit());
   await w.click('[data-ftab=nc]'); await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(400); await stSave(w);
   for (const [k, v] of [[0, 340000], [1, 200000], [2, 250000]]) await w.fill(`#luongForm [name=dt_${k}]`, String(v));
-  await w.click('#luongForm button[type=submit]'); await w.waitForTimeout(200);
+  await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(200);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
 
@@ -75,11 +75,11 @@ async function zipTexts(file) {
   t = await zipTexts(await exp('ttvc', '.zip'));
   ok('BM-10 theo đơn giá cố định: tiền từng xe = khối lượng × 52.000 (' + tienOf(52000).map(fmt).join(', ') + ')', tienOf(52000).every(v => t.includes(fmt(v))), t.slice(0, 500));
   // cố định không cần cự ly; tấn/km thì cần
-  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=cuLy]', ''); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(200);
+  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=cuLy]', ''); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(200);
   ok('đơn giá cố định không cần cự ly: checklist không báo lỗi giá vận chuyển khi bỏ trống cự ly', !/thiếu cự ly vận chuyển/.test(await chk()), (await chk()).slice(0, 300));
   await w.click('[data-ftab=dx]'); await w.selectOption('#vcForm [name=vcMode]', 'tanKm'); await saveVc();
   ok('tấn/km thì cần cự ly: bỏ trống cự ly thì báo “thiếu cự ly vận chuyển”', /thiếu cự ly vận chuyển/.test(await status()), (await status()).slice(-200));
-  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=cuLy]', '45'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(150);
+  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=cuLy]', '45'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(150);
 
   // ===== kiểm tra dữ liệu nhập =====
   await w.click('[data-ftab=dx]'); await w.selectOption('#vcForm [name=vcMode]', 'coDinh'); await w.fill('#vcForm [name=vcCoDinh]', 'abc'); await saveVc();
@@ -98,15 +98,13 @@ async function zipTexts(file) {
   const o = Object.values(saved.rs)[0], f = Object.values(o.forests)[0]; f.info.vanChuyen = {mode: 'tanDoan', donGiaKm: 1000, coDinh: 52000, bac: [{den: 50, gia: 40000}]};
   await w.evaluate(d => window.hak.save(d), saved); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open]'); await w.click('[data-sforest] >> nth=0');
-  ok('hồ sơ cũ theo bậc cự ly: checklist báo cách tính không còn áp dụng', /không còn áp dụng/.test(await chk()), (await chk()).slice(0, 400));
+  ok('hồ sơ cũ theo bậc cự ly (SQLite v6): chuyển sang tấn/km, không còn báo “không còn áp dụng”; dữ liệu bậc giữ ở bacCu', !/không còn áp dụng/.test(await chk()) && await w.evaluate(() => { const v = Object.values(Object.values(window.hak.loadSync().db.rs)[0].forests)[0].info.vanChuyen; return v.mode === 'tanKm' && v.bacCu[0].den === 50 && !('bac' in v); }), (await chk()).slice(0, 400));
   await w.click('[data-ftab=dx]');
-  ok('hồ sơ cũ: ô chọn hiển thị rõ lựa chọn không còn áp dụng cùng hai lựa chọn đúng', JSON.stringify(await opts()) === '["coDinh","tanKm","tanDoan"]' && /không còn áp dụng/.test(await w.$eval('#vcForm [name=vcMode]', e => e.selectedOptions[0].textContent)));
-  await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
-  ok('hồ sơ cũ: chưa xuất được hợp đồng vận chuyển cho đến khi chọn lại', await w.isDisabled('button[data-act=dl][data-kind=hdvc]'));
+  ok('ô chọn chỉ còn hai lựa chọn: cố định và tấn/km (đã chọn tấn/km)', JSON.stringify(await opts()) === '["coDinh","tanKm"]' && (await w.$eval('#vcForm [name=vcMode]', e => e.value)) === 'tanKm');
   await w.click('[data-ftab=dx]'); await w.selectOption('#vcForm [name=vcMode]', 'tanKm'); await saveVc();
   ok('chọn lại tấn/km: tính được 45.000 đồng/tấn', /45\.000 đồng\/tấn/.test(await status()));
   const after = await w.evaluate(() => window.hak.loadSync().db); const vc = Object.values(Object.values(after.rs)[0].forests)[0].info.vanChuyen;
-  ok('dữ liệu bậc cũ được giữ nguyên, không bị xóa khi lưu', vc.mode === 'tanKm' && Array.isArray(vc.bac) && vc.bac[0].den === 50 && vc.bac[0].gia === 40000, JSON.stringify(vc));
+  ok('dữ liệu bậc cũ được giữ nguyên ở bacCu, không bị xóa khi lưu', vc.mode === 'tanKm' && Array.isArray(vc.bacCu) && vc.bacCu[0].den === 50 && vc.bacCu[0].gia === 40000, JSON.stringify(vc));
   ok('không có lỗi JavaScript sau khi mở lại', errs.length === 0, errs.join('; '));
   await app.close();
   console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);

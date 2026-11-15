@@ -27,8 +27,8 @@ const NC = [nv(1, 'Tổ trưởng', 'TRẦN VĂN TỔ', 'Tổ trưởng', '04908
     await w.evaluate(d => window.hak.save(d), seed([L])); await w.reload(); await w.waitForSelector('#side');
     await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
     await w.click('[data-ftab=finfo]'); const fld = await w.$('#forestForm input[name=donGia]:not([type=hidden])');
-    ok(donGiaTT ? 'hồ sơ cũ có đơn giá Tổ trưởng ' + donGiaTT + ': Thông tin rừng vẫn hiện ô của bản cũ với giá trị đó' : 'lô mới: Thông tin rừng không còn ô “Đơn giá giao khoán Tổ trưởng”', donGiaTT ? !!fld && (await fld.inputValue()) === '340.000' : !fld);
-    if (donGiaTT) { await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(400); }
+    ok(donGiaTT ? 'hồ sơ cũ có đơn giá Tổ trưởng ' + donGiaTT + ' (SQLite v6): Thông tin rừng không còn ô của bản cũ' : 'lô mới: Thông tin rừng không còn ô “Đơn giá giao khoán Tổ trưởng”', !fld);
+    if (donGiaTT) { await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400); }
     await w.click('[data-ftab=xuat]');
     return {gk: await get('hd', 'gk'), uq: await get('hd', 'uq'), tc: await get('ld', 'tc')};
   };
@@ -43,9 +43,9 @@ const NC = [nv(1, 'Tổ trưởng', 'TRẦN VĂN TỔ', 'Tổ trưởng', '04908
   ok('BM-08: tiền từng người đúng (4.200.000; 3.300.000 ×2; 3.800.000)', /4\.200\.000/.test(d.tc) && (d.tc.match(/3\.300\.000/g) || []).length >= 2 && /3\.800\.000/.test(d.tc));
   // ===== 2. có đơn giá Tổ trưởng ở Thông tin rừng: như cũ =====
   d = await run(340000, 'cu');
-  ok('đã lưu đơn giá vào lô: ' + JSON.stringify(await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.donGia)), (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.donGia)) === 340000);
-  ok('có đơn giá Tổ trưởng ở Thông tin rừng: BM-01 làm như cũ (không có đơn giá bình quân, không có công thức)', !/đơn giá bình quân|Cơ sở tính giá trung bình/.test(d.gk) && /Tổng tiền khoán dự tính/.test(d.gk));
-  ok('có đơn giá Tổ trưởng ở Thông tin rừng: BM-20 và BM-08 như cũ (không có phần suy ra đơn giá ký)', !/Đơn giá ký:/.test(d.uq) && !/đơn giá khoán của tổ/.test(d.tc));
+  ok('SQLite v6: đơn giá Tổ trưởng cũ không còn ở thông tin rừng và đội (donGia bị bỏ), giá nằm ở bảng đơn giá theo vị trí của đội', !(await w.evaluate(() => 'donGia' in window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc)) && (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.doi[0].hinhThuc.donGiaTan['Tổ trưởng'])) > 0);
+  ok('lô cũ có đơn giá Tổ trưởng: BM-01 nay dùng cách trình bày đơn giá khoán bình quân như lô mới (số tiền không đổi)', /đơn giá bình quân|Cơ sở tính giá trung bình/.test(d.gk));
+  ok('lô cũ có đơn giá Tổ trưởng: BM-20 và BM-08 nay có phần suy ra đơn giá ký như lô mới', /Đơn giá ký:/.test(d.uq) && /đơn giá khoán của tổ/.test(d.tc));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

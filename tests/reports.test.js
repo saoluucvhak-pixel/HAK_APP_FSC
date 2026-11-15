@@ -102,3 +102,33 @@ test('báo cáo danh sách xe theo lô: xe, người ký, số chuyến và kh�
   const k = R.REPORTS.find(x => x.id === 'danhsachxe').build(rs, {from: '01/02/2026', to: '28/02/2026', today: 'x'}); assert.strictEqual(k.sections[1].rows.find(r => r[3] === '92C-11111')[12], 0, 'lọc kỳ: chuyến ngoài kỳ không tính');
   assert.ok(R.toAoa(m, {org: 'HAK', today: 'x', stamp: 'x', scope: ''}).length > 5);
 });
+
+test('báo cáo sản lượng theo đội: phiếu cân gán đội, đơn giá bình quân, thành tiền, phiếu chưa gán, lọc theo kỳ', () => {
+  const rec = {maRung: 'R1', chuRung: 'NGUYỄN VĂN AN', pc: [
+    {doiId: 'd1', ngay: '05/10/2026', bienSo: '92C-1', soPhieu: 'A1', kl: 10}, {doiId: 'd2', ngay: '06/10/2026', bienSo: '92C-1', soPhieu: 'A2', kl: 4.5},
+    {doiId: 'd1', ngay: '20/11/2026', bienSo: '92C-1', soPhieu: 'A3', kl: 2}, {doiId: '', ngay: '07/10/2026', bienSo: '92C-1', soPhieu: 'A4', kl: 1}],
+    doiList: [{id: 'd1', ten: 'Đội 1', tt: 'TRẦN MỘT', nguoi: 3, tienTrenTan: 330000, cachTinh: 'đồng/tấn'}, {id: 'd2', ten: 'Đội 2', tt: 'NGUYỄN HAI', nguoi: 2, tienTrenTan: null, cachTinh: 'đồng/công'}]};
+  const m = R.REPORTS.find(x => x.id === 'sanluongdoi').build([rec], {from: '', to: '', today: '15/11/2026'});
+  const r = m.sections[0].rows;
+  assert.deepStrictEqual(r[0].slice(3, 10), ['Đội 1', 'TRẦN MỘT', 3, 2, 12, 330000, 3960000]);
+  assert.deepStrictEqual(r[1].slice(3, 10), ['Đội 2', 'NGUYỄN HAI', 2, 1, 4.5, '', '']);   // tính theo ngày công: không có đơn giá đồng/tấn
+  assert.strictEqual(m.sections[1].rows[0][3], 1, 'một phiếu chưa gán đội'); assert.ok(m.notes.some(n => /chưa gán đội/.test(n)));
+  assert.strictEqual(m.kpis.find(k => /Thành tiền/.test(k.label)).value, 3960000);
+  const k = R.REPORTS.find(x => x.id === 'sanluongdoi').build([rec], {from: '01/10/2026', to: '31/10/2026', today: '15/11/2026'});
+  assert.strictEqual(k.sections[0].rows[0][7], 10, 'lọc kỳ: phiếu 20/11 ngoài kỳ không tính'); assert.ok(R.toAoa(m, {org: 'HAK', today: 'x', stamp: 'x', scope: ''}).length > 5);
+});
+test('báo cáo vận chuyển theo đội xe: người ký, số xe, số chuyến, khối lượng, cước', () => {
+  const rec = {maRung: 'R1', chuRung: 'NGUYỄN VĂN AN', pc: [
+    {ngay: '05/10/2026', bienSo: '92C-123.45', soPhieu: 'A1', kl: 10}, {ngay: '06/10/2026', bienSo: '92c 12345', soPhieu: 'A2', kl: 5}, {ngay: '07/10/2026', bienSo: '92C-999.99', soPhieu: 'A3', kl: 8}],
+    hdList: [{ten: 'Đội xe 1', ky: 'LÊ VĂN XE', vai: 'Chủ xe', bien: ['92C-123.45'], donGia: 100000}, {ten: 'Đội xe 2', ky: 'CÔNG TY VẬN TẢI', vai: 'Doanh nghiệp', bien: ['92C-999.99'], donGia: null}]};
+  const m = R.REPORTS.find(x => x.id === 'vanchuyendoi').build([rec], {from: '', to: '', today: '15/11/2026'}), r = m.sections[0].rows;
+  assert.deepStrictEqual(r[0].slice(3, 11), ['Đội xe 1', 'LÊ VĂN XE', 'Chủ xe', 1, 2, 15, 100000, 1500000]);   // biển khác cách ghi vẫn khớp
+  assert.deepStrictEqual(r[1].slice(6, 11), [1, 1, 8, '', '']);
+  assert.ok(m.notes.some(n => /chưa tính được cước/.test(n))); assert.strictEqual(m.kpis.find(k => /Số đội xe/.test(k.label)).value, 2);
+});
+test('báo cáo danh sách lao động có cột Đội ở cuối (các cột cũ giữ vị trí)', () => {
+  const rec = {maRung: 'R1', chuRung: 'AN', tuNgay: '01/10/2026', ncList: [{vaiTro: 'Tổ trưởng', stt: '1', ten: 'A', chucDanh: 'Tổ trưởng', ngaySinh: '01/01/1985', cccd: '049085000001', doi: 'Đội 1'}]};
+  const m = R.REPORTS.find(x => x.id === 'laodong').build([rec], {from: '', to: '', today: '15/11/2026'}), s = m.sections[1];
+  assert.strictEqual(s.cols[s.cols.length - 1].h, 'Đội'); assert.strictEqual(s.rows[0][s.cols.length - 1], 'Đội 1'); assert.strictEqual(s.rows[0][4], 'Tổ trưởng');
+  assert.strictEqual(s.rows[0].length, s.cols.length); assert.strictEqual(s.foot.length, s.cols.length);
+});

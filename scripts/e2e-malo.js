@@ -33,6 +33,9 @@ const save = (w, d) => w.evaluate(x => window.hak.save(x), d);
 const openForest = async (w, oid, fid, ftab = 'finfo') => { await w.click(`[data-open=${oid}]`); await w.click('[data-tab=rung]'); await w.click(`[data-forest=${fid}]`); await w.click(`[data-ftab=${ftab}]`); };
 const byMa = (db, ma) => { for (const o of Object.values(db.rs)) for (const f of Object.values(o.forests)) if (f.info.maRung === ma) return f; return null; };
 
+/* SQLite lưu lô theo cấu trúc 2.0 (có đội, src/model.js): so với dữ liệu mẫu đã chuẩn hóa, không phụ thuộc thứ tự khóa */
+const MM = require('../src/model');
+const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want) : kind ? MM.ensureDb({rs: {x: want}}).rs.x : MM.ensureForest(want); try { require('assert').deepStrictEqual(got, w); return true; } catch (e) { return false; } };
 (async () => {
   fs.mkdirSync(lotDir, {recursive: true});
   // ===== 1. Giữ cả hai =====
@@ -54,7 +57,7 @@ const byMa = (db, ma) => { for (const o of Object.values(db.rs)) for (const f of
   let db = await dbOf(w); const clone2 = byMa(db, 'R-A-BAN-SAO');
   ok('lô nhân bản có ID mới và mã mới đã xác nhận; mã gốc R-A vẫn chỉ một lô', !!clone2 && clone2.id !== 'fa' && L.duplicateGroups(db).length === 0 && Object.values(db.rs.o1.forests).filter(f => f.info.maRung === 'R-A').length === 1);
   ok('dòng xe của lô nhân bản đổi theo mã mới, phiếu vẫn thuộc đúng lô', clone2.dx.every(r => r.maRung === 'R-A-BAN-SAO') && clone2.pc.length === 1 && clone2.pc[0].soPhieu === 'P1-R-A');
-  ok('lô gốc A và lô B giữ nguyên', JSON.stringify(db.rs.o1.forests.fa) === JSON.stringify(SEED.rs.o1.forests.fa) && JSON.stringify(db.rs.o1.forests.fb) === JSON.stringify(SEED.rs.o1.forests.fb) && JSON.stringify(db.rs.o2) === JSON.stringify(SEED.rs.o2));
+  ok('lô gốc A và lô B giữ nguyên', sameN(db.rs.o1.forests.fa, SEED.rs.o1.forests.fa) && sameN(db.rs.o1.forests.fb, SEED.rs.o1.forests.fb) && sameN(db.rs.o2, SEED.rs.o2, true));
   // sao lưu lô mới → sửa → khôi phục đúng lô mới
   await openForest(w, 'o1', clone2.id); await w.click('#lotBackupBtn'); await w.waitForTimeout(600);
   const fileNew = fs.readdirSync(lotDir).find(f => /R-A-BAN-SAO/.test(f)); ok('sao lưu lô mới: file theo mã mới', !!fileNew, JSON.stringify(fs.readdirSync(lotDir)));
@@ -85,13 +88,13 @@ const byMa = (db, ma) => { for (const o of Object.values(db.rs)) for (const f of
   ({app, w} = await launch({}, 'may3')); await save(w, DUP); await w.reload(); await w.waitForSelector('#side');
   await openForest(w, 'o1', 'fa', 'kt'); let kt = await w.innerText('#main');
   ok('mã trùng cũ: kiểm tra hồ sơ liệt kê ĐỦ ba lô khớp (cả chủ khác)', /Mã lô trùng/.test(kt) && /đang dùng cho 3 lô/.test(kt) && /Lô A/.test(kt) && /Lô D/.test(kt) && /Lô E/.test(kt) && /CHỦ HAI/.test(kt), kt.slice(0, 700));
-  ok('dữ liệu giữ nguyên đến khi người dùng đổi mã', JSON.stringify((await dbOf(w)).rs) === JSON.stringify(DUP.rs));
+  ok('dữ liệu giữ nguyên đến khi người dùng đổi mã', sameN({rs: (await dbOf(w)).rs}, {rs: DUP.rs}, 'db'));
   await w.click('#lotBackupBtn').catch(() => {}); // (nút ở đầu hồ sơ; không bắt buộc ở đây)
-  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=maRung]', 'R-A-MOI'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(500);
+  await w.click('[data-ftab=finfo]'); await w.fill('#forestForm [name=maRung]', 'R-A-MOI'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(500);
   db = await dbOf(w); const fa2 = db.rs.o1.forests.fa;
   ok('đổi mã lô A: thông báo đổi theo dòng xe, dữ liệu xe và phiếu vẫn thuộc lô A', fa2.info.maRung === 'R-A-MOI' && fa2.dx.every(r => r.maRung === 'R-A-MOI') && fa2.pc.length === 1 && /đổi theo 0 dòng nhân công, 1 xe/.test(await w.innerText('body')));
   ok('sau đổi mã, lô A không còn bị báo trùng (còn D và E trùng nhau)', L.duplicateGroups(db).length === 1 && L.duplicateGroups(db)[0].lots.length === 2);
-  await w.fill('#forestForm [name=maRung]', 'R-B'); await w.click('#forestForm button[type=submit]'); await w.waitForTimeout(300);
+  await w.fill('#forestForm [name=maRung]', 'R-B'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(300);
   ok('đổi sang mã đã có ở lô khác: bị từ chối, nêu lô đang dùng', /đã có ở/.test(await w.innerText('#forestForm')) && (await dbOf(w)).rs.o1.forests.fa.info.maRung === 'R-A-MOI');
   await app.close();
 
@@ -111,7 +114,7 @@ const byMa = (db, ma) => { for (const o of Object.values(db.rs)) for (const f of
   await w.click('[data-act=ktGo] >> nth=0'); await w.waitForTimeout(300);
   ok('bấm “Mở để sửa”: mở đúng tab (Thông tin chủ/rừng hoặc Vận chuyển)', /Mã rừng|Thông tin chủ rừng|Phiếu cân/.test(await w.innerText('#main')));
   await openForest(w, 'o1', 'fb', 'kt'); kt = await w.innerText('#main');
-  ok('hồ sơ cũ cước theo bậc cự ly: mục chặn nêu phải chọn lại, dữ liệu bậc giữ', /Cước theo bậc cự ly \(hồ sơ cũ\)/.test(kt) && /chọn lại/.test(kt) && (await dbOf(w)).rs.o1.forests.fb.info.vanChuyen.bac.length === 1);
+  ok('hồ sơ cũ cước theo bậc cự ly (SQLite v6): chuyển sang tấn/km, không còn mục chặn “chọn lại”, dữ liệu bậc giữ ở bacCu', !/Cước theo bậc cự ly \(hồ sơ cũ\)/.test(kt) && (await dbOf(w)).rs.o1.forests.fb.info.vanChuyen.bacCu.length === 1 && (await dbOf(w)).rs.o1.forests.fb.info.vanChuyen.mode === 'tanKm');
   ok('lô chưa chọn địa chỉ giao: mục đối chiếu nêu thiếu địa chỉ', /Chưa chọn địa chỉ giao hàng đã chốt|nhập tay/.test(kt));
   await w.click('[data-ftab=dx]'); ok('mở tab Vận chuyển để sửa cước', await w.isVisible('#vcForm'));
   await openForest(w, 'o2', 'fc', 'kt'); kt = await w.innerText('#main');
