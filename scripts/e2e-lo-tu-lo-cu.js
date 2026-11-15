@@ -13,6 +13,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const A = lot('fa', 'R-A', {exp: {soKT: '015', ngayKy: '02/10/2026'}, kl: null, pc: [P(1, '05/10/2026', '92C-12345', 'PA1', 12.5)], nc: [nv(1, 'Tổ trưởng', 'TT CŨ', 'Tổ trưởng', '049085007001'), nv(2, 'Công nhân', 'CN CŨ', 'Công nhân khai thác', '049085007002')]});
   const D = seed([A]);
+  Object.assign(D.rs.own1.forests.fa, {chot: {at: '2026-11-01T00:00:00Z', nguoi: 'Kế toán', phienBan: 1, hash: 'abc', goi: '{}'}, luuTru: {at: '2026-11-02T00:00:00Z'}, nhatKy: [{at: '2026-11-01T00:00:00Z', hanh: 'chot', lyDo: '', nguoi: 'Kế toán'}], nhatKyNap: [{at: 1}], ref: {at: 1}, inAn: {items: {}, soIn: []}, sttDaCap: {doi: [1], doiXe: [1]}});
   D.dmLaoDong = [{ngayCapNhat: '01/11/2026', cccd: '049085007002', ten: 'CN CŨ', diaChi: 'ĐỊA CHỈ MỚI NHẤT', chucVu: 'Công nhân', viTri: 'Công nhân khai thác'}];
   await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.waitForSelector('#loTuLoCu');
@@ -25,6 +26,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('không chép số và ngày văn bản của đội và lô', JSON.stringify(nb.exp || {}) === '{}' && (nb.doi || []).every(d => JSON.stringify(d.exp || {}) === '{}'));
   ok('lô nguồn không đổi (còn phiếu cân, số văn bản)', F.fa.pc.length === 1 && F.fa.doi[0].exp.soKT === '015');
   ok('đơn giá của đội được chép', (nb.doi[0].hinhThuc.donGiaTan || {})['Tổ trưởng'] === 420000, JSON.stringify(nb.doi[0].hinhThuc));
+  ok('lô nguồn đã chốt vẫn đã chốt', !!F.fa.chot && !!F.fa.luuTru && F.fa.nhatKy.length === 1);
+  ok('lô mới không mang trạng thái chốt, lưu trữ, nhật ký, in, tham chiếu, lịch sử STT', ['chot', 'luuTru', 'dung', 'nhatKy', 'nhatKyNap', 'ref', 'inAn', 'inDot2', 'bienLog', 'sttDaCap'].every(k => !(k in nb)), Object.keys(nb).join(','));
+  await w.waitForSelector('#forestForm'); const bannerKhoa = await w.$('.loKhoa, #loKhoaBanner');
+  await w.fill('#forestForm [name=diaDiem]', 'Thôn mới'); await w.evaluate(() => document.getElementById('forestForm').requestSubmit()); await w.waitForTimeout(700);
+  const nb2 = (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests[ids.find(k => k !== 'fa')];
+  ok('lô mới (tạo từ lô đã chốt) sửa và lưu được, không bị khóa chỉ đọc', nb2.info.diaDiem === 'Thôn mới' && !bannerKhoa, JSON.stringify(nb2.info.diaDiem));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

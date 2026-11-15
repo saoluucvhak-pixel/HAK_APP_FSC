@@ -96,3 +96,15 @@ test('người chung: một CCCD = một người dù là lao động, tài xế
   assert.strictEqual(M.nguoiChung(Object.assign({}, db, g.db)).length, 1, 'sau gộp chỉ còn một người');
   assert.strictEqual(g.db.dmLaoDong.length, 2, 'lịch sử lao động giữ nguyên');
 });
+
+test('tạo lô từ lô đã chốt: lô mới không mang vòng đời, nhật ký, in/ký, tham chiếu, lịch sử STT; lô nguồn không đổi', () => {
+  const M = require('../src/danhmuc'), V = require('../src/vongdoi');
+  const src = {id: 'a', info: {maRung: 'R-A', giayTo: []}, doi: [{id: 'd1', ten: 'Đội 1', stt: 1, exp: {soKT: '01/2026/HĐGK-RA'}}], hdvc: [{id: 'h1', stt: 1, exp: {}}], nc: [], dx: [], pc: [{soPhieu: 'P1'}],
+    chot: {at: 1, nguoi: 'x', phienBan: 1, hash: 'h', goi: '{}'}, luuTru: {at: 2}, dung: {at: 3, ngay: '01/01/2026', lyDo: 'x'}, nhatKy: [{hanh: 'chot'}], nhatKyNap: [{at: 1}], ref: {at: 1}, inAn: {items: {}}, inDot2: {a: 1}, bienLog: [1], qt: {x: 1}, sttDaCap: {doi: [1], doiXe: [1]}, khoaLa: 1};
+  const truoc = JSON.stringify(src), f = M.loTuLoCu(src, {id: 'b', maRung: 'R-B', tenRung: 'B', dmLaoDong: [], dmXe: []}).f;
+  assert.strictEqual(JSON.stringify(src), truoc);
+  ['chot', 'luuTru', 'dung', 'nhatKy', 'nhatKyNap', 'ref', 'inAn', 'inDot2', 'bienLog', 'qt', 'sttDaCap', 'khoaLa'].forEach(k => assert.ok(!(k in f), k));
+  assert.strictEqual(V.chiDoc(f), false); assert.strictEqual(V.trangThai(f, {}), 'dang-lap');
+  assert.ok(!('stt' in f.doi[0]) && !('stt' in f.hdvc[0]) && f.doi[0].exp.soKT === undefined && f.pc.length === 0);
+  assert.deepStrictEqual(Object.keys(f).filter(k => !M.KHUNG_LO.includes(k)).sort(), ['exp', 'pc']);
+});
