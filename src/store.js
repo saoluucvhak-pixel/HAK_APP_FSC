@@ -63,6 +63,16 @@ const MIGRATIONS = [
       const f = JSON.parse(r.data); if (!M.needsEnsure(f)) return;
       const data = JSON.stringify(M.ensureForest(f)); up.run(data, sha(data), r.id);
     });
+  },
+  /* v7 (bản 2.1, docs/THIET_KE_QUY_TRINH_2_1.md): DANH MỤC LAO ĐỘNG và DANH MỤC XE dùng chung, nhiều dòng theo ngày cập nhật (src/danhmuc.js). Dựng từ nhân công và xe của mọi lô;
+   * chỉ THÊM hai khóa ở bảng meta (dmLaoDong, dmXeVC) khi chưa có; không đổi hồ sơ lô nào nên bản in không đổi. Chạy sau khi sao lưu file. */
+  function v7(db) {
+    const DM = require('./danhmuc'), g = k => { const r = db.prepare('SELECT value FROM meta WHERE key=?').get(k); return r ? JSON.parse(r.value) : null; };
+    const rs = {}; db.prepare('SELECT owner_id, data FROM forests').all().forEach(r => { const o = rs[r.owner_id] = rs[r.owner_id] || {forests: {}}; const f = JSON.parse(r.data); o.forests[f.id || r.owner_id + '/' + Object.keys(o.forests).length] = f; });
+    const d = new Date(), homNay = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    const x = DM.dungTuLo(rs, homNay), put = db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO NOTHING');
+    if (g('dmLaoDong') == null) put.run('dmLaoDong', JSON.stringify(x.laoDong));
+    if (g('dmXeVC') == null) put.run('dmXeVC', JSON.stringify(x.xe));
   }
 ];
 
