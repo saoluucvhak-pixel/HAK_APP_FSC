@@ -307,10 +307,12 @@ document.addEventListener('click', e => {
 function dinhBienPanel(rec) {
   const g = {rows: viTriRowsTai((rec.info || {}).tuNgay)}, bd = doiOf(rec);
   if (g.rows.ngayLoi) return '<div class="msg err" id="dbNgayLoi"><b>Định mức nhân công:</b> ' + esc(g.rows.ngayLoi) + '.</div>';
-  const sc = HAKDinhBien.soSanh(g.rows, bd.multi ? [bd.doi[0].tt, ...bd.doi[0].members] : rec.nc || []), lt = HAKDinhBien.lechText(sc);
+  // lô nhiều đội: bảng vị trí so với ĐỘI ĐANG CHỌN (không phải đội đầu); cảnh báo lệch hiện cho từng đội ở dưới
+  const tc = bd.multi ? (curTeam() || {}) : null, dc = bd.multi ? (bd.doi.find(d => d.id === tc.id) || bd.doi[0]) : null;
+  const sc = HAKDinhBien.soSanh(g.rows, dc ? [dc.tt, ...dc.members] : rec.nc || []), lt = HAKDinhBien.lechText(sc);
   const stDoi = bd.multi ? bd.doi.map(d => { const x = HAKDinhBien.soSanh(g.rows, [d.tt, ...d.members]), t = HAKDinhBien.lechText(x); return t ? '<div class="msg warn dbLechDoi"><b>Đội “' + esc(d.ten) + '” — lệch định mức nhân công (1 đội ' + x.can + ' người, hiện có ' + x.co + '):</b> ' + esc(t) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok dbLechDoi">Đội “' + esc(d.ten) + '” đúng định mức nhân công: ' + x.co + ' người.</div>'; }).join('') : '';
   const st = bd.multi ? stDoi : !(rec.nc || []).length ? '' : lt ? '<div class="msg warn" id="dbLech"><b>Lệch định mức nhân công (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '):</b> ' + esc(lt) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok" id="dbLech">Đúng định mức nhân công: ' + sc.co + ' người.</div>';
-  return '<details class="card" id="dbPanel"><summary><b>Định mức nhân công và nhiệm vụ từng vị trí</b> — 1 đội ' + sc.can + ' người' + (g.saved ? '' : ' (mặc định)') + '</summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Định mức</th><th>Hiện có</th><th>Nhiệm vụ</th></tr></thead><tbody>' +
+  return '<details class="card" id="dbPanel"><summary><b>Định mức nhân công và nhiệm vụ từng vị trí</b> — 1 đội ' + sc.can + ' người' + (g.saved ? '' : ' (mặc định)') + (dc ? ' · bảng so với đội “' + esc(dc.ten) + '” (đội đang chọn)' : '') + '</summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Định mức</th><th>Hiện có' + (dc ? ' (' + esc(dc.ten) + ')' : '') + '</th><th>Nhiệm vụ</th></tr></thead><tbody>' +
     sc.vt.map((v, i) => '<tr><td><b>' + esc(v.chucDanh) + '</b>' + (v.kiemNhiem ? '<br><small class="mut">kiêm ' + esc(v.kiemNhiem) + '</small>' : '') + '</td><td style="text-align:center">' + v.can + '</td><td style="text-align:center">' + (v.lech === 0 ? v.co : '<b style="color:var(--warn)">' + v.co + '</b>') + '</td><td>' + esc(g.rows[i].nhiemVu) + '</td></tr>').join('') + '</tbody></table></div></details>' + st;
 }
 /* Các đội của lô: mỗi Tổ trưởng một đội, mỗi đội một hợp đồng giao khoán, sản lượng chia theo số người */
