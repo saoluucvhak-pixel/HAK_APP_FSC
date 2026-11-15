@@ -524,9 +524,10 @@ async function smoke() {
       if (o) await smokeChot(r, o);
     }
     await new Promise(res => { if (win.webContents.isLoading()) win.webContents.once('did-finish-load', res); else res(); });
-    r.dom = await win.webContents.executeJavaScript(`(async()=>({title: document.title, reportMenu: !!document.querySelector('[data-act=rpOpen]'), lookupMenu: !!document.querySelector('[data-act=lkOpen]'), sideFilter: !!document.getElementById('sideQ'),
+    r.dom = await win.webContents.executeJavaScript(`(async()=>({title: document.title, reportMenu: !!document.querySelector('[data-act=rpOpen]'), lookupMenu: !!document.querySelector('[data-act=lkOpen]'), sideFilter: !!document.getElementById('sideQ'), appVer: (document.getElementById('appVer') || {}).textContent || '',
       reports: typeof HAKReports === 'object' && HAKReports.REPORTS.length, ownerShown: document.getElementById('side').innerText.includes('CHỦ RỪNG THỬ NGHIỆM'),
       filter: await window.hak.lookup.search('', '', {onlyIssues: true, from: '2026-01-01', sort: 'tan'}).then(x => x.ok && !!x.facets).catch(() => false)}))()`);
+    r.checks.appVerShown = r.dom.appVer === ' · Phiên bản ' + app.getVersion();   // phiên bản hiện ở đầu trang đúng bằng phiên bản bản cài
     if (app.isPackaged) r.checks.testEnvOff = TEST_ONLY_ENV.every(k => !(k in process.env));   // bản cài: biến môi trường kiểm thử đã bị xóa
     r.checks.reportMenu = r.dom.reportMenu && r.dom.reports >= 5; r.checks.smartFilter = r.dom.sideFilter && r.dom.filter === true; r.checks.lookupMenu = r.dom.lookupMenu === true;
     if (phase === 'upgrade') r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('CHỦ RỪNG CŨ')"); // giao diện hiện lại chủ rừng cũ
