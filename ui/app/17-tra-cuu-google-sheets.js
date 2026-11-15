@@ -401,6 +401,7 @@ async function lkApply() {
   }
 }
 async function persistNow() {
+  doiDuLieu();
   if (!HB) { persist(); return {ok: storeOk}; }
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   showSave('… Đang lưu');

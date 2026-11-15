@@ -1,13 +1,24 @@
 /* ========== Kiểm tra hồ sơ trước khi xuất: dùng lại gate/checklist FSC, nhóm thành “chặn xuất” và “cần đối chiếu”, kèm số phiếu/trường và liên kết đến đúng tab ========== */
 /* exportCheck có nhớ tạm trong MỘT lượt xử lý (cùng đối tượng job, chưa có thay đổi dữ liệu nào xen vào): gate, nút tải, mục quy trình, gói ZIP cùng đọc một danh sách mà không tính lại */
-let ktNho = {job: null, kt: null, ver: -1}, ktVer = 0;
-let cheoNho = null;
-const ktXoaNho = () => { ktVer++; ktNho = {job: null, kt: null, ver: -1}; cheoNho = null; };
-/* chỉ mục chéo lô dựng MỘT lần cho cả db trong một lượt xử lý (duyệt nhiều lô không dựng lại mỗi lô) */
-function cheoCtx() { if (!cheoNho || cheoNho.db !== db) { cheoNho = {db, ctx: HAKCheoLo.taoChiMuc(db)}; Promise.resolve().then(ktXoaNho); } return cheoNho.ctx; }
+/* B7: nhớ tạm theo PHIÊN BẢN DỮ LIỆU (dataVer, ui/app/02): hồ sơ dựng từ lô (jobView / stJob có khóa ẩn __vk) nhớ theo (khóa, dataVer, db); hồ sơ khác (hồ sơ con của đội…) nhớ theo chính đối tượng.
+ * Dữ liệu đổi (dataVer tăng) hoặc db bị thay (khôi phục, nạp lại) thì tính lại. Chỉ mục chéo lô dựng một lần cho mỗi phiên bản dữ liệu. */
+let ktNho = {ver: -1, db: null, theoKhoa: new Map(), theoDoiTuong: new WeakMap(), khac: new WeakMap()}, cheoNho = null;
+const ktXoaNho = () => doiDuLieu();   // giữ tên cũ cho nơi đang gọi
+const ktMoi = () => { if (ktNho.ver !== dataVer || ktNho.db !== db) ktNho = {ver: dataVer, db, theoKhoa: new Map(), theoDoiTuong: new WeakMap(), khac: new WeakMap()}; return ktNho; };
+function cheoCtx() { if (!cheoNho || cheoNho.db !== db || cheoNho.ver !== dataVer) cheoNho = {db, ver: dataVer, ctx: HAKCheoLo.taoChiMuc(db)}; return cheoNho.ctx; }
+/* nhớ tạm chung theo phiên bản dữ liệu cho các phép tính theo lô (ten phân biệt loại kết quả): gateRaw, tiến độ, … */
+function nhoTam(ten, rec, fn) {
+  const n = ktMoi(), k = rec && rec.__vk;
+  const m = k ? n.theoKhoa : (rec && typeof rec === 'object' ? (n.khac.get(rec) || (n.khac.set(rec, new Map()), n.khac.get(rec))) : null);
+  const kk = k ? ten + '|' + k : ten; if (m && m.has(kk)) return m.get(kk);
+  const v = fn(); if (m && ktNho === n) m.set(kk, v); return v;
+}
+{ const g0 = gateRaw; gateRaw = rec => nhoTam('gateRaw', rec, () => g0(rec)); }   // gate, checklist, tiến độ của mọi lô ở danh sách bên trái: không tính lại khi dữ liệu không đổi
 function exportCheck(job) {
-  if (ktNho.job === job && ktNho.ver === ktVer) return ktNho.kt;
-  const kt = exportCheckTinh(job); ktNho = {job, kt, ver: ktVer}; Promise.resolve().then(ktXoaNho);
+  const n = ktMoi(), k = job && job.__vk;
+  if (k) { const v = n.theoKhoa.get(k); if (v) return v; } else if (job && typeof job === 'object') { const v = n.theoDoiTuong.get(job); if (v) return v; }
+  const kt = exportCheckTinh(job);
+  if (ktNho === n) { if (k) n.theoKhoa.set(k, kt); else if (job && typeof job === 'object') n.theoDoiTuong.set(job, kt); }   // dữ liệu đổi trong lúc tính: không nhớ kết quả cũ
   return kt;
 }
 /* đối tượng xuất của một biểu mẫu: biểu mẫu theo đội khai thác → từng đội; theo đội xe → từng đội xe; còn lại cả lô (null) */
@@ -405,3 +416,5 @@ function panelImport(kind, rec) {
     (count ? '<button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu</button>' : '') + '</div></div></div>';
 }
 
+/* kiểm thử B7: kết quả kiểm tra của lô đang mở (bản nháp nếu có) và phiên bản dữ liệu hiện tại */
+window.__ktTest = {kt: () => { const r = curRec(); return r ? exportCheck(stJob(r)) : null; }, ver: () => dataVer};

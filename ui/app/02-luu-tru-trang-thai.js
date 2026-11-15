@@ -62,7 +62,16 @@ let saveCache = null, saveChain = Promise.resolve();
 const loDirty = new Set();   // id lô còn thay đổi chưa lưu ngoài các bảng nháp
 let savedSnap = null;        // ảnh chụp đúng nội dung đã ghi thành công gần nhất (bản đã lưu của từng lô)
 let nhapKhung = null;   // đang áp dụng một khung vào bản nháp: chỉ đánh dấu “Chưa lưu” khi dữ liệu của lô THỰC SỰ đổi (sự kiện change có thể chạy khi ô không đổi gì)
+/* PHIÊN BẢN DỮ LIỆU (B7): tăng ở MỌI chỗ đổi dữ liệu hoặc bản nháp — persist, persistLo, persistNow, bỏ thay đổi, mọi thao tác bản nháp (HAKStage bọc bên dưới, đối tượng stages bọc
+ * ở module 11). Kết quả kiểm tra (exportCheck) và chỉ mục chéo lô nhớ theo (lô, bản đã lưu / bản nháp, dataVer): vẽ lại khi dữ liệu không đổi thì không tính lại.
+ * Thay đổi dữ liệu mà không qua các hàm này là lỗi (test tests/datacver.test.js quét mã). */
+let dataVer = 0;
+function doiDuLieu() { dataVer++; }
+['merge', 'addRow', 'updateRow', 'removeRow', 'restoreRow', 'resolve', 'commit'].forEach(k => { const g = HAKStage[k]; if (typeof g === 'function' && !g._dv) { const w = function () { doiDuLieu(); try { return g.apply(this, arguments); } finally { doiDuLieu(); } }; w._dv = true; HAKStage[k] = w; } });
+/* khóa nhớ tạm cho hồ sơ dựng từ lô (jobView: bản đã lưu, stJob: bản nháp): thuộc tính ẩn, Object.assign không chép sang hồ sơ con (subRec…) */
+const ganKhoaHoSo = (r, k) => { try { Object.defineProperty(r, '__vk', {value: k, enumerable: false}); } catch (e) { /* đối tượng đóng băng: bỏ qua, không nhớ tạm */ } return r; };
 function persistLo(f) {
+  doiDuLieu();
   f = f || curForest(); if (!f) return;
   if (typeof ktXoaNho === 'function') ktXoaNho();
   if (loKhoa(f)) { loVeBanDaLuu(f.id); loKhoaNote(f); return; }   // lô chỉ đọc: không bao giờ vào bản nháp (trả về bản đã lưu, không để trạng thái “Chưa lưu” treo)
@@ -85,7 +94,7 @@ function dbGhi() {
 /* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu */
 function loHoan(fid) { return loDirty.has(fid) ? loVeBanDaLuu(fid) || true : false; }
 function loVeBanDaLuu(fid) {
-  loDirty.delete(fid);
+  doiDuLieu(); loDirty.delete(fid);
   const b = savedSnap && savedSnap.forests.get(fid); if (!b) return false;
   Object.values(db.rs || {}).forEach(o => { const k = Object.keys(o.forests || {}).find(x => (o.forests[x].id || x) === fid); if (k) { const f = o.forests[k], v = JSON.parse(b.json); Object.keys(f).forEach(x => { delete f[x]; }); Object.assign(f, v); } });
   return true;
@@ -142,6 +151,7 @@ function flushSave() {
   }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });
 }
 function persist() {
+  doiDuLieu();
   if (typeof ktXoaNho === 'function') ktXoaNho();
   if (dataIssueUi) return;   // chưa mở được cơ sở dữ liệu: không ghi gì
   if (HB) {
@@ -231,6 +241,8 @@ function jobView(o, f) {
   return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info, d0 ? d0.hinhThuc : {}, {_klPC: klPhieu(pc)}), nc: g.nc, dx: v.dx, pc, exp, cc: f.cc || {}, doi: g.doi || null, hdvc: v.hdvc || null,
     ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
 }
+/* jobView có khóa nhớ tạm: xem ganKhoaHoSo */
+{ const jv = jobView; jobView = function (o, f) { return ganKhoaHoSo(jv(o, f), (f && f.id) + '|luu'); }; }
 const curRec = () => { const o = curOwner(), f = curForest(); return o && f ? jobView(o, f) : null; };
 /* Định mức (tấn/ha) của rừng: giá trị rừng tự điền; chưa điền thì lấy định mức gỗ keo mặc định có hiệu lực theo ngày bắt đầu khai thác (Định mức BHLĐ → gỗ keo) */
 const dinhMucEff = i => HAKDinhMuc.dinhMucLo(db, i);   // một định nghĩa với kiểm tra chéo lô (src/dinhmuc.js)

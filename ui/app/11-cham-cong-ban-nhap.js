@@ -54,7 +54,7 @@ document.addEventListener('change', e => {
 /* ========== Bản nháp “Chưa lưu” của nhân công, xe, phiếu cân (src/stage.js) ========== */
 /* Mọi nguồn (nhập tay, Excel, bản tra cứu) chỉ đổi BẢN NHÁP của lô đang mở. Hồ sơ lô (SQLite) chỉ đổi khi bấm “Lưu dữ liệu vào lô”; tạo, xuất, in hồ sơ chỉ dùng dữ liệu đã lưu. */
 let dbEpoch = 0;   // tăng mỗi khi toàn bộ dữ liệu bị thay (khôi phục, nạp lại): lượt nhập đang chờ không còn đích hợp lệ
-const stages = {};   // 'mã chủ rừng|mã lô' → bản nháp
+const stages = new Proxy({}, {set(t, k, v) { t[k] = v; doiDuLieu(); return true; }, deleteProperty(t, k) { delete t[k]; doiDuLieu(); return true; }});   // 'mã chủ rừng|mã lô' → bản nháp; thêm / bỏ bản nháp tăng phiên bản dữ liệu (B7)
 const stKeyOf = (o, f) => o + '|' + f, stKey = () => stKeyOf(cur, curF);
 const stCur = () => stages[stKey()] || null;
 const stDirtyOf = k => (!!stages[k] && HAKStage.dirty(stages[k])) || loDirty.has(k.split('|')[1]);   // bảng nháp hoặc thay đổi khác của lô
@@ -63,7 +63,7 @@ const stDirtyCur = () => stDirtyOf(stKey());
 function stGetFor(oid, fid, make) { const k = stKeyOf(oid, fid), o = db.rs[oid], f = o && o.forests && o.forests[fid]; if (!f) return null; if (!stages[k] && make) stages[k] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); return stages[k] || null; }
 function stGet(make) { const k = stKey(); if (!stages[k] && make) { const f = curForest(); if (!f) return null; stages[k] = HAKStage.create({nc: f.nc || [], dx: f.dx || [], pc: f.pc || []}); } return stages[k] || null; }
 /* hồ sơ lô với ba danh sách là bản nháp (nếu có): dùng để hiển thị và kiểm tra khi xem trước */
-function stJob(rec) { const st = stCur(); if (!st) return rec; const g = ganDoi(rec.doi, st.cur.nc), v = ganVC(rec.hdvc, st.cur.dx), pc = ganPC(g.doi, st.cur.pc); return Object.assign({}, rec, {nc: g.nc, doi: g.doi, dx: v.dx, hdvc: v.hdvc, pc, info: Object.assign({}, rec.info, {_klPC: klPhieu(pc)})}); }
+function stJob(rec) { const st = stCur(); if (!st) return rec; const g = ganDoi(rec.doi, st.cur.nc), v = ganVC(rec.hdvc, st.cur.dx), pc = ganPC(g.doi, st.cur.pc); return ganKhoaHoSo(Object.assign({}, rec, {nc: g.nc, doi: g.doi, dx: v.dx, hdvc: v.hdvc, pc, info: Object.assign({}, rec.info, {_klPC: klPhieu(pc)})}), rec.fid + '|nhap'); }
 const ST_LABEL = {nc: 'nhân công', dx: 'xe', pc: 'phiếu cân'}, ST_CHECK = {nc: checkNC, dx: checkDX, pc: checkPC};
 const ST_TAB = {nc: 'nc', dx: 'dx', pc: 'dx'};
 /* Lý do chặn tạo, xuất, in hồ sơ khi lô còn thay đổi chưa lưu ('' nếu được phép) */

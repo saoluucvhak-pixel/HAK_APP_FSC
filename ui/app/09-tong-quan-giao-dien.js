@@ -134,7 +134,7 @@ function checklistRung(job) {
   add(!!ex.dtNgay, 'Biên bản ATLĐ có ngày đào tạo', 'Nhập ở tab Xuất hồ sơ', true);
   return L;
 }
-const progressOf = job => { const L = checklistRung(job); return {L, pct: Math.round(100 * L.filter(x => x.ok).length / L.length)}; };
+const progressOf = job => nhoTam('tienDo', job, () => { const L = checklistRung(job); return {L, pct: Math.round(100 * L.filter(x => x.ok).length / L.length)}; });   // nhớ tạm theo phiên bản dữ liệu (B7)
 function panelTienDo(job) {
   const {L, pct} = progressOf(job);
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Tiến độ hồ sơ rừng · checklist FSC</h3><b>' + pct + '%</b></div>' +

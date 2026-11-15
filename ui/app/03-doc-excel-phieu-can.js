@@ -140,9 +140,16 @@ function checkPC(rec) {
   }
   return {errs, warns, state};
 }
+/* phiếu cân của lô sắp theo ngày (sắp ổn định) và khóa biển số: dựng MỘT lần cho mỗi mảng phiếu và phiên bản dữ liệu (B7) — lọc sau khi sắp cho cùng thứ tự như sắp sau khi lọc */
+const pcSapNho = new WeakMap();
+function pcSapTheoNgay(pc) {
+  const c = pcSapNho.get(pc); if (c && c.ver === dataVer && c.n === pc.length) return c.ds;
+  const ds = pc.map((r, i) => ({r, i, d: dateKey(r.ngay), k: bienKey(r.bienSo)})).sort((a, b) => (a.d - b.d) || (a.i - b.i));
+  pcSapNho.set(pc, {ver: dataVer, n: pc.length, ds}); return ds;
+}
 function tripsOf(rec, g) {
   const ks = new Set(g.xe.map(x => bienKey(x.bienSo)));
-  return (rec.pc || []).filter(r => ks.has(bienKey(r.bienSo))).sort((a, b) => dateKey(a.ngay) - dateKey(b.ngay));
+  return pcSapTheoNgay(rec.pc || []).filter(x => ks.has(x.k)).map(x => x.r);
 }
 function payVC(rec, g) {
   const rows = g.xe.map(x => {
