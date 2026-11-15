@@ -567,6 +567,7 @@ function createWindow() {
       if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true}'), new Promise(res => setTimeout(() => res(null), 15000))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
     }
     if (pick === 2) return;
+    if (n > 0) { try { await ask('window.__nhapTamXoa ? window.__nhapTamXoa() : 0', 0); } catch (err) { /* không xóa được bản tạm: bỏ qua */ } }   // đóng có chủ ý (lưu hoặc bỏ): không giữ bản nháp tạm
     closing = true; win.close();
   });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));

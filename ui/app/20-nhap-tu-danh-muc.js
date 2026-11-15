@@ -74,3 +74,43 @@ function luongLayDonGia() {
   const msg = document.getElementById('luongLayMsg'); if (msg) msg.textContent = 'Đã điền ' + n + ' đơn giá từ ' + s.ten + '. Kiểm tra rồi bấm “Lưu dữ liệu vào lô”.';
   fm.elements.hinhThucLuong.dispatchEvent(new Event('change', {bubbles: true}));
 }
+
+/* ========== Tự lưu bản nháp (bản 2.2, mục 11.1 điểm 1) ==========
+ * Thay đổi chưa lưu của lô (thông tin lô, bảng nháp nhân công / xe / phiếu cân) được ghi tạm vào localStorage vài giây một lần. Mất điện hoặc treo máy:
+ * mở lại sẽ hỏi “Khôi phục thay đổi chưa lưu?”. Lưu vào lô, bỏ thay đổi hoặc đóng có chọn “Bỏ thay đổi” thì xóa bản tạm. KHÔNG ghi vào SQLite. */
+const NHAP_TAM_KEY = 'hakqn.nhapTam.v1';
+function nhapTamDoc() { try { const s = localStorage.getItem(NHAP_TAM_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function nhapTamXoa() { try { localStorage.removeItem(NHAP_TAM_KEY); } catch (e) { /* không có localStorage: bỏ qua */ } }
+function nhapTamGhi() {
+  try {
+    const ks = stDirtyList(); if (!ks.length) { if (!nhapTamCho) nhapTamXoa(); return; }
+    const lots = {}, sts = {};
+    ks.forEach(k => {
+      const [oid, fid] = k.split('|'), f = db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; if (!f) return;
+      if (loDirty.has(fid)) lots[k] = f;
+      if (stages[k] && HAKStage.dirty(stages[k])) sts[k] = stages[k];
+    });
+    if (!Object.keys(lots).length && !Object.keys(sts).length) return nhapTamXoa();
+    localStorage.setItem(NHAP_TAM_KEY, JSON.stringify({at: new Date().toISOString(), lots, stages: sts}));
+  } catch (e) { /* đầy bộ nhớ hoặc không có localStorage: bỏ qua, không làm phiền người dùng */ }
+}
+let nhapTamCho = false;   // đang chờ người dùng trả lời khôi phục: chưa xóa bản tạm
+function nhapTamKhoiPhuc() {
+  const d = nhapTamDoc(); if (!d) return;
+  const ten = []; const lots = Object.entries(d.lots || {}).filter(([k]) => { const [oid, fid] = k.split('|'); return db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; });
+  const sts = Object.entries(d.stages || {}).filter(([k]) => { const [oid, fid] = k.split('|'); return db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; });
+  if (!lots.length && !sts.length) return nhapTamXoa();
+  const ma = new Set(); [...lots, ...sts].forEach(([k]) => { const [oid, fid] = k.split('|'); const f = db.rs[oid].forests[fid]; ma.add((f.info && f.info.maRung) || fid); });
+  nhapTamCho = true;
+  const ok = confirm('Lần làm việc trước còn thay đổi chưa lưu (tự lưu tạm lúc ' + (d.at ? new Date(d.at).toLocaleString('vi-VN') : '?') + ') ở lô: ' + [...ma].join(', ') + '.\n\nKhôi phục các thay đổi này vào bản nháp? (Chưa ghi vào dữ liệu; bấm “Lưu dữ liệu vào lô” mới ghi.)');
+  nhapTamCho = false;
+  if (!ok) return nhapTamXoa();
+  if (!savedSnap) savedSnap = (saveCache && saveCache.snap) || HAKDelta.snapshot(dbGhi());
+  lots.forEach(([k, f]) => { const [oid, fid] = k.split('|'); db.rs[oid].forests[fid] = f; loDirty.add(fid); });
+  sts.forEach(([k, st]) => { stages[k] = st; });
+  note('Đã khôi phục thay đổi chưa lưu của lô ' + [...ma].join(', ') + ' vào bản nháp. Kiểm tra rồi bấm “Lưu dữ liệu vào lô”.', 'warn');
+  render();
+}
+window.__nhapTamXoa = nhapTamXoa;
+setInterval(nhapTamGhi, 3000);
+setTimeout(nhapTamKhoiPhuc, 400);
