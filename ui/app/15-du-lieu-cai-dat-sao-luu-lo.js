@@ -125,7 +125,14 @@ async function lotBackup() {
   const r = await HB.lotSave(pkg);
   if (r.canceled) return;
   if (r.ok && r.canhBao) pushNote('Cảnh báo: ' + r.canhBao, 'err');
-  note(r.ok ? 'Đã sao lưu lô ' + pkg.maLo + ' (' + pkg.kiemTra.nc + ' nhân công, ' + pkg.kiemTra.dx + ' xe, ' + pkg.kiemTra.pc + ' phiếu cân) vào: ' + r.file : 'Không sao lưu được lô: ' + r.error, r.ok ? 'ok' : 'err');
+  note(r.ok ? 'Đã sao lưu lô ' + pkg.maLo + ' (' + pkg.kiemTra.nc + ' nhân công, ' + pkg.kiemTra.dx + ' xe, ' + pkg.kiemTra.pc + ' phiếu cân) vào: ' + r.file + (f.chot ? '. ' + lotPhamViText(f) : '') : 'Không sao lưu được lô: ' + r.error, r.ok ? 'ok' : 'err');
+}
+/* PHẠM VI gói sao lưu riêng lô đối với lô đã chốt: gói chỉ mang BẢN CHỐT HIỆN HÀNH (một bản chụp); bản chụp của các lần chốt trước ở lại máy nguồn (bảng chot_goi),
+ * nhật ký vòng đời (lần chốt, lý do mở khóa, dấu vân tay từng lần) đi theo gói. Dùng chung cho thông báo sau khi sao lưu và màn xem trước khi khôi phục. */
+function lotPhamViText(f) {
+  const c = f && f.chot; if (!c) return '';
+  const truoc = (f.nhatKy || []).filter(x => x.hanh === 'chot' && x.phienBan && x.phienBan !== c.phienBan).map(x => x.phienBan);
+  return 'Phạm vi gói: chỉ mang bản chốt hiện hành (phiên bản ' + c.phienBan + ', dấu vân tay ' + c.hash + ').' + (truoc.length ? ' Bản chụp của lần chốt trước (phiên bản ' + truoc.join(', ') + ') không nằm trong gói, vẫn lưu ở máy đã chốt;' : '') + ' Nhật ký vòng đời (lần chốt, lý do mở khóa, dấu vân tay từng lần) đi theo gói.';
 }
 const lotCnt = c => c ? c.nc + ' nhân công, ' + c.dx + ' xe, ' + c.pc + ' phiếu cân, ' + fmtTan(c.kl) + ' tấn' : '';
 /* So sánh số liệu một lô: trước (đang có trên máy) và sau (trong file). Một cột khi lô chưa có trên máy. */
@@ -150,7 +157,7 @@ async function lotRestoreOpen(filePath) {
       (exists ? ' Lô này <b>đã tồn tại</b> trên máy.' : ' Lô <b>chưa có</b> trên máy.') + '</div>' : '<div class="msg err" id="lotDung"><b>' + (P.conflicts.some(c => c.loai === 'toanVen') ? 'Dừng: hồ sơ đã chốt trong file không toàn vẹn — không khôi phục từ file này.</b> Chưa ghi gì; hồ sơ trên máy, các lô khác và file nguồn giữ nguyên. Bấm Hủy rồi chọn bản sao lưu khác để đối chiếu.' : 'Dừng: không xác định được lô đích, cần đối chiếu.</b> Chưa ghi gì.') + '<br>' + P.conflicts.map(c => '• ' + esc(c.moTa)).join('<br>') + '</div>') +
     (P.giuTrongChu.length ? '<p class="mut">Các lô khác của chủ này trên máy giữ nguyên: ' + P.giuTrongChu.map(x => esc(x.ma)).join(', ') + '.</p>' : '') +
     (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn"><b>Thiết lập dùng chung: máy đích giữ nguyên thiết lập của mình</b>, chỉ bổ sung mục máy chưa có.<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x.text) + '<br><small class="mut">Phần hồ sơ có thể khác: ' + esc(x.anhHuong) + '</small>').join('<br>') + '</div>' : '<p class="mut">Thiết lập dùng chung (định mức BHLĐ, ánh xạ biển số) của lô trùng với máy đích.</p>') +
-    P.ghiChu.map(x => '<p class="mut">' + esc(x) + '</p>').join('') +
+    P.ghiChu.map(x => '<p class="mut">' + esc(x) + '</p>').join('') + (pk.lo && pk.lo.chot ? '<p class="mut" id="lotPhamVi">' + esc(lotPhamViText(pk.lo)) + '</p>' : '') +
     (P.ok && exists ? '<p><b>Lô đã có trên máy:</b></p><label><input type="radio" name="lotAct" value="giu" checked> Giữ bản hiện có (không đổi gì)</label><label><input type="radio" name="lotAct" value="thay"> Thay đúng lô này bằng bản trong file (các lô khác không bị đụng tới)</label>' : '') +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu trước khi ghi và ghi trong một giao dịch.</p>' +
     '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="lotCancel">Hủy</button>' + (P.ok ? '<button class="btn" data-act="lotGo">' + (exists ? 'Thực hiện' : 'Khôi phục lô') + '</button>' : '') + '</div>';

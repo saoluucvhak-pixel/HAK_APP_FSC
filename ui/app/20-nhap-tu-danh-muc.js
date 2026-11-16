@@ -87,7 +87,9 @@ function luongLayDonGia() {
 const NHAP_TAM_KEY = 'hakqn.nhapTam.v1';
 function nhapTamDoc() { try { const s = localStorage.getItem(NHAP_TAM_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function nhapTamXoa() { try { localStorage.removeItem(NHAP_TAM_KEY); } catch (e) { /* không có localStorage: bỏ qua */ } }
+let nhapTamTat = false;   // đang đóng có chủ ý: không ghi lại bản tạm nữa (bộ hẹn giờ 1 giây không được ghi lại sau khi đã xóa)
 function nhapTamGhi() {
+  if (nhapTamTat) return;
   try {
     const ks = stDirtyList(); if (!ks.length) { if (!nhapTamCho) nhapTamXoa(); return; }
     const lots = {}, sts = {};
@@ -117,7 +119,7 @@ function nhapTamKhoiPhuc() {
   note('Đã khôi phục thay đổi chưa lưu của lô ' + [...ma].join(', ') + ' vào bản nháp. Kiểm tra rồi bấm “Lưu dữ liệu vào lô”.', 'warn');
   render();
 }
-window.__nhapTamXoa = nhapTamXoa;
+window.__nhapTamXoa = () => { nhapTamTat = true; nhapTamXoa(); return 1; };   // tiến trình chính gọi khi đóng có chủ ý (lưu hoặc bỏ thay đổi)
 setInterval(nhapTamGhi, 1000);   // và gọi ngay sau mỗi lần lưu / bỏ thay đổi: lưu xong thì xóa bản tạm tức thì (không để tải lại trang khôi phục bản cũ)
 setTimeout(nhapTamKhoiPhuc, 400);
 

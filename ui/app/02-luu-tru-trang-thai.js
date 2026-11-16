@@ -32,7 +32,8 @@ function loadDb() {
       const r = HB.loadSync();
       if (r && r.unavailable) { dataIssueUi = r.issue || {path: '', reason: r.error || 'không mở được cơ sở dữ liệu', code: 'OPEN_FAILED'}; storeOk = false; dbInfo = {error: r.error}; }
       else if (!r || !r.ok) { storeOk = false; dbInfo = {error: (r && r.error) || 'không đọc được cơ sở dữ liệu'}; }
-      else { dbInfo = r; if (r.notice) pendingNotice = r.notice; const o = r.db; return withDefaults(o && o.v === 2 ? o : (o && o.rs && Object.keys(o.rs).length ? migrateV1(o) : {v: 2, rs: {}})); }
+      else { dbInfo = r; { const e = document.getElementById('appVer'); if (e && r.version) e.textContent = ' · Phiên bản ' + r.version; }   // phiên bản bản cài (package.json) hiện ở đầu trang
+        if (r.notice) pendingNotice = r.notice; const o = r.db; return withDefaults(o && o.v === 2 ? o : (o && o.rs && Object.keys(o.rs).length ? migrateV1(o) : {v: 2, rs: {}})); }
     } catch (e) { storeOk = false; dbInfo = {error: e.message}; }
     return withDefaults({v: 2, rs: {}});
   }

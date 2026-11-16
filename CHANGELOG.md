@@ -1,6 +1,25 @@
 # Nhật ký thay đổi
 
-## Chưa phát hành — toàn vẹn hồ sơ đã chốt và nghiệm thu in đợt 2 (mốc tái hiện cce3907)
+## 2.2.0 — Bản ổn định sau v1.4.33
+
+Bản 2.2.0 gồm phần này và bốn phần “2.2.0 (phần)” bên dưới, cùng các bản 2.1.0 và 2.0.0 (chưa từng phát hành công khai; bản công khai gần nhất là v1.4.33).
+
+### Thay đổi
+- **Phiên bản hiện ở đầu trang** (“· Phiên bản 2.2.0” cạnh tên ứng dụng), lấy từ chính bản cài; kiểm tra khói của bộ cài (kể cả sau khi cài đè lên v1.4.33) so số này với `package.json`.
+- **Phạm vi gói sao lưu riêng lô đối với lô đã chốt nhiều lần** được ghi rõ ở thông báo sau khi sao lưu, màn xem trước khi khôi phục và hướng dẫn: gói chỉ mang **bản chốt hiện hành** (một bản chụp, phiên bản và dấu vân tay giữ nguyên); bản chụp các lần chốt trước ở lại máy đã chốt (bảng `chot_goi`, có trong Sao lưu toàn bộ dạng SQLite); nhật ký vòng đời (lần chốt, lý do mở khóa, dấu vân tay từng lần) đi theo gói. Hành vi sao lưu, khôi phục không đổi.
+
+### Sửa lỗi
+- **Đóng ứng dụng và chọn “Bỏ thay đổi và đóng” mà lần mở sau vẫn hỏi khôi phục bản nháp** (lộ ra ở CI Windows, lượt 141): sau khi bản nháp tạm được xóa lúc đóng, bộ hẹn giờ tự lưu 1 giây của giao diện có thể ghi lại nó trước khi cửa sổ kịp đóng, và lần xóa có thể chưa kịp ghi xuống đĩa. Nay việc tự lưu tạm dừng hẳn khi đang đóng có chủ ý, và ứng dụng ép ghi bộ nhớ trình duyệt xuống đĩa trước khi đóng. Hồi quy: `scripts/e2e-nhap-tam.js`.
+
+- **Số văn bản theo đội xe (thay đổi hành vi):** lô có từ hai đội xe mà các đội cùng dùng một số (để trống số riêng nên lấy số chung của lô, hoặc nhập trùng) thì số hợp đồng vận chuyển và số biên bản xác nhận khối lượng trên BM-04, BM-09, BM-10 **tự thêm hậu tố .1, .2…** theo thứ tự đội xe (07 → 07.1, 07/2026-HĐVC → 07.1/2026-HĐVC), cùng quy tắc với đội khai thác. Trước đây hai bên vận chuyển khác nhau mang cùng một số. Lô một đội xe và đội xe đã nhập số riêng không đổi. **Lưu ý:** lô nhiều đội xe đã in BM-04/09/10 bằng số chung, khi in lại sẽ ra số có hậu tố; muốn giữ số cũ thì nhập số riêng cho từng đội xe ở tab Vận chuyển. Dữ liệu và dấu vân tay của lô đã chốt không đổi. Hồi quy: `scripts/e2e-nghiemthu-dot2.js`.
+- **Chế độ kiểm thử:** file tải về được ghi ở thư mục tạm rồi đổi tên khi xong, để bộ kiểm thử không đọc phải file đang ghi dở (CI Windows lượt 142, `e2e-haidot`). Không ảnh hưởng bản cài.
+
+### Kiểm thử
+- `scripts/e2e-chot-hai-lan.js` (42 kiểm tra, Electron + SQLite thật, chặn mạng): chốt lần 1 → mở khóa có lý do → sửa PA1 12,5 → 13,75 tấn → chốt lần 2; hai bản chụp trong SQLite; gói chỉ mang bản lần 2; khôi phục vào cơ sở dữ liệu mới (chỉ đọc, nguyên vẹn, giữ lý do mở khóa, dấu vân tay không đổi); gói thiếu bản chụp, sai dấu vân tay, JSON cắt dở dừng ở xem trước (nêu mã lô, phiên bản, lý do), máy đích và file nguồn giữ nguyên.
+- `scripts/e2e-nghiemthu-dot2.js` bổ sung: tiền công (BM-08, BM-14) và cước (BM-10) đối chiếu bảng tính tay; số biên bản, ngày; tờ nền và tờ in đè cùng khổ giấy, chiều giấy, lề, đầu/chân trang; in đè chỉ hiện nội dung bổ sung.
+- `tests/phien-ban.test.js`: `package.json`, `package-lock.json`, tên bộ cài, CHANGELOG và ghi chú phát hành cùng một số phiên bản, lớn hơn bản công khai gần nhất.
+
+## 2.2.0 (phần) — toàn vẹn hồ sơ đã chốt và nghiệm thu in đợt 2 (mốc tái hiện cce3907)
 
 ### Sửa lỗi
 | # | Lỗi (trước) | Sửa (sau) |
@@ -19,7 +38,7 @@ Kết quả kiểm (`kiemToanVen`): `nguyen-ven`, `chua-chot`, `thieu-goi`, `thi
 - `tests/toanven.test.js` (12 ca, gồm hồi quy T1, T2 và khôi phục thất bại); `scripts/e2e-toanven.js` (Electron + SQLite thật: hỏng gói ngay trong SQLite, đóng mở lại, sáu loại gói sao lưu, gói bản cũ, khôi phục toàn bộ).
 - `scripts/e2e-nghiemthu-dot2.js`: nghiệm thu in đợt 2 (BM-08, 09, 10, 14) bằng dữ liệu đã lưu — ca in cả bộ trên giấy trắng; ca in nền → xác nhận → đóng mở → bổ sung → đóng mở → in đè đúng mẫu, đúng đội xe; bảng kê BM-09 trang riêng; không có “BẢN NHÁP”; đổi PDF bằng LibreOffice và chồng ảnh nền + in đè (CI tải lên artifact).
 
-## Chưa phát hành — sửa lỗi A1–A4 và hiệu năng B5–B7 (nền: nhánh sửa năm mục)
+## 2.2.0 (phần) — sửa lỗi A1–A4 và hiệu năng B5–B7 (nền: nhánh sửa năm mục)
 
 ### Sửa lỗi
 | # | Lỗi (trước) | Sửa (sau) |
@@ -57,7 +76,7 @@ Kết quả kiểm (`kiemToanVen`): `nguyen-ven`, `chua-chot`, `thieu-goi`, `thi
 - Tab Vận chuyển dao động 150–270 ms, tab Xuất 250–420 ms giữa các lần đo trên máy CI; mục tiêu < 300 ms đạt ở số nhỏ nhất của 3 lần nhưng có lần vượt.
 - Bản chạy trong trình duyệt (không có Electron) vẫn giữ gói trong lô (lưu vào bộ nhớ trình duyệt như trước).
 
-## Chưa phát hành — sửa năm mục (nền: main 2.2 + bốn lỗi ở mục trên)
+## 2.2.0 (phần) — sửa năm mục (nền: main 2.2 + bốn lỗi ở mục trên)
 
 ### Sửa lỗi
 | # | Lỗi (trước) | Sửa (sau) |
@@ -79,7 +98,7 @@ Kết quả kiểm (`kiemToanVen`): `nguyen-ven`, `chua-chot`, `thieu-goi`, `thi
 - Dòng lô nhập trước bản này chưa có ngày chụp danh mục: coi là chụp từ rất lâu, nên gặp danh mục có ngày mới hơn và khác vẫn được đề nghị cập nhật một lần.
 - Khôi phục **thay toàn bộ** dữ liệu (nhập bản sao lưu) là thao tác chủ động nên không bị khóa chỉ đọc chặn; khôi phục từng lô đè lên lô đang chốt thì bị chặn.
 
-## Chưa phát hành — sửa bốn lỗi (mốc tái hiện 2d2b3e2)
+## 2.2.0 (phần) — sửa bốn lỗi (mốc tái hiện 2d2b3e2)
 
 | # | Lỗi (trước) | Sửa (sau) |
 | --- | --- | --- |

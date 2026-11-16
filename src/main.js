@@ -524,9 +524,10 @@ async function smoke() {
       if (o) await smokeChot(r, o);
     }
     await new Promise(res => { if (win.webContents.isLoading()) win.webContents.once('did-finish-load', res); else res(); });
-    r.dom = await win.webContents.executeJavaScript(`(async()=>({title: document.title, reportMenu: !!document.querySelector('[data-act=rpOpen]'), lookupMenu: !!document.querySelector('[data-act=lkOpen]'), sideFilter: !!document.getElementById('sideQ'),
+    r.dom = await win.webContents.executeJavaScript(`(async()=>({title: document.title, reportMenu: !!document.querySelector('[data-act=rpOpen]'), lookupMenu: !!document.querySelector('[data-act=lkOpen]'), sideFilter: !!document.getElementById('sideQ'), appVer: (document.getElementById('appVer') || {}).textContent || '',
       reports: typeof HAKReports === 'object' && HAKReports.REPORTS.length, ownerShown: document.getElementById('side').innerText.includes('CHỦ RỪNG THỬ NGHIỆM'),
       filter: await window.hak.lookup.search('', '', {onlyIssues: true, from: '2026-01-01', sort: 'tan'}).then(x => x.ok && !!x.facets).catch(() => false)}))()`);
+    r.checks.appVerShown = r.dom.appVer === ' · Phiên bản ' + app.getVersion();   // phiên bản hiện ở đầu trang đúng bằng phiên bản bản cài
     if (app.isPackaged) r.checks.testEnvOff = TEST_ONLY_ENV.every(k => !(k in process.env));   // bản cài: biến môi trường kiểm thử đã bị xóa
     r.checks.reportMenu = r.dom.reportMenu && r.dom.reports >= 5; r.checks.smartFilter = r.dom.sideFilter && r.dom.filter === true; r.checks.lookupMenu = r.dom.lookupMenu === true;
     if (phase === 'upgrade') r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('CHỦ RỪNG CŨ')"); // giao diện hiện lại chủ rừng cũ
@@ -596,7 +597,11 @@ function createWindow() {
   // Tải biểu mẫu/ZIP: hỏi nơi lưu (mặc định thư mục Tải về). Khi kiểm thử tự động: lưu thẳng vào HAKQN_DOWNLOAD_DIR.
   win.webContents.session.on('will-download', (e, item) => {
     const dir = process.env.HAKQN_DOWNLOAD_DIR;
-    if (dir) { fs.mkdirSync(dir, {recursive: true}); item.setSavePath(path.join(dir, item.getFilename())); }
+    if (dir) {   // kiểm thử: ghi ở thư mục tạm bên cạnh rồi đổi tên vào thư mục đích khi tải xong, để bộ kiểm thử không bao giờ đọc phải file đang ghi dở (CI Windows lượt 142: ZIP 0 byte)
+      const tam = dir.replace(/[\\/]+$/, '') + '.dang-tai', f1 = path.join(tam, item.getFilename()), f2 = path.join(dir, item.getFilename());
+      fs.mkdirSync(dir, {recursive: true}); fs.mkdirSync(tam, {recursive: true}); item.setSavePath(f1);
+      item.once('done', (ev, state) => { try { if (state === 'completed') fs.renameSync(f1, f2); else fs.rmSync(f1, {force: true}); } catch (err) { log('ERROR', 'tải file (kiểm thử): ' + err.message); } });
+    }
     else item.setSaveDialogOptions({title: 'Lưu file', defaultPath: path.join(app.getPath('downloads'), item.getFilename())});
   });
   win.webContents.setWindowOpenHandler(() => ({action: 'deny'}));
@@ -615,7 +620,9 @@ function createWindow() {
       if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true}'), new Promise(res => setTimeout(() => res(null), 15000))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
     }
     if (pick === 2) return;
-    if (n > 0) { try { await ask('window.__nhapTamXoa ? window.__nhapTamXoa() : 0', 0); } catch (err) { /* không xóa được bản tạm: bỏ qua */ } }   // đóng có chủ ý (lưu hoặc bỏ): không giữ bản nháp tạm
+    if (n > 0) { try { await ask('window.__nhapTamXoa ? window.__nhapTamXoa() : 0', 0); } catch (err) { /* không xóa được bản tạm: bỏ qua */ } }
+    // bộ nhớ trình duyệt (localStorage) ghi đĩa trễ: ép ghi rồi mới đóng, để lần xóa bản tạm không bị mất khi tiến trình thoát ngay
+    if (n > 0) { try { win.webContents.session.flushStorageData(); await new Promise(r => setTimeout(r, 400)); } catch (err) { /* bỏ qua */ } }   // đóng có chủ ý (lưu hoặc bỏ): không giữ bản nháp tạm
     closing = true; win.close();
   });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));

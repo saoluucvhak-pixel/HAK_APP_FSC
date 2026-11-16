@@ -270,6 +270,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 **Số hợp đồng và năm trên biểu mẫu** (BM-01, BM-04, BM-09, BM-10, BM-14, BM-20): số in có dạng `<phần số>/<năm>-<hậu tố>`, ví dụ `015/2027-KT`.
 - Nhập số **đầy đủ** (có dấu “/” hoặc đã có hậu tố, ví dụ `015/2025-KT`): phần mềm **giữ nguyên**.
 - Chỉ nhập **phần số** (`015`): phần mềm ghép **năm lấy từ ngày ký của chính hợp đồng đó** và hậu tố. Hợp đồng khai thác (BM-01, BM-14, BM-20) và hợp đồng vận chuyển (BM-04) theo **Ngày ký hợp đồng**; Giấy ủy quyền theo ngày lập giấy (trống thì theo ngày ký hợp đồng); biên bản nghiệm thu, thanh lý và biên bản xác nhận khối lượng theo ngày lập biên bản.
+- **Lô nhiều đội xe:** các đội xe cùng dùng một số (để trống số riêng nên lấy số chung của lô, hoặc nhập trùng) thì số hợp đồng vận chuyển và số biên bản xác nhận khối lượng trên BM-04, BM-09, BM-10 tự thêm `.1`, `.2`… theo thứ tự đội xe (`07` → `07.1/2026-HĐVC`), như đội khai thác. Muốn dùng số khác: nhập số riêng cho từng đội xe ở tab Vận chuyển.
 - **Thiếu hoặc sai ngày ký**: năm để trống (`015/……-KT`), không tự điền năm cố định; khung “Số hợp đồng đầy đủ sẽ in (xem trước)” ở tab Xuất hồ sơ nêu rõ cần bổ sung ngày nào. Các dòng ngày để trống in “ngày ….. tháng ….. năm …….”.
 - BM-01, BM-14 và BM-20 của cùng hồ sơ giao khoán luôn tham chiếu **cùng một số** hợp đồng khai thác.
 
@@ -293,6 +294,8 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác nhau** thì phần mềm **dừng**, không ghi gì và liệt kê hồ sơ cần đối chiếu.
 
 **Sao lưu một lô rừng** (dùng khi chuyển lô sang máy khác, hoặc lưu riêng một lô): mở lô → **Sao lưu lô rừng** → chọn nơi lưu bằng hộp thoại Windows. File `HAKQN_LoRung_<MaLo>_<Ngày>.json` chứa đúng **một** lô: thông tin, giấy tờ, nhân công, xe, phiếu cân, hợp đồng, đơn giá, thông số biểu mẫu, dấu vết nhập, **địa chỉ giao hàng đã chốt** (để BM-04 vẫn đúng sau khi chuyển máy), nhận diện chủ rừng và các thiết lập dùng chung lô cần. File **không** chứa lô khác, chủ khác, bản tra cứu Google Sheets hay thông tin đăng nhập.
+
+**Phạm vi gói đối với lô đã chốt.** Gói sao lưu riêng lô chỉ mang **bản chốt hiện hành**: một bản chụp (gói đóng băng) của lần chốt đang có hiệu lực, kèm phiên bản và dấu vân tay. Nếu lô đã chốt nhiều lần (chốt → mở khóa có lý do → sửa → chốt lại), bản chụp của các lần chốt **trước** không nằm trong gói; chúng vẫn nằm ở cơ sở dữ liệu của máy đã chốt (và trong **Sao lưu toàn bộ** dạng SQLite của máy đó). **Nhật ký vòng đời** đi theo gói: từng lần chốt (phiên bản, dấu vân tay), từng lần mở khóa (lý do, phiên bản và dấu vân tay của bản bị mở). Vì vậy trên máy đích vẫn đối chiếu được dấu vân tay của bản chốt cũ với máy nguồn, nhưng không mở lại được nội dung bản chốt cũ. Thông báo sau khi sao lưu và màn xem trước khi khôi phục đều ghi rõ phạm vi này. Cần giữ đủ mọi bản chụp thì dùng **Sao lưu toàn bộ**.
 
 **Khôi phục một lô rừng**: **⋯ Thêm → Khôi phục lô rừng…** → chọn file. Màn hình xem trước nêu chủ rừng và mã lô đích, thời điểm sao lưu, số nhân công, xe, phiếu cân, tổng tấn:
 - Chủ đã có thì lô được **thêm vào đúng chủ đó**; chưa có thì **tạo chủ mới**.
