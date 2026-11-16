@@ -49,7 +49,7 @@ const book = (sheet, rows, name) => { const wb = XLSX.utils.book_new(); XLSX.uti
   await w.setInputFiles('input[data-file="dx"]', book('DOI_XE', [car('92C-11111', 'PHẠM XE BA', '049000000079', 'LÊ VĂN MỘT'), car('92C-33333', 'ĐẶNG XE NĂM', '049000000081')], 'dx2.xlsx')); await w.waitForTimeout(800);
   await save(); F = await db(); const hdMot = F.fa.dx.find(x => x.bienSo === '92C-12345').hdvcId, x3 = F.fa.dx.find(x => x.bienSo === '92C-11111'), x5 = F.fa.dx.find(x => x.bienSo === '92C-33333');
   ok('xe ghi Đội xe “LÊ VĂN MỘT” vào đúng đội xe đó (cùng hợp đồng với xe 92C-12345)', x3 && x3.hdvcId === hdMot, JSON.stringify(F.fa.dx.map(x => x.bienSo + ':' + x.hdvcId)));
-  ok('xe không ghi Đội xe, chưa chọn đội xe: theo người ký như trước (hợp đồng riêng của người ký)', x5 && x5.hdvcId && x5.hdvcId !== hdMot, JSON.stringify(x5));
+  ok('xe không ghi Đội xe: (3.0) nạp ở trang chi tiết hợp đồng → vào hợp đồng đang mở (của LÊ VĂN MỘT)', x5 && x5.hdvcId === hdMot, JSON.stringify(x5));
   // 3. phiếu cân: cột Đội
   await w.setInputFiles('input[data-file="pc"]', book('PHIEU_CAN', [phieu('PX1', '05/10/2026', '92C-12345', 12500, 'Đội 2'), phieu('PX2', '06/10/2026', '92C-12345', 9000, 'Đội 9')], 'pc1.xlsx')); await w.waitForTimeout(800);
   t = await w.innerText('#main');

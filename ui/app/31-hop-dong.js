@@ -31,7 +31,7 @@ function panelDsNC(rec) {
   const ds = rec.doi || [], pc = rec.pc || [], nhieu = ds.length > 1, chua = (rec.nc || []).filter(r => !ds.some(d => d.id === r.doiId)).length;
   const tt = d => { const x = (rec.nc || []).find(r => r.doiId === d.id && isTT(r)); return x ? x.ten : ''; };
   const ben = d => { const n = benTen(d.benNhanKhoan); if (n) return esc(n) + ' <small class="mut">(bên nhận khoán)</small>'; const t = tt(d); return t ? esc(t) + ' <small class="mut">(Tổ trưởng)</small>' : '<span class="mut">—</span>'; };
-  const kl = d => { const p = nhieu ? pc.filter(x => x.doiId === d.id) : pc; const t = klPhieu(p); return t > 0 ? fmtTan(t) + ' tấn' : '—'; };
+  const pbk = HAKPhanBo.tinh(rec), kl = d => { const x = pbk.doi.find(y => y.id === d.id); return x && x.kg > 0 ? fmtT(x.kg) + ' tấn' : '—'; };   // 3.0: khối lượng theo phân bổ (cùng kết quả với biểu mẫu)
   const row = (d, i) => { const info = infoTeam(rec, d), so = soHdNc(rec, d);
     return '<tr data-act="chonDoi" data-doi="' + esc(d.id) + '" tabindex="0" style="cursor:pointer"><td style="text-align:center">' + (i + 1) + '</td><td>' + (so ? '<b>' + esc(so) + '</b>' : '<span class="mut">chưa có số</span>') + '</td><td><b>' + esc(tenDoiNc(rec, d)) + '</b></td><td>' + (isDirect(info) ? 'Ký với cá nhân' : 'Giao khoán') + '</td><td>' + ben(d) + '</td>' +
       '<td style="text-align:center">' + (rec.nc || []).filter(r => r.doiId === d.id).length + '</td><td style="text-align:right">' + kl(d) + '</td><td><button class="btn sm" data-act="chonDoi" data-doi="' + esc(d.id) + '">Mở</button></td></tr>'; };
@@ -40,7 +40,7 @@ function panelDsNC(rec) {
     '<p class="mut" style="margin:6px 0">Mỗi đội khai thác ký một hợp đồng nhân công. Bấm một dòng để mở hợp đồng: thông tin, đơn giá, thành viên, chấm công.</p>' +
     '<div class="wrap" style="max-height:min(60vh,520px)"><table id="dsHdNcTbl" style="min-width:760px"><thead><tr><th>STT</th><th>Số hợp đồng</th><th>Đội</th><th>Hình thức</th><th>Bên nhận khoán / người ký</th><th>Số người</th><th>Khối lượng</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(row).join('') : '<tr><td colspan="8" class="mut">Chưa có hợp đồng nào: bấm “+ Thêm hợp đồng (đội)”.</td></tr>') + '</tbody></table></div>' +
-    (chua ? '<div class="msg warn" style="margin-top:6px" id="dsHdNcChua">' + chua + ' người chưa thuộc đội nào: mở một hợp đồng rồi chọn đội ở cột Đội của bảng nhân công.</div>' : '') + '</div>';
+    '</div>' + panelPhanBo(rec) + '<div>' + (chua ? '<div class="msg warn" style="margin-top:6px" id="dsHdNcChua">' + chua + ' người chưa thuộc đội nào: mở một hợp đồng rồi chọn đội ở cột Đội của bảng nhân công.</div>' : '') + '</div>';
 }
 
 /* ---------- danh sách hợp đồng vận chuyển (mỗi đội xe một hợp đồng) ---------- */

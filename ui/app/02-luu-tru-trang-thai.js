@@ -245,6 +245,7 @@ function jobView(o, f) {
   const d0 = (f.doi || [])[0], exp = d0 && Object.keys(d0.exp || {}).length ? Object.assign({}, f.exp, d0.exp) : f.exp;
   const g = ganDoi(f.doi, f.nc), v = ganVC(f.hdvc || null, f.dx), pc = ganPC(g.doi, f.pc || []);
   return {id: o.id, fid: f.id, info: Object.assign({}, o.info, f.info, d0 ? d0.hinhThuc : {}, {_klPC: klPhieu(pc)}), nc: g.nc, dx: v.dx, pc, exp, cc: f.cc || {}, doi: g.doi || null, hdvc: v.hdvc || null,
+    phanBo: f.phanBo || null,   /* 3.0: cách phân bổ khối lượng cho đội (src/phanbo.js) */
     ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
 }
 /* jobView có khóa nhớ tạm: xem ganKhoaHoSo */
