@@ -368,15 +368,21 @@ class Store {
     const goneO = [...have.keys()].filter(id => !keepO.has(id)), goneF = [...haveF.keys()].filter(id => !keepF.has(id));
     this._guardDelete(goneO, goneF, opts);
     if (!opts.boQuaKhoa) this._kiemKhoa(rows.forests.filter(f => haveF.has(f.id) && haveF.get(f.id) !== f.hash + '|' + f.owner_id), goneF, goneO);
-    const st = this._stmts(), t = now(); let changed = 0;
+    const st = this._stmts(), t = now(); let changed = 0, goiCu = 0;
     this.db.transaction(() => {
       changed += this._writeSide(db, t);
       rows.owners.forEach(o => { if (have.get(o.id) !== o.hash) { st.upO.run({...o, t}); changed++; } });
       rows.forests.forEach(f => { this._ghiGoi(f.id, f.goi); if (haveF.get(f.id) !== f.hash + '|' + f.owner_id) { const {goi: _g, ...r} = f; st.upF.run({...r, t}); changed++; } });
       goneO.forEach(id => { st.delO.run(id); changed++; });
       goneF.forEach(id => { if (haveF.has(id)) { st.delF.run(id); changed++; } });
+      /* LỊCH SỬ BẢN CHỤP đi kèm (khôi phục từ bản .sqlite, src/khosaoluu.js): bản chụp của các lần chốt TRƯỚC được chép trong CÙNG giao dịch với hồ sơ, chỉ cho lô còn
+       * trong dữ liệu vừa ghi, không ghi đè bản đã có. Lỗi ở đây hoàn tác cả lần ghi: không có trạng thái "hồ sơ đã thay nhưng thiếu lịch sử". */
+      if (Array.isArray(opts.goiLichSu) && opts.goiLichSu.length && this._coBangGoi()) {
+        const put = this.db.prepare('INSERT OR IGNORE INTO chot_goi(forest_id,phien_ban,hash,at,data) VALUES(?,?,?,?,?)');
+        opts.goiLichSu.forEach(g => { if (keepF.has(String(g.forest_id))) goiCu += put.run(String(g.forest_id), g.phien_ban, g.hash, g.at, g.data).changes; });
+      }
     })();
-    return {changed, at: t, rev: this._bump(), mode: 'full'};
+    return {changed, at: t, rev: this._bump(), mode: 'full', goiCu};
   }
 
   /* Lưu theo phần thay đổi (src/delta.js). d = {rev, upO: {id: json}, upF: {id: {owner, json}}, delO: [id], delF: [id], side, counts: {owners, forests}}.
@@ -488,8 +494,8 @@ class Store {
       Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
     }
     const backup = this.snapshotFile('truoc-khoi-phuc', {keep: 20});   // giữ 20 bản gần nhất (như truoc-xoa): mỗi bản là cả cơ sở dữ liệu, không để thư mục sao lưu lớn mãi
-    this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace'});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
-    return {backup, counts: Store.counts(this.load())};
+    const kq = this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace', goiLichSu: opts && opts.goiLichSu});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
+    return {backup, counts: Store.counts(this.load()), goiCu: kq.goiCu || 0};
   }
 
   /* Khôi phục MỘT lô rừng từ gói đã kiểm tra (LoRung.parsePackage). Xem trước dùng planLot, ghi dùng applyLot: cùng quy tắc. */

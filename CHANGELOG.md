@@ -52,9 +52,10 @@ Rà soát hiệu năng, quy trình nhập liệu và sao lưu trên bộ dữ li
 | # | Lỗi (trước) | Sửa (sau) |
 | --- | --- | --- |
 | D1 | Lô đang có thay đổi chưa lưu, rồi khôi phục chính lô đó (hoặc khôi phục toàn bộ): dấu “chưa lưu” và bản đã lưu cũ còn lại, nên lần lưu kế tiếp có thể ghi lại bản **trước khi khôi phục** của lô | Sau mọi lần thay dữ liệu từ ngoài (khôi phục toàn bộ, khôi phục lô, khôi phục từ kho), bản nháp, dấu “chưa lưu” và bản đã lưu được đặt lại theo đúng dữ liệu vừa nạp (`dbThayToanBo`, `ui/app/29`) |
+| D2 | Khôi phục từ bản `.sqlite`: hồ sơ được ghi trước, lịch sử bản chụp của các lần chốt trước chép sau ở một giao dịch riêng. Lỗi ghi ở bước sau để lại hồ sơ **đã thay** nhưng thiếu lịch sử, trong khi thông báo ghi “dữ liệu cũ giữ nguyên” | Hồ sơ và lịch sử bản chụp ghi trong **một** giao dịch (`Store.save` `goiLichSu`): lỗi ở bước nào cũng hoàn tác tất cả, dữ liệu đích và các bản chụp của đích còn nguyên, khôi phục lại được sau khi hết lỗi. Bản `truoc-khoi-phuc-…` tạo trước khi ghi vẫn còn trong kho |
 
 ### Kiểm thử
-- `tests/khosaoluu.test.js` (9 ca): liệt kê theo loại, kiểm tra bản tốt / hỏng / cắt dở, khôi phục và hoàn tác, bản hỏng không ghi gì, lô đã chốt hai lần còn nguyên vẹn sau khôi phục, bản v1.0.0, xóa có giới hạn, làm mới bản tự sao lưu, giữ 20 bản.
+- `tests/khosaoluu.test.js` (10 ca, gồm mô phỏng lỗi ghi khi chép lịch sử bản chụp): liệt kê theo loại, kiểm tra bản tốt / hỏng / cắt dở, khôi phục và hoàn tác, bản hỏng không ghi gì, lô đã chốt hai lần còn nguyên vẹn sau khôi phục, bản v1.0.0, xóa có giới hạn, làm mới bản tự sao lưu, giữ 20 bản.
 - `scripts/e2e-kho-sao-luu.js` (34 kiểm tra, Electron + SQLite thật): đóng app làm mới bản hôm nay, màn kho, khôi phục từ bản tốt và bản hỏng, hoàn tác, xóa, đường dẫn ngoài danh sách bị từ chối, Tự sao lưu ngay, Ctrl+S, menu ⋯ Thêm ở cửa sổ hẹp.
 
 ### Chưa làm (đề xuất)

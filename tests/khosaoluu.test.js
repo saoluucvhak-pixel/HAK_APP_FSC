@@ -99,6 +99,34 @@ test('khôi phục: lô đã chốt còn chỉ đọc và nguyên vẹn; bản c
   s2.close();
 });
 
+test('khôi phục: lỗi khi chép lịch sử bản chụp (lần chốt trước) → hoàn tác cả lần khôi phục, dữ liệu đích và các bản chụp của đích giữ nguyên; thử lại thì được', async () => {
+  const d = tmp(), bk = path.join(d, 'backups'), s = new Store(path.join(d, 'nguon.sqlite'), {backupDir: bk});
+  const db = duLieu(); db.rs.o1.forests.f1 = M.ensureForest(db.rs.o1.forests.f1);
+  V.chot(db.rs.o1.forests.f1, 'Lần 1', '2026-11-10T01:00:00.000Z', []); s.save(db);
+  let f = s.load().rs.o1.forests.f1; V.moKhoa(f, 'sửa khối lượng', '2026-11-11T01:00:00.000Z'); const d2 = s.load(); d2.rs.o1.forests.f1 = f; s.save(d2);
+  f = s.load().rs.o1.forests.f1; f.pc[0].kl = 12.5; V.chot(f, 'Lần 2', '2026-11-12T01:00:00.000Z', []); const d3 = s.load(); d3.rs.o1.forests.f1 = f; s.save(d3);
+  const r = await AB.daily(s, {dir: bk, now: day(2026, 11, 14)}); s.close();
+  // máy đích: hồ sơ khác hẳn, có một lô đã chốt riêng (bản chụp của đích cũng phải còn nguyên)
+  const bk2 = path.join(d, 'bk-dich'), t = new Store(path.join(d, 'dich.sqlite'), {backupDir: bk2});
+  const dich = {v: 2, rs: {o9: {id: 'o9', info: {ma: 'CR9', ten: 'CHỦ ĐÍCH', cccd: '049000000009'}, forests: {f9: M.ensureForest(lo('f9', 'R9', [3, 4]))}}}, congTy: {c9: {id: 'c9', ten: 'CÔNG TY ĐÍCH', mst: '0400000009'}}};
+  V.chot(dich.rs.o9.forests.f9, 'Chốt ở đích', '2026-11-13T01:00:00.000Z', []); t.save(dich);
+  const chup = () => JSON.stringify({db: t.load({kemGoi: true}), goi: t.db.prepare('SELECT forest_id, phien_ban, hash, length(data) n FROM chot_goi ORDER BY forest_id, phien_ban').all()});
+  const truoc = chup(), rev = t.rev;
+  // giả lập lỗi ghi đúng lúc chép bản chụp của LẦN CHỐT TRƯỚC (phiên bản 1 của f1); bản hiện hành (phiên bản 2) vẫn ghi được
+  t.db.exec("CREATE TEMP TRIGGER gia_lap_loi BEFORE INSERT ON chot_goi WHEN NEW.forest_id = 'f1' AND NEW.phien_ban = 1 BEGIN SELECT RAISE(ABORT, 'giả lập lỗi ghi lịch sử'); END");
+  assert.throws(() => K.khoiPhuc(t, r.file, SCHEMA_VERSION), /giả lập lỗi ghi lịch sử/);
+  assert.strictEqual(chup(), truoc, 'dữ liệu đích (hồ sơ, công ty, mọi bản chụp) giữ nguyên: không có lần khôi phục dở dang');
+  assert.strictEqual(t.rev, rev, 'phiên bản dữ liệu không đổi: giao diện không coi như đã ghi');
+  assert.ok(V.chiDoc(t.load().rs.o9.forests.f9)); assert.strictEqual(V.kiemToanVen(t.load().rs.o9.forests.f9, null, t.kiemGoi('f9')).ma, 'nguyen-ven');
+  assert.strictEqual(md5(r.file) && K.kiemTra(r.file, SCHEMA_VERSION).ok, true, 'bản sao lưu nguồn vẫn dùng được');
+  // hết lỗi: khôi phục lại được, đủ cả hai bản chụp
+  t.db.exec('DROP TRIGGER gia_lap_loi');
+  const kq = K.khoiPhuc(t, r.file, SCHEMA_VERSION);
+  assert.strictEqual(kq.goiCu, 1); assert.deepStrictEqual(t.dsGoi('f1').map(g => g.phienBan), [1, 2]); assert.deepStrictEqual(Object.keys(t.load().rs), ['o1']);
+  assert.ok(t.lichSuGoi('f1').every(g => g.ok));
+  t.close();
+});
+
 test('khôi phục từ bản cấu trúc cũ (v1.0.0): nâng cấp trên bản chép, file sao lưu gốc giữ nguyên cấu trúc cũ', () => {
   const d = tmp(), bk = path.join(d, 'backups'); fs.mkdirSync(bk);
   const cu = path.join(bk, 'truoc-nang-cap-v2-len-v14-2026-01-01T00-00-00-000Z.sqlite'); fs.copyFileSync(path.join(__dirname, 'fixtures', 'hakqn_v1_0_0.sqlite'), cu);
