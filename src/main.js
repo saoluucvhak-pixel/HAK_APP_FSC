@@ -224,7 +224,9 @@ function registerIpc() {
     try {
       if (typeof html !== 'string' || !html || html.length > 50 * 1024 * 1024) throw new Error('Nội dung in không hợp lệ.');
       const safe = String(ten || 'ban-in').replace(/[^A-Za-z0-9_-]+/g, '_').slice(0, 80) || 'ban-in', dir = path.join(app.getPath('userData'), 'in-tam');
-      fs.mkdirSync(dir, {recursive: true}); tmp = path.join(dir, safe + '-' + Date.now() + '.html'); fs.writeFileSync(tmp, html);
+      fs.mkdirSync(dir, {recursive: true});
+      for (const n of fs.readdirSync(dir)) { try { fs.rmSync(path.join(dir, n), {force: true}); } catch (er) { /* file của lần in trước còn bị khóa: bỏ qua */ } }   // dọn file tạm còn sót của lần in trước
+      tmp = path.join(dir, safe + '-' + Date.now() + '.html'); fs.writeFileSync(tmp, html);
       pw = new BrowserWindow({show: false, webPreferences: {javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false}});
       pw.webContents.setWindowOpenHandler(() => ({action: 'deny'})); pw.webContents.on('will-navigate', ev => ev.preventDefault());
       await pw.loadFile(tmp);
@@ -234,7 +236,11 @@ function registerIpc() {
       if (!r.success && /cancel/i.test(r.reason || '')) return {ok: false, canceled: true};
       return r.success ? {ok: true} : {ok: false, error: r.reason || 'máy in không nhận lệnh'};
     } catch (err) { log('ERROR', 'in: ' + err.message); return {ok: false, error: err.message}; }
-    finally { try { if (pw && !pw.isDestroyed()) pw.destroy(); } catch (er) { /* bỏ qua */ } try { if (tmp) fs.rmSync(tmp, {force: true}); } catch (er) { /* bỏ qua */ } }
+    finally {
+      // Windows giữ khóa file tạm cho tới khi cửa sổ in đóng hẳn: chờ sự kiện 'closed' rồi mới xóa, có thử lại (CI Windows lượt 148: file tạm còn sót vì xóa ngay sau destroy)
+      try { if (pw && !pw.isDestroyed()) { const dong = new Promise(res => { pw.once('closed', res); setTimeout(res, 3000); }); pw.destroy(); await dong; } } catch (er) { /* bỏ qua */ }
+      try { if (tmp) fs.rmSync(tmp, {force: true, maxRetries: 20, retryDelay: 100}); } catch (er) { log('WARN', 'in: chưa xóa được file tạm ' + tmp + ': ' + er.message); }
+    }
   });
   ipcMain.handle('lookup:audit', () => wrap(() => ({audit: lookup.audit()}))());
   ipcMain.handle('lookup:status', () => wrap(() => ({...lookup.status(), sheetUrl: lookup.getMeta('sheetUrl') || DEFAULT_SHEET}))());

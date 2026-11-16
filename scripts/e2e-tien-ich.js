@@ -76,7 +76,8 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   await w.click('header [data-act=rpOpen]').catch(() => w.click('[data-act=rpOpen]')); await w.waitForSelector('#inBaoCaoBtn'); await w.click('#inBaoCaoBtn');
   let pdf2 = null; for (let i = 0; i < 100 && !pdf2; i++) { pdf2 = fs.readdirSync(inDir).find(x => /^Bao_cao_.*\.pdf$/.test(x)); if (!pdf2) await w.waitForTimeout(150); }
   ok('In báo cáo: có file PDF của báo cáo đang xem', !!pdf2 && fs.readFileSync(path.join(inDir, pdf2)).slice(0, 5).toString() === '%PDF-', String(pdf2));
-  ok('file tạm của bản in đã được dọn', !fs.existsSync(path.join(dir, 'ud', 'in-tam')) || fs.readdirSync(path.join(dir, 'ud', 'in-tam')).length === 0);
+  { const tam = path.join(dir, 'ud', 'in-tam'), con = () => (fs.existsSync(tam) ? fs.readdirSync(tam) : []); for (let i = 0; i < 40 && con().length; i++) await w.waitForTimeout(150);   // lệnh in trả kết quả sau khi dọn; chờ tối đa 6 giây
+    ok('file tạm của bản in đã được dọn sau khi in xong', con().length === 0, con().join(', ')); }
   await w.click('[data-act=rpClose]').catch(() => {});
 
   // ---------- 3. phụ lục in lại, ký lại ----------
