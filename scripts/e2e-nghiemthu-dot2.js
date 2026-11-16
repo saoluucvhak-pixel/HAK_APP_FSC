@@ -79,6 +79,9 @@ const soTrang = f => +((cp.execFileSync('pdfinfo', [f], {encoding: 'utf8'}).matc
     ok('ca 1: BM-09 số biên bản 09/2026-XNKL, ngày 20/12/2026; khối lượng từng đội xe 20,500 tấn (2 chuyến) và 9,250 tấn (1 chuyến)', ['09/2026-XNKL', 'ngày 20/12/2026', '20,500'].every(v => xe('09', '92C-12345').includes(v)) && ['09/2026-XNKL', 'ngày 20/12/2026', '9,250'].every(v => xe('09', '92C-67890').includes(v)) && !xe('09', '92C-67890').includes('20,500'));
     ok('ca 1: BM-10 cước từng đội xe khớp bảng tính tay (20,5 × 52.000 = 1.066.000; 9,25 × 52.000 = 481.000), không lẫn tiền của đội kia', ['52.000', '20,500', '1.066.000'].every(v => xe('10', '92C-12345').includes(v)) && ['52.000', '9,250', '481.000'].every(v => xe('10', '92C-67890').includes(v)) && !xe('10', '92C-12345').includes('481.000') && !xe('10', '92C-67890').includes('1.066.000') && 20.5 * 52000 === 1066000 && 9.25 * 52000 === 481000 && 1066000 + 481000 === 29.75 * 52000); }
   const fT = luu('ca1-giay-trang', T.name, T.docs);
+  // hai đội xe để trống số riêng nên cùng in số chung của lô (07/2026-HĐVC, 09/2026-XNKL): màn Kiểm tra phải cảnh báo, không chặn xuất
+  { await w.click('[data-ftab=kt]'); await w.waitForTimeout(400); const kt = await w.innerText('#main');
+    ok('ca 1: màn Kiểm tra cảnh báo hai đội xe cùng in số chung của lô (HĐ vận chuyển “07”, xác nhận khối lượng “09”)', /cùng in số chung của lô “07”/.test(kt) && /cùng in số chung của lô “09”/.test(kt), kt.slice(0, 600)); }
   await open('fa'); a = await adv(); ok('ca 1: tải gói không làm đổi trạng thái (chỉ nút xác nhận mới ghi nhận đã in)', ALL6.every(k => a[k] === 'trang'));
 
   // ===== CA 2: in nền → xác nhận → đóng mở → bổ sung → đóng mở → in đè =====

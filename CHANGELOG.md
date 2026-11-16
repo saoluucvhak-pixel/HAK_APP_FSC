@@ -11,6 +11,9 @@ Bản 2.2.0 gồm phần này và bốn phần “2.2.0 (phần)” bên dưới
 ### Sửa lỗi
 - **Đóng ứng dụng và chọn “Bỏ thay đổi và đóng” mà lần mở sau vẫn hỏi khôi phục bản nháp** (lộ ra ở CI Windows, lượt 141): sau khi bản nháp tạm được xóa lúc đóng, bộ hẹn giờ tự lưu 1 giây của giao diện có thể ghi lại nó trước khi cửa sổ kịp đóng, và lần xóa có thể chưa kịp ghi xuống đĩa. Nay việc tự lưu tạm dừng hẳn khi đang đóng có chủ ý, và ứng dụng ép ghi bộ nhớ trình duyệt xuống đĩa trước khi đóng. Hồi quy: `scripts/e2e-nhap-tam.js`.
 
+- **Nhiều đội xe cùng in số chung của lô:** đội xe để trống số riêng thì in số hợp đồng vận chuyển / số biên bản xác nhận khối lượng chung của lô, nên hai bên vận chuyển khác nhau có thể mang cùng một số mà không có cảnh báo. Nay màn Kiểm tra cảnh báo (không chặn xuất), nêu tên các đội xe, số và biểu mẫu. Phần mềm **không** tự thêm hậu tố để không đổi số của văn bản đã in. Hồi quy: `tests/phien-ban.test.js`, `scripts/e2e-nghiemthu-dot2.js`.
+- **Chế độ kiểm thử:** file tải về được ghi ở thư mục tạm rồi đổi tên khi xong, để bộ kiểm thử không đọc phải file đang ghi dở (CI Windows lượt 142, `e2e-haidot`). Không ảnh hưởng bản cài.
+
 ### Kiểm thử
 - `scripts/e2e-chot-hai-lan.js` (42 kiểm tra, Electron + SQLite thật, chặn mạng): chốt lần 1 → mở khóa có lý do → sửa PA1 12,5 → 13,75 tấn → chốt lần 2; hai bản chụp trong SQLite; gói chỉ mang bản lần 2; khôi phục vào cơ sở dữ liệu mới (chỉ đọc, nguyên vẹn, giữ lý do mở khóa, dấu vân tay không đổi); gói thiếu bản chụp, sai dấu vân tay, JSON cắt dở dừng ở xem trước (nêu mã lô, phiên bản, lý do), máy đích và file nguồn giữ nguyên.
 - `scripts/e2e-nghiemthu-dot2.js` bổ sung: tiền công (BM-08, BM-14) và cước (BM-10) đối chiếu bảng tính tay; số biên bản, ngày; tờ nền và tờ in đè cùng khổ giấy, chiều giấy, lề, đầu/chân trang; in đè chỉ hiện nội dung bổ sung.

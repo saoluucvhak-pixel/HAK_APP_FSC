@@ -597,7 +597,11 @@ function createWindow() {
   // Tải biểu mẫu/ZIP: hỏi nơi lưu (mặc định thư mục Tải về). Khi kiểm thử tự động: lưu thẳng vào HAKQN_DOWNLOAD_DIR.
   win.webContents.session.on('will-download', (e, item) => {
     const dir = process.env.HAKQN_DOWNLOAD_DIR;
-    if (dir) { fs.mkdirSync(dir, {recursive: true}); item.setSavePath(path.join(dir, item.getFilename())); }
+    if (dir) {   // kiểm thử: ghi ở thư mục tạm bên cạnh rồi đổi tên vào thư mục đích khi tải xong, để bộ kiểm thử không bao giờ đọc phải file đang ghi dở (CI Windows lượt 142: ZIP 0 byte)
+      const tam = dir.replace(/[\\/]+$/, '') + '.dang-tai', f1 = path.join(tam, item.getFilename()), f2 = path.join(dir, item.getFilename());
+      fs.mkdirSync(dir, {recursive: true}); fs.mkdirSync(tam, {recursive: true}); item.setSavePath(f1);
+      item.once('done', (ev, state) => { try { if (state === 'completed') fs.renameSync(f1, f2); else fs.rmSync(f1, {force: true}); } catch (err) { log('ERROR', 'tải file (kiểm thử): ' + err.message); } });
+    }
     else item.setSaveDialogOptions({title: 'Lưu file', defaultPath: path.join(app.getPath('downloads'), item.getFilename())});
   });
   win.webContents.setWindowOpenHandler(() => ({action: 'deny'}));
