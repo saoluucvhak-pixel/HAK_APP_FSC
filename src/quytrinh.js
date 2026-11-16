@@ -45,7 +45,7 @@
   };
   const unmark = (st, code, now) => { const had = !!st.items[code]; if (had) ghiSo(st, {at: now || new Date().toISOString(), ma: code, hanh: 'huyin', sig: st.items[code].sig, lyDo: 'bỏ xác nhận đã in'}); delete st.items[code]; return had; };
   /* ĐÃ KÝ: chỉ khi mẫu đã in và còn khớp dữ liệu. Dữ liệu đổi thì chữ ký không còn hiệu lực (phải in và ký lại). */
-  const ky = (st, code, sig, now) => { const r = st.items[code]; if (!r || r.sig !== sig) return null; r.ky = now; ghiSo(st, {at: now, ma: code, hanh: 'ky', sig, lyDo: 'đã ký'}); return r; };
+  const ky = (st, code, sig, now) => { const r = st.items[code]; if (!r || r.sig !== sig) return null; r.ky = now; const lan = (st.soIn || []).filter(x => x.ma === code && x.hanh === 'ky').length; ghiSo(st, {at: now, ma: code, hanh: 'ky', sig, lyDo: lan ? 'ký lại lần ' + (lan + 1) : 'đã ký'}); return r; };   // từ lần ký thứ hai ghi rõ “ký lại lần N” (phụ lục in lại, ký lại)
   const huyKy = (st, code, now) => { const r = st.items[code]; if (!r || !r.ky) return false; delete r.ky; ghiSo(st, {at: now || new Date().toISOString(), ma: code, hanh: 'huyky', sig: r.sig, lyDo: 'bỏ đánh dấu đã ký'}); return true; };
 
   /* items: [{code, ready: 'du'|'nhap'|'thieu', sig}] → thêm printed: 'chua' | 'da' | 'doi', at */

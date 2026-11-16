@@ -1,5 +1,20 @@
 # Nhật ký thay đổi
 
+## 2.3.0 — Dán từ Excel, mục lục gói in, phụ lục in lại / ký lại, gói Chỉ xem, in trong app, hướng dẫn lần đầu
+
+Sáu tính năng còn lại của kế hoạch 2.2 (đợt 1–3). Không đổi cấu trúc SQLite (vẫn v14), không đổi cách tính và nội dung các biểu mẫu BM-01…BM-20.
+
+### Tính năng mới
+1. **Dán từ Excel** (tab Nhân công, Vận chuyển, khung phiếu cân): nút “Dán từ Excel” mở hộp dán; chép vùng ô trong Excel / Google Sheets **gồm dòng tiêu đề** rồi Ctrl+V. Dữ liệu đi qua đúng đường nạp file (cùng kiểm tra, cùng bảng so sánh thêm / cập nhật / bỏ, cùng bản nháp và nút Lưu). Số ghi kiểu Việt Nam (`12,5`, `1.234,5`) thành số; CCCD, điện thoại, số có 0 đứng đầu, ngày giữ nguyên. Thiếu tiêu đề hoặc thiếu cột bắt buộc thì báo tên cột và không nạp.
+2. **Mục lục gói in:** gói “Toàn bộ hồ sơ”, đợt 1, đợt 2 có thêm `00_Muc_luc.docx` đứng đầu: STT, mã mẫu, tên biểu mẫu, lập cho ai (đội / đội xe), số bản, tên file.
+3. **Phụ lục in lại, ký lại:** Sổ in ghi “ký lại lần N” từ lần ký thứ hai; nút “Phụ lục in lại, ký lại” (tab Xuất hồ sơ) tải bảng theo dõi các mẫu đã in hoặc ký từ lần thứ hai, kèm thời điểm và lý do.
+4. **Gói Chỉ xem:** “Tải gói Chỉ xem (.zip)” gồm `XEM_HO_SO.html` (một trang tóm tắt tự đủ, không script, mở bằng trình duyệt bất kỳ: chủ rừng, lô, đội, đội xe và số văn bản, nhân công, xe, phiếu cân, chốt hồ sơ, nhật ký vòng đời) và thư mục `Bieu_mau` (các biểu mẫu xuất được + mục lục). Gói không có file sao lưu nên không nhập lại được vào phần mềm.
+5. **In trong app:** “In tóm tắt hồ sơ” (tab Xuất hồ sơ) và “In báo cáo” (màn Báo cáo) mở hộp thoại in của Windows. Bản in dựng trong cửa sổ ẩn không chạy script. Biểu mẫu Word vẫn in bằng Word như cũ.
+6. **Hướng dẫn lần đầu:** màn Tổng quan hiện “Hướng dẫn bắt đầu” gồm 6 bước, tự đánh dấu bước đã xong theo dữ liệu, có nút mở đúng nơi làm bước kế tiếp; ẩn được và mở lại ở ⋯ Thêm → Hướng dẫn bắt đầu.
+
+### Kiểm thử
+- `tests/tienich.test.js` (7 ca), `scripts/e2e-tien-ich.js` (25 kiểm tra, Electron + SQLite thật; lệnh in được kiểm bằng cách ghi PDF).
+
 ## 2.2.0 — Bản ổn định sau v1.4.33
 
 Bản 2.2.0 gồm phần này và bốn phần “2.2.0 (phần)” bên dưới, cùng các bản 2.1.0 và 2.0.0 (chưa từng phát hành công khai; bản công khai gần nhất là v1.4.33).
@@ -128,11 +143,9 @@ Quy trình mới nhằm hết nhập trùng và chồng lấn số liệu (thi�
 7. **Đối tác:** người ký vận chuyển (cá nhân, chống trùng CCCD), doanh nghiệp ký vận chuyển (danh mục đơn vị vận chuyển có sẵn), tổ trưởng ký nhân công (lấy từ danh mục lao động có chức vụ Tổ trưởng).
 8. **Định mức BHLĐ** dùng vị trí của danh mục (không nhập vị trí riêng); tab báo vị trí nào chưa khai định mức.
 
-### Việc còn lại
-- Chưa có màn riêng khai **đơn giá khoán / ngày công theo vị trí** cho từng hợp đồng: vẫn dùng khung đơn giá ở tab Nhân công.
-- Đối tác cá nhân chưa được dựng sẵn khi nâng cấp (danh sách bắt đầu trống, người ký xe cũ vẫn nằm trong dữ liệu lô).
-- Bước CI nâng cấp từ bản dựng 2.0.0 chưa thêm; chuyển SQLite v7 đã có unit test.
-- Còn lại từ 2.0.0: hàm quy tắc kiểm tra thuần trong `src/`, `db.chucDanhThem` (xem mục dưới).
+### Việc còn lại (cập nhật)
+- Đã làm ở bản 2.2: bảng đơn giá theo vị trí của từng đội (tab Nhân công); danh mục Đối tác dựng sẵn khi nâng cấp (SQLite v8: doanh nghiệp và người ký cá nhân của đội xe); bước CI nâng cấp từ bản dựng 2.0.0.
+- Còn lại từ 2.0.0: `db.chucDanhThem` (xem mục dưới).
 
 ## 2.0.0 — Cấu trúc bảng mẹ – bảng con (Lô → Đội khai thác, Đội xe, Phiếu cân)
 

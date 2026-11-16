@@ -293,6 +293,12 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 
 Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác nhau** thì phần mềm **dừng**, không ghi gì và liệt kê hồ sơ cần đối chiếu.
 
+**Dán từ Excel** (nhân công, xe, phiếu cân): ở khung nạp file bấm **Dán từ Excel**, chép vùng ô trong Excel gồm cả **dòng tiêu đề** (tên cột như file mẫu), dán vào hộp rồi bấm **Nạp dữ liệu đã dán**. Phần mềm kiểm tra và so với dữ liệu đang có như khi nạp file; sau đó bấm **Lưu dữ liệu vào lô**.
+
+**Mục lục, gói Chỉ xem, in:** gói hồ sơ tải về có tờ `00_Muc_luc.docx`. Tab Xuất hồ sơ → khung **Chia sẻ và in**: **Tải gói Chỉ xem (.zip)** (mở `XEM_HO_SO.html` bằng trình duyệt; người nhận không sửa và không nhập lại được), **In tóm tắt hồ sơ**, **Phụ lục in lại, ký lại**. Màn Báo cáo có nút **In báo cáo**. Biểu mẫu Word vẫn in bằng Word.
+
+**Hướng dẫn bắt đầu:** màn Tổng quan hiện 6 bước cho người mới; ẩn được, mở lại ở **⋯ Thêm → Hướng dẫn bắt đầu**.
+
 **Sao lưu một lô rừng** (dùng khi chuyển lô sang máy khác, hoặc lưu riêng một lô): mở lô → **Sao lưu lô rừng** → chọn nơi lưu bằng hộp thoại Windows. File `HAKQN_LoRung_<MaLo>_<Ngày>.json` chứa đúng **một** lô: thông tin, giấy tờ, nhân công, xe, phiếu cân, hợp đồng, đơn giá, thông số biểu mẫu, dấu vết nhập, **địa chỉ giao hàng đã chốt** (để BM-04 vẫn đúng sau khi chuyển máy), nhận diện chủ rừng và các thiết lập dùng chung lô cần. File **không** chứa lô khác, chủ khác, bản tra cứu Google Sheets hay thông tin đăng nhập.
 
 **Phạm vi gói đối với lô đã chốt.** Gói sao lưu riêng lô chỉ mang **bản chốt hiện hành**: một bản chụp (gói đóng băng) của lần chốt đang có hiệu lực, kèm phiên bản và dấu vân tay. Nếu lô đã chốt nhiều lần (chốt → mở khóa có lý do → sửa → chốt lại), bản chụp của các lần chốt **trước** không nằm trong gói; chúng vẫn nằm ở cơ sở dữ liệu của máy đã chốt (và trong **Sao lưu toàn bộ** dạng SQLite của máy đó). **Nhật ký vòng đời** đi theo gói: từng lần chốt (phiên bản, dấu vân tay), từng lần mở khóa (lý do, phiên bản và dấu vân tay của bản bị mở). Vì vậy trên máy đích vẫn đối chiếu được dấu vân tay của bản chốt cũ với máy nguồn, nhưng không mở lại được nội dung bản chốt cũ. Thông báo sau khi sao lưu và màn xem trước khi khôi phục đều ghi rõ phạm vi này. Cần giữ đủ mọi bản chụp thì dùng **Sao lưu toàn bộ**: file `.sqlite` mang mọi bản chụp; khôi phục bằng cách chép file đó thành `hakqn.sqlite` vào một thư mục rồi chọn thư mục đó ở **Cài đặt → Thư mục dữ liệu → Dùng dữ liệu có sẵn**. Khung **Vòng đời lô** liệt kê các bản chụp đang có trên máy và báo bản nào hỏng.
