@@ -132,3 +132,20 @@ test('báo cáo danh sách lao động có cột Đội ở cuối (các cột c
   assert.strictEqual(s.cols[s.cols.length - 1].h, 'Đội'); assert.strictEqual(s.rows[0][s.cols.length - 1], 'Đội 1'); assert.strictEqual(s.rows[0][4], 'Tổ trưởng');
   assert.strictEqual(s.rows[0].length, s.cols.length); assert.strictEqual(s.foot.length, s.cols.length);
 });
+
+test('báo cáo cước bỏ phiếu khớp nhiều đội xe và nêu số phiếu để đối chiếu', () => {
+  const r = {maRung: 'A', pc: [{soPhieu: 'P1', ngay: '01/11/2026', bienSo: '92C12345', kl: 10}],
+    hdList: [{bien: ['92C12345'], donGia: 52000}, {bien: ['92C-12345'], donGia: 62000}]};
+  const m = R.vanChuyenDoiXe([r], {});
+  assert.strictEqual(m.kpis.find(k => k.label === 'Số chuyến').value, 0);
+  assert.ok(m.notes.some(n => n.includes('P1') && n.includes('chưa tính cước')));
+});
+
+test('hai báo cáo cước cùng cộng số đã làm tròn từng xe như BM-10', () => {
+  const r = {maRung: 'A', pc: ['X', 'Y'].map(bienSo => ({ngay: '01/11/2026', bienSo, kl: 0.01})),
+    hdList: [{bien: ['X', 'Y'], donGia: 150}]};
+  const detail = R.vanChuyenDoiXe([r], {});
+  const summary = R.REPORTS.find(x => x.id === 'sohoso').build([r], {});
+  assert.strictEqual(detail.kpis.find(k => k.label === 'Cước (đồng)').value, 4);
+  assert.strictEqual(summary.sections[0].rows[0][18], 4);
+});

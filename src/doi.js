@@ -31,10 +31,22 @@
     const total = doi.reduce((s, d) => s + d.n, 0) || 1; doi.forEach(d => { d.share = d.n / total; });
     return {multi: true, doi, errs, orphans};
   }
-  /* chia một số lượng (tấn hoặc ha) cho các đội theo số người; làm tròn 3 chữ số, đội cuối nhận phần còn lại để tổng khớp đúng */
+  /* Chia phần nguyên trước rồi cấp phần dư theo số lẻ lớn nhất. */
   function chia(vol, doi) {
-    if (typeof vol !== 'number' || !(vol > 0) || !doi.length) return doi.map(() => null);
-    let used = 0; return doi.map((d, i) => { const v = i === doi.length - 1 ? Math.round((vol - used) * 1000) / 1000 : Math.round(vol * d.share * 1000) / 1000; used += v; return v; });
+    const units = Math.round(vol * 1000);
+    if (typeof vol !== 'number' || !(vol > 0) || !Number.isSafeInteger(units) || !doi.length) return doi.map(() => null);
+    const shares = doi.map(d => d.share);
+    if (shares.some(share => !Number.isFinite(share) || share < 0)) return doi.map(() => null);
+    const total = shares.reduce((sum, share) => sum + share, 0);
+    if (!Number.isFinite(total) || total <= 0) return doi.map(() => null);
+    const exact = shares.map(share => units * (share / total));
+    const allocated = exact.map(Math.floor);
+    const order = exact.map((value, index) => ({index, remainder: value - allocated[index]}));
+    order.sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+    const remaining = units - allocated.reduce((sum, value) => sum + value, 0);
+    if (remaining < 0 || remaining > order.length) return doi.map(() => null);
+    order.slice(0, remaining).forEach(({index}) => { allocated[index]++; });
+    return allocated.map(value => value / 1000);
   }
   /* Khối lượng thực tế của từng đội. Phiếu cân không ghi đội nên MẶC ĐỊNH chia theo số người (chia).
    * Nếu năng suất các đội khác nhau, người dùng nhập khối lượng thực tế riêng từng đội: klDoi = {khóa Tổ trưởng (keyOf): tấn}.

@@ -38,3 +38,8 @@ test('khối lượng thực tế từng đội: trống → chia theo số ngư
   assert.strictEqual(D.khoiLuong(30, doi, {a: 20.0004, b: 9.9999}).nguon, 'nhap', 'lệch dưới 1 kg vẫn khớp');
   assert.strictEqual(D.khoiLuong(30, doi, {a: 'x', b: 10}).nguon, 'songuoi', 'ô nhập sai coi như chưa nhập');
 });
+
+
+test('chia 2 kg cho bốn đội: tổng khớp, không đội nào nhận số âm', () => {
+  assert.deepStrictEqual(D.chia(0.002, Array.from({length: 4}, () => ({share: 0.25}))), [0.001, 0.001, 0, 0]);
+});
