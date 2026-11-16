@@ -1,6 +1,6 @@
 /* ========== Thao tác ========== */
 function openRs(id) { cur = id; curF = null; tab = 'info'; view = 'owner'; render(); }
-function openForest(fid) { curF = fid; ftab = 'finfo'; tab = 'rung'; view = 'owner'; render(); }
+function openForest(fid) { if (typeof hdMoS === 'object' && hdMoS) delete hdMoS[fid]; curF = fid;   /* 3.0: mở rừng → tab Nhân công / Vận chuyển bắt đầu ở danh sách hợp đồng */ ftab = 'finfo'; tab = 'rung'; view = 'owner'; render(); }
 
 function newRs() {
   const id = 'rs' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -108,7 +108,8 @@ function themDoi() {
   if ((f.doi || []).some(d => HAKDoi.fold(d.ten) === HAKDoi.fold(ten))) return note('Chưa thêm: đã có đội tên “' + ten + '”.', 'warn');
   const t0 = curTeam(f), r = HAKModel.addTeam(f, ten, t0 && t0.id);
   if (f.doi.length === 1 && !trim(f.doi[0].ten)) r.f.doi[0].ten = 'Đội 1';   // lô có từ 2 đội: mỗi đội một tên
-  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); curDoi = r.id; persistLo(); note('Đã thêm đội “' + trim(ten) + '”. Thêm nhân công cho đội (tay hoặc nạp Excel) khi đội đang được chọn.'); render();
+  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); hdMoDat('nc', r.id); persistLo();   // 3.0: mở ngay hợp đồng (đội) mới
+  note('Đã thêm đội “' + trim(ten) + '”. Thêm nhân công cho đội (tay hoặc nạp Excel) khi đội đang được chọn.'); render();
 }
 function xoaDoi() {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
@@ -120,7 +121,8 @@ function saveDoi(form, nhap) {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
   const dt = trim(form.elements.dienTich.value), v = dt ? toDec(dt) : null;
   if (dt && !(typeof v === 'number' && v > 0)) return formMsg(form, chuaLuu(nhap) + 'diện tích của đội phải là số lớn hơn 0 (ha) hoặc để trống');
-  const r = HAKModel.updateTeam(f, t.id, {ten: trim(form.elements.ten.value), dienTich: v}); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
+  const patch = {ten: trim(form.elements.ten.value), dienTich: v}; if (form.elements.benNK) patch.benNhanKhoan = benTuGiaTri(form.elements.benNK.value);   // 3.0: liên kết bên nhận khoán
+  const r = HAKModel.updateTeam(f, t.id, patch); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
   clearFormMsg(form);
   const tenD = trim(form.elements.ten.value) || 'đội'; f.doi = r.f.doi; if (nhap) { persistLo(); return; } render(); luuLo().then(x => { if (x && x.ok) note('Đã lưu đội “' + tenD + '”.'); });
 }
@@ -139,7 +141,7 @@ function saveDv(form) {
 function themHd() {
   const f = curForest(); if (!f) return;
   const inp = document.getElementById('hdMoiTen'), n = ((f.hdvc || []).length + 1), ten = trim(inp && inp.value) || 'Đội xe ' + n;
-  const r = HAKModel.addHd(f, ten); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); curHd = r.id; persistLo();
+  const r = HAKModel.addHd(f, ten); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); hdMoDat('dx', r.id); persistLo();
   note('Đã thêm “' + ten + '”. Chọn đội này ở cột “Đội xe” của các xe, hoặc thêm xe khi đội đang được chọn; rồi chọn người ký của đội.'); render();
 }
 function saveHd(form, nhap) {
@@ -156,10 +158,12 @@ function saveHd(form, nhap) {
   if (g('pcNgay') && !parseVN(g('pcNgay'))) e.push('ngày lập xác nhận khối lượng phải đúng dd/mm/yyyy');
   if (e.length) return formMsg(form, chuaLuu(nhap) + e.join('; '));
   clearFormMsg(form);
-  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? HAKDanhMuc.timDoiTac(db.dmDoiTac || [], ky.slice(2)) : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
+  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? HAKDanhMuc.timDoiTac(dmDoiTacAll(), ky.slice(2)) : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
   const patch = {ten: g('ten'), cuoc, exp: {soVC: g('soVC'), vcChiPhi: g('vcChiPhi'), pcSo: g('pcSo'), pcNgay: g('pcNgay')}};
   if (dv) { if (HAKDanhMuc.chuanDoiTacId(cur.donViId) !== dv.id) patch.donVi = dv; } else if (ky.startsWith('p:')) patch.key = ky.slice(2);   // người ký: người trong đội hoặc doanh nghiệp
   const r = HAKModel.updateHd(f, curHd, patch); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
+  { const h = (r.f.hdvc || []).find(x => x.id === curHd);   // 3.0: liên kết bên ký tới Danh mục đối tượng (ID), bản chụp h.ben vẫn dùng để in
+    if (h) { const d = dv && dv.doiTuongId ? {doiTuongId: dv.doiTuongId, nguoiId: dv.nguoiId || ''} : !dv && ky.startsWith('p:') ? (a => a ? {doiTuongId: a.dt.id, nguoiId: a.ng.id} : null)(HAKDoiTuong.timCccd(dmDT(), ky.slice(2))) : null; if (d) h.benKy = d; else if (dv || ky.startsWith('p:')) delete h.benKy; } }
   Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); if (nhap) { persistLo(); return; } render(); luuLo().then(x => { if (x && x.ok) note('Đã lưu đội xe và hợp đồng vận chuyển.'); });
 }
 function xoaHd() {
@@ -168,7 +172,7 @@ function xoaHd() {
   Object.assign(f, {hdvc: r.f.hdvc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
 }
 function hdCapNhatDv() {
-  const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === curHd), dv = h && HAKDanhMuc.timDoiTac(db.dmDoiTac || [], h.donViId); if (!dv) return;
+  const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === curHd), dv = h && HAKDanhMuc.timDoiTac(dmDoiTacAll(), h.donViId); if (!dv) return;
   const r = HAKModel.updateHd(f, h.id, {ben: dv}); Object.assign(f, {hdvc: r.f.hdvc}); persistLo(); note('Đã cập nhật thông tin đối tác theo danh mục.'); render();
 }
 /* gán đội cho các phiếu cân đang lọc (ngày, biển số, số phiếu, chỉ phiếu chưa gán) */
@@ -303,6 +307,7 @@ async function importFile(kind, file) {
     r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; if (kind === 'pc') { const co = !!String(x.ngay2 || '').trim(); HAKPhieuCan.chuanHoaNgay2(x); if (!co && x.ngay2) x._ngay2Suy = true; } });   // file không có hoặc để trống ngày cân 2: suy ra (cờ tạm _ngay2Suy chỉ dùng khi gộp, không lưu)
     stErrList = null; const st = stGetFor(tgt.o, tgt.f, true), nkSnap = nhatKyNapChup(st, kind), rep = HAKStage.merge(st, kind, r.rows, {source: 'Excel: ' + file.name, suyNgay2: HAKPhieuCan.suyNgay2});
     nhatKyNapGhi(st, kind, file.name, rep, nkSnap);
+    if (kind === 'pc' && cur === tgt.o && curF === tgt.f) ganPhieuHopDong(st, rep.ids, f1);   // 3.0: phiếu mới vào hợp đồng vận chuyển đang mở, xe theo BKS khớp duy nhất
     const here = cur === tgt.o && curF === tgt.f;
     const msg = 'Đã đưa ' + r.rows.length + ' dòng ' + ST_LABEL[kind] + ' từ ' + file.name + ' vào BẢN NHÁP của lô ' + ma + ' (chưa lưu): thêm ' + rep.add + ', cập nhật ' + rep.upd + ', giữ nguyên ' + rep.same + (rep.kept ? ', giữ ' + rep.kept + ' bản ghi đã lưu không có trong file' : '') + (rep.pending ? ', CẦN ĐỐI CHIẾU ' + rep.pending + ' dòng trùng số phiếu nhưng khác dữ liệu (chưa áp dụng)' : '') + (rep.errors ? ', ' + rep.errors + ' ô sai định dạng (giữ giá trị cũ, xem chi tiết)' : '') + (other.length ? '. Cảnh báo: file có mã rừng khác lô này (' + other.join(', ') + ') nên các dòng đó báo lỗi' : '') + '. Xem trước, chỉnh sửa rồi bấm “Lưu dữ liệu vào lô”.';
     if (!here) { pushNote('Lô ' + ma + ' có dữ liệu chờ xem trước (' + ST_LABEL[kind] + ' từ ' + file.name + '). Bạn đang xem lô khác nên màn hình giữ nguyên; mở lại lô ' + ma + ' để xem trước và lưu.', 'warn'); return; }

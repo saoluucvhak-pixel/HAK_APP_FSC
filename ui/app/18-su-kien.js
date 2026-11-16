@@ -16,10 +16,11 @@ document.addEventListener('click', async e => {
   if (act === 'delRs') return delRs(), render();
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
-  if (act === 'chonDoi') { curDoi = el.dataset.doi; return render(); }
+  if (act === 'chonDoi') { hdMoDat('nc', el.dataset.doi); return render(); }   // 3.0: mở trang chi tiết hợp đồng nhân công của đội
+  if (act === 'hdQuayLai') { hdMoDat(el.dataset.kind, null); return render(); }
   if (act === 'ncTatCa') { ncTatCa = true; return render(); }
   if (act === 'ncTheoDoi') { ncTatCa = false; return render(); }
-  if (act === 'chonHd') { curHd = curHd === el.dataset.hd ? null : el.dataset.hd; return render(); }
+  if (act === 'chonHd') { hdMoDat('dx', el.dataset.hd); return render(); }   // 3.0: mở trang chi tiết hợp đồng vận chuyển
   if (act === 'themHd') return themHd();
   if (act === 'pcGanLoat') return pcGanLoat();
   if (act === 'xoaHd') return xoaHd();

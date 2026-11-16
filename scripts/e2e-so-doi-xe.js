@@ -18,7 +18,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-sdx-')), out = path.joi
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('');
 const launch = async () => { const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
-  const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
+  const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
 const PCx = (t, ma) => [P(1, '05/10/2026', '92C-12345', t + '1', 12.5), P(2, '06/10/2026', '92C-67890', t + '2', 9.25), P(3, '07/10/2026', '92C-12345', t + '3', 8)].map(r => Object.assign(r, {maRung: ma}));
 const dungMa = f => { ['nc', 'dx', 'pc'].forEach(k => { f[k] = (f[k] || []).map(r => Object.assign({}, r, {maRung: f.info.maRung})); }); return f; };
 const mk = (id, ma) => M.ensureForest(dungMa(lot(id, ma, {exp: EXP1, pc: PCx(id.slice(-1).toUpperCase(), ma), kl: null})));
@@ -79,7 +79,7 @@ const mk = (id, ma) => M.ensureForest(dungMa(lot(id, ma, {exp: EXP1, pc: PCx(id.
   await open('fa', 'xuat'); D = await taiGoi();
   ok('chỉ còn đội A: số của A vẫn giữ nguyên (không trở về số chung 07, không đổi hậu tố)', anhA() === soTrenGiayA && cua(D, '04', A).includes('Số: ' + soA.vc), anhA());
   db = await dbNow(); F = db.rs.own1.forests.fa;
-  { const h = M.addHd(F, 'Đội xe C'); F = h.f; const xeC = Object.assign({}, F.dx[0], {_row: 9, bienSo: '92C-55555', chuXe: 'TRẦN VĂN C', cccd: '049000000555', taiXe: 'TÀI XẾ C'}); F.dx.push(xeC); F = M.moveXe(F, [F.dx.length - 1], h.id).f || F;
+  { const h = M.addHd(F, 'Đội xe C'); F = h.f; const xeC = Object.assign({}, F.dx[0], {id: undefined, xeId: undefined, _row: 9, bienSo: '92C-55555', chuXe: 'TRẦN VĂN C', cccd: '049000000555', taiXe: 'TÀI XẾ C'}); F.dx.push(xeC); F = M.moveXe(F, [F.dx.length - 1], h.id).f || F;
     F.pc.push(Object.assign(P(4, '08/10/2026', '92C-55555', 'A4', 5), {maRung: 'R-A'})); db.rs.own1.forests.fa = F; }
   ok('thêm đội xe C (xe 92C-55555): lưu được', (await saveDb(db)).ok && (await lo('fa')).hdvc.length === 2);
   await open('fa', 'xuat'); await w.click('[data-act=svbDien]'); await w.waitForTimeout(400); await w.click('button[data-act=stSave]'); await w.waitForTimeout(800);

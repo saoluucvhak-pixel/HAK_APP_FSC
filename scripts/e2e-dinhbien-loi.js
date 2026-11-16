@@ -11,7 +11,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-dbl-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const mk = (id, ma, tu) => { const l = lot(id, ma, {exp: {}, kl: null, pc: []}); l.info.tuNgay = tu; l.info.denNgay = ''; l.nc = l.nc.map(r => ({...r, maRung: ma})); l.dx = l.dx.map(r => ({...r, maRung: ma})); return l; };
   const D = seed([mk('fa', 'R-A', '30/11/2026'), mk('fb', 'R-B', '01/12/2026'), mk('fc', 'R-C', '31/11/2026'), mk('fd', 'R-D', '')]);
   const db0 = {}; B.set(db0, B.get({}).rows, DM); const a = B.addVersion(db0, '01/12/2026'); B.setVersion(db0, a.id, B.get(db0, '01/12/2026').rows.map(r => r.chucDanh === 'Công nhân cưa' ? {...r, soNguoi: 5} : r), DM);

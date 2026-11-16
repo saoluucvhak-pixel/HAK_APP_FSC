@@ -18,7 +18,7 @@ const launch = (env = {}, name = 'd') => electron.launch({executablePath: requir
   f.doi.forEach(d => { d.exp = d.exp || {}; });
   const h = M.addHd(f, 'Xe 2'); f = h.f; f.hdvc[0].ten = 'Xe 1'; f = M.moveXe(f, f.dx.map((r, i) => i), h.id).f || f;
   const idDoi1 = f.doi[0].id, idDoi2 = f.doi[1].id, idHd1 = f.hdvc[0].id;
-  let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), seed([f])); await w.reload(); await w.waitForSelector('#side');
   const forest = async () => (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fa;
   const open = async ftab => { if (!(await w.$('[data-ftab=nc]'))) { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); } await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(400); };
@@ -35,7 +35,7 @@ const launch = (env = {}, name = 'd') => electron.launch({executablePath: requir
   F = await forest();
   ok('đã xóa đội 01 và đội xe 01; lịch sử STT vẫn giữ [1, 2]', F.doi.length === 1 && F.hdvc.length === 1 && F.sttDaCap.doi.join() === '1,2' && F.sttDaCap.doiXe.join() === '1,2', JSON.stringify([F.doi.length, F.hdvc.length, F.sttDaCap]));
   // 3. đóng và mở lại app
-  await app.close(); app = await launch(); w = await app.firstWindow();   // mở lại app: màn đầu, mở lô từ danh sách w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  await app.close(); app = await launch(); w = require('./_hd30').boc(await app.firstWindow());   // mở lại app: màn đầu, mở lô từ danh sách w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   F = await forest(); ok('mở lại app: lịch sử STT và số của đội 02 còn nguyên', F.sttDaCap.doi.join() === '1,2' && F.doi[0].exp.soKT === so2 && F.doi[0].stt === 2, JSON.stringify(F.sttDaCap));
   // 4. thêm đội mới và đội xe mới → nhận 03
   await open('nc'); await w.fill('#doiMoiTen', 'Đội mới'); await w.click('[data-act=themDoi]'); await w.waitForTimeout(500);
@@ -51,7 +51,7 @@ const launch = (env = {}, name = 'd') => electron.launch({executablePath: requir
   await open('finfo'); await w.click('#lotBackupBtn'); await w.waitForTimeout(700);
   const file = fs.readdirSync(lotDir).find(x => /^HAKQN_LoRung_R-A_.*\.json$/.test(x)); ok('sao lưu riêng lô ra file', !!file, JSON.stringify(fs.readdirSync(lotDir)));
   const pkg = JSON.parse(fs.readFileSync(path.join(lotDir, file), 'utf8')); ok('file sao lưu mang lịch sử STT [1, 2, 3] của cả đội khai thác và đội xe', pkg.lo.sttDaCap && pkg.lo.sttDaCap.doi.join() === '1,2,3' && pkg.lo.sttDaCap.doiXe.join() === '1,2,3', JSON.stringify(pkg.lo.sttDaCap));
-  await app.close(); app = await launch({HAKQN_LOT_FILE: path.join(lotDir, file)}, 'may2'); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  await app.close(); app = await launch({HAKQN_LOT_FILE: path.join(lotDir, file)}, 'may2'); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(900);
   const idsR = Object.keys((await w.evaluate(() => window.hak.loadSync().db)).rs); ok('khôi phục lô vào máy khác thành công', idsR.length === 1);
   const ownR = idsR[0], lotR = async () => Object.values((await w.evaluate(() => window.hak.loadSync().db)).rs[ownR].forests)[0];

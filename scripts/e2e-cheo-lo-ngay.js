@@ -12,7 +12,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 (async () => {
   const out = path.join(dir, 'out'); fs.mkdirSync(out, {recursive: true});
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const mk = (id, ma, ngay, so, extra, bien) => { const l = lot(id, ma, {exp: {soKT: extra || '015', ngayKy: '02/10/2026', soVC: '07', ntSo: '03', pcSo: '09', pcNgay: '20/12/2026', ntNgay: '20/12/2026'}, kl: null, pc: [P(1, ngay, bien || '92C-12345', so || 'P1', 12.5)]}); l.nc = l.nc.map(r => ({...r, maRung: ma})); l.dx = l.dx.map(r => ({...r, maRung: ma})); l.pc = l.pc.map(r => ({...r, maRung: ma, ngay, bienSo: bien || '92C-12345', soPhieu: so || 'P1'})); return l; };
   const A = mk('fa', 'R-A', '1/11/2026', 'P1', '015'), B = mk('fb', 'R-B', '01/11/2026', 'P1', '016'), C = mk('fc', 'R-C', '03/11/2026', 'P7', '017');
   await w.evaluate(d => window.hak.save(d), seed([A, B, C, mk('fd', 'R-D', '02/11/2026', 'P1', '018'), mk('fe', 'R-E', '01/11/2026', 'P1', '019', '92C-67890')])); await w.reload(); await w.waitForSelector('#side');

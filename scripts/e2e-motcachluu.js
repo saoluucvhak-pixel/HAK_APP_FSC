@@ -11,7 +11,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-luu1-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), seed([lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 29.75}), lot('fb', 'R-B', {exp: {}, pc: []})])); await w.reload(); await w.waitForSelector('#side');
   const db = async () => (await w.evaluate(() => window.hak.loadSync().db));
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300);
@@ -34,12 +34,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const f = (await db()).rs.own1.forests.fa;
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
   ok('Bỏ thay đổi: ô về số đã lưu, hết thanh “Chưa lưu”, SQLite không đổi', (await w.inputValue('#doiKTVb input[data-exp=soKT]')) === (soKT0 || '') && !(await w.$('#loDirtyBar')) && f.doi[0].exp.soKT === soKT0, await w.inputValue('#doiKTVb input[data-exp=soKT]'));
-  // 5. sửa lại, lưu danh mục (đơn vị vận chuyển) khi lô còn thay đổi: danh mục ghi, lô vẫn chưa ghi
+  // 5. sửa lại, lưu danh mục (3.0: Danh mục đối tượng ở Cài đặt) khi lô còn thay đổi: danh mục ghi, lô vẫn chưa ghi
   await w.fill('#doiKTVb input[data-exp=soKT]', '077'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change'); await w.waitForTimeout(300);
-  await w.click('[data-ftab=dx]'); await w.waitForTimeout(200);
-  await w.fill('#dvForm [name=ten]', 'CÔNG TY VT THỬ'); await w.click('#dvForm [type=submit]'); await w.waitForTimeout(500);
+  await w.click('[data-ftab=dx]'); await w.waitForTimeout(200); await w.click('#hdForm [data-act=openSetDt][data-quaylai]'); await w.waitForSelector('#dtThem');
+  await w.click('#dtThem'); await w.selectOption('#dtLoai', 'phapnhan'); await w.fill('#dtForm [name=ten]', 'CÔNG TY VT THỬ'); await w.click('#dtLuu'); await w.waitForTimeout(500);
   let d = await db();
-  ok('lưu danh mục khi lô còn thay đổi: danh mục đã ghi, số HĐ của lô CHƯA ghi', (d.dmDoiTac || []).some(x => x.ten === 'CÔNG TY VT THỬ') && d.rs.own1.forests.fa.doi[0].exp.soKT === soKT0, JSON.stringify(d.rs.own1.forests.fa.doi[0].exp));
+  ok('lưu danh mục khi lô còn thay đổi: danh mục đã ghi, số HĐ của lô CHƯA ghi', (d.dmDoiTuong || []).some(x => x.ten === 'CÔNG TY VT THỬ') && d.rs.own1.forests.fa.doi[0].exp.soKT === soKT0, JSON.stringify(d.rs.own1.forests.fa.doi[0].exp));
+  await w.click('#veLaiBtn'); await w.waitForTimeout(200);   // quay lại hợp đồng: bản nháp của lô vẫn còn
   // 6. một nút Lưu: ghi cả lô
   await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(500); d = await db();
   ok('“Lưu dữ liệu vào lô”: ghi số 077, hết thanh “Chưa lưu”', d.rs.own1.forests.fa.doi[0].exp.soKT === '077' && !(await w.$('#loDirtyBar')));

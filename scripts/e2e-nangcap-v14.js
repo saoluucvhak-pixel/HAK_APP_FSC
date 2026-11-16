@@ -30,7 +30,7 @@ const doc = (q, ...a) => { const s = new Store(file, {migrations: MIGRATIONS}); 
 
   // 2. mở bằng bản mới
   const launch = async () => { const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: file, HAKQN_USERDATA: path.join(dir, 'ud')}});
-    const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
+    const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
   let {app, w} = await launch();
   const bk1 = fs.existsSync(bkDir) ? fs.readdirSync(bkDir).filter(n => n.startsWith('truoc-nang-cap-v8-len-v' + MIGRATIONS.length + '-')) : [];
   ok('sao lưu file trước khi nâng cấp (truoc-nang-cap-v8-len-v' + MIGRATIONS.length + ')', bk1.length === 1, JSON.stringify(fs.existsSync(bkDir) ? fs.readdirSync(bkDir) : []));

@@ -14,7 +14,7 @@ const grp = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 const launch = (db, ud, out) => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: db, HAKQN_USERDATA: ud, HAKQN_DOWNLOAD_DIR: out}});
 (async () => {
   const out = path.join(dir, 'out'); fs.mkdirSync(out, {recursive: true});
-  let app = await launch(path.join(dir, 'd.sqlite'), path.join(dir, 'ud'), out), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  let app = await launch(path.join(dir, 'd.sqlite'), path.join(dir, 'ud'), out), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   // ---- dữ liệu giả lập: Đội 1 = TT + cưa + 2 khai thác (N = 4); Đội 2 = TT + 1 khai thác (N = 2); đơn giá theo tấn ----
   const p = (i, vai, ten, cd, doi) => ({...nv(i, vai, ten, cd, '04908500' + String(7000 + i)), maRung: 'R-A', doi});
   const nc = [p(1, 'Tổ trưởng', 'TRẦN MỘT', 'Tổ trưởng', 'Đội 1'), p(2, 'Công nhân', 'LÊ CƯA', 'Công nhân cưa', 'Đội 1'), p(3, 'Công nhân', 'PHẠM KT BA', 'Công nhân khai thác', 'Đội 1'), p(4, 'Công nhân', 'ĐỖ KT BỐN', 'Công nhân khai thác', 'Đội 1'),
@@ -56,10 +56,10 @@ const launch = (db, ud, out) => electron.launch({executablePath: require('electr
   const fx = path.join(root, 'tests', 'fixtures', 'hakqn_v1_4.sqlite'), cu = path.join(dir, 'cu.sqlite'); fs.copyFileSync(fx, cu);
   const raw = new Database(cu, {readonly: true}), goc = raw.prepare('SELECT data FROM forests').all().map(r => JSON.parse(r.data)).find(x => x.id === 'fa' || x.info); raw.close();
   const soGoc = (goc.exp || {}).soKT || '', pcGoc = (goc.pc || []).length;
-  app = await launch(cu, path.join(dir, 'ud2'), path.join(dir, 'out2')); w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  app = await launch(cu, path.join(dir, 'ud2'), path.join(dir, 'out2')); w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const D = (await w.evaluate(() => window.hak.loadSync().db)); const fa = Object.values(D.rs).flatMap(o => Object.values(o.forests)).find(x => x.id === goc.id) || Object.values(Object.values(D.rs)[0].forests)[0];
   ok('hồ sơ một đội từ bản 1.4.x: mở lại được, số hợp đồng khai thác ' + (soGoc || '(trống)') + ' giữ nguyên ở đội duy nhất, phiếu cân giữ nguyên', fa.doi.length === 1 && ((fa.doi[0].exp || {}).soKT || '') === soGoc && (fa.pc || []).length === pcGoc, JSON.stringify([fa.doi.length, (fa.doi[0].exp || {}).soKT, soGoc, (fa.pc || []).length, pcGoc]));
   await w.click('[data-open=' + Object.keys(D.rs)[0] + ']'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fa.id + ']'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(500);
-  ok('định mức nhân công của hồ sơ cũ: tab Nhân công đọc được (không có lỗi ngày/phiên bản), dùng đúng bản đã lưu hoặc mặc định', !(await w.$('#dbNgayLoi')) && /Nhân công khai thác/.test(await w.innerText('#main')) && !(D.dinhBienVer && D.dinhBienVer.length), JSON.stringify([D.dinhBien && D.dinhBien.length, D.dinhBienVer]));
+  ok('định mức nhân công của hồ sơ cũ: tab Nhân công đọc được (không có lỗi ngày/phiên bản), dùng đúng bản đã lưu hoặc mặc định', !(await w.$('#dbNgayLoi')) && /Nhân công khai thác|Hợp đồng nhân công/.test(await w.innerText('#main')) && !(D.dinhBienVer && D.dinhBienVer.length), JSON.stringify([D.dinhBien && D.dinhBien.length, D.dinhBienVer]));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

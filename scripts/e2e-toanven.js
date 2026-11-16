@@ -18,7 +18,7 @@ const sql = fn => { const Db = require('better-sqlite3'), d = new Db(file); try 
 const anh = () => sql(d => JSON.stringify({f: d.prepare('SELECT id, hash FROM forests ORDER BY id').all(), g: d.prepare('SELECT forest_id, phien_ban, hash, data FROM chot_goi ORDER BY forest_id').all()}));
 const launch = async (env = {}) => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: file, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_LOT_DIR: lotDir, ...env}});
-  const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w};
+  const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w};
 };
 const openLo = async (w, fid, ftab = 'nc') => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(300); };
 const banner = async w => { const e = await w.$('#toanVenLoi'); return e ? {ma: await e.getAttribute('data-ma'), text: await e.innerText()} : null; };

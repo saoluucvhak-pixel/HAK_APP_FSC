@@ -29,7 +29,7 @@ const lotOf = d => d.rs.own1.forests.fa;
 const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml').async('string')).then(x => (x.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join(''));
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'n.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const load = async (seed, ftab = 'xuat') => { await w.evaluate(d => window.hak.save(d, {allowBulkDelete: true}), seed); await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(200); };
   const draftCard = async seed => { await load(seed); await w.click('[data-xtab=all]'); return w.innerText('#draftCard'); };
   const ktText = async seed => { await load(seed, 'kt'); return w.innerText('#main'); };

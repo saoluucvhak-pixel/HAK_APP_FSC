@@ -3,12 +3,20 @@
  * - Người / xe MỚI nhập trong lô được ghi luôn vào danh mục khi lưu lô (không nhập hai nơi).
  * - Nút “Cập nhật từ danh mục”: làm mới có chủ ý bản chụp trong bản nháp của lô. */
 const dmNguonLd = () => {
-  const dm = HAKDanhMuc.laoDongHieuLuc(db.dmLaoDong || []), co = new Set(dm.map(r => HAKDanhMuc.cccdSo(r.cccd)));
+  /* 3.0: trước hết người có vai trò Nhân công trong Danh mục đối tượng (nhãn: đối tượng — người); sau đó danh mục lao động cũ và người đã có ở các lô (chưa có trong danh mục mới) */
+  const moi = HAKDoiTuong.nguoiTheoVaiTro(dmDT(), 'nhanCong').map(({dt, ng}) => ({ngayCapNhat: dt.ngayCapNhat || '', cccd: HAKDanhMuc.cccdSo(ng.cccd), ten: ng.hoTen, gioiTinh: ng.gioiTinh || '', ngaySinh: ng.ngaySinh || '', diaChi: ng.diaChi || '', ngayCap: ng.ngayCap || '', noiCap: ng.noiCap || '', sdt: ng.sdt || '',
+    chucVu: '', viTri: ten30(ng.viTriId), _ngId: ng.id, _viTriId: ng.viTriId || '', _nhan: HAKDoiTuong.nhanNguoi(dt, ng)})).filter(r => r.cccd);
+  const coMoi = new Set(moi.map(r => r.cccd));
+  const dm = HAKDanhMuc.laoDongHieuLuc(db.dmLaoDong || []).filter(r => !coMoi.has(HAKDanhMuc.cccdSo(r.cccd))), co = new Set(dm.map(r => HAKDanhMuc.cccdSo(r.cccd)).concat([...coMoi]));
   const them = HAKModel.nguoiDanhMuc(db.rs).filter(r => !co.has(HAKDanhMuc.cccdSo(r.cccd))).map(r => ({ngayCapNhat: '', cccd: HAKDanhMuc.cccdSo(r.cccd), ten: r.ten, gioiTinh: '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '', chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}));
-  return dm.concat(them).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
+  return moi.concat(dm.concat(them).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi')));
 };
 const dmNguonXe = () => {
-  const dm = HAKDanhMuc.xeHieuLuc(db.dmXeVC || []), co = new Set(dm.map(r => HAKDanhMuc.bienKey(r.bienSo)));
+  /* 3.0: trước hết xe của Danh mục xe (chủ xe theo ID); sau đó danh mục xe cũ và xe đã có ở các lô */
+  const xeId = b => (HAKXeDM.timBks(dmXE(), b) || {}).id || '';
+  const cu = HAKDanhMuc.xeHieuLuc(db.dmXeVC || []).map(x => Object.assign({}, x, {_xeId: xeId(x.bienSo)})), coCu = new Set(cu.map(r => HAKDanhMuc.bienKey(r.bienSo)));   // dòng cũ đầy đủ hơn (tài xế, cà vẹt): giữ, nối ID xe mới
+  const moi = dmCu().dmXeVC.filter(x => x.bienSo && !coCu.has(HAKDanhMuc.bienKey(x.bienSo))).map(x => Object.assign(x, {_xeId: xeId(x.bienSo)}));
+  const dm = cu.concat(moi), co = new Set(dm.map(r => HAKDanhMuc.bienKey(r.bienSo)));
   const them = xeDanhMuc().filter(r => !co.has(HAKDanhMuc.bienKey(r.bienSo))).map(r => ({ngayCapNhat: '', bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || '', loaiXe: r.loaiXe || '', cccd: r.cccd || '', ngaySinh: r.ngaySinh || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', diaChi: r.diaChi || '', sdt: r.sdt || '', cavet: r.cavet || '', nguoiKy: r.nguoiKy || '', _goc: r}));   // _goc: các trường riêng của xe ở lô cũ (chủ xe, loại xe…) để điền sẵn
   return dm.concat(them).sort((a, b) => String(a.bienSo).localeCompare(String(b.bienSo)));
 };
@@ -17,11 +25,13 @@ function dmDienNguoi(d) {
   const goc = Object.assign({}, stm.vals), r = HAKDanhMuc.chupLaoDong(d, goc);
   ['ten', 'cccd', 'ngaySinh', 'ngayCap', 'noiCap', 'diaChi', 'vaiTro', 'chucDanh'].forEach(k => { if (r[k] != null) stm.vals[k] = stStr(r[k]); });
   if (d.gioiTinh) stm.vals.danhXung = d.gioiTinh === 'Nữ' ? 'Bà' : 'Ông';
+  if (d._ngId) { stm.vals.nguoiId = d._ngId; if (d._viTriId) stm.vals.viTriId = d._viTriId; }   // 3.0: dòng lô nối người của Danh mục đối tượng
   stm.vals._dmNgay = trim(d.ngayCapNhat);   // ngày của dòng danh mục vừa chọn (dòng lô lưu lại để biết khi nào danh mục mới hơn)
 }
 function dmDienXe(d) {
   const r = HAKDanhMuc.chupXe(d, Object.assign({}, stm.vals));
   if (d._goc) ST_FIELDS.dx.forEach(([k]) => { if (k !== 'stt' && d._goc[k] != null && d._goc[k] !== '') stm.vals[k] = stStr(d._goc[k]); });
+  if (d._xeId) stm.vals.xeId = d._xeId;   // 3.0: dòng xe nối xe của Danh mục xe
   ['bienSo', 'chuXe', 'taiXe', 'cccdTx', 'diaChiTx', 'ngayCapTx', 'noiCapTx', 'gplx', 'hanGplx', 'kdDen', 'hanBH'].concat(HAKDanhMuc.CHU_XE).forEach(k => { if (r[k] != null && r[k] !== '') stm.vals[k] = stStr(r[k]); });
   stm.vals._dmNgay = trim(d.ngayCapNhat);
 }

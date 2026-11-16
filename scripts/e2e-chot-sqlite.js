@@ -16,7 +16,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const sha = f => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 const rowsOf = file => { const Db = require('better-sqlite3'), d = new Db(file, {readonly: true}); try { return d.prepare("SELECT phien_ban pb, hash, data FROM chot_goi WHERE forest_id='fa' ORDER BY phien_ban").all(); } finally { d.close(); } };
 const launch = async (ud, env = {}) => { const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_USERDATA: path.join(dir, ud), ...env}});
-  const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
+  const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
 const loadDb = w => w.evaluate(() => window.hak.loadSync().db);
 const openLo = async w => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.waitForSelector('#chotBox'); await w.waitForTimeout(300); };
 const kl1 = f => f.pc.find(p => /PA1$/.test(p.soPhieu)).kl;

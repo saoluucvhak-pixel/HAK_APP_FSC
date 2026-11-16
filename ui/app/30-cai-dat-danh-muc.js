@@ -30,6 +30,8 @@ let roiCho = null;   // thao tác điều hướng đang chờ người dùng ch
 const DIEU_HUONG = '[data-act=goHome],[data-act=openSettings],[data-act^=openSet],[data-act=openCty],[data-act=rpOpen],[data-act=lkOpen],[data-act=openNorm],[data-open],[data-forest],[data-ftab],[data-tab],[data-act=newRs],[data-act=hdQuayLai]';
 document.addEventListener('click', e => {
   const el = e.target && e.target.closest && e.target.closest(DIEU_HUONG); if (!el || el.closest('#dlgBox')) return;
+  if (el.dataset.quaylai) { if (cd.xe.sua) cd.xe.sua = xeDocForm(); if (cd.sua) cd.sua = dtDocForm(); veLaiGhi(el.dataset.quaylai); return; }   // mở danh mục rồi quay lại: giữ bản đang nhập, không hỏi
+  if (veLai && (/^nav/.test(el.id || '') || el.dataset.open || el.dataset.forest)) veLai = null;   // đi nơi khác bằng thanh chính / chọn chủ rừng, rừng: thôi nhắc quay lại
   const bn = banNhapDo(); if (!bn || el.dataset.roiOk) return;
   e.preventDefault(); e.stopImmediatePropagation(); roiCho = el;
   dlgMo('<h3 style="margin-top:0">Còn thay đổi chưa lưu</h3><p>' + esc(bn.ten) + ' có thay đổi chưa lưu. Bạn muốn làm gì?</p>' +

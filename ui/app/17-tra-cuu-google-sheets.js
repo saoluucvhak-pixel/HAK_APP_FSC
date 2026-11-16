@@ -381,6 +381,7 @@ async function lkApply() {
       const isPlate = (p, i) => s.plateOnly && p.bienDoi;
       const plateRows = rows.filter((r, i) => isPlate(chosen[i], i)).map(r => ({soPhieu: r.soPhieu, bienSo: r.bienSo, _src: r._src})), restRows = rows.filter((r, i) => !isPlate(chosen[i], i));
       lkRep = HAKStage.merge(stages[k0], 'pc', restRows, {source: 'Google Sheets', plateSource: 'Google Sheets', suyNgay2: HAKPhieuCan.suyNgay2});
+      if (curF === f.id) ganPhieuHopDong(stages[k0], lkRep.ids, f);   // 3.0: phiếu mới vào hợp đồng vận chuyển đang mở
       if (plateRows.length) { const pr = HAKStage.merge(stages[k0], 'pc', plateRows, {source: 'Google Sheets (đổi biển số)', plateSource: 'Google Sheets', sameTrip: true}); lkRep.upd += pr.upd; lkRep.same += pr.same; lkRep.pending += pr.pending; }
     }
     if (false && s.kl) { f.info.khoiLuong = Math.round(chosen.reduce((a, p) => a + p.kl, 0) * 1000) / 1000; mark(f, 'khoiLuong', {tab: 'HoSoKeo_QC', row: 0, col: 'Tổng Khối lượng (Tấn) của ' + chosen.length + ' phiếu đã chọn'}); }
@@ -389,7 +390,8 @@ async function lkApply() {
     const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
     const r = await persistNow();
     if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } nhapTamGhi();
-    cur = o.id; curF = f.id; tab = 'rung'; ftab = 'finfo'; view = 'owner';
+    const veHd = curF === f.id && ftab === 'dx' && hdMo('dx');   // 3.0: tra cứu từ hợp đồng vận chuyển: lưu xong ở lại đúng hợp đồng
+    cur = o.id; curF = f.id; tab = 'rung'; ftab = veHd ? 'dx' : 'finfo'; view = 'owner';
     lkClose(); lk.view = 'search';
     if (chosen.length) ftab = 'dx';
     note('Đã ghi thông tin tra cứu vào ' + esc(o.info.ten) + ' · rừng ' + f.info.maRung + '.' + (chosen.length ? ' ' + chosen.length + ' phiếu cân đã đưa vào BẢN NHÁP (thêm ' + lkRep.add + ', cập nhật ' + lkRep.upd + ', giữ nguyên ' + lkRep.same + (lkRep.pending ? ', CẦN ĐỐI CHIẾU ' + lkRep.pending : '') + '): xem trước ở tab Vận chuyển rồi bấm “Lưu dữ liệu vào lô” (chưa lưu thì chưa dùng để tạo hồ sơ).' : ''), chosen.length ? 'warn' : undefined);

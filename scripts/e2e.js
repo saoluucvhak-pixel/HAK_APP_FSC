@@ -10,7 +10,7 @@ let fail = 0; const ok = (name, cond) => { console.log((cond ? 'ĐẠT  ' : 'L�
 const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
 
 (async () => {
-  let app = await launch(), win = await app.firstWindow(); const errs = []; win.on('pageerror', e => errs.push(e.message)); win.on('dialog', d => d.accept());
+  let app = await launch(), win = require('./_hd30').boc(await app.firstWindow()); const errs = []; win.on('pageerror', e => errs.push(e.message)); win.on('dialog', d => d.accept());
   await win.waitForSelector('#side');
   ok('cửa sổ có tiêu đề HAKQN', (await win.title()).includes('HAKQN') || (await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].getTitle())).includes('HAKQN'));
   ok('thanh trạng thái hiển thị SQLite', (await win.innerText('#saveSt')).includes('SQLite'));
@@ -39,7 +39,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   await app.close();
 
   // Mở lại: hồ sơ phải còn đủ từng rừng
-  app = await launch(); win = await app.firstWindow(); win.on('pageerror', e => errs.push(e.message)); await win.waitForSelector('#side');
+  app = await launch(); win = require('./_hd30').boc(await app.firstWindow()); win.on('pageerror', e => errs.push(e.message)); await win.waitForSelector('#side');
   ok('mở lại thấy chủ rừng', (await win.innerText('#side')).includes('NGUYỄN PHƯỚC TÁM') && (await win.innerText('#side')).includes('2 rừng'));
   await win.click('[data-open]'); await win.click('[data-tab=rung]');
   const items = await win.$$eval('[data-forest]', els => els.map(e => e.innerText));
@@ -50,7 +50,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   const v1 = {rs: {old1: {id: 'old1', info: {ma: 'CR-OLD', ten: 'TRẦN CŨ', cccd: '049000000009', danhXung: 'Ông', ngaySinh: '', ngayCap: '', noiCap: '', diaChi: '', diaDiem: 'X', tuNgay: '', denNgay: '', donGia: 1},
     nc: [{ten: 'A', maRung: 'x'}], dx: [], exp: {}}}};
   const jf = path.join(path.dirname(dbFile), 'v1.json'); fs.writeFileSync(jf, JSON.stringify(v1));
-  await win.setInputFiles('input[data-file="restore"]', jf);
+  await win.click('#navSet'); await win.click('#setTab_setbk'); await win.setInputFiles('input[data-file="restore"]', jf);   // 3.0: khôi phục ở Cài đặt → Sao lưu và khôi phục
   await win.waitForSelector('#impBox.on');
   const txt = await win.innerText('#impBody');
   ok('xem trước nhập hiển thị số liệu', /Chủ rừng/.test(txt) && /Phiếu cân/.test(txt));

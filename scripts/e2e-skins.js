@@ -15,7 +15,7 @@ const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN'
 
 (async () => {
   const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(tmp, 'skin.sqlite'), HAKQN_USERDATA: path.join(tmp, 'userdata'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');
   const size = async (W, H) => { await app.evaluate(({BrowserWindow}, [a, b]) => { const win = BrowserWindow.getAllWindows()[0]; win.setContentSize(a, b); }, [W, H]); await w.waitForTimeout(250); };
@@ -46,7 +46,7 @@ const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN'
   await pick('classic'); await setTheme('light');
   await app.close();
   // Mở lại: nhớ lựa chọn của người dùng (bảng màu và chế độ), không đổi dữ liệu hồ sơ
-  app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   ok('mở lại: nhớ bảng màu classic (xanh ngọc)', await w.evaluate(() => document.documentElement.dataset.skin) === 'classic');
   ok('mở lại: bảng màu không làm đổi dữ liệu hồ sơ', (await w.$$('[data-open]')).length === 1);
   await w.click('#navSet'); await w.click('#setTab_setgd'); await w.waitForSelector('#skinPick'); ok('Giao diện: bảng màu đánh dấu đúng lựa chọn đang dùng', await w.$eval('[data-skinpick=classic]', e => e.classList.contains('on') && e.getAttribute('aria-pressed') === 'true') && (await w.$$('[data-skinpick]')).length === 4);

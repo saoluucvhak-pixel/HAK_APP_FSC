@@ -17,7 +17,7 @@ const fmt = n => n.toLocaleString('vi-VN');
 const RATE = {'Tổ trưởng': 400000, 'Công nhân khai thác': 300000, 'Công nhân cưa': 320000};
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'c.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const mk = extra => { const L = lot('fa', 'R-A', {exp: {...EXP1}, pc: PC, kl: 29.75}); Object.assign(L.info, {hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: RATE, tuNgay: '05/10/2026', denNgay: '11/10/2026', donGia: null}, extra || {}); return L; };
   const openF = async tab => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + tab + ']'); if (tab === 'xuat') await w.click('[data-xtab=all]'); };
   const dl = async kind => { clean(); await w.$eval('button[data-act=dl][data-kind=' + kind + ']', b => b.click()); let f = null; for (let i = 0; i < 100 && !f; i++) { f = fs.readdirSync(out).find(x => /\.(docx|zip)$/.test(x)); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(300); return readOut(); };

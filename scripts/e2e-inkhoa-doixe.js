@@ -11,7 +11,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-inkhoa-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const A = lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 29.75});
   A.inDot2 = {v: 1, items: {'09:049000000077': {at: '2026-11-01T00:00:00.000Z', sig: '', info: null, legacy: true, crossChecked: false}}};   // tờ nền BM-09 in từ bản cũ, khóa theo CCCD người ký
   const D = seed([A]); D.dmDoiTac = [{id: 'dn:dv1', loai: 'doanhnghiep', ten: 'CÔNG TY VẬN TẢI A', mst: '0401234567', diaChi: 'Đà Nẵng', daiDien: 'ÔNG B', chucVu: 'Giám đốc'}];

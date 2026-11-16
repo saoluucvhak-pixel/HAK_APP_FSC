@@ -15,7 +15,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const BAD = [[/\bNaN\b/, 'NaN'], [/\bundefined\b/, 'undefined'], [/\bnull\b/, 'null'], [/\[object /, '[object …]'], [/Invalid Date/, 'Invalid Date'], [/\b20\d\d-\d\d-\d\d\b/, 'ngày ISO yyyy-mm-dd'], [/\d\.\d{6,}/, 'số lẻ dài (làm tròn nhị phân)'], [/\b\d{1,2}:\d{1}\b(?!\d)/, 'giờ thiếu số 0']];
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const A = lot('fa', 'R-A', {exp: {...EXP1}, pc: PC.map((p, i) => ({...p, gioCan1: '08:1' + i + ':00', gioCan2: '09:4' + i + ':00', can1: 6840 + i, can2: 4000, klKg: p.kl * 1000, khachHang: 'NGUYỄN VĂN AN', donGia: 1250000, thanhTien: Math.round(p.kl * 1250000)})), kl: 29.75});
   A.info.muaHang = {...A.info.muaHang, lat: 15.5, lng: 108.4}; A.info.cuLy = null;
   const B = lot('fb', 'R-B', {exp: {}, pc: []}); B.info.lat = null; B.info.lng = null;

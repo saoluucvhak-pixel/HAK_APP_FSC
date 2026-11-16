@@ -61,8 +61,8 @@ function checkNC(rec) {
     if (!r.noiCap) bad('thiếu Nơi cấp CCCD');
     if (!r.diaChi) bad('thiếu Địa chỉ thường trú');
     if (!isCccd(r.cccd)) bad('CCCD phải đủ 12 chữ số');
-    else if (seen[r.cccd]) bad('CCCD trùng dòng ' + seen[r.cccd]);
-    else seen[r.cccd] = r._row;
+    else if (seen[r.cccd + '|' + (r.doiId || '')]) bad('CCCD trùng dòng ' + seen[r.cccd + '|' + (r.doiId || '')] + ' trong cùng đội');   // 3.0: một người có thể ở hai đội (hai hợp đồng); không trùng trong một đội
+    else seen[r.cccd + '|' + (r.doiId || '')] = r._row;
     if (!chucDanhAll().includes(r.chucDanh)) bad('Chức danh không hợp lệ: "' + r.chucDanh + '"');
     if (role === 'TT' && r.chucDanh !== 'Tổ trưởng') bad('Tổ trưởng phải có chức danh "Tổ trưởng"');
     if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi chức danh "Tổ trưởng"');

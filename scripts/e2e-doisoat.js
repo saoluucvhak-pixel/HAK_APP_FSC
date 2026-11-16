@@ -30,7 +30,7 @@ const fmtVN = n => n.toLocaleString('vi-VN', {maximumFractionDigits: 3});
 (async () => {
   console.log('   · bảng tính tay: A tất cả ' + EXP.A_all + ' t, B tất cả ' + EXP.B_all + ' t, cộng ' + EXP.all + ' t, ' + EXP.tripsAll + ' chuyến; kỳ tháng 10: A ' + EXP.A_oct + ' t, B ' + EXP.B_oct + ' t, cộng ' + EXP.oct + ' t, ' + EXP.tripsOct + ' chuyến');
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const A = lot('fa', 'R-A', {exp: {}, pc: A_PC.map((r, i) => P('R-A', i + 1, r[0], r[1], r[2], r[3])), kl: 40});   // khối lượng thực tế nhập tay 40 t (lệch phiếu cân 46,416 t)
   const B = lot('fb', 'R-B', {exp: {}, pc: B_PC.map((r, i) => P('R-B', i + 1, r[0], r[1], r[2], r[3])), nc: [nv(1, 'Tổ trưởng', 'ĐỖ TỔ B', 'Tổ trưởng', '049085000011')].map(r => ({...r, maRung: 'R-B'})), dx: [{...xe('92C-55555', '049000000099', 'TRẦN CHỦ XE B'), maRung: 'R-B'}]});
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');

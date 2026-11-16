@@ -26,7 +26,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
 
 (async () => {
   const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'hd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   const clear = () => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); };
   const exp = async (kind, ext) => { clear(); await w.click(`button[data-act=dl][data-kind=${kind}]`); for (let i = 0; i < 80; i++) { const f = fs.existsSync(out) && fs.readdirSync(out).find(x => x.endsWith(ext)); if (f) { await w.waitForTimeout(300); return path.join(out, f); } await w.waitForTimeout(100); } throw new Error('không có file ' + ext + ' cho ' + kind); };
@@ -106,7 +106,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   await app.close();
 
   // ===== Hồ sơ cũ/không hợp lệ: giao khoán mà đang chọn ngày công; người dưới 18 tuổi không được ủy quyền =====
-  app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   const person = (vt, cd, ten, ns) => ({maRung: 'R-X', vaiTro: vt, stt: 1, danhXung: 'Ông', ten, ngaySinh: ns, cccd: '049' + String(Math.abs(ten.length * 7919)).padStart(9, '0'), ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: cd});
   const info = (extra) => ({maRung: 'R-X', tenRung: 'Rừng X', diaDiem: 'Thôn X', lat: null, lng: null, dienTich: 2, dinhMucTanHa: 10, cuLy: null, tuNgay: '01/10/2026', denNgay: '30/11/2026', giayTo: [], donGiaTan: {'Tổ trưởng': 1, 'Công nhân khai thác': 1, 'Công nhân cưa': 1}, ...extra});
   const mk = (id, ten, extra, nc) => ({id, info: {...OWNER, ten, danhXung: 'Ông'}, nc: [], dx: [], exp: {}, forests: {['f' + id]: {id: 'f' + id, info: info(extra), nc, dx: [], pc: [], exp: {}}}});

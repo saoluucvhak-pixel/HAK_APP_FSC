@@ -20,7 +20,7 @@ const sql = (may, fn) => { const Db = require('better-sqlite3'), d = new Db(path
 const anh = may => sql(may, d => JSON.stringify({f: d.prepare('SELECT id, hash FROM forests ORDER BY id').all(), g: d.prepare('SELECT forest_id, phien_ban, hash, data FROM chot_goi ORDER BY forest_id, phien_ban').all()}));
 const launch = async (may, env = {}) => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(may, 'd.sqlite'), HAKQN_USERDATA: path.join(may, 'ud'), HAKQN_LOT_DIR: lotDir, ...env}});
-  const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w};
+  const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w};
 };
 const loadDb = w => w.evaluate(() => window.hak.loadSync().db);
 const timLo = D => { for (const [oid, o] of Object.entries(D.rs)) for (const [fid, f] of Object.entries(o.forests || {})) if (f.info && f.info.maRung === 'R-A') return {oid, fid, f}; return null; };

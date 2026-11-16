@@ -38,7 +38,7 @@ const doTran = w => w.evaluate(() => {
   for (const scale of [1, 1.25, 1.5]) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-anh-'));
     const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--force-device-scale-factor=' + scale], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
-    const w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+    const w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
     await app.evaluate(({BrowserWindow}, s) => { const b = BrowserWindow.getAllWindows()[0]; b.setContentSize(s[0], s[1]); }, [RONG, CAO]);
     const A = lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 29.75}), B = lot('fb', 'R-B', {exp: {}, pc: []});
     await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');

@@ -10,7 +10,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-dxpc-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const p = (i, vai, ten, cd, doi) => ({...nv(i, vai, ten, cd, '04908500' + String(5000 + i)), doi});
   const P = (i, ngay, bien, so, kl) => ({_row: i + 1, maRung: 'R-A', stt: String(i), ngay, bienSo: bien, soPhieu: so, kl, noiGiao: 'KCN Điện Nam, Quảng Nam'});
   const nc = [p(1, 'Tổ trưởng', 'TRẦN MỘT', 'Tổ trưởng', 'Đội 1'), p(2, 'Công nhân', 'LÊ A', 'Công nhân khai thác', 'Đội 1'), p(3, 'Tổ trưởng', 'NGUYỄN HAI', 'Tổ trưởng', 'Đội 2'), p(4, 'Công nhân', 'PHẠM B', 'Công nhân khai thác', 'Đội 2')];
@@ -22,12 +22,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const db = async () => (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests;
   const open = async (id, ftab) => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + id + ']'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(300); };
   // 1. lô hai đội xe: bảng phiếu cân có cột Đội xe với người ký của đội xe
-  await open('fa', 'dx'); const PCT = '#main table:has(th:text("Số phiếu cân"))'; const th = await w.$$eval(PCT + ' thead th', l => l.map(x => x.textContent.trim()));
+  await open('fa', 'dx'); await w.click('[data-act=pcTatCa]'); await w.waitForTimeout(200);   // 3.0: trang chi tiết hợp đồng chỉ có phiếu của hợp đồng — xem mọi phiếu của rừng
+  const PCT = '#main table:has(th:text("Số phiếu cân"))'; const th = await w.$$eval(PCT + ' thead th', l => l.map(x => x.textContent.trim()));
   ok('bảng phiếu cân hiện đội xe dưới biển số của từng phiếu (lô có hai đội xe), không thêm cột mới làm tràn bảng', /Đội xe: /.test(await w.innerText(PCT)) && !th.includes('Đội xe'), th.join('|'));
   const rows = await w.$$eval(PCT + ' tbody tr', trs => trs.map(tr => tr.innerText.replace(/\s+/g, ' ')));
   const r1 = rows.find(r => /PA1/.test(r)) || '', r2 = rows.find(r => /PA2/.test(r)) || '';
   ok('mỗi phiếu hiện đội xe của xe chạy phiếu đó: PA1 → LÊ VĂN MỘT, PA2 → TRẦN VĂN HAI', /LÊ VĂN MỘT/.test(r1) && /TRẦN VĂN HAI/.test(r2) && !/TRẦN VĂN HAI/.test(r1), r1 + ' || ' + r2);
-  ok('cột Đội xe chỉ xem: không có ô chọn trong cột này', (await w.$$eval(PCT + ' tbody tr:first-child select', s => s.length)) === 1);   // chỉ ô chọn Đội (khai thác)
+  ok('cột Đội xe chỉ xem: không có ô chọn trong cột này (chỉ ô Đội khai thác và, bản 3.0, Xe của hợp đồng, Hợp đồng)', (await w.$$eval(PCT + ' tbody tr:first-child select', s => s.map(x => Object.keys(x.dataset)[0]).sort().join())) === 'pcdoi,pchd,pcxe');
   // 2. lọc theo đội xe trong khung gán đội hàng loạt
   const opts = await w.$$eval('#pgXe option', o => o.map(x => x.textContent.trim()));
   ok('khung gán hàng loạt có ô lọc Đội xe: (tất cả), hai người ký', opts.length === 3 && /LÊ VĂN MỘT/.test(opts.join('|')) && /TRẦN VĂN HAI/.test(opts.join('|')), opts.join('|'));

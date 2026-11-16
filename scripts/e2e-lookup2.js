@@ -12,7 +12,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
 const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lktab="' + tab + '"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200); };
 
 (async () => {
-  let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   // 1. Nhập Excel (đường offline) và kiểm tra đủ 3 tab
   const imp = await w.evaluate(p => window.hak.lookup.importExcel(p), path.join(FIX, 'gia_lap_HoSoKeo_QC.xlsx'));
@@ -88,7 +88,7 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   await app.close();
 
   // 6. Mở lại app (không mạng; địa chỉ đồng bộ trỏ vào cổng đóng): hồ sơ và bản tra cứu còn nguyên, đồng bộ lỗi vẫn giữ bản cũ
-  app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   ok('mở lại: 2 chủ rừng còn nguyên', (await w.$$('[data-open]')).length === 2);
   await w.click('header [data-act=lkOpen]'); await w.click('[data-act=lkSync]'); await w.waitForFunction(() => /Chưa cập nhật bản tra cứu/.test(document.getElementById('lkBody').innerText), null, {timeout: 60000});
   const body = await w.innerText('#lkBody');

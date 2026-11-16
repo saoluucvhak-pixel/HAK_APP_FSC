@@ -10,7 +10,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_USERDATA: ud, HAKQN_PICK_DIR: usb}});
 const lst = d => { try { return fs.readdirSync(d).filter(n => /^tu-dong-.*\.sqlite$/.test(n)); } catch (e) { return []; } };
 (async () => {
-  let app = await launch(), w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', 'BK-1'); await w.fill('#infoForm [name="ten"]', 'CHỦ SAO LƯU');
   for (const [k, v] of Object.entries({cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v);
   await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
