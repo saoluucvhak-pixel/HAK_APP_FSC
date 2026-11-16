@@ -27,7 +27,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   const body = () => w.innerText('#main');
 
   // ===== 1. thêm tay một nhân công vào lô A =====
-  await openLot('fa', 'nc'); const a0 = await forest('fa'), b0 = await forest('fb'), boNgayChup = x => JSON.stringify(x, (k, v) => k === '_dmNgay' ? undefined : v), snapB = boNgayChup(b0);   // A4: ngày chụp danh mục gán khi nạp (dữ liệu thử ghi thẳng, chưa qua SQLite v11) được ghi ở lần lưu đầu
+  await openLot('fa', 'nc'); const a0 = await forest('fa'), b0 = await forest('fb'), boNgayChup = x => JSON.stringify(require('../tests/_bo30').bo30(x), (k, v) => k === '_dmNgay' ? undefined : v), snapB = boNgayChup(b0);   // 3.0: bỏ ID dòng / liên kết gán khi lưu   // A4: ngày chụp danh mục gán khi nạp (dữ liệu thử ghi thẳng, chưa qua SQLite v11) được ghi ở lần lưu đầu
   ok('trên tab Nhân công có nút Thêm nhân công, hiện chủ rừng và mã lô đang thao tác', !!(await w.$('[data-act=stAdd][data-kind=nc]')) && /Chủ rừng: NGUYỄN VĂN MỘT/.test(await body()) && /Lô: R-A/.test(await body()));
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
   await fillForm({vaiTro: 'Công nhân', danhXung: 'Ông', ten: 'NGUYỄN THÊM', ngaySinh: '01/01/1990', cccd: '049090000010', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: 'Công nhân khai thác'});

@@ -43,16 +43,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.evaluate(() => document.getElementById('stForm').requestSubmit()); await w.waitForTimeout(400); await w.click('button[data-act=stSave]'); await w.waitForTimeout(600);
   F = (await dbAll()).rs.own1.forests.fb; x = F.dx.find(r => /555/.test(r.bienSo));
   ok('lưu: xe mới có thông tin chủ xe đủ và ngày chụp', !!x && x.cccd === '049085009999' && x.sdt === '0905123456' && x.nguoiKy === 'Chủ xe' && x._dmNgay === '01/11/2026', JSON.stringify(x));
-  // 4. Danh mục xe: form có trường chủ xe, lưu được, dòng cũ thiếu trường vẫn đọc được
-  await w.click('#navDm'); await w.click('[data-dmtab=xe]'); await w.waitForSelector('#dmXeForm');
-  const co = await w.$$eval('#dmXeForm [name]', e => e.map(i => i.name));
-  ok('form Danh mục xe có đủ trường chủ xe', ['loaiXe', 'cccd', 'ngaySinh', 'ngayCap', 'noiCap', 'diaChi', 'sdt', 'cavet', 'nguoiKy'].every(k => co.includes(k)), co.join(','));
-  const bang = await w.innerText('#dmXeTbl'); ok('bảng danh mục xe hiện cả dòng cũ thiếu trường mới lẫn dòng đủ chủ xe', /777\.88/.test(bang) && /555\.66/.test(bang) && /Xe ben/.test(bang));
-  await w.evaluate(() => { const f = document.getElementById('dmXeForm'); f.elements.ngayCapNhat.value = '02/11/2026'; f.elements.bienSo.value = '92C-111.22'; f.elements.cccd.value = '049085001111'; f.elements.ngaySinh.value = '31/11/1980'; f.requestSubmit(); }); await w.waitForTimeout(300);
-  ok('ngày sinh chủ xe không có thật bị từ chối, chưa lưu', !((await dbAll()).dmXeVC || []).some(r => /111\.22/.test(r.bienSo)) && /ngày sinh chủ xe/.test(await w.innerText('#main')));
-  await w.evaluate(() => { const f = document.getElementById('dmXeForm'); f.elements.ngaySinh.value = '01/01/1980'; f.elements.nguoiKy.value = 'Chủ xe'; f.requestSubmit(); }); await w.waitForTimeout(400);
-  const moi = ((await dbAll()).dmXeVC || []).find(r => /111\.22/.test(r.bienSo));
-  ok('lưu dòng xe có chủ xe vào SQLite', !!moi && moi.cccd === '049085001111' && moi.nguoiKy === 'Chủ xe' && moi.ngaySinh === '01/01/1980', JSON.stringify(moi));
+  // 4. (3.0) form Danh mục xe cũ đã thay bằng Danh mục xe mới — kiểm ở e2e-danhmuc30
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

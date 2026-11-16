@@ -27,7 +27,9 @@ async function issueAct(kind) {
 
 /* ===== Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu (bản cài trên máy; xử lý ở src/main.js, src/settings.js) ===== */
 /* Cài đặt: Hệ thống (thư mục dữ liệu, sao lưu) · Google Sheets (địa chỉ bảng tính) · Công ty (công ty mua hàng) · Hiển thị số */
-const SET_TABS = [['settings', 'Hệ thống', 'openSettings'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['setgs', 'Google Sheets', 'openSetGs'], ['cty', 'Công ty', 'openCty'], ['setfmt', 'Hiển thị số', 'openSetFmt']];
+/* 3.0: Cài đặt nằm trên thanh chính; Danh mục đối tượng, Danh mục xe, Vị trí, Giao diện, Hướng dẫn, Sao lưu và khôi phục, Cần đối chiếu đều ở đây (bỏ menu “⋯ Thêm”) */
+const SET_TABS = [['setdt', 'Danh mục đối tượng', 'openSetDt'], ['setxe', 'Danh mục xe', 'openSetXe'], ['setvt', 'Vị trí', 'openSetVt'], ['cty', 'Công ty mua hàng', 'openCty'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị số', 'openSetFmt'], ['setgd', 'Giao diện', 'openSetGd'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
+const SET_VIEWS = ['setdt', 'setxe', 'setvt', 'cty', 'settings', 'setbk', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
 function settingsFrame(active, inner) {
   return '<h2>Cài đặt</h2><div class="tabs">' + SET_TABS.map(([v, l, a]) => '<button class="' + (active === v ? 'on' : '') + '" data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') + '</div>' + inner;
 }

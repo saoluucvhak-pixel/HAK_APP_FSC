@@ -54,11 +54,28 @@
     return n;
   }
   /* o.batKe: chuẩn hóa cả lô đang khóa — CHỈ dùng để SO SÁNH (kiểm khóa chỉ đọc: bản đã lưu đang khóa so với bản vừa mở khóa đã được gán ID), không ghi */
+  /* PHIẾU ĐI THEO XE: phiếu đã gắn dòng xe thì thuộc hợp đồng của dòng xe đó (chuyển xe sang hợp đồng khác → phiếu theo xe, như bản cũ nhóm phiếu theo biển số);
+   * dòng xe đã bỏ → bỏ liên kết xe (phiếu giữ nguyên, chọn lại xe); phiếu chưa gắn xe → chỉ tự gắn khi BKS khớp ĐÚNG MỘT dòng xe của lô. Trả số phiếu đã đổi. */
+  function dongBoPhieu(f) {
+    const dx = (f.dx || []).filter(r => r && s(r.id)), byId = new Map(dx.map(r => [r.id, r])), hd = new Set((f.hdvc || []).map(h => h && h.id)); let n = 0;
+    (f.pc || []).forEach(p => {
+      if (!p || typeof p !== 'object') return;
+      if (p.xeRowId && !byId.has(p.xeRowId)) { delete p.xeRowId; n++; }
+      if (p.xeRowId) { const h = byId.get(p.xeRowId).hdvcId; if (h && p.hdvcId !== h) { p.hdvcId = h; n++; } return; }
+      if (p.hdvcId && !hd.has(p.hdvcId)) { delete p.hdvcId; n++; }
+      const k = B().khoa(p.bienSo); if (!k) return;
+      const m = dx.filter(r => B().khoa(r.bienSo) === k); if (m.length !== 1 || !m[0].hdvcId) return;
+      if (p.hdvcId && p.hdvcId !== m[0].hdvcId) return;   // đã chọn hợp đồng khác: không tự đổi
+      p.xeRowId = m[0].id; p.hdvcId = m[0].hdvcId; n++;
+    });
+    return n;
+  }
   function chuanLo(f, o) {
     if (!f || typeof f !== 'object' || (khoa(f) && !(o && o.batKe))) return 0;
-    return ganIdBang(f.nc, 'tv') + ganIdBang(f.dx, 'xr') + ganIdBang(f.pc, 'pc') + doiKhoaChamCong(f);
+    const n = ganIdBang(f.nc, 'tv') + ganIdBang(f.dx, 'xr') + ganIdBang(f.pc, 'pc') + doiKhoaChamCong(f);
+    return n + dongBoPhieu(f);
   }
-  const canChuan = f => !!f && typeof f === 'object' && !khoa(f) && (['nc', 'dx', 'pc'].some(k => (f[k] || []).some(r => r && typeof r === 'object' && !s(r.id))) ||
+  const canChuan = f => !!f && typeof f === 'object' && !khoa(f) && (['nc', 'dx', 'pc'].some(k => (f[k] || []).some(r => r && typeof r === 'object' && !s(r.id))) || dongBoPhieu(JSON.parse(JSON.stringify({dx: f.dx, hdvc: f.hdvc, pc: f.pc}))) > 0 ||
     Object.values(f.cc || {}).some(m => { const ids = new Set((f.nc || []).map(r => r && r.id)); return Object.keys(m || {}).some(k => !ids.has(k) && (f.nc || []).some(r => r && pk(r) === k)); }));
 
   /* nối liên kết danh mục cho MỘT lô (sửa f; bỏ qua lô khóa). db: {dmDoiTuong, dmXe, dmViTri}. Trả số liên kết đã ghi. */
@@ -112,6 +129,6 @@
   }
   /* db đã chuyển 3.0 chưa (có danh mục mới) */
   const daChuyen = db => Array.isArray(db && db.dmDoiTuong) && Array.isArray(db && db.dmXe) && Array.isArray(db && db.dmViTri);
-  const api = {chuanLo, canChuan, ganIdBang, doiKhoaChamCong, noiDanhMuc, chuyenDoi, daChuyen, pkCu: pk};
+  const api = {chuanLo, canChuan, dongBoPhieu, ganIdBang, doiKhoaChamCong, noiDanhMuc, chuyenDoi, daChuyen, pkCu: pk};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKLienKet = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -112,12 +112,11 @@ const moKho = async w => { await w.click('#navSet'); await w.click('#setTab_setb
   ok('Ctrl+S khi đang gõ: ghi nhận ô đang nhập và lưu lô vào SQLite', await settle(w, async () => (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.tenRung)) === 'Rừng đổi tên bằng Ctrl+S'), await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.tenRung));
   ok('sau Ctrl+S không còn thay đổi chưa lưu', (await w.evaluate(() => window.__stDirty().length)) === 0);
 
-  // menu ⋯ Thêm ở cửa sổ hẹp không bị cắt mép trái
+  // 3.0: không còn menu “⋯ Thêm”; ở cửa sổ hẹp thanh chính nằm một dòng, Sao lưu và khôi phục ở Cài đặt
   await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].setContentSize(1100, 720)); await w.waitForTimeout(300);
-  await w.click('#moreMenu summary'); await w.waitForTimeout(150);
-  const box = await w.evaluate(() => { const r = document.querySelector('#moreMenu .pop').getBoundingClientRect(); return {l: Math.round(r.left), r: Math.round(r.right), w: window.innerWidth}; });
-  ok('menu ⋯ Thêm nằm trọn trong cửa sổ', box.l >= 0 && box.r <= box.w, JSON.stringify(box));
-  ok('menu có mục Sao lưu và khôi phục', await w.isVisible('#openSetBkBtn'));
+  const hd = await w.evaluate(() => { const h = document.querySelector('header.top').getBoundingClientRect(), b = [...document.querySelectorAll('.nav .nb')].filter(x => !x.hidden).map(x => Math.round(x.getBoundingClientRect().top)); return {h: Math.round(h.height), dong: new Set(b).size, w: window.innerWidth}; });
+  ok('thanh chính một dòng ở cửa sổ hẹp (không còn “⋯ Thêm”)', hd.dong === 1 && !(await w.$('#moreMenu')), JSON.stringify(hd));
+  await w.click('#navSet'); ok('Cài đặt có tab Sao lưu và khôi phục', await w.isVisible('#setTab_setbk'));
   await app.close();
 
   /* D1: lô đang có thay đổi CHƯA LƯU rồi khôi phục chính lô đó từ gói sao lưu lô → lần lưu kế tiếp (ở nơi khác) không được ghi lại bản trước khi khôi phục.
@@ -134,7 +133,8 @@ const moKho = async w => { await w.click('#navSet'); await w.click('#setTab_setb
   ({app, w} = await launch({HAKQN_LOT_FILE: goi}));
   await moLo(w); await w.fill('#forestForm input[name=tenRung]', 'Rừng C'); await w.keyboard.press('Tab');
   ok('D1: lô có thay đổi chưa lưu (Rừng C), SQLite còn Rừng B', (await w.evaluate(() => window.__stDirty().length)) === 1 && (await tenDb(w)) === 'Rừng B');
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('input[name=lotAct][value=thay]'); await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]');
+  // 3.0: khôi phục lô ở Cài đặt → rời lô còn thay đổi chưa lưu thì app hỏi (Lưu / Bỏ thay đổi / Quay lại); chọn Bỏ thay đổi rồi khôi phục
+  await w.click('#navSet'); await w.waitForSelector('#stGDrop'); await w.click('#stGDrop'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('input[name=lotAct][value=thay]'); await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]');
   await settle(w, async () => (await tenDb(w)) === 'Rừng A');
   ok('D1: khôi phục lô (thay) ghi bản trong gói (Rừng A), không còn dấu chưa lưu', (await tenDb(w)) === 'Rừng A' && (await w.evaluate(() => window.__stDirty().length)) === 0, await tenDb(w));
   const s0 = await w.evaluate(() => window.__saveStats.delta + window.__saveStats.full);

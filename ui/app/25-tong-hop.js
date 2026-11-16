@@ -2,7 +2,7 @@
  * Mở từ kết quả tìm kiếm (nút “Tổng hợp”) cho người, xe, đối tác, chủ rừng: thông tin hiện hành, lịch sử danh mục, các lô đã tham gia, số chuyến và khối lượng. Chỉ đọc. */
 let thOn = null;
 function thMo(loai, key) {
-  const f = {nguoi: HAKTongHop.nguoi, xe: HAKTongHop.xe, doitac: HAKTongHop.doiTac, chu: HAKTongHop.chuRung}[loai], r = f ? f(db, key) : null;
+  const f = {nguoi: HAKTongHop.nguoi, xe: HAKTongHop.xe, doitac: HAKTongHop.doiTac, chu: HAKTongHop.chuRung}[loai], r = f ? f(Object.assign({}, db, dmCu()), key) : null;
   if (!r) return note('Không có dữ liệu tổng hợp cho đối tượng này.', 'warn');
   thOn = r; thVe();
 }

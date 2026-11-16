@@ -21,10 +21,13 @@ test('lô đã chốt / dừng không kiểm (không đổi được)', () => { 
 
 test('Store: lưu toàn bộ sai quan hệ → QUAN_HE, không ghi gì; lưu theo phần thay đổi cũng vậy', () => {
   const s = new Store(':memory:'), f = lo(); s.save(db(f)); const truoc = JSON.stringify(s.load());
-  const x = s.load(); x.rs.o.forests.f1.pc[0].hdvcId = 'hdKhongCo'; x.rs.o.forests.f1.pc[0].kl = 99;
-  assert.throws(() => s.save(x), e => e.code === 'QUAN_HE' && /hdKhongCo/.test(e.message) && Array.isArray(e.loi));
+  const x = s.load(); x.rs.o.forests.f1.nc[0].doiId = 'doiKhongCo'; x.rs.o.forests.f1.pc[0].kl = 99;
+  assert.throws(() => s.save(x), e => e.code === 'QUAN_HE' && /doiKhongCo/.test(e.message) && Array.isArray(e.loi));
+  // phiếu đã gắn xe trỏ hợp đồng sai: tầng lưu đưa phiếu về đúng hợp đồng của xe (phiếu đi theo xe), không chặn
+  const y = s.load(); y.rs.o.forests.f1.pc[0].hdvcId = 'hdKhongCo'; s.save(y); const p0 = s.load().rs.o.forests.f1.pc[0]; assert.equal(p0.hdvcId, s.load().rs.o.forests.f1.dx.find(r => r.id === p0.xeRowId).hdvcId);
+  const truoc2 = JSON.stringify(s.load());
   assert.equal(JSON.stringify(s.load()), truoc);
   const a = s.load(), snap = D.snapshot(a); a.rs.o.forests.f1.nc[0].doiId = 'doiX';
   const sn2 = D.snapshot(a), d = D.diff(snap, sn2); d.rev = s.rev; d.sideD = D.diffSide(snap.side, sn2.side); d.counts = sn2.counts;
-  assert.throws(() => s.saveDelta(d), e => e.code === 'QUAN_HE'); assert.equal(JSON.stringify(s.load()), truoc);
+  assert.throws(() => s.saveDelta(d), e => e.code === 'QUAN_HE'); assert.equal(JSON.stringify(s.load()), truoc2);
 });

@@ -12,9 +12,14 @@ function dbThayToanBo(moi) {
   try { savedSnap = HAKDelta.snapshot(db); } catch (e) { savedSnap = null; }
   doiDuLieu();
 }
+/* 3.0: các thao tác trước nằm ở menu “⋯ Thêm” (sao lưu / khôi phục toàn bộ .json, khôi phục một lô) nay ở đầu màn này */
+const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 style="margin:0 0 6px">Sao lưu / khôi phục bằng file</h3><div class="row" style="gap:8px;flex-wrap:wrap">' +
+  '<button class="btn" data-act="backup" id="kslJson">Sao lưu toàn bộ dữ liệu (.json' + (HB ? ' + .sqlite' : '') + ')</button>' +
+  '<label class="btn ghost" style="cursor:pointer" id="restoreLbl">Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>' +
+  (HB ? '<button class="btn ghost" data-act="lotRestore" id="lotRestoreBtn">Khôi phục lô rừng…</button>' : '') + '</div></div>';
 function panelKhoSaoLuu() {
-  if (!HB) return '<div class="card"><div class="msg warn">Kho sao lưu chỉ có ở bản cài trên Windows. Bản chạy trong trình duyệt: dùng ⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json).</div></div>';
-  return '<div class="card"><h2 style="margin-top:0">Sao lưu và khôi phục</h2>' + (ksl.msg ? '<div class="msg ' + ksl.msg[1] + '" id="kslMsg">' + esc(ksl.msg[0]) + '</div>' : '') + '<div id="kslBox" class="mut">Đang đọc thư mục sao lưu…</div></div>';
+  if (!HB) return kslNut() + '<div class="card"><div class="msg warn">Kho sao lưu (các bản .sqlite tự động) chỉ có ở bản cài trên Windows.</div></div>';
+  return kslNut() + '<div class="card"><h2 style="margin-top:0">Kho sao lưu</h2>' + (ksl.msg ? '<div class="msg ' + ksl.msg[1] + '" id="kslMsg">' + esc(ksl.msg[0]) + '</div>' : '') + '<div id="kslBox" class="mut">Đang đọc thư mục sao lưu…</div></div>';
 }
 function kslPaint() {
   const box = document.getElementById('kslBox'), d = ksl.d; if (!box || !d) return;

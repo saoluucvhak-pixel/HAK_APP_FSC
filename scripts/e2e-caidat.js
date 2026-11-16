@@ -11,12 +11,12 @@ const launch = env => electron.launch({executablePath: require('electron'), args
 (async () => {
   let app = await launch({HAKQN_PICK_DIR: bk}); let w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', 'CR-CD'); await w.fill('#infoForm [name="ten"]', 'NGUYỄN CÀI ĐẶT'); for (const [k, v] of Object.entries({cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v); await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
-  await w.click('#moreMenu summary'); await w.click('#openSettingsBtn'); await w.waitForSelector('#setBox [data-set-path]');
+  await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]');
   let t = await w.innerText('#main');
   ok('mặc định: hiện đường dẫn dữ liệu và sao lưu, nhãn “mặc định”', /hakqn\.sqlite/.test(t) && (t.match(/mặc định/g) || []).length >= 2, t.slice(0, 300));
   await w.click('[data-act=setBackup]'); await w.waitForSelector('#setMsg');
   ok('đổi thư mục sao lưu: báo thành công, nhãn “thư mục riêng”', /đổi thư mục sao lưu/.test(await w.innerText('#setMsg')) && /thư mục riêng/.test(await w.innerText('#main')));
-  await w.click('#moreMenu summary'); await w.click('[data-act=backup]'); await w.waitForTimeout(800);
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#kslJson'); await w.waitForTimeout(800);
   const bfiles = fs.readdirSync(bk);
   ok('sao lưu toàn bộ lưu thẳng vào thư mục đã chọn (.json và .sqlite), không hỏi lại', bfiles.some(f => f.endsWith('.json')) && bfiles.some(f => f.endsWith('.sqlite')), bfiles.join(','));
   const sr = await w.evaluate(() => window.hak.settings.get());
@@ -26,7 +26,7 @@ const launch = env => electron.launch({executablePath: require('electron'), args
   // đổi thư mục dữ liệu
   await app.close(); app = await launch({HAKQN_PICK_DIR: dd}); w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   ok('mở lại: dữ liệu và thư mục sao lưu được nhớ', /CÀI ĐẶT/i.test(await w.innerText('#sideList')));
-  await w.click('#moreMenu summary'); await w.click('#openSettingsBtn'); await w.waitForSelector('#setBox [data-set-path]');
+  await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]');
   await w.click('[data-act=setData]'); await w.waitForFunction(() => /Đã chuyển dữ liệu/.test((document.querySelector('#main') || {}).innerText || ''), null, {timeout: 25000}); await w.waitForSelector('#side');
   const t2 = await w.innerText('#main');
   ok('đổi thư mục dữ liệu: file mới có trong thư mục đã chọn, bản cũ còn nguyên', fs.existsSync(path.join(dd, 'hakqn.sqlite')) && fs.existsSync(path.join(ud, 'hakqn.sqlite')));

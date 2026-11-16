@@ -1,10 +1,10 @@
 /* ========== Tìm kiếm toàn cục (bản 2.2, mục 5.1; src/timkiem.js): Ctrl+K hoặc nút trên thanh trên cùng ==========
  * Gõ tên người, CCCD, biển số, số phiếu cân, mã lô, chủ rừng, số hợp đồng, tên đối tác, MST; không cần gõ dấu. Bấm kết quả để mở đúng nơi. */
 let tkOn = false, tkQ = '', tkSel = 0;
-function tkTim() { return HAKTimKiem.tim(db, tkQ); }
+function tkTim() { return HAKTimKiem.tim(Object.assign({}, db, dmCu()), tkQ); }   // 3.0: danh mục đọc từ Danh mục đối tượng / xe
 function tkDiaTo(d) {
   tkDong();
-  if (d.to === 'dm') { view = 'dm'; dmTab = d.tab; dmQ = d.q || ''; dmLs = null; return render(); }
+  if (d.to === 'dm') { cur = null; curF = null; if (d.tab === 'xe') { view = 'setxe'; cd.xe.q = d.q || ''; } else { view = 'setdt'; cd.q = d.q || ''; cd.nhom = 'tatca'; } return render(); }   // 3.0: Danh mục đối tượng / xe
   if (d.to === 'chu') { cur = d.oid; curF = null; tab = 'info'; view = 'owner'; return render(); }
   cur = d.oid; curF = d.fid; tab = 'rung'; ftab = d.ftab || 'finfo'; view = 'owner'; render();
 }

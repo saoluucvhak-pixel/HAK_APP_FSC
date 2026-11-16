@@ -70,7 +70,7 @@ const banner = async w => { const e = await w.$('#toanVenLoi'); return e ? {ma: 
   for (const [ten, sua] of Object.entries(loi)) {
     const f = viet(ten.replace(/\s+/g, '_'), sua), nguon = fs.readFileSync(f, 'utf8'), truoc = anh();
     ({app, w} = await launch({HAKQN_LOT_FILE: f}));
-    await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
+    await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
     const t = await w.innerText('#impBody').catch(() => '');
     ok('khôi phục gói "' + ten + '": dừng ở xem trước, nêu lô R-A, không có nút ghi', /không toàn vẹn/.test(t) && /R-A/.test(t) && !(await w.$('[data-act=lotGo]')) && !!(await w.$('#lotDung')), t.slice(0, 300));
     const r = await w.evaluate(async p => window.hak.lotApply(JSON.parse(p), 'thay'), nguon);   // kể cả gọi thẳng lệnh ghi cũng bị chặn ở tiến trình chính
@@ -84,7 +84,7 @@ const banner = async w => { const e = await w.$('#toanVenLoi'); return e ? {ma: 
   // lô A trên máy đang chốt (chỉ đọc): thay bằng bản trong file phải mở khóa có lý do trước (quy tắc khóa giữ nguyên)
   await openLo(w, 'fa', 'xuat'); await w.waitForSelector('#chotBox'); await w.fill('#chotLyDo', 'Khôi phục bản sao lưu để đối chiếu'); await w.click('[data-act=chotMoKhoa]'); await w.waitForTimeout(700);
   ok('mở khóa lô A có lý do, ghi nhật ký', await w.evaluate(() => { const f = window.hak.loadSync().db.rs.own1.forests.fa; return !f.chot && f.nhatKy.some(x => x.hanh === 'mokhoa' && /đối chiếu/.test(x.lyDo)); }));
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('[data-act=lotGo]');
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('[data-act=lotGo]');
   await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(700);
   await openLo(w, 'fa'); const fa2 = await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa);
   ok('gói có nhật ký / lưu trữ đổi sau khi chốt: khôi phục được, lô nguyên vẹn, chỉ đọc, phiên bản chốt 1, có lưu trữ', !(await banner(w)) && !!(await w.$('#loKhoaBar')) && /phiên bản 1/.test(await w.innerText('#loKhoaBar')) && !!fa2.luuTru && fa2.chot.phienBan === 1, JSON.stringify(fa2.chot));
@@ -93,7 +93,7 @@ const banner = async w => { const e = await w.$('#toanVenLoi'); return e ? {ma: 
   const pkgCu = L.exportLot({rs: {own2: {id: 'own2', info: {ma: 'CR-02', ten: 'TRẦN HAI', cccd: '049067000222'}, forests: {fe: cu}}}}, 'own2', 'fe', {now: '2026-06-02T00:00:00.000Z', version: '2.2.0'});
   const fCu = path.join(dir, 'goi-ban-cu.json'); fs.writeFileSync(fCu, JSON.stringify(L.seal(pkgCu, sha), null, 2));
   ({app, w} = await launch({HAKQN_LOT_FILE: fCu}));
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
   ok('gói do bản cũ tạo (lô chưa có đội, chưa có dấu vân tay phần dữ liệu): xem trước không báo lỗi toàn vẹn', !!(await w.$('[data-act=lotGo]')) && !(await w.$('#lotDung')), (await w.innerText('#impBody')).slice(0, 300));
   await w.click('[data-act=lotGo]'); await w.waitForTimeout(700);
   const fe = (await w.evaluate(() => window.hak.loadSync().db)).rs;
@@ -107,7 +107,7 @@ const banner = async w => { const e = await w.$('#toanVenLoi'); return e ? {ma: 
     ({app, w} = await launch()); const full = await w.evaluate(() => window.hak.loadSync().db);
     const g = JSON.parse(fs.readFileSync(fileA, 'utf8')).lo; g.chot.goi = g.chot.goi.slice(0, 50); full.rs.own1.forests.fa = g;
     const fFull = path.join(dir, 'sao_luu_toan_bo_hong.json'); fs.writeFileSync(fFull, JSON.stringify(full)); const truoc = anh();
-    await w.setInputFiles('input[data-file=restore]', fFull); await w.waitForSelector('#impBox.on'); await w.waitForTimeout(300);
+    await w.click('#navSet'); await w.click('#setTab_setbk'); await w.setInputFiles('input[data-file=restore]', fFull); await w.waitForSelector('#impBox.on'); await w.waitForTimeout(300);
     const t = await w.innerText('#impBody');
     ok('khôi phục toàn bộ có lô chốt gói hỏng: báo ở xem trước, không có nút Thực hiện, mọi cách xử lý bị khóa', !!(await w.$('#impToanVen')) && /R-A/.test(t) && !(await w.$('[data-act=impGo]')) && (await w.$$('input[name=impStrat]:not([disabled])')).length === 0, t.slice(0, 300));
     const r = await w.evaluate(async d => window.hak.importApply(d, 'replace', {}), full);

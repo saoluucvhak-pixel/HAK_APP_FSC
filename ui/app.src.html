@@ -136,7 +136,9 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 /* Hộp thoại dùng chung */
 #guideBox,#lkBox,#rpBox,#impBox,#stBox{position:fixed;inset:0;z-index:50;background:rgba(8,20,14,.55);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:22px 12px}
 #lkBox{z-index:55}#rpBox{z-index:56}#impBox{z-index:60}
-#guideBox.on,#lkBox.on,#rpBox.on,#impBox.on,#stBox.on{display:flex}
+#guideBox.on,#lkBox.on,#rpBox.on,#impBox.on,#stBox.on,#dlgBox.on{display:flex}
+#dlgBox{position:fixed;inset:0;z-index:70;background:rgba(8,20,14,.55);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:22px 12px}#dlgBox .gd{max-width:760px;width:100%}
+#dtNguoiTbl td,#dtBang td,#xeBang td{vertical-align:top}
 .gd{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;width:100%;padding:18px 24px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
 #guideBox .gd{max-width:880px}#lkBox .gd{max-width:1280px}#rpBox .gd{max-width:1180px}#impBox .gd{max-width:660px}#stBox .gd{max-width:980px}.stAct{white-space:nowrap;min-width:92px}.stAct .btn{display:block;width:100%;margin:0 0 4px}.stInfo{margin-bottom:6px;color:var(--mut-aa)}.stBarCard{padding:12px 14px}.stDirty{margin:10px 0 0}tr.stGone td{text-decoration:line-through;color:var(--mut-aa)}.stAct{white-space:nowrap}
 .gh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:sticky;top:-22px;background:var(--card);padding:4px 0 8px;z-index:3}
@@ -170,24 +172,10 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
     <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
-    <button class="nb" data-act="openDm" id="navDm">Danh mục</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
   <button class="hbtn" data-act="tkOpen" id="tkBtn" title="Tìm kiếm toàn cục (Ctrl+K)">🔍 Tìm (Ctrl+K)</button>
-  <button class="hbtn" data-act="theme" id="themeBtn">Chế độ tối</button>
-  <details class="menu" id="moreMenu"><summary class="hbtn">⋯ Thêm</summary><div class="pop">
-    <button class="mi" data-act="guide">Hướng dẫn sử dụng</button>
-    <button class="mi" data-act="hdHien" id="hdHienBtn">Hướng dẫn bắt đầu</button>
-    <button class="mi deskOnly" data-act="openSettings" id="openSettingsBtn">Cài đặt hệ thống</button>
-    <hr>
-    <div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu"></div>
-    <hr>
-    <button class="mi deskOnly" data-act="openSetBk" id="openSetBkBtn" hidden>Sao lưu và khôi phục (kho sao lưu)</button>
-    <button class="mi" data-act="backup">Sao lưu toàn bộ dữ liệu (.json)</button>
-    <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
-    <button class="mi" data-act="lotRestore" id="lotRestoreBtn">Khôi phục lô rừng…</button>
-  </div></details>
 </header>
 <div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><button type="button" class="pill" id="bkChip" data-act="openSetBk" hidden></button><span class="pill" id="saveSt"></span></div>
 <div class="layout">
@@ -198,6 +186,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <div id="lkBox"><div class="gd" id="lkBody"></div></div>
 <div id="rpBox"><div class="gd" id="rpBody"></div></div>
 <div id="impBox"><div class="gd" id="impBody"></div></div>
+<div id="dlgBox" role="dialog" aria-modal="true"><div class="gd" id="dlgBody"></div></div>
 <div id="stBox"><div class="gd" id="stBody"></div></div>
 <div id="guideBox" data-act="guideBg"><div class="gd">
 <div class="gh"><h2>Hướng dẫn sử dụng</h2><button class="btn ghost sm" data-act="guideClose">✕ Đóng</button></div>

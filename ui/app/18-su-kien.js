@@ -48,14 +48,19 @@ document.addEventListener('click', async e => {
   if (act === 'inBaoCao') return inBaoCao();
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
-  if (act === 'hdHien') { hdDat(false); const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; return render(); }
+  if (act === 'hdHien') { hdDat(false); cur = null; curF = null; view = 'owner'; return render(); }   // 3.0: nút ở Cài đặt → Hướng dẫn; hướng dẫn hiện ở Tổng quan
   if (act === 'hdDi') return hdDi(el.dataset.buoc);
   if (act === 'svbGiuSo') return svbGiuSo(el.dataset.hd);
   if (act === 'vclMo') { const [oid, fid, ft] = (el.dataset.vcl || '').split('|'); if (db.rs[oid]) { cur = oid; curF = fid; tab = 'rung'; ftab = ft || 'xuat'; view = 'owner'; render(); } return; }
   if (act === 'luongLay') return luongLayDonGia();
   if (act === 'loTuLoCu') return loTuLoCuTao();
   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
-  if (act === 'openDm') { view = 'dm'; return render(); }
+  if (act === 'openDm' || act === 'openSetDt') { cur = null; curF = null; view = 'setdt'; cd.msg = null; return render(); }
+  if (act === 'openSetXe') { cur = null; curF = null; view = 'setxe'; cd.msg = null; return render(); }
+  if (act === 'openSetVt') { cur = null; curF = null; view = 'setvt'; cd.vtMsg = null; return render(); }
+  if (act === 'openSetGd') { cur = null; curF = null; view = 'setgd'; return render(); }
+  if (act === 'openSetHd') { cur = null; curF = null; view = 'sethd'; return render(); }
+  if (act === 'openSetCan') { cur = null; curF = null; view = 'setcan'; return render(); }
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
@@ -234,8 +239,7 @@ setSkin(savedSkin);
 function setTheme(t) {
   document.documentElement.dataset.theme = t;
   try { localStorage.setItem('hskt.theme', t); } catch (e) {}
-  const b = document.getElementById('themeBtn');
-  if (b) b.textContent = t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối';
+  ['themeBtn', 'themeBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'; });
 }
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('hskt.theme'); } catch (e) {}

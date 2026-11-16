@@ -50,7 +50,7 @@ async function exportText(w, kind) {
 }
 const nums = t => (t.match(/\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+,\d+/g) || []).sort();
 const openForest = async (w, oid, fid, ftab = 'finfo') => { await w.click(`[data-open=${oid}]`); await w.click('[data-tab=rung]'); await w.click(`[data-forest=${fid}]`); await w.click(`[data-ftab=${ftab}]`); };
-const restoreMenu = async w => { await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); };
+const restoreMenu = async w => { await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); };
 const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
 
 (async () => {
@@ -98,7 +98,7 @@ const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
   await w.evaluate(d => window.hak.save(d), editedDb); await w.reload(); await w.waitForSelector('#side');
   const justA = {v: 2, rs: {own1: Object.assign(clone(SEED.rs.own1), {forests: {fa: SEED.rs.own1.forests.fa}})}, congTy: {}};
   const fileFull = path.join(dir, 'sao_luu_cu_chi_co_A.json'); fs.writeFileSync(fileFull, JSON.stringify(justA));
-  await w.setInputFiles('input[data-file=restore]', fileFull); await w.waitForSelector('#impBox.on');
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.setInputFiles('input[data-file=restore]', fileFull); await w.waitForSelector('#impBox.on');
   box = await w.innerText('#impBody');
   ok('xem trước toàn bộ: nêu lô A TRÙNG và lô B được GIỮ', /TRÙNG/.test(box) && /GIỮ/.test(box) && /R-B/.test(box), box.slice(0, 600));
   await w.check('input[name=impStrat][value=overwrite]'); await w.click('[data-act=impGo]'); await w.waitForTimeout(700);
@@ -106,11 +106,11 @@ const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
   { const M = require('../src/model'), A2 = d2.rs.own1.forests.fa;   // bản sao lưu dạng 1.4.x: khôi phục rồi chuẩn hóa sang dạng có đội (cấu trúc 2.0)
   const same = (x, y) => { try { require('assert').deepStrictEqual(x, y); return true; } catch (e) { return false; } };   // thứ tự khóa trong JSON không quan trọng
   const boNgayChup = x => JSON.parse(JSON.stringify(x, (k, v) => k === '_dmNgay' ? undefined : v));   // A4: dòng cũ nạp vào được gán ngày chụp danh mục (như SQLite v11)
-  ok('ghi đè từ bản sao lưu chỉ có A: A về bản cũ (đã chuẩn hóa có đội; dựng lại dạng cũ giống hệt; bỏ qua ngày chụp danh mục)', same(boNgayChup(A2), M.ensureForest(SEED.rs.own1.forests.fa)) && same(boNgayChup(boCuF(M.legacyForest(A2))), boCuF(SEED.rs.own1.forests.fa)), JSON.stringify(A2).slice(0, 300)); }
+  ok('ghi đè từ bản sao lưu chỉ có A: A về bản cũ (đã chuẩn hóa có đội; dựng lại dạng cũ giống hệt; bỏ qua ngày chụp danh mục)', same(boNgayChup(require('../tests/_bo30').bo30(A2)), M.ensureForest(SEED.rs.own1.forests.fa)) && same(boNgayChup(require('../tests/_bo30').bo30(boCuF(M.legacyForest(A2)))), boCuF(SEED.rs.own1.forests.fa)), JSON.stringify(A2).slice(0, 300)); }
   ok('B không bị xóa và còn bản đã sửa; chủ khác giữ nguyên', JSON.stringify(d2.rs.own1.forests.fb) === JSON.stringify(editedDb.rs.own1.forests.fb) && JSON.stringify(d2.rs.own2) === JSON.stringify(editedDb.rs.own2));
   // bản sao lưu toàn bộ + "Thay toàn bộ" phải nêu rõ phạm vi
   let said = ''; w.removeAllListeners('dialog'); w.on('dialog', async dlg => { said = dlg.message(); await dlg.dismiss(); });
-  await w.setInputFiles('input[data-file=restore]', fileFull); await w.waitForSelector('#impBox.on'); await w.check('input[name=impStrat][value=replace]'); await w.click('[data-act=impGo]'); await w.waitForTimeout(300);
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.setInputFiles('input[data-file=restore]', fileFull); await w.waitForSelector('#impBox.on'); await w.check('input[name=impStrat][value=replace]'); await w.click('[data-act=impGo]'); await w.waitForTimeout(300);
   ok('“Thay toàn bộ” hỏi xác nhận nêu rõ phạm vi, hủy thì không đổi gì', /THAY TOÀN BỘ/.test(said) && /MẤT/.test(said) && JSON.stringify((await dbOf(w)).rs.own2) === JSON.stringify(editedDb.rs.own2), said.slice(0, 200));
   w.removeAllListeners('dialog'); w.on('dialog', dlg => dlg.accept()); await w.click('[data-act=impCancel]');
   await app.close();
@@ -151,14 +151,14 @@ const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
   ({app, w} = await launch({}, 'may1')); const before = JSON.stringify(await dbOf(w)); await app.close();
   for (const [name, file, re1, re2] of cases) {
     ({app, w} = await launch({HAKQN_LOT_FILE: file}, 'may1'));
-    await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
+    await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
     const shown = (await w.innerText('body'));
     ok('lỗi “' + name + '”: báo rõ và không có nút ghi', re1.test(shown) && re2.test(shown) && !(await w.$('[data-act=lotGo]')), shown.slice(0, 300));
     ok('lỗi “' + name + '”: dữ liệu không đổi', JSON.stringify(await dbOf(w)) === before);
     await app.close();
   }
   // bản sao lưu LÔ đưa nhầm vào luồng khôi phục toàn bộ
-  ({app, w} = await launch({}, 'may1')); await w.setInputFiles('input[data-file=restore]', fullA); await w.waitForTimeout(500);
+  ({app, w} = await launch({}, 'may1')); await w.click('#navSet'); await w.click('#setTab_setbk'); await w.setInputFiles('input[data-file=restore]', fullA); await w.waitForTimeout(500);
   ok('gói lô đưa nhầm vào “Khôi phục toàn bộ dữ liệu (.json)” bị từ chối và chỉ sang luồng lô', /MỘT lô rừng/.test(await w.innerText('body')) && !(await w.$('#impBox.on')));
 
   // ===== 5. Phiếu cũ sai ngày: giữ phiếu, nêu số phiếu và lý do, sửa được =====

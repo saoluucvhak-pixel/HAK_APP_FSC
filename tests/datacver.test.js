@@ -12,7 +12,8 @@ const NGOAI_LE = {
   'jobView': 'chuẩn hóa cấu trúc lúc đọc (lô mới chưa có đội); bọc thêm khóa nhớ tạm',
   'importGo': 'thay CẢ db (db = …): nhớ tạm so khớp đối tượng db nên tự tính lại; bỏ bản nháp qua stages (đã tăng phiên bản)',
   'lotGo': 'thay CẢ db sau khôi phục một lô: như importGo',
-  'dbCard': 'không sửa dữ liệu: chuỗi HTML data-db="…" khớp mẫu tìm'
+  'dbCard': 'không sửa dữ liệu: chuỗi HTML data-db="…" khớp mẫu tìm',
+  'chuanHoaDb': 'chuẩn hóa ngay trước khi ghi (gọi trong lưu, sau persist đã tăng phiên bản): ID dòng, liên kết, Danh mục vị trí — xác định, chạy lại không đổi'
 };
 function quet() {
   const out = [];

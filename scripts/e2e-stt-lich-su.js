@@ -52,7 +52,7 @@ const launch = (env = {}, name = 'd') => electron.launch({executablePath: requir
   const file = fs.readdirSync(lotDir).find(x => /^HAKQN_LoRung_R-A_.*\.json$/.test(x)); ok('sao lưu riêng lô ra file', !!file, JSON.stringify(fs.readdirSync(lotDir)));
   const pkg = JSON.parse(fs.readFileSync(path.join(lotDir, file), 'utf8')); ok('file sao lưu mang lịch sử STT [1, 2, 3] của cả đội khai thác và đội xe', pkg.lo.sttDaCap && pkg.lo.sttDaCap.doi.join() === '1,2,3' && pkg.lo.sttDaCap.doiXe.join() === '1,2,3', JSON.stringify(pkg.lo.sttDaCap));
   await app.close(); app = await launch({HAKQN_LOT_FILE: path.join(lotDir, file)}, 'may2'); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(900);
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(900);
   const idsR = Object.keys((await w.evaluate(() => window.hak.loadSync().db)).rs); ok('khôi phục lô vào máy khác thành công', idsR.length === 1);
   const ownR = idsR[0], lotR = async () => Object.values((await w.evaluate(() => window.hak.loadSync().db)).rs[ownR].forests)[0];
   let G = await lotR(); ok('sau khôi phục: lịch sử STT còn [1, 2, 3] cả hai nhóm, đội 02 giữ số', G.sttDaCap.doi.join() === '1,2,3' && G.sttDaCap.doiXe.join() === '1,2,3' && G.doi.some(d => d.exp.soKT === so2), JSON.stringify(G.sttDaCap));
