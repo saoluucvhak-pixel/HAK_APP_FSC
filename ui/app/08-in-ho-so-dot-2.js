@@ -201,6 +201,7 @@ async function exportKind(kind, idx, opt) {
     }
     const z = new JSZip();
     for (const f of pick) z.file(f.path, await makeDocx(f.blocks, docOpts(f, rec)));
+    if (['all', 'dau', 'cuoi'].includes(kind)) z.file('00_Muc_luc.docx', await mucLucDocx(rec, pick, {all: 'Toàn bộ hồ sơ', dau: 'Hồ sơ đợt 1', cuoi: 'Hồ sơ đợt 2'}[kind]));   // tờ mục lục đứng đầu gói: thứ tự, mẫu, lập cho ai, số bản
     const blob = await z.generateAsync({type: 'blob'});
     download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung'}[kind] || kind) + (pick.some(f => f.draft) ? '_BAN_NHAP' : '') + '.zip');
     if (['all', 'dau', 'cuoi'].includes(kind)) { const nt = exportNotes(rec, g, kind); const dr = pick.filter(f => f.draft); if (dr.length) nt.unshift('Các biểu mẫu mang nhãn BẢN NHÁP (tên file, đầu tài liệu và tên gói): ' + dr.map(f => (HAKBanNhap.label((f.path.match(/(?:^|\/)(\d\d)_/) || [])[1]) || f.path).replace(/ .*/, '') + ' (' + f.draft.map(x => x.text).join('; ') + ')').join(' · ') + '.'); if (nt.length) note('Đã tải file nhưng còn ' + nt.length + ' lưu ý:\n• ' + nt.join('\n• '), 'warn'); else note('Đã tải file: dữ liệu đủ, không có lưu ý.', 'ok'); }

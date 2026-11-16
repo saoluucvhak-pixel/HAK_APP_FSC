@@ -14,7 +14,7 @@ const {GoogleAuth, fileIdOf} = require('./google-auth');
 /* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
  * để không tiến trình nào trên máy đặt được chúng nhằm bỏ qua hộp thoại xác nhận hay đổi nguồn dữ liệu. HAKQN_USERDATA/HAKQN_DB/HAKQN_SMOKE* vẫn dùng cho kiểm tra khói bản cài. */
 const TEST_ONLY_ENV = ['HAKQN_CHECK_MODEL', 'HAKQN_FAIL_SAVE', 'HAKQN_SHEET_URL', 'HAKQN_TEST_BACKUP_FAIL', 'HAKQN_LOT_DIR', 'HAKQN_LOT_FILE', 'HAKQN_PICK_DIR', 'HAKQN_PICK_CHOICE',
-  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE'];
+  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE', 'HAKQN_PRINT_DIR'];
 if (app.isPackaged) TEST_ONLY_ENV.forEach(k => { delete process.env[k]; });
 /* Đường dẫn file do giao diện gửi lên (thay hộp thoại chọn file) chỉ nhận khi chạy từ mã nguồn (kiểm thử); bản cài luôn hỏi qua hộp thoại của hệ điều hành */
 const rendererPath = p => (!app.isPackaged && typeof p === 'string' && p) ? p : null;
@@ -217,6 +217,31 @@ function registerIpc() {
     const parsed = LoRung.parsePackage(pkg, sha); if (!parsed.ok) throw new Error(parsed.error);
     return {...store.applyLot(parsed.pkg, action), db: store.load()};
   })()));
+  /* IN TRONG APP: in một trang HTML do giao diện dựng (tóm tắt hồ sơ, báo cáo). Trang được ghi ra file tạm rồi nạp vào một cửa sổ ẩn KHÔNG chạy script, không có cầu nối với ứng dụng;
+   * hộp thoại in của hệ điều hành cho chọn máy in. Kiểm thử tự động: HAKQN_PRINT_DIR → ghi PDF vào thư mục đó thay cho hộp thoại in. */
+  ipcMain.handle('print:html', async (e, html, ten) => {
+    let pw = null, tmp = '';
+    try {
+      if (typeof html !== 'string' || !html || html.length > 50 * 1024 * 1024) throw new Error('Nội dung in không hợp lệ.');
+      const safe = String(ten || 'ban-in').replace(/[^A-Za-z0-9_-]+/g, '_').slice(0, 80) || 'ban-in', dir = path.join(app.getPath('userData'), 'in-tam');
+      fs.mkdirSync(dir, {recursive: true});
+      for (const n of fs.readdirSync(dir)) { try { fs.rmSync(path.join(dir, n), {force: true}); } catch (er) { /* file của lần in trước còn bị khóa: bỏ qua */ } }   // dọn file tạm còn sót của lần in trước
+      tmp = path.join(dir, safe + '-' + Date.now() + '.html'); fs.writeFileSync(tmp, html);
+      pw = new BrowserWindow({show: false, webPreferences: {javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false}});
+      pw.webContents.setWindowOpenHandler(() => ({action: 'deny'})); pw.webContents.on('will-navigate', ev => ev.preventDefault());
+      await pw.loadFile(tmp);
+      const pdfDir = process.env.HAKQN_PRINT_DIR;
+      if (pdfDir) { fs.mkdirSync(pdfDir, {recursive: true}); const f = path.join(pdfDir, safe + '.pdf'); fs.writeFileSync(f, await pw.webContents.printToPDF({printBackground: true, pageSize: 'A4'})); return {ok: true, file: f}; }
+      const r = await new Promise(res => pw.webContents.print({silent: false, printBackground: true}, (success, reason) => res({success, reason})));
+      if (!r.success && /cancel/i.test(r.reason || '')) return {ok: false, canceled: true};
+      return r.success ? {ok: true} : {ok: false, error: r.reason || 'máy in không nhận lệnh'};
+    } catch (err) { log('ERROR', 'in: ' + err.message); return {ok: false, error: err.message}; }
+    finally {
+      // Windows giữ khóa file tạm cho tới khi cửa sổ in đóng hẳn: chờ sự kiện 'closed' rồi mới xóa, có thử lại (CI Windows lượt 148: file tạm còn sót vì xóa ngay sau destroy)
+      try { if (pw && !pw.isDestroyed()) { const dong = new Promise(res => { pw.once('closed', res); setTimeout(res, 3000); }); pw.destroy(); await dong; } } catch (er) { /* bỏ qua */ }
+      try { if (tmp) fs.rmSync(tmp, {force: true, maxRetries: 20, retryDelay: 100}); } catch (er) { log('WARN', 'in: chưa xóa được file tạm ' + tmp + ': ' + er.message); }
+    }
+  });
   ipcMain.handle('lookup:audit', () => wrap(() => ({audit: lookup.audit()}))());
   ipcMain.handle('lookup:status', () => wrap(() => ({...lookup.status(), sheetUrl: lookup.getMeta('sheetUrl') || DEFAULT_SHEET}))());
   ipcMain.handle('lookup:setSheet', afterReloc((e, link) => wrap(() => { if (!exportUrl(link)) throw new Error('Liên kết không phải Google Sheets'); lookup.setMeta('sheetUrl', link); return {}; })()));
