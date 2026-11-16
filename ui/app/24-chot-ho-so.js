@@ -26,6 +26,20 @@ function loKhoaBanner(f) {
   return '<div class="msg warn" id="loKhoaBar"><b>' + (f.dung ? 'Lô đã dừng' + (f.dung.ngay ? ' ngày ' + esc(f.dung.ngay) : '') + ' · chỉ đọc' : 'Đã chốt ngày ' + esc(new Date(f.chot.at).toLocaleDateString('vi-VN')) + ' · phiên bản ' + f.chot.phienBan + ' · chỉ đọc') + '</b>' +
     (f.chot && !nv ? ' <span class="pill err">' + esc(tv.ma === 'du-lieu-khac' ? 'dữ liệu lô khác bản đã chốt' : tv.ten) + '</span>' : '') + ' Các ô nhập đã khóa. Mở khóa ở tab Xuất hồ sơ (nhập lý do).</div>' + (f.chot && !nv ? toanVenHtml(tv) : '');
 }
+/* LỊCH SỬ BẢN CHỤP của lô trên máy này (bảng chot_goi; src/store.js lichSuGoi): mỗi lần chốt một bản chụp, kiểm riêng từng bản. Bản chụp cũ chỉ có ở máy đã chốt và trong Sao lưu toàn bộ (.sqlite);
+ * gói sao lưu riêng lô chỉ mang bản hiện hành. Nhớ tạm theo lô + nhật ký + phiên bản dữ liệu (không băm lại mỗi lần vẽ). */
+const lsGoiNho = new Map();
+function lichSuGoiHtml(f) {
+  const chots = (f.nhatKy || []).filter(x => x.hanh === 'chot' && x.phienBan); if (!chots.length || !HB || !HB.lichSuGoiSync) return '';
+  const k = (f.chot ? f.chot.hash : '') + '|' + chots.length + '|' + dataVer, c = lsGoiNho.get(f.id); let ds;
+  if (c && c.k === k) ds = c.ds; else { try { ds = HB.lichSuGoiSync(f.id) || []; } catch (e) { ds = []; } lsGoiNho.set(f.id, {k, ds}); }
+  const hong = ds.filter(x => !x.ok), thieu = chots.filter(x => !ds.some(d => d.phienBan === x.phienBan));
+  return '<div id="lichSuGoi" data-co="' + ds.length + '" data-hong="' + hong.length + '" data-thieu="' + thieu.length + '" style="margin-top:8px"><b>Bản chụp các lần chốt lưu trên máy này</b>' +
+    (hong.length ? '<div class="msg err" id="lichSuGoiLoi">' + hong.map(x => 'Bản chụp hỏng — lô ' + esc((f.info || {}).maRung || f.id) + ' · phiên bản chốt ' + x.phienBan + ' · ' + esc(HAKVongDoi.TEN_KT[x.ma] || x.ma) + ': ' + esc(x.lyDo)).join('<br>') + '<br><small>Phần mềm không tự sửa bản chụp. Đối chiếu với bản Sao lưu toàn bộ (.sqlite).</small></div>' : '') +
+    '<ul style="margin:6px 0">' + ds.map(x => '<li data-pb="' + x.phienBan + '" data-ok="' + (x.ok ? 1 : 0) + '">Phiên bản ' + x.phienBan + (x.hienHanh ? ' <span class="pill">hiện hành</span>' : '') + ' · dấu vân tay <code>' + esc(x.hash) + '</code> · chốt ' + esc(new Date(x.at).toLocaleString('vi-VN')) + ' · ' + (x.ok ? 'nguyên vẹn' : '<span class="pill err">hỏng</span>') + '</li>').join('') +
+    thieu.map(x => '<li data-pb="' + x.phienBan + '" data-ok="-1" class="mut">Phiên bản ' + x.phienBan + ' · dấu vân tay <code>' + esc(x.hash || '') + '</code> (theo nhật ký) · không có bản chụp trên máy này</li>').join('') + '</ul>' +
+    '<small class="mut">Gói sao lưu riêng lô chỉ mang bản chốt hiện hành. Muốn phục hồi cả các bản chụp cũ: dùng Sao lưu toàn bộ (file .sqlite).</small></div>';
+}
 function chotBox(rec) {
   const f = curForest(); if (!f) return '';
   const q = qtEval(rec, f), tt = HAKVongDoi.trangThai(f, q.sum), bd = doiOf(rec), kt = exportCheck(rec);
@@ -40,7 +54,7 @@ function chotBox(rec) {
     (!f.chot && !f.dung ? (thieu.length ? '<p class="mut" style="margin:0 0 6px">Để chốt hồ sơ còn thiếu:</p><ul id="chotThieu" style="margin:0 0 8px">' + thieu.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p class="mut" style="margin:0 0 8px">Đủ điều kiện chốt: không còn mục chặn, mọi mẫu đã in và ký, mọi phiếu cân đã gán đội.</p>') + (sach ? '' : '<p class="msg warn">Còn thay đổi chưa lưu: bấm “Lưu dữ liệu vào lô” trước khi chốt.</p>') : '') +
     (true ? '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px"><label style="flex:1;min-width:260px">Lý do (bắt buộc khi mở khóa, dừng lô, mở lại lô)<input id="chotLyDo" style="width:100%" placeholder="Ví dụ: sửa số phiếu cân bị nhập nhầm"></label>' + (f.chot || f.dung ? '' : '<label>Ngày dừng <input id="chotNgay" value="' + esc(todayStr()) + '" style="width:120px"></label>') + '</div>' : '') +
     '<div class="row" style="gap:8px;flex-wrap:wrap">' + act + '</div>' +
-    (nk.length ? '<details style="margin-top:8px"><summary class="mut">Nhật ký vòng đời (' + (f.nhatKy || []).length + ')</summary><ul style="margin:6px 0">' + nk.map(x => '<li>' + esc(new Date(x.at).toLocaleString('vi-VN')) + ' · <b>' + esc(HANH[x.hanh] || x.hanh) + '</b>' + (x.phienBan ? ' (phiên bản ' + x.phienBan + ')' : '') + (x.lyDo ? ' · ' + esc(x.lyDo) : '') + (x.nguoi ? ' · ' + esc(x.nguoi) : '') + '</li>').join('') + '</ul></details>' : '') + '</div>';
+    (nk.length ? '<details style="margin-top:8px"><summary class="mut">Nhật ký vòng đời (' + (f.nhatKy || []).length + ')</summary><ul style="margin:6px 0">' + nk.map(x => '<li>' + esc(new Date(x.at).toLocaleString('vi-VN')) + ' · <b>' + esc(HANH[x.hanh] || x.hanh) + '</b>' + (x.phienBan ? ' (phiên bản ' + x.phienBan + ')' : '') + (x.lyDo ? ' · ' + esc(x.lyDo) : '') + (x.nguoi ? ' · ' + esc(x.nguoi) : '') + '</li>').join('') + '</ul></details>' : '') + lichSuGoiHtml(f) + '</div>';
 }
 /* lý do nhập ở ô trong khung Vòng đời lô (Electron không có hộp nhập prompt) */
 const lyDoNhap = () => ((document.getElementById('chotLyDo') || {}).value || '').trim();
@@ -66,7 +80,7 @@ function chotAct(act) {
  * persistLo trả lô về bản đã lưu, saveOnce (giao diện) và Store.save / saveDelta (tiến trình chính, mã LOCKED) từ chối thay đổi dữ liệu của lô khóa.
  * Ngoại lệ duy nhất: thao tác vòng đời (chốt, mở khóa, lưu trữ, bỏ lưu trữ, dừng, mở lại: chotAct) và các khóa chot / luuTru / dung / nhatKy. */
 function kiemKhoa(f) { f = f || curForest(); if (!loKhoa(f)) return false; loKhoaNote(f); return true; }
-const ACT_GHI_LO = /^(themDoi|xoaDoi|themHd|xoaHd|hdCapNhatDv|pcGanLoat|addGiay|delGiay|luongLay|fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk|ccFill|ccClear|stAdd|stAddXe|stEdit|stDel|stRestore|stPend|stSave|d2confirm|d2legacy|d2undo|clear|pcFixDate|mhConfirm|dmCapNhatLo|svbDien|napHoanTac|qtKy|qtHuyKy|qtMark|qtUnmark|delForest)$/;
+const ACT_GHI_LO = /^(themDoi|xoaDoi|themHd|xoaHd|hdCapNhatDv|pcGanLoat|addGiay|delGiay|luongLay|fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk|ccFill|ccClear|stAdd|stAddXe|stEdit|stDel|stRestore|stPend|stSave|d2confirm|d2legacy|d2undo|clear|pcFixDate|mhConfirm|dmCapNhatLo|svbDien|svbGiuSo|napHoanTac|qtKy|qtHuyKy|qtMark|qtUnmark|delForest)$/;
 const NHAP_GHI_LO = '[data-exp],[data-pcdoi],[data-xehd],[data-ncdoi],[data-pcfix],.ccIn';
 document.addEventListener('click', e => {
   const el = e.target && e.target.closest && e.target.closest('[data-act]'); if (!el) return;

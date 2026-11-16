@@ -40,6 +40,7 @@ document.addEventListener('click', async e => {
   if (act === 'napHoanTac') return nhatKyNapHoanTac(el.dataset.kind);
   if (act === 'tkOpen') return tkMo();
   if (act === 'svbDien') return svbDien();
+  if (act === 'svbGiuSo') return svbGiuSo(el.dataset.hd);
   if (act === 'vclMo') { const [oid, fid, ft] = (el.dataset.vcl || '').split('|'); if (db.rs[oid]) { cur = oid; curF = fid; tab = 'rung'; ftab = ft || 'xuat'; view = 'owner'; render(); } return; }
   if (act === 'luongLay') return luongLayDonGia();
   if (act === 'loTuLoCu') return loTuLoCuTao();

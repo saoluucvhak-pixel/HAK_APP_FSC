@@ -227,7 +227,7 @@ const recOfRow = (rec, r) => { if (!rec.doi) return rec; const B = doiOf(rec); i
 const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, b.klNguon === 'phieucan' ? {pc: (rec.pc || []).filter(p => p.doiId === d.id)} : {}, {_share: b.klNguon === 'phieucan' ? null : d.share, _klNhap: b.klNguon === 'nhap', _klLo: klLo(rec.info), _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], _team: d.team || null, exp: d.team && Object.keys(d.team.exp || {}).length ? Object.assign({}, rec.exp, d.team.exp) : rec.exp, info: Object.assign({}, rec.info, d.team ? d.team.hinhThuc : {}, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {klHoSoCu: d.khoiLuong} : {})});
 const ncList = rec => { const tt = rec.nc.find(isTT); return tt ? [tt, ...rec.nc.filter(r => r !== tt)] : rec.nc.slice(); };   // tổ trưởng đầu danh sách, rồi mọi người còn lại (kể cả các tổ trưởng khác)
 /* Lô nhiều đội: mỗi đội ký hợp đồng riêng nên số hợp đồng, giấy ủy quyền, biên bản nghiệm thu của mỗi đội thêm hậu tố .1, .2… ngay sau phần số (015 → 015.1, 015/2026-KT → 015.1/2026-KT).
- * Số để trống (chưa nhập) thì giữ nguyên chỗ trống để điền tay. Hợp đồng vận chuyển và xác nhận khối lượng: cùng quy tắc theo ĐỘI XE (vcCtx). */
+ * Số để trống (chưa nhập) thì giữ nguyên chỗ trống để điền tay. Số hợp đồng vận chuyển và xác nhận khối lượng KHÔNG thêm hậu tố: lưu riêng theo ID đội xe (Sổ văn bản, src/sovb.js). */
 const soDoiSo = (x, k) => (x.thieuSo || !x.so) ? x : Object.assign({}, x, {so: /\//.test(x.so) ? x.so.replace('/', '.' + k + '/') : x.so + '.' + k});
 const exDoi = (ex, b, idx) => {
   if (!b.multi) return ex;

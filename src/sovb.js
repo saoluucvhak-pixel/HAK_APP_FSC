@@ -57,6 +57,31 @@
     const out = [], by = new Map(); [['doi', f.doi], ['doiXe', f.hdvc]].forEach(([cap, ds]) => (ds || []).forEach(d => LOAI.filter(l => l.cap === cap).forEach(l => { const v = s((d.exp || {})[l.truong]); if (!v) return; const k = l.truong + '|' + v.toUpperCase(); if (by.has(k) && by.get(k) !== d.id) { if (!out.some(x => x.so === v)) out.push({so: v, truong: l.truong, ten: s(d.ten) || 'đội'}); } else by.set(k, d.id); })));
     return out;
   }
+  /* ---------- SỐ VĂN BẢN THEO ĐỘI XE (số in ra KHÔNG phụ thuộc thứ tự đội) ----------
+   * Số của một đội xe = số RIÊNG đã lưu ở đội xe (h.exp.soVC / h.exp.pcSo, theo ID đội xe); để trống thì là số CHUNG của lô (f.exp). Không có hậu tố tính theo vị trí.
+   * soDoiXe(f): [{id, ten, stt, truong, ma, mau, kyHieu, rieng, chung, nguon: 'rieng' | 'chung' | 'trong', in: số đầy đủ sẽ in (đã ghép năm, ký hiệu) hoặc ''}]. Chỉ đọc. */
+  const HD = () => (typeof require === 'function' ? require('./hopdong') : root.HAKHopDong);
+  const KY = {soVC: ['HĐVC', 'ngayKy'], pcSo: ['XNKL', 'pcNgay']};
+  function soDoiXe(f) {
+    f = f || {}; const hd = f.hdvc || [], d0 = ((f.doi || [])[0] || {}).exp || {}, out = [];
+    hd.forEach((h, i) => { const ex = Object.assign({}, f.exp, d0, h.exp);
+      LOAI.filter(l => l.cap === 'doiXe').forEach(l => { const rieng = s((h.exp || {})[l.truong]), chung = s(Object.assign({}, f.exp, d0)[l.truong]), v = rieng || chung, k = KY[l.truong];
+        out.push({id: h.id, ten: s(h.ten) || 'Đội xe ' + (i + 1), stt: h.stt || 0, truong: l.truong, ma: l.ma, mau: l.ten, kyHieu: l.kyHieu, rieng, chung, nguon: rieng ? 'rieng' : chung ? 'chung' : 'trong', in: v ? HD().soDayDu(v, k[0], ex[k[1]] || ex.ngayKy).so : ''}); }); });
+    return out;
+  }
+  /* các đội xe sẽ in CÙNG một số (so theo số đầy đủ in ra, không phân biệt hoa thường): [{truong, ma, mau, so, doi: [{id, ten, nguon}], loai}]
+   * loai 'rieng': mọi đội trong nhóm đều có số riêng → trùng số riêng, CHẶN xuất cho tới khi người dùng xử lý; 'chung': có đội đang dùng số chung của lô → cần xác nhận số trên giấy / cấp số. chiTinh: chỉ xét các ID đội xe này (đội có xe). */
+  function trungDoiXe(f, chiTinh) {
+    const by = new Map(); soDoiXe(f).filter(x => x.in && (!chiTinh || chiTinh.includes(x.id))).forEach(x => { const k = x.truong + '|' + x.in.toUpperCase(); if (!by.has(k)) by.set(k, []); by.get(k).push(x); });
+    return [...by.values()].filter(g => g.length > 1).map(g => ({truong: g[0].truong, ma: g[0].ma, mau: g[0].mau, so: g[0].in, doi: g.map(x => ({id: x.id, ten: x.ten, nguon: x.nguon})), loai: g.every(x => x.nguon === 'rieng') ? 'rieng' : 'chung'}));
+  }
+  /* XÁC NHẬN SỐ TRÊN GIẤY: lưu số ĐẦY ĐỦ đang in (số chung của lô đã ghép năm, ký hiệu) thành số riêng của đội xe hdId — chỉ các ô đội đó còn để trống; không đổi số riêng đã có, không đổi đội khác.
+   * Ghi lịch sử STT nếu số có dạng NN/NĂM/… Sửa trực tiếp f (bản nháp của lô); trả số ô đã ghi. */
+  function giuSoDangIn(f, hdId) {
+    const h = ((f && f.hdvc) || []).find(x => x.id === hdId); if (!h) return 0; let n = 0;
+    soDoiXe(f).filter(x => x.id === hdId && x.nguon === 'chung' && x.in).forEach(x => { h.exp = h.exp || {}; h.exp[x.truong] = x.in; n++; const k = sttTuSo(x.in); if (k > 0) ghiStt(f, 'doiXe', k); });
+    return n;
+  }
   /* số văn bản trùng giữa các lô: cùng ô số, cùng nội dung ở lô khác. Trả [{so, truong, ma (lô kia)}] cho lô (oid, fid) */
   function trung(db, oid, fid) {
     const out = [], seen = new Map(), lots = [];
@@ -67,6 +92,6 @@
     nhan(me.f).forEach(([t, v]) => { const k = t + '|' + v.toUpperCase(); if (seen.has(k) && !out.some(x => x.so === v && x.truong === t)) out.push({so: v, truong: t, ma: seen.get(k)}); });
     return out;
   }
-  const api = {LOAI, maLo, so, capStt, daCap, deXuat, dien, khoiTaoLichSu, trungTrongLo, trung};
+  const api = {LOAI, maLo, so, capStt, daCap, deXuat, dien, khoiTaoLichSu, trungTrongLo, trung, soDoiXe, trungDoiXe, giuSoDangIn};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKSoVB = api;
 })(typeof self !== 'undefined' ? self : this);

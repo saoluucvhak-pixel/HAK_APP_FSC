@@ -132,7 +132,7 @@ async function lotBackup() {
 function lotPhamViText(f) {
   const c = f && f.chot; if (!c) return '';
   const truoc = (f.nhatKy || []).filter(x => x.hanh === 'chot' && x.phienBan && x.phienBan !== c.phienBan).map(x => x.phienBan);
-  return 'Phạm vi gói: chỉ mang bản chốt hiện hành (phiên bản ' + c.phienBan + ', dấu vân tay ' + c.hash + ').' + (truoc.length ? ' Bản chụp của lần chốt trước (phiên bản ' + truoc.join(', ') + ') không nằm trong gói, vẫn lưu ở máy đã chốt;' : '') + ' Nhật ký vòng đời (lần chốt, lý do mở khóa, dấu vân tay từng lần) đi theo gói.';
+  return 'Phạm vi gói: chỉ mang bản chốt hiện hành (phiên bản ' + c.phienBan + ', dấu vân tay ' + c.hash + ').' + (truoc.length ? ' Bản chụp của lần chốt trước (phiên bản ' + truoc.join(', ') + ') không nằm trong gói, vẫn lưu ở máy đã chốt;' : '') + ' Nhật ký vòng đời (lần chốt, lý do mở khóa, dấu vân tay từng lần) đi theo gói. Muốn phục hồi cả các bản chụp cũ: dùng Sao lưu toàn bộ (file .sqlite).';
 }
 const lotCnt = c => c ? c.nc + ' nhân công, ' + c.dx + ' xe, ' + c.pc + ' phiếu cân, ' + fmtTan(c.kl) + ' tấn' : '';
 /* So sánh số liệu một lô: trước (đang có trên máy) và sau (trong file). Một cột khi lô chưa có trên máy. */

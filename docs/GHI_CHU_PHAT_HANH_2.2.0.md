@@ -1,6 +1,6 @@
 # Ghi chú phát hành — HAKQN Desktop 2.2.0
 
-> Số phiên bản 2.2.0 đã được người phụ trách duyệt ngày 16/11/2026.
+> Số phiên bản 2.2.0 đã được người phụ trách duyệt ngày 16/11/2026. **Chưa phát hành:** chờ nghiệm thu bản sửa số văn bản đội xe; chưa có thẻ và Release `v2.2.0`.
 > Bản công khai gần nhất: **v1.4.33**. Bộ cài của bản này: `HAKQN-HoSoKhaiThac-Setup-2.2.0.exe` (artifact của CI, kèm `BUILD_INFO.txt` ghi commit, kích thước và SHA-256).
 
 ## Vì sao là 2.2.0
@@ -20,7 +20,8 @@
 - **Toàn vẹn hồ sơ đã chốt**: gói hỏng, sai dấu vân tay hoặc dữ liệu khác bản chụp được báo rõ (mã lô, phiên bản chốt, lý do); khôi phục từ gói như vậy dừng ở bước xem trước, không ghi.
 - **Sao lưu riêng lô đã chốt nhiều lần**: gói chỉ mang **bản chốt hiện hành**; bản chụp các lần chốt trước ở lại máy đã chốt (có trong Sao lưu toàn bộ dạng SQLite); nhật ký vòng đời (lý do mở khóa, dấu vân tay từng lần) đi theo gói. Phạm vi này được ghi ở thông báo sau khi sao lưu và ở màn xem trước khi khôi phục.
 - **In hồ sơ đợt 2 (BM-08, 09, 10, 14)**: in đầy đủ trên giấy trắng, hoặc in nền trước rồi in đè số liệu; bảng kê BM-09 in trên giấy mới; không còn chữ “BẢN NHÁP” ở bản in chính thức.
-- **Số văn bản theo đội xe**: lô có từ hai đội xe cùng dùng một số hợp đồng vận chuyển / biên bản xác nhận khối lượng thì số trên BM-04, BM-09, BM-10 tự thêm hậu tố .1, .2 (như đội khai thác). Lô nhiều đội xe đã in bằng số chung, khi in lại sẽ ra số có hậu tố; muốn giữ số cũ thì nhập số riêng cho từng đội xe.
+- **Số văn bản theo đội xe**: mỗi đội xe có số hợp đồng vận chuyển và số biên bản xác nhận khối lượng riêng, lưu theo đội xe, không đổi khi in lại. Lô nhiều đội xe đang dùng số chung: mở Sổ văn bản để cấp số riêng hoặc xác nhận số trên giấy. Hai đội trùng số riêng thì BM-04, 09, 10 của hai đội bị chặn cho tới khi sửa.
+- **Lịch sử bản chụp**: khung Vòng đời lô liệt kê các bản chụp của từng lần chốt; bản chụp cũ đi theo Sao lưu toàn bộ (.sqlite).
 - **Số văn bản**: số đã cấp không bị cấp lại sau khi xóa đội; phiếu cân trùng giữa các lô được phát hiện dù ngày ghi `1/11` hay `01/11`; định mức theo ngày hiệu lực báo lỗi khi ngày bắt đầu không có thật.
 - Chi tiết từng mục: `CHANGELOG.md` (các phần 2.2.0, 2.1.0, 2.0.0).
 

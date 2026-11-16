@@ -232,6 +232,19 @@ class Store {
     const g = typeof f.chot.goi === 'string' ? f.chot.goi : ((this.docGoi(f.id || forestId, f.chot.phienBan) || {}).data);
     const k = V.kiemGoi(f.chot, g, f.id || forestId); return {ok: k.ok, ma: k.ma, lyDo: k.lyDo, bamDL: k.bamDL, phienBan: f.chot.phienBan || null, hash: f.chot.hash || ''};
   }
+  /* LỊCH SỬ BẢN CHỤP của một lô: mọi phiên bản chốt còn lưu ở chot_goi, mỗi bản được kiểm riêng (JSON đọc được, đúng cấu trúc, dấu vân tay tính từ chính chuỗi gói khớp dấu vân tay ghi lúc chốt
+   * và khớp nhật ký vòng đời của lô nếu có). Trả [{phienBan, hash, at, bytes, ok, ma, lyDo, hienHanh}] — không kèm dữ liệu, không sửa gì. */
+  lichSuGoi(forestId) {
+    if (!this._coBangGoi()) return [];
+    const V = require('./vongdoi'), fid = String(forestId), row = this.db.prepare('SELECT data FROM forests WHERE id=?').get(fid);
+    let f = null; try { f = row ? JSON.parse(row.data) : null; } catch (e) { f = null; }
+    const nk = (f && Array.isArray(f.nhatKy) ? f.nhatKy : []).filter(x => x.hanh === 'chot'), hh = f && f.chot ? f.chot.phienBan : null;
+    return this.db.prepare('SELECT phien_ban, hash, at, data FROM chot_goi WHERE forest_id=? ORDER BY phien_ban').all(fid).map(r => {
+      const k = V.kiemGoi({hash: r.hash}, r.data, fid), ghi = nk.find(x => x.phienBan === r.phien_ban);
+      const lech = k.ok && ghi && ghi.hash && ghi.hash !== r.hash ? 'Dấu vân tay của bản chụp (' + r.hash + ') khác dấu vân tay ghi trong nhật ký lúc chốt (' + ghi.hash + ')' : '';
+      return {phienBan: r.phien_ban, hash: r.hash, at: r.at, bytes: r.data.length, ok: k.ok && !lech, ma: lech ? 'hash-khong-khop' : k.ma, lyDo: lech || k.lyDo, hienHanh: r.phien_ban === hh};
+    });
+  }
   /* các phiên bản gói đã lưu của một lô (không kèm dữ liệu) */
   dsGoi(forestId) { return this._coBangGoi() ? this.db.prepare('SELECT phien_ban phienBan, hash, at, length(data) bytes FROM chot_goi WHERE forest_id=? ORDER BY phien_ban').all(String(forestId)) : []; }
   /* lô đang ghi có chot.goi (vừa chốt, hoặc nạp từ bản sao lưu): ghi gói vào chot_goi, JSON lô bỏ goi. Gọi TRONG giao dịch (dòng gói ghi cùng lô). */

@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('hak', {
   saveDelta: d => ipcRenderer.invoke('db:saveDelta', d),
   goiChot: (fid, pb) => ipcRenderer.invoke('db:goiChot', fid, pb),
   kiemGoiSync: fid => ipcRenderer.sendSync('db:kiemGoi', fid),
+  lichSuGoiSync: fid => ipcRenderer.sendSync('db:lichSuGoi', fid),
   save: (db, opts) => ipcRenderer.invoke('db:save', db, opts && typeof opts === 'object' ? {allowBulkDelete: !!opts.allowBulkDelete} : undefined),
   importPreview: (db, opts) => ipcRenderer.invoke('import:preview', db, opts),
   importApply: (db, strategy, opts) => ipcRenderer.invoke('import:apply', db, strategy, opts),

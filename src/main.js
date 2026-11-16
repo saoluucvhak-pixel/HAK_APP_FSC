@@ -151,6 +151,7 @@ function registerIpc() {
   ipcMain.handle('db:goiChot', (e, forestId, phienBan) => wrap(() => ({goi: store.docGoi(forestId, phienBan), ds: store.dsGoi(forestId)}))());
   /* kiểm gói đã chốt của một lô (cấu trúc, JSON, dấu vân tay) trên SQLite; giao diện so tiếp dữ liệu hiện tại (src/vongdoi.js kiemToanVen). Đồng bộ, không kèm dữ liệu gói. */
   ipcMain.on('db:kiemGoi', (e, forestId) => { try { e.returnValue = store ? store.kiemGoi(forestId) : {ok: false, ma: 'thieu-goi', lyDo: NO_STORE()}; } catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, ma: 'thieu-goi', lyDo: err.message}; } });
+  ipcMain.on('db:lichSuGoi', (e, forestId) => { try { e.returnValue = store ? store.lichSuGoi(forestId) : []; } catch (err) { log('ERROR', err.message); e.returnValue = []; } });   // lịch sử bản chụp của lô (mọi phiên bản chốt còn lưu), mỗi bản đã kiểm
   ipcMain.handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, opts))()));
   ipcMain.handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, opts), db: store.load()}))()));
   ipcMain.handle('backup:to', afterReloc(async () => {
