@@ -30,6 +30,10 @@ const open = async w => { await w.click('[data-open=own1]'); await w.click('[dat
   await w.waitForTimeout(3500); ok('sau khi lưu: bản tạm bị xóa', await w.evaluate(() => !localStorage.getItem('hakqn.nhapTam.v1')));
   // đóng có chủ ý (bỏ thay đổi): không giữ bản tạm
   await w.evaluate(() => { const f = document.getElementById('forestForm'); f.elements.diaDiem.value = 'SẼ BỎ'; f.elements.diaDiem.dispatchEvent(new Event('change', {bubbles: true})); }); await w.waitForTimeout(3800);
+  ok('có bản tạm của thay đổi sắp bỏ', await w.evaluate(() => !!localStorage.getItem('hakqn.nhapTam.v1')));
+  // hồi quy (CI Windows lượt 141): sau khi tiến trình chính xóa bản tạm lúc đóng, bộ hẹn giờ 1 giây của giao diện không được ghi lại bản tạm khi lô vẫn còn thay đổi chưa lưu
+  await w.evaluate(() => window.__nhapTamXoa()); await w.waitForTimeout(2500);
+  ok('đóng có chủ ý: bản tạm đã xóa không bị bộ hẹn giờ ghi lại dù lô còn thay đổi chưa lưu', await w.evaluate(() => !localStorage.getItem('hakqn.nhapTam.v1') && window.__stDirty().length > 0));
   await app.close(); app = await launch(); w = await app.firstWindow(); msgs = []; w.on('dialog', d => { msgs.push(d.message()); d.accept(); }); await w.waitForSelector('#side'); await w.waitForTimeout(1500);
   ok('đóng và chọn bỏ thay đổi: mở lại không hỏi khôi phục', !msgs.some(m => /chưa lưu/.test(m)), msgs.join(' | '));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));

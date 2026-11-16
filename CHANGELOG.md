@@ -8,6 +8,9 @@ Bản 2.2.0 gồm phần này và bốn phần “2.2.0 (phần)” bên dưới
 - **Phiên bản hiện ở đầu trang** (“· Phiên bản 2.2.0” cạnh tên ứng dụng), lấy từ chính bản cài; kiểm tra khói của bộ cài (kể cả sau khi cài đè lên v1.4.33) so số này với `package.json`.
 - **Phạm vi gói sao lưu riêng lô đối với lô đã chốt nhiều lần** được ghi rõ ở thông báo sau khi sao lưu, màn xem trước khi khôi phục và hướng dẫn: gói chỉ mang **bản chốt hiện hành** (một bản chụp, phiên bản và dấu vân tay giữ nguyên); bản chụp các lần chốt trước ở lại máy đã chốt (bảng `chot_goi`, có trong Sao lưu toàn bộ dạng SQLite); nhật ký vòng đời (lần chốt, lý do mở khóa, dấu vân tay từng lần) đi theo gói. Hành vi sao lưu, khôi phục không đổi.
 
+### Sửa lỗi
+- **Đóng ứng dụng và chọn “Bỏ thay đổi và đóng” mà lần mở sau vẫn hỏi khôi phục bản nháp** (lộ ra ở CI Windows, lượt 141): sau khi bản nháp tạm được xóa lúc đóng, bộ hẹn giờ tự lưu 1 giây của giao diện có thể ghi lại nó trước khi cửa sổ kịp đóng, và lần xóa có thể chưa kịp ghi xuống đĩa. Nay việc tự lưu tạm dừng hẳn khi đang đóng có chủ ý, và ứng dụng ép ghi bộ nhớ trình duyệt xuống đĩa trước khi đóng. Hồi quy: `scripts/e2e-nhap-tam.js`.
+
 ### Kiểm thử
 - `scripts/e2e-chot-hai-lan.js` (42 kiểm tra, Electron + SQLite thật, chặn mạng): chốt lần 1 → mở khóa có lý do → sửa PA1 12,5 → 13,75 tấn → chốt lần 2; hai bản chụp trong SQLite; gói chỉ mang bản lần 2; khôi phục vào cơ sở dữ liệu mới (chỉ đọc, nguyên vẹn, giữ lý do mở khóa, dấu vân tay không đổi); gói thiếu bản chụp, sai dấu vân tay, JSON cắt dở dừng ở xem trước (nêu mã lô, phiên bản, lý do), máy đích và file nguồn giữ nguyên.
 - `scripts/e2e-nghiemthu-dot2.js` bổ sung: tiền công (BM-08, BM-14) và cước (BM-10) đối chiếu bảng tính tay; số biên bản, ngày; tờ nền và tờ in đè cùng khổ giấy, chiều giấy, lề, đầu/chân trang; in đè chỉ hiện nội dung bổ sung.
