@@ -78,6 +78,14 @@ document.addEventListener('click', async e => {
   }
   if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
   if (act === 'openSetGs') { cur = null; curF = null; view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
+  if (act === 'openSetBk') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'setbk'; ksl.msg = null; return render(); }
+  if (act === 'kslTai') { ksl.msg = null; ksl.kiem = {}; return render(); }
+  if (act === 'kslKiem') return kslKiem(el);
+  if (act === 'kslAuto') return kslAuto();
+  if (act === 'kslXoa') return kslXoa(el);
+  if (act === 'kslKhoiPhuc') return kslKhoiPhuc(el);
+  if (act === 'kslGo') return kslGo();
+  if (act === 'kslHuy') { window.__ksl = null; return $('#impBox').classList.remove('on'); }
   if (act === 'openSetFmt') { cur = null; curF = null; view = 'setfmt'; return render(); }
   if (act === 'setGsSave') { const r = await HB.lookup.setSheet(($('#setGsLink') || {}).value.trim()); setgs.msg = r.ok ? {kind: 'ok', text: 'Đã lưu địa chỉ bảng tính.'} : {kind: 'err', text: r.error}; setgs.st = await HB.lookup.status(); return render(); }
   if (act === 'setNumStyle') { db.dinhDangSo = el.value === 'en' ? 'en' : 'vi'; persist(); return render(); }

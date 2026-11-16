@@ -27,7 +27,7 @@ async function issueAct(kind) {
 
 /* ===== Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu (bản cài trên máy; xử lý ở src/main.js, src/settings.js) ===== */
 /* Cài đặt: Hệ thống (thư mục dữ liệu, sao lưu) · Google Sheets (địa chỉ bảng tính) · Công ty (công ty mua hàng) · Hiển thị số */
-const SET_TABS = [['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets', 'openSetGs'], ['cty', 'Công ty', 'openCty'], ['setfmt', 'Hiển thị số', 'openSetFmt']];
+const SET_TABS = [['settings', 'Hệ thống', 'openSettings'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['setgs', 'Google Sheets', 'openSetGs'], ['cty', 'Công ty', 'openCty'], ['setfmt', 'Hiển thị số', 'openSetFmt']];
 function settingsFrame(active, inner) {
   return '<h2>Cài đặt</h2><div class="tabs">' + SET_TABS.map(([v, l, a]) => '<button class="' + (active === v ? 'on' : '') + '" data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') + '</div>' + inner;
 }
@@ -72,7 +72,8 @@ function settingsPaint() {
     '<div class="row" style="margin-top:8px;gap:8px"><button class="btn" data-act="setBackup2">Chọn thư mục…</button>' + (s.auto && s.auto.dir2 ? '<button class="btn ghost" data-act="setBackup2Off">Tắt</button>' : '') + '</div></div>' +
     '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">Nhắc sao lưu</h3><p class="mut" style="margin:0 0 8px">Khi mở phần mềm, nhắc sao lưu toàn bộ dữ liệu nếu đã quá số ngày dưới đây kể từ lần sao lưu cuối (⋯ Thêm → Sao lưu toàn bộ dữ liệu).</p>' +
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Nhắc sau <select id="setRemind">' + [[0, 'Không nhắc'], [3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày']].map(o => '<option value="' + o[0] + '"' + (o[0] === s.remind.remindDays ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
-    '<span class="mut">Sao lưu toàn bộ lần cuối: ' + (s.remind.lastBackup ? esc(new Date(s.remind.lastBackup).toLocaleString('vi-VN')) : 'chưa có') + '</span></div></div>' + autoBackupCard(s.auto);
+    '<span class="mut">Sao lưu toàn bộ lần cuối: ' + (s.remind.lastBackup ? esc(new Date(s.remind.lastBackup).toLocaleString('vi-VN')) : 'chưa có') + '</span></div></div>' + autoBackupCard(s.auto) +
+    '<p class="mut" style="margin:10px 0 0">Xem, kiểm tra, khôi phục và dọn các bản sao lưu: tab <b>Sao lưu và khôi phục</b> ở trên. <button class="btn ghost sm" data-act="openSetBk" id="moKhoSaoLuu">Mở kho sao lưu</button></p>';
   const ak = document.getElementById('setAutoKeep');
   if (ak) ak.addEventListener('change', async () => { const r = await HB.settings.setAutoKeep(ak.value); if (r.ok) { setg.s = r.settings; setg.msg = [+ak.value ? 'Đã lưu: giữ ' + ak.value + ' bản tự sao lưu hằng ngày gần nhất.' : 'Đã tắt tự sao lưu hằng ngày.', 'ok']; render(); } });
   const sel = document.getElementById('setRemind');
@@ -83,7 +84,7 @@ function autoBackupCard(a) {
   if (!a) return '';
   const r = a.result, last = a.last, sz = b => b / 1048576 >= 1 ? (b / 1048576).toFixed(1) + ' MB' : Math.ceil(b / 1024) + ' KB';
   const st = !a.keep ? 'Đang tắt.' : r && !r.ok ? '<span class="warnTxt">Lần chạy gần nhất không được: ' + esc(r.error || '') + '</span>' : r && r.skipped && r.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : '';
-  return '<div class="card" style="margin:10px 0" id="autoBk"><h3 style="margin:0 0 4px">Tự sao lưu hằng ngày</h3><p class="mut" style="margin:0 0 8px">Mỗi ngày, lần đầu mở phần mềm sẽ tự lưu một bản cơ sở dữ liệu (tu-dong-năm-tháng-ngày.sqlite) vào thư mục sao lưu ở trên và chỉ giữ số bản gần nhất chọn dưới đây. Bản này nằm cùng máy, không thay cho sao lưu toàn bộ ra ổ khác.</p>' +
+  return '<div class="card" style="margin:10px 0" id="autoBk"><h3 style="margin:0 0 4px">Tự sao lưu hằng ngày</h3><p class="mut" style="margin:0 0 8px">Mỗi ngày, lần đầu mở phần mềm sẽ tự lưu một bản cơ sở dữ liệu (tu-dong-năm-tháng-ngày.sqlite) vào thư mục sao lưu ở trên và chỉ giữ số bản gần nhất chọn dưới đây. Khi đóng phần mềm (và mỗi 2 giờ nếu để máy mở), bản của hôm nay được làm mới nếu dữ liệu đã đổi, nên bản tự sao lưu chứa cả việc làm trong ngày. Bản này nằm cùng máy, không thay cho sao lưu toàn bộ ra ổ khác.</p>' +
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Giữ <select id="setAutoKeep">' + [[0, 'Tắt'], [3, '3 bản'], [7, '7 bản'], [14, '14 bản'], [30, '30 bản']].map(o => '<option value="' + o[0] + '"' + (o[0] === a.keep ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
     '<span class="mut" data-auto-last>' + (last ? 'Bản gần nhất: ' + esc(last.day.split('-').reverse().join('/')) + ' (' + sz(last.size) + ') · đang có ' + a.count + ' bản' : 'Chưa có bản tự sao lưu nào') + '</span>' + (st ? ' <span class="mut">' + st + '</span>' : '') + '</div></div>';
 }
@@ -169,7 +170,7 @@ async function lotGo() {
   const r = await HB.lotApply(window.__lot, act);
   $('#impBox').classList.remove('on'); window.__lot = null;
   if (!r.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
-  db = withDefaults(r.db); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]);
+  dbThayToanBo(r.db);   // kể cả dấu “chưa lưu” và bản đã lưu cũ: lô vừa khôi phục không bị ghi lại bằng bản trước khi khôi phục
   if (!r.doi) return note('Giữ bản hiện có của lô ' + r.plan.maLo + ': không có gì thay đổi.');
   cur = r.ownerId; curF = r.forestId; view = 'owner'; tab = 'rung'; ftab = 'finfo'; render();
   note('Đã khôi phục lô ' + r.plan.maLo + ' (' + lotCnt(r.plan.incoming) + '). Bản sao lưu trước khi ghi: ' + r.backup, 'ok');

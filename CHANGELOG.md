@@ -15,6 +15,52 @@ Sáu tính năng còn lại của kế hoạch 2.2 (đợt 1–3). Không đổi
 ### Kiểm thử
 - `tests/tienich.test.js` (7 ca), `scripts/e2e-tien-ich.js` (25 kiểm tra, Electron + SQLite thật; lệnh in được kiểm bằng cách ghi PDF).
 
+## 2.3.0 (phần) — hiệu năng mở app và lưu, kho sao lưu, tự sao lưu khi đóng, Ctrl+S
+
+Rà soát hiệu năng, quy trình nhập liệu và sao lưu trên bộ dữ liệu lớn. Không đổi cấu trúc SQLite (vẫn v14), không đổi cách tính và nội dung biểu mẫu, không đổi chữ ký nội dung của mẫu đã in.
+
+### Hiệu năng
+Đo bằng `scripts/perf-dulieu.js` (Electron thật, SQLite thật): 50 lô × 2.000 phiếu cân, danh mục 4.500 dòng lao động và 900 dòng xe, 10 lô đã chốt, file SQLite ~33 MB. Cùng một máy, trước và sau; số đo ở `reports/perf/truoc-C.json`, `reports/perf/sau-C.json`. Mỗi chỉ số đo một lượt (thời gian vẽ là số nhỏ nhất của 3 lần); các lượt đo lặp lại dao động khoảng ±30 %.
+
+| Chỉ số | Trước | Sau |
+| --- | --- | --- |
+| Mở app đến khi hiện Tổng quan | 8.061 ms | 3.234 ms |
+| Lưu lần đầu khi sửa một ô (lưu toàn bộ) | 2.410 ms | 1.631 ms |
+| Lưu lần sau khi sửa một ô (theo phần thay đổi) | 1.087 ms | 711 ms |
+| Lưu một dòng danh mục | 282 ms | 187 ms |
+| Vẽ tab Xuất hồ sơ (tất cả) | 175 ms | 56 ms |
+
+| # | Nguyên nhân (trước) | Sửa (sau) |
+| --- | --- | --- |
+| C1 | Màn Tổng quan, Báo cáo, Việc cần làm tính **chữ ký nội dung** của mọi biểu mẫu cho **mọi lô** (dựng và băm cả file Word sẽ in), dù chữ ký chỉ dùng để so với mẫu đã xác nhận in: ~6 trong 8 giây mở app | Chữ ký tính **khi cần đọc** và nhớ theo phiên bản dữ liệu (`ui/app/13`, `src/quytrinh.js` `evaluate`): mẫu chưa in không dựng file; mẫu đã in vẫn so đúng chữ ký như cũ. Kết quả trạng thái in / ký không đổi |
+| C2 | Mỗi lần sửa một ô, chỉ mục kiểm tra chéo lô phân tích lại ngày giờ của **mọi phiếu cân ở mọi lô** | Khóa phiếu, biển số chuẩn hóa, khoảng giờ cân nhớ theo từng phiếu, kèm các trường nguồn và so lại mỗi lần dùng (`src/cheolo.js`): phiếu không đổi thì không phân tích lại |
+| C3 | Mỗi lần lưu, từng lô đã chốt / dừng được giải mã và chuẩn hóa toàn bộ để kiểm khóa chỉ đọc | Lô giống hệt bản đã lưu (so chuỗi JSON) được bỏ qua ngay (`ui/app/02` `loKhoaViPham`); lô có khác vẫn kiểm đầy đủ |
+| C4 | Mở app: mọi dòng nhân công / xe đều tra danh mục để gán ngày chụp, kể cả dòng đã có ngày chụp | Chỉ tra danh mục cho dòng chưa có ngày chụp (`src/danhmuc.js` `ganNgayChup`) |
+
+### Sao lưu và lưu trữ
+1. **Kho sao lưu** (Cài đặt → **Sao lưu và khôi phục**; cũng mở từ nhãn “Tự sao lưu: …” ở thanh ngữ cảnh và ⋯ Thêm): liệt kê mọi bản sao lưu trong thư mục sao lưu và thư mục thứ hai theo loại (tự động hằng ngày, sao lưu toàn bộ, trước khi nâng cấp / khôi phục / khôi phục lô / xóa), thời điểm, dung lượng, tổng dung lượng, lọc theo loại; **kiểm tra** từng bản (toàn vẹn, phiên bản cấu trúc, số chủ rừng / lô); **xóa** bản cũ. Chỉ thao tác trên file đang có trong danh sách; file tên khác và cơ sở dữ liệu đang dùng không bao giờ bị đụng (`src/khosaoluu.js`).
+2. **Khôi phục từ bản `.sqlite` ngay trong app** (trước đây phải đóng phần mềm và chép file bằng tay): xem trước số liệu trên máy và trong bản sao lưu → thay toàn bộ. Đi qua đúng đường “Khôi phục toàn bộ → Thay toàn bộ” (`Store.applyImport`): kiểm toàn vẹn hồ sơ đã chốt, sao lưu dữ liệu hiện tại (`truoc-khoi-phuc-…`), ghi trong một giao dịch; bản hỏng dừng trước khi sao lưu hay ghi. Bản cấu trúc cũ được nâng cấp trên bản chép tạm, file sao lưu gốc không đổi. Bản chụp của các lần chốt trước trong bản sao lưu được chép theo. Hoàn tác bằng cách khôi phục lại từ bản “Trước khi khôi phục”.
+3. **Tự sao lưu chứa việc làm trong ngày:** trước đây bản của hôm nay chỉ tạo lúc mở lần đầu trong ngày (tức dữ liệu của hôm trước) và phiên làm việc để máy qua đêm không có bản mới. Nay khi **đóng phần mềm** và **mỗi 2 giờ**, nếu dữ liệu đã đổi thì bản của hôm nay được làm mới: ghi file tạm, kiểm tra, rồi thay bằng một lần đổi tên (lỗi thì bản cũ còn nguyên); thư mục sao lưu thứ hai thay theo. Không đổi gì thì không ghi lại. Nút **Tự sao lưu ngay** ở kho.
+4. **Giới hạn dung lượng:** bản tự tạo `truoc-khoi-phuc-…` và `truoc-khoi-phuc-lo-…` giữ 20 bản gần nhất mỗi loại (như `truoc-xoa-…`). Trước đây không giới hạn, mỗi bản là cả cơ sở dữ liệu.
+5. **Nhãn trạng thái sao lưu** ở thanh ngữ cảnh: “Tự sao lưu: hôm nay / hôm qua / N ngày trước / tắt”, đổi màu cảnh báo khi đến hạn nhắc sao lưu toàn bộ.
+
+### Dễ dùng
+- **Ctrl+S** lưu lô đang mở (như nút “Lưu dữ liệu vào lô”); ô đang gõ được ghi nhận trước khi lưu.
+- **Menu ⋯ Thêm bị cắt chữ** khi thanh điều hướng xuống dòng (cửa sổ rộng 1366 trở xuống, là cỡ mặc định): bảng chọn tràn ra ngoài mép trái. Nay tự canh trái khi tràn và không vượt quá cửa sổ.
+
+### Sửa lỗi
+| # | Lỗi (trước) | Sửa (sau) |
+| --- | --- | --- |
+| D1 | Lô đang có thay đổi chưa lưu, rồi khôi phục chính lô đó (hoặc khôi phục toàn bộ): dấu “chưa lưu” và bản đã lưu cũ còn lại, nên lần lưu kế tiếp có thể ghi lại bản **trước khi khôi phục** của lô | Sau mọi lần thay dữ liệu từ ngoài (khôi phục toàn bộ, khôi phục lô, khôi phục từ kho), bản nháp, dấu “chưa lưu” và bản đã lưu được đặt lại theo đúng dữ liệu vừa nạp (`dbThayToanBo`, `ui/app/29`) |
+
+### Kiểm thử
+- `tests/khosaoluu.test.js` (9 ca): liệt kê theo loại, kiểm tra bản tốt / hỏng / cắt dở, khôi phục và hoàn tác, bản hỏng không ghi gì, lô đã chốt hai lần còn nguyên vẹn sau khôi phục, bản v1.0.0, xóa có giới hạn, làm mới bản tự sao lưu, giữ 20 bản.
+- `scripts/e2e-kho-sao-luu.js` (34 kiểm tra, Electron + SQLite thật): đóng app làm mới bản hôm nay, màn kho, khôi phục từ bản tốt và bản hỏng, hoàn tác, xóa, đường dẫn ngoài danh sách bị từ chối, Tự sao lưu ngay, Ctrl+S, menu ⋯ Thêm ở cửa sổ hẹp.
+
+### Chưa làm (đề xuất)
+- Lần lưu đầu tiên sau khi mở app vẫn là lưu toàn bộ (hành vi có chủ ý, có kiểm thử `e2e-luudelta`); với bộ dữ liệu đo ở trên mất khoảng 1,6 giây, một lần mỗi phiên.
+- Mở app vẫn nạp toàn bộ hồ sơ vào bộ nhớ; với hàng trăm lô nên chuyển sang nạp theo lô khi mở.
+
 ## 2.2.0 — Bản ổn định sau v1.4.33
 
 Bản 2.2.0 gồm phần này và bốn phần “2.2.0 (phần)” bên dưới, cùng các bản 2.1.0 và 2.0.0 (chưa từng phát hành công khai; bản công khai gần nhất là v1.4.33).

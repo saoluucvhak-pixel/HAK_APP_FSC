@@ -399,7 +399,7 @@ async function importGo() {
   const r = await HB.importApply(window.__imp, strat, opts);
   $('#impBox').classList.remove('on'); window.__imp = null; window.__plan = null;
   if (!r.ok) return note('Không nhập được, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
-  db = withDefaults(r.db); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); cur = null; curF = null;   // dữ liệu vừa được thay: bản nháp cũ không còn đích
+  dbThayToanBo(r.db); cur = null; curF = null;   // dữ liệu vừa được thay: bản nháp, dấu “chưa lưu” và bản đã lưu cũ không còn đích (ui/app/29)
   note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân. Bản sao lưu trước khi nhập: ' + r.backup);
 }
 

@@ -33,10 +33,10 @@ header.top h1 small{display:block;font-size:11.5px;font-weight:400;opacity:.72;m
 .menu .pop{position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 12px 32px rgba(0,0,0,.28);padding:6px;z-index:40}
 .menu .pop .mi{display:flex;width:100%;align-items:center;gap:8px;text-align:left;border:0;background:none;color:var(--ink);padding:9px 12px;border-radius:var(--rs);font:inherit;cursor:pointer}
 .menu .pop .mi:hover{background:var(--accSoft)}.mi-sec{padding:4px 8px 6px;font-size:12px;color:var(--mut-aa)}.mi-sec b{display:block;margin:2px 4px 4px;color:var(--ink)}.skinbtn{display:flex;align-items:center;gap:8px;width:100%;border:1px solid transparent;background:none;color:var(--ink);padding:6px 8px;border-radius:var(--rs);font:inherit;cursor:pointer;text-align:left}.skinbtn:hover{background:var(--accSoft)}.skinbtn.on{border-color:var(--brand);background:var(--accSoft);font-weight:600}.sw{display:inline-flex;width:34px;height:16px;border-radius:5px;overflow:hidden;border:1px solid var(--ctl);flex:0 0 auto}.sw i{flex:1}
-.menu .pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
+.menu.trai .pop{right:auto;left:0}.menu .pop{max-width:calc(100vw - 16px);max-height:calc(100vh - 120px);overflow:auto}.menu .pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
 /* Thanh ngữ cảnh */
 #ctxBar{position:sticky;top:50px;z-index:29;display:flex;gap:6px 18px;flex-wrap:wrap;align-items:center;padding:7px 18px;background:var(--card);border-bottom:1px solid var(--line);font-size:13px;color:var(--mut-aa)}
-#ctxBar b{color:var(--ink);font-weight:600}#ctxBar .sp{flex:1}
+#ctxBar b{color:var(--ink);font-weight:600}#ctxBar .sp{flex:1}#kslBang .pill,#kslBang th{white-space:nowrap}#bkChip{border:0;font:inherit;font-size:12px;font-weight:550;cursor:pointer}#bkChip:hover{filter:brightness(.96)}#bkChip:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 #saveSt.err{background:var(--errBg);color:var(--err)}
 /* Bố cục */
 .layout{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:calc(100vh - 86px)}
@@ -183,12 +183,13 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <hr>
     <div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu"></div>
     <hr>
+    <button class="mi deskOnly" data-act="openSetBk" id="openSetBkBtn" hidden>Sao lưu và khôi phục (kho sao lưu)</button>
     <button class="mi" data-act="backup">Sao lưu toàn bộ dữ liệu (.json)</button>
     <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
     <button class="mi" data-act="lotRestore" id="lotRestoreBtn">Khôi phục lô rừng…</button>
   </div></details>
 </header>
-<div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><span class="pill" id="saveSt"></span></div>
+<div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><button type="button" class="pill" id="bkChip" data-act="openSetBk" hidden></button><span class="pill" id="saveSt"></span></div>
 <div class="layout">
   <aside id="side"><input class="sideq" id="sideQ" type="search" placeholder="Lọc chủ rừng…" aria-label="Lọc chủ rừng"><div id="sideList"></div></aside>
   <main id="main"></main>

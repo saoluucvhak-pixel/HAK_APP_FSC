@@ -211,8 +211,9 @@
     if (!f || f.chot || f.dung) return 0;   // lô đã chốt / đã dừng: không đổi dữ liệu (giữ nguyên dấu vân tay của gói đã chốt, không vướng khóa chỉ đọc)
     let n = 0; const hn = trim(homNay);
     const gan = (r, m) => { if (!r || typeof r !== 'object' || Object.prototype.hasOwnProperty.call(r, '_dmNgay')) return; const d = m && trim(m.row.ngayCapNhat) && ngayKey(m.row.ngayCapNhat) ? trim(m.row.ngayCapNhat) : hn; r._dmNgay = d; n++; };
-    ((f && f.nc) || []).forEach(r => gan(r, r && layLaoDong(dmLaoDong || [], r.cccd)));
-    ((f && f.dx) || []).forEach(r => gan(r, r && layXe(dmXe || [], r.bienSo)));
+    const can = r => r && typeof r === 'object' && !Object.prototype.hasOwnProperty.call(r, '_dmNgay');   // dòng đã có ngày chụp: không tra danh mục (mở app với danh mục lớn: mỗi lần tra duyệt cả danh mục)
+    ((f && f.nc) || []).forEach(r => { if (can(r)) gan(r, layLaoDong(dmLaoDong || [], r.cccd)); });
+    ((f && f.dx) || []).forEach(r => { if (can(r)) gan(r, layXe(dmXe || [], r.bienSo)); });
     return n;
   }
   const api = {ganNgayChup, chuanDoiTacId, timDoiTac, hopNhatDoiTac, KHUNG_LO, CHUC_VU, LAO_DONG, XE, cccdSo, bienKey, layLaoDong, layXe, lichSuLaoDong, lichSuXe, laoDongHieuLuc, xeHieuLuc, kiemLaoDong, kiemXe, themLaoDong, themXe, chupLaoDong, chupXe, khacLaoDong, khacXe, lechLaoDong, lechXe, moiHonChup, CHU_XE, dungTuLo, doiTacKey, dungDoiTac, loTuLoCu, nguoiChung, timNguoi, gopNguoi};

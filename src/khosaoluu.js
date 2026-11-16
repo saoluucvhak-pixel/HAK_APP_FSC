@@ -1,0 +1,121 @@
+'use strict';
+/* KHO SAO LƯU: liệt kê, kiểm tra, khôi phục và dọn các bản sao lưu trong thư mục sao lưu (và thư mục sao lưu thứ hai). Không phụ thuộc Electron để kiểm thử được bằng Node.
+ *
+ * Các loại bản sao lưu phần mềm tạo ra (nhận theo TÊN FILE; file tên khác không được liệt kê, không bao giờ bị xóa):
+ *   tu-dong-YYYY-MM-DD.sqlite            tự sao lưu hằng ngày (src/autobackup.js)
+ *   HoSoKhaiThac_SaoLuu_*.sqlite|.json   sao lưu toàn bộ do người dùng bấm (src/backup.js)
+ *   truoc-nang-cap-*.sqlite              trước khi nâng cấp cấu trúc dữ liệu
+ *   truoc-khoi-phuc-*.sqlite             trước khi khôi phục toàn bộ
+ *   truoc-khoi-phuc-lo-*.sqlite          trước khi khôi phục một lô
+ *   truoc-xoa-*.sqlite                   trước lần lưu có xóa chủ rừng / lô
+ *
+ * KHÔI PHỤC TỪ BẢN .sqlite (khoiPhuc): KHÔNG chép đè file cơ sở dữ liệu đang dùng. Bản sao lưu được chép ra thư mục tạm, mở bằng Store (bản cấu trúc cũ được nâng cấp
+ * TRÊN BẢN CHÉP, file sao lưu gốc không bị đụng), đọc thành dữ liệu hồ sơ rồi đi qua đúng đường "Khôi phục toàn bộ → thay toàn bộ" (Store.applyImport 'replace'):
+ * kiểm toàn vẹn hồ sơ đã chốt, sao lưu file hiện tại (truoc-khoi-phuc-…) rồi ghi trong MỘT giao dịch. Lỗi ở bước nào dữ liệu đang dùng cũng còn nguyên.
+ * Bản chụp của các lần chốt trước (bảng chot_goi) trong bản sao lưu được chép thêm cho các lô còn tồn tại. Bản tra cứu Google Sheets của máy giữ nguyên. */
+const fs = require('fs'), path = require('path'), os = require('os');
+const DM = require('./datamove');
+
+const LOAI = [
+  {ma: 'tudong', ten: 'Tự động hằng ngày', re: /^tu-dong-\d{4}-\d{2}-\d{2}\.sqlite$/},
+  {ma: 'toanbo', ten: 'Sao lưu toàn bộ', re: /^HoSoKhaiThac_SaoLuu_[\w-]+\.(sqlite|json)$/},
+  {ma: 'nangcap', ten: 'Trước khi nâng cấp', re: /^truoc-nang-cap-[\w-]+\.sqlite$/},
+  {ma: 'khoiphuclo', ten: 'Trước khi khôi phục lô', re: /^truoc-khoi-phuc-lo-[\w-]+\.sqlite$/},
+  {ma: 'khoiphuc', ten: 'Trước khi khôi phục', re: /^truoc-khoi-phuc-[\w-]+\.sqlite$/},
+  {ma: 'xoa', ten: 'Trước khi xóa', re: /^truoc-xoa-[\w-]+\.sqlite$/}
+];
+const loaiCua = name => LOAI.find(l => l.re.test(name)) || null;
+const cungFile = (a, b) => process.platform === 'win32' ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase() : path.resolve(a) === path.resolve(b);
+
+/* Danh sách bản sao lưu trong các thư mục `dirs` (bỏ thư mục trùng / trống / không đọc được), mới nhất trước.
+ * Trả {items: [{file, name, dir, loai, tenLoai, dinhDang: 'sqlite' | 'json', size, mtime}], tong: {soBan, bytes}, loi: [{dir, error}]} — không ném lỗi. */
+function lietKe(dirs) {
+  const items = [], loi = [], seen = [];
+  (dirs || []).filter(Boolean).forEach(dir => {
+    if (seen.some(d => cungFile(d, dir))) return; seen.push(dir);
+    let names; try { names = fs.readdirSync(dir); } catch (e) { if (e.code !== 'ENOENT') loi.push({dir, error: e.message}); return; }
+    names.forEach(name => {
+      const l = loaiCua(name); if (!l) return;
+      let st; try { st = fs.statSync(path.join(dir, name)); } catch (e) { return; }
+      if (!st.isFile()) return;
+      items.push({file: path.join(dir, name), name, dir, loai: l.ma, tenLoai: l.ten, dinhDang: name.endsWith('.json') ? 'json' : 'sqlite', size: st.size, mtime: st.mtime.toISOString()});
+    });
+  });
+  items.sort((a, b) => a.mtime < b.mtime ? 1 : a.mtime > b.mtime ? -1 : a.name < b.name ? 1 : -1);
+  return {items, tong: {soBan: items.length, bytes: items.reduce((s, x) => s + x.size, 0)}, loi};
+}
+/* Chỉ thao tác trên file ĐANG CÓ trong danh sách (đường dẫn do giao diện gửi lên không được tin): trả mục khớp hoặc ném lỗi */
+function timTrongKho(dirs, file) {
+  const it = typeof file === 'string' && file ? lietKe(dirs).items.find(x => cungFile(x.file, file)) : null;
+  if (!it) throw Object.assign(new Error('Bản sao lưu không còn trong thư mục sao lưu (đã bị xóa hoặc chuyển đi). Hãy tải lại danh sách.'), {code: 'KHONG_CO'});
+  return it;
+}
+const demHoSo = db => { const c = {owners: 0, forests: 0, nc: 0, dx: 0, pc: 0}; Object.values((db && db.rs) || {}).forEach(o => { c.owners++; Object.values((o && o.forests) || {}).forEach(f => { c.forests++; c.nc += (f.nc || []).length; c.dx += (f.dx || []).length; c.pc += (f.pc || []).length; }); }); return c; };
+
+/* Kiểm tra MỘT bản sao lưu có dùng được không (chỉ đọc, không sửa file):
+ *  - .sqlite: đúng file SQLite của HAKQN, qua kiểm tra toàn vẹn, phiên bản cấu trúc không mới hơn ứng dụng; kèm số chủ rừng / lô;
+ *  - .json:   đọc được, đúng định dạng sao lưu toàn bộ; kèm số chủ rừng / lô / nhân công / xe / phiếu cân.
+ * Trả {ok, dinhDang, version?, counts, size, mtime, error}. */
+function kiemTra(file, supportedVersion) {
+  if (/\.json$/i.test(file)) {
+    try {
+      const st = fs.statSync(file), o = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (!o || typeof o !== 'object' || !o.rs || typeof o.rs !== 'object') return {ok: false, dinhDang: 'json', counts: {}, size: st.size, mtime: st.mtime.toISOString(), error: 'File không đúng định dạng sao lưu toàn bộ (thiếu danh sách chủ rừng).'};
+      return {ok: true, dinhDang: 'json', counts: demHoSo(o), size: st.size, mtime: st.mtime.toISOString(), error: ''};
+    } catch (e) { return {ok: false, dinhDang: 'json', counts: {}, size: 0, mtime: null, error: e instanceof SyntaxError ? 'File JSON bị hỏng hoặc bị cắt dở (' + e.message + ').' : 'Không đọc được file: ' + e.message}; }
+  }
+  const i = DM.inspect(file, supportedVersion, {cleanSidecars: true});
+  return {ok: i.ok, dinhDang: 'sqlite', version: i.version, counts: {owners: i.counts.owners || 0, forests: i.counts.forests || 0, companies: i.counts.companies || 0, chotGoi: i.counts.chot_goi || 0}, size: i.size, mtime: i.mtime, error: i.ok ? '' : i.error};
+}
+
+/* Đọc dữ liệu hồ sơ từ một bản sao lưu .sqlite mà KHÔNG đụng file gốc: chép ra thư mục tạm, mở bằng Store (tự nâng cấp bản chép nếu cấu trúc cũ), đọc kèm gói đã chốt.
+ * Trả {data, goi: [{forest_id, phien_ban, hash, at, data}], version}; luôn dọn thư mục tạm. */
+function docBanSqlite(file, o) {
+  const {Store} = require('./store');
+  const tmpDir = fs.mkdtempSync(path.join((o && o.tmpDir) || os.tmpdir(), 'hakqn-kp-')), tmp = path.join(tmpDir, 'ban-sao.sqlite');
+  let s = null;
+  try {
+    fs.copyFileSync(file, tmp);
+    s = new Store(tmp, {backupDir: path.join(tmpDir, 'bk')});
+    const data = s.load({kemGoi: true});
+    const goi = s._coBangGoi() ? s.db.prepare('SELECT forest_id, phien_ban, hash, at, data FROM chot_goi').all() : [];
+    return {data, goi, version: s.db.pragma('user_version', {simple: true})};
+  } finally {
+    if (s) { try { s.close(); } catch (e) { /* đã đóng */ } }
+    try { fs.rmSync(tmpDir, {recursive: true, force: true, maxRetries: 5, retryDelay: 100}); } catch (e) { /* để hệ điều hành dọn thư mục tạm */ }
+  }
+}
+
+/* Xem trước khi khôi phục từ bản .sqlite: số liệu trong bản sao lưu và đang có trên máy. Không ghi gì. */
+function xemTruoc(store, file, supportedVersion) {
+  const kt = kiemTra(file, supportedVersion);
+  if (!kt.ok) throw Object.assign(new Error('Bản sao lưu không dùng được: ' + kt.error), {code: 'BAN_HONG'});
+  const {Store} = require('./store'), b = docBanSqlite(file);
+  return {trongBan: Store.counts(b.data), trenMay: Store.counts(store.load()), version: b.version, size: kt.size, mtime: kt.mtime};
+}
+
+/* Khôi phục TOÀN BỘ hồ sơ từ bản .sqlite (xem ghi chú đầu file). Trả {backup: file sao lưu trước khi ghi, counts, goiCu: số bản chụp cũ đã chép thêm}. */
+function khoiPhuc(store, file, supportedVersion) {
+  const kt = kiemTra(file, supportedVersion);
+  if (!kt.ok) throw Object.assign(new Error('Bản sao lưu không dùng được: ' + kt.error + ' Dữ liệu trên máy chưa bị thay đổi.'), {code: 'BAN_HONG'});
+  if (store.file !== ':memory:' && cungFile(store.file, file)) throw new Error('Đây chính là cơ sở dữ liệu đang dùng, không phải bản sao lưu.');
+  const b = docBanSqlite(file);
+  const r = store.applyImport(b.data, 'replace');   // kiểm toàn vẹn lô đã chốt → sao lưu truoc-khoi-phuc → ghi trong một giao dịch
+  let goiCu = 0;
+  if (b.goi.length && store._coBangGoi()) {   // bản chụp của các lần chốt TRƯỚC: chép thêm cho lô còn tồn tại, không ghi đè bản đã có
+    const co = store.db.prepare('SELECT 1 FROM forests WHERE id=?'), put = store.db.prepare('INSERT OR IGNORE INTO chot_goi(forest_id,phien_ban,hash,at,data) VALUES(?,?,?,?,?)');
+    store.db.transaction(() => { b.goi.forEach(g => { if (co.get(g.forest_id)) goiCu += put.run(g.forest_id, g.phien_ban, g.hash, g.at, g.data).changes; }); })();
+  }
+  return {backup: r.backup, counts: r.counts, goiCu};
+}
+
+/* Xóa MỘT bản sao lưu trong kho (chỉ file đang có trong danh sách; không bao giờ xóa cơ sở dữ liệu đang dùng) */
+function xoa(dirs, file, dbFile) {
+  const it = timTrongKho(dirs, file);
+  if (dbFile && cungFile(it.file, dbFile)) throw new Error('Không xóa cơ sở dữ liệu đang dùng.');
+  fs.unlinkSync(it.file);
+  for (const x of ['-wal', '-shm']) { try { fs.unlinkSync(it.file + x); } catch (e) { /* không có */ } }
+  return {name: it.name, size: it.size};
+}
+
+module.exports = {LOAI, loaiCua, lietKe, timTrongKho, kiemTra, xemTruoc, khoiPhuc, xoa, docBanSqlite};

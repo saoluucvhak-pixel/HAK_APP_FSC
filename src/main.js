@@ -9,6 +9,7 @@ const Settings = require('./settings');
 const DM = require('./datamove');
 const Backup = require('./backup');
 const AutoBackup = require('./autobackup');
+const KhoSaoLuu = require('./khosaoluu');
 const {GoogleAuth, fileIdOf} = require('./google-auth');
 
 /* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
@@ -88,6 +89,7 @@ function log(level, msg) {
 function openStore() {
   const dir = app.getPath('userData'); fs.mkdirSync(dir, {recursive: true});
   if (store) { try { store.db.close(); } catch (e) { /* đã đóng */ } store = null; }
+  autoBkRev = null;
   loc = Settings.resolve(dir, process.env);
   gauth = new GoogleAuth({dir, fetch: (u, o) => net.fetch(u, o), openExternal: u => shell.openExternal(u), safeStorage});
   // Kiểm tra cả thư mục lẫn file hakqn.sqlite đã cấu hình TRƯỚC khi mở (Store sẽ tự tạo file trống nếu thiếu): không tự chuyển sang bản mặc định
@@ -110,17 +112,27 @@ function openStore() {
 /* Tự sao lưu xoay vòng hằng ngày khi mở cơ sở dữ liệu (src/autobackup.js): chạy nền, không chặn khởi động; lỗi chỉ ghi nhật ký và hiện ở Cài đặt hệ thống */
 let autoBk = null;   // kết quả lần chạy gần nhất trong phiên
 let autoBkP = null;  // Promise của lần chạy đang dở (kiểm tra khói chờ xong rồi mới thoát)
-function runAutoBackup() {
-  let st; try { st = Settings.load(app.getPath('userData')); } catch (e) { return; }
-  if (!st.autoKeep) { autoBk = {ok: true, skipped: true, reason: 'off'}; return; }
+let autoBkRev = null;   // phiên bản dữ liệu (store.rev) mà bản tự sao lưu của hôm nay đã chứa; khác store.rev = có thay đổi chưa vào bản tự sao lưu
+/* lamMoi (đóng ứng dụng, hẹn giờ, bấm "Tự sao lưu ngay"): nếu dữ liệu đã đổi sau bản của hôm nay thì LÀM MỚI bản đó, để bản tự sao lưu chứa cả việc làm trong ngày
+ * (trước đây bản của hôm nay chỉ tạo lúc mở lần đầu nên là dữ liệu của hôm trước). Các lần chạy xếp hàng, không chạy chồng. */
+function runAutoBackup(lamMoi) {
+  let st; try { st = Settings.load(app.getPath('userData')); } catch (e) { return Promise.resolve(); }
+  if (!st.autoKeep) { autoBk = {ok: true, skipped: true, reason: 'off'}; return Promise.resolve(); }
   const s = store, dir = loc.backupDir;
-  autoBkP = AutoBackup.daily(s, {keep: st.autoKeep, dir}).then(r => {
-    autoBk = {...r, at: new Date().toISOString()};
-    if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
-    if (!r.ok) log('ERROR', 'Tự sao lưu hằng ngày không được: ' + r.error);
-    else if (!r.skipped) log('INFO', 'Tự sao lưu hằng ngày: ' + path.basename(r.file) + (r.removed.length ? ' (xóa ' + r.removed.length + ' bản cũ)' : ''));
-  }, e => { autoBk = {ok: false, error: e.message}; });
+  autoBkP = (autoBkP || Promise.resolve()).then(() => {
+    if (!s || store !== s) return;   // cơ sở dữ liệu đã đổi (đổi thư mục dữ liệu) trong lúc chờ
+    const rev = s.rev, refresh = !!lamMoi && rev !== autoBkRev;
+    return AutoBackup.daily(s, {keep: st.autoKeep, dir, refresh}).then(r => {
+      autoBk = {...r, at: new Date().toISOString()};
+      if (r.ok && (!r.skipped || autoBkRev === null)) autoBkRev = rev;   // lần đầu trong phiên: bản của hôm nay (nếu có) do lần đóng trước làm mới, coi như đã chứa dữ liệu lúc mở
+      if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep, {overwrite: !!r.refreshed}); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
+      if (!r.ok) log('ERROR', 'Tự sao lưu hằng ngày không được: ' + r.error);
+      else if (!r.skipped) log('INFO', 'Tự sao lưu hằng ngày: ' + path.basename(r.file) + (r.refreshed ? ' (làm mới)' : '') + (r.removed.length ? ' (xóa ' + r.removed.length + ' bản cũ)' : ''));
+    });
+  }).catch(e => { autoBk = {ok: false, error: e.message}; });
+  return autoBkP;
 }
+const autoBackupStale = () => !!store && autoBkRev !== null && store.rev !== autoBkRev;
 
 const NO_STORE = () => 'Chưa mở được cơ sở dữ liệu' + (dataIssue ? ': ' + dataIssue.reason + ' (' + dataIssue.path + ')' : '') + '. Hãy xử lý ở màn hình thông báo trước.';
 /* Tự kiểm cấu trúc 2.0 (chỉ khi chạy từ mã nguồn, HAKQN_CHECK_MODEL=<file nhật ký>): sau mỗi lần lưu, dữ liệu trong SQLite phải ĐÃ CHUẨN HÓA
@@ -348,7 +360,7 @@ function registerIpc() {
       // chuyển phiên làm việc sang cơ sở dữ liệu mới; lỗi ở đây thì trả cấu hình về như cũ
       const old = store, from = loc.dbFile;
       try {
-        store = res.newStore; loc = Settings.resolve(userDir, process.env); store.backupDir = loc.backupDir; lookup = new Lookup(store); dataIssue = null;
+        store = res.newStore; autoBkRev = null; loc = Settings.resolve(userDir, process.env); store.backupDir = loc.backupDir; lookup = new Lookup(store); dataIssue = null;
       } catch (er) {
         try { Settings.save(userDir, prev); } catch (e2) { log('ERROR', 'Không trả được cấu hình: ' + e2.message); }
         try { res.newStore.db.close(); } catch (e3) { /* bỏ qua */ }
@@ -397,6 +409,21 @@ function registerIpc() {
       return {ok: true};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
+  /* ===== KHO SAO LƯU (src/khosaoluu.js): liệt kê, kiểm tra, khôi phục từ bản .sqlite, xóa bản cũ, tự sao lưu ngay. Đường dẫn do giao diện gửi lên chỉ được dùng khi
+   * file đó ĐANG CÓ trong danh sách của thư mục sao lưu (timTrongKho); không thao tác trên đường dẫn tùy ý. ===== */
+  const bkDirs = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } return [loc.backupDir, st.backupDir2 || ''].filter(Boolean); };
+  const bkFile = f => KhoSaoLuu.timTrongKho(bkDirs(), f);
+  ipcMain.handle('bk:list', () => wrap(() => ({...KhoSaoLuu.lietKe(bkDirs()), dirs: bkDirs(), auto: autoBk, chuaVaoBanTuDong: autoBackupStale()}), true)());
+  ipcMain.handle('bk:verify', (e, f) => wrap(() => ({kiem: KhoSaoLuu.kiemTra(bkFile(f).file, SCHEMA_VERSION)}), true)());
+  ipcMain.handle('bk:preview', afterReloc((e, f) => wrap(() => ({xem: KhoSaoLuu.xemTruoc(store, bkFile(f).file, SCHEMA_VERSION)}))()));
+  ipcMain.handle('bk:restore', afterReloc((e, f) => wrap(() => {
+    const it = bkFile(f); if (it.dinhDang !== 'sqlite') throw new Error('Bản .json khôi phục qua màn xem trước của “Khôi phục toàn bộ dữ liệu”.');
+    const r = KhoSaoLuu.khoiPhuc(store, it.file, SCHEMA_VERSION); log('INFO', 'Khôi phục toàn bộ từ bản sao lưu ' + it.name); checkModel('khoiphuc');
+    return {...r, name: it.name, db: store.load()};
+  })()));
+  ipcMain.handle('bk:readJson', (e, f) => wrap(() => { const it = bkFile(f); if (it.dinhDang !== 'json') throw new Error('Không phải bản sao lưu .json.'); if (it.size > 512 * 1024 * 1024) throw new Error('File quá lớn.'); return {name: it.name, text: fs.readFileSync(it.file, 'utf8')}; }, true)());
+  ipcMain.handle('bk:delete', (e, f) => wrap(() => { const r = KhoSaoLuu.xoa(bkDirs(), f, loc.dbFile); log('INFO', 'Xóa bản sao lưu ' + r.name); return r; }, true)());
+  ipcMain.handle('bk:autoNow', afterReloc(async () => { if (!store) return {ok: false, error: NO_STORE(), unavailable: true}; await runAutoBackup(true); return {ok: !!(autoBk && autoBk.ok), auto: autoBk, error: autoBk && !autoBk.ok ? autoBk.error : undefined}; }));
   ipcMain.handle('phieucan:open', async (e, rows, company) => { try { await openPhieuCan(rows, company); return {ok: true}; } catch (err) { log('ERROR', 'phieucan: ' + err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('app:openData', () => { shell.showItemInFolder(loc.dbFile); return {ok: true}; });
 }
@@ -649,6 +676,8 @@ function createWindow() {
     if (n > 0) { try { await ask('window.__nhapTamXoa ? window.__nhapTamXoa() : 0', 0); } catch (err) { /* không xóa được bản tạm: bỏ qua */ } }
     // bộ nhớ trình duyệt (localStorage) ghi đĩa trễ: ép ghi rồi mới đóng, để lần xóa bản tạm không bị mất khi tiến trình thoát ngay
     if (n > 0) { try { win.webContents.session.flushStorageData(); await new Promise(r => setTimeout(r, 400)); } catch (err) { /* bỏ qua */ } }   // đóng có chủ ý (lưu hoặc bỏ): không giữ bản nháp tạm
+    // dữ liệu đã đổi sau bản tự sao lưu của hôm nay: làm mới bản đó trước khi thoát (tối đa 30 giây; quá thời gian thì vẫn đóng, bản cũ của hôm nay còn nguyên)
+    if (autoBackupStale()) { try { await Promise.race([runAutoBackup(true), new Promise(r => setTimeout(r, 30000))]); } catch (err) { /* lỗi đã ghi nhật ký */ } }
     closing = true; win.close();
   });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
@@ -665,6 +694,7 @@ else {
     ]));
     try { installFileCsp(); } catch (e) { log('ERROR', 'Không đặt được CSP cho cửa sổ in phiếu cân: ' + e.message); }
     registerIpc(); createWindow();
+    setInterval(() => { if (store) runAutoBackup(true); }, 2 * 3600 * 1000).unref();   // phiên làm việc dài (để máy qua ngày): mỗi 2 giờ tạo bản của ngày mới / làm mới bản hôm nay nếu dữ liệu đã đổi
     if (process.env.HAKQN_SMOKE) setTimeout(() => smoke().catch(() => app.exit(4)), 1500);
   });
   app.on('window-all-closed', () => { if (store) { try { store.close(); } catch (e) {} } app.quit(); });

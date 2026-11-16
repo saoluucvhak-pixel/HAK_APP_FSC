@@ -296,7 +296,7 @@ window.__doiKT = () => { const rec = curRec(); if (!rec) return null; const B = 
 /* Chặn rời lô khi còn bản nháp: bắt sự kiện bấm ở pha bắt (trước mọi xử lý khác) với các nút đổi lô, đổi chủ rừng, sang màn hình khác */
 document.addEventListener('click', e => {
   if (stBypass || !stDirtyCur()) return; const t = e.target; if (!t.closest || t.closest('#stBox')) return;
-  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],#navHome,[data-act=openNorm],[data-act=openSettings],[data-act=newRs]'); if (!nav) return;
+  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],#navHome,[data-act=openNorm],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
   if ((nav.dataset.sforest && nav.dataset.sforest === curF) || (nav.dataset.forest && nav.dataset.forest === curF)) return;   // bấm lại đúng lô đang mở
   e.preventDefault(); e.stopPropagation();
   const d = nav.dataset, sel = d.sforest ? '[data-sforest="' + d.sforest + '"]' : d.forest ? '[data-forest="' + d.forest + '"]' : d.open ? '[data-open="' + d.open + '"]' : d.dash ? '[data-dash="' + d.dash + '"]' : nav.id ? '#' + nav.id : '[data-act="' + d.act + '"]';   // vẽ lại sau khi lưu/bỏ nên tìm lại đúng nút

@@ -109,6 +109,7 @@ function loKhoaViPham() {
   if (!savedSnap || !savedSnap.forests) return out;
   Object.values(db.rs || {}).forEach(o => Object.entries((o && o.forests) || {}).forEach(([fk, f]) => {
     const id = (f && f.id) || fk, b = savedSnap.forests.get(id); if (!b || !/"(chot|dung)":\{/.test(b.json)) return;
+    try { if (JSON.stringify(f) === b.json) return; } catch (e) { /* không tuần tự hóa được: so đầy đủ bên dưới */ }   // giống hệt bản đã lưu: không vi phạm, khỏi giải mã và chuẩn hóa cả lô (lô lớn: hàng trăm ms mỗi lần lưu)
     let cu; try { cu = JSON.parse(b.json); } catch (e) { return; }
     if (HAKVongDoi.viPhamKhoa(cu, f)) out.push(id);
   }));

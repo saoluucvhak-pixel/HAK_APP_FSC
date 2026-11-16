@@ -98,6 +98,7 @@ function renderMain() {
   if (view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
   if (view === 'cty') { $('#main').innerHTML = renderMsgs() + settingsFrame('cty', panelCty()); return; }
   if (view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
+  if (view === 'setbk') { $('#main').innerHTML = renderMsgs() + settingsFrame('setbk', panelKhoSaoLuu()); kslLoad(); return; }
   if (view === 'setgs') { $('#main').innerHTML = renderMsgs() + settingsFrame('setgs', panelSetGs()); return; }
   if (view === 'setfmt') { $('#main').innerHTML = renderMsgs() + settingsFrame('setfmt', panelSetFmt()); return; }
   const own = curOwner();
