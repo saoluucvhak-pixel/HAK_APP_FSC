@@ -357,6 +357,13 @@ class Store {
     });
     return changed;
   }
+  /* KIỂM QUAN HỆ (3.0, src/quanhe.js): hợp đồng thuộc đúng rừng, thành viên thuộc đúng đội, xe thuộc đúng hợp đồng, phiếu dùng đúng xe của hợp đồng.
+   * Gọi TRƯỚC giao dịch: có lỗi thì không ghi gì (mã QUAN_HE); giao diện giữ dữ liệu đang nhập để sửa và lưu lại. */
+  _kiemQuanHe(lots) {
+    const QH = require('./quanhe'), loi = [];
+    (lots || []).forEach(f => QH.kiem(f).forEach(x => loi.push(x)));
+    if (loi.length) throw Object.assign(new Error('Dữ liệu chưa đúng quan hệ nên chưa ghi: ' + loi.slice(0, 5).join('; ') + (loi.length > 5 ? ' (và ' + (loi.length - 5) + ' lỗi khác)' : '') + '. Dữ liệu đang nhập vẫn còn để sửa.'), {code: 'QUAN_HE', loi});
+  }
   _guardDelete(goneO, goneF, opts) {
     if (goneO.length >= 2 && !opts.allowBulkDelete) throw Object.assign(new Error('Lần lưu này sẽ xóa ' + goneO.length + ' hồ sơ chủ rừng cùng lúc nên đã bị chặn để tránh mất dữ liệu. Xóa từng chủ rừng, hoặc dùng Khôi phục toàn bộ nếu muốn thay toàn bộ dữ liệu.'), {code: 'BULK_DELETE'});
     if (goneO.length || goneF.length) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
@@ -434,6 +441,7 @@ class Store {
       return this._tachGoiKhiGhi({id, owner_id: String(v.owner), ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: json, hash: sha(json)});
     });
     if (delF.some(id => id in upF) || delO.some(id => id in upO)) bad('vừa sửa vừa xóa cùng một dòng');
+    this._kiemQuanHe(Object.values(upF).map(v => { try { return JSON.parse(v.json); } catch (e) { return null; } }).filter(Boolean));
     this._guardDelete(delO, delF, opts);
     if (!opts.boQuaKhoa) this._kiemKhoa(rowsF, delF, delO);
     const st = this._stmts(), t = now(); let changed = 0;
@@ -453,7 +461,7 @@ class Store {
   /* Mã nội bộ (id) chủ rừng và lô rừng là khóa chính: trùng thì bản sau ghi đè bản trước trong SQLite → dừng và báo, không ghi gì */
   explode(db) {
     const M = require('./model');
-    const owners = [], forests = [], seenO = new Map(), seenF = new Map(), dups = [];
+    const owners = [], forests = [], seenO = new Map(), seenF = new Map(), dups = [], kiemLo = [];
     Object.entries(db.rs || {}).forEach(([id, o]) => {
       if (!o || typeof o !== 'object') throw new Error('Hồ sơ chủ rừng "' + id + '" không hợp lệ. Không ghi gì.');
       const {forests: fs_, ...rest} = o; rest.id = rest.id || id;
@@ -465,10 +473,12 @@ class Store {
         if (LK.canChuan(f)) { if (f === f0) f = JSON.parse(JSON.stringify(f0)); LK.chuanLo(f); }   // 3.0: ID dòng, chấm công theo ID thành viên (lô chưa khóa)
         const fd = JSON.stringify(f), fi = f.info || {}, idF = f.id || fid;
         if (seenF.has(idF)) dups.push('lô ' + idF + ' (' + (fi.maRung || '') + ') ở chủ ' + seenF.get(idF) + ' và ' + rest.id); seenF.set(idF, rest.id);
+        kiemLo.push(f);
         forests.push(this._tachGoiKhiGhi({id: idF, owner_id: rest.id, ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: fd, hash: sha(fd)}));
       });
     });
     if (dups.length) throw Object.assign(new Error('Trùng mã nội bộ: ' + dups.slice(0, 5).join('; ') + (dups.length > 5 ? '…' : '') + '. Không ghi gì để tránh mất hồ sơ; hãy khôi phục lại với lựa chọn "Giữ cả hai" để cấp mã mới.'), {code: 'DUP_ID'});
+    this._kiemQuanHe(kiemLo);
     return {owners, forests};
   }
 
