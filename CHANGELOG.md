@@ -1,16 +1,14 @@
 # Nhật ký thay đổi
 
-## Chưa phát hành — sửa sau rà soát PR #17–#21
+## 2.3.0 — Dán từ Excel, mục lục gói in, phụ lục in lại / ký lại, gói Chỉ xem, in trong app, hướng dẫn lần đầu
 
-### Sửa lỗi
+Sáu tính năng còn lại của kế hoạch 2.2 (đợt 1–3). Không đổi cấu trúc SQLite (vẫn v14), không đổi cách tính và nội dung các biểu mẫu BM-01…BM-20.
+
+### Sửa lỗi sau rà soát PR #17–#21
 | # | Lỗi (trước) | Sửa (sau) |
 | --- | --- | --- |
 | 1 | PR #21 đổi hẳn cách chia khối lượng / diện tích cho các đội sang “phần dư lớn nhất”: lô nhiều đội đổi số so với bản đã in (10 tấn chia 3 đội: 3,333 / 3,333 / 3,334 thành 3,334 / 3,333 / 3,333), mẫu đã in hoặc đã ký chuyển “dữ liệu đổi”, lô đã chốt in lại ra số khác giấy đã ký | `src/doi.js` `chia`: giữ cách chia từ trước (làm tròn từng đội, đội cuối nhận phần còn lại) nên **số của mọi lô giữ nguyên như bản đã in**; chỉ khi cách đó cho một đội số âm (lượng rất nhỏ: 0,002 tấn chia 4 đội ra -0,001) mới chia lại theo phần dư lớn nhất. Test: 3.000 bộ lượng / số đội ngẫu nhiên — tổng khớp đến 0,001, không âm, bằng cách cũ khi cách cũ không âm |
 | 4 | Lệnh khôi phục `import:preview` / `import:apply` chuyển nguyên tùy chọn từ giao diện xuống tiến trình chính: khi gộp phần “lịch sử bản chụp” của PR #20 (`goiLichSu`), giao diện chèn được bản chụp tùy ý vào bảng `chot_goi` mà không qua kiểm tra | Tùy chọn từ giao diện đi qua `LoRung.optsKhoiPhuc`: chỉ giữ cách xử lý (`strategy`) và mã lô mới (`maMoi`); mọi tùy chọn nội bộ bị bỏ |
-
-## 2.3.0 — Dán từ Excel, mục lục gói in, phụ lục in lại / ký lại, gói Chỉ xem, in trong app, hướng dẫn lần đầu
-
-Sáu tính năng còn lại của kế hoạch 2.2 (đợt 1–3). Không đổi cấu trúc SQLite (vẫn v14), không đổi cách tính và nội dung các biểu mẫu BM-01…BM-20.
 
 ### Tính năng mới
 1. **Dán từ Excel** (tab Nhân công, Vận chuyển, khung phiếu cân): nút “Dán từ Excel” mở hộp dán; chép vùng ô trong Excel / Google Sheets **gồm dòng tiêu đề** rồi Ctrl+V. Dữ liệu đi qua đúng đường nạp file (cùng kiểm tra, cùng bảng so sánh thêm / cập nhật / bỏ, cùng bản nháp và nút Lưu). Số ghi kiểu Việt Nam (`12,5`, `1.234,5`) thành số; CCCD, điện thoại, số có 0 đứng đầu, ngày giữ nguyên. Thiếu tiêu đề hoặc thiếu cột bắt buộc thì báo tên cột và không nạp.
