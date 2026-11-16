@@ -262,6 +262,15 @@
     return {next, plan, doi: true, ownerId: oid, forestId: fid};
   }
 
-  const api = {KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
+  /* TÙY CHỌN KHÔI PHỤC NHẬN TỪ GIAO DIỆN (src/main.js import:preview / import:apply): chỉ giữ cách xử lý (strategy) và mã lô mới do người dùng xác nhận (maMoi: id → chuỗi).
+   * Tùy chọn nội bộ của tiến trình chính (ví dụ lịch sử bản chụp chép kèm khi khôi phục từ bản .sqlite) không bao giờ lấy từ giao diện, để giao diện không chèn được dữ liệu
+   * vào bảng gói đã chốt hay đổi cách ghi. */
+  function optsKhoiPhuc(o) {
+    const out = {}; if (!o || typeof o !== 'object') return out;
+    if (typeof o.strategy === 'string') out.strategy = o.strategy;
+    if (o.maMoi && typeof o.maMoi === 'object' && !Array.isArray(o.maMoi)) out.maMoi = Object.fromEntries(Object.entries(o.maMoi).filter(([, v]) => typeof v === 'string'));
+    return out;
+  }
+  const api = {optsKhoiPhuc, KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKLoRung = api;
 })(typeof self !== 'undefined' ? self : this);
