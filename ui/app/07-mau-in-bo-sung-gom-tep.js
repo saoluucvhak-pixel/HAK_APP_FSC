@@ -87,8 +87,18 @@ const vcInfo = (rec, h) => h && h.cuoc ? Object.assign({}, rec.info, {vanChuyen:
 function vcCtx(rec, ex, g) {
   const h = g && g.hd; if (!h) return [rec, ex];
   const r2 = h.cuoc ? Object.assign({}, rec, {info: vcInfo(rec, h)}) : rec;
-  if (!Object.keys(h.exp || {}).length) return [r2, ex];
-  const e = Object.assign({}, ex, h.exp), n = HAKHopDong.numbers(e); e._so = Object.assign({}, ex._so, {vc: n.vc, xn: n.xn}); return [r2, e];
+  let e = ex;
+  if (Object.keys(h.exp || {}).length) { e = Object.assign({}, ex, h.exp); const n = HAKHopDong.numbers(e); e._so = Object.assign({}, ex._so, {vc: n.vc, xn: n.xn}); }
+  /* Lô nhiều đội xe: mỗi đội xe là một bên vận chuyển ký hợp đồng riêng. Các đội xe cùng dùng MỘT số (để trống số riêng nên lấy số chung của lô, hoặc nhập trùng nhau) thì số hợp đồng vận chuyển
+   * và số biên bản xác nhận khối lượng thêm hậu tố .1, .2… theo thứ tự đội xe (07 → 07.1, 07/2026-HĐVC → 07.1/2026-HĐVC), cùng quy tắc với đội khai thác (soDoiSo). Số để trống giữ nguyên chỗ trống. */
+  const gs = rec.hdvc ? groupsDX(rec).filter(x => x.hd) : [], idx = gs.findIndex(x => x.hd.id === h.id);
+  if (gs.length > 1 && idx >= 0 && e._so) {
+    const gt = (x, k) => trim((x.hd.exp || {})[k] || ex[k] || ''), chung = k => !!gt(g, k) && gs.filter(x => gt(x, k) === gt(g, k)).length > 1, so = Object.assign({}, e._so);
+    if (so.vc && chung('soVC')) so.vc = soDoiSo(so.vc, idx + 1);
+    if (so.xn && chung('pcSo')) so.xn = soDoiSo(so.xn, idx + 1);
+    e = Object.assign({}, e, {_so: so});
+  }
+  return [r2, e];
 }
 const vaiTroDV = b => (b && b.loai === 'doanhnghiep') ? 'Doanh nghiệp' : (b && b.loai === 'nguoiKyVC' && ['Chủ xe', 'Tài xế'].includes(b.vaiTro)) ? b.vaiTro : 'Đơn vị vận chuyển';   // người ký cá nhân từ Đối tác: giữ vai trò đã khai (Chủ xe, Tài xế) để lời văn hợp đồng đúng
 /* khóa trạng thái in đợt 2 của BM-09 / BM-10: theo ĐỘI XE (đổi người ký không mất lịch sử in); hồ sơ cũ không có đội xe: theo người ký như trước */

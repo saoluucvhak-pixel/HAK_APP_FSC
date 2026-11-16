@@ -270,6 +270,7 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 **Số hợp đồng và năm trên biểu mẫu** (BM-01, BM-04, BM-09, BM-10, BM-14, BM-20): số in có dạng `<phần số>/<năm>-<hậu tố>`, ví dụ `015/2027-KT`.
 - Nhập số **đầy đủ** (có dấu “/” hoặc đã có hậu tố, ví dụ `015/2025-KT`): phần mềm **giữ nguyên**.
 - Chỉ nhập **phần số** (`015`): phần mềm ghép **năm lấy từ ngày ký của chính hợp đồng đó** và hậu tố. Hợp đồng khai thác (BM-01, BM-14, BM-20) và hợp đồng vận chuyển (BM-04) theo **Ngày ký hợp đồng**; Giấy ủy quyền theo ngày lập giấy (trống thì theo ngày ký hợp đồng); biên bản nghiệm thu, thanh lý và biên bản xác nhận khối lượng theo ngày lập biên bản.
+- **Lô nhiều đội xe:** các đội xe cùng dùng một số (để trống số riêng nên lấy số chung của lô, hoặc nhập trùng) thì số hợp đồng vận chuyển và số biên bản xác nhận khối lượng trên BM-04, BM-09, BM-10 tự thêm `.1`, `.2`… theo thứ tự đội xe (`07` → `07.1/2026-HĐVC`), như đội khai thác. Muốn dùng số khác: nhập số riêng cho từng đội xe ở tab Vận chuyển.
 - **Thiếu hoặc sai ngày ký**: năm để trống (`015/……-KT`), không tự điền năm cố định; khung “Số hợp đồng đầy đủ sẽ in (xem trước)” ở tab Xuất hồ sơ nêu rõ cần bổ sung ngày nào. Các dòng ngày để trống in “ngày ….. tháng ….. năm …….”.
 - BM-01, BM-14 và BM-20 của cùng hồ sơ giao khoán luôn tham chiếu **cùng một số** hợp đồng khai thác.
 

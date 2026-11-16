@@ -1,6 +1,6 @@
 # Nhật ký thay đổi
 
-## 2.2.0 — Bản ổn định sau v1.4.33 (dự kiến phát hành; số phiên bản chờ người phụ trách duyệt, chưa gắn thẻ)
+## 2.2.0 — Bản ổn định sau v1.4.33
 
 Bản 2.2.0 gồm phần này và bốn phần “2.2.0 (phần)” bên dưới, cùng các bản 2.1.0 và 2.0.0 (chưa từng phát hành công khai; bản công khai gần nhất là v1.4.33).
 
@@ -11,7 +11,7 @@ Bản 2.2.0 gồm phần này và bốn phần “2.2.0 (phần)” bên dưới
 ### Sửa lỗi
 - **Đóng ứng dụng và chọn “Bỏ thay đổi và đóng” mà lần mở sau vẫn hỏi khôi phục bản nháp** (lộ ra ở CI Windows, lượt 141): sau khi bản nháp tạm được xóa lúc đóng, bộ hẹn giờ tự lưu 1 giây của giao diện có thể ghi lại nó trước khi cửa sổ kịp đóng, và lần xóa có thể chưa kịp ghi xuống đĩa. Nay việc tự lưu tạm dừng hẳn khi đang đóng có chủ ý, và ứng dụng ép ghi bộ nhớ trình duyệt xuống đĩa trước khi đóng. Hồi quy: `scripts/e2e-nhap-tam.js`.
 
-- **Nhiều đội xe cùng in số chung của lô:** đội xe để trống số riêng thì in số hợp đồng vận chuyển / số biên bản xác nhận khối lượng chung của lô, nên hai bên vận chuyển khác nhau có thể mang cùng một số mà không có cảnh báo. Nay màn Kiểm tra cảnh báo (không chặn xuất), nêu tên các đội xe, số và biểu mẫu. Phần mềm **không** tự thêm hậu tố để không đổi số của văn bản đã in. Hồi quy: `tests/phien-ban.test.js`, `scripts/e2e-nghiemthu-dot2.js`.
+- **Số văn bản theo đội xe (thay đổi hành vi):** lô có từ hai đội xe mà các đội cùng dùng một số (để trống số riêng nên lấy số chung của lô, hoặc nhập trùng) thì số hợp đồng vận chuyển và số biên bản xác nhận khối lượng trên BM-04, BM-09, BM-10 **tự thêm hậu tố .1, .2…** theo thứ tự đội xe (07 → 07.1, 07/2026-HĐVC → 07.1/2026-HĐVC), cùng quy tắc với đội khai thác. Trước đây hai bên vận chuyển khác nhau mang cùng một số. Lô một đội xe và đội xe đã nhập số riêng không đổi. **Lưu ý:** lô nhiều đội xe đã in BM-04/09/10 bằng số chung, khi in lại sẽ ra số có hậu tố; muốn giữ số cũ thì nhập số riêng cho từng đội xe ở tab Vận chuyển. Dữ liệu và dấu vân tay của lô đã chốt không đổi. Hồi quy: `scripts/e2e-nghiemthu-dot2.js`.
 - **Chế độ kiểm thử:** file tải về được ghi ở thư mục tạm rồi đổi tên khi xong, để bộ kiểm thử không đọc phải file đang ghi dở (CI Windows lượt 142, `e2e-haidot`). Không ảnh hưởng bản cài.
 
 ### Kiểm thử

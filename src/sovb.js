@@ -57,13 +57,6 @@
     const out = [], by = new Map(); [['doi', f.doi], ['doiXe', f.hdvc]].forEach(([cap, ds]) => (ds || []).forEach(d => LOAI.filter(l => l.cap === cap).forEach(l => { const v = s((d.exp || {})[l.truong]); if (!v) return; const k = l.truong + '|' + v.toUpperCase(); if (by.has(k) && by.get(k) !== d.id) { if (!out.some(x => x.so === v)) out.push({so: v, truong: l.truong, ten: s(d.ten) || 'đội'}); } else by.set(k, d.id); })));
     return out;
   }
-  /* NHIỀU ĐỘI XE CÙNG IN SỐ CHUNG CỦA LÔ: đội xe để trống số riêng thì in số chung của lô (f.exp). Từ hai đội xe trở lên cùng để trống trong khi lô có số chung → các hợp đồng vận chuyển /
-   * biên bản xác nhận khối lượng của các bên vận chuyển KHÁC NHAU mang cùng một số. Chỉ cảnh báo (không đổi số đã in, không tự thêm hậu tố). Trả [{so, truong, ma, mau, doi: [tên đội xe]}]. */
-  function chungDoiXe(f) {
-    const hd = (f && f.hdvc) || [], out = []; if (hd.length < 2) return out;
-    LOAI.filter(l => l.cap === 'doiXe').forEach(l => { const chung = s(((f || {}).exp || {})[l.truong]); if (!chung) return; const ds = hd.filter(h => !s((h.exp || {})[l.truong])); if (ds.length > 1) out.push({so: chung, truong: l.truong, ma: l.ma, mau: l.ten, doi: ds.map((h, i) => s(h.ten) || 'Đội xe ' + (hd.indexOf(h) + 1))}); });
-    return out;
-  }
   /* số văn bản trùng giữa các lô: cùng ô số, cùng nội dung ở lô khác. Trả [{so, truong, ma (lô kia)}] cho lô (oid, fid) */
   function trung(db, oid, fid) {
     const out = [], seen = new Map(), lots = [];
@@ -74,6 +67,6 @@
     nhan(me.f).forEach(([t, v]) => { const k = t + '|' + v.toUpperCase(); if (seen.has(k) && !out.some(x => x.so === v && x.truong === t)) out.push({so: v, truong: t, ma: seen.get(k)}); });
     return out;
   }
-  const api = {LOAI, maLo, so, capStt, daCap, deXuat, dien, khoiTaoLichSu, trungTrongLo, chungDoiXe, trung};
+  const api = {LOAI, maLo, so, capStt, daCap, deXuat, dien, khoiTaoLichSu, trungTrongLo, trung};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKSoVB = api;
 })(typeof self !== 'undefined' ? self : this);
