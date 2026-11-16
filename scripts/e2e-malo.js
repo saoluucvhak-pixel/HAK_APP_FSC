@@ -64,7 +64,7 @@ const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want)
   const ed = await dbOf(w); ed.rs.o1.forests[clone2.id].pc.push(P(2, '09/10/2026', '92C-12345', 'SUA', 77, 'R-A-BAN-SAO')); await save(w, ed); const edited = clone(await dbOf(w));
   await app.close();
   ({app, w} = await launch({HAKQN_LOT_FILE: path.join(lotDir, fileNew)}, 'may1'));
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on');
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on');
   let box = await w.innerText('#impBody');
   ok('khôi phục lô mới: xác định đúng lô đích (không mâu thuẫn ID/mã)', !/Dừng/.test(box) && /đã tồn tại/.test(box) && /R-A-BAN-SAO/.test(box), box.slice(0, 300));
   await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(700);
@@ -77,7 +77,7 @@ const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want)
   const pkgX = L.exportLot(Object.assign(clone(SEED), {}), 'o1', 'fa'); pkgX.lo.nc = [{_row: 2, maRung: 'R-A', ten: 'TỔ TRƯỞNG', chucDanh: 'Tổ trưởng'}]; pkgX.dungChung = {dinhMuc: {'Tổ trưởng': {qa: '1 bộ (gói)'}}, bienAlias: {'92c12345': '92C-99999'}}; pkgX.kiemTra.nc = 1;
   const fileX = path.join(dir, 'x.json'); fs.writeFileSync(fileX, JSON.stringify(L.seal(pkgX, sha)));
   ({app, w} = await launch({HAKQN_LOT_FILE: fileX}, 'may2')); await save(w, Object.assign(clone(SEED), {rs: {}, dinhMuc: {'Tổ trưởng': {qa: '2 bộ (máy đích)'}}, bienAlias: {'92c12345': '92C-12345'}}));
-  await w.reload(); await w.waitForSelector('#side'); await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); box = await w.innerText('#impBody');
+  await w.reload(); await w.waitForSelector('#side'); await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); box = await w.innerText('#impBody');
   ok('thiết lập khác: nêu máy đích dùng bản của mình, giá trị hai bên và phần hồ sơ có thể khác', /giữ nguyên thiết lập của mình/.test(box) && /2 bộ \(máy đích\)/.test(box) && /1 bộ \(gói\)/.test(box) && /Bảng cấp phát BHLĐ/.test(box) && /Ghép biển số/.test(box), box.slice(0, 900));
   await w.click('[data-act=lotGo]'); await w.waitForTimeout(600); db = await dbOf(w);
   ok('sau khôi phục: thiết lập dùng chung của máy đích giữ nguyên', db.dinhMuc['Tổ trưởng'].qa === '2 bộ (máy đích)' && db.bienAlias['92c12345'] === '92C-12345');

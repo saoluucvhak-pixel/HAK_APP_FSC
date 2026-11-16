@@ -502,7 +502,6 @@ document.addEventListener('keydown', async e => {
     if (open('rpBox')) { rpClose(); e.preventDefault(); return; }
     if (open('lkBox')) { lkClose(); e.preventDefault(); return; }
     if (open('guideBox')) { document.getElementById('guideBox').classList.remove('on'); e.preventDefault(); return; }
-    const mm = document.getElementById('moreMenu'); if (mm && mm.open) { mm.open = false; e.preventDefault(); }
   }
 });
 window.addEventListener('online', () => { if ($('#lkBox').classList.contains('on') && lk.view !== 'preview') lkRender(); });

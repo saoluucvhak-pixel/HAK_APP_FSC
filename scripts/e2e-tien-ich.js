@@ -29,7 +29,7 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   ok('Ẩn hướng dẫn: bảng biến mất', !(await w.$('#huongDan')));
   await w.reload(); await w.waitForSelector('#side'); await w.waitForTimeout(300);
   ok('mở lại trang: vẫn ẩn (ghi nhớ lựa chọn)', !(await w.$('#huongDan')));
-  await w.click('#moreMenu summary'); await w.click('#hdHienBtn'); await w.waitForSelector('#huongDan');
+  await w.click('#navSet'); await w.click('#setTab_sethelp'); await w.click('#hdHienBtn'); await w.waitForSelector('#huongDan');
   ok('⋯ Thêm → Hướng dẫn bắt đầu: hiện lại', !!(await w.$('#huongDan')));
   const A = M.ensureForest(lot('fa', 'R-A', {exp: EXP1, pc: [], kl: null}));
   await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.waitForSelector('#huongDan');

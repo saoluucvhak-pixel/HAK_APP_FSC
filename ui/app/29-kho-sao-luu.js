@@ -13,8 +13,14 @@ function dbThayToanBo(moi) {
   doiDuLieu();
 }
 function panelKhoSaoLuu() {
-  if (!HB) return '<div class="card"><div class="msg warn">Kho sao lưu chỉ có ở bản cài trên Windows. Bản chạy trong trình duyệt: dùng ⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json).</div></div>';
-  return '<div class="card"><h2 style="margin-top:0">Sao lưu và khôi phục</h2>' + (ksl.msg ? '<div class="msg ' + ksl.msg[1] + '" id="kslMsg">' + esc(ksl.msg[0]) + '</div>' : '') + '<div id="kslBox" class="mut">Đang đọc thư mục sao lưu…</div></div>';
+  /* Sao lưu / khôi phục bằng FILE (trước đây ở menu “⋯ Thêm”): sao lưu toàn bộ, khôi phục toàn bộ từ .json, khôi phục một lô. Ô chọn file nằm sẵn ở khung trang (#restoreInput). */
+  const tuFile = '<div class="card" style="margin:10px 0" id="kslTuFile"><h3 style="margin:0 0 6px">Sao lưu và khôi phục bằng file</h3>' +
+    '<p class="mut" style="margin:0 0 8px">Dùng khi chuyển dữ liệu sang máy khác hoặc khôi phục từ file đã lưu ở ổ ngoài. Mọi lần khôi phục đều có màn xem trước và phần mềm tự sao lưu dữ liệu hiện tại trước khi ghi.</p>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="backup" id="backupAllBtn">Sao lưu toàn bộ dữ liệu' + (HB ? ' (.json + .sqlite)' : ' (.json)') + '</button>' +
+    '<label class="btn ghost" for="restoreInput" id="restoreLbl" style="cursor:pointer">Khôi phục toàn bộ từ file .json…</label>' +
+    '<button class="btn ghost" data-act="lotRestore" id="lotRestoreBtn">Khôi phục lô rừng…</button></div></div>';
+  if (!HB) return '<div class="card"><h2 style="margin-top:0">Sao lưu và khôi phục</h2><div class="msg warn">Bản chạy trong trình duyệt lưu dữ liệu trong trình duyệt: hãy sao lưu ra file thường xuyên. Kho sao lưu tự động chỉ có ở bản cài trên Windows.</div>' + tuFile + '</div>';
+  return '<div class="card"><h2 style="margin-top:0">Sao lưu và khôi phục</h2>' + (ksl.msg ? '<div class="msg ' + ksl.msg[1] + '" id="kslMsg">' + esc(ksl.msg[0]) + '</div>' : '') + tuFile + '<div id="kslBox" class="mut">Đang đọc thư mục sao lưu…</div></div>';
 }
 function kslPaint() {
   const box = document.getElementById('kslBox'), d = ksl.d; if (!box || !d) return;
@@ -28,7 +34,7 @@ function kslPaint() {
     '<div style="margin-top:4px">Sao lưu toàn bộ (.json + .sqlite, nên lưu ra ổ khác): ' + toanBo + '</div>' +
     '<div class="mut" style="margin-top:4px;word-break:break-all">Thư mục: ' + d.dirs.map(x => '<code>' + esc(x) + '</code>').join(' · ') + '</div>' +
     (d.loi && d.loi.length ? '<div class="msg warn" style="margin-top:6px">Không đọc được: ' + d.loi.map(x => esc(x.dir) + ' (' + esc(x.error) + ')').join('; ') + '</div>' : '') +
-    '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn" data-act="backup" id="kslToanBo">Sao lưu toàn bộ ngay</button><button class="btn ghost" data-act="kslAuto" id="kslAutoBtn"' + (au.keep ? '' : ' disabled') + '>Tự sao lưu ngay</button>' +
+    '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-act="kslAuto" id="kslAutoBtn"' + (au.keep ? '' : ' disabled') + '>Tự sao lưu ngay</button>' +
     '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button><button class="btn ghost" data-act="kslTai">Tải lại danh sách</button></div></div>' +
     '<div class="card" style="margin:10px 0"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Các bản sao lưu trên máy</h3>' +
     '<span class="mut" id="kslTong">' + d.tong.soBan + ' bản · ' + kslMB(d.tong.bytes) + '</span></div>' +
@@ -121,8 +127,17 @@ document.addEventListener('keydown', e => {
     if (r && r.ok === false && r.error) note('Chưa lưu được: ' + r.error, 'err');
   }, 0);
 });
-/* Menu “⋯ Thêm”: khi thanh điều hướng xuống dòng (cửa sổ hẹp), nút nằm sát mép trái nên bảng chọn canh phải bị cắt mất phần chữ. Đo sau khi mở, tràn mép trái thì canh trái. */
-document.addEventListener('DOMContentLoaded', () => {
-  const m = document.getElementById('moreMenu'); if (!m) return;
-  m.addEventListener('toggle', () => { m.classList.remove('trai'); if (!m.open) return; const p = m.querySelector('.pop'); if (p && p.getBoundingClientRect().left < 8) m.classList.add('trai'); });
-});
+/* ===== Cài đặt → Giao diện (bảng màu, sáng / tối) và Trợ giúp: các mục trước đây ở menu “⋯ Thêm” ===== */
+function panelSetUi() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  setTimeout(() => setSkin(document.documentElement.dataset.skin), 0);   // vẽ danh sách bảng màu vào #skinPick sau khi khung đã vào trang
+  return '<div class="card"><h2 style="margin-top:0">Giao diện</h2>' +
+    '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 6px">Chế độ sáng / tối</h3><div class="row" style="gap:8px"><button class="btn' + (dark ? ' ghost' : '') + '" data-act="themeSet" data-theme-v="light" id="themeLight">Sáng</button><button class="btn' + (dark ? '' : ' ghost') + '" data-act="themeSet" data-theme-v="dark" id="themeDark">Tối</button></div></div>' +
+    '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 6px">Bảng màu</h3><div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu" style="max-width:420px;padding:0"></div></div></div>';
+}
+function panelSetHelp() {
+  return '<div class="card"><h2 style="margin-top:0">Trợ giúp</h2>' +
+    '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">Hướng dẫn sử dụng</h3><p class="mut" style="margin:0 0 8px">Tài liệu đầy đủ theo từng màn hình, mở ngay trong phần mềm.</p><button class="btn" data-act="guide" id="guideBtn">Mở hướng dẫn sử dụng</button></div>' +
+    '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">Hướng dẫn bắt đầu</h3><p class="mut" style="margin:0 0 8px">Sáu bước đầu tiên, hiện ở màn Tổng quan và tự đánh dấu bước đã xong.</p><button class="btn ghost" data-act="hdHien" id="hdHienBtn">Hiện hướng dẫn bắt đầu ở Tổng quan</button></div>' +
+    '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">Phím tắt</h3><div class="mut"><b>Ctrl+S</b> lưu lô đang mở · <b>Ctrl+K</b> tìm kiếm toàn cục · <b>Esc</b> đóng hộp thoại</div></div></div>';
+}

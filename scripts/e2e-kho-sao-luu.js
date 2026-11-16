@@ -112,12 +112,17 @@ const moKho = async w => { await w.click('#navSet'); await w.click('#setTab_setb
   ok('Ctrl+S khi đang gõ: ghi nhận ô đang nhập và lưu lô vào SQLite', await settle(w, async () => (await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.tenRung)) === 'Rừng đổi tên bằng Ctrl+S'), await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa.info.tenRung));
   ok('sau Ctrl+S không còn thay đổi chưa lưu', (await w.evaluate(() => window.__stDirty().length)) === 0);
 
-  // menu ⋯ Thêm ở cửa sổ hẹp không bị cắt mép trái
-  await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].setContentSize(1100, 720)); await w.waitForTimeout(300);
-  await w.click('#moreMenu summary'); await w.waitForTimeout(150);
-  const box = await w.evaluate(() => { const r = document.querySelector('#moreMenu .pop').getBoundingClientRect(); return {l: Math.round(r.left), r: Math.round(r.right), w: window.innerWidth}; });
-  ok('menu ⋯ Thêm nằm trọn trong cửa sổ', box.l >= 0 && box.r <= box.w, JSON.stringify(box));
-  ok('menu có mục Sao lưu và khôi phục', await w.isVisible('#openSetBkBtn'));
+  // thanh trên cùng một dòng, không còn menu ⋯ Thêm, không nút nào bị khuất ở cửa sổ 1366 (mặc định) và 1100
+  for (const rong of [1366, 1100]) {
+    await app.evaluate(({BrowserWindow}, r) => BrowserWindow.getAllWindows()[0].setContentSize(r, 720), rong); await w.waitForTimeout(300);
+    const hd = await w.evaluate(() => { const h = document.querySelector('header.top').getBoundingClientRect(), bs = [...document.querySelectorAll('header.top .nb, header.top .hbtn')].filter(b => !b.hidden).map(b => b.getBoundingClientRect());
+      return {cao: Math.round(h.height), trai: Math.round(Math.min(...bs.map(r => r.left))), phai: Math.round(Math.max(...bs.map(r => r.right))), dong: new Set(bs.map(r => Math.round(r.top))).size, w: window.innerWidth, menu: !!document.getElementById('moreMenu')}; });
+    ok('cửa sổ ' + rong + ': thanh trên cùng một dòng, mọi nút nằm trọn trong cửa sổ, không còn menu ⋯ Thêm', hd.dong === 1 && hd.cao <= 64 && hd.trai >= 0 && hd.phai <= hd.w && !hd.menu, JSON.stringify(hd));
+  }
+  await w.click('#navSet');
+  ok('Cài đặt có tab Sao lưu và khôi phục, Giao diện, Trợ giúp (các mục của menu cũ)', (await w.isVisible('#setTab_setbk')) && (await w.isVisible('#setTab_setui')) && (await w.isVisible('#setTab_sethelp')));
+  await w.click('#setTab_setbk'); await w.waitForSelector('#kslTuFile');
+  ok('tab Sao lưu và khôi phục có: Sao lưu toàn bộ, Khôi phục toàn bộ từ file, Khôi phục lô rừng', (await w.isVisible('#backupAllBtn')) && (await w.isVisible('#restoreLbl')) && (await w.isVisible('#lotRestoreBtn')));
   await app.close();
 
   /* D1: lô đang có thay đổi CHƯA LƯU rồi khôi phục chính lô đó từ gói sao lưu lô → lần lưu kế tiếp (ở nơi khác) không được ghi lại bản trước khi khôi phục.
@@ -134,7 +139,9 @@ const moKho = async w => { await w.click('#navSet'); await w.click('#setTab_setb
   ({app, w} = await launch({HAKQN_LOT_FILE: goi}));
   await moLo(w); await w.fill('#forestForm input[name=tenRung]', 'Rừng C'); await w.keyboard.press('Tab');
   ok('D1: lô có thay đổi chưa lưu (Rừng C), SQLite còn Rừng B', (await w.evaluate(() => window.__stDirty().length)) === 1 && (await tenDb(w)) === 'Rừng B');
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('input[name=lotAct][value=thay]'); await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]');
+  await w.click('#navSet'); await w.waitForSelector('#stGDrop');
+  ok('D1: rời lô sang Cài đặt khi còn thay đổi chưa lưu: hỏi Lưu / Bỏ / Quay lại', await w.isVisible('#stGSave') && await w.isVisible('#stGBack'));
+  await w.click('#stGDrop'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('input[name=lotAct][value=thay]'); await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]');
   await settle(w, async () => (await tenDb(w)) === 'Rừng A');
   ok('D1: khôi phục lô (thay) ghi bản trong gói (Rừng A), không còn dấu chưa lưu', (await tenDb(w)) === 'Rừng A' && (await w.evaluate(() => window.__stDirty().length)) === 0, await tenDb(w));
   const s0 = await w.evaluate(() => window.__saveStats.delta + window.__saveStats.full);

@@ -48,7 +48,7 @@ function loadDb() {
   return withDefaults({v: 2, rs: {}});
 }
 let db = loadDb();
-if (HB) { document.addEventListener('DOMContentLoaded', () => { const l = document.getElementById('restoreLbl'); if (l) l.firstChild.textContent = 'Khôi phục toàn bộ dữ liệu (.json)'; document.querySelectorAll('.deskOnly').forEach(x => { x.hidden = false; }); }); }
+if (HB) { document.addEventListener('DOMContentLoaded', () => { document.querySelectorAll('.deskOnly').forEach(x => { x.hidden = false; }); }); }
 let saveSt = {text: '', err: false}, saveTimer = null;
 function showSave(text, err) { saveSt = {text, err: !!err}; const el = document.getElementById('saveSt'); if (el) { el.textContent = text; el.classList.toggle('err', !!err); } }
 const hhmm = () => new Date().toLocaleTimeString('vi-VN');

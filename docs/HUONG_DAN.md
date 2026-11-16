@@ -36,7 +36,7 @@ Tài liệu dành cho người nhập liệu và người lập hồ sơ. Phần
 | 5 | Chọn cách tính cước, **nạp Excel xe**, rồi **nạp Excel phiếu cân**, chọn **địa chỉ giao hàng** | Lô → tab Vận chuyển |
 | 6 | Mở **Kiểm tra trước khi xuất**, xử lý các mục chặn và mục cần đối chiếu | Lô → tab Kiểm tra trước khi xuất |
 | 7 | Nhập thông số biên bản, **tải biểu mẫu** (từng file hoặc ZIP) | Lô → tab Xuất hồ sơ |
-| 8 | **Sao lưu** lô hoặc toàn bộ dữ liệu | Sao lưu lô rừng / ⋯ Thêm → Sao lưu |
+| 8 | **Sao lưu** lô hoặc toàn bộ dữ liệu | Sao lưu lô rừng / Cài đặt → Sao lưu và khôi phục |
 
 Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa chỉ giao riêng; chủ rừng chỉ giữ thông tin chung (họ tên, CCCD, địa chỉ).
 
@@ -284,16 +284,16 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 
 **Tự sao lưu hằng ngày**: mỗi ngày, lần đầu mở phần mềm (khi đã có hồ sơ) sẽ tự lưu một bản `tu-dong-năm-tháng-ngày.sqlite` vào thư mục sao lưu và chỉ giữ số bản gần nhất (mặc định 7; đổi hoặc tắt ở **Cài đặt hệ thống → Tự sao lưu hằng ngày**). Bản sao được kiểm tra mở được trước khi giữ lại; các bản sao lưu khác không bị xóa. Khi **đóng phần mềm** (và mỗi 2 giờ nếu để máy mở), bản của hôm nay được **làm mới** nếu dữ liệu đã đổi, nên bản tự sao lưu chứa cả việc làm trong ngày; bản mới được ghi ra file tạm và kiểm tra xong mới thay bản cũ. Bản này nằm trên cùng máy nên **không thay cho Sao lưu toàn bộ ra ổ khác/USB**. Khôi phục từ bản tự động: dùng **Kho sao lưu** dưới đây.
 
-**Kho sao lưu** (**Cài đặt → Sao lưu và khôi phục**, hoặc bấm nhãn **“Tự sao lưu: …”** ở thanh ngay dưới thanh trên cùng, hoặc **⋯ Thêm → Sao lưu và khôi phục**): một nơi xem mọi bản sao lưu đang có trong thư mục sao lưu và thư mục sao lưu thứ hai.
+**Kho sao lưu** (**Cài đặt → Sao lưu và khôi phục**, hoặc bấm nhãn **“Tự sao lưu: …”** ở thanh ngay dưới thanh trên cùng, hoặc **Cài đặt → Sao lưu và khôi phục**): một nơi xem mọi bản sao lưu đang có trong thư mục sao lưu và thư mục sao lưu thứ hai.
 - **Tình trạng**: bản tự sao lưu gần nhất, lần sao lưu toàn bộ gần nhất (có nhắc khi đến hạn), có thay đổi nào chưa vào bản tự sao lưu của hôm nay không. Nút **Sao lưu toàn bộ ngay**, **Tự sao lưu ngay**, **Mở thư mục sao lưu**.
 - **Danh sách**: thời điểm, loại (Tự động hằng ngày · Sao lưu toàn bộ · Trước khi nâng cấp · Trước khi khôi phục · Trước khi khôi phục lô · Trước khi xóa), tên file, dung lượng; tổng số bản và tổng dung lượng; lọc theo loại. File tên khác trong thư mục không được liệt kê và không bao giờ bị đụng tới.
 - **Kiểm tra**: mở bản sao lưu ở chế độ chỉ đọc, kiểm tra toàn vẹn, phiên bản cấu trúc và số chủ rừng / lô. Bản hỏng báo rõ lý do.
 - **Khôi phục…** từ bản `.sqlite`: màn xem trước so số liệu đang có trên máy với số liệu trong bản sao lưu → **Thay toàn bộ bằng bản này**. Phần mềm sao lưu dữ liệu hiện tại trước khi ghi (bản “Trước khi khôi phục”, cũng nằm trong kho nên **hoàn tác được** bằng cách khôi phục lại từ bản đó), kiểm tra hồ sơ đã chốt còn toàn vẹn, rồi ghi trong một giao dịch. Bản sao lưu của phiên bản phần mềm cũ được nâng cấp trên một bản chép tạm; file sao lưu gốc không bị sửa. Bản chụp của các lần chốt trước có trong bản sao lưu được khôi phục theo. Bản tra cứu Google Sheets của máy giữ nguyên. Bản `.json` mở màn xem trước của **Khôi phục toàn bộ** (chọn giữ / ghi đè / giữ cả hai / thay toàn bộ).
 - **Xóa**: xóa một bản sao lưu để giải phóng ổ đĩa (có hỏi lại; không hoàn tác được). Các bản “Trước khi khôi phục”, “Trước khi khôi phục lô”, “Trước khi xóa” tự giữ 20 bản gần nhất mỗi loại.
 
-**Sao lưu toàn bộ**: **⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json)** → chọn thư mục → tạo 2 file cùng tên `.json` và `.sqlite`.
+**Sao lưu toàn bộ**: **Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu** → chọn thư mục → tạo 2 file cùng tên `.json` và `.sqlite`.
 
-**Khôi phục toàn bộ**: **⋯ Thêm → Khôi phục toàn bộ dữ liệu (.json)** (cũng dùng để nhập bản sao lưu từ bản HTML cũ). Màn hình xem trước cho biết số liệu trong file và trên máy, và với từng chủ/lô: **THÊM** (chưa có), **TRÙNG** (đã có), **GIỮ** (có trên máy, không có trong file). Chọn cách xử lý:
+**Khôi phục toàn bộ**: **Cài đặt → Sao lưu và khôi phục → Khôi phục toàn bộ từ file .json** (cũng dùng để nhập bản sao lưu từ bản HTML cũ). Màn hình xem trước cho biết số liệu trong file và trên máy, và với từng chủ/lô: **THÊM** (chưa có), **TRÙNG** (đã có), **GIỮ** (có trên máy, không có trong file). Chọn cách xử lý:
 - **Giữ bản trên máy, chỉ thêm mới**.
 - **Ghi đè lô trùng**: chỉ thay **đúng các lô trùng**, giữ lô khác của chủ và chủ khác; hồ sơ chủ rừng của máy được giữ.
 - **Giữ cả hai**: lô trùng được thêm thành lô **mới** và bạn **xác nhận mã mới** cho từng lô (gợi ý sẵn, ví dụ `R1-2`; mã bị từ chối nếu trùng lô đã có, lô khác trong file hoặc mã cũ).
@@ -305,13 +305,13 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 
 **Mục lục, gói Chỉ xem, in:** gói hồ sơ tải về có tờ `00_Muc_luc.docx`. Tab Xuất hồ sơ → khung **Chia sẻ và in**: **Tải gói Chỉ xem (.zip)** (mở `XEM_HO_SO.html` bằng trình duyệt; người nhận không sửa và không nhập lại được), **In tóm tắt hồ sơ**, **Phụ lục in lại, ký lại**. Màn Báo cáo có nút **In báo cáo**. Biểu mẫu Word vẫn in bằng Word.
 
-**Hướng dẫn bắt đầu:** màn Tổng quan hiện 6 bước cho người mới; ẩn được, mở lại ở **⋯ Thêm → Hướng dẫn bắt đầu**.
+**Hướng dẫn bắt đầu:** màn Tổng quan hiện 6 bước cho người mới; ẩn được, mở lại ở **Cài đặt → Trợ giúp → Hướng dẫn bắt đầu**.
 
 **Sao lưu một lô rừng** (dùng khi chuyển lô sang máy khác, hoặc lưu riêng một lô): mở lô → **Sao lưu lô rừng** → chọn nơi lưu bằng hộp thoại Windows. File `HAKQN_LoRung_<MaLo>_<Ngày>.json` chứa đúng **một** lô: thông tin, giấy tờ, nhân công, xe, phiếu cân, hợp đồng, đơn giá, thông số biểu mẫu, dấu vết nhập, **địa chỉ giao hàng đã chốt** (để BM-04 vẫn đúng sau khi chuyển máy), nhận diện chủ rừng và các thiết lập dùng chung lô cần. File **không** chứa lô khác, chủ khác, bản tra cứu Google Sheets hay thông tin đăng nhập.
 
 **Phạm vi gói đối với lô đã chốt.** Gói sao lưu riêng lô chỉ mang **bản chốt hiện hành**: một bản chụp (gói đóng băng) của lần chốt đang có hiệu lực, kèm phiên bản và dấu vân tay. Nếu lô đã chốt nhiều lần (chốt → mở khóa có lý do → sửa → chốt lại), bản chụp của các lần chốt **trước** không nằm trong gói; chúng vẫn nằm ở cơ sở dữ liệu của máy đã chốt (và trong **Sao lưu toàn bộ** dạng SQLite của máy đó). **Nhật ký vòng đời** đi theo gói: từng lần chốt (phiên bản, dấu vân tay), từng lần mở khóa (lý do, phiên bản và dấu vân tay của bản bị mở). Vì vậy trên máy đích vẫn đối chiếu được dấu vân tay của bản chốt cũ với máy nguồn, nhưng không mở lại được nội dung bản chốt cũ. Thông báo sau khi sao lưu và màn xem trước khi khôi phục đều ghi rõ phạm vi này. Cần giữ đủ mọi bản chụp thì dùng **Sao lưu toàn bộ**: file `.sqlite` mang mọi bản chụp; khôi phục bằng cách chép file đó thành `hakqn.sqlite` vào một thư mục rồi chọn thư mục đó ở **Cài đặt → Thư mục dữ liệu → Dùng dữ liệu có sẵn**. Khung **Vòng đời lô** liệt kê các bản chụp đang có trên máy và báo bản nào hỏng.
 
-**Khôi phục một lô rừng**: **⋯ Thêm → Khôi phục lô rừng…** → chọn file. Màn hình xem trước nêu chủ rừng và mã lô đích, thời điểm sao lưu, số nhân công, xe, phiếu cân, tổng tấn:
+**Khôi phục một lô rừng**: **Cài đặt → Sao lưu và khôi phục → Khôi phục lô rừng…** → chọn file. Màn hình xem trước nêu chủ rừng và mã lô đích, thời điểm sao lưu, số nhân công, xe, phiếu cân, tổng tấn:
 - Chủ đã có thì lô được **thêm vào đúng chủ đó**; chưa có thì **tạo chủ mới**.
 - Lô đã tồn tại: mặc định **giữ bản hiện có**; chọn **thay** thì chỉ thay đúng lô đó, kèm bảng **trước / sau** (nhân công, xe, phiếu cân, tổng tấn, giấy tờ, cách tính cước, địa chỉ giao).
 - Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: **máy đích giữ thiết lập của mình**; màn hình nêu giá trị hai bên và phần hồ sơ có thể khác. Mục máy chưa có sẽ được bổ sung.
@@ -397,7 +397,7 @@ Tab **Xuất hồ sơ** có bảng **Quy trình hồ sơ theo đợt** ở đầ
 
 
 ## Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu
-Mở **⋯ Thêm → Cài đặt hệ thống**.
+Mở **Cài đặt → Hệ thống**.
 - **Thư mục dữ liệu**: nơi lưu cơ sở dữ liệu (`hakqn.sqlite`). Bấm *Chọn thư mục…* để đổi: phần mềm sao chép toàn bộ dữ liệu sang thư mục mới rồi dùng từ đó; **bản cũ không bị xóa** (xóa tay khi chắc chắn không cần). Nếu thư mục mới đã có dữ liệu HAKQN, phần mềm hỏi: dùng dữ liệu có sẵn đó, ghi đè bằng dữ liệu đang dùng (bản có sẵn được lưu lại trước), hoặc hủy. *Về mặc định* đưa dữ liệu về thư mục của ứng dụng.
 - **Thư mục sao lưu**: bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu hằng ngày, **Sao lưu toàn bộ dữ liệu** (lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc USB.
 - Thư mục phải có sẵn và ghi được, nếu không phần mềm báo lỗi và giữ cài đặt cũ. Nếu thư mục đã chọn bị xóa hoặc ổ không còn, phần mềm dùng vị trí mặc định và nêu rõ trong màn Cài đặt.
@@ -409,7 +409,7 @@ Mở **⋯ Thêm → Cài đặt hệ thống**.
 
 
 ## Đổi thư mục dữ liệu an toàn, ổ dữ liệu không truy cập được, sao lưu đáng tin cậy
-**Đổi thư mục dữ liệu** (⋯ Thêm → Cài đặt hệ thống). Phần mềm làm theo thứ tự và chỉ chuyển khi mọi bước đã qua kiểm tra:
+**Đổi thư mục dữ liệu** (Cài đặt → Hệ thống). Phần mềm làm theo thứ tự và chỉ chuyển khi mọi bước đã qua kiểm tra:
 1. Tạo bản sao dữ liệu đang dùng thành **file tạm** ở thư mục đích, kiểm tra toàn vẹn, phiên bản cấu trúc và số bản ghi từng bảng.
 2. Mở thử cơ sở dữ liệu mới và đọc thử; **chỉ sau đó mới lưu đường dẫn mới**. Lỗi ở bất kỳ bước nào: hoàn tác, vẫn làm việc ở vị trí cũ, dữ liệu cũ không bị đổi.
 3. Thư mục đích đã có dữ liệu: hộp thoại nêu số chủ rừng, số lô, ngày sửa của cả hai bên và cho chọn **Dùng dữ liệu có sẵn**, **Ghi đè bằng dữ liệu đang dùng** hoặc **Hủy**. *Dùng dữ liệu có sẵn* kiểm tra đúng cơ sở dữ liệu HAKQN, không hỏng, phiên bản cấu trúc được hỗ trợ. *Ghi đè* trước hết tạo **bản dự phòng nhất quán của đích** (gồm cả giao dịch đã commit còn trong nhật ký WAL) vào thư mục sao lưu và **kiểm tra mở được** rồi mới thay; đích đang được chương trình khác dùng thì dừng và báo; đích hỏng hoặc không phải HAKQN thì không ghi đè.

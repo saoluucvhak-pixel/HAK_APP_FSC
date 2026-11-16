@@ -36,7 +36,7 @@ const settle = async (w, cond, ms = 8000) => { const t = Date.now(); while (Date
   await settle(w, () => autos().length === 7);
   ok('xoay vòng: chỉ giữ 7 bản tự động gần nhất (mặc định)', autos().length === 7 && autos()[6] === today && !autos().includes('tu-dong-2020-01-01.sqlite'), autos().join(','));
   ok('bản sao lưu loại khác không bị xóa', fs.existsSync(path.join(bk, 'truoc-khoi-phuc-2020-01-01T00-00-00-000Z.sqlite')));
-  await w.click('#moreMenu summary'); await w.click('#openSettingsBtn'); await w.waitForSelector('#autoBk');
+  await w.click('#navSet'); await w.waitForSelector('#autoBk');
   const card = await w.innerText('#autoBk');
   ok('Cài đặt hệ thống: hiện thẻ Tự sao lưu hằng ngày, bản gần nhất và số bản', /Tự sao lưu hằng ngày/.test(card) && /Bản gần nhất/.test(card) && /7 bản/.test(card), card);
   await w.selectOption('#setAutoKeep', '3'); await w.waitForSelector('#setMsg');

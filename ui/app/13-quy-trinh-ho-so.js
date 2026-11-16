@@ -171,8 +171,8 @@ function panelXuat(rec) {
 
 function renderCtx() {
   const o = curOwner(), f = curForest();
-  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && view !== 'norm' && view !== 'dm' && !['settings', 'setbk', 'setgs', 'setfmt', 'cty'].includes(view));
-  const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', ['settings', 'setbk', 'setgs', 'setfmt', 'cty'].includes(view));
+  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && view !== 'norm' && view !== 'dm' && !['settings', 'setbk', 'setui', 'sethelp', 'setgs', 'setfmt', 'cty'].includes(view));
+  const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', ['settings', 'setbk', 'setui', 'sethelp', 'setgs', 'setfmt', 'cty'].includes(view));
   const nd = document.getElementById('navDm'); if (nd) nd.classList.toggle('on', view === 'dm');
   const nn = document.getElementById('navNorm'); if (nn) nn.classList.toggle('on', view === 'norm');
   $('#ctxOwner').innerHTML = 'Chủ rừng: <b>' + esc(o ? (o.info.ten || '(chưa đặt tên)') : 'chưa mở') + '</b>';

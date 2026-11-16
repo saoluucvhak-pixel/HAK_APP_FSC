@@ -50,7 +50,7 @@ async function exportText(w, kind) {
 }
 const nums = t => (t.match(/\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+,\d+/g) || []).sort();
 const openForest = async (w, oid, fid, ftab = 'finfo') => { await w.click(`[data-open=${oid}]`); await w.click('[data-tab=rung]'); await w.click(`[data-forest=${fid}]`); await w.click(`[data-ftab=${ftab}]`); };
-const restoreMenu = async w => { await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); };
+const restoreMenu = async w => { await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); };
 const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
 
 (async () => {
@@ -151,7 +151,7 @@ const lotFiles = () => (fs.existsSync(lotDir) ? fs.readdirSync(lotDir) : []);
   ({app, w} = await launch({}, 'may1')); const before = JSON.stringify(await dbOf(w)); await app.close();
   for (const [name, file, re1, re2] of cases) {
     ({app, w} = await launch({HAKQN_LOT_FILE: file}, 'may1'));
-    await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
+    await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
     const shown = (await w.innerText('body'));
     ok('lỗi “' + name + '”: báo rõ và không có nút ghi', re1.test(shown) && re2.test(shown) && !(await w.$('[data-act=lotGo]')), shown.slice(0, 300));
     ok('lỗi “' + name + '”: dữ liệu không đổi', JSON.stringify(await dbOf(w)) === before);

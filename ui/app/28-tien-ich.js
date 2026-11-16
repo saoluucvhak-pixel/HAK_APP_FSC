@@ -117,7 +117,7 @@ function huongDanBox() {
   return '<div class="card" id="huongDan" data-xong="' + xong + '" data-tiep="' + tiep.id + '"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Hướng dẫn bắt đầu <span class="mut" style="font-weight:400">· xong ' + xong + '/' + ds.length + ' bước</span></h3><button class="btn ghost sm" data-act="hdAn">Ẩn hướng dẫn</button></div>' +
     '<ol style="line-height:1.9;margin:8px 0 0;padding-left:22px">' + ds.map(x => '<li data-buoc="' + x.id + '" data-xong="' + (x.xong ? 1 : 0) + '"' + (x.xong ? ' class="mut"' : '') + '>' + (x.xong ? '✓ ' : '') + '<b>' + esc(x.ten) + '</b>' + (x === tiep ? ' <span class="pill warn">làm tiếp</span>' : '') + '<br><span class="mut">' + esc(x.moTa) + '</span>' +
       (x === tiep ? ' <button class="btn sm" data-act="' + (x.id === 'chu' ? 'newRs' : 'hdDi') + '" data-buoc="' + x.id + '">' + (x.id === 'chu' ? '+ Chủ rừng mới' : 'Mở nơi làm bước này') + '</button>' : '') + '</li>').join('') + '</ol>' +
-    '<p class="mut" style="margin:8px 0 0">Mở lại bất cứ lúc nào ở ⋯ Thêm → Hướng dẫn bắt đầu. Tài liệu đầy đủ: ⋯ Thêm → Hướng dẫn sử dụng.</p></div>';
+    '<p class="mut" style="margin:8px 0 0">Mở lại bất cứ lúc nào ở Cài đặt → Trợ giúp → Hướng dẫn bắt đầu. Tài liệu đầy đủ: Cài đặt → Trợ giúp → Hướng dẫn sử dụng.</p></div>';
 }
 function hdDi(buoc) {
   const oid = Object.keys(db.rs || {})[0]; if (!oid) return;

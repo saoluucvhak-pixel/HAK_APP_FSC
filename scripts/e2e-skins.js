@@ -21,7 +21,7 @@ const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN'
   const size = async (W, H) => { await app.evaluate(({BrowserWindow}, [a, b]) => { const win = BrowserWindow.getAllWindows()[0]; win.setContentSize(a, b); }, [W, H]); await w.waitForTimeout(250); };
   const css = (sel, prop) => w.$eval(sel, (e, p) => getComputedStyle(e)[p], prop);
   const setTheme = async t => { const cur = await w.evaluate(() => document.documentElement.dataset.theme || 'light'); if (cur !== t) { await w.click('#themeBtn'); await w.waitForTimeout(350); } };
-  const pick = async k => { await w.click('#moreMenu summary'); await w.click('[data-skinpick=' + k + ']'); await w.waitForTimeout(250); await w.click('main'); await w.waitForTimeout(150); };
+  const pick = async k => { await w.click('#navSet'); await w.click('#setTab_setui'); await w.click('[data-skinpick=' + k + ']'); await w.waitForTimeout(250); await w.click('main'); await w.waitForTimeout(150); };
 
   const bars = {}, bgs = {}, brands = {};
   ok('mặc định là luxe (navy + champagne)', await w.evaluate(() => document.documentElement.dataset.skin) === 'luxe');
@@ -48,7 +48,7 @@ const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN'
   app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   ok('mở lại: nhớ bảng màu classic (xanh ngọc)', await w.evaluate(() => document.documentElement.dataset.skin) === 'classic');
   ok('mở lại: bảng màu không làm đổi dữ liệu hồ sơ', (await w.$$('[data-open]')).length === 1);
-  await w.click('#moreMenu summary'); ok('menu bảng màu đánh dấu đúng lựa chọn đang dùng', await w.$eval('[data-skinpick=classic]', e => e.classList.contains('on') && e.getAttribute('aria-pressed') === 'true') && (await w.$$('[data-skinpick]')).length === 4);
+  await w.click('#navSet'); await w.click('#setTab_setui'); await w.waitForSelector('[data-skinpick=classic]'); ok('menu bảng màu đánh dấu đúng lựa chọn đang dùng', await w.$eval('[data-skinpick=classic]', e => e.classList.contains('on') && e.getAttribute('aria-pressed') === 'true') && (await w.$$('[data-skinpick]')).length === 4);
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('; '));
   await app.close();
   console.log('Ảnh chụp: ' + shots);

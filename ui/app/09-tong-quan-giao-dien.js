@@ -48,7 +48,7 @@ function panelHome() {
   const recs = rpRecords(''), F = HAKReports.fmtCell, n = Object.keys(db.rs).length;
   if (!n) {
     return '<div class="hero"><div><h2>Chào mừng đến với HAKQN</h2><p class="mut">Hồ sơ khai thác và vận chuyển gỗ keo theo từng rừng, chuẩn FSC.</p></div></div>' +
-      (huongDanBox() || '<div class="card"><p class="mut" style="margin:0 0 10px">Chưa có chủ rừng nào. Mở ⋯ Thêm → Hướng dẫn bắt đầu để xem các bước.</p></div>') +
+      (huongDanBox() || '<div class="card"><p class="mut" style="margin:0 0 10px">Chưa có chủ rừng nào. Mở Cài đặt → Trợ giúp → Hướng dẫn bắt đầu để xem các bước.</p></div>') +
       '<div class="card"><div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></div>';
   }
   const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { a.t += +p.kl > 0 ? Math.round(p.kl * 1000) / 1000 : 0; a.n++; }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
@@ -99,6 +99,8 @@ function renderMain() {
   if (view === 'cty') { $('#main').innerHTML = renderMsgs() + settingsFrame('cty', panelCty()); return; }
   if (view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
   if (view === 'setbk') { $('#main').innerHTML = renderMsgs() + settingsFrame('setbk', panelKhoSaoLuu()); kslLoad(); return; }
+  if (view === 'setui') { $('#main').innerHTML = renderMsgs() + settingsFrame('setui', panelSetUi()); return; }
+  if (view === 'sethelp') { $('#main').innerHTML = renderMsgs() + settingsFrame('sethelp', panelSetHelp()); return; }
   if (view === 'setgs') { $('#main').innerHTML = renderMsgs() + settingsFrame('setgs', panelSetGs()); return; }
   if (view === 'setfmt') { $('#main').innerHTML = renderMsgs() + settingsFrame('setfmt', panelSetFmt()); return; }
   const own = curOwner();

@@ -1,7 +1,6 @@
 /* ========== Sự kiện ========== */
 document.addEventListener('click', async e => {
   const t = e.target;
-  const mm = document.getElementById('moreMenu'); if (mm && mm.open && (!t.closest('#moreMenu') || t.closest('.pop button.mi'))) mm.open = false;
   const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick); return; }
   const dsh = t.closest('[data-dash]'); if (dsh) { const [oid, fid] = dsh.dataset.dash.split('|'); openRs(oid); return openForest(fid); }
   const open = t.closest('[data-open]'); if (open) return openRs(open.dataset.open);
@@ -28,7 +27,7 @@ document.addEventListener('click', async e => {
   if (act === 'themDoi') return themDoi();
   if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();
-  if (act === 'openSettings') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'settings'; setg.msg = null; return render(); }
+  if (act === 'openSettings') { cur = null; curF = null; view = 'settings'; setg.msg = null; return render(); }
   if (act === 'dataRetry') return issueAct('retry');
   if (act === 'dataPick') return issueAct('pick');
   if (act === 'dataDefault') return issueAct('default');
@@ -48,7 +47,7 @@ document.addEventListener('click', async e => {
   if (act === 'inBaoCao') return inBaoCao();
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
-  if (act === 'hdHien') { hdDat(false); const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; return render(); }
+  if (act === 'hdHien') { hdDat(false); cur = null; curF = null; view = 'owner'; return render(); }   // về Tổng quan, nơi hiện hướng dẫn bắt đầu
   if (act === 'hdDi') return hdDi(el.dataset.buoc);
   if (act === 'svbGiuSo') return svbGiuSo(el.dataset.hd);
   if (act === 'vclMo') { const [oid, fid, ft] = (el.dataset.vcl || '').split('|'); if (db.rs[oid]) { cur = oid; curF = fid; tab = 'rung'; ftab = ft || 'xuat'; view = 'owner'; render(); } return; }
@@ -78,7 +77,7 @@ document.addEventListener('click', async e => {
   }
   if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
   if (act === 'openSetGs') { cur = null; curF = null; view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
-  if (act === 'openSetBk') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'setbk'; ksl.msg = null; return render(); }
+  if (act === 'openSetBk') { cur = null; curF = null; view = 'setbk'; ksl.msg = null; return render(); }
   if (act === 'kslTai') { ksl.msg = null; ksl.kiem = {}; return render(); }
   if (act === 'kslKiem') return kslKiem(el);
   if (act === 'kslAuto') return kslAuto();
@@ -86,6 +85,9 @@ document.addEventListener('click', async e => {
   if (act === 'kslKhoiPhuc') return kslKhoiPhuc(el);
   if (act === 'kslGo') return kslGo();
   if (act === 'kslHuy') { window.__ksl = null; return $('#impBox').classList.remove('on'); }
+  if (act === 'openSetUi') { cur = null; curF = null; view = 'setui'; return render(); }
+  if (act === 'openSetHelp') { cur = null; curF = null; view = 'sethelp'; return render(); }
+  if (act === 'themeSet') { setTheme(el.dataset.themeV === 'dark' ? 'dark' : 'light'); return render(); }
   if (act === 'openSetFmt') { cur = null; curF = null; view = 'setfmt'; return render(); }
   if (act === 'setGsSave') { const r = await HB.lookup.setSheet(($('#setGsLink') || {}).value.trim()); setgs.msg = r.ok ? {kind: 'ok', text: 'Đã lưu địa chỉ bảng tính.'} : {kind: 'err', text: r.error}; setgs.st = await HB.lookup.status(); return render(); }
   if (act === 'setNumStyle') { db.dinhDangSo = el.value === 'en' ? 'en' : 'vi'; persist(); return render(); }
@@ -109,7 +111,7 @@ document.addEventListener('click', async e => {
   if (act === 'backup') return backupAll();
   if (act === 'ktGo') { const go = JSON.parse(el.dataset.go || '{}'); if (go.view) { view = go.view; return render(); } if (go.tab) { tab = go.tab; return render(); } ftab = go.ftab || 'finfo'; render(); const tgt = go.focus === 'pc' ? document.querySelector('[data-pcfix], #pcTable, .wrap table') : go.focus === 'mua' ? document.getElementById('mhDiemDen') : null; if (tgt && tgt.scrollIntoView) tgt.scrollIntoView({block: 'center'}); return; }
   if (act === 'lotBackup') return lotBackup();
-  if (act === 'lotRestore') { const m = document.getElementById('moreMenu'); if (m) m.open = false; return lotRestoreOpen(); }
+  if (act === 'lotRestore') return lotRestoreOpen();
   if (act === 'lotCancel') { window.__lot = null; return $('#impBox').classList.remove('on'); }
   if (act === 'lotGo') return lotGo();
   if (act === 'impCancel') { window.__imp = null; return $('#impBox').classList.remove('on'); }
@@ -269,5 +271,5 @@ document.addEventListener('change', e => {
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
 if (pendingNotice) { view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
-if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind; if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
+if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind; if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
 render();

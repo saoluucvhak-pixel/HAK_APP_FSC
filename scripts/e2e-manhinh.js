@@ -61,12 +61,12 @@ const SEED = {v: 2, congTy: {c1: {id: 'c1', ten: 'CÔNG TY TNHH CHẾ BIẾN G�
       ok(`${tag}: Báo cáo — Esc đóng hộp`, await w.evaluate(() => !document.getElementById('rpBox').classList.contains('on')));
       // Khôi phục lô
       await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]');
-      await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
+      await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
       o = await over(); ok(`${tag}: Khôi phục lô không tràn ngang`, o.page <= 0 && o.boxes === 0, JSON.stringify(o)); await shot('khoiphuclo', W, th);
       await w.keyboard.press('Escape'); await w.waitForTimeout(250);
       ok(`${tag}: Khôi phục lô — Esc hủy và đóng hộp thoại (không ghi gì)`, await w.evaluate(() => !document.getElementById('impBox').classList.contains('on')));
       // Cài đặt hệ thống
-      await w.click('#moreMenu summary'); await w.click('#openSettingsBtn'); await w.waitForSelector('#setBox [data-set-path]');
+      await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]');
       o = await over(); ok(`${tag}: Cài đặt không tràn ngang`, o.page <= 0 && o.boxes === 0, JSON.stringify(o)); await shot('caidat', W, th);
       // Xuất hồ sơ (tên dài, nhiều phiếu)
       await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.waitForTimeout(300);

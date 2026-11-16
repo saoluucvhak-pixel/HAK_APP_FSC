@@ -87,7 +87,7 @@ const LY_DO = 'Phiếu PA1 nhập nhầm khối lượng, sửa 12,5 thành 13,7
   // ---------- MÁY ĐÍCH: cơ sở dữ liệu MỚI, mất mạng ----------
   ({app, w} = await launch(DICH, {HAKQN_LOT_FILE: fileA}));
   ok('máy đích là cơ sở dữ liệu mới (chưa có chủ rừng nào), không có mạng', Object.keys((await loadDb(w)).rs || {}).length === 0 && !(await w.evaluate(() => fetch('https://docs.google.com/').then(() => true, () => false))));
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('[data-act=lotGo]');
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('[data-act=lotGo]');
   const xt = await w.innerText('#impBody');
   ok('xem trước khôi phục: nêu lô R-A và phạm vi gói (bản chốt hiện hành phiên bản 2, dấu vân tay lần 2; phiên bản 1 không nằm trong gói)', /R-A/.test(xt) && !!(await w.$('#lotPhamVi')) && xt.indexOf('phiên bản 2, dấu vân tay ' + c2.hash) > 0 && /phiên bản 1\) không nằm trong gói/.test(xt), xt.slice(0, 600));
   await w.click('[data-act=lotGo]'); await w.waitForTimeout(900);
@@ -124,7 +124,7 @@ const LY_DO = 'Phiếu PA1 nhập nhầm khối lượng, sửa 12,5 thành 13,7
     const p = JSON.parse(JSON.stringify(goc)); sua(p.lo); const fl = path.join(dir, 'goi-' + ma + '.json'); fs.writeFileSync(fl, JSON.stringify(L.seal(p, sha), null, 2)); const txt = fs.readFileSync(fl, 'utf8');
     ok('gói "' + ten + '": hàm kiểm trả mã ' + ma, V.kiemToanVen(p.lo).ma === ma, V.kiemToanVen(p.lo).ma);
     ({app, w} = await launch(DICH, {HAKQN_LOT_FILE: fl}));
-    await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(800);
+    await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(800);
     const t = await w.innerText('#impBody').catch(() => '');
     ok('  xem trước: dừng, hiện mã lô R-A, phiên bản chốt 2 và lý do; không có nút ghi', !!(await w.$('#lotDung')) && /R-A/.test(t) && /phiên bản chốt 2/.test(t) && mau.test(t) && !(await w.$('[data-act=lotGo]')), t.slice(0, 500));
     const ra = await w.evaluate(async q => window.hak.lotApply(JSON.parse(q), 'thay'), txt);
