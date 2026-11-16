@@ -121,7 +121,7 @@ function checkPC(rec) {
     if (!HAKDates.isValid(r.ngay)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(r.ngay).replace(/^thiếu ngày$/, 'thiếu ngày cân'));
     const coXe = r.xeRowId && rec.dx.some(x => x.id === r.xeRowId);   // 3.0: phiếu đã chọn xe (ID dòng xe) — BKS ghi trên phiếu giữ nguyên dù khác
     if (!r.bienSo && !coXe) mark(r, 'err', 'Thiếu biển kiểm soát');
-    else if (!coXe && !keys.has(bienKey(r.bienSo))) { if (r.hdvcId && (rec.hdvc || []).some(h => h.id === r.hdvcId)) mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '') + ': BKS ' + r.bienSo + ' không khớp xe nào — chọn xe ở cột “Xe của hợp đồng” sau khi lưu'); else mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)'); }
+    else if (!coXe && !keys.has(bienKey(r.bienSo))) { if (r.hdvcId && (rec.hdvc || []).some(h => h.id === r.hdvcId)) mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '') + ': BKS ' + r.bienSo + ' không khớp xe nào — chọn xe ở cột “Xe · hợp đồng” sau khi lưu'); else mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)'); }
     if (trim(r.ngay2) && !HAKDates.isValid(r.ngay2)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ngày cân 2 ' + HAKDates.why(r.ngay2));
     else HAKPhieuCan.ngay2Warn(r).forEach(m => mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + m));
     if (!r.soPhieu) mark(r, 'err', 'Thiếu số phiếu cân');

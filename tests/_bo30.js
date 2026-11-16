@@ -9,7 +9,7 @@ function boLo(f) {
   if (f.cc && typeof f.cc === 'object') Object.values(f.cc).forEach(m => { if (!m || typeof m !== 'object') return; Object.keys(m).forEach(k => { if (ids.has(k)) { const c = ids.get(k); if (!(c in m)) m[c] = m[k]; delete m[k]; } }); });
   (f.nc || []).forEach(r => { if (!r) return; if (/^tv\d+$/.test(r.id || '')) delete r.id; delete r.nguoiId; delete r.viTriId; });
   (f.dx || []).forEach(r => { if (!r) return; if (/^xr\d+$/.test(r.id || '')) delete r.id; delete r.xeId; delete r.taiXeId; });
-  (f.pc || []).forEach(r => { if (!r) return; if (/^pc\d+$/.test(r.id || '')) delete r.id; delete r.hdvcId; delete r.xeRowId; });
+  (f.pc || []).forEach(r => { if (!r) return; if (/^pc\d+$/.test(r.id || '')) delete r.id; delete r.hdvcId; delete r.xeRowId; delete r.xeTay; });
   (f.hdvc || []).forEach(h => { if (h) delete h.benKy; }); (f.doi || []).forEach(d => { if (d) delete d.benNhanKhoan; });
   delete f.canDoiChieu;
   return f;

@@ -48,7 +48,7 @@ const file = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   // 2. chọn xe cho phiếu: lưu ID dòng, giữ BKS gốc
   const ix3 = f.pc.findIndex(x => x.soPhieu === 'P3');
   await w.selectOption('select[data-pcxe="' + ix3 + '"]', xA); await w.waitForTimeout(400); await luu(); f = await lotDb();
-  ok('chọn xe cho P3: lưu ID dòng xe, BKS trên phiếu giữ “43A-99999”', p('P3').xeRowId === xA && p('P3').bienSo === '43A-99999' && p('P3').hdvcId === hA, JSON.stringify(p('P3')));
+  ok('chọn xe cho P3: lưu ID dòng xe, BKS trên phiếu giữ “43A-99999”', p('P3').xeRowId === xA && p('P3').xeTay === true && p('P3').bienSo === '43A-99999' && p('P3').hdvcId === hA, JSON.stringify(p('P3')));
 
   // 3. chuyển P1 sang hợp đồng B: BKS 92C-12345 không có xe trong B → chưa chọn xe; ghi một lần
   const ix1 = f.pc.findIndex(x => x.soPhieu === 'P1');

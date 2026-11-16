@@ -56,13 +56,21 @@ test('Vị trí: dựng danh mục có ID từ mọi tên đang dùng; chạy l�
 test('Vị trí: đổi tên giữ liên kết định biên, định mức BHLĐ, đơn giá, nhân công; lô đã chốt giữ tên đã áp dụng', () => {
   const db = dbVT(); db.dmViTri = VT.dung(db); const id = VT.tim(db.dmViTri, 'Công nhân cưa').id;
   const r = VT.doiTen(db, id, 'Thợ cưa');
-  assert.ok(r.ok); assert.equal(db.dinhBien[1].chucDanh, 'Thợ cưa'); assert.equal(db.dinhBienVer[0].rows[0].chucDanh, 'Thợ cưa');
-  assert.deepEqual(db.dinhMuc, {'Thợ cưa': {qa: 2}}); assert.deepEqual(db.dinhMucBan[0].dm, {'Thợ cưa': {qa: 3}});
+  // có lô đã chốt dùng tên cũ: định biên / định mức BHLĐ dùng chung GIỮ mục tên cũ (in lại lô chốt) và thêm bản sao tên mới
+  assert.ok(r.ok); assert.ok(r.so.giuTenCu);
+  assert.deepEqual(db.dinhBien.map(x => x.chucDanh).filter(x => /cưa/.test(x)), ['Công nhân cưa', 'Thợ cưa']); assert.deepEqual(db.dinhBienVer[0].rows.map(x => x.chucDanh).filter(x => /cưa/.test(x)), ['Công nhân cưa', 'Thợ cưa']);
+  assert.deepEqual(db.dinhMuc, {'Công nhân cưa': {qa: 2}, 'Thợ cưa': {qa: 2}}); assert.deepEqual(db.dinhMucBan[0].dm, {'Công nhân cưa': {qa: 3}, 'Thợ cưa': {qa: 3}});
   const f1 = db.rs.o.forests.f1, f2 = db.rs.o.forests.f2;
   assert.deepEqual(Object.keys(f1.doi[0].hinhThuc.donGiaTan), ['Tổ trưởng', 'Thợ cưa'], 'giữ thứ tự khóa');
   assert.equal(f1.nc[0].chucDanh, 'Thợ cưa'); assert.equal(f1.nc[0].viTriId, id);
   assert.equal(f2.nc[0].chucDanh, 'Công nhân cưa'); assert.ok(f2.doi[0].hinhThuc.donGiaTan['Công nhân cưa']); assert.equal(r.so.loKhoa, 1);
   assert.equal(VT.doiTen(db, id, 'Tổ trưởng').ok, false, 'không trùng tên vị trí khác');
+});
+test('Vị trí: không có lô đã chốt dùng tên cũ → đổi khóa định biên, định mức BHLĐ (không để lại mục tên cũ)', () => {
+  const db = dbVT(); delete db.rs.o.forests.f2; db.dmViTri = VT.dung(db); const id = VT.tim(db.dmViTri, 'Công nhân cưa').id;
+  const r = VT.doiTen(db, id, 'Thợ cưa');
+  assert.ok(r.ok && !r.so.giuTenCu); assert.equal(db.dinhBien[1].chucDanh, 'Thợ cưa'); assert.equal(db.dinhBienVer[0].rows[0].chucDanh, 'Thợ cưa');
+  assert.deepEqual(db.dinhMuc, {'Thợ cưa': {qa: 2}}); assert.deepEqual(db.dinhMucBan[0].dm, {'Thợ cưa': {qa: 3}});
 });
 
 const nguoi = (o) => Object.assign({hoTen: 'NGƯỜI', cccd: '', vaiTro: {}, kyHD: {}}, o);

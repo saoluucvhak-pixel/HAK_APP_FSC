@@ -19,7 +19,11 @@ const MAN = {
   rungNC: async w => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); return true; },
   rungDX: async w => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]'); return true; },
   rungXuat: async w => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); return true; },
-  danhMuc: async w => { const b = await w.$('#navDm'); if (!b) return false; await b.click(); return true; }
+  danhMuc: async w => { const b = await w.$('#navDm'); if (b) { await b.click(); return true; } if (!(await w.$('#navSet'))) return false; await w.click('#navSet'); const t = await w.$('#setTab_setdt'); if (!t) return false; await t.click(); return true; },
+  /* 3.0: danh mục xe, trang chi tiết hợp đồng nhân công / vận chuyển (có phiếu cân) */
+  danhMucXe: async w => { if (!(await w.$('#navSet'))) return false; await w.click('#navSet'); const t = await w.$('#setTab_setxe'); if (!t) return false; await t.click(); return true; },
+  hdNC: async w => { await MAN.rungNC(w); await w.waitForTimeout(150); const r = await w.$('#dsHdNcTbl tbody tr[data-act]'); if (!r) return false; await r.click(); return true; },
+  hdDX: async w => { await MAN.rungDX(w); await w.waitForTimeout(150); const r = await w.$('#dsHdVcTbl tbody tr[data-act]'); if (!r) return false; await r.click(); return true; }
 };
 /* đo tràn ngang: trang có cuộn ngang không, và các phần tử (không nằm trong khung cuộn) vượt mép phải cửa sổ */
 const doTran = w => w.evaluate(() => {
@@ -38,7 +42,7 @@ const doTran = w => w.evaluate(() => {
   for (const scale of [1, 1.25, 1.5]) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-anh-'));
     const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--force-device-scale-factor=' + scale], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
-    const w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+    const w = await app.firstWindow();   // không bọc _hd30: chụp đúng màn danh sách / chi tiết w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
     await app.evaluate(({BrowserWindow}, s) => { const b = BrowserWindow.getAllWindows()[0]; b.setContentSize(s[0], s[1]); }, [RONG, CAO]);
     const A = lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 29.75}), B = lot('fb', 'R-B', {exp: {}, pc: []});
     await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');

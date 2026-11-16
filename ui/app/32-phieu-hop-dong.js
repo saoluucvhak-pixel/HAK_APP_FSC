@@ -52,24 +52,24 @@ function pcCotHd(rec, r, hMo) {
   const cur = xe.find(x => x.id === r.xeRowId) || (tuDong && tuDong.xe && xe.includes(tuDong.xe) ? tuDong.xe : null);   // chưa lưu ID xe: BKS khớp duy nhất một xe của hợp đồng
   let xeHtml;
   if (!hId) xeHtml = '<span class="mut">—</span>';
-  else if (sua && xe.length) xeHtml = '<select data-pcxe="' + ix + '"><option value="">— chưa chọn xe —</option>' + xe.map(x => '<option value="' + esc(x.id) + '"' + (cur === x ? ' selected' : '') + '>' + esc(x.bienSo + (x.taiXe ? ' · ' + x.taiXe : '')) + '</option>').join('') + '</select>';
+  else if (sua && xe.length) xeHtml = '<select data-pcxe="' + ix + '" style="max-width:130px"><option value="">— chưa chọn xe —</option>' + xe.map(x => '<option value="' + esc(x.id) + '"' + (cur === x ? ' selected' : '') + '>' + esc(x.bienSo + (x.taiXe ? ' · ' + x.taiXe : '')) + '</option>').join('') + '</select>';
   else xeHtml = cur ? esc(cur.bienSo) : '<span class="pill warn">chưa chọn</span>';
   if (hId && !cur) { const c = chonXePhieu(f || rec, rec.dx, hId, r.bienSo); if (!c.xe || !c.xe.id) xeHtml += '<br><small class="mut">' + esc(c.lyDo || 'chọn xe trong hợp đồng') + '</small>'; }
   if (cur && HAKBks.khoa(cur.bienSo) !== HAKBks.khoa(r.bienSo)) xeHtml += '<br><small class="mut" title="BKS ghi trên phiếu (nguồn) được giữ nguyên">BKS phiếu: ' + esc(r.bienSo) + '</small>';
   const list = rec.hdvc || [];
-  const hdHtml = sua && list.length > 1 ? '<select data-pchd="' + ix + '">' + (hId ? '' : '<option value="" selected>(chưa thuộc)</option>') + list.map(h => '<option value="' + esc(h.id) + '"' + (h.id === hId ? ' selected' : '') + '>' + esc(tenDoiVc(rec, h)) + '</option>').join('') + '</select>'
+  const hdHtml = sua && list.length > 1 ? '<select data-pchd="' + ix + '" style="max-width:130px">' + (hId ? '' : '<option value="" selected>(chưa thuộc)</option>') + list.map(h => '<option value="' + esc(h.id) + '"' + (h.id === hId ? ' selected' : '') + '>' + esc(tenDoiVc(rec, h)) + '</option>').join('') + '</select>'
     : hId ? esc(tenDoiVc(rec, list.find(h => h.id === hId) || {ten: hId})) : '<span class="pill warn">chưa thuộc</span>';
-  return '<td>' + xeHtml + '</td><td>' + hdHtml + '</td>';
+  return '<td>' + xeHtml + '<div style="margin-top:4px" title="Hợp đồng vận chuyển của phiếu"><small class="mut">Hợp đồng:</small> ' + hdHtml + '</div></td>';   // một cột: bảng không rộng thêm (nút Sửa, Xóa vẫn trong tầm nhìn)
 }
 function pcDoiXe(ix, id) {
   const f = curForest(), p = f && (f.pc || [])[ix]; if (!p) return;
-  if (id) { const x = (f.dx || []).find(r => r.id === id); if (!x) return; p.xeRowId = id; p.hdvcId = x.hdvcId; } else delete p.xeRowId;   // BKS gốc của phiếu (p.bienSo) giữ nguyên
+  if (id) { const x = (f.dx || []).find(r => r.id === id); if (!x) return; p.xeRowId = id; p.hdvcId = x.hdvcId; p.xeTay = true; } else { delete p.xeRowId; delete p.xeTay; }   // BKS gốc của phiếu (p.bienSo) giữ nguyên; xe chọn tay không tự đổi theo BKS
   persistLo(); render();
 }
 function pcChuyenHd(ix, hId) {
   const f = curForest(), p = f && (f.pc || [])[ix]; if (!p || !(f.hdvc || []).some(h => h.id === hId) || p.hdvcId === hId) return;
   const c = chonXePhieu(f, f.dx, hId, p.bienSo), tu = p.hdvcId ? tenHdId(f, p.hdvcId) : '(chưa thuộc)';
-  p.hdvcId = hId; if (c.xe && c.xe.id) p.xeRowId = c.xe.id; else delete p.xeRowId;   // kiểm lại xe trong hợp đồng mới; cước tính theo hợp đồng mới khi in
+  p.hdvcId = hId; delete p.xeTay; if (c.xe && c.xe.id) p.xeRowId = c.xe.id; else delete p.xeRowId;   // kiểm lại xe trong hợp đồng mới; cước tính theo hợp đồng mới khi in
   persistLo(); note('Đã chuyển phiếu ' + (p.soPhieu || '') + ' từ ' + tu + ' sang ' + tenHdId(f, hId) + (c.xe ? ' (xe ' + c.xe.bienSo + ')' : ': ' + c.lyDo) + '. Cước vận chuyển tính theo hợp đồng mới.', c.xe ? 'ok' : 'warn'); render();
 }
 document.addEventListener('change', e => {

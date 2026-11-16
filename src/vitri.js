@@ -45,11 +45,17 @@
     if (!vt) return {ok: false, error: 'Không có vị trí này'};
     if (!moi) return {ok: false, error: 'Tên vị trí không được để trống'};
     const trung = tim(dm, moi); if (trung && trung.id !== id) return {ok: false, error: 'Đã có vị trí “' + trung.ten + '”'};
-    const cu = vt.ten, so = {dinhBien: 0, dinhMuc: 0, donGia: 0, nhanCong: 0, loKhoa: 0};
+    const cu = vt.ten, so = {dinhBien: 0, dinhMuc: 0, donGia: 0, nhanCong: 0, loKhoa: 0, giuTenCu: false};
     if (cu === moi) return {ok: true, so};
-    (db.dinhBien || []).forEach(r => { if (r && fold(r.chucDanh) === fold(cu)) { r.chucDanh = moi; so.dinhBien++; } });
-    (db.dinhBienVer || []).forEach(v => ((v && v.rows) || []).forEach(r => { if (r && fold(r.chucDanh) === fold(cu)) { r.chucDanh = moi; so.dinhBien++; } }));
-    so.dinhMuc += doiKhoa(db.dinhMuc, cu, moi); (db.dinhMucBan || []).forEach(v => { so.dinhMuc += doiKhoa(v && v.dm, cu, moi); });
+    /* lô đã chốt / dừng dùng tên cũ: in lại theo tên cũ nên định biên, định mức BHLĐ dùng chung GIỮ mục tên cũ và thêm bản sao tên mới (không đổi khóa) */
+    const giu = Object.values(db.rs || {}).some(o => Object.values((o && o.forests) || {}).some(f => khoa(f) && (f.nc || []).some(r => r && (r.viTriId === id || fold(r.chucDanh) === fold(cu)))));
+    so.giuTenCu = giu;
+    const bangDB = rows => { if (!Array.isArray(rows)) return; const cuR = rows.filter(r => r && fold(r.chucDanh) === fold(cu)); if (!cuR.length) return;
+      if (!giu) { cuR.forEach(r => { r.chucDanh = moi; so.dinhBien++; }); return; }
+      if (!rows.some(r => r && fold(r.chucDanh) === fold(moi))) cuR.forEach(r => { rows.splice(rows.indexOf(r) + 1, 0, Object.assign(JSON.parse(JSON.stringify(r)), {chucDanh: moi})); so.dinhBien++; }); };
+    const khoaDM = o => { if (!o || typeof o !== 'object') return 0; if (!giu) return doiKhoa(o, cu, moi); const k = Object.keys(o).find(x => fold(x) === fold(cu)); if (!k || Object.keys(o).some(x => fold(x) === fold(moi))) return 0; o[moi] = JSON.parse(JSON.stringify(o[k])); return 1; };
+    bangDB(db.dinhBien); (db.dinhBienVer || []).forEach(v => bangDB(v && v.rows));
+    so.dinhMuc += khoaDM(db.dinhMuc); (db.dinhMucBan || []).forEach(v => { so.dinhMuc += khoaDM(v && v.dm); });
     Object.values(db.rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => {
       const dung = (f.nc || []).some(r => r && (r.viTriId === id || fold(r.chucDanh) === fold(cu)));
       if (khoa(f)) { if (dung) so.loKhoa++; return; }   // lô đã chốt / dừng: giữ tên đã áp dụng

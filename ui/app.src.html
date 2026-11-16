@@ -47,6 +47,8 @@ h3{font-size:14.5px;margin:20px 0 10px;color:var(--ink);font-weight:650}
 h4{font-size:13.5px}
 .mut{color:var(--mut-aa)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+/* 3.0: bảng dữ liệu rộng cuộn trong khung; cột Thao tác (Sửa, Xóa) ghim bên phải để luôn thấy ở 100–150 % */
+.wrap table[id^=stTbl_] th:last-child,.wrap table[id^=stTbl_] td:last-child{position:sticky;right:0;background:var(--card);box-shadow:-6px 0 6px -6px rgba(0,0,0,.25);z-index:1}
 .card>h3:first-child{margin-top:0}
 /* Nút */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--acc);background:var(--acc);color:var(--accInk);border-radius:var(--rs);padding:7px 14px;font:inherit;font-weight:550;cursor:pointer;text-decoration:none;transition:background .12s,box-shadow .12s}

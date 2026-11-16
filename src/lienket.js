@@ -61,6 +61,7 @@
     (f.pc || []).forEach(p => {
       if (!p || typeof p !== 'object') return;
       if (p.xeRowId && !byId.has(p.xeRowId)) { delete p.xeRowId; n++; }
+      if (p.xeRowId && !p.xeTay) { const r = byId.get(p.xeRowId); if (B().khoa(r.bienSo) !== B().khoa(p.bienSo)) { delete p.xeRowId; if (p.hdvcId === r.hdvcId) delete p.hdvcId; n++; } }   // xe tự gắn theo BKS: BKS của phiếu đổi (nạp lại, sửa) → gắn lại theo BKS mới; xe người dùng chọn tay (xeTay) giữ nguyên
       if (p.xeRowId) { const h = byId.get(p.xeRowId).hdvcId; if (h && p.hdvcId !== h) { p.hdvcId = h; n++; } return; }
       if (p.hdvcId && !hd.has(p.hdvcId)) { delete p.hdvcId; n++; }
       const k = B().khoa(p.bienSo); if (!k) return;
