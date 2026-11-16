@@ -57,7 +57,8 @@ Luồng thống nhất cho ba cách nhập (thêm tay, nạp Excel, đưa từ T
 4. **Phiếu cân và xe**: ô **Xe** chỉ chọn xe của lô; chưa có xe thì chọn **+ Thêm xe mới…** ngay trong phiếu (thông tin đã nhập được giữ) hoặc bấm nút **+ Thêm xe …** ở thanh nhắc biển còn thiếu. Sửa biển số xe có phiếu liên kết: hộp xác nhận liệt kê các phiếu; số chuyến, khối lượng, tiền không đổi. Xóa xe còn phiếu liên kết bị chặn (nêu số phiếu).
 5. **Lưu dữ liệu vào lô**: kiểm tra lại lô đích, quan hệ xe–phiếu và lỗi dữ liệu rồi ghi một lần vào SQLite. Còn lỗi thì không ghi và nêu từng lỗi; lưu thất bại thì dữ liệu đã lưu và bản nháp đều giữ nguyên để thử lại. Phiếu trùng số với lô khác cần xác nhận đối chiếu. Chưa khai đơn giá chức danh không chặn lưu nhưng vẫn chặn xuất hồ sơ.
 6. **Tạo, xuất, in hồ sơ** chỉ dùng dữ liệu đã lưu: còn bản nháp thì mọi nút tải, xuất, in (kể cả Tải toàn bộ, in đợt 2, in phiếu cân) bị khóa, nêu lý do và có nút quay lại mục đang chỉnh. Sau khi lưu, số chuyến, tổng tấn, tiền công và cước được tính lại từ dữ liệu đã lưu.
-7. **Chuyển lô, đổi chủ rừng, đóng ứng dụng** khi còn bản nháp: hỏi **Lưu và tiếp tục**, **Bỏ thay đổi** hoặc **Quay lại chỉnh sửa**. Sao lưu lô rừng chỉ gồm dữ liệu đã lưu (có nhắc nếu còn bản nháp). Mọi bước hoạt động khi không có mạng.
+7. **Ctrl+S** lưu lô đang mở (như bấm “Lưu dữ liệu vào lô”); ô đang gõ được ghi nhận trước khi lưu. **Ctrl+K** mở tìm kiếm.
+8. **Chuyển lô, đổi chủ rừng, đóng ứng dụng** khi còn bản nháp: hỏi **Lưu và tiếp tục**, **Bỏ thay đổi** hoặc **Quay lại chỉnh sửa**. Sao lưu lô rừng chỉ gồm dữ liệu đã lưu (có nhắc nếu còn bản nháp). Mọi bước hoạt động khi không có mạng.
 
 **Gộp dữ liệu khi nạp Excel hoặc Google Sheets vào bản nháp** (cùng một quy tắc cho hai nguồn, áp dụng cho nhân công, xe, phiếu cân):
 - **Ô nguồn trống hoặc cột vắng mặt thì giữ giá trị đang có**, không bao giờ xóa trường qua nhập file. Muốn xóa một trường được phép để trống, bấm **Sửa** và xóa trong hộp thoại rồi lưu.
@@ -281,7 +282,14 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 ## 10. Sao lưu và khôi phục
 Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backups` trước mỗi lần nâng cấp cấu trúc và mỗi lần khôi phục; mọi thao tác ghi nằm trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên. Lần lưu nào có **xóa chủ rừng hoặc lô rừng** cũng tự sao lưu trước (`truoc-xoa-…`, giữ 20 bản gần nhất); mỗi lần lưu chỉ xóa được một chủ rừng (muốn thay toàn bộ dữ liệu thì dùng Khôi phục → Thay toàn bộ).
 
-**Tự sao lưu hằng ngày**: mỗi ngày, lần đầu mở phần mềm (khi đã có hồ sơ) sẽ tự lưu một bản `tu-dong-năm-tháng-ngày.sqlite` vào thư mục sao lưu và chỉ giữ số bản gần nhất (mặc định 7; đổi hoặc tắt ở **Cài đặt hệ thống → Tự sao lưu hằng ngày**). Bản sao được kiểm tra mở được trước khi giữ lại; các bản sao lưu khác không bị xóa. Bản này nằm trên cùng máy nên **không thay cho Sao lưu toàn bộ ra ổ khác/USB**. Khôi phục từ bản tự động: đóng phần mềm, chép file đó thành `hakqn.sqlite` trong thư mục dữ liệu (giữ lại file cũ), hoặc chọn thư mục chứa nó ở màn hình thông báo lỗi dữ liệu.
+**Tự sao lưu hằng ngày**: mỗi ngày, lần đầu mở phần mềm (khi đã có hồ sơ) sẽ tự lưu một bản `tu-dong-năm-tháng-ngày.sqlite` vào thư mục sao lưu và chỉ giữ số bản gần nhất (mặc định 7; đổi hoặc tắt ở **Cài đặt hệ thống → Tự sao lưu hằng ngày**). Bản sao được kiểm tra mở được trước khi giữ lại; các bản sao lưu khác không bị xóa. Khi **đóng phần mềm** (và mỗi 2 giờ nếu để máy mở), bản của hôm nay được **làm mới** nếu dữ liệu đã đổi, nên bản tự sao lưu chứa cả việc làm trong ngày; bản mới được ghi ra file tạm và kiểm tra xong mới thay bản cũ. Bản này nằm trên cùng máy nên **không thay cho Sao lưu toàn bộ ra ổ khác/USB**. Khôi phục từ bản tự động: dùng **Kho sao lưu** dưới đây.
+
+**Kho sao lưu** (**Cài đặt → Sao lưu và khôi phục**, hoặc bấm nhãn **“Tự sao lưu: …”** ở thanh ngay dưới thanh trên cùng, hoặc **⋯ Thêm → Sao lưu và khôi phục**): một nơi xem mọi bản sao lưu đang có trong thư mục sao lưu và thư mục sao lưu thứ hai.
+- **Tình trạng**: bản tự sao lưu gần nhất, lần sao lưu toàn bộ gần nhất (có nhắc khi đến hạn), có thay đổi nào chưa vào bản tự sao lưu của hôm nay không. Nút **Sao lưu toàn bộ ngay**, **Tự sao lưu ngay**, **Mở thư mục sao lưu**.
+- **Danh sách**: thời điểm, loại (Tự động hằng ngày · Sao lưu toàn bộ · Trước khi nâng cấp · Trước khi khôi phục · Trước khi khôi phục lô · Trước khi xóa), tên file, dung lượng; tổng số bản và tổng dung lượng; lọc theo loại. File tên khác trong thư mục không được liệt kê và không bao giờ bị đụng tới.
+- **Kiểm tra**: mở bản sao lưu ở chế độ chỉ đọc, kiểm tra toàn vẹn, phiên bản cấu trúc và số chủ rừng / lô. Bản hỏng báo rõ lý do.
+- **Khôi phục…** từ bản `.sqlite`: màn xem trước so số liệu đang có trên máy với số liệu trong bản sao lưu → **Thay toàn bộ bằng bản này**. Phần mềm sao lưu dữ liệu hiện tại trước khi ghi (bản “Trước khi khôi phục”, cũng nằm trong kho nên **hoàn tác được** bằng cách khôi phục lại từ bản đó), kiểm tra hồ sơ đã chốt còn toàn vẹn, rồi ghi trong một giao dịch. Bản sao lưu của phiên bản phần mềm cũ được nâng cấp trên một bản chép tạm; file sao lưu gốc không bị sửa. Bản chụp của các lần chốt trước có trong bản sao lưu được khôi phục theo. Bản tra cứu Google Sheets của máy giữ nguyên. Bản `.json` mở màn xem trước của **Khôi phục toàn bộ** (chọn giữ / ghi đè / giữ cả hai / thay toàn bộ).
+- **Xóa**: xóa một bản sao lưu để giải phóng ổ đĩa (có hỏi lại; không hoàn tác được). Các bản “Trước khi khôi phục”, “Trước khi khôi phục lô”, “Trước khi xóa” tự giữ 20 bản gần nhất mỗi loại.
 
 **Sao lưu toàn bộ**: **⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json)** → chọn thư mục → tạo 2 file cùng tên `.json` và `.sqlite`.
 
@@ -331,6 +339,7 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 ## Cài đặt: Hệ thống, Google Sheets, Công ty, Hiển thị số
 Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
 - **Hệ thống**: thư mục dữ liệu, thư mục sao lưu, nhắc sao lưu.
+- **Sao lưu và khôi phục**: kho sao lưu (mục 10).
 - **Google Sheets**: **địa chỉ bảng tính** dùng cho màn Tra cứu (chỉ đọc). Màn Tra cứu không còn ô nhập địa chỉ; chỉ ghi địa chỉ đang dùng và nút “Đổi trong Cài đặt”.
 - **Công ty**: thông tin **Công ty mua hàng** (một hồ sơ cho cả phần mềm, các địa chỉ giao hàng). Nút Công ty mua hàng không còn ở menu ngang.
 - **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
@@ -377,7 +386,7 @@ Tab **Xuất hồ sơ** có bảng **Quy trình hồ sơ theo đợt** ở đầ
 | Khôi phục lô báo “mã kiểm tra không khớp” | File bị sửa hoặc hỏng: lấy lại file sao lưu gốc |
 | Đồng bộ Google lỗi | Mất mạng hoặc bảng tính không còn quyền xem: bản tra cứu cũ được giữ; dùng **Nhập bản Excel** |
 | Word hiện dòng chấm | Ô thông số hoặc địa chỉ giao đang trống: điền ở màn hình hoặc điền tay |
-| Nghi ngờ mất dữ liệu | Mở thư mục `backups` (cạnh file `hakqn.sqlite`) hoặc khôi phục từ file sao lưu gần nhất |
+| Nghi ngờ mất dữ liệu | **Cài đặt → Sao lưu và khôi phục**: kiểm tra rồi khôi phục từ bản sao lưu gần nhất (tự động hằng ngày hoặc “Trước khi…”) |
 
 ## 14. Lưu ý trước khi dùng chính thức
 - **BM-20 Giấy ủy quyền** soạn theo Bộ luật Dân sự 2015 và Điều 18 Bộ luật Lao động 2019 (căn cứ tra qua các trang tư vấn pháp luật, chưa đối chiếu văn bản gốc): **cần người có chuyên môn pháp lý duyệt** trước khi dùng.

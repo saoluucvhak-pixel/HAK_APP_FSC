@@ -7,14 +7,19 @@ function qtSig(rec, kind) {
   files.forEach(f => { const o = docOpts(f, rec); acc += f.path + '\u0001' + o.footer + '\u0001' + (o.landscape ? 'L' : 'P') + '\u0001' + (f.draft ? 'N' : '') + '\u0001' + withMode('day', () => bodyXml(tidySign(f.blocks))) + '\u0002'; });
   return IA.hash(acc);
 }
-function qtItems(rec) {
+/* HIỆU NĂNG: chữ ký (sig) TÍNH KHI ĐỌC và nhớ lại — dựng và băm cả file sẽ in là phần tốn công nhất khi duyệt mọi lô (Tổng quan, Báo cáo, Việc cần làm).
+ * HAKQuyTrinh.evaluate chỉ đọc sig của mẫu đã có xác nhận in, nên lô chưa in mẫu nào không phải dựng file. Danh sách nhớ theo phiên bản dữ liệu (nhoTam, ui/app/10):
+ * dữ liệu không đổi thì không tính lại; dữ liệu đổi thì có danh sách mới, chữ ký mới. */
+function qtItemsTinh(rec) {
   const g = gate(rec), ok = kindOk(g), c = draftCtx(rec), Q = HAKQuyTrinh;
   return Q.applicable(allDirect(rec) ? 'tructiep' : 'giaokhoan').map(f => {
     const iss = HAKBanNhap.issues(f.code, c), ready = !ok[f.kind] ? 'thieu' : iss.length ? 'nhap' : 'du';
-    let sig = ''; if (ok[f.kind]) { try { sig = qtSig(rec, f.kind); } catch (e) { sig = 'loi:' + e.message; } }
-    return {code: f.code, ready, sig, why: iss.map(x => x.text).join('; ')};
+    const it = {code: f.code, ready, why: iss.map(x => x.text).join('; ')}; let sig;
+    Object.defineProperty(it, 'sig', {enumerable: true, configurable: true, get() { if (sig === undefined) { sig = ''; if (ok[f.kind]) { try { sig = qtSig(rec, f.kind); } catch (e) { sig = 'loi:' + e.message; } } } return sig; }});
+    return it;
   });
 }
+function qtItems(rec) { return nhoTam('qtItems', rec, () => qtItemsTinh(rec)); }
 function qtEval(rec, f) { const L = HAKQuyTrinh.evaluate(qtItems(rec), HAKQuyTrinh.peek(f || curForest())); return {list: L, sum: HAKQuyTrinh.summary(L)}; }
 function qtPrep(rec) {
   const g = gate(rec), miss = [];
@@ -166,8 +171,8 @@ function panelXuat(rec) {
 
 function renderCtx() {
   const o = curOwner(), f = curForest();
-  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && view !== 'norm' && view !== 'dm' && !['settings', 'setgs', 'setfmt', 'cty'].includes(view));
-  const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', ['settings', 'setgs', 'setfmt', 'cty'].includes(view));
+  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && view !== 'norm' && view !== 'dm' && !['settings', 'setbk', 'setgs', 'setfmt', 'cty'].includes(view));
+  const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', ['settings', 'setbk', 'setgs', 'setfmt', 'cty'].includes(view));
   const nd = document.getElementById('navDm'); if (nd) nd.classList.toggle('on', view === 'dm');
   const nn = document.getElementById('navNorm'); if (nn) nn.classList.toggle('on', view === 'norm');
   $('#ctxOwner').innerHTML = 'Chủ rừng: <b>' + esc(o ? (o.info.ten || '(chưa đặt tên)') : 'chưa mở') + '</b>';

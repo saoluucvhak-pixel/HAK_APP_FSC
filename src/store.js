@@ -487,7 +487,7 @@ class Store {
       Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || strategy === 'overwrite') next.congTy[id] = c; });
       Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
     }
-    const backup = this.snapshotFile('truoc-khoi-phuc');
+    const backup = this.snapshotFile('truoc-khoi-phuc', {keep: 20});   // giữ 20 bản gần nhất (như truoc-xoa): mỗi bản là cả cơ sở dữ liệu, không để thư mục sao lưu lớn mãi
     this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace'});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
     return {backup, counts: Store.counts(this.load())};
   }
@@ -498,7 +498,7 @@ class Store {
     { const e = LoRung.loiToanVen(pkg && pkg.lo); if (e) throw Object.assign(new Error(e.moTa + ' Dữ liệu trên máy chưa bị thay đổi.'), {code: 'GOI_HONG', toanVen: e.toanVen}); }   // trước khi sao lưu hay ghi
     const cur = this.load(), r = LoRung.applyLot(cur, pkg, action);
     if (!r.doi) return {backup: '', plan: r.plan, doi: false};                  // lô đã có và giữ bản hiện có: không ghi gì
-    const backup = this.snapshotFile('truoc-khoi-phuc-lo');
+    const backup = this.snapshotFile('truoc-khoi-phuc-lo', {keep: 20});
     this.save(r.next);
     return {backup, plan: r.plan, doi: true, ownerId: r.ownerId, forestId: r.forestId};
   }

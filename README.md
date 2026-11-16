@@ -20,7 +20,8 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 
 - Tra cứu dạng **cha–con** (master–detail: hợp đồng → rừng → phiếu cân), chip điều kiện và bộ lọc đã lưu (HAK Smart Filter); giao diện theo HAK Enterprise Design System với 4 bảng màu (luxe navy, classic xanh ngọc, neutral, champagne) × sáng/tối; báo cáo cha–con và định dạng theo HAK Accounting & Reporting Standard.
 - CI: kiểm thử, đóng gói, cài thử bộ `.exe`, quét chất lượng mã bằng `hak_code_quality_test` (cấu hình `.hakquality.json`) và `npm audit` (chặn lỗ hổng mức cao trong thư viện của ứng dụng); báo cáo e2e tổng hợp tải lên artifact và trang tóm tắt lượt chạy.
-- Tự sao lưu hằng ngày khi mở ứng dụng (xoay vòng, mặc định giữ 7 bản).
+- Tự sao lưu hằng ngày khi mở ứng dụng (xoay vòng, mặc định giữ 7 bản), làm mới bản của hôm nay khi đóng ứng dụng nếu dữ liệu đã đổi.
+- **Kho sao lưu** (Cài đặt → Sao lưu và khôi phục): liệt kê, kiểm tra, khôi phục từ bản `.sqlite` ngay trong ứng dụng, xóa bản cũ (`src/khosaoluu.js`).
 
 ## Mã nguồn
 | Đường dẫn | Nội dung |
@@ -36,6 +37,7 @@ Electron + SQLite. Giao diện và nghiệp vụ lấy từ bản HTML (`ui/app.
 | `ui/app.src.html` | Khung giao diện (HTML + CSS) và chỗ ghép các module |
 | `ui/app/NN-*.js` | Nghiệp vụ và giao diện tách theo phần (cấu hình, lưu trữ, kiểm tra dữ liệu, hợp đồng, biểu mẫu, chấm công, công ty, quy trình, thao tác, cài đặt và sao lưu, báo cáo, tra cứu, sự kiện); `build:html` ghép theo thứ tự số vào cùng một khối script nên dùng chung phạm vi biến |
 | `src/autobackup.js` | Tự sao lưu xoay vòng hằng ngày khi mở ứng dụng |
+| `src/khosaoluu.js` | Kho sao lưu: liệt kê theo loại, kiểm tra, khôi phục toàn bộ từ bản `.sqlite`, xóa có giới hạn |
 | `src/google-auth.js` | Đăng nhập Google OAuth (PKCE, chỉ đọc), tải .xlsx qua Drive API |
 | `ui/vendor/` | Bản sao nguyên văn các thư viện HAK dùng chung (design system, smart filter, chuẩn báo cáo), ghi nguồn và commit trong `ui/vendor/README.md` |
 | `ui/skins.css` | Hai bảng màu bổ sung (neutral, champagne) dùng cùng token với luxe; classic = token gốc của design system |

@@ -30,6 +30,15 @@ contextBridge.exposeInMainWorld('hak', {
     pickOther: () => ipcRenderer.invoke('data:pickOther'),
     useDefault: () => ipcRenderer.invoke('data:useDefault')
   },
+  saoLuu: {
+    list: () => ipcRenderer.invoke('bk:list'),
+    verify: f => ipcRenderer.invoke('bk:verify', f),
+    preview: f => ipcRenderer.invoke('bk:preview', f),
+    restore: f => ipcRenderer.invoke('bk:restore', f),
+    readJson: f => ipcRenderer.invoke('bk:readJson', f),
+    remove: f => ipcRenderer.invoke('bk:delete', f),
+    autoNow: () => ipcRenderer.invoke('bk:autoNow')
+  },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
   phieuCan: (rows, company) => ipcRenderer.invoke('phieucan:open', rows, company),
   google: {

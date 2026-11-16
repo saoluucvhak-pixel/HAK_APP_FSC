@@ -49,11 +49,14 @@
   const huyKy = (st, code, now) => { const r = st.items[code]; if (!r || !r.ky) return false; delete r.ky; ghiSo(st, {at: now || new Date().toISOString(), ma: code, hanh: 'huyky', sig: r.sig, lyDo: 'bỏ đánh dấu đã ký'}); return true; };
 
   /* items: [{code, ready: 'du'|'nhap'|'thieu', sig}] → thêm printed: 'chua' | 'da' | 'doi', at */
+  /* HIỆU NĂNG: chữ ký nội dung (it.sig) có thể là thuộc tính TÍNH KHI ĐỌC (giao diện băm cả file sẽ in, tốn công nhất của màn Tổng quan / Báo cáo khi có nhiều lô).
+   * Chỉ đọc it.sig khi mẫu ĐÃ có xác nhận in để so; mẫu chưa in thì kết quả không phụ thuộc chữ ký. Phần tử trả về vẫn có `sig` (đọc lúc nào tính lúc đó, cùng giá trị). */
   function evaluate(items, st) {
     return items.map(it => {
-      const r = st && st.items ? st.items[it.code] : null;
-      const printed = !r ? 'chua' : (r.sig === it.sig ? 'da' : 'doi');
-      return Object.assign({}, it, {printed, at: r ? r.at : '', daKy: !!(r && r.ky && r.sig === it.sig), kyAt: r && r.ky ? r.ky : '', kyDoi: !!(r && r.ky && r.sig !== it.sig), form: byCode(it.code)});
+      const r = st && st.items ? st.items[it.code] : null, khop = r ? r.sig === it.sig : false;
+      const out = {}; Object.keys(it).forEach(k => { if (k !== 'sig') out[k] = it[k]; });
+      Object.defineProperty(out, 'sig', {enumerable: true, configurable: true, get: () => it.sig});
+      return Object.assign(out, {printed: !r ? 'chua' : (khop ? 'da' : 'doi'), at: r ? r.at : '', daKy: !!(r && r.ky && khop), kyAt: r && r.ky ? r.ky : '', kyDoi: !!(r && r.ky && !khop), form: byCode(it.code)});
     });
   }
   /* tổng hợp từng đợt: số mẫu, đủ dữ liệu, đã in và còn khớp, đã in nhưng dữ liệu đổi, bản nháp */

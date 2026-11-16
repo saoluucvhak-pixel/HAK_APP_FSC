@@ -9,12 +9,18 @@
 - **Gói Chỉ xem:** một trang tóm tắt mở bằng trình duyệt kèm biểu mẫu, để gửi người chỉ cần xem; không sửa được, không nhập lại được.
 - **In trong app:** in tóm tắt hồ sơ và báo cáo thẳng ra máy in. Biểu mẫu Word vẫn in bằng Word.
 - **Hướng dẫn bắt đầu:** 6 bước trên màn Tổng quan cho người mới dùng.
+- **Mở phần mềm và lưu nhanh hơn** khi có nhiều lô và nhiều phiếu cân (số đo ở CHANGELOG).
+- **Kho sao lưu** (Cài đặt → Sao lưu và khôi phục): xem mọi bản sao lưu trên máy, kiểm tra từng bản, **khôi phục ngay trong phần mềm** từ bản tự động hằng ngày hoặc bản “Trước khi…”, xóa bản cũ.
+- **Tự sao lưu chứa việc làm trong ngày:** bản của hôm nay được làm mới khi đóng phần mềm và mỗi 2 giờ nếu dữ liệu đã đổi.
+- **Ctrl+S** lưu lô đang mở; menu ⋯ Thêm không còn bị cắt chữ ở cửa sổ hẹp.
 
 Không đổi cấu trúc dữ liệu (SQLite v14) và nội dung biểu mẫu. Cài đè lên v2.2.0 không cần chuyển dữ liệu.
 
 ## Giới hạn
 - In trong app chỉ in trang tóm tắt và báo cáo; biểu mẫu Word (BM-01…BM-20) vẫn mở bằng Word để in.
 - Dán từ Excel cần dòng tiêu đề đúng tên cột của file mẫu.
+- Khôi phục từ kho sao lưu thay toàn bộ hồ sơ trên máy (không gộp từng lô); muốn gộp thì dùng bản `.json`. Bản tra cứu Google Sheets không nằm trong phần khôi phục.
+- Bản “Trước khi khôi phục”, “Trước khi khôi phục lô” chỉ giữ 20 bản gần nhất mỗi loại.
 - Bộ cài chưa ký số.
 
 ## Đã kiểm và chưa kiểm
@@ -22,4 +28,5 @@ Không đổi cấu trúc dữ liệu (SQLite v14) và nội dung biểu mẫu. 
 | --- | --- |
 | Kiểm thử đơn vị, đầu-cuối, quét mã, build và cài thử, cài đè | Tự động (CI) |
 | Lệnh in | Tự động bằng cách ghi PDF; **chưa in ra máy in thật** |
+| Kho sao lưu, tự sao lưu khi đóng, Ctrl+S | Tự động (Electron + SQLite thật trên Linux); **chưa kiểm bằng bộ cài trên Windows** và chưa kiểm với ổ ngoài rút ra giữa chừng khi đang làm mới bản tự sao lưu |
 | Dán trực tiếp từ Microsoft Excel thật | **Chưa kiểm** (kiểm bằng chuỗi ký tự cùng định dạng Excel đưa vào bộ nhớ tạm) |
