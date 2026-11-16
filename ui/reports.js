@@ -338,18 +338,59 @@ const HAKReports = (function () {
       notes};
   }
 
+  /* Cước theo biển số: chỉ tính phiếu khớp duy nhất một đội, làm tròn theo
+   * từng xe như bảng thanh toán BM-10. */
+  function cuocTheoDoiXe(groups, pcs) {
+    const byPlate = new Map();
+    const teams = groups.map(h => ({h, plates: new Set((h.bien || []).map(plateKey).filter(Boolean)), vehicles: new Map()}));
+    teams.forEach(team => team.plates.forEach(plate => {
+      const matches = byPlate.get(plate) || [];
+      matches.push(team);
+      byPlate.set(plate, matches);
+    }));
+    const unresolved = [];
+    pcs.forEach(p => {
+      const plate = plateKey(p.bienSo), matches = byPlate.get(plate) || [];
+      if (matches.length !== 1) { unresolved.push(p); return; }
+      const {vehicles} = matches[0], v = vehicles.get(plate) || {n: 0, kg: 0};
+      v.n++;
+      v.kg += Math.round(kt(p) * 1000);
+      vehicles.set(plate, v);
+    });
+    return {unresolved, teams: teams.map(({h, plates, vehicles}) => {
+      const rate = Number.isFinite(h.donGia) ? h.donGia : null;
+      let n = 0, kg = 0, amount = 0;
+      vehicles.forEach(v => {
+        n += v.n;
+        kg += v.kg;
+        if (rate !== null) amount += Math.round(v.kg * rate / 1000);
+      });
+      return {h, xe: plates.size, n, tan: kg / 1000, rate: rate ?? '', amount: rate === null ? '' : amount};
+    })};
+  }
+
+  function notePhieuChuaGhep(list) {
+    return list.length ? list.length + ' phiếu chưa xác định duy nhất đội xe, chưa tính cước: ' +
+      list.slice(0, 8).map(p => p.maRung + ' / ' + (p.soPhieu || '(chưa có số)') + ' / ' + (p.bienSo || '(chưa có biển)')).join('; ') +
+      (list.length > 8 ? '; …' : '') + '.' : '';
+  }
+
   /* ---- 11. Vận chuyển theo đội xe: mỗi đội xe một hợp đồng vận chuyển (người ký, số chuyến, khối lượng, cước) ---- */
   function vanChuyenDoiXe(recs, o) {
-    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung)), det = [];
-    sorted.forEach(r => (r.hdList || []).forEach(h => {
-      const ks = new Set((h.bien || []).map(plateKey)), mine = pcOf(r, o).filter(p => ks.has(plateKey(p.bienSo))), tan = sumKl(mine), dg = typeof h.donGia === 'number' ? h.donGia : '';
-      det.push([det.length + 1, r.maRung, r.chuRung, h.ten, h.ky || '', h.vai || '', (h.bien || []).length, mine.length, tan, dg, dg === '' ? '' : Math.round(tan * h.donGia)]);
-    }));
+    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung)), det = [], unresolved = [];
+    sorted.forEach(r => {
+      const result = cuocTheoDoiXe(r.hdList || [], pcOf(r, o));
+      result.unresolved.forEach(p => unresolved.push({...p, maRung: r.maRung}));
+      result.teams.forEach(({h, xe, n, tan, rate, amount}) => {
+        det.push([det.length + 1, r.maRung, r.chuRung, h.ten, h.ky || '', h.vai || '', xe, n, tan, rate, amount]);
+      });
+    });
     const tXe = det.reduce((n, r) => n + r[6], 0), tChuyen = det.reduce((n, r) => n + r[7], 0), tTan = round(det.reduce((n, r) => n + r[8], 0), 3), tTien = det.reduce((n, r) => n + (typeof r[10] === 'number' ? r[10] : 0), 0);
     const notes = []; if (rangeNote(o)) notes.push(rangeNote(o));
     if (!det.length) notes.push('Chưa có đội xe nào. Nạp file đội xe ở tab Vận chuyển của từng lô.');
     if (det.some(r => r[9] === '')) notes.push('Có đội xe chưa tính được cước (thiếu đơn giá hoặc cự ly): cột Cước và Thành tiền để trống.');
-    notes.push('Số chuyến, khối lượng theo phiếu cân của các xe trong đội xe; thành tiền cước = khối lượng × cước (đồng/tấn) của hợp đồng đội xe.');
+    if (unresolved.length) notes.push(notePhieuChuaGhep(unresolved));
+    notes.push('Số chuyến và khối lượng chỉ gồm phiếu đã xác định đội xe; cước làm tròn đến đồng theo từng xe rồi cộng theo đội, như BM-10.');
     return {id: 'vanchuyendoi', title: 'BÁO CÁO VẬN CHUYỂN THEO ĐỘI XE', orient: 'landscape', period: periodText(o.from, o.to),
       kpis: [{label: 'Số đội xe', value: det.length, f: 'n0'}, {label: 'Số xe', value: tXe, f: 'n0'}, {label: 'Số chuyến', value: tChuyen, f: 'n0'}, {label: 'Khối lượng (tấn)', value: tTan, f: 'n3'}, {label: 'Cước (đồng)', value: tTien, f: 'n0'}],
       sections: [
@@ -389,12 +430,14 @@ const HAKReports = (function () {
 
   /* ---- 12. Sổ hồ sơ khai thác (bản 2.2, mục 4.3): mỗi lô một dòng — quy mô, thời gian, sản lượng, giá trị, vòng đời và số mẫu còn nợ ---- */
   function soHoSo(recs, o) {
-    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung)), rows = [], T = {dt: 0, dk: 0, tt: 0, pc: 0, nc: 0, cong: 0, vc: 0, noIn: 0, chuaKy: 0, doi: 0, xe: 0, dx: 0};
+    const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung)), rows = [], T = {dt: 0, dk: 0, tt: 0, pc: 0, nc: 0, cong: 0, vc: 0, noIn: 0, chuaKy: 0, doi: 0, xe: 0, dx: 0}, unresolved = [];
     const ngay = iso => { const d = iso ? new Date(iso) : null; return d && !isNaN(d) ? String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear() : ''; };
     sorted.forEach((r, i) => {
       const pcs = pcOf(r, o), tt = sumKl(pcs), dk = yieldOf(r), ids = new Set((r.doiList || []).map(d => d.id));
       const cong = Math.round((r.doiList || []).reduce((s, d) => s + (typeof d.tienTrenTan === 'number' ? sumKl(pcs.filter(p => p.doiId === d.id)) * d.tienTrenTan : 0), 0));
-      const vc = Math.round((r.hdList || []).reduce((s, h) => { const ks = new Set((h.bien || []).map(plateKey)); return s + (typeof h.donGia === 'number' ? sumKl(pcs.filter(p => ks.has(plateKey(p.bienSo)))) * h.donGia : 0); }, 0));
+      const vcResult = cuocTheoDoiXe(r.hdList || [], pcs);
+      vcResult.unresolved.forEach(p => unresolved.push({...p, maRung: r.maRung}));
+      const vc = vcResult.teams.reduce((s, h) => s + num(h.amount), 0);
       T.dt += num(r.dienTich); T.dk += num(dk); T.tt += tt; T.pc += pcs.length; T.nc += r.nc || 0; T.cong += cong; T.vc += vc; T.noIn += r.noIn || 0; T.chuaKy += r.chuaKy || 0; T.doi += r.soDoi || 0; T.xe += r.dx || 0; T.dx += r.soDoiXe || 0;
       rows.push([i + 1, r.maRung, r.chuRung, r.diaDiem || '', r.congTy || '', typeof r.dienTich === 'number' ? r.dienTich : '', r.soDoi || 0, r.nc || 0, r.soDoiXe || 0, r.dx || 0, r.tuNgay || '', r.denNgay || '', ngay(r.ngayChot),
         dk == null ? '' : dk, tt, dk ? round(tt / dk * 100, 1) : '', pcs.length, cong || '', vc || '', r.trangThaiTen || '', r.noIn || 0, r.chuaKy || 0]);
@@ -402,6 +445,7 @@ const HAKReports = (function () {
     const dem = {}; sorted.forEach(r => { const k = r.trangThaiTen || '(chưa rõ)'; dem[k] = (dem[k] || 0) + 1; });
     const notes = []; if (rangeNote(o)) notes.push(rangeNote(o));
     notes.push('Trạng thái lô tự suy ra từ tiến độ in và ký, riêng Đã chốt, Lưu trữ, Đã dừng do người dùng bấm. “Mẫu nợ in” = mẫu chưa in hoặc đã in nhưng dữ liệu đổi; “mẫu chưa ký” = đã in nhưng chưa đánh dấu đã ký.');
+    if (unresolved.length) notes.push(notePhieuChuaGhep(unresolved));
     notes.push('Sản lượng thực tế = tổng khối lượng phiếu cân của lô; tiền nhân công và tiền vận chuyển tính theo phiếu cân và đơn giá hiện có của đội, đội xe (trống nếu chưa tính được).');
     return {id: 'sohoso', title: 'SỔ HỒ SƠ KHAI THÁC', orient: 'landscape', period: periodText(o.from, o.to),
       kpis: [{label: 'Số lô', value: sorted.length, f: 'n0'}, {label: 'Diện tích (ha)', value: round(T.dt, 3), f: 'n2'}, {label: 'Sản lượng dự kiến (tấn)', value: round(T.dk, 3), f: 'n3'}, {label: 'Thực tế theo phiếu cân (tấn)', value: round(T.tt, 3), f: 'n3'},
