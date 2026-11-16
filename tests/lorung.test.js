@@ -1,4 +1,5 @@
 'use strict';
+const {bo30} = require('./_bo30');   // gỡ phần bổ sung 3.0 (ID dòng, liên kết, danh mục mới) khi so với mốc trước 3.0
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), os = require('os'), path = require('path'), crypto = require('crypto');
@@ -27,8 +28,8 @@ test('ghi đè khi khôi phục chỉ thay ĐÚNG lô trùng, giữ lô khác c�
   const r = s.applyImport(file, 'overwrite'); assert.ok(fs.existsSync(r.backup));
   const db = s.load();
   assert.strictEqual(db.rs.o1.forests.fa.pc[0].kl, 99, 'lô A bị thay');
-  assert.deepStrictEqual(db.rs.o1.forests.fb, base().rs.o1.forests.fb, 'lô B giữ nguyên');
-  assert.deepStrictEqual(db.rs.o2, base().rs.o2, 'chủ khác giữ nguyên');
+  assert.deepStrictEqual(bo30(db.rs.o1.forests.fb), base().rs.o1.forests.fb, 'lô B giữ nguyên');
+  assert.deepStrictEqual(bo30({o2: db.rs.o2}).o2, base().rs.o2, 'chủ khác giữ nguyên');
 });
 
 test('skip giữ bản trên máy; lô mới trong file được thêm vào ĐÚNG chủ đã có', () => {
@@ -93,8 +94,8 @@ test('xuất A, sửa A, khôi phục A: A về đúng bản sao lưu, B và ch�
   let r = s.applyLot(pkg); assert.strictEqual(r.doi, false, 'mặc định giữ bản hiện có'); assert.strictEqual(JSON.stringify(s.load()), edited);
   r = s.applyLot(pkg, 'thay'); assert.ok(r.doi && fs.existsSync(r.backup));
   const after = s.load();
-  assert.deepStrictEqual(after.rs.o1.forests.fa, base().rs.o1.forests.fa, 'A trở lại đúng bản sao lưu');
-  assert.strictEqual(after.rs.o1.forests.fb.pc.length, 3, 'B giữ nguyên (kể cả chỉnh sửa mới)'); assert.deepStrictEqual(after.rs.o2, base().rs.o2);
+  assert.deepStrictEqual(bo30(after.rs.o1.forests.fa), base().rs.o1.forests.fa, 'A trở lại đúng bản sao lưu');
+  assert.strictEqual(after.rs.o1.forests.fb.pc.length, 3, 'B giữ nguyên (kể cả chỉnh sửa mới)'); assert.deepStrictEqual(bo30({o2: after.rs.o2}).o2, base().rs.o2);
 });
 
 test('cùng ca, qua luồng nhập bản sao lưu toàn bộ cũ với lựa chọn ghi đè', () => {
@@ -114,7 +115,7 @@ test('chuyển sang máy mới: tạo chủ mới, đủ dữ liệu, tổng t�
   assert.ok(pv.dungChung.khac.some(x => /Tổ trưởng/.test(x.text) && /DÙNG BẢN CỦA MÁY ĐÍCH/.test(x.text))); assert.ok(pv.dungChung.them.some(x => /92c12345/.test(x.text))); assert.ok(pv.ghiChu.some(x => /CÔNG TY MUA/.test(x)));
   const r = dst.applyLot(pkg); assert.ok(r.doi); const db = dst.load();
   const oid = Object.keys(db.rs)[0]; assert.strictEqual(db.rs[oid].info.cccd, '049000000001');
-  const f = Object.values(db.rs[oid].forests)[0]; assert.deepStrictEqual(f, base().rs.o1.forests.fa);
+  const f = Object.values(db.rs[oid].forests)[0]; assert.deepStrictEqual(bo30(f), base().rs.o1.forests.fa);
   assert.strictEqual(L.sumKl(f.pc), 20); assert.strictEqual(db.dinhMuc['Tổ trưởng'].qa, '2 bộ (máy đích)', 'giữ thiết lập của máy đích'); assert.strictEqual(db.bienAlias['92c12345'], '92C-12345');
   assert.strictEqual(f.info.muaHang.diaChi, 'KCN X');
 });
@@ -174,7 +175,7 @@ test('giữ cả hai: bắt buộc xác nhận mã mới, kiểm tra cùng quy t
   const db = s.load(), lots = Object.values(db.rs.o1.forests), clone2 = lots.find(f => f.info.maRung === 'LO-A-BAN-SAO');
   assert.ok(clone2 && clone2.id !== 'fa' && clone2.pc[0].kl === 99); assert.ok(db.rs.o1.forests.fz, 'lô mới trong file được thêm');
   assert.strictEqual(L.duplicateGroups(db).length, 0, 'không còn mã trùng');
-  assert.deepStrictEqual(db.rs.o1.forests.fa, base().rs.o1.forests.fa, 'lô gốc giữ nguyên');
+  assert.deepStrictEqual(bo30(db.rs.o1.forests.fa), base().rs.o1.forests.fa, 'lô gốc giữ nguyên');
 });
 
 test('đổi mã lô: dòng nhân công, xe, phiếu cân mang mã cũ đổi theo; dòng mang mã khác được báo, không tự đổi', () => {

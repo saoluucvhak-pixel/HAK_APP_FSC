@@ -14,7 +14,7 @@
   const ownerJson = (id, o) => { const {forests: _f, ...rest} = o; rest.id = rest.id || id; return [rest.id, JSON.stringify(rest)]; };
   const forestJson = (fid, f) => [f.id || fid, JSON.stringify(f)];
 
-  const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac'];
+  const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac', 'dmDoiTuong', 'dmXe', 'dmViTri'];   // trùng src/store.js DM_BANG (3.0: danh mục đối tượng, xe, vị trí)
   function sideSnap(db) {
     const m = new Map();
     Object.keys(db || {}).forEach(k => {

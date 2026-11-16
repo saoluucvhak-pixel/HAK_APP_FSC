@@ -1,4 +1,5 @@
 'use strict';
+const {bo30} = require('./_bo30');   // gỡ phần bổ sung 3.0 (ID dòng, liên kết, danh mục mới) khi so với mốc trước 3.0
 /* Cấu trúc 2.0, giai đoạn 3 (docs/THIET_KE_BANG_ME_CON.md): đội khai thác là bảng con của lô, nhân công mang doiId.
  * Bất biến: lô cũ chuẩn hóa rồi dựng lại dạng cũ giống hệt; chuẩn hóa chạy lại không đổi. */
 const test = require('node:test');
@@ -200,10 +201,10 @@ test('v7: SQLite dựng danh mục lao động và danh mục xe từ dữ liệ
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v7-')), file = path.join(d, 'x.sqlite');
   const s6 = new Store(file, {migrations: MIGRATIONS.slice(0, 6)});
   const f = lot6({info: {maRung: 'R', hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', tuNgay: '01/10/2026'}, dx: [{_row: 2, bienSo: '92C-1', chuXe: 'A', taiXe: 'B', cccdTx: '049000000009', nguoiKy: 'Chủ xe', cccd: '049000000001', kdDen: '01/12/2027'}]});
-  s6.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C1', cccd: '049067005459'}, forests: {f}}}}); const truoc = JSON.stringify(s6.load().rs); s6.close();
+  s6.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C1', cccd: '049067005459'}, forests: {f}}}}); const truoc = JSON.stringify(bo30(s6.load().rs)); s6.close();
   const s7 = new Store(file), db = s7.load();
   assert.strictEqual(s7.db.pragma('user_version', {simple: true}), MIGRATIONS.length); assert.ok(MIGRATIONS.length >= 7);
-  assert.strictEqual(JSON.stringify(boNgayChup(db.rs)), truoc, 'hồ sơ lô không đổi (ngoài ngày chụp danh mục của v11)');
+  assert.strictEqual(JSON.stringify(boNgayChup(bo30(db.rs))), truoc, 'hồ sơ lô không đổi (ngoài ngày chụp danh mục của v11)');
   assert.deepStrictEqual(db.dmLaoDong.map(r => [r.cccd, r.ngayCapNhat, r.viTri]), [['111111111111', '01/10/2026', 'Tổ trưởng'], ['222222222222', '01/10/2026', 'Công nhân khai thác']]);
   assert.deepStrictEqual([db.dmXeVC.length, db.dmXeVC[0].bienSo, db.dmXeVC[0].hanDangKiem], [1, '92C-1', '01/12/2027']); s7.close();
 });
@@ -212,10 +213,10 @@ test('v8: SQLite dựng danh mục Đối tác từ người ký của đội xe
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-v8-')), file = path.join(d, 'x.sqlite');
   const s7 = new Store(file, {migrations: MIGRATIONS.slice(0, 7)});
   const f = lot6({info: {maRung: 'R', hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', tuNgay: '01/10/2026'}, dx: [{_row: 2, bienSo: '92C-1', chuXe: 'A', taiXe: 'B', cccdTx: '049000000009', nguoiKy: 'Chủ xe', cccd: '049000000001', ngayCap: '01/01/2021', noiCap: 'CA'}]});
-  s7.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C1', cccd: '049067005459'}, forests: {f}}}, dmDonViVC: {d1: {id: 'd1', ten: 'CÔNG TY VẬN TẢI', mst: '0400000000', daiDien: 'ÔNG X'}}}); const truoc = JSON.stringify(s7.load().rs); s7.close();
+  s7.save({v: 2, rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C1', cccd: '049067005459'}, forests: {f}}}, dmDonViVC: {d1: {id: 'd1', ten: 'CÔNG TY VẬN TẢI', mst: '0400000000', daiDien: 'ÔNG X'}}}); const truoc = JSON.stringify(bo30(s7.load().rs)); s7.close();
   const s8 = new Store(file), db = s8.load();
   assert.strictEqual(s8.db.pragma('user_version', {simple: true}), MIGRATIONS.length); assert.ok(MIGRATIONS.length >= 8);
-  assert.strictEqual(JSON.stringify(boNgayChup(db.rs)), truoc, 'hồ sơ lô không đổi (ngoài ngày chụp danh mục của v11)');
+  assert.strictEqual(JSON.stringify(boNgayChup(bo30(db.rs))), truoc, 'hồ sơ lô không đổi (ngoài ngày chụp danh mục của v11)');
   const ids = db.dmDoiTac.map(x => x.id).sort(); assert.deepStrictEqual(ids, ['ct:049000000001', 'dn:d1']);
   const ct = db.dmDoiTac.find(x => x.id === 'ct:049000000001'); assert.deepStrictEqual([ct.ten, ct.noiCap, ct.loai], ['A', 'CA', 'nguoiKyVC']); s8.close();
 });

@@ -142,11 +142,35 @@ const MIGRATIONS = [
       put.run(r.id, x.goi.phienBan, x.goi.hash, x.goi.at, x.goi.data);
       const data = JSON.stringify(x.f); up.run(data, sha(data), r.id);
     });
+  },
+  /* v15 (3.0, docs/THIET_KE_3_0.md): DANH MỤC ĐỐI TƯỢNG, DANH MỤC XE, VỊ TRÍ CÓ ID dựng từ ba danh mục cũ (dmLaoDong, dmXeVC, dmDoiTac — giữ nguyên làm bản lưu trữ,
+   * không sửa); mọi lô CHƯA chốt / dừng: ID dòng (thành viên, xe, phiếu), chấm công theo ID thành viên, liên kết danh mục khi khớp DUY NHẤT, phiếu → hợp đồng + xe.
+   * Dòng không tự liên kết được: giữ dữ liệu gốc, ghi “Cần đối chiếu” (lô.canDoiChieu; danh mục: meta canDoiChieu). Lô đã chốt / dừng không đổi (dấu vân tay giữ nguyên).
+   * Chạy sau khi sao lưu file (Store.migrate); chạy lại không đổi (src/lienket.js chuyenDoi). Bản in của lô không đổi: lô giữ bản chụp, chỉ thêm ID. */
+  function v15(db) {
+    const LK = require('./lienket'), g = k => { const r = db.prepare('SELECT value FROM meta WHERE key=?').get(k); return r ? JSON.parse(r.value) : undefined; };
+    const dm = k => db.prepare('SELECT 1 FROM danh_muc_bang WHERE kind=?').get(k) ? db.prepare('SELECT data FROM danh_muc WHERE kind=? ORDER BY ord').all(k).map(r => JSON.parse(r.data)) : (g(k) || undefined);
+    const o = {rs: {}};
+    ['dinhBien', 'dinhBienVer', 'dinhMuc', 'dinhMucBan', 'canDoiChieu'].forEach(k => { const v = g(k); if (v !== undefined) o[k] = v; });
+    DM_BANG.forEach(k => { const v = dm(k); if (v !== undefined) o[k] = v; });
+    const rows = db.prepare('SELECT id, owner_id, data FROM forests').all(), truoc = new Map();
+    rows.forEach(r => { const f = JSON.parse(r.data); (o.rs[r.owner_id] = o.rs[r.owner_id] || {forests: {}}).forests[r.id] = f; truoc.set(r.id, r.data); });
+    LK.chuyenDoi(o);
+    const up = db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?');
+    rows.forEach(r => { const f = o.rs[r.owner_id].forests[r.id], data = JSON.stringify(f); if (data !== truoc.get(r.id)) up.run(data, sha(data), r.id); });
+    const put = db.prepare('INSERT INTO danh_muc(kind,ord,data,hash) VALUES(?,?,?,?) ON CONFLICT(kind,ord) DO UPDATE SET data=excluded.data, hash=excluded.hash');
+    ['dmDoiTuong', 'dmXe', 'dmViTri'].forEach(k => {
+      db.prepare('DELETE FROM danh_muc WHERE kind=?').run(k);
+      o[k].forEach((x, i) => { const data = JSON.stringify(x); put.run(k, i, data, sha(data)); });
+      db.prepare('INSERT OR IGNORE INTO danh_muc_bang(kind) VALUES(?)').run(k);
+    });
+    db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('canDoiChieu', JSON.stringify(o.canDoiChieu || []));
   }
 ];
 
 const sha = s => crypto.createHash('sha1').update(s).digest('hex');
-const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac'];
+const LK = require('./lienket');
+const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac', 'dmDoiTuong', 'dmXe', 'dmViTri'];
 /* B5: tách gói đóng băng khỏi JSON của lô đã chốt. f = lô (đối tượng). Trả {f: lô không còn chot.goi, goi: {phienBan, hash, at, data} | null}. Không sửa f đầu vào. */
 function tachGoi(f) {
   if (!f || !f.chot || typeof f.chot.goi !== 'string') return {f, goi: null};
@@ -347,7 +371,8 @@ class Store {
     rowsF.forEach(r => {
       const row = get.get(r.id); if (!row) return;
       let cu, moi; try { cu = JSON.parse(row.data); moi = JSON.parse(r.data); } catch (e) { return; }
-      if (V.viPhamKhoa(M.needsEnsure(cu) ? M.ensureForest(cu) : cu, moi)) bad.push((moi.info && moi.info.maRung) || r.id);
+      const cuN = M.needsEnsure(cu) ? M.ensureForest(cu) : cu; if (!V.chiDoc(moi)) LK.chuanLo(cuN, {batKe: true});   // 3.0: ID dòng gán tất định — lô vừa mở khóa được gán ID trong cùng lần lưu, không tính là sửa dữ liệu
+      if (V.viPhamKhoa(cuN, moi)) bad.push((moi.info && moi.info.maRung) || r.id);
     });
     if (bad.length) throw Object.assign(new Error('Lô ' + bad.slice(0, 5).join(', ') + (bad.length > 5 ? '…' : '') + ' đã chốt hoặc đã dừng (chỉ đọc): không ghi thay đổi dữ liệu. Mở khóa (nhập lý do) hoặc mở lại lô trước khi sửa.'), {code: 'LOCKED', lots: bad});
   }
@@ -402,7 +427,9 @@ class Store {
     const rowsF = Object.entries(upF).map(([id, v]) => {
       let f; try { f = JSON.parse(v && v.json); } catch (e) { bad('lô ' + id); }
       if (!f || typeof f !== 'object' || (f.id || id) !== id || !v.owner || delO.includes(String(v.owner))) bad('lô ' + id);
-      const json = M.needsEnsure(f) ? JSON.stringify(f = M.ensureForest(f)) : v.json;   // chuẩn hóa đội như lưu toàn bộ
+      if (M.needsEnsure(f)) f = M.ensureForest(f);
+      if (LK.canChuan(f)) LK.chuanLo(f);
+      const json = JSON.stringify(f) === v.json ? v.json : JSON.stringify(f);   // chuẩn hóa đội, ID dòng như lưu toàn bộ
       const fi = f.info || {};
       return this._tachGoiKhiGhi({id, owner_id: String(v.owner), ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: json, hash: sha(json)});
     });
@@ -434,7 +461,8 @@ class Store {
       const data = JSON.stringify(rest), info = rest.info || {};
       owners.push({id: rest.id, ma: String(info.ma || ''), ten: String(info.ten || ''), cccd: String(info.cccd || ''), data, hash: sha(data)});
       Object.entries(fs_ || {}).forEach(([fid, f0]) => {
-        const f = M.needsEnsure(f0) ? M.ensureForest(f0) : f0;   // mọi lô ghi xuống đều có đội và mọi nhân công có doiId (tiến trình chính là nơi có thẩm quyền)
+        let f = M.needsEnsure(f0) ? M.ensureForest(f0) : f0;   // mọi lô ghi xuống đều có đội và mọi nhân công có doiId (tiến trình chính là nơi có thẩm quyền)
+        if (LK.canChuan(f)) { if (f === f0) f = JSON.parse(JSON.stringify(f0)); LK.chuanLo(f); }   // 3.0: ID dòng, chấm công theo ID thành viên (lô chưa khóa)
         const fd = JSON.stringify(f), fi = f.info || {}, idF = f.id || fid;
         if (seenF.has(idF)) dups.push('lô ' + idF + ' (' + (fi.maRung || '') + ') ở chủ ' + seenF.get(idF) + ' và ' + rest.id); seenF.set(idF, rest.id);
         forests.push(this._tachGoiKhiGhi({id: idF, owner_id: rest.id, ma_rung: String(fi.maRung || ''), ten_rung: String(fi.tenRung || ''), data: fd, hash: sha(fd)}));

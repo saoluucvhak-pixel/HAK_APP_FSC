@@ -1,4 +1,5 @@
 'use strict';
+const {bo30} = require('./_bo30');   // gỡ phần bổ sung 3.0 (ID dòng, liên kết, danh mục mới) khi so với mốc trước 3.0
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs'), os = require('os'), path = require('path');
@@ -15,7 +16,7 @@ test('lưu và đọc lại đúng từng rừng, giữ CCCD dạng chuỗi có 
   const d = tmp(), f = path.join(d, 'a.sqlite');
   let s = new Store(f); s.save(sample()); s.close();
   s = new Store(f); const o = s.load();
-  assert.deepStrictEqual(o.rs.r1.forests.f1.pc, [{so: '1', doiId: 'doi1'}, {so: '2', doiId: 'doi1'}]);   // lô một đội: phiếu cân tự thuộc đội (cấu trúc 2.0)
+  assert.deepStrictEqual(bo30(o.rs.r1.forests.f1).pc, [{so: '1', doiId: 'doi1'}, {so: '2', doiId: 'doi1'}]);   // lô một đội: phiếu cân tự thuộc đội (cấu trúc 2.0)
   assert.strictEqual(o.rs.r1.info.cccd, '049000000001');
   assert.strictEqual(Object.keys(o.rs.r1.forests).length, 2);
   assert.deepStrictEqual(o.norm, {x: 1});
@@ -161,7 +162,7 @@ test('nâng cấp từ cơ sở dữ liệu v1.0.0 THẬT (tests/fixtures/hakqn_
   const forA = s.db.prepare('SELECT id,data FROM forests ORDER BY id').all();
   /* so từng lô trước/sau: giống từng trường, TRỪ các trường đã chuyển ở v6 (đơn giá Tổ trưởng cũ vào bảng đơn giá theo vị trí, cước bậc sang tấn/km + bacCu) — kiểm riêng bên dưới */
   const sanCu = o => { const c = JSON.parse(JSON.stringify(o)); ['donGia', 'donGiaTan', 'soDoi', 'khoiLuong', 'klHoSoCu', 'klDoi'].forEach(k => delete (c.info || {})[k]); if (c.info && c.info.vanChuyen) ['mode', 'bac', 'bacCu'].forEach(k => delete c.info.vanChuyen[k]); return c; };
-  assert.deepStrictEqual(forA.map(r => [r.id, sanCu(boNgayChup(M.legacyForest(JSON.parse(r.data))))]), forB.map(r => [r.id, sanCu(JSON.parse(r.data))]));
+  assert.deepStrictEqual(forA.map(r => [r.id, sanCu(boNgayChup(bo30(M.legacyForest(JSON.parse(r.data)))))]), forB.map(r => [r.id, sanCu(JSON.parse(r.data))]));
   forB.forEach(rb => { const b = JSON.parse(rb.data), x = JSON.parse(forA.find(z => z.id === rb.id).data);   // đơn giá Tổ trưởng cũ nay nằm ở bảng đơn giá theo vị trí của đội; số cũ không còn ở thông tin rừng
     assert.ok(!('donGia' in x.info) && !('donGia' in x.doi[0].hinhThuc));
     if (b.info.donGia > 0 && (!b.info.hinhThucLuong || b.info.hinhThucLuong === 'sanluong')) assert.strictEqual(x.doi[0].hinhThuc.donGiaTan['Tổ trưởng'], (b.info.donGiaTan || {})['Tổ trưởng'] > 0 ? b.info.donGiaTan['Tổ trưởng'] : b.info.donGia); });
@@ -293,13 +294,13 @@ test('v10: đối tác một nguồn — dữ liệu 2.2 có cả danh mục đ�
   const f = {id: 'f', info: {maRung: 'R-1', tenRung: 'R'}, nc: [], dx: [{bienSo: '92C-1', hdvcId: 'h1', cccd: '049000000001', chuXe: 'AN'}], hdvc: [{id: 'h1', ten: 'Đội xe 1', key: '', donViId: 'dv1', ben: {id: 'dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI CŨ', mst: '0400111222'}, cuoc: null, exp: {}}], exp: {}};
   const s9 = new Store(file, {migrations: MIGRATIONS.slice(0, 9)}); s9.save({v: 2, dmDonViVC: {dv1: {id: 'dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI SỬA', mst: '0400111222', daiDien: 'ÔNG A'}, dv2: {id: 'dv2', loai: 'doanhnghiep', ten: 'CTY HAI'}},
     dmDoiTac: [{id: 'dn:dv1', loai: 'doanhnghiep', ten: 'CTY VẬN TẢI CŨ (bản chép lúc v8)', mst: '0400111222'}, {id: 'ct:049000000001', loai: 'nguoiKyVC', ten: 'AN', cccd: '049000000001'}],
-    rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C', cccd: '049067005459'}, forests: {f}}}}); const truoc = JSON.stringify(s9.load().rs); s9.close();
+    rs: {o: {id: 'o', info: {ten: 'CHỦ', ma: 'C', cccd: '049067005459'}, forests: {f}}}}); const truoc = JSON.stringify(bo30(s9.load().rs)); s9.close();
   assert.ok(MIGRATIONS.length >= 10);
   const s10 = new Store(file), db = s10.load();
   assert.ok(!('dmDonViVC' in db), 'dmDonViVC không còn: doanh nghiệp chỉ ở một nơi');
   assert.deepStrictEqual(db.dmDoiTac.map(x => x.id).sort(), ['ct:049000000001', 'dn:dv1', 'dn:dv2'], 'không mất dòng nào, không thêm trùng');
   const dv1 = db.dmDoiTac.find(x => x.id === 'dn:dv1'); assert.strictEqual(dv1.ten, 'CTY VẬN TẢI SỬA', 'doanh nghiệp lấy theo nơi từng cho sửa (danh mục đơn vị vận chuyển)'); assert.strictEqual(dv1.daiDien, 'ÔNG A');
-  assert.strictEqual(JSON.stringify(boNgayChup(s10.load().rs)), truoc, 'không đổi lô nào (ngoài ngày chụp danh mục của v11)');
+  assert.strictEqual(JSON.stringify(boNgayChup(bo30(s10.load().rs))), truoc, 'không đổi lô nào (ngoài ngày chụp danh mục của v11)');
   const h = db.rs.o.forests.f.hdvc[0]; assert.strictEqual(DM.timDoiTac(db.dmDoiTac, h.donViId).id, 'dn:dv1', 'đội xe vẫn trỏ đúng đối tác'); assert.strictEqual(DM.doiTacKey(h), 'dn:dv1'); assert.strictEqual(h.ben.ten, 'CTY VẬN TẢI CŨ', 'bản chụp bên B giữ nguyên (bản in không đổi)');
   s10.close();
   const s = new Store(file); assert.strictEqual(s.load().dmDoiTac.length, 3, 'mở lại không gộp thêm'); s.close();

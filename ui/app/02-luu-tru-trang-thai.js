@@ -102,7 +102,7 @@ function loVeBanDaLuu(fid) {
 }
 window.__saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
 /* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
-function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); })); }   // tại chỗ: nơi đang giữ tham chiếu lô vẫn đúng
+function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); if (HAKLienKet.canChuan(o.forests[k])) HAKLienKet.chuanLo(o.forests[k]); })); }   // 3.0: ID dòng, chấm công theo ID thành viên — giống hệt tầng lưu (src/store.js) để ảnh chụp khớp SQLite   // tại chỗ: nơi đang giữ tham chiếu lô vẫn đúng
 /* lô đã chốt / dừng (theo bản ĐÃ LƯU) mà trong bộ nhớ đã khác ngoài các khóa vòng đời: [mã lô]. Chỉ giải mã JSON của lô khóa. */
 function loKhoaViPham() {
   const out = [];
@@ -111,6 +111,7 @@ function loKhoaViPham() {
     const id = (f && f.id) || fk, b = savedSnap.forests.get(id); if (!b || !/"(chot|dung)":\{/.test(b.json)) return;
     try { if (JSON.stringify(f) === b.json) return; } catch (e) { /* không tuần tự hóa được: so đầy đủ bên dưới */ }   // giống hệt bản đã lưu: không vi phạm, khỏi giải mã và chuẩn hóa cả lô (lô lớn: hàng trăm ms mỗi lần lưu)
     let cu; try { cu = JSON.parse(b.json); } catch (e) { return; }
+    if (!HAKVongDoi.chiDoc(f)) HAKLienKet.chuanLo(cu, {batKe: true});   // như tầng lưu: ID dòng gán tất định, lô vừa mở khóa không bị coi là sửa dữ liệu
     if (HAKVongDoi.viPhamKhoa(cu, f)) out.push(id);
   }));
   return out;
