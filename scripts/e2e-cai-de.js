@@ -12,7 +12,7 @@ if (!rootCu || !fs.existsSync(path.join(rootCu, 'package.json'))) { console.log(
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-cd-')), out = path.join(dir, 'out'), dbFile = path.join(dir, 'd.sqlite');
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const sha = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
-const launch = root => electron.launch({executablePath: require(path.join(rootMoi, 'node_modules', 'electron')), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
+const launch = root => electron.launch({executablePath: require(path.join(root, 'node_modules', 'electron')), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
 const gom = async w => {   // mở lô, xuất gói toàn bộ, trả {tên file: xml}
   await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.waitForTimeout(500);
   for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f));

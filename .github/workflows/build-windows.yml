@@ -53,9 +53,9 @@ jobs:
   e2e-pdf:
     name: Kiểm thử bố cục biểu mẫu Word qua PDF (LibreOffice, Ubuntu)
     # Các bộ e2e dựng .docx ra PDF bằng LibreOffice để đếm trang, so ảnh, đọc dòng chữ ký. Runner Windows không có LibreOffice nên
-    # các phần đó bị bỏ qua ở job build; job này chạy đủ, và --no-skip coi bộ nào còn phần bỏ qua (thiếu công cụ) là không đạt.
+    # các phần đó bị bỏ qua ở job build. Job này chạy đủ và chặn cả phần bỏ qua trong kiểm thử nâng cấp từ mã nguồn v1.4.33.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
         with:
@@ -69,10 +69,21 @@ jobs:
           soffice --version
       - run: npm ci
       - run: npm run build:html
+      - name: Kiểm tra quyền tệp khi di chuyển dữ liệu trên Linux
+        run: ELECTRON_RUN_AS_NODE=1 "$(node -p "require('electron')")" --test tests/datamove.test.js
+      - name: Chuẩn bị mã nguồn và Electron của v1.4.33
+        run: |
+          old="$RUNNER_TEMP/hakqn-v1.4.33"
+          git fetch --depth=1 origin refs/tags/v1.4.33
+          test "$(git rev-parse 'FETCH_HEAD^{commit}')" = 91534882c1fe28ec4e12e8cb64714afae3279ae2
+          git worktree add --detach "$old" FETCH_HEAD
+          npm ci --prefix "$old" --ignore-scripts
+          (cd "$old" && node node_modules/electron/install.js && npm run postinstall && npm run build:html)
+          echo "HAKQN_ROOT_CU=$old" >> "$GITHUB_ENV"
       - name: Nâng cấp dữ liệu v8 (main 2.2) → v14 (danh mục theo dòng, gói chốt riêng, khóa in theo đội xe, ngày chụp danh mục; sao lưu trước, mở lại không đổi)
         run: xvfb-run -a node scripts/e2e-nangcap-v14.js
-      - name: Năm bộ e2e có kiểm tra PDF (số hợp đồng, in đè, BM-08, chữ ký, nghiệm thu in đợt 2)
-        run: node scripts/e2e-all.js sohd inde bm08 chuky nghiemthu-dot2 --no-skip --out reports/e2e-pdf
+      - name: Kiểm tra PDF và nâng cấp từ v1.4.33, bắt buộc chạy đủ
+        run: node scripts/e2e-all.js sohd inde bm08 chuky nghiemthu-dot2 cai-de --no-skip --out reports/e2e-pdf
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2
         if: always()
         with:
@@ -261,7 +272,7 @@ jobs:
           $old = Join-Path $env:RUNNER_TEMP 'old-release-1433'; New-Item -ItemType Directory $old | Out-Null
           gh release download v1.4.33 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-1.4.33.exe' -D $old
           $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-1.4.33.exe'
-          if (-not (Test-Path $oldSetup)) { Write-Host "::warning::Bản phát hành v1.4.33 không còn trên GitHub Releases nên bỏ qua bước nâng cấp từ bộ cài thật của bản này. Hãy cập nhật bước này sang bản phát hành gần nhất còn trên Releases."; exit 0 }
+          if (-not (Test-Path $oldSetup)) { throw 'Thiếu bộ cài v1.4.33 để kiểm tra nâng cấp trên Windows' }
           $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
           if ($h -ne '15DC58545276FED4C0CE8565B36D9D6856010E4E066E8AAEE91078DA2F68E6AD') { throw "Bộ cài v1.4.33 tải về không khớp mã băm công bố: $h" }
           $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade1433'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade1433-userdata'
