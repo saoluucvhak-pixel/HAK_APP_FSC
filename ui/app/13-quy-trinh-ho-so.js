@@ -73,7 +73,7 @@ function qtMarkAct(codes, on) {
 /* In phiếu cân theo rừng (giống xuất hồ sơ): dùng đúng phiếu cân của rừng đang mở, bất kể phiếu đến từ file nhập ở rừng, Tra cứu Google Sheets hay cập nhật biển số */
 let pcInLoc = null, pcInDuLieu = null;
 function panelInPhieuCan() {
-  const saved = HB?.loadSync()?.db?.rs?.[cur]?.forests?.[curF];
+  const saved = HB?.loadSync()?.db?.rs?.[NAV.cur]?.forests?.[NAV.curF];
   if (!saved) return '<div class="msg warn">Chưa có lô đã lưu để in phiếu cân.</div>';
   const rec = jobView(curOwner(), saved), loc = pcInLoc || {};
   const from = loc.tu ? Number(loc.tu.replaceAll('-', '')) : 0;
@@ -199,7 +199,7 @@ function panelXuat(rec) {
     row('Biên bản kiểm tra hiện trường khai thác', 'Checklist trước và sau khai thác (in ngang)', btn('Tải .docx', 'kthn', null, g.ok('kthn'))) +
     row('Nhật ký khai thác hằng ngày', 'Tự lập các ngày từ thời gian khai thác (bỏ Chủ nhật) · in ngang', btn('Tải .docx', 'nkkt', null, g.ok('nkkt'))) + '</div>';
   const TABS = [['hd', '1. Hợp đồng'], ['ld', '2. Lao động, an toàn'], ['vc', '3. Vận chuyển'], ['fsc', '4. FSC, giám sát'], ['all', 'Tất cả']];
-  const cur = TABS.some(t => t[0] === xtab) ? xtab : 'hd';
+  const cur = TABS.some(t => t[0] === NAV.xtab) ? NAV.xtab : 'hd';
   const INTRO = {hd: 'Nhập số, ngày, thông số hợp đồng và nghiệm thu, rồi tải từng mẫu.', ld: 'Bảo hộ lao động, đào tạo ATLĐ, chấm công, tiền công, sổ tai nạn và kiểm tra thiết bị.',
     vc: 'Hợp đồng vận chuyển theo người ký; xác nhận khối lượng và thanh toán lấy từ phiếu cân.', fsc: 'Thẩm định, cam kết, phổ biến, kiểm tra hiện trường, nhật ký khai thác phục vụ giám sát FSC.', all: 'Hiển thị toàn bộ thông số và mẫu của cả 4 nhóm.'};
   const dl = draftList(rec).filter(x => x.issues.length);
@@ -218,10 +218,10 @@ function panelXuat(rec) {
 
 function renderCtx() {
   const o = curOwner(), f = curForest();
-  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && view !== 'norm' && view !== 'dm' && !SET_VIEWS.includes(view));
-  const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', SET_VIEWS.includes(view));
-  const nd = document.getElementById('navDm'); if (nd) nd.classList.toggle('on', view === 'dm');
-  const nn = document.getElementById('navNorm'); if (nn) nn.classList.toggle('on', view === 'norm');
+  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && NAV.view !== 'norm' && NAV.view !== 'dm' && !SET_VIEWS.includes(NAV.view));
+  const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', SET_VIEWS.includes(NAV.view));
+  const nd = document.getElementById('navDm'); if (nd) nd.classList.toggle('on', NAV.view === 'dm');
+  const nn = document.getElementById('navNorm'); if (nn) nn.classList.toggle('on', NAV.view === 'norm');
   $('#ctxOwner').innerHTML = 'Chủ rừng: <b>' + esc(o ? (o.info.ten || '(chưa đặt tên)') : 'chưa mở') + '</b>';
   $('#ctxForest').innerHTML = 'Rừng: <b>' + esc(f ? ((f.info.maRung || '(chưa có mã)') + (f.info.tenRung ? ' · ' + f.info.tenRung : '')) : 'chưa mở') + '</b>';
   if (!saveSt.text) showSave(HB ? (storeOk ? 'Dữ liệu lưu trong SQLite trên máy' : 'Chưa đọc được cơ sở dữ liệu') : 'Dữ liệu lưu trong trình duyệt', !storeOk);

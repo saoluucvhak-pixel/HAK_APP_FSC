@@ -108,7 +108,7 @@ function exportCheckTinh(job) {
   return {items, chan: items.filter(x => x.muc === 'chan'), doi: items.filter(x => x.muc === 'doi'), g, tomTat: HAKKiemTra.tomTat(items), bieuMauBiChan: HAKKiemTra.bieuMauBiChan(items)};
 }
 const mucLoDaMo = new Map();
-const mucLoKey = k => JSON.stringify([cur, curF, k, k === 'nc' || k === 'dx' ? hdMo(k) : null]);
+const mucLoKey = k => JSON.stringify([NAV.cur, NAV.curF, k, k === 'nc' || k === 'dx' ? hdMo(k) : null]);
 const mucLoDangMo = (k, macDinh = 'chung') => mucLoDaMo.get(mucLoKey(k)) || macDinh;
 window.__mucLo = (k, id) => { mucLoDaMo.set(mucLoKey(k), id); render(); };
 window.__hdMo = (k, id) => { hdMoDat(k, id || null); render(); };   // kiểm thử đầu-cuối: mở / đóng trang chi tiết hợp đồng trong cùng lô (bản nháp của lô vẫn giữ)   // kiểm thử đầu-cuối: mở một mục nhập (không qua hộp hỏi lưu bản nháp — bản nháp của lô vẫn giữ)
@@ -127,14 +127,14 @@ function khungMucLo(k, cacMuc, macDinh = 'chung') {
 /* Đường dẫn từ chủ rừng đến mục nhập đang mở. */
 function loCrumb(job) {
   const o = curOwner(), f = curForest(); if (!o || !f) return '';
-  const man = {finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', kt: 'Kiểm tra trước khi xuất', xuat: 'Xuất hồ sơ', inpc: 'In phiếu cân'}[ftab] || '';
+  const man = {finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', kt: 'Kiểm tra trước khi xuất', xuat: 'Xuất hồ sơ', inpc: 'In phiếu cân'}[NAV.ftab] || '';
   let doi = '';
-  if (ftab === 'nc' && job.doi && curTeam(f)) { const t = curTeam(f); doi = 'Đội “' + esc(trim(t.ten) || 'Đội ' + (job.doi.findIndex(d => d.id === t.id) + 1)) + '”'; }
-  if (ftab === 'dx' && job.hdvc) { const h = job.hdvc.find(x => x.id === curHd); if (h) { const k = job.hdvc.indexOf(h); doi = 'Đội xe “' + esc(trim(h.ten) || 'Đội xe ' + (k + 1)) + '”'; } }
+  if (NAV.ftab === 'nc' && job.doi && curTeam(f)) { const t = curTeam(f); doi = 'Đội “' + esc(trim(t.ten) || 'Đội ' + (job.doi.findIndex(d => d.id === t.id) + 1)) + '”'; }
+  if (NAV.ftab === 'dx' && job.hdvc) { const h = job.hdvc.find(x => x.id === NAV.curHd); if (h) { const k = job.hdvc.indexOf(h); doi = 'Đội xe “' + esc(trim(h.ten) || 'Đội xe ' + (k + 1)) + '”'; } }
   const part = [['Chủ rừng “' + esc(o.info.ten || '') + '”', 'data-tab="info"'],
     ['Lô <b>' + esc(f.info.maRung || '(chưa có mã)') + '</b>', 'data-ftab="finfo"']];
-  if (man && ftab !== 'finfo') part.push([man, doi ? 'data-act="hdQuayLai" data-kind="' + ftab + '"' : '']);
-  if (doi) part.push([doi, 'data-muc-lo="chung" data-lo-nhom="' + ftab + '"']);
+  if (man && NAV.ftab !== 'finfo') part.push([man, doi ? 'data-act="hdQuayLai" data-kind="' + NAV.ftab + '"' : '']);
+  if (doi) part.push([doi, 'data-muc-lo="chung" data-lo-nhom="' + NAV.ftab + '"']);
   return '<nav class="crumb" id="loCrumb" aria-label="Đường dẫn">' + part.map(([t, a], i) =>
     (i ? ' <span aria-hidden="true">›</span> ' : '') + (a ? '<button type="button" class="linkbtn" ' + a + '>' + t + '</button>' : '<span>' + t + '</span>')).join('') + '<span id="loCrumbMuc"></span></nav>';
 }
@@ -154,7 +154,7 @@ function panelRung(own) {
   const add = '<button class="btn sm" data-act="newForest">+ Rừng mới</button>';
   const list = '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Các rừng của chủ rừng</h3>' + (f ? '' : add) + '</div>' +
     '<p class="mut">Mỗi rừng có tổ khai thác, vận chuyển, hợp đồng và hồ sơ xuất riêng.</p>' + loTuLoCuBox(own) +
-    (fl.length ? fl.map(f => '<button class="item ' + (f.id === curF ? 'on' : '') + '" data-forest="' + f.id + '"><span class="pill ' + (progressOf(jobView(own, f)).pct === 100 ? 'ok' : '') + '">' + progressOf(jobView(own, f)).pct + '%</span><b>' + esc(f.info.tenRung || f.info.maRung) +
+    (fl.length ? fl.map(f => '<button class="item ' + (f.id === NAV.curF ? 'on' : '') + '" data-forest="' + f.id + '"><span class="pill ' + (progressOf(jobView(own, f)).pct === 100 ? 'ok' : '') + '">' + progressOf(jobView(own, f)).pct + '%</span><b>' + esc(f.info.tenRung || f.info.maRung) +
       '</b><small>Mã ' + esc(f.info.maRung) + ' · ' + esc(f.info.diaDiem || 'chưa có địa điểm') + ' · ' + f.nc.length + ' người · ' + f.dx.length + ' xe</small></button>').join('')
       : '<p class="mut">Chưa có rừng. Bấm “+ Rừng mới”.</p>') + '</div>';
   if (!f) return list;
@@ -163,16 +163,16 @@ function panelRung(own) {
   return '<details class="rungTomTat"><summary>Danh sách rừng · Tiến độ ' + progressOf(job).pct + '%</summary>' +
     list + panelTienDo(job) + '</details>' +
     '<div class="row" style="justify-content:space-between;flex-wrap:wrap"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row" style="flex-wrap:wrap">' + add + '<button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
-    loCrumb(job) + loBar() + '<div class="tabs rungTabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
+    loCrumb(job) + loBar() + '<div class="tabs rungTabs">' + ft.map(([k, l]) => '<button class="' + (NAV.ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
     loKhoaBanner(f) +
-    (ftab === 'inpc' ? panelInPhieuCan() : ftab === 'finfo' ? khungMucLo('finfo', [
+    (NAV.ftab === 'inpc' ? panelInPhieuCan() : NAV.ftab === 'finfo' ? khungMucLo('finfo', [
       ['chung', 'Thông tin chung', () => panelForest(f, 'chung')],
       ['toado', 'Tọa độ và cự ly', () => panelForest(f, 'toado')],
       ['dinhmuc', 'Định mức, sản lượng', () => panelForest(f, 'dinhmuc')],
       ['giay', 'Giấy tờ pháp lý', () => panelGiay(f), (f.info.giayTo || []).length],
       ['giaohang', 'Công ty, địa chỉ giao và cước', () => panelMua(job) + panelVc(job)],
       ['vanban', 'Số văn bản chung', () => soVanBanBox(job)]
-    ]) : ftab === 'nc' ? panelNC(stJob(job)) : ftab === 'dx' ? panelVanChuyen(stJob(job)) : ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu.</b>' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + chotBox(job) + soVanBanBox(job) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job));
+    ]) : NAV.ftab === 'nc' ? panelNC(stJob(job)) : NAV.ftab === 'dx' ? panelVanChuyen(stJob(job)) : NAV.ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu.</b>' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + chotBox(job) + soVanBanBox(job) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job));
 }
 
 /* Ô Định mức (tấn/ha) của rừng: để trống thì dùng định mức gỗ keo mặc định (hiệu lực theo ngày bắt đầu khai thác); tự điền thì dùng số của rừng */

@@ -91,7 +91,7 @@ const cuocText = (rec, h) => { const t = transportPrice(vcInfo(rec, h)); return 
 function panelHdvc(rec) {
   if (!rec.hdvc) return '';
   const F = {dx: rec.dx, hdvc: rec.hdvc}, list = HAKModel.hdOrder(F), gs = groupsDX(rec), gOf = h => gs.find(g => g.hd === h);
-  const sel = list.find(h => h.id === curHd) || null;
+  const sel = list.find(h => h.id === NAV.curHd) || null;
   const tenDoi = (h, k) => trim(h.ten) || 'Đội xe ' + (k + 1);
   const ky = h => { if (h.donViId) return esc((h.ben || {}).ten || '(đơn vị)') + ' <span class="mut">(' + esc(vaiTroDV(h.ben)) + ')</span>'; const g = gOf(h); return g ? esc(g.ten || '') + ' <span class="mut">(' + esc(g.vaiTro) + ')</span>' : '<span class="mut">chưa có xe</span>'; };
   const row = (h, k) => '<tr data-act="chonHd" data-hd="' + esc(h.id) + '" style="cursor:pointer' + (sel && sel.id === h.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(tenDoi(h, k)) + '</b>' + (sel && sel.id === h.id ? ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + ky(h) + '</td><td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td><td>' + cuocText(rec, h) + '</td><td>' + esc((h.exp || {}).soVC || '') + (h.exp && h.exp.soVC ? '' : ' <span class="mut">(số chung)</span>') + '</td></tr>';
@@ -123,7 +123,7 @@ function panelHdvc(rec) {
 /* Số và ngày văn bản của đội xe đang chọn, sửa trong mục riêng. */
 function panelHdvcVB(rec) {
   if (!rec.hdvc) return '';
-  const sel = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc}).find(h => h.id === curHd); if (!sel) return '';
+  const sel = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc}).find(h => h.id === NAV.curHd); if (!sel) return '';
   const e = sel.exp || {}, k = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc}).indexOf(sel), ten = trim(sel.ten) || 'Đội xe ' + (k + 1);
   const o = (n, lb) => '<label><span>' + lb + '</span><input name="' + n + '" value="' + esc(e[n] || '') + '"></label>';
   return '<div class="card" id="hdVB"><h4 style="margin:0 0 6px">Số và ngày văn bản của ' + esc(ten) + ' <span class="mut" style="font-weight:400">· để trống thì dùng số chung của lô</span></h4><form id="hdVbForm" class="grid">' +

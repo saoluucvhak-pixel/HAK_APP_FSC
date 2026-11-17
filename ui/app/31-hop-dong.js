@@ -2,14 +2,14 @@
  * Tab mở ra DANH SÁCH hợp đồng của rừng (Nhân công: mỗi đội một hợp đồng; Vận chuyển: mỗi đội xe một hợp đồng). Chọn một hợp đồng → trang chi tiết
  * có tên rừng, số hợp đồng và nút “Quay lại danh sách”. Hợp đồng đang mở được nhớ theo từng rừng: lưu xong vẫn ở đúng hợp đồng, đúng phần đang làm. */
 var hdMoS = {};   // {mã rừng: {nc: id đội | null, dx: id hợp đồng vận chuyển | null}}
-var hdMo = k => { const s = hdMoS[curF]; return (s && s[k]) || null; };
-function hdMoDat(k, id) { (hdMoS[curF] = hdMoS[curF] || {})[k] = id || null; if (k === 'nc') curDoi = id || null; if (k === 'dx') curHd = id || null; }
+var hdMo = k => { const s = hdMoS[NAV.curF]; return (s && s[k]) || null; };
+function hdMoDat(k, id) { (hdMoS[NAV.curF] = hdMoS[NAV.curF] || {})[k] = id || null; if (k === 'nc') NAV.curDoi = id || null; if (k === 'dx') NAV.curHd = id || null; }
 /* hợp đồng đang mở còn trong lô (đội / hợp đồng có thể vừa bị xóa, khôi phục): trả bản ghi hoặc null (và quên id cũ) */
 function hdMoHopLe(k, rec) {
   const id = hdMo(k); if (!id) return null;
   const x = (k === 'nc' ? rec.doi : rec.hdvc || []).find(d => d.id === id);
   if (!x) { hdMoDat(k, null); return null; }
-  if (k === 'nc') curDoi = id; else curHd = id;
+  if (k === 'nc') NAV.curDoi = id; else NAV.curHd = id;
   return x;
 }
 var tenRungHd = rec => { const i = rec.info || {}; return [i.maRung, i.tenRung].filter(Boolean).join(' · ') || 'rừng chưa đặt tên'; };
@@ -83,16 +83,16 @@ function doiTacKyVC() {
  * Cài đặt hiện thanh “Quay lại …” đưa về đúng rừng, tab, hợp đồng đang mở. */
 var veLai = null;
 function veLaiGhi(noi) {
-  veLai = {noi, view, tab, ftab, cur: typeof cur !== 'undefined' ? cur : null, curF, hd: Object.assign({}, hdMoS[curF] || {}),
-    ten: noi === 'setxe' ? 'Danh mục xe (xe đang nhập)' : noi === 'setdt' ? 'Danh mục đối tượng (đang sửa)' : view === 'owner' && curF ? 'hợp đồng đang mở' : 'màn trước'};
+  veLai = {noi, view: NAV.view, tab: NAV.tab, ftab: NAV.ftab, cur: typeof NAV.cur !== 'undefined' ? NAV.cur : null, curF: NAV.curF, hd: Object.assign({}, hdMoS[NAV.curF] || {}),
+    ten: noi === 'setxe' ? 'Danh mục xe (xe đang nhập)' : noi === 'setdt' ? 'Danh mục đối tượng (đang sửa)' : NAV.view === 'owner' && NAV.curF ? 'hợp đồng đang mở' : 'màn trước'};
 }
 function veLaiThanh() {
   return veLai ? '<div class="msg" id="veLaiBar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px"><span>Đang mở từ <b>' + esc(veLai.ten) + '</b>: bản đang nhập vẫn được giữ.</span><button class="btn sm" data-act="veLai" id="veLaiBtn">← Quay lại ' + esc(veLai.ten) + '</button></div>' : '';
 }
 function veLaiDi() {
   const v = veLai; veLai = null; if (!v) return render();
-  if (v.noi === 'setxe' || v.noi === 'setdt') view = v.noi;
-  else { view = v.view; tab = v.tab; ftab = v.ftab; if (v.cur != null && typeof cur !== 'undefined') cur = v.cur; curF = v.curF; hdMoS[curF] = v.hd; if (v.hd.nc) curDoi = v.hd.nc; if (v.hd.dx) curHd = v.hd.dx; }
+  if (v.noi === 'setxe' || v.noi === 'setdt') NAV.view = v.noi;
+  else { NAV.view = v.view; NAV.tab = v.tab; NAV.ftab = v.ftab; if (v.cur != null && typeof NAV.cur !== 'undefined') NAV.cur = v.cur; NAV.curF = v.curF; hdMoS[NAV.curF] = v.hd; if (v.hd.nc) NAV.curDoi = v.hd.nc; if (v.hd.dx) NAV.curHd = v.hd.dx; }
   render();
 }
 document.addEventListener('click', e => {

@@ -174,7 +174,7 @@ async function lotGo() {
   if (!r.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
   dbThayToanBo(r.db);   // kể cả dấu “chưa lưu” và bản đã lưu cũ: lô vừa khôi phục không bị ghi lại bằng bản trước khi khôi phục
   if (!r.doi) return note('Giữ bản hiện có của lô ' + r.plan.maLo + ': không có gì thay đổi.');
-  cur = r.ownerId; curF = r.forestId; view = 'owner'; tab = 'rung'; ftab = 'finfo'; render();
+  NAV.cur = r.ownerId; NAV.curF = r.forestId; NAV.view = 'owner'; NAV.tab = 'rung'; NAV.ftab = 'finfo'; render();
   note('Đã khôi phục lô ' + r.plan.maLo + ' (' + lotCnt(r.plan.incoming) + '). Bản sao lưu trước khi ghi: ' + r.backup, 'ok');
 }
 async function restoreAll(file) {
@@ -184,7 +184,7 @@ async function restoreAll(file) {
     if (!o || typeof o !== 'object' || !o.rs) throw new Error('File không đúng định dạng sao lưu.');
     if (HB) return importWithPreview(withDefaults(o.v === 2 ? o : migrateV1(o)));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
-    db = withDefaults(o.v === 2 ? o : migrateV1(o)); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); savedSnap = null; persist(); cur = null; curF = null;
+    db = withDefaults(o.v === 2 ? o : migrateV1(o)); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
     note('Đã khôi phục ' + Object.keys(db.rs).length + ' hồ sơ chủ rừng.');
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
 }

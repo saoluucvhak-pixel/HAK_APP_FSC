@@ -266,7 +266,7 @@ document.addEventListener('click', e => {
   if (el.dataset.ngbo) { cd.sua = dtDocForm(); const p = cd.sua.nguoi[+el.dataset.ngbo]; if (!confirm('Bỏ ' + p.hoTen + ' khỏi đối tượng này? (Hồ sơ rừng đã chụp thông tin người này không đổi.)')) return; cd.sua.nguoi = cd.sua.nguoi.filter((_, i) => i !== +el.dataset.ngbo); return render(); }
   if (el.dataset.xesua) return xeMo(el.dataset.xesua);
   if (el.dataset.vtdoi) { const id = el.dataset.vtdoi, inp = document.querySelector('[data-vtten="' + id + '"]'), r = HAKViTri.doiTen(db, id, inp ? inp.value : ''); cd.vtMsg = r.ok ? ['Đã đổi tên vị trí: cập nhật ' + r.so.dinhBien + ' dòng định biên, ' + r.so.dinhMuc + ' định mức BHLĐ, ' + r.so.donGia + ' đơn giá, ' + r.so.nhanCong + ' dòng nhân công' + (r.so.loKhoa ? '; ' + r.so.loKhoa + ' lô đã chốt giữ tên cũ (định biên, định mức BHLĐ giữ thêm mục tên cũ để in lại đúng)' : '') + '.', 'ok'] : [r.error, 'err']; if (r.ok) persist(); return render(); }
-  if (el.dataset.canmo) { const [oid, fid, ft] = el.dataset.canmo.split('|'); cur = oid; curF = fid; view = 'owner'; tab = 'rung'; ftab = ft; return render(); }
+  if (el.dataset.canmo) { const [oid, fid, ft] = el.dataset.canmo.split('|'); NAV.cur = oid; NAV.curF = fid; NAV.view = 'owner'; NAV.tab = 'rung'; NAV.ftab = ft; return render(); }
   if (el.dataset.canxong) { const [fid, loai, ref] = el.dataset.canxong.split('|'), bo = l => (l || []).filter(c => !(c.loai === loai && c.ref === ref));
     if (fid) { Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => { if (f.id === fid) { if (loKhoa(f)) return; f.canDoiChieu = bo(f.canDoiChieu); persistLo(f); } })); } else { db.canDoiChieu = bo(db.canDoiChieu); persist(); } return render(); }
 });

@@ -172,26 +172,32 @@ function persist() {
 if (HB) window.addEventListener('beforeunload', () => { if (saveTimer) { clearTimeout(saveTimer); flushSave(); } });
 
 /* ========== Trạng thái giao diện ========== */
-let cur = null;      // id chủ rừng đang mở
-let curF = null;     // id rừng đang mở (thuộc chủ rừng cur)
-let tab = 'info';    // info | rung
-let xtab = 'hd';     // trong tab Xuất hồ sơ: hd | ld | vc | fsc | all
-let ftab = 'finfo';  // trong rừng: finfo | nc | dx | xuat
+/* Trạng thái điều hướng: MỘT đối tượng NAV thay cho các biến toàn cục rời (module điều khiển ghi, module vẽ màn hình đọc).
+ * Mọi nơi dùng NAV.<tên>; kiểm thử đọc và đặt qua đây thay vì các móc rời. */
+const NAV = {
+  cur: null,       // id chủ rừng đang mở
+  curF: null,      // id rừng đang mở (thuộc chủ rừng NAV.cur)
+  tab: 'info',     // info | rung
+  xtab: 'hd',      // trong tab Xuất hồ sơ: hd | ld | vc | fsc | all
+  ftab: 'finfo',   // trong rừng: finfo | nc | dx | xuat
+  view: 'owner',   // owner | norm (định mức BHLĐ)
+  curDoi: null,    // đội đang chọn của lô đang mở
+  curHd: null,     // hợp đồng vận chuyển đang chọn của lô đang mở
+  ncTatCa: false   // xem nhân công của mọi đội
+};
 let notes = [];      // thông báo tạm thời
-let view = 'owner';  // owner | norm (định mức BHLĐ)
 try { savedSnap = HAKDelta.snapshot(db); } catch (e) { savedSnap = null; }   // bản đã lưu lúc mở app
 if (migrated) { persist(); notes.push({text: 'Đã chuyển dữ liệu sang cấu trúc Rừng. Dữ liệu cũ vẫn được giữ trong trình duyệt.', kind: 'ok'}); }
 
 const note = (text, kind = 'ok') => { notes.push({text, kind}); render(); };
 const pushNote = (text, kind = 'ok') => { notes.push({text, kind}); }; // chỉ xếp hàng, để lần render sau hiển thị
-const curOwner = () => (cur && db.rs[cur]) || null;
+const curOwner = () => (NAV.cur && db.rs[NAV.cur]) || null;
 const forestList = o => Object.values(o.forests || {});
 /* Điểm đến vận chuyển hiệu lực của rừng: bản chụp công ty mua hàng, nếu chưa chọn thì điểm đến nhập tay cũ (src/muahang.js) */
 const destOf = rec => HAKMuaHang.diemDen(rec.info, rec.exp);
-const curForest = () => { const o = curOwner(); return (o && curF && o.forests[curF]) || null; };
+const curForest = () => { const o = curOwner(); return (o && NAV.curF && o.forests[NAV.curF]) || null; };
 /* Đội đang chọn của lô đang mở (bảng con “Nhân công khai thác”); chưa chọn / không còn: đội đầu */
-let curDoi = null, curHd = null, ncTatCa = false;   // đội / hợp đồng vận chuyển đang chọn của lô đang mở
-const curTeam = f => { f = f || curForest(); if (!f) return null; if (HAKModel.needsEnsure(f)) Object.assign(f, HAKModel.ensureForest(f)); return f.doi.find(d => d.id === curDoi) || f.doi[0]; };
+const curTeam = f => { f = f || curForest(); if (!f) return null; if (HAKModel.needsEnsure(f)) Object.assign(f, HAKModel.ensureForest(f)); return f.doi.find(d => d.id === NAV.curDoi) || f.doi[0]; };
 /* thông tin rừng + hình thức của đội đầu (để đọc ở form thông tin rừng; hồ sơ dùng jobView) */
 const fInfo = f => Object.assign({}, (f && f.info) || {}, (((f && f.doi) || [])[0] || {}).hinhThuc || {});
 /* ghi các trường của ĐỘI vào đội (mặc định đội đang chọn), còn lại vào lô; trả phần của lô */
@@ -207,7 +213,7 @@ function ghiDoi(f, patch, kind, d) {
  * còn lại theo src/model.js (cột Đội khớp tên đội; lô một đội: đội đó; thay cả danh sách: chia đội theo cột Đội như bản cũ) */
 function ganDoi(doi, nc) {
   if (!doi || !doi.length || !(nc || []).some(r => r && r.doiId === undefined)) return {doi, nc};
-  const t = doi.length > 1 ? (doi.find(d => d.id === curDoi) || doi[0]) : null;
+  const t = doi.length > 1 ? (doi.find(d => d.id === NAV.curDoi) || doi[0]) : null;
   const nc2 = t ? nc.map(r => r && r.doiId === undefined && !trim(r.doi) ? Object.assign({}, r, {doiId: t.id}) : r) : nc;
   const x = HAKModel.ensureForest({doi, nc: nc2}); return {doi: x.doi, nc: x.nc};
 }
@@ -227,7 +233,7 @@ function ganVC(hdvc, dx) {
   if (!hdvc) return {hdvc, dx};
   const F0 = {dx, hdvc};   // xe có cột Đội xe khớp tên một đội xe của lô: vào đội xe đó (ưu tiên hơn đội xe đang chọn)
   if ((dx || []).some(r => r && r.hdvcId === undefined && trim(r.doiXe))) dx = dx.map(r => { if (!r || r.hdvcId !== undefined || !trim(r.doiXe)) return r; const m = hdvc.find(h => hdTenKhop(F0, h, r.doiXe)); return m ? Object.assign({}, r, {hdvcId: m.id}) : r; });
-  const t = curHd && hdvc.find(h => h.id === curHd);   // xe mới (chưa có đội xe) vào ĐỘI XE ĐANG CHỌN; chưa chọn đội: theo người ký (mỗi người ký một đội như trước)
+  const t = NAV.curHd && hdvc.find(h => h.id === NAV.curHd);   // xe mới (chưa có đội xe) vào ĐỘI XE ĐANG CHỌN; chưa chọn đội: theo người ký (mỗi người ký một đội như trước)
   if (t && (dx || []).some(r => r && r.hdvcId === undefined)) dx = dx.map(r => r && r.hdvcId === undefined ? Object.assign({}, r, {hdvcId: t.id}) : r);
   const F = {doi: [{id: '_'}], nc: [], hdvc, dx};
   if (!HAKModel.needsEnsure(F)) return {hdvc, dx};

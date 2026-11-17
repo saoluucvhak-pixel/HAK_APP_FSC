@@ -95,7 +95,7 @@ async function kslGo() {
   ksl.busy = true; let r; try { r = await HB.saoLuu.restore(x.file); } finally { ksl.busy = false; }
   $('#impBox').classList.remove('on'); window.__ksl = null;
   if (!r.ok) { ksl.msg = ['Không khôi phục được, dữ liệu cũ giữ nguyên: ' + r.error, 'err']; return render(); }
-  dbThayToanBo(r.db); cur = null; curF = null;
+  dbThayToanBo(r.db); NAV.cur = null; NAV.curF = null;
   ksl.msg = ['Đã khôi phục từ ' + r.name + ': ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' lô, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân' + (r.goiCu ? '; chép thêm ' + r.goiCu + ' bản chụp của các lần chốt trước' : '') + '. Dữ liệu trước khi khôi phục: ' + r.backup, 'ok'];
   render();
 }
