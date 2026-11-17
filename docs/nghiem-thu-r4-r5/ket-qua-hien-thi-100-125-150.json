@@ -1,0 +1,366 @@
+{
+ "rong": 1024,
+ "cao": 700,
+ "kq": [
+  {
+   "man": "home",
+   "scale": 1,
+   "coMan": true,
+   "anh": "home-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "settings",
+   "scale": 1,
+   "coMan": true,
+   "anh": "settings-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungNC",
+   "scale": 1,
+   "coMan": true,
+   "anh": "rungNC-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungDX",
+   "scale": 1,
+   "coMan": true,
+   "anh": "rungDX-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungXuat",
+   "scale": 1,
+   "coMan": true,
+   "anh": "rungXuat-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungThongTin",
+   "scale": 1,
+   "coMan": true,
+   "anh": "rungThongTin-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungGiaoHang",
+   "scale": 1,
+   "coMan": true,
+   "anh": "rungGiaoHang-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "danhMuc",
+   "scale": 1,
+   "coMan": true,
+   "anh": "danhMuc-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "danhMucXe",
+   "scale": 1,
+   "coMan": true,
+   "anh": "danhMucXe-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNC",
+   "scale": 1,
+   "coMan": true,
+   "anh": "hdNC-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNCThanhVien",
+   "scale": 1,
+   "coMan": true,
+   "anh": "hdNCThanhVien-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNCChamCong",
+   "scale": 1,
+   "coMan": true,
+   "anh": "hdNCChamCong-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDX",
+   "scale": 1,
+   "coMan": true,
+   "anh": "hdDX-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDXXe",
+   "scale": 1,
+   "coMan": true,
+   "anh": "hdDXXe-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDXPhieuCan",
+   "scale": 1,
+   "coMan": true,
+   "anh": "hdDXPhieuCan-100.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "home",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "home-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "settings",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "settings-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungNC",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "rungNC-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungDX",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "rungDX-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungXuat",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "rungXuat-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungThongTin",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "rungThongTin-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungGiaoHang",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "rungGiaoHang-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "danhMuc",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "danhMuc-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "danhMucXe",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "danhMucXe-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNC",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "hdNC-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNCThanhVien",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "hdNCThanhVien-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNCChamCong",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "hdNCChamCong-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDX",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "hdDX-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDXXe",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "hdDXXe-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDXPhieuCan",
+   "scale": 1.25,
+   "coMan": true,
+   "anh": "hdDXPhieuCan-125.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "home",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "home-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "settings",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "settings-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungNC",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "rungNC-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungDX",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "rungDX-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungXuat",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "rungXuat-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungThongTin",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "rungThongTin-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "rungGiaoHang",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "rungGiaoHang-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "danhMuc",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "danhMuc-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "danhMucXe",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "danhMucXe-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNC",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "hdNC-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNCThanhVien",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "hdNCThanhVien-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdNCChamCong",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "hdNCChamCong-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDX",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "hdDX-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDXXe",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "hdDXXe-150.png",
+   "cuonNgang": false,
+   "tran": []
+  },
+  {
+   "man": "hdDXPhieuCan",
+   "scale": 1.5,
+   "coMan": true,
+   "anh": "hdDXPhieuCan-150.png",
+   "cuonNgang": false,
+   "tran": []
+  }
+ ]
+}

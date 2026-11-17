@@ -43,6 +43,7 @@ const file = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   await w.setInputFiles('input[data-file=pc]', file('pc1.xlsx', [['P1', '05/10/2026', '92c 123.45', '12500'], ['P2', '06/10/2026', '92C-67890', '9000'], ['P3', '07/10/2026', '43A-99999', '8000']]));
   await w.waitForSelector('#pcGanBao'); let bao = await w.innerText('#pcGanBao');
   ok('xem trước: tên rừng, hợp đồng đích số 01, số phiếu, ngày, KL, BKS nguồn, xe được chọn', /R-A/.test(await w.innerText('#pgRung')) && /số 01/.test(await w.innerText('#pgDich')) && /P1/.test(bao) && /05\/10\/2026/.test(bao) && /12,5/.test(bao) && /92C 123\.45/i.test(bao) && /92C-12345/.test(bao), bao);
+  { const gb = await w.$('#pcGanBao'); if (gb) await gb.screenshot({path: path.join(process.env.HAKQN_ANH || dir, 'doi-chieu-bks.png')}).catch(() => {}); }   /* ảnh nghiệm thu: bản xem trước phiếu, BKS chỉ có ở hợp đồng khác */
   ok('BKS chỉ có ở HĐ B: báo “Xe này thuộc hợp đồng số 02”, phiếu vẫn ở đích A, có 3 cách xử lý', /Xe này thuộc hợp đồng số 02/.test(bao) && !!(await w.$('select[data-pgxe]')) && !!(await w.$('[data-act=pgThemXe]')) && !!(await w.$('[data-act=pgDoiHd]')) && /1 phiếu cần xử lý/.test(bao), bao);
   ok('BKS không có ở đâu: không tự chọn, nêu lý do', /43A-99999 không có trong hợp đồng đang mở/.test(bao), bao);
   await luu(); f = await lotDb();
@@ -97,7 +98,6 @@ const file = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   // 5. nạp lại cùng phiếu với BKS đổi: nhận ra bản ghi đã có, không thêm phiếu mới
   await w.setInputFiles('input[data-file=pc]', file('pc3.xlsx', [['P1', '05/10/2026', '92C-12345', '12500']])); await w.waitForTimeout(600); await luu(); f = await lotDb();
   ok('nạp lại P1 với BKS viết khác: không thêm phiếu mới (vẫn 4 phiếu), P1 giữ HĐ B và xe đã chọn', f.pc.length === 4 && f.pc.filter(x => x.soPhieu === 'P1').length === 1 && p('P1').hdvcId === hB && p('P1').xeRowId === xB, JSON.stringify(f.pc.map(x => [x.soPhieu, x.bienSo, x.hdvcId, x.xeRowId])));
-  await w.screenshot({path: path.join(process.env.HAKQN_ANH || dir, 'doi-chieu-bks.png')}).catch(() => {});
 
   const d = await w.evaluate(() => window.hak.loadSync().db);
   const lo = d.rs.own1.forests.fa;

@@ -12,18 +12,31 @@ const RONG = +arg('--rong', 1024), CAO = +arg('--cao', 700);
 const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
 const {lot, seed, PC, EXP1} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed, PC, EXP1};')();
 
+/* 3.0: danh sách rừng của chủ rừng nằm trong khối gập; mỗi tab của lô chia thành các mục (.mucNav) */
+const moRung = async (w, tab) => {
+  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]');
+  await w.evaluate(() => { const d = document.querySelector('.rungTomTat'); if (d) d.open = true; });
+  await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + tab + ']');
+};
+const muc = (w, k, id) => w.evaluate(([k, id]) => window.__mucLo && window.__mucLo(k, id), [k, id]);
 /* các màn cần chụp: tên → hàm điều hướng (trả false nếu màn chưa có ở bản này) */
 const MAN = {
   home: async w => { await w.click('[data-act=goHome]'); return true; },
   settings: async w => { const b = await w.$('#navSet'); if (!b) return false; await b.click(); return true; },
-  rungNC: async w => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); return true; },
-  rungDX: async w => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]'); return true; },
-  rungXuat: async w => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); return true; },
+  rungNC: async w => { await moRung(w, 'nc'); return true; },
+  rungDX: async w => { await moRung(w, 'dx'); return true; },
+  rungXuat: async w => { await moRung(w, 'xuat'); return true; },
+  rungThongTin: async w => { await moRung(w, 'finfo'); return true; },
+  rungGiaoHang: async w => { await moRung(w, 'finfo'); await muc(w, 'finfo', 'giaohang'); return true; },
   danhMuc: async w => { const b = await w.$('#navDm'); if (b) { await b.click(); return true; } if (!(await w.$('#navSet'))) return false; await w.click('#navSet'); const t = await w.$('#setTab_setdt'); if (!t) return false; await t.click(); return true; },
   /* 3.0: danh mục xe, trang chi tiết hợp đồng nhân công / vận chuyển (có phiếu cân) */
   danhMucXe: async w => { if (!(await w.$('#navSet'))) return false; await w.click('#navSet'); const t = await w.$('#setTab_setxe'); if (!t) return false; await t.click(); return true; },
-  hdNC: async w => { await MAN.rungNC(w); await w.waitForTimeout(150); const r = await w.$('#dsHdNcTbl tbody tr[data-act]'); if (!r) return false; await r.click(); return true; },
-  hdDX: async w => { await MAN.rungDX(w); await w.waitForTimeout(150); const r = await w.$('#dsHdVcTbl tbody tr[data-act]'); if (!r) return false; await r.click(); return true; }
+  hdNC: async w => { await MAN.rungNC(w); await w.waitForTimeout(150); const r = await w.$('#dsHdNcTbl tbody tr[data-act]'); if (r) await r.click(); else if (!(await w.$('#hdDau'))) return false; return true; } /* đã ở trang chi tiết (tab nhớ hợp đồng đang mở) thì giữ */,
+  hdNCThanhVien: async w => { if (!(await MAN.hdNC(w))) return false; await muc(w, 'nc', 'thanhvien'); return true; },
+  hdNCChamCong: async w => { if (!(await MAN.hdNC(w))) return false; await muc(w, 'nc', 'chamcong'); return true; },
+  hdDX: async w => { await MAN.rungDX(w); await w.waitForTimeout(150); const r = await w.$('#dsHdVcTbl tbody tr[data-act]'); if (r) await r.click(); else if (!(await w.$('#hdDau'))) return false; return true; } /* đã ở trang chi tiết (tab nhớ hợp đồng đang mở) thì giữ */,
+  hdDXXe: async w => { if (!(await MAN.hdDX(w))) return false; await muc(w, 'dx', 'xe'); return true; },
+  hdDXPhieuCan: async w => { if (!(await MAN.hdDX(w))) return false; await muc(w, 'dx', 'phieu'); return true; }
 };
 /* đo tràn ngang: trang có cuộn ngang không, và các phần tử (không nằm trong khung cuộn) vượt mép phải cửa sổ */
 const doTran = w => w.evaluate(() => {
