@@ -41,9 +41,16 @@ async function exportDot2(mode, keys) {
   if (stBlockNote()) return;
   const rec = curRec(); if (!rec || !keys || !keys.length) return;
   const docM = {trang: 'day', nen: 'trong', de: 'de'}[mode], P_ = D2_PKG[mode];
+  /* 3.0: in đủ / in đè phần số liệu chính thức của BM-09, BM-10 chỉ khi phiếu thuộc phạm vi mẫu đã được đối chiếu; in nền theo trạng thái đã lưu */
+  if (mode !== 'nen' && keys.some(k => /^(09|10)\b|^(09|10):/.test(k))) {
+    const k = doiChieuPcVanChuyen(rec), chua = [...k.canSua, ...k.hetHan];
+    if (chua.length) { note('Chưa in ' + (mode === 'de' ? 'phần in đè' : 'bản đầy đủ') + ' BM-09/10: còn ' + chua.length + ' phiếu (' + fmt(totalKg(chua.map(x => x.p))) + ' kg) thuộc phạm vi mẫu chưa vào biên bản. Xử lý ở tab Xuất hồ sơ → Đối chiếu khối lượng BM-09/10 → Mở phiếu, rồi in lại.', 'warn'); return; }
+  }
   docMode = docM;
   try {
-    const files = dot2Files(rec, docM, keys).filter(f => !f.biChan);
+    /* mẫu nền không mang số liệu phiếu cân: nhóm chặn về phiếu cân (pc) không chặn in nền — đúng như bảng “Còn thiếu để in” ở trên (chanMiss) */
+    const ktNen = mode === 'nen' ? exportCheck(rec) : null, biChanNen = f => { const m = /^(\d\d)_/.exec(f.path || ''); return m ? HAKKiemTra.chanCho(ktNen.chan, m[1], f.pham || null).some(x => !((HAKKiemTra.NHOM[x.ma] || {}).pc)) : false; };
+    const files = dot2Files(rec, docM, keys).filter(f => mode === 'nen' ? !biChanNen(f) : !f.biChan);
     if (!files.length) { note('Không có mẫu nào để tải.', 'warn'); return; }
     const nm = f => f.path.split('/').pop().replace(/\.docx$/, P_[1] + '.docx');
     if (files.length === 1) { download(await makeDocx(files[0].blocks, docOpts(files[0], rec)), nm(files[0])); return; }
