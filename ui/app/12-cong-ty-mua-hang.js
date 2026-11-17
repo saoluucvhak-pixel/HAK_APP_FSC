@@ -120,14 +120,15 @@ function panelHdvc(rec) {
   }
   return html + '</div>';
 }
-/* Số và ngày văn bản của đội xe đang chọn: cuối màn Vận chuyển (thông tin – bảng con – số văn bản); các ô thuộc form #hdForm qua thuộc tính form */
+/* Số và ngày văn bản của đội xe đang chọn, sửa trong mục riêng. */
 function panelHdvcVB(rec) {
   if (!rec.hdvc) return '';
   const sel = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc}).find(h => h.id === curHd); if (!sel) return '';
   const e = sel.exp || {}, k = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc}).indexOf(sel), ten = trim(sel.ten) || 'Đội xe ' + (k + 1);
-  const o = (n, lb) => '<label><span>' + lb + '</span><input form="hdForm" name="' + n + '" value="' + esc(e[n] || '') + '"></label>';
-  return '<div class="card" id="hdVB"><h4 style="margin:0 0 6px">Số và ngày văn bản của ' + esc(ten) + ' <span class="mut" style="font-weight:400">· để trống thì dùng số chung của lô</span></h4><div class="grid">' +
-    o('soVC', 'Số HĐ vận chuyển (trống = số chung của lô)') + o('vcChiPhi', 'Chi phí khác (trống = chung)') + o('pcSo', 'Số biên bản xác nhận KL (trống = chung)') + o('pcNgay', 'Ngày lập xác nhận KL (trống = chung)') + '</div></div>';
+  const o = (n, lb) => '<label><span>' + lb + '</span><input name="' + n + '" value="' + esc(e[n] || '') + '"></label>';
+  return '<div class="card" id="hdVB"><h4 style="margin:0 0 6px">Số và ngày văn bản của ' + esc(ten) + ' <span class="mut" style="font-weight:400">· để trống thì dùng số chung của lô</span></h4><form id="hdVbForm" class="grid">' +
+    o('soVC', 'Số HĐ vận chuyển (trống = số chung của lô)') + o('vcChiPhi', 'Chi phí khác (trống = chung)') + o('pcSo', 'Số biên bản xác nhận KL (trống = chung)') + o('pcNgay', 'Ngày lập xác nhận KL (trống = chung)') +
+    '<button class="sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></form></div>';
 }
 function dvForm(d) {
   d = d || {};

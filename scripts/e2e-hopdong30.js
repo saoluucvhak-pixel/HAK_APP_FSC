@@ -81,6 +81,10 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('mở lại rừng: khôi phục hợp đồng và mục Phiếu cân', !!(await w.$('#hdDau')) && await w.isVisible('#pcHd'));
 
   // 3. người ký từ Danh mục đối tượng; mở danh mục từ hợp đồng rồi quay lại
+  await muc('vanban');
+  await w.fill('#hdVbForm [name=soVC]', '017');
+  await w.press('#hdVbForm [name=soVC]', 'Enter');
+  await w.waitForFunction(() => window.hak.loadSync().db.rs.own1.forests.fa.hdvc.some(h => h.exp?.soVC === '017'));
   await muc('chung'); await w.waitForSelector('#hdForm');
   await w.click('#hdForm [data-act=openSetDt][data-quaylai]'); await w.waitForSelector('#veLaiBar');
   ok('mở Danh mục đối tượng từ hợp đồng: có thanh “Quay lại”, không hỏi lưu / bỏ', await w.isVisible('#veLaiBtn') && !(await w.isVisible('#roiLuu').catch(() => false)));
@@ -96,6 +100,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   if (await w.$('#loDirtyBar [data-act=stSave]')) { await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(500); }
   const H = (await lotDb()).hdvc.find(h => h.id === h2.id);
   ok('lưu người ký: hợp đồng chụp thông tin người ký (CCCD, đối tượng), in theo bản chụp', !!H && H.donViId === 'ct:049085000099' && H.ben && H.ben.cccd === '049085000099' && H.ben.doiTuongTen === 'HỘ KINH DOANH VẬN TẢI CHÍN', JSON.stringify(H));
+  ok('số hợp đồng lưu ở mục văn bản và giữ nguyên khi sửa người ký', H?.exp?.soVC === '017');
   ok('lưu xong vẫn ở hợp đồng đang mở', !!(await w.$('#hdDau')));
 
   // 4. hợp đồng nhân công giao khoán: bên nhận khoán chọn từ Danh mục đối tượng (quyền ký Nhân công), lưu theo ID

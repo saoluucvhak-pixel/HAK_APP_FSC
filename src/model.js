@@ -283,6 +283,8 @@
   function removeHd(f, id) {
     const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có đội xe này'};
     const n = xeOf(out, h).length; if (n) return {ok: false, error: 'Đội xe còn ' + n + ' xe: chuyển xe sang đội khác trước'};
+    const phieu = (out.pc || []).filter(p => p?.hdvcId === id).length;
+    if (phieu) return {ok: false, error: 'Đội xe còn ' + phieu + ' phiếu cân: chuyển phiếu sang hợp đồng khác trước'};
     ghiSttDaCap(out, 'doiXe', h.stt);
     out.hdvc = out.hdvc.filter(x => x !== h); return {ok: true, f: out};
   }

@@ -4,7 +4,7 @@
  *  2. Trực tiếp: chủ rừng ký hợp đồng lao động (BM-03) với tất cả nhân công; tính theo tấn hoặc ngày công.
  *  Đơn giá theo từng vai trò; sản lượng (tấn, ha) hoặc số công chia đều cho mọi người. Kiểm tra số liệu trong BM-01, BM-08, BM-14, BM-20. */
 const {_electron: electron} = require('playwright-core');
-const {saveStage: stSave, xacNhanHopDongPhieu} = require('./lib-stage');
+const {saveStage: stSave, xacNhanHopDongPhieu, fillForestSection} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip'), XLSX = require('xlsx');
 const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixtures');
@@ -33,20 +33,26 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   const save = async () => { await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(250); };
   const opts = () => w.$$eval('#luongForm [name=hinhThucLuong] option', o => o.map(x => x.value));
   const price = async (pre, v) => { for (let k = 0; k < 3; k++) await w.fill(`#luongForm [name=${pre}${k}]`, String(v[k])); };
+  const muc = id => w.locator('.mucNav [data-muc-lo=' + id + ']').click();
+  const moDonGia = async () => { await w.click('[data-ftab=nc]'); await muc('dongia'); };
 
   // --- Dựng hồ sơ: chủ rừng, rừng 2,5 ha × 80 tấn/ha = 200 tấn, nhân công từ file
   await w.click('text=+ Chủ rừng mới');
   for (const [k, v] of Object.entries(OWNER)) await w.fill(`#infoForm [name="${k}"]`, v);
   await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]');
   await w.click('[data-tab=rung]'); await w.click('text=+ Rừng mới');
-  await w.fill('#forestForm [name=diaDiem]', 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng'); await w.fill('#forestForm [name=cuLy]', '45');
-  await w.fill('#forestForm [name=lat]', '15.9'); await w.fill('#forestForm [name=lng]', '108.1'); await w.fill('#forestForm [name=dienTich]', '2,5'); await w.fill('#forestForm [name=dinhMucTanHa]', '80');
-  await w.fill('#forestForm [name=tuNgay]', '01/10/2026'); await w.fill('#forestForm [name=denNgay]', '30/11/2026'); await w.$eval('#forestForm', f => f.requestSubmit());
-  await w.click('[data-ftab=nc]'); await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(500); await stSave(w);
-  await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.$eval('#vcForm', f => f.requestSubmit());   // vận chuyển: để gói “tải tất cả” đủ điều kiện
+  await fillForestSection(w, 'chung', {diaDiem: 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng', dienTich: '2,5', tuNgay: '01/10/2026', denNgay: '30/11/2026'});
+  await fillForestSection(w, 'toado', {cuLy: '45', lat: '15.9', lng: '108.1'});
+  await fillForestSection(w, 'dinhmuc', {dinhMucTanHa: '80'});
+  await muc('giaohang'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.$eval('#vcForm', f => f.requestSubmit()); await stSave(w);
+  await w.click('[data-ftab=nc]'); await muc('thanhvien'); await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(500); await stSave(w);
+  await w.click('[data-ftab=dx]');
   await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
+  const hopDong = w.locator('#dsHdVcTbl tr[data-act=chonHd]');
+  if (await hopDong.count()) await hopDong.first().click();
+  await muc('phieu');
   await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await xacNhanHopDongPhieu(w); await stSave(w);
-  await w.click('[data-ftab=nc]');
+  await moDonGia();
 
   // ===== GIAO KHOÁN =====
   ok('giao khoán là hình thức mặc định; cơ sở tính có tấn, ha và ngày công (Tổ trưởng nhận thay cả tổ)', JSON.stringify(await opts()) === '["sanluong","ha","ngaycong"]', JSON.stringify(await opts()));
@@ -68,7 +74,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   ok('BM-14 giao khoán: đơn giá theo vai trò, chia đều và thành tiền = tổng theo vai trò', /Đơn giá khoán theo vai trò \(đồng\/tấn\)/.test(t) && t.includes('Thành tiền: ' + fmt(total(PCT, TAN)) + ' đồng'), t.slice(t.indexOf('Điều 3'), t.indexOf('Điều 3') + 400));
 
   // theo ha: 2,5 ha chia đều 4 người = 0,625 ha/người
-  await w.click('[data-ftab=nc]'); await w.selectOption('#luongForm [name=hinhThucLuong]', 'ha'); await price('ha_', HA); await save(); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
+  await moDonGia(); await w.selectOption('#luongForm [name=hinhThucLuong]', 'ha'); await price('ha_', HA); await save(); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   f = await exp('gk', '.docx'); t = await docText(f);
   ok('BM-01 giao khoán theo ha: đơn giá từng vai trò (đồng/ha), diện tích chia đều, tổng = ' + fmt(total(2.5, HA)), /Đơn giá khoán theo vai trò \(đồng\/ha\)/.test(t) && HA.every(v => t.includes(fmt(v))) && /Diện tích khai thác chia đều cho 4 người/.test(t) && /đơn giá bình quân 6\.750\.000 đồng\/ha/.test(t) && t.includes(fmt(total(2.5, HA)) + ' đồng'), t.slice(t.indexOf('Điều 2'), t.indexOf('Điều 2') + 500));
   f = await exp('tc', '.docx'); t = await docText(f);
@@ -87,7 +93,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   ok('gói tất cả (giao khoán): có Giấy ủy quyền, không có thư mục 03_HDLD (hợp đồng lao động từng người)', names.some(n => /^20_Giay_uy_quyen/.test(n)) && !names.some(n => /^03_HDLD\//.test(n)), names.join(', '));
 
   // Giao khoán chọn được tấn, ha hoặc ngày công; đổi sang trực tiếp thì ha bị đổi về tấn
-  await w.click('[data-ftab=nc]');
+  await moDonGia();
   await w.selectOption('#luongForm [name=moHinhKy]', 'tructiep');
   ok('đổi sang trực tiếp khi đang chọn “theo ha”: tự đổi về “theo tấn”; cơ sở tính còn tấn và ngày công', await w.inputValue('#luongForm [name=hinhThucLuong]') === 'sanluong' && JSON.stringify(await opts()) === '["sanluong","ngaycong"]', JSON.stringify(await opts()));
 
@@ -99,7 +105,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   ok('trực tiếp theo ngày công: BM-08 có số công, đơn giá đồng/công theo vai trò, không có cột diện tích', t.includes('Đơn giá (đồng/công)') && NG.every(v => t.includes(fmt(v))) && !t.includes('Diện tích chia đều'), t.slice(0, 400));
   f = await exp('all', '.zip'); z = await JSZip.loadAsync(fs.readFileSync(f)); names = Object.keys(z.files);
   ok('gói tất cả (trực tiếp): ' + N + ' hợp đồng lao động (BM-03) của tất cả nhân công, không có Giấy ủy quyền', names.filter(n => /^03_HDLD\/.+\.docx$/.test(n)).length === N && !names.some(n => /^20_Giay_uy_quyen/.test(n)), names.join(', '));
-  await w.click('[data-ftab=nc]'); await w.selectOption('#luongForm [name=hinhThucLuong]', 'sanluong'); await price('dt_', TAN); await save();
+  await moDonGia(); await w.selectOption('#luongForm [name=hinhThucLuong]', 'sanluong'); await price('dt_', TAN); await save();
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]'); f = await exp('tc', '.docx'); t = await docText(f);
   ok('trực tiếp theo tấn: (tổng phiếu cân ÷ 4) mỗi người × đơn giá vai trò, tổng khớp', t.includes('Sản lượng chia đều (tấn)') && t.includes(fmt(total(PCT, TAN))));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('; '));
@@ -116,9 +122,10 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   await w.evaluate(d => window.hak.save(d), db); await w.reload(); await w.waitForSelector('#side');
   const openForest = async name => { await w.click('#sideQ'); await w.fill('#sideQ', name); await w.click('[data-open]:has-text("' + name + '")'); await w.click('[data-sforest] >> nth=0'); };
   await openForest('CHỦ CŨ');
+  await w.locator('.rungTomTat > summary').click();
   const chk = () => w.innerText('.chk');
   ok('hồ sơ cũ trực tiếp + theo ha: checklist báo “Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công”', /Chủ rừng ký trực tiếp chỉ tính theo tấn hoặc ngày công/.test(await chk()), (await chk()).slice(0, 300));
-  await w.click('[data-ftab=nc]');
+  await moDonGia();
   ok('hồ sơ cũ: ô chọn hiển thị rõ lựa chọn không hợp lệ và các lựa chọn đúng', (await w.$$eval('#luongForm [name=hinhThucLuong] option', o => o.map(x => x.textContent))).some(x => /không áp dụng/.test(x)) && JSON.stringify(await opts()) === '["sanluong","ngaycong","ha"]', JSON.stringify(await opts()));
   await openForest('CHỦ TRẺ'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   ok('có người dưới 18 tuổi: Giấy ủy quyền không xuất được và nói rõ lý do', await w.isDisabled('button[data-act=dl][data-kind=uq]') && /dưới 18 tuổi/.test(await w.innerText('#main')));

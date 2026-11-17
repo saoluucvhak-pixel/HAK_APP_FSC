@@ -214,7 +214,7 @@ function ganDoi(doi, nc) {
 /* Ô số / ngày văn bản (data-exp): mỗi ô nằm ở MÀN CỦA ĐỐI TƯỢNG sở hữu nó — đội (tab Nhân công), đội xe / vận chuyển chung (tab Vận chuyển), lô (tab Xuất hồ sơ).
  * Ghi: ô của đội ghi vào đội đang chọn (ghiDoi), còn lại vào lô. */
 const EXP_VC = ['soVC', 'vcChiPhi', 'pcSo', 'pcNgay', 'pcNguoiLap', 'pcNguong'];
-const expTab = k => HAKModel.DOI_EXP.includes(k) ? {ftab: 'nc'} : EXP_VC.includes(k) ? {ftab: 'dx'} : {ftab: 'xuat', xtab: ['capNgay', 'capHan', 'capNguoi', 'dtNgay', 'dtDiaDiem', 'dtThoiLuong', 'dtNguoi', 'dtNoiDung', 'tbNgay', 'tbNguoi', 'tbSoBinh', 'thang'].includes(k) ? 'ld' : 'hd'};
+const expTab = k => HAKModel.DOI_EXP.includes(k) ? {ftab: 'nc', muc: 'vanban'} : EXP_VC.includes(k) ? {ftab: 'finfo', muc: 'giaohang'} : {ftab: 'xuat', xtab: ['capNgay', 'capHan', 'capNguoi', 'dtNgay', 'dtDiaDiem', 'dtThoiLuong', 'dtNguoi', 'dtNoiDung', 'tbNgay', 'tbNguoi', 'tbSoBinh', 'thang'].includes(k) ? 'ld' : 'hd'};
 window.__expTab = expTab;   // kiểm thử đầu-cuối: ô này nằm ở màn nào
 function expInputs(list, ex) {
   return '<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">' +

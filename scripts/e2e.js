@@ -26,12 +26,13 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   ok('thanh ngữ cảnh hiện chủ rừng', (await win.innerText('#ctxOwner')).includes('NGUYỄN PHƯỚC TÁM'));
   ok('thanh ngữ cảnh hiện mã rừng đang mở', /CR-001-R2/.test(await win.innerText('#ctxForest')));
   if (fs.existsSync(path.join(FIX, 'test_nhancong.xlsx'))) {
-    await win.click('[data-ftab=nc]'); await win.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await win.waitForTimeout(600);
+    await win.click('[data-ftab=nc]'); await win.locator('.mucNav [data-muc-lo=thanhvien]').click(); await win.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await win.waitForTimeout(600);
     // file mang mã rừng CR-001-R1 nhưng đang mở lô CR-001-R2: KHÔNG tự chuyển lô, báo lỗi và không ghi gì (tránh ghi nhầm lô)
     const blocked = await win.evaluate(async () => (window.__stDirty().length ? await window.__stSaveCurrent() : null));
     ok('file nhân công mang mã lô khác lô đang mở: không lưu được, báo rõ; không lô nào có nhân công', !!blocked && blocked.ok === false && /khác lô đang mở/.test((blocked.errs || []).join(' ')), JSON.stringify(blocked).slice(0, 200));
     await win.evaluate(() => document.querySelector('[data-act=stDiscard]') && document.querySelector('[data-act=stDiscard]').click()); await win.waitForTimeout(300);
-    await win.click('[data-tab=rung]'); await win.click('[data-forest]'); await win.click('[data-ftab=nc]');   // sang đúng lô CR-001-R1 rồi nạp lại
+    await win.locator('.rungTomTat > summary').click(); await win.locator('.rungTomTat [data-forest]').first().click();
+    await win.click('[data-ftab=nc]'); await win.locator('.mucNav [data-muc-lo=thanhvien]').click();   // sang đúng lô CR-001-R1 rồi nạp lại
     await win.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await win.waitForTimeout(600); await stSave(win);
   }
   await win.waitForFunction(() => document.getElementById('saveSt').textContent.includes('Đã lưu'), null, {timeout: 5000}).catch(() => {});

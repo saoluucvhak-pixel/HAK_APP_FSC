@@ -203,10 +203,10 @@ document.addEventListener('keydown', e => {
   const back = document.getElementById('hdQuayLai');
   if (back) { e.preventDefault(); back.click(); }
 });
-const KHUNG_LO = {forestForm: 'saveForest', luongForm: 'saveLuong', vcForm: 'saveVc', giayForm: 'saveGiay', doiForm: 'saveDoi', hdForm: 'saveHd'};
+const KHUNG_LO = {forestForm: 'saveForest', luongForm: 'saveLuong', vcForm: 'saveVc', giayForm: 'saveGiay', doiForm: 'saveDoi', hdForm: 'saveHd', hdVbForm: 'saveHdVb'};
 document.addEventListener('change', e => {
   const t = e.target, fm = t && t.form; if (!fm || !KHUNG_LO[fm.id] || t.id === 'xeDm' || t.id === 'ncDm') return;
-  const fn = {saveForest, saveLuong, saveVc, saveGiay, saveDoi, saveHd}[KHUNG_LO[fm.id]]; if (!fn) return;
+  const fn = {saveForest, saveLuong, saveVc, saveGiay, saveDoi, saveHd, saveHdVb}[KHUNG_LO[fm.id]]; if (!fn) return;
   const f = curForest(), truoc = f ? JSON.stringify(f) : '';
   nhapKhung = {can: false};
   try { fn(fm, true); } finally { const can = nhapKhung.can; nhapKhung = null; if (can && f && JSON.stringify(f) !== truoc) persistLo(f); }
@@ -224,6 +224,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'luongForm') { e.preventDefault(); saveLuong(e.target); }
   if (e.target.id === 'doiForm') { e.preventDefault(); saveDoi(e.target); }
   if (e.target.id === 'hdForm') { e.preventDefault(); saveHd(e.target); }
+  if (e.target.id === 'hdVbForm') { e.preventDefault(); saveHdVb(e.target); }
   if (e.target.id === 'dvForm') { e.preventDefault(); saveDv(e.target); }
   if (e.target.id === 'stForm') { e.preventDefault(); stFinishRow(); }
   if (e.target.id === 'vcForm') { e.preventDefault(); saveVc(e.target); }

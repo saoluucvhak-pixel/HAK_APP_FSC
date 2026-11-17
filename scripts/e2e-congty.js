@@ -34,8 +34,15 @@ async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(
   await w.reload(); await w.waitForSelector('#side');
   const exp = async (kind) => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); await w.click(`button[data-act=dl][data-kind=${kind}]`); for (let i = 0; i < 80; i++) { const f = fs.existsSync(out) && fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); if (f) { await w.waitForTimeout(300); return f.endsWith('.zip') ? zipTexts(path.join(out, f)) : docxText(path.join(out, f)); } await w.waitForTimeout(100); } throw new Error('không thấy file xuất ' + kind); };
   const dbOf = () => w.evaluate(() => window.hak.loadSync().db);
-  const openF = async (id) => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]').catch(() => {}); await w.click(`[data-forest=${id}]`); await w.click('[data-ftab=dx]'); };
-  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f1]'); await w.click('[data-ftab=dx]');
+  const openF = async id => {
+    await w.click('[data-open=own1]');
+    await w.click('[data-tab=rung]');
+    await w.click(`[data-forest=${id}]`);
+  };
+  const openDelivery = async id => {
+    await openF(id);
+    await w.locator('.mucNav [data-muc-lo=giaohang]').click();
+  };
 
   // ===== màn hình hồ sơ công ty (một công ty, không có danh mục nhiều công ty) =====
   await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
@@ -49,7 +56,7 @@ async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(
   ok('lưu hồ sơ công ty có thêm địa chỉ giao thứ hai', /Đã lưu thông tin công ty/.test(await w.innerText('#main')) && Object.values((await dbOf()).congTy).length === 1 && (await dbOf()).congTy.c1.diaChiGiao.length === 2);
 
   // ===== rừng A chọn địa chỉ Cảng Kỳ Hà =====
-  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f1]'); await w.click('[data-ftab=dx]');
+  await openDelivery('f1');
   ok('rừng mới chưa chọn: có cảnh báo thiếu địa chỉ giao hàng', /Chưa chọn địa chỉ giao hàng/.test(await w.innerText('#main')));
   await w.click('[data-act=mhOpen]'); await w.selectOption('#mhAddr', 'a1');
   ok('chọn địa chỉ giao: hiện ngay tên công ty và địa chỉ đề xuất', (await w.innerText('#main')).includes('Cảng dăm Kỳ Hà, Núi Thành') && (await w.innerText('#main')).includes('DĂM AN PHÁT'));
@@ -58,7 +65,7 @@ async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(
   ok('rừng A: cảnh báo 1 phiếu có nơi giao khác điểm đến (giữ nguyên dữ liệu phiếu)', /Nơi giao trên 1 phiếu cân khác/.test(await w.innerText('#main')) && (await w.innerText('#main')).includes('Nhà máy khác ở Huế'));
 
   // ===== rừng B (hồ sơ cũ) chọn địa chỉ công ty =====
-  await w.click('[data-forest=f2]'); await w.click('[data-ftab=dx]');
+  await openDelivery('f2');
   ok('hồ sơ cũ: vẫn giữ điểm đến nhập tay, báo chưa chọn địa chỉ giao', /Nhà máy cũ nhập tay, KCN Cũ/.test(await w.innerText('#main')));
   await w.click('[data-act=mhOpen]'); await w.selectOption('#mhAddr', '@main');
   const cmp = await w.innerText('#main');
@@ -69,20 +76,20 @@ async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(
   // ===== đóng/mở lại: mỗi rừng giữ đúng điểm đến =====
   await new Promise(r => setTimeout(r, 800)); await app.close();
   app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
-  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f1]'); await w.click('[data-ftab=dx]');
+  await openDelivery('f1');
   ok('mở lại: rừng A vẫn là Cảng Kỳ Hà', (await w.inputValue('#mhDiemDen')) === 'Cảng dăm Kỳ Hà, Núi Thành, Quảng Nam');
-  await w.click('[data-forest=f2]'); await w.click('[data-ftab=dx]');
+  await openDelivery('f2');
   ok('mở lại: rừng B vẫn là địa chỉ công ty', (await w.inputValue('#mhDiemDen')) === C1.diaChi);
 
   // ===== hồ sơ in ra =====
-  await w.click('[data-forest=f1]'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
+  await openF('f1'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   let t = await exp('hdvc');
   ok('BM-04 rừng A ghi địa điểm giao hàng = địa chỉ đã chọn', t.includes('Địa điểm giao hàng: DĂM AN PHÁT'.slice(0, 0)) || t.includes('CÔNG TY TNHH DĂM AN PHÁT – Cảng dăm Kỳ Hà, Núi Thành, Quảng Nam'), t.slice(t.indexOf('Địa điểm giao hàng'), t.indexOf('Địa điểm giao hàng') + 160));
   ok('BM-04 rừng A không dùng địa chỉ công ty chính của rừng B', !t.includes('KCN Điện Nam'));
   t = await exp('xnvc');
   ok('BM-09 rừng A: về điểm đến theo hồ sơ; cột “Nơi giao” của phiếu giữ nguyên dữ liệu nguồn', t.includes('Cảng dăm Kỳ Hà, Núi Thành') && t.includes('Nhà máy khác ở Huế'));
   t = await exp('ttvc'); ok('BM-10 rừng A ghi điểm giao hàng theo hồ sơ', t.includes('Địa điểm giao hàng (theo hồ sơ rừng): CÔNG TY TNHH DĂM AN PHÁT – Cảng dăm Kỳ Hà'));
-  await w.click('[data-forest=f2]'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
+  await openF('f2'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   t = await exp('hdvc'); ok('BM-04 rừng B ghi địa chỉ công ty, không còn điểm đến nhập tay cũ', t.includes(C1.diaChi) && !t.includes('Nhà máy cũ nhập tay'));
 
   // ===== sửa địa chỉ công ty: hồ sơ rừng giữ nguyên cho đến khi xác nhận =====
@@ -90,11 +97,12 @@ async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(
   await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
   await w.fill('#ctyForm [name=diaChi]', NEW); await w.click('#ctyForm button[type=submit]');
   ok('lưu hồ sơ công ty: báo rừng đã chọn vẫn giữ địa chỉ đã lưu', /GIỮ địa chỉ đã lưu/.test(await w.innerText('#main')));
-  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f2]'); await w.click('[data-ftab=dx]');
+  await openDelivery('f2');
   ok('rừng B vẫn giữ địa chỉ cũ và báo thông tin công ty đã đổi', (await w.inputValue('#mhDiemDen')) === C1.diaChi && /Thông tin công ty đã thay đổi/.test(await w.innerText('#main')));
   await w.click('[data-act=mhOpen]'); await w.click('[data-act=mhConfirm]');
   ok('xác nhận cập nhật: rừng B lấy địa chỉ mới', (await w.inputValue('#mhDiemDen')) === NEW);
-  ok('rừng A (địa chỉ giao Cảng Kỳ Hà) không bị ảnh hưởng', await (async () => { await w.click('[data-forest=f1]'); await w.click('[data-ftab=dx]'); return (await w.inputValue('#mhDiemDen')) === 'Cảng dăm Kỳ Hà, Núi Thành, Quảng Nam'; })());
+  await openDelivery('f1');
+  ok('rừng A (địa chỉ giao Cảng Kỳ Hà) không bị ảnh hưởng', (await w.inputValue('#mhDiemDen')) === 'Cảng dăm Kỳ Hà, Núi Thành, Quảng Nam');
 
   // ===== đổi địa chỉ giao của rừng A: hiển thị cũ và mới =====
   await w.click('[data-act=mhOpen]'); await w.selectOption('#mhAddr', {index: 2});
