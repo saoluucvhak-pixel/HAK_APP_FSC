@@ -48,7 +48,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('PC002: đơn giá dạng chữ “1.250.000” đọc thành số', by('PC002').donGia === 1250000, JSON.stringify(by('PC002')));
   // in phiếu cân dùng chính dữ liệu này; phiếu trạng thái HỦY mặc định không chọn
   await w.click('[data-ftab=xuat]'); await w.waitForSelector('#pcPrintCard');
-  const [pw] = await Promise.all([app.waitForEvent('window'), w.$eval('#pcPrintCard [data-act=pcPrint]', b => b.click())]);
+  const pw = await require('./lib-stage').moInPhieuCan(w);
   await pw.waitForFunction(() => document.querySelectorAll('#tb tr.row').length === 5, null, {timeout: 15000});
   ok('in phiếu cân: công cụ nhận đủ 5 phiếu, phiếu trạng thái HỦY không được chọn sẵn (4/5)', /Đã chọn 4\/5 phiếu/.test(await pw.innerText('#count')), await pw.innerText('#count'));
   const pt = await pw.$eval('#render', r => r.innerText);

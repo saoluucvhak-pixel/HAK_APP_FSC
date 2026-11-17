@@ -55,7 +55,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.check('#hdForm [name=rieng]'); await w.selectOption('#hdForm [name=vcMode]', 'coDinh'); await w.fill('#hdForm [name=vcCoDinh]', '');
   await w.$eval('#hdForm', f => f.requestSubmit()); await w.waitForTimeout(200);
   ok('cước riêng thiếu đơn giá: không lưu, nêu rõ', /chưa nhập đơn giá cố định/.test(await w.innerText('#hdForm')));
-  await w.fill('#hdForm [name=vcCoDinh]', '60000'); await w.fill('[form=hdForm][name=soVC]', '88'); await w.$eval('#hdForm', f => f.requestSubmit()); await w.waitForTimeout(400);
+  await w.fill('#hdForm [name=vcCoDinh]', '60000'); await w.$eval('#hdForm', f => f.requestSubmit()); await w.waitForTimeout(400);
+  await w.fill('#hdVbForm [name=soVC]', '88'); await w.$eval('#hdVbForm', f => f.requestSubmit()); await w.waitForTimeout(400);   // 3.0: số văn bản của đội xe ở mục “Số và ngày văn bản”
   f = await lotDb('fa'); const H = f.hdvc.find(h => h.id === hdDn);
   ok('lưu đội xe: ký với doanh nghiệp (chụp lại thông tin), cước riêng 60.000 đ/tấn, số HĐ 88; cước chung của lô không đổi', H.donViId === Object.keys(dm)[0] && H.ben.mst === '0401234567' && H.cuoc && H.cuoc.coDinh === 60000 && H.exp.soVC === '88' && f.info.vanChuyen.coDinh === 50000, JSON.stringify(H));
   const cd2 = await w.evaluate(() => window.__checkDX());

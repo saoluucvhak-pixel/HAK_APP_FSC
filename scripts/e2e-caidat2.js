@@ -32,14 +32,14 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('“Đổi trong Cài đặt” mở đúng mục Google Sheets và đóng hộp Tra cứu', (await w.inputValue('#setGsLink')) === url && !(await w.$('#lkBox.on')));
   // 4. Công ty trong Cài đặt
   await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
-  ok('thông tin công ty nằm trong Cài đặt (mục Công ty)', !!(await w.$('#ctyForm')) && (await w.$$eval('[id^=setTab_].on', b => b.map(x => x.textContent))).includes('Công ty mua hàng'), (await w.$$eval('.tabs button.on', b => b.map(x => x.textContent))).join('/'));
+  ok('thông tin công ty nằm trong Cài đặt (mục Công ty)', !!(await w.$('#ctyForm')) && (await w.$$eval('[id^=setTab_][aria-current]', b => b.map(x => x.textContent))).includes('Công ty mua hàng'), (await w.$$eval('.tabs button.on', b => b.map(x => x.textContent))).join('/'));
   // 5. Hiển thị số
   await w.click('#setTab_setfmt'); await w.waitForSelector('[name=numStyle]');
   ok('mục Hiển thị số: nêu ngày luôn dd/mm/yyyy và hai kiểu số', /dd\/mm\/yyyy/.test(await w.innerText('#main')) && (await w.$$('[name=numStyle]')).length === 2);
   await w.click('[name=numStyle][value=en]'); await w.waitForTimeout(400);
   ok('chọn kiểu quốc tế: lưu vào cơ sở dữ liệu', (await w.evaluate(() => window.hak.loadSync().db.dinhDangSo)) === 'en');
   await w.click('[data-open=own1]').catch(() => {}); await w.evaluate(() => document.querySelector('[data-act=goHome]').click()); await w.waitForTimeout(300);
-  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]'); await w.waitForTimeout(300);
+  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]'); await w.evaluate(() => window.__mucLo('dx', 'phieu')); await w.waitForTimeout(300);   // 3.0: phiếu cân ở mục “Phiếu cân”
   const dxText = await w.innerText('#main');
   ok('kiểu quốc tế: số trên màn hình hiện dạng 1,234.5 (có khối lượng phiếu cân)', /\d,\d{3}|\d\.\d/.test(dxText) && /9\.25|12\.5/.test(dxText), dxText.slice(0, 300));
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=ld]');

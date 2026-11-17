@@ -45,7 +45,7 @@ const moKho = async w => { await w.click('#navSet'); await w.click('#setTab_setb
   await settle(w, async () => !(await w.evaluate(() => document.getElementById('bkChip').hidden)));
   ok('thanh ngữ cảnh: nhãn trạng thái tự sao lưu', /Tự sao lưu: hôm nay/.test(await w.innerText('#bkChip')), await w.innerText('#bkChip'));
   await w.click('#bkChip'); await w.waitForSelector('#kslBang');
-  ok('bấm nhãn mở tab Sao lưu và khôi phục', await w.evaluate(() => document.getElementById('setTab_setbk').classList.contains('on')));
+  ok('bấm nhãn mở tab Sao lưu và khôi phục', await w.evaluate(() => document.getElementById('setTab_setbk').hasAttribute('aria-current')));
   const rows = async () => w.$$eval('#kslBang tr[data-ksl-loai]', trs => trs.map(t => t.innerText.replace(/\s+/g, ' ')));
   let rs = await rows();
   ok('liệt kê 3 bản tự động, không liệt kê file lạ', rs.length === 3 && rs.every(t => /Tự động hằng ngày/.test(t)) && !rs.some(t => /ghi-chu/.test(t)), rs.join(' | '));
