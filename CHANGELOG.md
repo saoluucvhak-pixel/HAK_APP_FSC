@@ -15,6 +15,30 @@ Sáu tính năng còn lại của kế hoạch 2.2 (đợt 1–3). Không đổi
 ### Kiểm thử
 - `tests/tienich.test.js` (7 ca), `scripts/e2e-tien-ich.js` (25 kiểm tra, Electron + SQLite thật; lệnh in được kiểm bằng cách ghi PDF).
 
+## 2.3.0 (phần) — bỏ menu Thêm; hợp đồng (cha) → nhân công / xe / phiếu cân (con), chọn từ Danh mục
+
+Tổ chức lại cách ghi nhận theo yêu cầu nghiệp vụ. Không đổi cấu trúc SQLite (vẫn v14: đội = `f.doi`, nhân công `nc.doiId`, hợp đồng vận chuyển = `f.hdvc`, xe `dx.hdvcId`), không đổi cách tính và nội dung biểu mẫu.
+
+### Bố cục
+- **Bỏ menu “⋯ Thêm”** (bị khuất chữ ở cửa sổ mặc định). Các mục vào **Cài đặt**: tab *Sao lưu và khôi phục* (sao lưu toàn bộ, khôi phục toàn bộ từ file .json, khôi phục lô rừng, kho sao lưu), *Giao diện* (bảng màu, sáng / tối), *Trợ giúp* (hướng dẫn sử dụng, hướng dẫn bắt đầu, phím tắt).
+- **Thanh trên cùng một dòng** ở cửa sổ từ 901 px: “Tra cứu Google Sheets” rút thành “Tra cứu”, tên ứng dụng tự co; kiểm ở 1366 và 1100 px (`scripts/e2e-kho-sao-luu.js`).
+
+### Cách tổ chức ghi nhận
+1. **Nhân công và xe lấy từ Danh mục.** Nạp Excel người và xe chỉ làm ở màn **Danh mục** (có nút *Tải file mẫu* cho Lao động và Xe). Tab Nhân công và Vận chuyển của lô **không còn** nạp Excel, dán Excel, tải mẫu theo lô.
+2. **Tab Nhân công:** *Hợp đồng nhân công* (mỗi hợp đồng một đội) là bảng cha của lô; thông số hợp đồng và số văn bản của đội đang chọn; **nhân công của đội** là bảng con, thêm bằng **“+ Chọn nhân công từ danh mục”** (chọn nhiều người, tìm không dấu). Số người của đội = số người đã chọn. Vai trò và vị trí hợp lệ ngay khi chọn: đội đã có Tổ trưởng thì người thêm là Công nhân; người chưa có vị trí hợp lệ nhận vị trí công nhân đầu tiên của Định mức nhân công (sửa ở nút Sửa).
+3. **Tab Vận chuyển:** *Hợp đồng vận chuyển* là bảng cha; phải có hợp đồng trước khi thêm xe; **xe của hợp đồng** là bảng con, thêm bằng **“+ Chọn xe từ danh mục”**. Bảng xe lọc theo hợp đồng đang chọn (có nút xem tất cả).
+4. **Phiếu cân là bảng con của hợp đồng vận chuyển**, đối chiếu với danh sách xe theo biển số: dòng tóm tắt số phiếu, số tấn, số xe có phiếu / số xe của hợp đồng; bảng lọc theo hợp đồng đang chọn; phiếu có biển số chưa thuộc xe nào của lô được đánh dấu **“chưa khớp xe”** (sửa phiếu để đổi biển số, hoặc thêm xe vào hợp đồng). Nút **“Tra cứu Google Sheets (HoSoKeo)”** mở Tra cứu ở tab HoSoKeo, tìm sẵn theo mã lô; màn xem trước sẵn có cho chọn từng phiếu và đổi biển số trước khi ghi.
+5. Người / xe chưa có trong Danh mục: nút “… mới (chưa có trong danh mục)” nhập một lần tại chỗ, phần mềm ghi vào Danh mục khi lưu lô. Xe nhập tại chỗ vào hợp đồng đang chọn.
+6. Đang có xe / phiếu cân chưa lưu (vừa nạp, dán, tra cứu) thì bảng hiện cả lô để soát đủ; sau khi lưu mới lọc theo hợp đồng.
+
+### Chuyển tiếp (nợ kỹ thuật, ghi rõ)
+- Mã nạp Excel nhân công / xe theo lô còn trong mã nguồn và còn một ô chọn file **ẩn** (người dùng không thấy, không bấm được) vì một số bộ kiểm thử đầu-cuối cũ (e2e, e2e-export, e2e-hopdong, e2e-vanchuyen, e2e-excel-bangcon, e2e-nhatky-nap, e2e-mamau, e2e-mau) dùng nó để dựng dữ liệu. Cần chuyển các bộ đó sang dựng dữ liệu qua Danh mục rồi gỡ hẳn.
+- Phiếu cân thuộc hợp đồng vận chuyển theo **biển số xe** (suy ra), chưa lưu mã hợp đồng trên phiếu.
+
+### Kiểm thử
+- `scripts/e2e-hop-dong-con.js` (32 kiểm tra, Electron + SQLite thật): file mẫu và nạp Excel ở Danh mục; chọn nhiều người vào hai đội; phải có hợp đồng vận chuyển trước khi chọn xe; xe và phiếu cân lọc theo hợp đồng; phiếu chưa khớp xe; quan hệ `nc.doiId`, `dx.hdvcId` lưu đúng.
+- Cập nhật 20 bộ đầu-cuối theo vị trí mới của các mục menu cũ, tiêu đề “hợp đồng”, và bảng lọc theo hợp đồng.
+
 ## 2.3.0 (phần) — hiệu năng mở app và lưu, kho sao lưu, tự sao lưu khi đóng, Ctrl+S
 
 Rà soát hiệu năng, quy trình nhập liệu và sao lưu trên bộ dữ liệu lớn. Không đổi cấu trúc SQLite (vẫn v14), không đổi cách tính và nội dung biểu mẫu, không đổi chữ ký nội dung của mẫu đã in.

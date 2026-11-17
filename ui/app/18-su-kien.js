@@ -16,6 +16,13 @@ document.addEventListener('click', async e => {
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
   if (act === 'chonDoi') { curDoi = el.dataset.doi; return render(); }
+  if (act === 'dmTaiMau') return dmTaiMau(el.dataset.loai);
+  if (act === 'dmChon') return dmChonMo(el.dataset.kind);
+  if (act === 'dmcXong') return dmChonXong();
+  if (act === 'dmcDanhMuc') { $('#stBox').classList.remove('on'); view = 'dm'; dmTab = dmc.kind === 'nc' ? 'laodong' : 'xe'; return render(); }
+  if (act === 'dxTatCa' || act === 'dxTheoHd') { dxTatCa = act === 'dxTatCa'; return render(); }
+  if (act === 'pcTatCa' || act === 'pcTheoHd') { pcTatCa = act === 'pcTatCa'; return render(); }
+  if (act === 'lkPhieuCan') return lkMoPhieuCan();
   if (act === 'ncTatCa') { ncTatCa = true; return render(); }
   if (act === 'ncTheoDoi') { ncTatCa = false; return render(); }
   if (act === 'chonHd') { curHd = curHd === el.dataset.hd ? null : el.dataset.hd; return render(); }

@@ -20,7 +20,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const B = lot('fb', 'R-B', {exp: {}, kl: null, pc: [{...P(1, '05/10/2026', '92C-12345', 'PB1', 5), maRung: 'R-B'}]}); B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = [{...xe('92C-12345', '049000000077', 'LÊ VĂN MỘT'), maRung: 'R-B'}];
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');
   const db = async () => (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests;
-  const open = async (id, ftab) => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + id + ']'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(300); };
+  const open = async (id, ftab) => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + id + ']'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(300); { const b = await w.$('[data-act=pcTatCa]'); if (b) { await b.click(); await w.waitForTimeout(200); } } };
   // 1. lô hai đội xe: bảng phiếu cân có cột Đội xe với người ký của đội xe
   await open('fa', 'dx'); const PCT = '#main table:has(th:text("Số phiếu cân"))'; const th = await w.$$eval(PCT + ' thead th', l => l.map(x => x.textContent.trim()));
   ok('bảng phiếu cân hiện đội xe dưới biển số của từng phiếu (lô có hai đội xe), không thêm cột mới làm tràn bảng', /Đội xe: /.test(await w.innerText(PCT)) && !th.includes('Đội xe'), th.join('|'));

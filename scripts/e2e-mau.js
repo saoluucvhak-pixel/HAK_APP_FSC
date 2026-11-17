@@ -11,7 +11,8 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-mau-')), out = path.joi
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const SEED = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-001', ten: 'NGUYỄN VĂN MẪU', ngaySinh: '06/10/1967', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', danhXung: 'Ông'}, nc: [], dx: [], exp: {},
   forests: {f1: {id: 'f1', info: {maRung: 'CR-001-R1', tenRung: 'Lô mẫu', diaDiem: 'Thôn 1', lat: 15.6, lng: 108.1, dienTich: 2, dinhMucTanHa: 80, cuLy: 45, tuNgay: '01/10/2026', denNgay: '30/11/2026', donGia: 340000, giayTo: []}, nc: [], dx: [], pc: [], exp: {}}}}}};
-const KINDS = [['nc', 'HAK_Mau_NhanCong.xlsx', 'NHAN_CONG', 3, '[data-ftab=nc]'], ['dx', 'HAK_Mau_DoiXe.xlsx', 'DOI_XE', 2, '[data-ftab=dx]'], ['pc', 'HAK_Mau_PhieuCan.xlsx', 'PHIEU_CAN', 3, '[data-ftab=dx]']];
+/* nhân công và xe không còn nạp Excel theo lô (chọn từ Danh mục; file mẫu của Danh mục: scripts/e2e-hop-dong-con.js): chỉ còn file mẫu phiếu cân */
+const KINDS = [['pc', 'HAK_Mau_PhieuCan.xlsx', 'PHIEU_CAN', 3, '[data-ftab=dx]']];
 
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'm.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
@@ -19,6 +20,10 @@ const KINDS = [['nc', 'HAK_Mau_NhanCong.xlsx', 'NHAN_CONG', 3, '[data-ftab=nc]']
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');
   const dbOf = () => w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.f1);
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f1]');
+  { const M = require('../src/xlsxmau'), wbX = XLSX.read(await M.build('dx', JSZip, {version: '9'}), {type: 'buffer'});
+    wbX.Sheets.DOI_XE = XLSX.utils.aoa_to_sheet(XLSX.utils.sheet_to_json(wbX.Sheets.VI_DU, {header: 1, defval: ''}).slice(1)); const fx = path.join(dir, 'xe_mau.xlsx'); XLSX.writeFile(wbX, fx);
+    await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', fx); await w.waitForTimeout(900); await stSave(w);
+    ok('dựng dữ liệu: 2 xe mẫu vào lô (để phiếu cân mẫu khớp biển số)', (await dbOf()).dx.length === 2, String((await dbOf()).dx.length)); }
   for (const [kind, fileName, sheet, nExpect, tabSel] of KINDS) {
     await w.click(tabSel); fs.mkdirSync(out, {recursive: true}); for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f));
     await w.click(`button[data-act=tpl][data-kind=${kind}]`);

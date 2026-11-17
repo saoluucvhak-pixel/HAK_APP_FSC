@@ -91,15 +91,15 @@ const cuocText = (rec, h) => { const t = transportPrice(vcInfo(rec, h)); return 
 function panelHdvc(rec) {
   if (!rec.hdvc) return '';
   const F = {dx: rec.dx, hdvc: rec.hdvc}, list = HAKModel.hdOrder(F), gs = groupsDX(rec), gOf = h => gs.find(g => g.hd === h);
-  const sel = list.find(h => h.id === curHd) || null;
+  const sel = hdDangChon(rec);   // luôn có một hợp đồng đang chọn (chưa bấm chọn: hợp đồng đầu): bảng xe và phiếu cân bên dưới là bảng con của nó
   const tenDoi = (h, k) => trim(h.ten) || 'Đội xe ' + (k + 1);
   const ky = h => { if (h.donViId) return esc((h.ben || {}).ten || '(đơn vị)') + ' <span class="mut">(' + esc(vaiTroDV(h.ben)) + ')</span>'; const g = gOf(h); return g ? esc(g.ten || '') + ' <span class="mut">(' + esc(g.vaiTro) + ')</span>' : '<span class="mut">chưa có xe</span>'; };
-  const row = (h, k) => '<tr data-act="chonHd" data-hd="' + esc(h.id) + '" style="cursor:pointer' + (sel && sel.id === h.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(tenDoi(h, k)) + '</b>' + (sel && sel.id === h.id ? ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + ky(h) + '</td><td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td><td>' + cuocText(rec, h) + '</td><td>' + esc((h.exp || {}).soVC || '') + (h.exp && h.exp.soVC ? '' : ' <span class="mut">(số chung)</span>') + '</td></tr>';
+  const row = (h, k) => '<tr data-act="chonHd" data-hd="' + esc(h.id) + '" style="cursor:pointer' + (sel && sel.id === h.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(tenDoi(h, k)) + '</b>' + (sel && sel.id === h.id ? ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + ky(h) + '</td><td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td><td style="text-align:center">' + pcCuaHd(rec, h).length + '</td><td>' + cuocText(rec, h) + '</td><td>' + esc((h.exp || {}).soVC || '') + (h.exp && h.exp.soVC ? '' : ' <span class="mut">(số chung)</span>') + '</td></tr>';
   const dv = dmVC();
-  let html = '<div class="card" id="hdvcKT"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Đội xe và hợp đồng vận chuyển: ' + list.length + ' đội xe (' + list.length + ' hợp đồng)</h3>' +
-    '<span class="row"><input id="hdMoiTen" placeholder="Tên đội xe mới" style="width:180px"><button class="btn ghost sm" data-act="themHd">+ Thêm đội xe</button></span></div>' +
-    '<p class="mut" style="margin:6px 0">Mỗi <b>đội xe</b> ký một hợp đồng vận chuyển (như đội khai thác). Người ký của đội: một chủ xe / tài xế trong đội, hoặc một <b>doanh nghiệp</b> trong danh mục. Xe mới chưa chọn đội: vào đội xe đang chọn; chưa chọn đội thì mỗi người ký một đội như trước. Chọn đội xe của từng xe ở cột “Đội xe”.</p>' +
-    (list.length ? '<div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Đội xe</th><th>Người ký</th><th>Số xe</th><th>Cước</th><th>Số HĐ</th></tr></thead><tbody>' + list.map(row).join('') + '</tbody></table></div>' : '<p class="mut">Chưa có đội xe: thêm xe (tay, Excel hoặc chọn từ danh mục xe) hoặc thêm đội xe.</p>') +
+  let html = '<div class="card" id="hdvcKT"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng vận chuyển: ' + list.length + ' hợp đồng (mỗi hợp đồng một đội xe)</h3>' +
+    '<span class="row"><input id="hdMoiTen" placeholder="Tên đội xe / hợp đồng mới" style="width:200px"><button class="btn ghost sm" data-act="themHd">+ Thêm hợp đồng vận chuyển</button></span></div>' +
+    '<p class="mut" style="margin:6px 0">Một rừng có thể có nhiều hợp đồng vận chuyển. Bấm vào một dòng để chọn hợp đồng: <b>danh sách xe</b> và <b>phiếu cân</b> bên dưới là bảng con của hợp đồng đó. Người ký: một chủ xe / tài xế trong hợp đồng, hoặc một <b>doanh nghiệp</b> trong danh mục Đối tác.</p>' +
+    (list.length ? '<div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Hợp đồng (đội xe)</th><th>Người ký</th><th>Số xe</th><th>Phiếu cân</th><th>Cước</th><th>Số HĐ</th></tr></thead><tbody>' + list.map(row).join('') + '</tbody></table></div>' : '<p class="mut" id="hdvcTrong">Chưa có hợp đồng vận chuyển: bấm “+ Thêm hợp đồng vận chuyển”, rồi chọn xe từ danh mục cho hợp đồng đó.</p>') +
     '<details style="margin-top:8px"' + (dv.length ? '' : ' open') + '><summary>Danh mục đơn vị vận chuyển (doanh nghiệp, dùng chung mọi lô)' + (dv.length ? ': ' + dv.length + ' đơn vị' : '') + '</summary>' +
     (dv.length ? '<ul style="margin:6px 0">' + dv.map(d => '<li>' + esc(d.ten) + (d.mst ? ' · MST ' + esc(d.mst) : '') + (d.daiDien ? ' · đại diện ' + esc(d.daiDien) : '') + ' <button class="btn ghost sm" data-act="suaDv" data-dv="' + esc(d.id) + '">Sửa</button></li>').join('') + '</ul>' : '') +
     dvForm() + '</details>';
@@ -145,12 +145,23 @@ function hdCell(rec, r) {
   if (list.length < 2 || stCur() || ix < 0) return h ? esc(tenDoi(h)) : '';
   return '<select data-xehd="' + ix + '">' + list.map(x => '<option value="' + esc(x.id) + '"' + (h === x ? ' selected' : '') + '>' + esc(tenDoi(x)) + '</option>').join('') + '</select>';
 }
+/* PHIẾU CÂN LÀ BẢNG CON CỦA HỢP ĐỒNG VẬN CHUYỂN: phiếu thuộc hợp đồng có xe mang biển số của phiếu (đối chiếu với danh sách xe). Trả phiếu của hợp đồng h; pcChuaKhop: phiếu có biển số chưa thuộc xe nào của lô. */
+let dxTatCa = false, pcTatCa = false;
+function pcCuaHd(rec, h) { return (rec.pc || []).filter(p => { const d = doiXeOfPc(rec, p); return !!(d && d.hd === h); }); }
+function pcChuaKhop(rec) { const keys = new Set((rec.dx || []).map(x => HAKStage.bienKey(x.bienSo))); return (rec.pc || []).filter(p => !keys.has(HAKStage.bienKey(p.bienSo))); }
 function panelDX(rec) {
   const c = checkDX(rec);
-  const head = panelMua(rec) + panelVc(rec) + panelHdvc(rec) + panelImport('dx', rec) + stBar('dx', rec) + stErrBox();
-  if (!rec.dx.length && !stCur()) return head + '<div class="empty">Chưa có danh sách vận chuyển. Bấm “+ Thêm xe”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>' + panelHdvcVB(rec);
-  return head + issuesBox(c.errs, c.warns) + stTable('dx', rec, ['Chủ xe', 'Biển kiểm soát', 'Loại xe', 'Người ký HĐ', 'Đội xe', 'Tài xế', 'Số GPLX', 'Hạn GPLX', 'Hạn bảo hiểm', 'Kiểm định'],
-    r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + hdCell(rec, r) + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c) + panelHdvcVB(rec);
+  /* thứ tự cha → con: công ty mua hàng, cước chung → hợp đồng vận chuyển (cha) → thông số, số văn bản của hợp đồng đang chọn → XE CỦA HỢP ĐỒNG (bảng con, chọn từ danh mục) */
+  const h0 = panelMua(rec) + panelVc(rec) + panelHdvc(rec) + panelHdvcVB(rec);   // panelHdvc đặt hợp đồng đang chọn (curHd)
+  const sel = hdDangChon(rec), F = {dx: rec.dx, hdvc: rec.hdvc || []};
+  const conHead = '<div class="card" id="dxCon" style="margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0"><h3 style="margin:0">Xe của ' + (sel ? 'hợp đồng “' + esc(hdTenHienThi(rec, sel)) + '”' : 'lô') + ' <span class="mut" style="font-weight:400">· bảng con của hợp đồng vận chuyển, lấy từ Danh mục xe</span></h3></div>';
+  const head = h0 + conHead + stBar('dx', rec) + stErrBox();
+  if (!rec.dx.length && !stCur()) return head + '<div class="empty">Chưa có xe. ' + (sel ? 'Bấm “+ Chọn xe từ danh mục” để thêm xe vào hợp đồng đang chọn.' : 'Thêm hợp đồng vận chuyển trước, rồi chọn xe từ danh mục.') + '</div>';
+  const nhapDx = !!(stCur() && HAKStage.dirtyKinds(stCur()).includes('dx'));   // đang có xe chưa lưu: hiện cả lô để soát đủ mọi dòng của lượt nhập
+  const only = sel && !dxTatCa && !nhapDx ? r => { const h = rec.hdvc ? HAKModel.hdOf(F, r) : null; return !h || h === sel; } : null;   // xe của hợp đồng đang chọn (và xe chưa thuộc hợp đồng nào)
+  const nHd = (rec.hdvc || []).length, loc = nHd > 1 ? '<div class="row" style="margin:6px 0">' + (only ? '<span class="mut">Đang xem xe của hợp đồng “' + esc(hdTenHienThi(rec, sel)) + '”.</span> <button class="btn ghost sm" data-act="dxTatCa">Xem tất cả xe của lô</button>' : nhapDx ? '<span class="mut">Đang có xe chưa lưu: hiện tất cả xe của lô để soát.</span>' : '<span class="mut">Đang xem tất cả xe của lô.</span> <button class="btn ghost sm" data-act="dxTheoHd">Chỉ xem hợp đồng đang chọn</button>') + '</div>' : '';
+  return head + issuesBox(c.errs, c.warns) + loc + stTable('dx', rec, ['Chủ xe', 'Biển kiểm soát', 'Loại xe', 'Người ký HĐ', 'Hợp đồng (đội xe)', 'Tài xế', 'Số GPLX', 'Hạn GPLX', 'Hạn bảo hiểm', 'Kiểm định'],
+    r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + hdCell(rec, r) + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c, null, only);
 }
 
 /* Ngày cân 2: số đã nhập thì hiện nguyên; không có thì suy từ ngày cân 1 và giờ cân (giờ cân 2 sớm hơn giờ cân 1 = qua nửa đêm, +1 ngày) và ghi “suy ra” */
@@ -160,13 +171,21 @@ function ngay2Cell(r) {
 }
 function panelPhieuCan(rec) {
   const c = checkPC(rec), pc = rec.pc || [];
-  const head = panelImport('pc', rec) + stBar('pc', rec);
-  if (!pc.length && !stCur()) return head + '<div class="empty">Chưa có phiếu cân. Bấm “+ Thêm phiếu cân”, hoặc “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
+  const sel = hdDangChon(rec), nHd = (rec.hdvc || []).length, cua = sel ? pcCuaHd(rec, sel) : pc, chuaKhop = pcChuaKhop(rec);
+  const conHead = '<div class="card" id="pcCon" style="margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0"><h3 style="margin:0">Phiếu cân của ' + (sel ? 'hợp đồng “' + esc(hdTenHienThi(rec, sel)) + '”' : 'lô') + ' <span class="mut" style="font-weight:400">· bảng con của hợp đồng vận chuyển, đối chiếu với danh sách xe</span></h3>' +
+    '<div class="mut" id="pcDoiChieu" style="margin-top:4px">' + (sel ? 'Hợp đồng này: <b>' + cua.length + '</b> phiếu, <b>' + fmtT(totalKg(cua)) + '</b> tấn, trên ' + new Set(cua.map(p => HAKStage.bienKey(p.bienSo))).size + ' / ' + HAKModel.xeOf({dx: rec.dx, hdvc: rec.hdvc}, sel).length + ' xe của hợp đồng' + (nHd > 1 ? ' · cả lô: ' + pc.length + ' phiếu, ' + fmtT(totalKg(pc)) + ' tấn' : '') : 'Cả lô: ' + pc.length + ' phiếu, ' + fmtT(totalKg(pc)) + ' tấn') + '.' +
+    (chuaKhop.length ? ' <span class="pill err" id="pcChuaKhop">' + chuaKhop.length + ' phiếu có biển số chưa thuộc xe nào của lô</span> Sửa phiếu để đổi biển số, hoặc thêm xe đó vào hợp đồng.' : (pc.length ? ' <span class="pill ok">mọi phiếu đều khớp xe của lô</span>' : '')) + '</div></div>';
+  const head = conHead + panelImport('pc', rec) + stBar('pc', rec);
+  if (!pc.length && !stCur()) return head + '<div class="empty">Chưa có phiếu cân. Bấm “Tra cứu Google Sheets (HoSoKeo)” để chọn phiếu, “+ Thêm phiếu cân”, hoặc nạp / dán Excel (mỗi chuyến một dòng theo phiếu cân nhà máy).</div>';
+  const kXe = sel ? new Set(HAKModel.xeOf({dx: rec.dx, hdvc: rec.hdvc}, sel).map(x => HAKStage.bienKey(x.bienSo))) : null, kLo = new Set((rec.dx || []).map(x => HAKStage.bienKey(x.bienSo)));
+  const nhapPc = !!(stCur() && HAKStage.dirtyKinds(stCur()).includes('pc'));   // đang có phiếu cân chưa lưu (vừa nạp, dán, tra cứu): hiện cả lô để soát đủ mọi dòng
+  const only = sel && nHd > 1 && !pcTatCa && !nhapPc ? r => { const k = HAKStage.bienKey(r.bienSo); return kXe.has(k) || !kLo.has(k); } : null;   // phiếu của hợp đồng đang chọn và phiếu chưa khớp xe nào
+  const loc = nHd > 1 ? '<div class="row" style="margin:6px 0">' + (only ? '<span class="mut">Đang xem phiếu cân của hợp đồng “' + esc(hdTenHienThi(rec, sel)) + '” (kèm phiếu chưa khớp xe).</span> <button class="btn ghost sm" data-act="pcTatCa">Xem tất cả phiếu cân của lô</button>' : nhapPc ? '<span class="mut">Đang có phiếu cân chưa lưu: hiện tất cả phiếu cân của lô để soát. Sau khi lưu, bảng lọc theo hợp đồng đang chọn.</span>' : '<span class="mut">Đang xem tất cả phiếu cân của lô.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ xem hợp đồng đang chọn</button>') + '</div>' : '';
   const R = '<span style="display:block;text-align:right">', num = (v, f) => typeof v === 'number' ? fmt(v) : '';
   const nhieu = rec.doi && rec.doi.length > 1, tenD = d => d.ten || ('Đội ' + (rec.doi.indexOf(d) + 1));
   const dCell = r => { if (!nhieu) return ''; const d = rec.doi.find(x => x.id === r.doiId), ix = pc.indexOf(r);
     return '<td>' + (stCur() || ix < 0 ? (d ? esc(tenD(d)) : '<span class="pill err">chưa gán</span>') : '<select data-pcdoi="' + ix + '">' + (d ? '' : '<option value="" selected>(chưa gán)</option>') + rec.doi.map(x => '<option value="' + esc(x.id) + '"' + (x === d ? ' selected' : '') + '>' + esc(tenD(x)) + '</option>').join('') + '</select>') + '</td>'; };
-  const nxe = groupsDX(rec).length > 1, xCell = r => { if (!nxe) return ''; const d = doiXeOfPc(rec, r), t = d && d.hd ? doiXeTen(rec, d) : ''; return t ? '<br><small class="mut" title="Đội xe (suy ra từ xe của phiếu, chỉ xem)">Đội xe: ' + esc(t) + '</small>' : ''; };   // chỉ xem: đội xe suy ra từ xe của phiếu
+  const nxe = groupsDX(rec).length > 1, kLo0 = new Set((rec.dx || []).map(x => HAKStage.bienKey(x.bienSo))), xCell = r => { if (r.bienSo && !kLo0.has(HAKStage.bienKey(r.bienSo))) return '<br><span class="pill err" title="Biển số của phiếu chưa thuộc xe nào của lô: bấm Sửa để đổi biển số, hoặc thêm xe vào hợp đồng">chưa khớp xe</span>'; if (!nxe) return ''; const d = doiXeOfPc(rec, r), t = d && d.hd ? doiXeTen(rec, d) : ''; return t ? '<br><small class="mut" title="Hợp đồng vận chuyển / đội xe (suy ra từ xe của phiếu, chỉ xem)">Đội xe: ' + esc(t) + '</small>' : ''; };   // chỉ xem: đội xe suy ra từ xe của phiếu
   const gan = nhieu && !stCur() ? '<div class="card" id="pcGan"><h3 style="margin-top:0">Gán đội cho phiếu cân <span class="mut" style="font-weight:400">· khối lượng thực hiện của mỗi đội = tổng phiếu cân của đội</span></h3>' +
     '<div class="row" style="flex-wrap:wrap;gap:8px"><label>Từ ngày <input id="pgTu" placeholder="dd/mm/yyyy" style="width:110px"></label><label>Đến ngày <input id="pgDen" placeholder="dd/mm/yyyy" style="width:110px"></label>' +
     '<label>Biển số chứa <input id="pgBien" style="width:110px"></label><label>Số phiếu chứa <input id="pgSo" style="width:110px"></label><label><input type="checkbox" id="pgChua" checked> chỉ phiếu chưa gán</label>' +
@@ -176,13 +195,13 @@ function panelPhieuCan(rec) {
     r => dCell(r) + '<td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay) : esc(r.ngay) + '<br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + ' (bấm Sửa)</small>') + '<br><span class="mut">' + esc(r.gioCan1 || '') + '</span></td><td>' + ngay2Cell(r) + '<br><span class="mut">' + esc(r.gioCan2 || '') + '</span></td><td>' + esc(r.bienSo) + xCell(r) +
       '</td><td>' + esc(r.soPhieu) + '</td><td style="text-align:right">' + num(r.can1) + '</td><td style="text-align:right">' + num(r.can2) +
       '</td><td style="text-align:right">' + (typeof r.klKg === 'number' ? fmt(r.klKg) : (typeof r.kl === 'number' ? fmt(Math.round(r.kl * 1000)) : '')) + '</td><td style="text-align:right">' + (typeof r.kl === 'number' ? fmtT(Math.round(r.kl * 1000)) : esc(r.kl)) +
-      '</td><td>' + esc(r.khachHang || '') + '</td><td style="text-align:right">' + num(r.donGia) + '</td><td style="text-align:right">' + num(r.thanhTien) + '</td><td>' + esc(r.noiGiao) + '</td>', c);
-  return head + gan + issuesBox(c.errs, c.warns) + t.replace('</tbody></table></div>', '</tbody><tfoot><tr><td colspan="' + (9 + (nhieu ? 1 : 0)) + '"><b>Tổng ' + pc.length + ' chuyến (bản ' + (stCur() ? 'nháp' : 'đã lưu') + ')</b></td><td style="text-align:right"><b>' + fmtT(totalKg(pc)) + ' tấn</b></td><td colspan="5"></td></tr></tfoot></table></div>');
+      '</td><td>' + esc(r.khachHang || '') + '</td><td style="text-align:right">' + num(r.donGia) + '</td><td style="text-align:right">' + num(r.thanhTien) + '</td><td>' + esc(r.noiGiao) + '</td>', c, null, only);
+  return head + gan + issuesBox(c.errs, c.warns) + loc + t.replace('</tbody></table></div>', '</tbody><tfoot><tr><td colspan="' + (9 + (nhieu ? 1 : 0)) + '"><b>Tổng ' + pc.length + ' chuyến (bản ' + (stCur() ? 'nháp' : 'đã lưu') + ')</b></td><td style="text-align:right"><b>' + fmtT(totalKg(pc)) + ' tấn</b></td><td colspan="5"></td></tr></tfoot></table></div>');
 }
 
 function issuesBox(errs, warns) {
   let h = '';
-  if (errs.length) h += '<div class="msg err"><b>Lỗi (' + errs.length + ') — cần sửa trong file rồi nạp lại:</b><ul class="issues">' + errs.slice(0, 40).map(e => '<li>' + esc(e) + '</li>').join('') + (errs.length > 40 ? '<li>… còn ' + (errs.length - 40) + ' lỗi</li>' : '') + '</ul></div>';
+  if (errs.length) h += '<div class="msg err"><b>Lỗi (' + errs.length + ') — cần sửa:</b><ul class="issues">' + errs.slice(0, 40).map(e => '<li>' + esc(e) + '</li>').join('') + (errs.length > 40 ? '<li>… còn ' + (errs.length - 40) + ' lỗi</li>' : '') + '</ul></div>';
   else h += '<div class="msg ok">Không có lỗi.</div>';
   if (warns.length) h += '<div class="msg warn"><b>Cảnh báo (' + warns.length + '):</b><ul class="issues">' + warns.slice(0, 20).map(e => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
   return h;

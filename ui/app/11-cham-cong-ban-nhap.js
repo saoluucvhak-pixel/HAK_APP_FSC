@@ -89,7 +89,7 @@ function stErrBox() { return stErrList && stErrList.length ? '<div class="msg er
 function stBar(kind, rec) {
   const st = stCur(), o = curOwner(), c = st ? HAKStage.counts(st, kind) : null, dk = st ? HAKStage.dirtyKinds(st) : [];
   const info = '<div class="stInfo">Chủ rừng: <b>' + esc(o ? o.info.ten : '') + '</b> · Lô: <b>' + esc(rec.info.maRung || '(chưa có mã)') + '</b>' + (st && st.src[kind] ? ' · Nguồn lượt này: <b>' + esc(st.src[kind]) + '</b>' : '') + '</div>';
-  const add = '<button class="btn sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + '</button>';
+  const add = kind === 'pc' ? '<button class="btn sm" data-act="stAdd" data-kind="pc">+ Thêm phiếu cân</button>' : dmcThanh(kind, rec);   // nhân công, xe: chọn từ Danh mục (ui/app/30)
   const sum = c ? ('Thêm mới <b>' + c.new + '</b> · Sửa <b>' + c.changed + '</b> · Xóa <b>' + c.removed + '</b> · Giữ nguyên <b>' + c.same + '</b>') : '';
   const bar = dk.length ? '<div class="msg warn stDirty" id="stDirty"><b>Chưa lưu</b> ' + (dk.length > 1 || dk[0] !== kind ? '(còn thay đổi ở ' + dk.map(k => ST_LABEL[k]).join(', ') + ') ' : '') + '— ' + (c && (c.new + c.changed + c.removed) ? sum + '. ' : '') + 'Hồ sơ chỉ dùng dữ liệu đã lưu.' +
     ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : '';
@@ -161,7 +161,11 @@ function stAct(act, el) {
   if (act === 'stEdit') return stOpen(kind, i);
   if (act === 'stDel') return stDelete(kind, i);
   if (act === 'stRestore') { HAKStage.restoreRow(stCur(), kind, el.dataset.id); stErrList = null; return render(); }
-  if (act === 'stAddXe') { stOpen('dx', null); stm.vals.bienSo = el.dataset.bien || ''; return stRender(); }
+  if (act === 'stAddXe') {   // biển số của phiếu cân chưa có trong lô: xe đã có ở Danh mục thì chọn từ danh mục (vào hợp đồng đang chọn); chưa có thì nhập xe mới tại chỗ
+    const b = el.dataset.bien || '';
+    if (b && dmNguonXe().some(x => HAKStage.bienKey(x.bienSo) === HAKStage.bienKey(b)) && hdDangChon(stJob(curRec()))) return dmChonMo('dx', b);
+    stOpen('dx', null); stm.vals.bienSo = b; return stRender();
+  }
   if (act === 'stPend') return stPendAct(el);
   if (act === 'stSave') return stSave();
   if (act === 'stDiscard') return stDiscard();
@@ -212,6 +216,7 @@ function stFinishRow() {
   const old = idx >= 0 ? st.cur[kind][idx] : null; if (kind === 'pc') HAKPhieuCan.chuanHoaNgay2(row, old);   // ngày cân 2 trống thì suy ra từ ngày cân 1 và giờ cân
    row._row = old ? old._row : st.cur[kind].reduce((m, r) => Math.max(m, +r._row || 0), 1) + 1; if (old) row._id = old._id;
   if (kind === 'nc' && rec.doi) { const m = trim(row.doi) && rec.doi.find(d => HAKDoi.fold(d.ten) === HAKDoi.fold(row.doi)), t = curTeam(); row.doiId = m ? m.id : old && old.doiId !== undefined ? old.doiId : (t ? t.id : ''); }   // đội của người: cột Đội khớp tên đội → đội đó; sửa người cũ → giữ đội; người mới → đội đang chọn
+  if (kind === 'dx' && !old && row.hdvcId === undefined) { const h = hdDangChon(stJob(rec)); if (h) row.hdvcId = h.id; }   // xe mới nhập tại chỗ: vào hợp đồng vận chuyển đang chọn (bảng con của hợp đồng)
   const list = st.cur[kind].slice(); if (idx >= 0) list[idx] = row; else list.push(row);
   const chk = ST_CHECK[kind](kind === 'nc' ? Object.assign({}, stJob(rec), ganDoi(rec.doi, list)) : Object.assign({}, stJob(rec), {[kind]: list})), mine = chk.errs.filter(m => m.startsWith('Dòng ' + row._row + ':'));
   if (mine.length) { stm.errs = mine; return stRender(); }
@@ -344,13 +349,14 @@ function panelDoiKT(rec, phan) {   // phan: 'tt' = chọn đội và thông tin 
   const t = curTeam(f), n = d => (rec.nc || []).filter(r => r.doiId === d.id).length, multi = rec.doi.length > 1, chua = (rec.nc || []).filter(r => !rec.doi.some(d => d.id === r.doiId)).length;
   const tt = d => { const x = (rec.nc || []).find(r => r.doiId === d.id && isTT(r)); return x ? x.ten : '—'; };
   const row = (d, k) => '<tr class="' + (d.id === t.id ? 'sel' : '') + '" data-act="chonDoi" data-doi="' + esc(d.id) + '" style="cursor:pointer' + (d.id === t.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(d.ten || ('Đội ' + (k + 1))) + '</b>' + (d.id === t.id ? ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + esc(tt(d)) + '</td><td style="text-align:center">' + n(d) + '</td><td>' + esc(hinhThucNgan(infoTeam(rec, d))) + '</td><td style="text-align:right">' + (typeof d.dienTich === 'number' ? formatNumber(d.dienTich, 3) : multi ? '<span class="mut">theo số người</span>' : '<span class="mut">cả lô</span>') + '</td></tr>';
-  return '<div class="card" id="doiKT"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Nhân công khai thác: ' + rec.doi.length + ' đội</h3><span class="row"><input id="doiMoiTen" placeholder="Tên đội mới, ví dụ Đội ' + (rec.doi.length + 1) + '" style="width:200px"><button class="btn ghost sm" data-act="themDoi">+ Thêm đội khai thác</button></span></div>' +
+  return '<div class="card" id="doiKT"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng nhân công: ' + rec.doi.length + ' hợp đồng (mỗi hợp đồng một đội)</h3><span class="row"><input id="doiMoiTen" placeholder="Tên đội mới, ví dụ Đội ' + (rec.doi.length + 1) + '" style="width:200px"><button class="btn ghost sm" data-act="themDoi">+ Thêm hợp đồng (đội)</button></span></div>' +
+    '<p class="mut" style="margin:6px 0">Một rừng có thể có nhiều hợp đồng nhân công; mỗi hợp đồng là một <b>đội</b>. Bấm vào một dòng để chọn đội: thông số hợp đồng và danh sách nhân công bên dưới là của đội đó.</p>' +
     '<div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Đội</th><th>Tổ trưởng</th><th>Số người</th><th>Hình thức · cách tính</th><th>Diện tích (ha)</th></tr></thead><tbody>' + rec.doi.map(row).join('') + '</tbody></table></div>' +
     (chua ? '<div class="msg warn" style="margin-top:6px">' + chua + ' người chưa thuộc đội nào: chọn đội ở cột Đội của bảng nhân công.</div>' : '') +
     '<form id="doiForm" class="grid" style="margin-top:8px"><label><span>Tên đội' + (multi ? '' : ' (tùy chọn khi lô một đội)') + '</span><input name="ten" value="' + esc(t.ten || '') + '"></label>' +
     '<label><span>Diện tích của đội (ha)</span><input name="dienTich" inputmode="decimal" value="' + esc(typeof t.dienTich === 'number' ? String(t.dienTich).replace('.', ',') : '') + '" placeholder="' + (multi ? 'trống: chia theo số người' : 'trống: cả lô') + '"></label>' +
     '<div class="row" style="grid-column:1/-1"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (multi ? '<button class="btn danger sm" type="button" data-act="xoaDoi">Xóa đội này</button>' : '') + '</div></form>' +
-    '<small class="mut">Mọi thông số của đội (hình thức, đơn giá bên dưới, diện tích, số văn bản, nhân công, chấm công) là của <b>đội đang chọn</b>. Người nhập thêm (tay hoặc Excel) không ghi cột Đội sẽ vào đội đang chọn.</small></div>';
+    '<small class="mut">Mọi thông số của hợp đồng (hình thức, đơn giá bên dưới, diện tích, số văn bản, nhân công, chấm công) là của <b>đội đang chọn</b>. Người chọn thêm từ danh mục vào đội đang chọn; số người của đội là số người đã chọn.</small></div>';
 }
 /* cột Đội: lô nhiều đội (không trong bản nháp) chọn đội ngay tại dòng; còn lại hiện tên đội */
 function doiCell(rec, r) {
@@ -362,11 +368,15 @@ function doiCell(rec, r) {
 }
 function panelNC(rec) {
   const c = checkNC(rec);
-  const head = panelDoiKT(rec) + panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec) + panelImport('nc', rec) + panelChamCong(recDoiChon(rec)) + stBar('nc', rec) + stErrBox();
-  if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có danh sách nhân công. Bấm “+ Thêm nhân công”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>' + panelDoiVB(rec);
+  /* thứ tự cha → con: hợp đồng (đội) → thông số hợp đồng (hình thức, đơn giá, số văn bản) → NHÂN CÔNG CỦA ĐỘI (bảng con, chọn từ danh mục) → định biên, chấm công */
+  const tDoi = rec.doi ? curTeam() : null, tenDoi = tDoi ? (trim(tDoi.ten) || 'Đội ' + (rec.doi.findIndex(d => d.id === tDoi.id) + 1)) : '';
+  const conHead = '<div class="card" id="ncCon" style="margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0"><h3 style="margin:0">Nhân công của ' + (tDoi ? 'đội “' + esc(tenDoi) + '”' : 'lô') + ' <span class="mut" style="font-weight:400">· bảng con của hợp đồng, lấy từ Danh mục lao động</span></h3></div>';
+  const head = panelDoiKT(rec) + panelLuong(rec) + panelDoiVB(rec) + conHead + stBar('nc', rec) + stErrBox();
+  const duoi = doiPanel(rec) + dinhBienPanel(rec) + panelChamCong(recDoiChon(rec));
+  if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có nhân công. Bấm “+ Chọn nhân công từ danh mục” để thêm người vào đội đang chọn.</div>' + duoi;
   const t = rec.doi && rec.doi.length > 1 && !ncTatCa ? curTeam() : null, only = t ? r => r.doiId === t.id || !rec.doi.some(d => d.id === r.doiId) : null;   // lô nhiều đội: chỉ người của đội đang chọn (và người chưa thuộc đội)
   const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' : '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';
   return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', 'Đội', 'Đơn giá'],
-    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + doiCell(rec, r) + '</td><td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>', c, null, only) + panelDoiVB(rec);
+    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + doiCell(rec, r) + '</td><td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>', c, null, only) + duoi;
 }
 

@@ -12,7 +12,9 @@
 - **Mở phần mềm và lưu nhanh hơn** khi có nhiều lô và nhiều phiếu cân (số đo ở CHANGELOG).
 - **Kho sao lưu** (Cài đặt → Sao lưu và khôi phục): xem mọi bản sao lưu trên máy, kiểm tra từng bản, **khôi phục ngay trong phần mềm** từ bản tự động hằng ngày hoặc bản “Trước khi…”, xóa bản cũ.
 - **Tự sao lưu chứa việc làm trong ngày:** bản của hôm nay được làm mới khi đóng phần mềm và mỗi 2 giờ nếu dữ liệu đã đổi.
-- **Ctrl+S** lưu lô đang mở; menu ⋯ Thêm không còn bị cắt chữ ở cửa sổ hẹp.
+- **Ctrl+S** lưu lô đang mở.
+- **Bỏ menu ⋯ Thêm:** sao lưu / khôi phục, bảng màu, hướng dẫn nằm trong Cài đặt; thanh trên cùng gọn trên một dòng.
+- **Nhân công và xe chọn từ Danh mục:** mỗi hợp đồng nhân công là một đội, mỗi hợp đồng vận chuyển có danh sách xe và phiếu cân riêng; nạp Excel người và xe làm ở Danh mục; phiếu cân có nút tra cứu Google Sheets (HoSoKeo).
 
 Không đổi cấu trúc dữ liệu (SQLite v14) và nội dung biểu mẫu. Cài đè lên v2.2.0 không cần chuyển dữ liệu.
 
@@ -21,6 +23,8 @@ Không đổi cấu trúc dữ liệu (SQLite v14) và nội dung biểu mẫu. 
 - Dán từ Excel cần dòng tiêu đề đúng tên cột của file mẫu.
 - Khôi phục từ kho sao lưu thay toàn bộ hồ sơ trên máy (không gộp từng lô); muốn gộp thì dùng bản `.json`. Bản tra cứu Google Sheets không nằm trong phần khôi phục.
 - Bản “Trước khi khôi phục”, “Trước khi khôi phục lô” chỉ giữ 20 bản gần nhất mỗi loại.
+- Tab Nhân công và Vận chuyển không còn nạp Excel theo lô: nạp ở Danh mục rồi chọn vào hợp đồng.
+- Phiếu cân thuộc hợp đồng vận chuyển theo biển số xe của phiếu.
 - Bộ cài chưa ký số.
 
 ## Đã kiểm và chưa kiểm

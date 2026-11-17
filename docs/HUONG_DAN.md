@@ -24,7 +24,7 @@ Tài liệu dành cho người nhập liệu và người lập hồ sơ. Phần
 1. Chạy `HAKQN-HoSoKhaiThac-Setup-<phiên bản>.exe`, chọn thư mục cài rồi bấm Cài đặt. Bộ cài chưa ký số nên Windows có thể hiện cảnh báo SmartScreen: chọn **More info → Run anyway**.
 2. Mở từ **Start Menu → HAKQN - Hồ sơ khai thác** hoặc biểu tượng trên Desktop.
 3. Dữ liệu nằm ở `%APPDATA%\hakqn-ho-so-khai-thac\hakqn.sqlite` (menu **Tệp → Mở thư mục dữ liệu**). Cài bản mới đè lên bản cũ **không mất dữ liệu**; gỡ cài đặt cũng không xóa dữ liệu.
-4. Thanh trên cùng: **Tổng quan · Tra cứu Google Sheets · Báo cáo · Công ty mua hàng**, nút sáng/tối và menu **⋯ Thêm** (Hướng dẫn, Bảng màu, Sao lưu, Khôi phục, Khôi phục lô rừng). Dòng ngay dưới cho biết chủ rừng, lô đang mở và trạng thái lưu (“Đã lưu vào máy”).
+4. Thanh trên cùng: **Tổng quan · Tra cứu · Báo cáo · Danh mục · Định mức · Cài đặt**, nút Tìm và nút sáng/tối. Hướng dẫn, Bảng màu, Sao lưu, Khôi phục, Khôi phục lô rừng nằm trong **Cài đặt** (tab Sao lưu và khôi phục, Giao diện, Trợ giúp). Dòng ngay dưới cho biết chủ rừng, lô đang mở và trạng thái lưu (“Đã lưu vào máy”).
 
 ## 2. Quy trình làm việc 8 bước
 | Bước | Việc cần làm | Ở đâu |
@@ -50,6 +50,11 @@ Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa c
 - Thanh **Tiến độ hồ sơ · checklist FSC** ở đầu lô cho biết % hoàn thành và từng mục còn thiếu.
 
 ## 3e. Nhập, sửa, lưu nhân công, xe và phiếu cân
+**Cách tổ chức (bản 2.3.0):** thông tin gốc của người lao động và xe nằm ở **Danh mục** (nhập tay hoặc nạp Excel ở màn Danh mục, có file mẫu). Trong lô:
+- **Tab Nhân công**: mỗi *hợp đồng nhân công* là một **đội**; chọn đội rồi bấm **+ Chọn nhân công từ danh mục** để thêm người vào đội đó. Số người của đội là số người đã chọn.
+- **Tab Vận chuyển**: thêm *hợp đồng vận chuyển* trước, rồi **+ Chọn xe từ danh mục** cho hợp đồng đang chọn. **Phiếu cân** là bảng con của hợp đồng vận chuyển (theo biển số xe); nạp bằng **Tra cứu Google Sheets (HoSoKeo)**, nạp / dán Excel, hoặc thêm tay. Phiếu có biển số chưa thuộc xe nào của lô hiện nhãn **chưa khớp xe**: bấm Sửa để đổi biển số, hoặc thêm xe đó vào hợp đồng.
+- Tab Nhân công và Vận chuyển không còn nạp Excel theo lô. Các bước dưới đây về “nạp Excel” áp dụng cho **phiếu cân**; với nhân công và xe, “nhập” nghĩa là chọn từ danh mục (hoặc nút “… mới (chưa có trong danh mục)”).
+
 Luồng thống nhất cho ba cách nhập (thêm tay, nạp Excel, đưa từ Tra cứu Google Sheets): **Nhập → Xem trước và chỉnh sửa → Lưu dữ liệu vào lô → Tạo, xuất, in hồ sơ**.
 1. **Nhập**: nút **+ Thêm nhân công / + Thêm xe / + Thêm phiếu cân** ở đúng tab (Nhân công, Vận chuyển); hoặc **Tải file mẫu** rồi nạp Excel; hoặc Tra cứu Google Sheets → chọn dữ liệu → đưa vào lô. Thanh phía trên bảng ghi **chủ rừng, mã lô** và **nguồn** của lượt nhập.
 2. **Xem trước (Chưa lưu)**: mọi nguồn chỉ đổi **bản nháp**, không đổi dữ liệu đã lưu và không đổi lô khác. Mỗi dòng có trạng thái **Thêm mới**, **Sửa** (rê chuột để xem giá trị cũ → mới), **Sẽ xóa**, **Đã lưu**. Nạp Excel theo khóa nghiệp vụ (nhân công: CCCD hoặc họ tên; xe: biển số đã chuẩn hóa; phiếu: số phiếu); bản ghi đã lưu mà file không có vẫn được giữ; nạp lại cùng file không tính trùng. File mang mã lô khác lô đang mở báo lỗi, không tự chuyển lô.

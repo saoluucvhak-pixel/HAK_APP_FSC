@@ -29,7 +29,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('Thông tin rừng: không còn ô nhập khối lượng thực tế; hiện tổng phiếu cân 35,75 tấn (4 phiếu)', !(await w.$('#forestForm [name=khoiLuong]')) && /35,75 tấn/.test(await w.innerText('#klPC')) && /4 phiếu cân/.test(await w.innerText('#klPC')), await w.innerText('#klPC').catch(() => ''));
   await w.click('[data-ftab=kt]'); await w.waitForTimeout(300);
   ok('Kiểm tra trước khi xuất: báo 4 phiếu cân chưa gán đội (khối lượng đội đang chia theo số người)', /4 phiếu cân chưa gán đội/.test(await w.innerText('#main')));
-  await w.click('[data-ftab=dx]'); await w.waitForTimeout(300);
+  await w.click('[data-ftab=dx]'); await w.waitForTimeout(300); { const b = await w.$('[data-act=pcTatCa]'); if (b) { await b.click(); await w.waitForTimeout(200); } }   // bảng phiếu cân mặc định lọc theo hợp đồng vận chuyển đang chọn: xem tất cả phiếu của lô
   ok('bảng phiếu cân có cột Đội và khung gán đội; chưa gán: 4 phiếu', !!(await w.$('#pcGan')) && /chưa gán: 4 phiếu/.test(await w.innerText('#pcGan')));
   // gán hàng loạt theo bộ lọc
   await w.fill('#pgBien', '12345'); await w.selectOption('#pgDoi', 'doi1'); await w.click('[data-act=pcGanLoat]'); await w.waitForTimeout(400);
