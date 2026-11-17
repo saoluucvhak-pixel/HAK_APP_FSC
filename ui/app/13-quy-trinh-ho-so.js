@@ -85,14 +85,15 @@ function panelDoiChieuPcVC(rec, groups) {
   const kq = doiChieuPcVanChuyen(rec, groups);
   if (!kq.pc.length) return '';
   const chua = [...kq.canSua, ...kq.hetHan], tong = a => a.length + ' phiếu · ' + fmt(totalKg(a)) + ' kg';
-  const rows = chua.map(({p, index, hdId, lyDo}) => '<tr><td>' + esc(p.soPhieu || '(không số)') + '</td><td>' +
+  const rows = [...chua, ...kq.ngoaiPhamVi].map(({p, index, hdId, lyDo}) => '<tr><td>' + esc(p.soPhieu || '(không số)') + '</td><td>' +
     esc(p.bksNguon || p.bienSo || '—') + '</td><td>' + fmt(totalKg([p])) + '</td><td>' + esc(lyDo) +
-    '</td><td><button class="btn ghost sm" data-act="ktGo" data-go="' +
-    esc(JSON.stringify({ftab: 'dx', focus: 'pc', hdId, pcIndex: index})) + '">Mở phiếu</button></td></tr>').join('');
+    '</td><td>' + (Number.isInteger(index) ? '<button class="btn ghost sm" data-act="ktGo" data-go="' +
+    esc(JSON.stringify({ftab: 'dx', focus: 'pc', hdId, pcIndex: index})) + '">Mở phiếu</button>' : 'Ngoài phạm vi') + '</td></tr>').join('');
   return '<div class="card" id="doiChieuPcVC"><h3 style="margin-top:0">Đối chiếu khối lượng BM-09/10</h3>' +
     '<div class="row" style="flex-wrap:wrap;gap:12px"><span>Tổng rừng <b id="pcVCTong">' + tong(kq.pc) +
     '</b></span><span>Đủ điều kiện về xe và hợp đồng <b id="pcVCDu">' + tong(kq.daGhep) +
-    '</b></span><span>Cần xử lý <b id="pcVCThieu">' + tong(chua.map(x => x.p)) + '</b></span></div>' +
+    '</b></span><span>Cần xử lý <b id="pcVCThieu">' + tong(chua.map(x => x.p)) +
+    '</b></span><span>Ngoài phạm vi mẫu <b id="pcVCNgoai">' + tong(kq.ngoaiPhamVi.map(x => x.p)) + '</b></span></div>' +
     (rows ? '<div class="wrap" style="margin-top:8px;max-height:240px"><table><thead><tr><th>Số phiếu</th><th>BKS nguồn</th><th>Kg</th><th>Lý do</th><th>Thao tác</th></tr></thead><tbody>' +
       rows + '</tbody></table></div>' : '') + '</div>';
 }

@@ -96,6 +96,19 @@ const file = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   ok('nạp lại P1 với BKS viết khác: không thêm phiếu mới (vẫn 4 phiếu), P1 giữ HĐ B và xe đã chọn', f.pc.length === 4 && f.pc.filter(x => x.soPhieu === 'P1').length === 1 && p('P1').hdvcId === hB && p('P1').xeRowId === xB, JSON.stringify(f.pc.map(x => [x.soPhieu, x.bienSo, x.hdvcId, x.xeRowId])));
   await w.screenshot({path: path.join(process.env.HAKQN_ANH || dir, 'doi-chieu-bks.png')}).catch(() => {});
 
+  const d = await w.evaluate(() => window.hak.loadSync().db);
+  const lo = d.rs.own1.forests.fa;
+  lo.pc.push({soPhieu: 'PX', ngay: '31/02/2026', bienSo: '92C-12345', kl: 5, hdvcId: hA, xeRowId: xA});
+  const saved = await w.evaluate(value => window.hak.save(value), d);
+  if (!saved.ok) throw new Error('Không nạp được phiếu cũ ngày sai để kiểm tra: ' + saved.error);
+  await w.reload(); await w.waitForSelector('#side');
+  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
+  const ngoai = w.locator('#doiChieuPcVC tbody tr').filter({hasText: 'PX'});
+  ok('BM-09/10: 5.000 kg ngày cân sai tách khỏi khối lượng đủ liên kết và danh sách thiếu xe',
+    /41\.500/.test(await w.innerText('#pcVCTong')) && /36\.500/.test(await w.innerText('#pcVCDu')) &&
+    /^0 phiếu/.test(await w.innerText('#pcVCThieu')) && /5\.000/.test(await w.innerText('#pcVCNgoai')) &&
+    /Ngày cân không hợp lệ/.test(await ngoai.innerText()), await w.innerText('#doiChieuPcVC'));
+
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });
