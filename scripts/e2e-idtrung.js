@@ -23,7 +23,7 @@ const tongTan = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 
   const set = async o => { for (const [k, v] of Object.entries(o)) { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); } };
   const addNc = async (ten, cccd, to) => { await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm'); await set({vaiTro: to ? 'Tổ trưởng' : 'Công nhân', danhXung: 'Ông', ten, ngaySinh: '01/01/1990', cccd, ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: to ? 'Tổ trưởng' : 'Công nhân khai thác'}); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300); };
   const addPc = async (so, bien, kg) => { await w.click('[data-act=stAdd][data-kind=pc]'); await w.waitForSelector('#stForm'); await set({soPhieu: so, ngay: '10/10/2026', bienSo: bien, klKg: String(kg)}); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300); };
-  const rowBtn = (kind, text, act) => w.locator('#stTbl_' + kind + ' tr').filter({hasText: text}).locator('[data-act=' + act + ']').click();
+  const rowBtn = async (kind, text, act) => { await w.$('#stTbl_' + kind); return w.locator('#stTbl_' + kind + ' tr').filter({hasText: text}).locator('[data-act=' + act + ']').click(); };   // 3.0: bảng nằm ở mục riêng — w.$ (bọc) mở mục có bảng
   const ids = f => ['nc', 'dx', 'pc'].flatMap(k => (f[k] || []).map(r => r._id));
 
   // ===== nhân công =====

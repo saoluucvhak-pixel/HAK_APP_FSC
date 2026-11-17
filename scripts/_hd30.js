@@ -19,16 +19,23 @@ function boc(w) {
   const quayLai = async () => { const k = await ghiNho(); if (k) await w.evaluate(k => window.__hdMo(k, null), k); else await goc.click('#hdQuayLai'); await w.waitForTimeout(150); return k; };
   const ghiNho = async () => { try { const v = await w.evaluate(() => { const b = document.getElementById('hdQuayLai'); return b ? b.dataset.kind : null; }); return v; } catch (e) { return null; } };
   /* 3.0 tách màn nhập thành các mục (.mucNav): chỉ mục đang mở được vẽ. Phần tử không có thì thử lần lượt các mục của màn đang mở. */
-  const timMuc = async sel => {
+  const thay = async (sel, hien) => { const e = await goc.$(sel); return !!e && (!hien || await e.isVisible().catch(() => true)); };
+  /* đổi mục thì màn vẽ lại: giữ giá trị các ô đang gõ dở (chưa lưu) của mục đang mở để trả lại khi quay về */
+  const chupNhap = () => w.evaluate(() => [...document.querySelectorAll('.mucNoiDung input, .mucNoiDung select, .mucNoiDung textarea')].filter(e => e.name && e.type !== 'file').map(e => [(e.form && e.form.id) || '', e.name, e.type, e.type === 'checkbox' || e.type === 'radio' ? e.checked : e.value, e.value])).catch(() => []);
+  const veMuc = async (m, oNhap) => {
+    await w.evaluate(([k, id]) => window.__mucLo(k, id), m);
+    if (oNhap && oNhap.length) await w.evaluate(ds => ds.forEach(([f, n, t, v, val]) => { const root = f ? document.getElementById(f) : document; if (!root) return; const els = [...(f ? root.elements : root.querySelectorAll('[name]'))].filter(e => e.name === n && (t !== 'radio' || e.value === val)); els.forEach(e => { if (t === 'checkbox' || t === 'radio') e.checked = v; else if (e.value !== v) e.value = v; }); }), oNhap).catch(() => {});
+  };
+  const timMuc = async (sel, hien) => {
     const ds = await w.evaluate(() => [...document.querySelectorAll('.mucNav [data-muc-lo]')].map(b => [b.dataset.loNhom, b.dataset.mucLo, b.hasAttribute('aria-current')])).catch(() => []);
     if (!ds.length) return false;
-    const dangMo = ds.find(x => x[2]);
+    const dangMo = ds.find(x => x[2]), oNhap = await chupNhap();
     for (const [k, id, on] of ds) {
       if (on) continue;
-      await w.evaluate(([k, id]) => window.__mucLo(k, id), [k, id]); await w.waitForTimeout(60);
-      if (await goc.$(sel)) return true;
+      await veMuc([k, id], oNhap); await w.waitForTimeout(60);   // ô cùng tên ở mục mới (form Thông tin rừng vẽ đủ ô, ẩn ô mục khác) nhận lại giá trị đang gõ dở
+      if (await thay(sel, hien)) return true;
     }
-    if (dangMo) await w.evaluate(([k, id]) => window.__mucLo(k, id), dangMo);
+    if (dangMo) await veMuc(dangMo, oNhap);
     return false;
   };
   const truoc = async sel => {   // phần tử cần thao tác chưa có trên trang chi tiết: quay lại danh sách
@@ -38,6 +45,12 @@ function boc(w) {
     await truocCu(sel);
     try { if (await goc.$(sel)) return; } catch (e) { return; }
     await timMuc(sel);
+  };
+  /* trang Thông tin rừng 3.0 vẽ cả form nhưng ẩn ô không thuộc mục đang mở: ô bị ẩn (không phải ô chọn file, không nằm trong khối gập) thì tìm mục có ô hiện */
+  const hienRa = async sel => {
+    if (typeof sel !== 'string' || TAB.test(sel)) return;
+    const can = await w.evaluate(s => { let e; try { e = document.querySelector(s); } catch (x) { return false; } if (!e || e.closest('details:not([open])') || (e.type === 'file') || e.type === 'hidden') return false; return !(e.offsetWidth || e.offsetHeight || e.getClientRects().length); }, sel).catch(() => false);
+    if (can) await timMuc(sel, true);
   };
   const truocCu = async sel => {
     if (!(await goc.$('#hdQuayLai'))) {   // đang ở danh sách mà phần tử chỉ có ở trang chi tiết: mở hợp đồng đã nhớ (hoặc đầu tiên)
@@ -58,8 +71,8 @@ function boc(w) {
   };
   /* 3.0: danh sách rừng của chủ rừng nằm trong khối gập (details.rungTomTat): mở khối gập chứa phần tử trước khi bấm */
   const moGap = async sel => { if (typeof sel === 'string') await w.evaluate(s => { let e; try { e = document.querySelector(s); } catch (x) { return; } for (let d = e && e.closest('details:not([open])'); d; d = d.parentElement && d.parentElement.closest('details:not([open])')) { const tieuDe = e.closest('summary'); if (!(tieuDe && tieuDe.parentElement === d)) d.open = true; } }, sel).catch(() => {}); };   // bấm chính tiêu đề khối gập thì để thao tác bấm tự mở
-  w.click = async (sel, o) => { await truoc(sel); await moGap(sel); const r = await goc.click(sel, o); await sau(sel); return r; };
-  ['fill', 'check', 'uncheck', 'selectOption', 'setInputFiles', '$eval', '$$eval'].forEach(n => { w[n] = async (sel, ...a) => { await truoc(sel); return goc[n](sel, ...a); }; });
+  w.click = async (sel, o) => { await truoc(sel); await hienRa(sel); await moGap(sel); const r = await goc.click(sel, o); await sau(sel); return r; };
+  ['fill', 'check', 'uncheck', 'selectOption', 'setInputFiles', '$eval', '$$eval'].forEach(n => { w[n] = async (sel, ...a) => { await truoc(sel); if (!/eval|setInputFiles/.test(n)) await hienRa(sel); return goc[n](sel, ...a); }; });
   /* đọc / thao tác khác: phần tử nằm ở mục chưa mở thì mở mục đó (không thấy ở mục nào thì giữ nguyên mục đang mở) */
   ['innerText', 'inputValue', 'textContent', 'getAttribute', 'isChecked', 'isDisabled', 'isEnabled', 'isEditable', 'dispatchEvent', 'focus', 'press', 'type', 'hover', 'dblclick'].forEach(n => { w[n] = async (sel, ...a) => { await truoc(sel); return goc[n](sel, ...a); }; });
   /* trước 3.0 một màn chứa mọi phần: đọc chữ của cả màn (#main, body) thì gộp chữ của mọi mục rồi trở lại mục đang mở */
@@ -67,9 +80,9 @@ function boc(w) {
     if (sel !== '#main' && sel !== 'body') { await truoc(sel); return goc.innerText(sel, ...a); }
     const ds = await w.evaluate(() => [...document.querySelectorAll('.mucNav [data-muc-lo]')].map(b => [b.dataset.loNhom, b.dataset.mucLo, b.hasAttribute('aria-current')])).catch(() => []);
     const dau = await goc.innerText(sel, ...a); if (!ds.length) return dau;
-    const parts = [dau], dangMo = ds.find(x => x[2]);
+    const parts = [dau], dangMo = ds.find(x => x[2]), oNhap = await chupNhap();
     for (const [k, id, on] of ds) { if (on) continue; await w.evaluate(([k, id]) => window.__mucLo(k, id), [k, id]); parts.push(await goc.innerText(sel, ...a)); }
-    if (dangMo) await w.evaluate(([k, id]) => window.__mucLo(k, id), dangMo);
+    if (dangMo) await veMuc(dangMo, oNhap);
     return parts.join('\n');
   };
   w.$ = async sel => { const r = await goc.$(sel); if (r || typeof sel !== 'string' || TAB.test(sel)) return r; return (await timMuc(sel)) ? goc.$(sel) : null; };

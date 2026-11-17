@@ -80,7 +80,7 @@ const mkP = (so, ngay, bien, klTan, giao, dg) => ({_row: 2, maRung: 'R-A', stt: 
   await w.setInputFiles('input[data-file="pc"]', e4); await w.waitForTimeout(900); await saveStage(w); pc = await pcOf('fa');
   ok('nạp lại file có ô trống sau khi đã lưu: Kho B và 1300 vẫn còn', pc[0].noiGiao === 'Kho B' && pc[0].donGia === 1300);
   // xóa chủ động bằng sửa tay
-  await openLot('fa'); const rowIdx = await w.$$eval('#main tr', trs => trs.findIndex(r => r.innerText.includes('P1'))); const trs = await w.$$('#main tr'); await (await trs[rowIdx].$('[data-act=stEdit]')).click(); await w.waitForSelector('#stForm');
+  await openLot('fa'); await w.evaluate(() => window.__mucLo('dx', 'phieu'));   /* 3.0: bảng phiếu cân ở mục “Phiếu cân” */ const rowIdx = await w.$$eval('#main tr', trs => trs.findIndex(r => r.innerText.includes('P1'))); const trs = await w.$$('#main tr'); await (await trs[rowIdx].$('[data-act=stEdit]')).click(); await w.waitForSelector('#stForm');
   await w.fill('#stForm input[name=noiGiao]', ''); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300); await saveStage(w); pc = await pcOf('fa');
   ok('chủ động xóa Nơi giao bằng Sửa tay rồi lưu: trường trống; Đơn giá giữ nguyên', pc[0].noiGiao === '' && pc[0].donGia === 1300, JSON.stringify(pc[0]));
 

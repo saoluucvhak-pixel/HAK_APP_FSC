@@ -42,7 +42,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 4. nút lấy từ phiếu cân
   await w.click('[data-act=fillTu]'); await w.click('[data-act=fillDen]');
   ok('nút lấy ngày cân nhỏ nhất, lớn nhất từ phiếu cân (05/10/2026, 07/10/2026); khối lượng thực tế không còn ô nhập: hiện tổng phiếu cân 29,75 tấn', (await w.inputValue('#forestForm [name=tuNgay]')) === '05/10/2026' && (await w.inputValue('#forestForm [name=denNgay]')) === '07/10/2026' && !(await w.$('#forestForm [name=khoiLuong]')) && /29,75 tấn/.test(await w.innerText('#klPC')));
-  await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(600); d = await db(); const ia = d.rs.own1.forests.fa.info;
+  await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(300); await w.evaluate(() => window.__stDirty().length && window.__stSaveCurrent()); await w.waitForTimeout(400); d = await db(); const ia = d.rs.own1.forests.fa.info;
   ok('lưu: từ ngày, đến ngày từ phiếu cân; không ghi khối lượng nhập tay (khối lượng = phiếu cân); định mức mặc định (rừng không lưu số riêng)', ia.tuNgay === '05/10/2026' && ia.denNgay === '07/10/2026' && !(ia.khoiLuong > 0) && ia.dinhMucTanHa == null, JSON.stringify(ia));
   // 5. rừng chưa có phiếu cân: báo rõ
   await toForest('fb'); await w.click('[data-act=fillTu]');
