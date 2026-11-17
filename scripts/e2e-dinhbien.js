@@ -12,7 +12,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('');
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   // rừng A: đủ 8 người đúng định biên; rừng B: nhân công mặc định cũ (tổ trưởng, công nhân khai thác, công nhân cưa)
   const eight = [['Tổ trưởng', 'Tổ trưởng'], ['Công nhân', 'Công nhân cưa'], ['Công nhân', 'Công nhân cưa'], ['Công nhân', 'Công nhân bóc vỏ'], ['Công nhân', 'Công nhân bóc vỏ'], ['Công nhân', 'Công nhân bóc vỏ'], ['Công nhân', 'Công nhân bốc xếp'], ['Công nhân', 'Công nhân bốc xếp']]
     .map(([vai, cd], i) => ({...nv(i + 1, vai, 'NGƯỜI SỐ ' + (i + 1), cd, '04908500' + String(1000 + i)), maRung: 'R-A'}));

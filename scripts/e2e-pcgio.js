@@ -9,7 +9,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-pp-'));
 const P = (stt, so, ngay, g1, g2, extra) => ({_row: stt + 1, maRung: 'R-A', stt: String(stt), ngay, gioCan1: g1, gioCan2: g2, bienSo: '92C-12345', soPhieu: so, can1: 40400, can2: 15000, klKg: 25400, kl: 25.4, khachHang: 'NGUYỄN VĂN AN', donGia: 1250000, thanhTien: 31750000, noiGiao: 'KCN', ghiChu: '', ...extra});
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [path.join(__dirname, '..'), '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'p.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
-  const w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const L = lot('fa', 'R-A', {exp: {}, pc: [P(1, 'Q1', '05/10/2026', '08:15:00', '09:40:00'), P(2, 'Q2', '05/10/2026', '23:50:00', '00:20:00'), P(3, 'Q3', '07/10/2026', '', ''), P(4, 'Q4', '10/10/2026', '23:50:00', '00:20:00', {ngay2: '11/10/2026'})]});
   const D = seed([L]); D.congTy = {c1: {id: 'c1', ten: 'CÔNG TY MẪU', mst: '', diaChi: 'KCN', nguoiDaiDien: '', chucVu: '', sdt: '', fax: '', noiLap: 'Điện Bàn', email: '', diaChiGiao: [], ghiChu: ''}};
   await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');

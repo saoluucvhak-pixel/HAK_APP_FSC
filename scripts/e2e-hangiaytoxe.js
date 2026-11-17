@@ -12,7 +12,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('');
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const hang = {kdDen: '31/12/2027', hanBH: '31/12/2027'};
   // xe 1 (kiểm định hết hạn 06/10/2026, phiếu P3 cân 07/10) và xe 2 (đủ hạn): hai người ký khác nhau = hai đội xe
   const x1 = {...xe('92C-12345', '049000000077', 'LÊ VĂN MỘT'), ...hang, kdDen: '06/10/2026'}, x2 = {...xe('92C-67890', '049000000078', 'TRẦN VĂN HAI'), ...hang};

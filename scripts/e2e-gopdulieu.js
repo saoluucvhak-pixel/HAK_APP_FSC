@@ -20,7 +20,7 @@ const xlsx = (name, rows) => { const wb = XLSX.utils.book_new(); XLSX.utils.book
 const mkP = (so, ngay, bien, klTan, giao, dg) => ({_row: 2, maRung: 'R-A', stt: '1', ngay, bienSo: bien, soPhieu: so, kl: klTan, noiGiao: giao, ghiChu: '', donGia: dg, klKg: klTan * 1000});
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'g.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const A = lot('fa', 'R-A', {exp: {...EXP1}, pc: [mkP('P1', '05/10/2026', '92C-12345', 1, 'Kho A', 1250)], kl: 1});
   const B = lot('fb', 'R-B', {exp: {}, pc: []}); B.pc = [{...mkP('B1', '04/10/2026', '92C-12345', 2, 'Kho B', 1100), maRung: 'R-B'}]; B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = B.dx.map(r => ({...r, maRung: 'R-B'}));
   const C = lot('fc', 'R-C', {exp: {}, pc: []}); C.nc = C.nc.map(r => ({...r, maRung: 'R-C'})); C.dx = C.dx.map(r => ({...r, maRung: 'R-C'}));
@@ -56,7 +56,7 @@ const mkP = (so, ngay, bien, klTan, giao, dg) => ({_row: 2, maRung: 'R-A', stt: 
   // dữ liệu bị thay (Khôi phục sao lưu) trong lúc đọc file
   const full = await db(); const bk = path.join(dir, 'sao_luu.json'); fs.writeFileSync(bk, JSON.stringify(full));
   await openLot('fb'); await slow(2500); const f3 = xlsx('g3.xlsx', [['PY1', '08/10/2026', '92C-12345', 3000, 'Kho B', '']]);
-  await w.setInputFiles('input[data-file="pc"]', f3); await w.setInputFiles('input[data-file=restore]', bk); await w.waitForSelector('#impBox.on'); await w.check('input[name=impStrat][value=replace]'); await w.click('[data-act=impGo]'); const sawRes = await seen(/Đã dừng nạp file g3\.xlsx/); await w.waitForTimeout(300);
+  await w.setInputFiles('input[data-file="pc"]', f3); await w.click('#navSet'); await w.click('#setTab_setbk'); await w.setInputFiles('input[data-file=restore]', bk); await w.waitForSelector('#impBox.on'); await w.check('input[name=impStrat][value=replace]'); await w.click('[data-act=impGo]'); const sawRes = await seen(/Đã dừng nạp file g3\.xlsx/); await w.waitForTimeout(300);
   t = await body(); ok('dữ liệu bị thay (Khôi phục sao lưu thật) trong lúc đọc file: dừng nạp, không có bản nháp, không có PY1 trong dữ liệu', sawRes && !(await w.evaluate(() => window.__stDirty().length)) && !(await forest('fb')).pc.some(p => p.soPhieu === 'PY1'), t.slice(0, 200));
   await fast();
 

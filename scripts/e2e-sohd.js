@@ -20,7 +20,7 @@ const SEED = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01', ten: 'NGUYỄN V
 async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(file)); let all = ''; const docs = file.endsWith('.zip') ? await Promise.all(Object.keys(z.files).filter(n => n.endsWith('.docx')).map(async n => JSZip.loadAsync(await z.file(n).async('nodebuffer')))) : [z]; for (const d of docs) { const x = await d.file('word/document.xml').async('string'); all += (x.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('') + '\n'; } return all.replace(/&amp;/g, '&'); }
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 's.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), SEED); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
   const setP = (k, v) => require('./lib-stage').setExp(w, k, v);   // ô ở đúng màn của đối tượng (đội, vận chuyển, lô)

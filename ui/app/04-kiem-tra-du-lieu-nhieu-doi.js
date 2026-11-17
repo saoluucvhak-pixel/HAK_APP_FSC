@@ -61,8 +61,8 @@ function checkNC(rec) {
     if (!r.noiCap) bad('thiếu Nơi cấp CCCD');
     if (!r.diaChi) bad('thiếu Địa chỉ thường trú');
     if (!isCccd(r.cccd)) bad('CCCD phải đủ 12 chữ số');
-    else if (seen[r.cccd]) bad('CCCD trùng dòng ' + seen[r.cccd]);
-    else seen[r.cccd] = r._row;
+    else if (seen[r.cccd + '|' + (r.doiId || '')]) bad('CCCD trùng dòng ' + seen[r.cccd + '|' + (r.doiId || '')] + ' trong cùng đội');   // 3.0: một người có thể ở hai đội (hai hợp đồng); không trùng trong một đội
+    else seen[r.cccd + '|' + (r.doiId || '')] = r._row;
     if (!chucDanhAll().includes(r.chucDanh)) bad('Chức danh không hợp lệ: "' + r.chucDanh + '"');
     if (role === 'TT' && r.chucDanh !== 'Tổ trưởng') bad('Tổ trưởng phải có chức danh "Tổ trưởng"');
     if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi chức danh "Tổ trưởng"');
@@ -212,8 +212,10 @@ function klTheoPhieu(rec, b) {
 const doiKl = (rec, b, ha) => {
   const kp = b.multi ? klTheoPhieu(rec, b) : null;
   let kq = b.multi ? HAKDoi.khoiLuong(klLo(rec.info), b.doi, Object.fromEntries(b.doi.map(d => [d.key, d.team && d.team.klHoSoCu]))) : {vals: HAKDoi.chia(klLo(rec.info), b.doi), nguon: 'songuoi', loi: ''};
-  if (kp && kp.vals) kq = kp.loi ? Object.assign({}, kq, {loi: kp.loi}) : kp;   // gán đủ: khối lượng đội = phiếu cân của đội
-  else if (kp && kp.chuaGan && kq.nguon !== 'nhap') kq = Object.assign({}, kq, {chuaGan: kp.chuaGan});   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
+  const pb = b.multi && rec.doi && HAKPhanBo.cheDo(rec) === 'chiaDeu' ? HAKPhanBo.tinh(rec) : null;   // 3.0: hai đội chia đều tổng phiếu cân (kg nguyên, 1 kg lẻ cho đội đứng trước)
+  if (pb && pb.tongKg > 0) kq = {vals: b.doi.map(d => { const x = pb.doi.find(y => y.id === d.id); return x ? x.tan : 0; }), nguon: 'chiadeu', loi: ''};
+  else if (kp && kp.vals) kq = kp.loi ? Object.assign({}, kq, {loi: kp.loi}) : kp;   // gán đủ: khối lượng đội = phiếu cân của đội
+  else if (kp && kp.chuaGan && kq.nguon !== 'nhap' && !pb) kq = Object.assign({}, kq, {chuaGan: kp.chuaGan});   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
   b.klNguon = kq.nguon; b.klLoi = kq.loi; b.pcChuaGan = kq.chuaGan || 0; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
 /* hồ sơ của ĐỘI ĐANG CHỌN (màn Nhân công khai thác): nhân công và hình thức của đội; lô một đội: cả lô */
 const recDoiChon = rec => {
@@ -224,7 +226,7 @@ const recDoiChon = rec => {
 };
 /* hồ sơ cho một người theo đội của người đó (hợp đồng lao động của đội ký trực tiếp) */
 const recOfRow = (rec, r) => { if (!rec.doi) return rec; const B = doiOf(rec); if (!B.multi) return rec; const d = B.doi.find(x => x.id === r.doiId); return d ? subRec(rec, B, d) : rec; };
-const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, b.klNguon === 'phieucan' ? {pc: (rec.pc || []).filter(p => p.doiId === d.id)} : {}, {_share: b.klNguon === 'phieucan' ? null : d.share, _klNhap: b.klNguon === 'nhap', _klLo: klLo(rec.info), _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], _team: d.team || null, exp: d.team && Object.keys(d.team.exp || {}).length ? Object.assign({}, rec.exp, d.team.exp) : rec.exp, info: Object.assign({}, rec.info, d.team ? d.team.hinhThuc : {}, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {klHoSoCu: d.khoiLuong} : {})});
+const subRec = (rec, b, d) => !b.multi ? rec : Object.assign({}, rec, b.klNguon === 'phieucan' ? {pc: (rec.pc || []).filter(p => p.doiId === d.id)} : {}, {_share: b.klNguon === 'phieucan' ? null : d.share, _klNhap: b.klNguon === 'nhap' || b.klNguon === 'chiadeu', _klChiaDeu: b.klNguon === 'chiadeu', _klLo: klLo(rec.info), _doiTen: d.ten, _nDoi: b.doi.length, nc: [d.tt, ...d.members], _team: d.team || null, exp: d.team && Object.keys(d.team.exp || {}).length ? Object.assign({}, rec.exp, d.team.exp) : rec.exp, info: Object.assign({}, rec.info, d.team ? d.team.hinhThuc : {}, d.dienTich != null ? {dienTich: d.dienTich} : {}, d.khoiLuong != null ? {klHoSoCu: d.khoiLuong} : {})});
 const ncList = rec => { const tt = rec.nc.find(isTT); return tt ? [tt, ...rec.nc.filter(r => r !== tt)] : rec.nc.slice(); };   // tổ trưởng đầu danh sách, rồi mọi người còn lại (kể cả các tổ trưởng khác)
 /* Lô nhiều đội: mỗi đội ký hợp đồng riêng nên số hợp đồng, giấy ủy quyền, biên bản nghiệm thu của mỗi đội thêm hậu tố .1, .2… ngay sau phần số (015 → 015.1, 015/2026-KT → 015.1/2026-KT).
  * Số để trống (chưa nhập) thì giữ nguyên chỗ trống để điền tay. Số hợp đồng vận chuyển và xác nhận khối lượng KHÔNG thêm hậu tố: lưu riêng theo ID đội xe (Sổ văn bản, src/sovb.js). */

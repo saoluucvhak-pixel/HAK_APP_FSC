@@ -30,10 +30,10 @@ const doc = (q, ...a) => { const s = new Store(file, {migrations: MIGRATIONS}); 
 
   // 2. mở bằng bản mới
   const launch = async () => { const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: file, HAKQN_USERDATA: path.join(dir, 'ud')}});
-    const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
+    const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
   let {app, w} = await launch();
-  const bk1 = fs.existsSync(bkDir) ? fs.readdirSync(bkDir).filter(n => /^truoc-nang-cap-v8-len-v14/.test(n)) : [];
-  ok('sao lưu file trước khi nâng cấp (truoc-nang-cap-v8-len-v14)', bk1.length === 1, JSON.stringify(fs.existsSync(bkDir) ? fs.readdirSync(bkDir) : []));
+  const bk1 = fs.existsSync(bkDir) ? fs.readdirSync(bkDir).filter(n => n.startsWith('truoc-nang-cap-v8-len-v' + MIGRATIONS.length + '-')) : [];
+  ok('sao lưu file trước khi nâng cấp (truoc-nang-cap-v8-len-v' + MIGRATIONS.length + ')', bk1.length === 1, JSON.stringify(fs.existsSync(bkDir) ? fs.readdirSync(bkDir) : []));
   const db = await w.evaluate(() => window.hak.loadSync().db);
   ok('danh mục đọc lại đủ (lao động 2, xe 1, đối tác 1)', (db.dmLaoDong || []).length === 2 && (db.dmXeVC || []).length === 1 && (db.dmDoiTac || []).length === 1, JSON.stringify([db.dmLaoDong, db.dmXeVC, db.dmDoiTac]).slice(0, 300));
   const fa = db.rs.own1.forests.fa, fb = db.rs.own1.forests.fb;
@@ -62,8 +62,9 @@ const doc = (q, ...a) => { const s = new Store(file, {migrations: MIGRATIONS}); 
     loCoGoi: s.db.prepare("SELECT COUNT(*) n FROM forests WHERE data LIKE '%\"goi\":%'").get().n,
     data: s.db.prepare('SELECT id, hash FROM forests ORDER BY id').all(), dmRows: s.db.prepare('SELECT kind, ord, hash FROM danh_muc ORDER BY kind, ord').all()
   }));
-  ok('SQLite ở v14', kq.ver === 14, 'v' + kq.ver);
-  ok('v13: danh mục không còn ở meta, ở bảng danh_muc theo dòng (đã có dòng thêm sau nâng cấp)', kq.meta.length === 0 && kq.dm === 'dmDoiTac:1,dmLaoDong:3,dmXeVC:1', JSON.stringify(kq));
+  ok('SQLite ở cấu trúc mới nhất (v' + MIGRATIONS.length + ')', kq.ver === MIGRATIONS.length, 'v' + kq.ver);
+  ok('v13: danh mục không còn ở meta, ở bảng danh_muc theo dòng (đã có dòng thêm sau nâng cấp)', kq.meta.length === 0 && kq.dm.split(',').filter(x => /^(dmDoiTac|dmLaoDong|dmXeVC):/.test(x)).join() === 'dmDoiTac:1,dmLaoDong:3,dmXeVC:1', JSON.stringify(kq));
+  ok('v15 (3.0): có Danh mục đối tượng, Danh mục xe, Vị trí dựng từ danh mục cũ', /dmDoiTuong:[1-9]/.test(kq.dm) && /dmXe:1/.test(kq.dm) && /dmViTri:[1-9]/.test(kq.dm), kq.dm);
   ok('v14: gói ở bảng chot_goi, không lô nào còn gói trong JSON', kq.goi === 'fa:1' && kq.loCoGoi === 0, JSON.stringify(kq));
 
   // 4. mở lại lần hai: không nâng cấp lại, không đổi dữ liệu

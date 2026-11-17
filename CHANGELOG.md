@@ -1,8 +1,41 @@
 # Nhật ký thay đổi
 
+## 3.0.0 — Danh mục đối tượng và xe, hợp đồng theo danh sách, phiếu cân trong hợp đồng, phân bổ khối lượng
+
+Cấu trúc SQLite v15 (chuyển một chiều, tự sao lưu file trước khi chuyển). Biểu mẫu in ra không đổi so với 2.3.0 (so bản in: 206/206 tài liệu giống từng byte).
+
+### Bố cục
+- Cài đặt nằm trên thanh chính; Hướng dẫn, Giao diện, Sao lưu và khôi phục chuyển vào Cài đặt (bỏ menu “⋯ Thêm”, thanh chính một dòng ở 1024 px / 150 %).
+- Tab Nhân công / Vận chuyển mở **danh sách hợp đồng**; chọn (chuột hoặc Enter) → trang chi tiết có tên rừng, số hợp đồng, “Quay lại danh sách”; lưu xong ở lại đúng hợp đồng.
+- Rời màn còn thay đổi: Lưu / Bỏ thay đổi / Tiếp tục chỉnh sửa. Mở danh mục từ hợp đồng rồi “Quay lại” đúng chỗ, giữ bản đang nhập.
+
+### Danh mục
+- **Danh mục đối tượng:** pháp nhân (đại diện, chức danh) / thể nhân (bảng Đối tác: họ tên, CCCD, ngày cấp, nơi cấp, hạn CCCD, thường trú, giới tính, SĐT, GPLX và hạn, vị trí mặc định, chức danh ký); vai trò Nhân công / Tài xế / Chủ xe; quyền ký Vận chuyển / Nhân công riêng; lọc theo vai trò, tìm, ngừng sử dụng; Excel xem trước (mới / trùng / thay đổi / lỗi); CCCD trùng, MST, GPLX được kiểm; số lưu dạng văn bản.
+- **Danh mục xe:** BKS chuẩn hóa không trùng, chủ xe theo ID; Excel xem trước, sửa dòng tại chỗ, BKS đã có khác chủ xe hiện cả hai.
+- **Vị trí:** mã ổn định; đổi tên cập nhật định biên, định mức BHLĐ, đơn giá, dòng nhân công của lô đang lập. Có lô đã chốt dùng tên cũ thì định biên / định mức BHLĐ giữ mục tên cũ (thêm bản tên mới) để in lại lô chốt đúng.
+
+### Hợp đồng, phiếu cân, phân bổ
+- Người ký HĐVC từ đối tượng có quyền ký Vận chuyển (`hdvc.benKy`); bên nhận khoán từ quyền ký Nhân công (`doi.benNhanKhoan`); thành viên từ vai trò Nhân công (một người được ở hai đội, ghi chú đội khác); xe từ Danh mục xe, mỗi xe một lần trong một hợp đồng. Dòng lô nối `nguoiId`, `viTriId`, `xeId`; ID dòng giữ khi sửa. Xóa người có chấm công: liệt kê ngày công trước.
+- Phiếu cân trong HĐVC: Tra cứu HoSoKeo / Nạp Excel / Thêm phiếu cân; phiếu mới vào hợp đồng đang mở, xe chỉ tự chọn khi BKS khớp duy nhất (khớp duy nhất xe của hợp đồng khác thì theo xe đó); bảng kết quả nạp (rừng, hợp đồng, số phiếu, ngày, KL, BKS nguồn, xe); đổi xe lưu ID dòng giữ BKS gốc; chuyển hợp đồng chọn lại xe. In BM-09/10 theo hợp đồng của phiếu.
+- Phân bổ khối lượng: một đội nhận toàn bộ; hai đội chọn phiếu theo đội hoặc chia đều (kg nguyên, 1 kg lẻ cho đội đứng trước); từ ba đội theo phiếu; xem trước, “Lưu phân bổ”; lô chốt dùng kết quả lúc chốt.
+
+### Lưu, chuyển dữ liệu, sao lưu
+- Kiểm quan hệ ở tầng SQLite trong một giao dịch (mã `QUAN_HE`: đội, hợp đồng, xe, phiếu, ID dòng trùng) — sai thì không ghi gì.
+- v15: dựng danh mục mới từ danh mục cũ (mỗi CCCD một người, gộp vai trò; doanh nghiệp → pháp nhân), gán ID dòng, chuyển chấm công sang ID dòng khi duy nhất, nối hợp đồng / phiếu; không xác định duy nhất → **Cần đối chiếu**, dữ liệu gốc giữ; lô đã chốt không đổi.
+- Gói lô mang danh mục lô dùng; khôi phục trên máy danh mục khác nối theo CCCD / MST / BKS / tên vị trí (người cùng CCCD khác tên → Cần đối chiếu).
+
+### Kiểm thử
+- Mới: `e2e-danhmuc30`, `e2e-hopdong30`, `e2e-phieu30`, `e2e-phanbo30`, `e2e-nghiemthu30`, `e2e-nangcap30`; unit `danhmuc3`, `chuyendoi30`, `quanhe`, `goidm`. Bỏ `e2e-danhmuc`, `e2e-nguoi-chung`, `e2e-doitac-mot-nguon` (màn cũ đã thay). Các e2e viết trước 3.0 chạy qua lớp `scripts/_hd30.js` (tự mở hợp đồng khi bấm tab).
+
 ## 2.3.0 — Dán từ Excel, mục lục gói in, phụ lục in lại / ký lại, gói Chỉ xem, in trong app, hướng dẫn lần đầu
 
 Sáu tính năng còn lại của kế hoạch 2.2 (đợt 1–3). Không đổi cấu trúc SQLite (vẫn v14), không đổi cách tính và nội dung các biểu mẫu BM-01…BM-20.
+
+### Sửa lỗi sau rà soát PR #17–#21
+| # | Lỗi (trước) | Sửa (sau) |
+| --- | --- | --- |
+| 1 | PR #21 đổi hẳn cách chia khối lượng / diện tích cho các đội sang “phần dư lớn nhất”: lô nhiều đội đổi số so với bản đã in (10 tấn chia 3 đội: 3,333 / 3,333 / 3,334 thành 3,334 / 3,333 / 3,333), mẫu đã in hoặc đã ký chuyển “dữ liệu đổi”, lô đã chốt in lại ra số khác giấy đã ký | `src/doi.js` `chia`: giữ cách chia từ trước (làm tròn từng đội, đội cuối nhận phần còn lại) nên **số của mọi lô giữ nguyên như bản đã in**; chỉ khi cách đó cho một đội số âm (lượng rất nhỏ: 0,002 tấn chia 4 đội ra -0,001) mới chia lại theo phần dư lớn nhất. Test: 3.000 bộ lượng / số đội ngẫu nhiên — tổng khớp đến 0,001, không âm, bằng cách cũ khi cách cũ không âm |
+| 4 | Lệnh khôi phục `import:preview` / `import:apply` chuyển nguyên tùy chọn từ giao diện xuống tiến trình chính: khi gộp phần “lịch sử bản chụp” của PR #20 (`goiLichSu`), giao diện chèn được bản chụp tùy ý vào bảng `chot_goi` mà không qua kiểm tra | Tùy chọn từ giao diện đi qua `LoRung.optsKhoiPhuc`: chỉ giữ cách xử lý (`strategy`) và mã lô mới (`maMoi`); mọi tùy chọn nội bộ bị bỏ |
 
 ### Tính năng mới
 1. **Dán từ Excel** (tab Nhân công, Vận chuyển, khung phiếu cân): nút “Dán từ Excel” mở hộp dán; chép vùng ô trong Excel / Google Sheets **gồm dòng tiêu đề** rồi Ctrl+V. Dữ liệu đi qua đúng đường nạp file (cùng kiểm tra, cùng bảng so sánh thêm / cập nhật / bỏ, cùng bản nháp và nút Lưu). Số ghi kiểu Việt Nam (`12,5`, `1.234,5`) thành số; CCCD, điện thoại, số có 0 đứng đầu, ngày giữ nguyên. Thiếu tiêu đề hoặc thiếu cột bắt buộc thì báo tên cột và không nạp.

@@ -28,7 +28,7 @@ async function zipTexts(file) {
 async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(file)); const x = await d.file('word/document.xml').async('string'); return (x.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('').replace(/&amp;/g, '&'); }
 (async () => {
   const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   const sv = await w.evaluate(db => window.hak.save(db), SEED); ok('ghi dữ liệu thử vào SQLite', sv && sv.ok, JSON.stringify(sv));
   await w.reload(); await w.waitForSelector('#side');
@@ -68,7 +68,7 @@ async function docxText(file) { const d = await JSZip.loadAsync(fs.readFileSync(
 
   // ===== đóng/mở lại: mỗi rừng giữ đúng điểm đến =====
   await new Promise(r => setTimeout(r, 800)); await app.close();
-  app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=f1]'); await w.click('[data-ftab=dx]');
   ok('mở lại: rừng A vẫn là Cảng Kỳ Hà', (await w.inputValue('#mhDiemDen')) === 'Cảng dăm Kỳ Hà, Núi Thành, Quảng Nam');
   await w.click('[data-forest=f2]'); await w.click('[data-ftab=dx]');

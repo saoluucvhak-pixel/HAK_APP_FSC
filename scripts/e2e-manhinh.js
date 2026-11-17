@@ -19,10 +19,10 @@ const SEED = {v: 2, congTy: {c1: {id: 'c1', ten: 'CÔNG TY TNHH CHẾ BIẾN G�
   fa: {id: 'fa', info: {hinhThucLuong: 'sanluong', moHinhKy: 'giaokhoan', donGiaTan: {'Tổ trưởng': 420000, 'Công nhân khai thác': 330000, 'Công nhân cưa': 380000}, khoiLuong: 280, maRung: 'CR-0001-R1', tenRung: 'Lô mẫu ' + LONG.slice(0, 30), diaDiem: ADDR, lat: 15.6, lng: 108.1, dienTich: 14, dinhMucTanHa: 80, cuLy: 45, tuNgay: '01/10/2026', denNgay: '30/11/2026', donGia: 340000, giayTo: [], muaHang: {congTyId: 'c1', diaChiId: 'main', ten: 'CÔNG TY TNHH CHẾ BIẾN GỖ VÀ XUẤT KHẨU DĂM GỖ AN PHÁT QUẢNG NAM DÀI', diaChi: ADDR}, vanChuyen: {mode: 'coDinh', coDinh: 52000, bac: []}}, nc, dx: [xe], pc, exp: {}}}}}};
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(tmp, 'mh.sqlite'), HAKQN_USERDATA: path.join(tmp, 'ud'), HAKQN_LOT_DIR: lotDir, HAKQN_DOWNLOAD_DIR: path.join(tmp, 'dl'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');
   const size = async (W, H) => { await app.evaluate(({BrowserWindow}, [a, b]) => BrowserWindow.getAllWindows()[0].setContentSize(a, b), [W, H]); await w.waitForTimeout(250); };
-  const setTheme = async t => { const cur = await w.evaluate(() => document.documentElement.dataset.theme || 'light'); if (cur !== t) { await w.click('#themeBtn'); await w.waitForTimeout(350); } };
+  const setTheme = async t => { const cur = await w.evaluate(() => document.documentElement.dataset.theme || 'light'); if (cur !== t) { await w.click('#navSet'); await w.click('#setTab_setgd'); await w.click('#themeBtn2'); await w.waitForTimeout(350); } };   // 3.0: chế độ sáng / tối ở Cài đặt → Giao diện
   const over = () => w.evaluate(() => ({page: document.documentElement.scrollWidth - innerWidth, boxes: [...document.querySelectorAll('.card, .box, #lkBox.on .wrap, .modal.on, .dlg')].filter(e => e.scrollWidth - e.clientWidth > 1 && getComputedStyle(e).overflowX === 'visible').length}));
   const shot = (name, W, th) => w.screenshot({path: path.join(shots, `${name}_${th}_${W}.png`)});
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]');
@@ -61,12 +61,12 @@ const SEED = {v: 2, congTy: {c1: {id: 'c1', ten: 'CÔNG TY TNHH CHẾ BIẾN G�
       ok(`${tag}: Báo cáo — Esc đóng hộp`, await w.evaluate(() => !document.getElementById('rpBox').classList.contains('on')));
       // Khôi phục lô
       await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]');
-      await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
+      await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForTimeout(700);
       o = await over(); ok(`${tag}: Khôi phục lô không tràn ngang`, o.page <= 0 && o.boxes === 0, JSON.stringify(o)); await shot('khoiphuclo', W, th);
       await w.keyboard.press('Escape'); await w.waitForTimeout(250);
       ok(`${tag}: Khôi phục lô — Esc hủy và đóng hộp thoại (không ghi gì)`, await w.evaluate(() => !document.getElementById('impBox').classList.contains('on')));
       // Cài đặt hệ thống
-      await w.click('#moreMenu summary'); await w.click('#openSettingsBtn'); await w.waitForSelector('#setBox [data-set-path]');
+      await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]');
       o = await over(); ok(`${tag}: Cài đặt không tràn ngang`, o.page <= 0 && o.boxes === 0, JSON.stringify(o)); await shot('caidat', W, th);
       // Xuất hồ sơ (tên dài, nhiều phiếu)
       await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.waitForTimeout(300);

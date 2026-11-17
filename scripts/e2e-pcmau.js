@@ -3,7 +3,7 @@
  * chỉ có kg thì tấn = kg ÷ 1000, cảnh báo kg/tấn lệch, file cũ không có các cột mới vẫn nạp được.
  * Chạy: xvfb-run -a node scripts/e2e-pcmau.js */
 const {_electron: electron} = require('playwright-core');
-const {saveStage: stSave, addXe} = require('./lib-stage');
+const {saveStage: stSave, addXe, xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const XLSX = require('xlsx'), JSZip = require('jszip');
 const M = require('../src/xlsxmau');
@@ -31,10 +31,10 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const f2 = path.join(dir, 'pc_cu.xlsx'), wb2 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(old), 'PHIEU_CAN'); XLSX.writeFile(wb2, f2);
 
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'p.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), seed([lot('fa', 'R-A', {exp: {}, pc: []})])); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]');
-  await w.setInputFiles('input[data-file="pc"]', f1); await w.waitForTimeout(900); await stSave(w);
+  await w.setInputFiles('input[data-file="pc"]', f1); await w.waitForTimeout(900); await xacNhanHopDongPhieu(w); await stSave(w);
   const db = () => w.evaluate(() => window.hak.loadSync().db); let d = await db(); const pc = Object.values(d.rs.own1.forests)[0].pc, by = n => pc.find(p => p.soPhieu === n);
   ok('nạp 5 phiếu', pc.length === 5, JSON.stringify(pc.map(p => p.soPhieu)));
   ok('PC001: giờ cân từ ô giờ Excel (08:15:00, 09:40:00), cân lần 1/2, kg, tấn, khách hàng', !!by('PC001') && by('PC001').gioCan1 === '08:15:00' && by('PC001').gioCan2 === '09:40:00' && by('PC001').can1 === 40400 && by('PC001').can2 === 15000 && by('PC001').klKg === 25400 && by('PC001').kl === 25.4 && by('PC001').khachHang === 'NGUYỄN VĂN AN', JSON.stringify(by('PC001')));
@@ -55,7 +55,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('phiếu in có giờ cân, cân lần 1/2, khối lượng, khách hàng, địa chỉ rừng, giá mua và thành tiền từ file', /08:15:00/.test(pt) && /40\.400/.test(pt) && /25\.400/.test(pt) && /Thôn A, xã B/.test(pt) && /Giá mua\s*:\s*1\.250\s*đ\/kg/.test(pt) && /31\.750\.000\s*\(vnđ\)/.test(pt), pt.slice(0, 500));
   await pw.close(); await w.click('[data-ftab=dx]');
   // file cũ vẫn nạp
-  await w.setInputFiles('input[data-file="pc"]', f2); await w.waitForTimeout(900); await stSave(w);
+  await w.setInputFiles('input[data-file="pc"]', f2); await w.waitForTimeout(900); await xacNhanHopDongPhieu(w); await stSave(w);
   d = await db(); const pc2 = Object.values(d.rs.own1.forests)[0].pc;
   const old1 = pc2.find(p => p.soPhieu === 'OLD1');
   ok('file cũ (không có cột mới) vẫn nạp được; nạp thêm KHÔNG xóa các phiếu đã lưu (5 phiếu trước + OLD1 = 6)', pc2.length === 6 && !!old1 && old1.kl === 10 && old1.gioCan1 === '', JSON.stringify(pc2.map(p => p.soPhieu)));

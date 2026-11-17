@@ -26,7 +26,7 @@ const SEED = {v: 2, congTy: COMPANY, dinhMuc: {'Tổ trưởng': {qa: '1 bộ (g
 const launch = async (env, name) => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'],
     env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, name + '.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud-' + name), HAKQN_LOT_DIR: lotDir, ELECTRON_DISABLE_SECURITY_WARNINGS: '1', ...env}});
-  const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w};
+  const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w};
 };
 const dbOf = w => w.evaluate(() => window.hak.loadSync().db);
 const save = (w, d) => w.evaluate(x => window.hak.save(x), d);
@@ -35,13 +35,14 @@ const byMa = (db, ma) => { for (const o of Object.values(db.rs)) for (const f of
 
 /* SQLite lưu lô theo cấu trúc 2.0 (có đội, src/model.js): so với dữ liệu mẫu đã chuẩn hóa, không phụ thuộc thứ tự khóa */
 const MM = require('../src/model');
-const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want) : kind ? MM.ensureDb({rs: {x: want}}).rs.x : MM.ensureForest(want); try { require('assert').deepStrictEqual(got, w); return true; } catch (e) { return false; } };
+const B30 = require('../tests/_bo30').bo30;   // 3.0: bỏ ID dòng, liên kết và danh mục mới khi so với dữ liệu gốc
+const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want) : kind ? MM.ensureDb({rs: {x: want}}).rs.x : MM.ensureForest(want); try { require('assert').deepStrictEqual(kind === 'db' ? B30(got) : kind ? B30({rs: {x: got}}).rs.x : B30(got), w); return true; } catch (e) { return false; } };
 (async () => {
   fs.mkdirSync(lotDir, {recursive: true});
   // ===== 1. Giữ cả hai =====
   let {app, w} = await launch({}, 'may1'); await save(w, SEED); await w.reload(); await w.waitForSelector('#side');
   const fileFull = path.join(dir, 'sao_luu_cu.json'); fs.writeFileSync(fileFull, JSON.stringify({v: 2, rs: {o1: owner('o1', 'CR-1', 'CHỦ MỘT', '049067005459', [forest('fa', 'R-A', 'Lô A (file)')])}, congTy: COMPANY}));
-  await w.setInputFiles('input[data-file=restore]', fileFull); await w.waitForSelector('#impBox.on');
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.setInputFiles('input[data-file=restore]', fileFull); await w.waitForSelector('#impBox.on');
   await w.check('input[name=impStrat][value=both]');
   ok('giữ cả hai: hiện ô nhập mã mới cho lô trùng, có gợi ý mã chưa tồn tại', (await w.inputValue('#impMa [data-mamoi=fa]')) === 'R-A-2');
   await w.fill('#impMa [data-mamoi=fa]', ' r-b '); await w.waitForTimeout(700);
@@ -64,7 +65,7 @@ const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want)
   const ed = await dbOf(w); ed.rs.o1.forests[clone2.id].pc.push(P(2, '09/10/2026', '92C-12345', 'SUA', 77, 'R-A-BAN-SAO')); await save(w, ed); const edited = clone(await dbOf(w));
   await app.close();
   ({app, w} = await launch({HAKQN_LOT_FILE: path.join(lotDir, fileNew)}, 'may1'));
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on');
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on');
   let box = await w.innerText('#impBody');
   ok('khôi phục lô mới: xác định đúng lô đích (không mâu thuẫn ID/mã)', !/Dừng/.test(box) && /đã tồn tại/.test(box) && /R-A-BAN-SAO/.test(box), box.slice(0, 300));
   await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(700);
@@ -77,7 +78,7 @@ const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want)
   const pkgX = L.exportLot(Object.assign(clone(SEED), {}), 'o1', 'fa'); pkgX.lo.nc = [{_row: 2, maRung: 'R-A', ten: 'TỔ TRƯỞNG', chucDanh: 'Tổ trưởng'}]; pkgX.dungChung = {dinhMuc: {'Tổ trưởng': {qa: '1 bộ (gói)'}}, bienAlias: {'92c12345': '92C-99999'}}; pkgX.kiemTra.nc = 1;
   const fileX = path.join(dir, 'x.json'); fs.writeFileSync(fileX, JSON.stringify(L.seal(pkgX, sha)));
   ({app, w} = await launch({HAKQN_LOT_FILE: fileX}, 'may2')); await save(w, Object.assign(clone(SEED), {rs: {}, dinhMuc: {'Tổ trưởng': {qa: '2 bộ (máy đích)'}}, bienAlias: {'92c12345': '92C-12345'}}));
-  await w.reload(); await w.waitForSelector('#side'); await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); box = await w.innerText('#impBody');
+  await w.reload(); await w.waitForSelector('#side'); await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); box = await w.innerText('#impBody');
   ok('thiết lập khác: nêu máy đích dùng bản của mình, giá trị hai bên và phần hồ sơ có thể khác', /giữ nguyên thiết lập của mình/.test(box) && /2 bộ \(máy đích\)/.test(box) && /1 bộ \(gói\)/.test(box) && /Bảng cấp phát BHLĐ/.test(box) && /Ghép biển số/.test(box), box.slice(0, 900));
   await w.click('[data-act=lotGo]'); await w.waitForTimeout(600); db = await dbOf(w);
   ok('sau khôi phục: thiết lập dùng chung của máy đích giữ nguyên', db.dinhMuc['Tổ trưởng'].qa === '2 bộ (máy đích)' && db.bienAlias['92c12345'] === '92C-12345');

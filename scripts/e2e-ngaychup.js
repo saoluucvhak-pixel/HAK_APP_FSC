@@ -11,7 +11,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-ngaychup-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   // lô cũ: người "LÊ CÔNG NHÂN" đã sửa tay địa chỉ trong lô, khác dòng danh mục ngày 01/01/2026; dòng lô chưa có _dmNgay (dữ liệu trước bản này)
   const A = lot('fa', 'R-A', {exp: {}, pc: [], kl: null});
   A.nc = A.nc.map(r => Object.assign({}, r)); const lc = A.nc.find(r => r.ten === 'LÊ CÔNG NHÂN'); lc.diaChi = 'Địa chỉ SỬA TAY trong lô';

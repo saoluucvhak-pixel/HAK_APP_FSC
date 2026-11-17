@@ -15,7 +15,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0) * 1000) / 1000;
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_DB: path.join(dir, 'l.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_CLOSE: 'discard', HAKQN_FAIL_SAVE: path.join(dir, 'fail-save.flag'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = [], dialogs = []; let answer = true;
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = [], dialogs = []; let answer = true;
   w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => { dialogs.push(d.message()); answer ? d.accept() : d.dismiss(); }); await w.waitForSelector('#side');
   const A = lot('fa', 'R-A', {exp: {}, pc: PC, kl: null}), B = lot('fb', 'R-B', {exp: {}, pc: [], nc: [nv(1, 'Tổ trưởng', 'ĐỖ TỔ B', 'Tổ trưởng', '049085000011')].map(r => ({...r, maRung: 'R-B'})), dx: [{...xe('92C-55555', '049000000099', 'TRẦN CHỦ XE B'), maRung: 'R-B'}]});
   A.info.donGia = null;
@@ -27,7 +27,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   const body = () => w.innerText('#main');
 
   // ===== 1. thêm tay một nhân công vào lô A =====
-  await openLot('fa', 'nc'); const a0 = await forest('fa'), b0 = await forest('fb'), boNgayChup = x => JSON.stringify(x, (k, v) => k === '_dmNgay' ? undefined : v), snapB = boNgayChup(b0);   // A4: ngày chụp danh mục gán khi nạp (dữ liệu thử ghi thẳng, chưa qua SQLite v11) được ghi ở lần lưu đầu
+  await openLot('fa', 'nc'); const a0 = await forest('fa'), b0 = await forest('fb'), boNgayChup = x => JSON.stringify(require('../tests/_bo30').bo30(x), (k, v) => k === '_dmNgay' ? undefined : v), snapB = boNgayChup(b0);   // 3.0: bỏ ID dòng / liên kết gán khi lưu   // A4: ngày chụp danh mục gán khi nạp (dữ liệu thử ghi thẳng, chưa qua SQLite v11) được ghi ở lần lưu đầu
   ok('trên tab Nhân công có nút Thêm nhân công, hiện chủ rừng và mã lô đang thao tác', !!(await w.$('[data-act=stAdd][data-kind=nc]')) && /Chủ rừng: NGUYỄN VĂN MỘT/.test(await body()) && /Lô: R-A/.test(await body()));
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
   await fillForm({vaiTro: 'Công nhân', danhXung: 'Ông', ten: 'NGUYỄN THÊM', ngaySinh: '01/01/1990', cccd: '049090000010', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: 'Công nhân khai thác'});
@@ -53,6 +53,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
   ok('thêm xe xong quay lại phiếu cân, giữ nguyên số phiếu, ngày, khối lượng đã nhập và chọn sẵn xe mới', (await w.inputValue('#stForm input[name=soPhieu]')) === 'PX1' && (await w.inputValue('#stForm input[name=klKg]')) === '12000' && (await w.inputValue('#stForm select[name=bienSo]')) === '92C-22222' && (await w.inputValue('#stForm input[name=donGia]')) === '1.250.000');
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
+  if (await w.$('[data-act=pcTatCa]')) await w.click('[data-act=pcTatCa]');   // 3.0: tổng cả rừng (trang chi tiết chỉ đếm phiếu của hợp đồng)
   let t = await body();
   ok('phiếu PX1 và xe 92C-22222 đều vào bản nháp (Thêm mới); khối lượng bản nháp = đã lưu + 12 tấn; dữ liệu đã lưu chưa đổi', /PX1/.test(t) && /92C-22222/.test(t) && (await forest('fa')).pc.length === 3 && (await forest('fa')).dx.length === 2 && /Tổng 4 chuyến \(bản nháp\)/.test(t), t.slice(0, 200));
 
@@ -86,6 +87,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   t = await body();
   ok('sau khi đổi: các phiếu theo xe mới 92C-54321; số chuyến bản nháp không đổi', /92C-54321/.test(t) && !/92C-12345/.test(t.replace(/Biển[^\n]*/g, '')) , t.slice(0, 120));
   // xóa xe còn phiếu: bị chặn
+  if (await w.$('[data-act=xeTatCa]')) await w.click('[data-act=xeTatCa]');   // 3.0: xe 92C-67890 ở hợp đồng khác — xem mọi xe của rừng
   const iXe2 = await w.$$eval('tr', rs => rs.filter(r => /92C-67890/.test(r.innerText) && r.querySelector('[data-act=stDel][data-kind=dx]')).map(r => r.querySelector('[data-act=stDel]').dataset.i)[0]);
   const dl1 = dialogs.length; await w.click('[data-act=stDel][data-kind=dx][data-i="' + iXe2 + '"]'); await w.waitForTimeout(300);
   ok('xóa xe còn phiếu cân liên kết bị chặn, nêu số phiếu cần xử lý', dialogs.slice(dl1).some(m => /Không xóa được xe 92C-67890/.test(m) && /PA2/.test(m)));

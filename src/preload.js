@@ -2,6 +2,7 @@
 const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('hak', {
   desktop: true,
+  testLegacyImport: process.argv.includes('--hakqn-test-legacy-import'),
   loadSync: () => ipcRenderer.sendSync('db:load'),
   saveDelta: d => ipcRenderer.invoke('db:saveDelta', d),
   goiChot: (fid, pb) => ipcRenderer.invoke('db:goiChot', fid, pb),

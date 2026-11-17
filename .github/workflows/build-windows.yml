@@ -53,9 +53,9 @@ jobs:
   e2e-pdf:
     name: Kiểm thử bố cục biểu mẫu Word qua PDF (LibreOffice, Ubuntu)
     # Các bộ e2e dựng .docx ra PDF bằng LibreOffice để đếm trang, so ảnh, đọc dòng chữ ký. Runner Windows không có LibreOffice nên
-    # các phần đó bị bỏ qua ở job build; job này chạy đủ, và --no-skip coi bộ nào còn phần bỏ qua (thiếu công cụ) là không đạt.
+    # các phần đó bị bỏ qua ở job build. Job này chạy đủ và chặn cả phần bỏ qua trong kiểm thử nâng cấp từ mã nguồn v1.4.33.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
         with:
@@ -69,10 +69,23 @@ jobs:
           soffice --version
       - run: npm ci
       - run: npm run build:html
+      - name: Kiểm tra quyền tệp khi di chuyển dữ liệu trên Linux
+        run: |
+          node -e "require('electron')"
+          ELECTRON_RUN_AS_NODE=1 "$(node -p "require('electron')")" --test tests/datamove.test.js
+      - name: Chuẩn bị mã nguồn và Electron của v1.4.33
+        run: |
+          old="$RUNNER_TEMP/hakqn-v1.4.33"
+          git fetch --depth=1 origin refs/tags/v1.4.33
+          test "$(git rev-parse 'FETCH_HEAD^{commit}')" = 91534882c1fe28ec4e12e8cb64714afae3279ae2
+          git worktree add --detach "$old" FETCH_HEAD
+          npm ci --prefix "$old" --ignore-scripts
+          (cd "$old" && node node_modules/electron/install.js && npm run postinstall && npm run build:html)
+          echo "HAKQN_ROOT_CU=$old" >> "$GITHUB_ENV"
       - name: Nâng cấp dữ liệu v8 (main 2.2) → v14 (danh mục theo dòng, gói chốt riêng, khóa in theo đội xe, ngày chụp danh mục; sao lưu trước, mở lại không đổi)
         run: xvfb-run -a node scripts/e2e-nangcap-v14.js
-      - name: Năm bộ e2e có kiểm tra PDF (số hợp đồng, in đè, BM-08, chữ ký, nghiệm thu in đợt 2)
-        run: node scripts/e2e-all.js sohd inde bm08 chuky nghiemthu-dot2 --no-skip --out reports/e2e-pdf
+      - name: Kiểm tra PDF và nâng cấp từ v1.4.33, bắt buộc chạy đủ
+        run: node scripts/e2e-all.js sohd inde bm08 chuky nghiemthu-dot2 cai-de --no-skip --out reports/e2e-pdf
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9   # v7.0.2
         if: always()
         with:
@@ -261,7 +274,7 @@ jobs:
           $old = Join-Path $env:RUNNER_TEMP 'old-release-1433'; New-Item -ItemType Directory $old | Out-Null
           gh release download v1.4.33 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-1.4.33.exe' -D $old
           $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-1.4.33.exe'
-          if (-not (Test-Path $oldSetup)) { Write-Host "::warning::Bản phát hành v1.4.33 không còn trên GitHub Releases nên bỏ qua bước nâng cấp từ bộ cài thật của bản này. Hãy cập nhật bước này sang bản phát hành gần nhất còn trên Releases."; exit 0 }
+          if (-not (Test-Path $oldSetup)) { throw 'Thiếu bộ cài v1.4.33 để kiểm tra nâng cấp trên Windows' }
           $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
           if ($h -ne '15DC58545276FED4C0CE8565B36D9D6856010E4E066E8AAEE91078DA2F68E6AD') { throw "Bộ cài v1.4.33 tải về không khớp mã băm công bố: $h" }
           $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade1433'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade1433-userdata'
@@ -388,52 +401,16 @@ jobs:
           $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ($r.version -ne $ver) { throw "Sau khi cài đè vẫn chạy phiên bản $($r.version), mong đợi $ver" }
           Copy-Item $out dist/smoke-upgrade200.json
-      - name: Nâng cấp từ bộ cài THẬT v2.2.0 (bản phát hành gần nhất) — dữ liệu và lô đã chốt do chính bản 2.2.0 tạo, cài đè bản mới, kiểm tra dữ liệu, lô đã chốt còn chỉ đọc và nguyên vẹn
+      - name: Nâng cấp từ bộ cài phát hành v2.2.0
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          . ./scripts/ci-install.ps1
-          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          if ($ver -eq '2.2.0') { Write-Host 'Bản đang dựng chính là 2.2.0: bỏ qua bước cài đè lên 2.2.0.'; exit 0 }
-          $old = Join-Path $env:RUNNER_TEMP 'old-release-220'; New-Item -ItemType Directory $old | Out-Null
-          gh release download v2.2.0 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-2.2.0.exe' -D $old
-          $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-2.2.0.exe'
-          if (-not (Test-Path $oldSetup)) { Write-Host "::warning::Bản phát hành v2.2.0 không còn trên GitHub Releases nên bỏ qua bước nâng cấp từ bộ cài thật của bản này. Hãy cập nhật bước này sang bản phát hành gần nhất còn trên Releases."; exit 0 }
-          $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
-          if ($h -ne '6073B85F6D59A738E9A85473633196B12B06EF9D439D0497CAA5857630DC99F1') { throw "Bộ cài v2.2.0 tải về không khớp mã băm công bố: $h" }
-          $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade220'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade220-userdata'
-          $ec = Install-Setup -Setup $oldSetup -Dir $dir -Tag 'upgrade-v220-old'
-          if ($ec -ne 0) { throw "Cài v2.2.0 lỗi, mã thoát $ec" }
-          $oldApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
-          if (-not $oldApp) { throw 'Không thấy file chạy của v2.2.0 sau khi cài' }
-          # chính bản v2.2.0 đã cài ghi dữ liệu (1 chủ rừng, 2 lô, phiếu cân) và chốt một lô (fchot) rồi tự thoát
-          $env:HAKQN_USERDATA = $ud; $env:HAKQN_SMOKE = Join-Path $env:RUNNER_TEMP 'smoke-v220-old.json'; $env:HAKQN_SMOKE_PHASE = 'create'
-          $pr = Start-Process -FilePath $oldApp.FullName -PassThru
-          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'v2.2.0: ứng dụng không tự thoát sau 120 giây' }
-          Get-Content $env:HAKQN_SMOKE -Raw
-          if ($pr.ExitCode -ne 0) { throw "v2.2.0 không tạo được dữ liệu thử (mã thoát $($pr.ExitCode))" }
-          $oldRes = Get-Content $env:HAKQN_SMOKE -Raw | ConvertFrom-Json
-          if ($oldRes.version -ne '2.2.0') { throw "Bản cũ chạy không đúng phiên bản: $($oldRes.version)" }
-          if ($oldRes.chotTaoLuc -ne 'create') { throw 'Bản 2.2.0 không tạo được lô đã chốt để thử cài đè' }
-          # cài đè bản mới lên đúng thư mục đã cài v2.2.0
-          $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
-          $ec = Install-Setup -Setup $setup -Dir $dir -Tag 'upgrade-v220-new'
-          if ($ec -ne 0) { throw "Cài đè bản mới lên v2.2.0 lỗi, mã thoát $ec" }
-          $newApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
-          $out = Join-Path $env:RUNNER_TEMP 'smoke-upgrade220.json'
-          $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = 'verify'
-          $pr = Start-Process -FilePath $newApp.FullName -PassThru
-          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'Nâng cấp 2.2.0: ứng dụng không tự thoát sau 120 giây' }
-          if (-not (Test-Path $out)) { throw "Nâng cấp 2.2.0: không có file kết quả (mã thoát $($pr.ExitCode))" }
-          Get-Content $out -Raw
-          if ($pr.ExitCode -ne 0) { throw "Nâng cấp 2.2.0: kiểm tra dữ liệu thất bại (mã thoát $($pr.ExitCode))" }
-          $r = Get-Content $out -Raw | ConvertFrom-Json
-          if ($r.version -ne $ver) { throw "Sau khi cài đè vẫn chạy phiên bản $($r.version), mong đợi $ver" }
-          # lô đã chốt là lô do bản 2.2.0 tạo (bản mới không tạo lại) và vẫn chỉ đọc, đúng phiên bản chốt, nguyên vẹn sau khi cài đè
-          if ($r.chotTaoLuc) { throw 'Sau khi cài đè không còn lô đã chốt của bản 2.2.0 (bản mới phải tạo lại)' }
-          if (-not ($r.checks.chotReadOnly -and $r.checks.chotVersion -and $r.checks.chotIntegrity -and $r.checks.chotUi)) { throw 'Sau khi cài đè lên 2.2.0: lô đã chốt không còn chỉ đọc / sai phiên bản / không nguyên vẹn' }
-          Copy-Item $out dist/smoke-upgrade220.json
+        run: ./scripts/ci-upgrade-release.ps1 -OldVersion 2.2.0 -Sha256 6073B85F6D59A738E9A85473633196B12B06EF9D439D0497CAA5857630DC99F1 -AllowMissingRelease
+      - name: Nâng cấp từ bộ cài phát hành v2.3.0
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/ci-upgrade-release.ps1 -OldVersion 2.3.0 -Sha256 B8BCBDAE1B3655E885741C07A72E161C4C19B393216ABF32FA00026D292E63A5
       - name: Thu thập chẩn đoán cài đặt (chỉ khi một bước ở trên thất bại)
         if: failure()
         shell: pwsh

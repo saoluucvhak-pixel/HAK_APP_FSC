@@ -10,7 +10,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-keo-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'k.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const A = lot('fa', 'R-A', {exp: {}, pc: PC}), B = lot('fb', 'R-B', {exp: {}, pc: []});
   for (const L of [A, B]) { L.info.dinhMucTanHa = null; L.info.tuNgay = '01/10/2026'; L.info.denNgay = ''; L.info.khoiLuong = null; L.info.dienTich = 2; }
   B.nc = A.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = A.dx.map(r => ({...r, maRung: 'R-B'}));

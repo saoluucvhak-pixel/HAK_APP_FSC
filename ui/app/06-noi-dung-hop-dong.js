@@ -44,6 +44,22 @@ function signTable(l, r) {
   ], {borders: false, al: 'center', keep: true});
 }
 
+/* BÊN NHẬN KHOÁN để in (3.0): bản chụp đã chọn trong hợp đồng của đội (doi.benNhanKhoanBan). Không có (hồ sơ cũ) → null: in theo Tổ trưởng như trước.
+ * Trả {p (dạng partyBlock: pháp nhân → loai 'doanhnghiep'), ten (tên in ở dòng bên B), ky (tên người ký), chucVuKy, laTT (bên nhận khoán chính là Tổ trưởng)} */
+function benKhoanIn(rec, tt) {
+  const t = rec._team || (rec.doi && rec.doi.length === 1 ? rec.doi[0] : null), c = t && t.benNhanKhoanBan; if (!c || !trim(c.ten)) return null;
+  if (c.loai === 'phapnhan') return {p: {loai: 'doanhnghiep', mst: c.mst, diaChi: c.diaChi, daiDien: c.daiDien, chucVu: c.chucVu, sdt: c.sdt}, ten: c.ten, ky: c.daiDien || '', chucVuKy: c.chucVu || '', phapNhan: true, laTT: false};
+  const ten = personName(c.danhXung, c.ten), laTT = !!(tt && ((trim(c.cccd) && HAKModel.cccdSo(c.cccd) === HAKModel.cccdSo(tt.cccd)) || (!trim(c.cccd) && keyName(c.ten) === keyName(tt.ten))));
+  return {p: {danhXung: c.danhXung, ten: c.ten, ngaySinh: c.ngaySinh, cccd: c.cccd, ngayCap: c.ngayCap, noiCap: c.noiCap, diaChi: c.diaChi, sdt: c.sdt}, ten, ky: ten, chucVuKy: c.chucVu || '', phapNhan: false, laTT};
+}
+/* khối Bên B của biểu mẫu giao khoán: bên nhận khoán (nếu đã chọn) + dòng Tổ trưởng phụ trách tổ khi khác bên nhận khoán */
+function benBGiaoKhoan(label, rec, tt, ttName) {
+  const b = benKhoanIn(rec, tt); if (!b) return partyBlock(label, tt, ttName);
+  return [...partyBlock(label, b.p, b.ten), ...(b.laTT ? [] : [P('Tổ trưởng tổ khai thác (phụ trách tổ, chấm công, nhận và chi trả tiền công theo Giấy ủy quyền): **' + upper(ttName) + '**', {ind: 360, after: 160})])];
+}
+/* ô ký của Bên B: người đại diện (pháp nhân) hoặc cá nhân nhận khoán; hồ sơ cũ: Tổ trưởng */
+const kyBenB = (rec, tt, ttName) => { const b = benKhoanIn(rec, tt); return b ? ['ĐẠI DIỆN BÊN B', b.chucVuKy ? b.chucVuKy + ' (Ký, ghi rõ họ tên' + (b.phapNhan ? ', đóng dấu)' : ')') : '(Ký, ghi rõ họ tên)', b.ky] : ['ĐẠI DIỆN BÊN B', '(Ký, ghi rõ họ tên)', ttName]; };
+
 function docGiaoKhoan(rec, ex) {
   const rs = rec.info, tt = rec.nc.find(isTT), ttName = personName(tt.danhXung, tt.ten), pr = payRows(rec, Object.assign({}, ex, {_forecast: true})), bs = basisOf(rs);   // hợp đồng ký trước khai thác: tổng khoán theo sản lượng DỰ KIẾN, không đổi khi nhập khối lượng thực tế
   const rsName = personName(rs.danhXung, rs.ten);
@@ -57,7 +73,7 @@ function docGiaoKhoan(rec, ex) {
     P('- Căn cứ khả năng và nhu cầu của hai bên.'),
     P('Hôm nay, ' + ngayLine(ex) + ' tại nhà ' + upper(rsName) + ' (địa chỉ: ' + rs.diaChi + '), chúng tôi gồm có:', {after: 160}),
     ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName, {noSinh: true}),
-    ...partyBlock('BÊN KHAI THÁC (BÊN B)', tt, ttName),
+    ...benBGiaoKhoan('BÊN KHAI THÁC (BÊN B)', rec, tt, ttName),
     P('Sau khi bàn bạc cụ thể, hai bên thống nhất ký hợp đồng khai thác gỗ keo rừng trồng với các điều khoản như sau:'),
     P('**Điều 1: Nội dung**', {keep: true}),
     P('Bên B đồng ý nhận và bên A đồng ý giao khai thác gỗ Keo Lai rừng trồng có kiểm soát tại địa chỉ: ' + rs.diaDiem + rungText(rs) + '.'),
@@ -85,7 +101,7 @@ function docGiaoKhoan(rec, ex) {
     bl('Tổ chức lực lượng lao động khai thác đủ để kịp tiến độ khai thác.'),
     bl('Sử dụng lao động hợp pháp đúng theo quy định của Pháp luật. Không sử dụng lao động trẻ em, lao động cưỡng bức.'),
     bl('Phải có danh sách đội khai thác xác định rõ tên, tuổi người lao động.'),
-    bl('Có Giấy ủy quyền của toàn bộ người lao động trong tổ để Bên B thay mặt giao kết và thực hiện hợp đồng này (kèm theo hợp đồng).'),
+    bl(benKhoanIn(rec, tt) && !benKhoanIn(rec, tt).laTT ? 'Có Giấy ủy quyền của toàn bộ người lao động trong tổ để Tổ trưởng ' + ttName + ' thay mặt tổ thực hiện hợp đồng này cùng Bên B (kèm theo hợp đồng).' : 'Có Giấy ủy quyền của toàn bộ người lao động trong tổ để Bên B thay mặt giao kết và thực hiện hợp đồng này (kèm theo hợp đồng).'),
     bl('Phải trang bị đầy đủ bảo hộ lao động và đào tạo về an toàn lao động cho lao động khai thác.'),
     bl('Khai thác đảm bảo đúng phạm vi khai thác, tránh sự lẫn lộn các nguồn nguyên liệu khác không phù hợp.'),
     bl('Tuân thủ các quy định về bảo vệ môi trường.'),
@@ -99,7 +115,7 @@ function docGiaoKhoan(rec, ex) {
     bl('Trường hợp tranh chấp phát sinh trong quá trình thực hiện hợp đồng, trước hết hai bên phải thỏa thuận để dàn xếp. Quyết định của Tòa án là quyết định cuối cùng và ràng buộc 2 bên. Chi phí Tòa án và các khoản chi phí khác liên quan do bên thua kiện chịu.'),
     bl('Hợp đồng được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị pháp lý như nhau và có hiệu lực kể từ ngày ký.'),
     P('', {after: 120}),
-    signTable(['ĐẠI DIỆN BÊN A', '(Ký, ghi rõ họ tên)', rsName], ['ĐẠI DIỆN BÊN B', '(Ký, ghi rõ họ tên)', ttName])
+    signTable(['ĐẠI DIỆN BÊN A', '(Ký, ghi rõ họ tên)', rsName], kyBenB(rec, tt, ttName))
   ];
 }
 
@@ -364,7 +380,7 @@ function docNghiemThu(rec, ex) {
   const hd = direct ? 'các hợp đồng lao động đã ký giữa chủ rừng và người lao động' : 'Hợp đồng khai thác gỗ keo số ' + ex._so.kt.so;
   // lô nhiều đội: phiếu cân là của cả lô; phần của đội theo khối lượng thực tế từng đội đã nhập (nếu có, src/doi.js khoiLuong), không thì chia theo số người
   const pcAll = totalKg(rec.pc || []), klTyLe = rec._klNhap && rec._klLo > 0 && typeof rs.klHoSoCu === 'number' ? rs.klHoSoCu / rec._klLo : null;
-  const pcKg = rec._share ? pcAll * (klTyLe != null ? klTyLe : rec._share) : pcAll, pcCach = klTyLe != null ? 'theo khối lượng thực tế từng đội' : 'chia theo số người';
+  const pcKg = rec._share ? pcAll * (klTyLe != null ? klTyLe : rec._share) : pcAll, pcCach = rec._klChiaDeu ? 'chia đều cho hai đội' : klTyLe != null ? 'theo khối lượng thực tế từng đội' : 'chia theo số người';
   return [
     ...TITLE_HEAD(),
     P('**BIÊN BẢN NGHIỆM THU VÀ THANH LÝ KHAI THÁC**', {al: 'center', sz: 28, before: 120, after: 60}),
@@ -374,7 +390,7 @@ function docNghiemThu(rec, ex) {
     P('- Căn cứ kết quả khai thác thực tế tại rừng.'),
     P('Hôm nay, ' + VP(ngayV(ex.ntNgay, ex), S_NGAY) + ' tại ' + (rs.diaDiem || '…………') + ', chúng tôi gồm có:', {after: 140}),
     ...partyBlock('BÊN CHỦ RỪNG (BÊN A)', rs, rsName, {noSinh: true}),
-    ...partyBlock(direct ? 'ĐẠI DIỆN TỔ KHAI THÁC (BÊN B)' : 'BÊN KHAI THÁC (BÊN B)', tt, ttName),
+    ...(direct ? partyBlock('ĐẠI DIỆN TỔ KHAI THÁC (BÊN B)', tt, ttName) : benBGiaoKhoan('BÊN KHAI THÁC (BÊN B)', rec, tt, ttName)),
     P('Hai bên cùng tiến hành nghiệm thu và thanh lý với các nội dung sau:', {keep: true}),
     P('**Điều 1: Thông tin rừng đã khai thác**', {keep: true}),
     P('Mã rừng: ' + dot(rs.maRung, 4) + '. Địa điểm: ' + dot(rs.diaDiem, 8) + rungText(rs) + '.', {ind: 360}),
@@ -394,7 +410,7 @@ function docNghiemThu(rec, ex) {
     P('Sau khi hai bên hoàn tất nghĩa vụ nêu trên, ' + hd + ' được thanh lý. Hai bên xác nhận không còn tranh chấp, khiếu nại nào khác về việc khai thác tại rừng nêu trên.', {ind: 360}),
     P('Biên bản được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị như nhau và có hiệu lực kể từ ngày ký.', {ind: 360}),
     P('', {after: 100}),
-    signTable(['ĐẠI DIỆN BÊN A', '(Ký, ghi rõ họ tên)', rsName], ['ĐẠI DIỆN BÊN B', '(Ký, ghi rõ họ tên)', ttName])
+    signTable(['ĐẠI DIỆN BÊN A', '(Ký, ghi rõ họ tên)', rsName], direct ? ['ĐẠI DIỆN BÊN B', '(Ký, ghi rõ họ tên)', ttName] : kyBenB(rec, tt, ttName))
   ];
 }
 

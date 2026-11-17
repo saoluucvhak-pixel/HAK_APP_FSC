@@ -17,7 +17,7 @@ const fmt = n => n.toLocaleString('vi-VN');
 const RATE = {'Tổ trưởng': 400000, 'Công nhân khai thác': 300000, 'Công nhân cưa': 320000};
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'c.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const mk = extra => { const L = lot('fa', 'R-A', {exp: {...EXP1}, pc: PC, kl: 29.75}); Object.assign(L.info, {hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: RATE, tuNgay: '05/10/2026', denNgay: '11/10/2026', donGia: null}, extra || {}); return L; };
   const openF = async tab => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + tab + ']'); if (tab === 'xuat') await w.click('[data-xtab=all]'); };
   const dl = async kind => { clean(); await w.$eval('button[data-act=dl][data-kind=' + kind + ']', b => b.click()); let f = null; for (let i = 0; i < 100 && !f; i++) { f = fs.readdirSync(out).find(x => /\.(docx|zip)$/.test(x)); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(300); return readOut(); };
@@ -44,7 +44,9 @@ const RATE = {'Tổ trưởng': 400000, 'Công nhân khai thác': 300000, 'Công
   ok('“Điền đủ công”: mỗi người 6 công (5 đến 10/10), Chủ nhật 11/10 để trống; tổng tháng và cả đợt = 6', cells.every(r => r.vals.filter(v => v === '1').length === 6 && r.vals[10] === '' && r.vals[4] === '1' && r.vals[9] === '1' && r.m === '6' && r.a === '6'), JSON.stringify(cells[0]));
   ok('đã chấm công: ghi chú đổi sang “Đã có số công chấm tay”', /Đã có số công chấm tay/.test(await w.innerText('#ccNote')));
   // sửa ô: TT ngày 5 = 0,5; công nhân ngày 6 = 0; cưa ngày 7 = 1,5
-  const setCell = async (pk, d, v) => { await w.fill('#ccCard tr[data-ccp="' + pk + '"] input[data-cc="' + d + '"]', v); await w.press('#ccCard tr[data-ccp="' + pk + '"] input[data-cc="' + d + '"]', 'Tab'); await w.waitForTimeout(150); };
+  /* 3.0: dòng chấm công gắn ID dòng thành viên (một người ở hai đội có hai dòng): tra ID theo CCCD trong dữ liệu đã lưu */
+  const idTv = async cccd => w.evaluate(c => { const db = window.hak.loadSync().db; for (const o of Object.values(db.rs)) for (const f of Object.values(o.forests)) { const r = (f.nc || []).find(x => x.cccd === c); if (r) return r.id; } return c; }, cccd);
+  const setCell = async (pk0, d, v) => { const pk = await idTv(pk0); await w.fill('#ccCard tr[data-ccp="' + pk + '"] input[data-cc="' + d + '"]', v); await w.press('#ccCard tr[data-ccp="' + pk + '"] input[data-cc="' + d + '"]', 'Tab'); await w.waitForTimeout(150); };
   await setCell('049085000001', 5, '0,5'); await setCell('049085000002', 6, '0'); await setCell('049085000003', 7, '1,5');
   cells = await congCells();
   ok('sửa ô: TT 5,5 công; công nhân 5 công (ô 0 giữ là 0); thợ cưa 6,5 công; tổng tháng và cả đợt cập nhật ngay không cần tải lại', cells[0].m === '5,5' && cells[0].a === '5,5' && cells[1].m === '5' && cells[1].vals[5] === '0' && cells[2].m === '6,5', JSON.stringify(cells.map(r => [r.m, r.a])));

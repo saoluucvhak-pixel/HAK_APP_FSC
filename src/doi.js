@@ -31,7 +31,14 @@
     const total = doi.reduce((s, d) => s + d.n, 0) || 1; doi.forEach(d => { d.share = d.n / total; });
     return {multi: true, doi, errs, orphans};
   }
-  /* Chia phần nguyên trước rồi cấp phần dư theo số lẻ lớn nhất. */
+  /* Chia một số lượng (tấn hoặc ha) cho các đội theo tỷ lệ số người, đơn vị 0,001; tổng luôn khớp đúng.
+   * GIỮ NGUYÊN SỐ ĐÃ IN: cách chia từ trước (làm tròn từng đội, đội cuối nhận phần còn lại) vẫn là cách chính, để lô nhiều đội không đổi số
+   * trên các mẫu đã in, đã ký hay đã chốt. Chỉ khi cách đó cho một đội số ÂM (lượng rất nhỏ, ví dụ 0,002 tấn chia 4 đội ra -0,001) mới chia lại
+   * theo phần dư lớn nhất: chia phần nguyên trước rồi cấp phần dư cho số lẻ lớn nhất. */
+  function chiaCu(vol, doi) {
+    let used = 0;
+    return doi.map((d, i) => { const v = i === doi.length - 1 ? Math.round((vol - used) * 1000) / 1000 : Math.round(vol * d.share * 1000) / 1000; used += v; return v; });
+  }
   function chia(vol, doi) {
     const units = Math.round(vol * 1000);
     if (typeof vol !== 'number' || !(vol > 0) || !Number.isSafeInteger(units) || !doi.length) return doi.map(() => null);
@@ -39,6 +46,8 @@
     if (shares.some(share => !Number.isFinite(share) || share < 0)) return doi.map(() => null);
     const total = shares.reduce((sum, share) => sum + share, 0);
     if (!Number.isFinite(total) || total <= 0) return doi.map(() => null);
+    const cu = chiaCu(vol, doi);
+    if (cu.every(v => v >= 0)) return cu;
     const exact = shares.map(share => units * (share / total));
     const allocated = exact.map(Math.floor);
     const order = exact.map((value, index) => ({index, remainder: value - allocated[index]}));
@@ -67,6 +76,6 @@
     nc = nc || []; const t = nc.find(isTT);
     return {multi: false, doi: t ? [{key: keyOf(t), ten: trim(t.doi), tt: t, members: nc.filter(r => r !== t), n: nc.length, share: 1}] : [], errs: [], orphans: []};
   }
-  const api = {build, single, chia, khoiLuong, keyOf, fold};
+  const api = {chiaCu, build, single, chia, khoiLuong, keyOf, fold};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDoi = api;
 })(typeof self !== 'undefined' ? self : this);

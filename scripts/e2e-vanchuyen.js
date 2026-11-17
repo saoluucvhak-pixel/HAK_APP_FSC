@@ -4,7 +4,7 @@
  *  2. Tấn/km: đơn giá đồng/tấn/km × cự ly của rừng.
  * Kiểm tra số liệu trong hợp đồng vận chuyển (BM-04) và bảng thanh toán tiền vận chuyển (BM-10), kiểm tra dữ liệu nhập, và hồ sơ cũ còn chọn “theo bậc cự ly”. */
 const {_electron: electron} = require('playwright-core');
-const {saveStage: stSave} = require('./lib-stage');
+const {saveStage: stSave, xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip'), XLSX = require('xlsx');
 const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixtures');
@@ -26,8 +26,8 @@ async function zipTexts(file) {
 }
 
 (async () => {
-  const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'vc.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-  let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
+  const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_TEST_LEGACY_IMPORT: '1', HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'vc.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   const clear = () => { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); };
   const exp = async (kind, ext) => { clear(); await w.click(`button[data-act=dl][data-kind=${kind}]`); for (let i = 0; i < 80; i++) { const f = fs.existsSync(out) && fs.readdirSync(out).find(x => x.endsWith(ext)); if (f) { await w.waitForTimeout(300); return path.join(out, f); } await w.waitForTimeout(100); } throw new Error('không có file ' + ext + ' cho ' + kind); };
@@ -46,7 +46,7 @@ async function zipTexts(file) {
   for (const [k, v] of [[0, 340000], [1, 200000], [2, 250000]]) await w.fill(`#luongForm [name=dt_${k}]`, String(v));
   await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(200);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
-  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
+  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await xacNhanHopDongPhieu(w); await stSave(w);
 
   // ===== chỉ còn hai cách tính =====
   const opts = () => w.$$eval('#vcForm [name=vcMode] option', o => o.map(x => x.value));
@@ -93,7 +93,7 @@ async function zipTexts(file) {
   await app.close();
 
   // ===== hồ sơ cũ còn chọn “theo bậc cự ly” =====
-  app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   const saved = await w.evaluate(() => window.hak.loadSync().db);
   const o = Object.values(saved.rs)[0], f = Object.values(o.forests)[0]; f.info.vanChuyen = {mode: 'tanDoan', donGiaKm: 1000, coDinh: 52000, bac: [{den: 50, gia: 40000}]};
   await w.evaluate(d => window.hak.save(d), saved); await w.reload(); await w.waitForSelector('#side');

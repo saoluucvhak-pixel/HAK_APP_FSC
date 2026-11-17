@@ -36,7 +36,7 @@ const clone = x => JSON.parse(JSON.stringify(x));
   const data = seed(names.map(k => L[k]));
   data.dmDoiTac = data.dmDoiTac || [];
   const app = await electron.launch({executablePath: require(path.join(root, 'node_modules', 'electron')), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: dl}});
-  const w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), data); await w.reload(); await w.waitForSelector('#side');
   const res = {};
   for (const k of names) {

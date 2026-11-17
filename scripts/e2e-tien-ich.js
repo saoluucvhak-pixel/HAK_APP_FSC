@@ -2,6 +2,7 @@
 /* TIỆN ÍCH BẢN 2.3 (Electron thật, SQLite thật, dữ liệu giả lập ở thư mục tạm): hướng dẫn lần đầu, dán từ Excel, mục lục gói in, gói Chỉ xem, in trong app (ghi PDF khi kiểm thử),
  * phụ lục in lại / ký lại. Chạy: xvfb-run -a node scripts/e2e-tien-ich.js */
 const {_electron: electron} = require('playwright-core');
+const {xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip');
 const root = path.join(__dirname, '..');
@@ -12,7 +13,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-ti-')), out = path.join
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('|');
 const launch = async () => { const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, HAKQN_PRINT_DIR: inDir}});
-  const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
+  const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
 
 (async () => {
   fs.mkdirSync(out, {recursive: true});
@@ -29,7 +30,7 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   ok('Ẩn hướng dẫn: bảng biến mất', !(await w.$('#huongDan')));
   await w.reload(); await w.waitForSelector('#side'); await w.waitForTimeout(300);
   ok('mở lại trang: vẫn ẩn (ghi nhớ lựa chọn)', !(await w.$('#huongDan')));
-  await w.click('#moreMenu summary'); await w.click('#hdHienBtn'); await w.waitForSelector('#huongDan');
+  await w.click('#navSet'); await w.click('#setTab_sethd'); await w.click('#hdHienBtn'); await w.waitForSelector('#huongDan');
   ok('⋯ Thêm → Hướng dẫn bắt đầu: hiện lại', !!(await w.$('#huongDan')));
   const A = M.ensureForest(lot('fa', 'R-A', {exp: EXP1, pc: [], kl: null}));
   await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.waitForSelector('#huongDan');
@@ -47,6 +48,7 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   await w.fill('#danText', 'Số phiếu\tNgày cân 1\tBiển số 1\tKhối lượng (tấn)\tGhi chú\r\nPA1\t05/10/2026\t92C-12345\t12,5\t"ghi chú\ncó xuống dòng"\r\nPA2\t06/10/2026\t92C-67890\t9,25\t\r\nPA3\t07/10/2026\t92C-12345\t8\t\r\n');
   ok('dán đúng (có tiêu đề, số kiểu Việt Nam 12,5): đọc được 3 dòng dữ liệu', /Đọc được 3 dòng dữ liệu, 5 cột/.test(await w.innerText('#danMsg')), await w.innerText('#danMsg'));
   await w.click('[data-act=danNap]'); await w.waitForTimeout(1200);
+  await xacNhanHopDongPhieu(w);
   await w.click('button[data-act=stSave]').catch(() => {}); await w.waitForTimeout(900);
   let F = await lo();
   ok('nạp dữ liệu đã dán và lưu: lô có 3 phiếu cân PA1, PA2, PA3; khối lượng 12,5 + 9,25 + 8 = 29,75 tấn; ngày và biển số đúng', F.pc.length === 3 && F.pc.map(p => p.soPhieu).join() === 'PA1,PA2,PA3' && Math.abs(F.pc.reduce((a, p) => a + p.kl, 0) - 29.75) < 1e-9 && F.pc[0].ngay === '05/10/2026' && F.pc[1].bienSo === '92C-67890', JSON.stringify(F.pc.map(p => [p.soPhieu, p.ngay, p.bienSo, p.kl])));

@@ -3,6 +3,19 @@
  * để các kịch bản kiểm tra dữ liệu đã lưu. Luồng bấm nút thật được kiểm ở scripts/e2e-luuvaolo.js. */
 exports.saveStage = async w => { const r = await w.evaluate(async () => (window.__stDirty && window.__stDirty().length) ? await window.__stSaveCurrent() : null); await w.waitForTimeout(500); return r; };
 
+/* File thử cũ chứa phiếu của nhiều hợp đồng. Xác nhận từng dòng có đúng một đích theo BKS trước khi lưu. */
+exports.xacNhanHopDongPhieu = async w => {
+  const doiDich = w.locator('#pcGanTbl tr:has([data-act=pgDoiHd])');
+  const soDong = await doiDich.count();
+  for (let i = 0; i < soDong; i++) {
+    const row = doiDich.first();
+    const options = row.locator('[data-act=pgDoiHd]');
+    if (await options.count() !== 1) throw new Error('Phiếu thử có nhiều hợp đồng đích: ' + await row.innerText());
+    await options.click();
+  }
+  if (await doiDich.count()) throw new Error('Còn phiếu thử chưa xác nhận được hợp đồng đích');
+};
+
 /* Thêm một xe vào BẢN NHÁP bằng hộp thoại (đang ở tab Vận chuyển): đủ trường bắt buộc của người ký là chủ xe */
 exports.addXe = async (w, bienSo, chuXe) => {
   await w.click('[data-act=stAdd][data-kind=dx]'); await w.waitForSelector('#stForm');

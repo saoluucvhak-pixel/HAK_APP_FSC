@@ -18,7 +18,7 @@ const draft = async (w, ten, cccd) => {
 };
 const names = async w => (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fa.nc.map(r => r.ten);
 (async () => {
-  let app = await launch('back'), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  let app = await launch('back'), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), seed([lot('fa', 'R-A', {exp: {}, pc: []})])); await w.reload(); await w.waitForSelector('#side');
   const base = (await names(w)).length;
   await draft(w, 'NGUYỄN QUAY LẠI', '049090000031');
@@ -27,13 +27,13 @@ const names = async w => (await w.evaluate(() => window.hak.loadSync().db)).rs.o
   await app.evaluate(() => { process.env.HAKQN_CLOSE = 'discard'; }); await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].close()).catch(() => {}); await new Promise(r => setTimeout(r, 2000));
   let exited = false; try { await w.evaluate(() => 1); } catch (e) { exited = true; }
   ok('Bỏ thay đổi và đóng: ứng dụng đóng', exited);
-  app = await launch('discard'); w = await app.firstWindow(); await w.waitForSelector('#side');
+  app = await launch('discard'); w = require('./_hd30').boc(await app.firstWindow()); await w.waitForSelector('#side');
   ok('mở lại: không có nhân công NGUYỄN QUAY LẠI (bản nháp bị bỏ, không ghi gì)', !(await names(w)).includes('NGUYỄN QUAY LẠI') && (await names(w)).length === base);
   await draft(w, 'TRẦN LƯU RỒI ĐÓNG', '049090000032');
   await app.evaluate(() => { process.env.HAKQN_CLOSE = 'save'; }); await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].close()).catch(() => {}); await new Promise(r => setTimeout(r, 2500));
   exited = false; try { await w.evaluate(() => 1); } catch (e) { exited = true; }
   ok('Lưu và đóng: lưu bản nháp rồi đóng ứng dụng', exited);
-  app = await launch('discard'); w = await app.firstWindow(); await w.waitForSelector('#side');
+  app = await launch('discard'); w = require('./_hd30').boc(await app.firstWindow()); await w.waitForSelector('#side');
   ok('mở lại: nhân công TRẦN LƯU RỒI ĐÓNG đã được lưu', (await names(w)).includes('TRẦN LƯU RỒI ĐÓNG') && (await names(w)).length === base + 1);
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);

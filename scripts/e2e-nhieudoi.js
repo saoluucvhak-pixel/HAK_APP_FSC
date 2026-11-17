@@ -10,7 +10,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-doi-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const p = (i, vai, ten, cd, doi) => ({...nv(i, vai, ten, cd, '04908500' + String(2000 + i)), maRung: 'R-A', doi: doi || ''});
   const two = [p(1, 'Tổ trưởng', 'TRẦN ĐỘI MỘT', 'Tổ trưởng', 'Đội 1'), p(2, 'Công nhân', 'LÊ A', 'Công nhân khai thác', 'Đội 1'), p(3, 'Công nhân', 'LÊ B', 'Công nhân khai thác', 'Đội 1'),
     p(4, 'Tổ trưởng', 'NGUYỄN ĐỘI HAI', 'Tổ trưởng', 'Đội 2'), p(5, 'Công nhân', 'PHẠM C', 'Công nhân khai thác', 'Đội 2')];

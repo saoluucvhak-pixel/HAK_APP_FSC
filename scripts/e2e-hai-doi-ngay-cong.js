@@ -30,7 +30,7 @@ const NGAY = {   // chấm công tháng 10/2026: cccd → {ngày: công}; Chủ 
 const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
 (async () => {
   fs.mkdirSync(out, {recursive: true});
-  let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const p = (i, vai, ten, cd, doi) => ({...nv(i, vai, ten, cd, '04908500' + String(7000 + i)), maRung: 'R-A', doi});
   const nc = [p(1, 'Tổ trưởng', 'TRẦN MỘT', 'Tổ trưởng', 'Đội 1'), p(2, 'Công nhân', 'LÊ CƯA', 'Công nhân cưa', 'Đội 1'), p(3, 'Công nhân', 'PHẠM KT BA', 'Công nhân khai thác', 'Đội 1'), p(4, 'Công nhân', 'ĐỖ KT BỐN', 'Công nhân khai thác', 'Đội 1'),
     p(5, 'Tổ trưởng', 'NGUYỄN HAI', 'Tổ trưởng', 'Đội 2'), p(6, 'Công nhân', 'HỒ KT SÁU', 'Công nhân khai thác', 'Đội 2')];
@@ -90,7 +90,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   const o1 = kiem('lần 1', await docs());
   if (process.env.DUMP) { Object.entries(o1).filter(([n]) => /^(08|14)_|^CC\//.test(n)).slice(0, 6).forEach(([n, x]) => console.log('## ' + n + '\n' + JSON.stringify(rowsOf(x).slice(0, 12)) + '\n' + plain(x).slice(0, 1500))); }
   // đóng và mở lại app, xuất lại: số liệu giữ nguyên
-  await app.close(); app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  await app.close(); app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]');
   const o2 = kiem('sau khi đóng mở lại app', await docs());
   const so = (a, b) => Object.keys(a).filter(n => !/^CC\//.test(n)).every(n => a[n] === b[n]);

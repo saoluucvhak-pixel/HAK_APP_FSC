@@ -16,7 +16,7 @@ const today = 'tu-dong-' + AB.dayOf(new Date()) + '.sqlite';
 const settle = async (w, cond, ms = 8000) => { const t = Date.now(); while (Date.now() - t < ms) { if (cond()) return true; await w.waitForTimeout(150); } return cond(); };
 (async () => {
   const errs = [];
-  let app = await launch(), w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.waitForTimeout(800);
   ok('lần đầu, chưa có hồ sơ: không tạo bản tự sao lưu', autos().length === 0, autos().join(','));
   const seed = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-TSL', ten: 'NGUYỄN TỰ SAO LƯU', cccd: '049000000077'}, forests: {fa: {id: 'fa', info: {maRung: 'R-TSL', tenRung: 'Rừng TSL', giayTo: []}, nc: [], dx: [], pc: [{_id: 'p1', stt: 1, ngay: '05/01/2026', bienSo: '92C-11111', soPhieu: 'TSL-1', kl: 12.5}], exp: {}}}}}};
@@ -27,7 +27,7 @@ const settle = async (w, cond, ms = 8000) => { const t = Date.now(); while (Date
   fs.mkdirSync(bk, {recursive: true});
   for (let i = 1; i <= 8; i++) fs.writeFileSync(path.join(bk, 'tu-dong-2020-01-0' + i + '.sqlite'), 'cu');
   fs.writeFileSync(path.join(bk, 'truoc-khoi-phuc-2020-01-01T00-00-00-000Z.sqlite'), 'khac');
-  app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await settle(w, () => autos().includes(today));
   ok('mở lại khi có hồ sơ: có bản tự sao lưu của hôm nay', autos().includes(today), autos().join(','));
   const s = new Store(path.join(bk, today)), db = s.load(); s.close();
@@ -36,7 +36,7 @@ const settle = async (w, cond, ms = 8000) => { const t = Date.now(); while (Date
   await settle(w, () => autos().length === 7);
   ok('xoay vòng: chỉ giữ 7 bản tự động gần nhất (mặc định)', autos().length === 7 && autos()[6] === today && !autos().includes('tu-dong-2020-01-01.sqlite'), autos().join(','));
   ok('bản sao lưu loại khác không bị xóa', fs.existsSync(path.join(bk, 'truoc-khoi-phuc-2020-01-01T00-00-00-000Z.sqlite')));
-  await w.click('#moreMenu summary'); await w.click('#openSettingsBtn'); await w.waitForSelector('#autoBk');
+  await w.click('#navSet'); await w.waitForSelector('#autoBk');
   const card = await w.innerText('#autoBk');
   ok('Cài đặt hệ thống: hiện thẻ Tự sao lưu hằng ngày, bản gần nhất và số bản', /Tự sao lưu hằng ngày/.test(card) && /Bản gần nhất/.test(card) && /7 bản/.test(card), card);
   await w.selectOption('#setAutoKeep', '3'); await w.waitForSelector('#setMsg');
@@ -47,7 +47,7 @@ const settle = async (w, cond, ms = 8000) => { const t = Date.now(); while (Date
   await app.close();
 
   fs.unlinkSync(path.join(bk, today));
-  app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side'); await w.waitForTimeout(1200);
+  app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side'); await w.waitForTimeout(1200);
   ok('đã tắt: mở lại không tạo bản tự sao lưu', !autos().includes(today), autos().join(','));
   const st2 = await w.evaluate(() => window.hak.settings.get());
   ok('cài đặt Tắt được nhớ qua lần mở lại', st2.settings.auto.keep === 0);

@@ -1,4 +1,5 @@
 'use strict';
+const {bo30} = require('./_bo30');   // gỡ phần bổ sung 3.0 (ID dòng, liên kết, danh mục mới) khi so với mốc trước 3.0
 /* B6: danh mục (lao động, xe, đối tác) ở bảng SQLite riêng, mỗi mục một dòng (danh_muc); lưu theo phần thay đổi chỉ ghi dòng đã đổi. */
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('fs'), os = require('os'), path = require('path');
@@ -24,11 +25,11 @@ test('v13: chuyển danh mục từ meta sang bảng danh_muc theo dòng; đọc
   const s = new Store(file);
   assert.deepStrictEqual(metaDM(s), [], 'khóa danh mục không còn ở meta');
   assert.equal(dongDM(s).filter(r => r.kind === 'dmLaoDong').length, 3);
-  assert.deepStrictEqual(s.load(), truoc, 'đọc lại giống hệt trước nâng cấp');
+  assert.deepStrictEqual(bo30(s.load()), bo30(truoc), 'đọc lại giống hệt trước nâng cấp (ngoài phần bổ sung 3.0)');
   assert.deepStrictEqual(s.load().dmXeVC, [], 'danh mục rỗng vẫn là mảng rỗng');
   const bk = fs.readdirSync(path.join(path.dirname(file), 'backups')); assert.ok(bk.some(n => /truoc-nang-cap-v12/.test(n)), 'sao lưu trước khi nâng cấp');
   const dong = dongDM(s); MIGRATIONS[12](s.db); assert.deepStrictEqual(dongDM(s), dong, 'chạy lại v13 không đổi');
-  assert.deepStrictEqual(s.save(truoc).changed, 0, 'lưu toàn bộ ngay sau đó không ghi dòng nào');
+  assert.deepStrictEqual(s.save(s.load()).changed, 0, 'lưu toàn bộ ngay sau đó không ghi dòng nào');
   s.close();
 });
 

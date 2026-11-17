@@ -9,11 +9,12 @@
  *   Có mâu thuẫn thì DỪNG, không ghi gì, và liệt kê hồ sơ cần đối chiếu.
  *
  * Gói lô (JSON): {loai:'HAKQN_LO_RUNG', dinhDang:1, xuatLuc, phanMem, maLo, tenLo, chuRung:{...hồ sơ chủ rừng, không có lô nào khác},
- *   lo:{...đủ dữ liệu một lô, kèm info.muaHang (công ty và địa chỉ giao đã chốt)}, dungChung:{dinhMuc, bienAlias (chỉ phần lô cần)}, kiemTra:{nc,dx,pc,tongTan}, maKiemTra}
+ *   lo:{...đủ dữ liệu một lô, kèm info.muaHang (công ty và địa chỉ giao đã chốt)}, dungChung:{dinhMuc, bienAlias (chỉ phần lô cần), danhMuc (3.0: đối tượng, xe, vị trí lô trỏ tới)}, kiemTra:{nc,dx,pc,tongTan}, maKiemTra}
  * Không chứa: lô của chủ khác hoặc lô khác, bản tra cứu Google Sheets, thông tin đăng nhập, danh mục công ty. */
 (function (root) {
   /* hồ sơ đã chốt trong file sao lưu: kiểm gói đóng băng và dữ liệu trước khi cho khôi phục (src/vongdoi.js kiemToanVen) */
   const VD = () => (typeof require === 'function' ? require('./vongdoi') : root.HAKVongDoi);
+  const GD = () => (typeof require === 'function' ? require('./goidm') : root.HAKGoiDM);   // 3.0: danh mục đối tượng / xe / vị trí đi kèm gói lô
   function loiToanVen(f) {
     if (!f || !f.chot) return null; const k = VD().kiemToanVen(f); if (k.ok) return null;
     return {loai: 'toanVen', ten: forestLabel(f), ma: k.ma, toanVen: k, moTa: 'Hồ sơ đã chốt của lô “' + (k.maLo || forestLabel(f)) + '”' + (k.phienBan ? ' (phiên bản chốt ' + k.phienBan + ')' : '') + ' trong file không toàn vẹn: ' + k.ten + ' — ' + k.lyDo + '. Không khôi phục được từ file này; hãy chọn bản sao lưu khác để đối chiếu.'};
@@ -168,6 +169,7 @@
     new Set((forest.nc || []).map(r => t(r.chucDanh)).filter(Boolean)).forEach(cd => { if (dm[cd]) out.dinhMuc[cd] = clone(dm[cd]); });
     const plates = new Set([...(forest.dx || []), ...(forest.pc || [])].map(r => t(r.bienSo)).filter(Boolean));
     Object.entries((db && db.bienAlias) || {}).forEach(([k, v]) => { if (plates.has(t(v))) out.bienAlias[k] = v; });
+    const goi = GD().dongGoi(db, forest); if (goi.doiTuong.length || goi.xe.length || goi.viTri.length) out.danhMuc = goi;   // lô không trỏ danh mục nào: gói như trước
     return out;
   }
   function exportLot(db, ownerId, forestId, opts) {
@@ -232,6 +234,11 @@
       if (!(k in al)) them.push({loai: 'bienAlias', khoa: k, goi: v, may: null, text: 'Ánh xạ biển số “' + k + '” → ' + v + ': máy đích chưa có, sẽ thêm từ gói', anhHuong: 'Ghép biển số khi nhận phiếu cân từ tra cứu'});
       else if (al[k] !== v) khac.push({loai: 'bienAlias', khoa: k, goi: v, may: al[k], text: 'Ánh xạ biển số “' + k + '” khác máy đích: DÙNG BẢN CỦA MÁY ĐÍCH (→ ' + al[k] + '), gói ghi → ' + v, anhHuong: 'Ghép biển số khi nhận phiếu cân từ tra cứu có thể ra biển khác bản gốc; phiếu cân đã lưu trong lô không đổi'});
     });
+    if (sh.danhMuc) { const n = GD().noi(cur, sh.danhMuc);   // 3.0: danh mục đi kèm — nối theo CCCD / MST / BKS / tên vị trí với danh mục của máy
+      n.them.forEach(x => them.push({loai: 'danhMuc', khoa: x, goi: null, may: null, text: x + ': máy đích chưa có, sẽ thêm từ gói', anhHuong: 'Danh mục dùng chung; lô trỏ tới mục này'}));
+      n.khac.forEach(x => khac.push({loai: 'danhMuc', khoa: x, goi: null, may: null, text: x, anhHuong: 'Hồ sơ đã in giữ bản chụp; hợp đồng mới lấy thông tin của máy'}));
+      n.can.forEach(c => khac.push({loai: 'danhMuc', khoa: c.ref, goi: c.goc, may: null, text: c.lyDo + ' (ghi vào Cần đối chiếu)', anhHuong: 'Lô giữ bản chụp thông tin người'}));
+    }
     const cty = f.info && f.info.muaHang;
     const ghiChu = []; if (cty && cty.congTyId && !((cur.congTy || {})[cty.congTyId])) ghiChu.push('Công ty mua hàng “' + cty.ten + '” chưa có trong danh mục của máy: tên và địa chỉ giao đã chốt vẫn được mang theo, BM-04 xuất đúng.');
     return {ok: !conflicts.length, conflicts, maLo: t(f.info.maRung), tenLo: t(f.info.tenRung), xuatLuc: pkg.xuatLuc,
@@ -259,9 +266,22 @@
     // Thiết lập dùng chung: giữ của máy đích, chỉ BỔ SUNG mục máy chưa có. Không tạo khóa rỗng (khóa dinhMuc có mặt sẽ chặn định mức mặc định của máy).
     Object.entries(sh.dinhMuc || {}).forEach(([k, v]) => { if (!next.dinhMuc || !(k in next.dinhMuc)) { next.dinhMuc = next.dinhMuc || {}; next.dinhMuc[k] = clone(v); } });
     Object.entries(sh.bienAlias || {}).forEach(([k, v]) => { if (!next.bienAlias || !(k in next.bienAlias)) { next.bienAlias = next.bienAlias || {}; next.bienAlias[k] = v; } });
+    if (sh.danhMuc) {   // 3.0: bổ sung danh mục còn thiếu, lô trỏ sang ID của máy (lô đã chốt giữ nguyên dữ liệu); người trùng CCCD khác tên → Cần đối chiếu
+      const n = GD().noi(next, sh.danhMuc); Object.assign(next, n.dm); GD().doiIdLo(owner.forests[fid], n.doi);
+      if (n.can.length) next.canDoiChieu = (next.canDoiChieu || []).concat(n.can.map(c => Object.assign({noi: 'Khôi phục lô ' + t(pkg.lo.info.maRung)}, c)));
+    }
     return {next, plan, doi: true, ownerId: oid, forestId: fid};
   }
 
-  const api = {KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
+  /* TÙY CHỌN KHÔI PHỤC NHẬN TỪ GIAO DIỆN (src/main.js import:preview / import:apply): chỉ giữ cách xử lý (strategy) và mã lô mới do người dùng xác nhận (maMoi: id → chuỗi).
+   * Tùy chọn nội bộ của tiến trình chính (ví dụ lịch sử bản chụp chép kèm khi khôi phục từ bản .sqlite) không bao giờ lấy từ giao diện, để giao diện không chèn được dữ liệu
+   * vào bảng gói đã chốt hay đổi cách ghi. */
+  function optsKhoiPhuc(o) {
+    const out = {}; if (!o || typeof o !== 'object') return out;
+    if (typeof o.strategy === 'string') out.strategy = o.strategy;
+    if (o.maMoi && typeof o.maMoi === 'object' && !Array.isArray(o.maMoi)) out.maMoi = Object.fromEntries(Object.entries(o.maMoi).filter(([, v]) => typeof v === 'string'));
+    return out;
+  }
+  const api = {optsKhoiPhuc, KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKLoRung = api;
 })(typeof self !== 'undefined' ? self : this);

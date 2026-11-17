@@ -2,6 +2,7 @@
 /* Nhập Excel theo bảng con: file nhân công, xe, phiếu cân vào đúng ĐỘI / ĐỘI XE bằng cột tùy chọn Đội, Đội xe, Đội; tên lạ báo lỗi dòng; file cũ không có cột mới nạp y như trước (Electron thật, SQLite thật).
  * Chạy: xvfb-run -a node scripts/e2e-excel-bangcon.js */
 const {_electron: electron} = require('playwright-core');
+const {xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const XLSX = require('xlsx');
 const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
@@ -11,8 +12,8 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-xlsxbc-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const book = (sheet, rows, name) => { const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheet); const f = path.join(dir, name); XLSX.writeFile(wb, f); return f; };
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_TEST_LEGACY_IMPORT: '1', HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const p = (i, vai, ten, cd, doi) => ({...nv(i, vai, ten, cd, '04908500' + String(6000 + i)), doi});
   const nc = [p(1, 'Tổ trưởng', 'TRẦN MỘT', 'Tổ trưởng', 'Đội 1'), p(2, 'Công nhân', 'LÊ A', 'Công nhân khai thác', 'Đội 1'), p(3, 'Tổ trưởng', 'NGUYỄN HAI', 'Tổ trưởng', 'Đội 2'), p(4, 'Công nhân', 'PHẠM B', 'Công nhân khai thác', 'Đội 2')];
   const A = lot('fa', 'R-A', {exp: {soKT: '015', ngayKy: '02/10/2026'}, kl: null, nc, dx: [xe('92C-12345', '049000000077', 'LÊ VĂN MỘT'), xe('92C-67890', '049000000078', 'TRẦN VĂN HAI')], pc: []});
@@ -49,14 +50,14 @@ const book = (sheet, rows, name) => { const wb = XLSX.utils.book_new(); XLSX.uti
   await w.setInputFiles('input[data-file="dx"]', book('DOI_XE', [car('92C-11111', 'PHẠM XE BA', '049000000079', 'LÊ VĂN MỘT'), car('92C-33333', 'ĐẶNG XE NĂM', '049000000081')], 'dx2.xlsx')); await w.waitForTimeout(800);
   await save(); F = await db(); const hdMot = F.fa.dx.find(x => x.bienSo === '92C-12345').hdvcId, x3 = F.fa.dx.find(x => x.bienSo === '92C-11111'), x5 = F.fa.dx.find(x => x.bienSo === '92C-33333');
   ok('xe ghi Đội xe “LÊ VĂN MỘT” vào đúng đội xe đó (cùng hợp đồng với xe 92C-12345)', x3 && x3.hdvcId === hdMot, JSON.stringify(F.fa.dx.map(x => x.bienSo + ':' + x.hdvcId)));
-  ok('xe không ghi Đội xe, chưa chọn đội xe: theo người ký như trước (hợp đồng riêng của người ký)', x5 && x5.hdvcId && x5.hdvcId !== hdMot, JSON.stringify(x5));
+  ok('xe không ghi Đội xe: (3.0) nạp ở trang chi tiết hợp đồng → vào hợp đồng đang mở (của LÊ VĂN MỘT)', x5 && x5.hdvcId === hdMot, JSON.stringify(x5));
   // 3. phiếu cân: cột Đội
   await w.setInputFiles('input[data-file="pc"]', book('PHIEU_CAN', [phieu('PX1', '05/10/2026', '92C-12345', 12500, 'Đội 2'), phieu('PX2', '06/10/2026', '92C-12345', 9000, 'Đội 9')], 'pc1.xlsx')); await w.waitForTimeout(800);
   t = await w.innerText('#main');
   ok('file phiếu cân: tên đội lạ báo lỗi dòng', /Đội “Đội 9” không có trong lô/.test(t), t.slice(0, 500));
   await w.click('button[data-act=stDiscard]'); await w.waitForTimeout(400);
   await w.setInputFiles('input[data-file="pc"]', book('PHIEU_CAN', [phieu('PX1', '05/10/2026', '92C-12345', 12500, 'Đội 2'), phieu('PX2', '06/10/2026', '92C-12345', 9000), phieu('PX3', '07/10/2026', '92C-67890', 6000, 'Đội 1')], 'pc2.xlsx')); await w.waitForTimeout(800);
-  await save(); F = await db(); const pcs = Object.fromEntries(F.fa.pc.map(x => [x.soPhieu, x.doiId]));
+  await xacNhanHopDongPhieu(w); await save(); F = await db(); const pcs = Object.fromEntries(F.fa.pc.map(x => [x.soPhieu, x.doiId]));
   ok('phiếu ghi tên đội vào đúng đội; phiếu để trống cột Đội chưa gán (lô nhiều đội)', pcs.PX1 === d2 && pcs.PX3 === d1 && pcs.PX2 === '', JSON.stringify(pcs));
   // 4. lô một đội, file cũ không có cột mới: nạp y như trước, phiếu tự thuộc đội duy nhất
   await open('fb', 'dx');

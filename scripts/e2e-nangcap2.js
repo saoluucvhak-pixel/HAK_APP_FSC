@@ -18,7 +18,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const ADDR_A = 'Cảng dăm Kỳ Hà, Núi Thành, Quảng Nam';
 const launch = async (name, env = {}) => { const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'],
   env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: name === 'may1' ? dbMay1 : path.join(dir, name + '.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud-' + name), HAKQN_DOWNLOAD_DIR: out, HAKQN_LOT_DIR: lotDir, ELECTRON_DISABLE_SECURITY_WARNINGS: '1', ...env}});
-  const w = await app.firstWindow(); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
+  const w = require('./_hd30').boc(await app.firstWindow()); w.errs = []; w.on('pageerror', e => w.errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side'); return {app, w}; };
 const dbOf = w => w.evaluate(() => window.hak.loadSync().db);
 async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(file)); let all = ''; const docs = file.endsWith('.zip') ? await Promise.all(Object.keys(z.files).filter(n => n.endsWith('.docx')).map(async n => JSZip.loadAsync(await z.file(n).async('nodebuffer')))) : [z]; for (const d of docs) { const x = await d.file('word/document.xml').async('string'); all += (x.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('') + '\n'; } return all.replace(/&amp;/g, '&'); }
 async function exportText(w, kind, xt) { for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) fs.unlinkSync(path.join(out, f)); await w.click('[data-ftab=xuat]'); await w.click(`[data-xtab=${xt}]`); await w.click(`button[data-act=dl][data-kind=${kind}]`); for (let i = 0; i < 80; i++) { const f = fs.existsSync(out) && fs.readdirSync(out).find(x => /\.(zip|docx)$/.test(x)); if (f) { await w.waitForTimeout(300); return docText(path.join(out, f)); } await w.waitForTimeout(100); } throw new Error('không thấy file xuất ' + kind); }
@@ -47,13 +47,13 @@ const openLot = async (w, fid, ftab = 'finfo') => { await w.click('[data-open=ow
   const ed = clone(await dbOf(w)); ed.rs.own1.forests.fa.pc.push({_row: 4, maRung: 'R-A', stt: '3', ngay: '09/10/2026', bienSo: '92C-12345', soPhieu: 'SUA', kl: 99, noiGiao: 'X', ghiChu: ''}); ed.rs.own1.forests.fa.info.tenRung = 'LÔ A ĐÃ SỬA'; ed.rs.own1.forests.fb.pc.push({_row: 3, maRung: 'R-B', stt: '2', ngay: '10/10/2026', bienSo: '92C-12345', soPhieu: 'PB2', kl: 4, noiGiao: 'X', ghiChu: ''});
   await w.evaluate(d => window.hak.save(d), ed); const edited = clone(await dbOf(w)); await app.close();
   ({app, w} = await launch('may1', {HAKQN_LOT_FILE: fileA}));
-  await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(700);
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on'); await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]'); await w.waitForTimeout(700);
   let d2 = await dbOf(w);
   ok('khôi phục A: A trở lại đúng bản sao lưu (so với trước khi sửa)', JSON.stringify(d2.rs.own1.forests.fa) === JSON.stringify(A0));
   ok('B và hồ sơ chủ rừng giữ nguyên (B giữ cả phần sửa sau sao lưu)', JSON.stringify(d2.rs.own1.forests.fb) === JSON.stringify(edited.rs.own1.forests.fb) && JSON.stringify(d2.rs.own1.info) === JSON.stringify(edited.rs.own1.info));
   // ===== 3. Giữ cả hai với mã lô mới =====
   const full = path.join(dir, 'sao_luu_A.json'); fs.writeFileSync(full, JSON.stringify({v: 2, rs: {own1: Object.assign(clone(d2.rs.own1), {forests: {fa: d2.rs.own1.forests.fa}})}, congTy: d2.congTy}));
-  await w.setInputFiles('input[data-file=restore]', full); await w.waitForSelector('#impBox.on'); await w.check('input[name=impStrat][value=both]');
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.setInputFiles('input[data-file=restore]', full); await w.waitForSelector('#impBox.on'); await w.check('input[name=impStrat][value=both]');
   ok('giữ cả hai: gợi ý mã mới chưa tồn tại', (await w.inputValue('#impMa [data-mamoi=fa]')) === 'R-A-2');
   await w.fill('#impMa [data-mamoi=fa]', 'R-A-BAN-SAO'); await w.waitForTimeout(700); await w.click('[data-act=impGo]'); await w.waitForTimeout(900);
   d2 = await dbOf(w); const dup = Object.values(d2.rs.own1.forests).find(f => f.info.maRung === 'R-A-BAN-SAO');
@@ -68,7 +68,7 @@ const openLot = async (w, fid, ftab = 'finfo') => { await w.click('[data-open=ow
   for (const [name, seed] of [['may2', null], ['may3', {v: 2, congTy: {z9: {id: 'z9', ten: 'CÔNG TY KHÁC TẠI MÁY ĐÍCH', mst: '', diaChi: 'Số 9 đường khác, Huế', nguoiDaiDien: '', chucVu: '', sdt: '', email: '', diaChiGiao: [], ghiChu: ''}}, rs: {}}]]) {
     ({app, w} = await launch(name, {HAKQN_LOT_FILE: fileA}));
     if (seed) { await w.evaluate(d => window.hak.save(d), seed); await w.reload(); await w.waitForSelector('#side'); }
-    await w.click('#moreMenu summary'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on');
+    await w.click('#navSet'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('#impBox.on');
     const box = await w.innerText('#impBody'); ok(name + ': xem trước báo chủ rừng và lô chưa có, nêu tổng tấn', /chưa có.*tạo chủ mới/.test(box) && /chưa có trên máy/.test(box) && box.includes('21,75'), box.slice(0, 300));
     await w.click('[data-act=lotGo]'); await w.waitForTimeout(800);
     const dn = await dbOf(w), no = Object.values(dn.rs)[0], fl = no && Object.values(no.forests)[0];

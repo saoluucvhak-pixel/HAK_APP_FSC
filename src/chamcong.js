@@ -1,6 +1,6 @@
 /* Chấm công thực tế theo ngày (hình thức tính lương theo ngày công, cả giao khoán lẫn trực tiếp).
  * Dữ liệu lưu trong rừng: cc = { 'yyyy-mm': { <khóa người>: { '1': 1, '2': 0.5, ... } } }.
- * Khóa người = CCCD, không có thì họ tên. Ô để trống = chưa chấm; 0 = nghỉ. Một ô là số công của ngày đó (0 đến 3, tối đa 2 số lẻ).
+ * Khóa người = ID dòng thành viên của đội (bản 3.0: một người ở hai đội có hai dòng, chấm riêng); dữ liệu trước 3.0 (dòng chưa có ID) theo CCCD, không có thì họ tên. Ô để trống = chưa chấm; 0 = nghỉ. Một ô là số công của ngày đó (0 đến 3, tối đa 2 số lẻ).
  * Quy tắc tính tiền: nếu rừng đã có bất kỳ dữ liệu chấm công nào thì số công mỗi người = tổng công đã chấm của người đó (người chưa chấm = 0);
  * chưa có dữ liệu thì dùng số công theo thời gian khai thác (trừ Chủ nhật). Hàm thuần, dùng chung cho giao diện, BM-05, BM-08 và kiểm thử. */
 (function (root) {
@@ -8,7 +8,7 @@
   const key = (y, m) => y + '-' + pad(m);
   const daysIn = k => { const [y, m] = k.split('-').map(Number); return new Date(y, m, 0).getDate(); };
   const isSunday = (k, d) => { const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, d).getDay() === 0; };
-  const personKey = r => String((r && (r.cccd || r.ten)) || '').trim();
+  const personKey = r => String((r && (r.id || r.cccd || r.ten)) || '').trim();
   /* các tháng (yyyy-mm) từ ngày a đến ngày b (Date); thiếu một trong hai thì rỗng */
   function monthsBetween(a, b) {
     if (!(a instanceof Date) || !(b instanceof Date) || isNaN(a) || isNaN(b) || b < a) return [];

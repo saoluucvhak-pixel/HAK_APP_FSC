@@ -10,7 +10,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-dmhd-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const B = lot('fb', 'R-B', {exp: {}, kl: null, pc: [], nc: [nv(1, 'Tổ trưởng', 'TỔ TRƯỞNG B', 'Tổ trưởng', '049085007009')]});
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = B.dx.map(r => ({...r, maRung: 'R-B'}));
   const D = seed([B]);
@@ -31,8 +31,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   let F = await forests(); let p = F.fb.nc.find(r => r.cccd === '049085007002');
   ok('lưu: người được chụp vào lô', !!p && p.diaChi === 'Quế Sơn' && p.chucDanh === 'Công nhân khai thác', JSON.stringify(p));
   // 2. danh mục đổi → lô báo lệch, cập nhật có chủ ý
-  await w.click('#navDm'); await w.click('[data-dmtab=laodong]'); await w.click('[data-dmsua="ld:049085007002"]'); await w.waitForSelector('#dmLdForm');
-  await w.evaluate(() => { const f = document.getElementById('dmLdForm'); f.elements.ngayCapNhat.value = '01/11/2026'; f.elements.diaChi.value = 'Đại Lộc'; f.requestSubmit(); }); await w.waitForTimeout(300);
+  // 3.0: màn Danh mục lao động cũ đã thay bằng Danh mục đối tượng; danh mục lao động cũ (nguồn ô chọn ở lô) nhận dòng mới hơn trực tiếp
+  await w.evaluate(() => { const d = window.hak.loadSync().db, c = d.dmLaoDong.filter(r => r.cccd === '049085007002').slice(-1)[0]; d.dmLaoDong.push(Object.assign({}, c, {ngayCapNhat: '01/11/2026', diaChi: 'Đại Lộc'})); return window.hak.save(d); });
+  await w.reload(); await w.waitForSelector('#side');
   await open('nc'); const lech = await w.innerText('#dmLechnc').catch(() => '');
   ok('danh mục đổi thường trú: tab Nhân công báo “mới hơn bản chụp”', /mới hơn/.test(lech) && /LÊ THỢ CƯA/.test(lech) && /thường trú/.test(lech), lech);
   F = await forests(); ok('lô chưa tự đổi (bản chụp giữ nguyên, hồ sơ đã in không đổi)', F.fb.nc.find(r => r.cccd === '049085007002').diaChi === 'Quế Sơn');

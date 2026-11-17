@@ -16,10 +16,11 @@ document.addEventListener('click', async e => {
   if (act === 'delRs') return delRs(), render();
   if (act === 'newForest') return newForest(), render();
   if (act === 'delForest') return delForest(), render();
-  if (act === 'chonDoi') { curDoi = el.dataset.doi; return render(); }
+  if (act === 'chonDoi') { hdMoDat('nc', el.dataset.doi); return render(); }   // 3.0: mở trang chi tiết hợp đồng nhân công của đội
+  if (act === 'hdQuayLai') { hdMoDat(el.dataset.kind, null); return render(); }
   if (act === 'ncTatCa') { ncTatCa = true; return render(); }
   if (act === 'ncTheoDoi') { ncTatCa = false; return render(); }
-  if (act === 'chonHd') { curHd = curHd === el.dataset.hd ? null : el.dataset.hd; return render(); }
+  if (act === 'chonHd') { hdMoDat('dx', el.dataset.hd); return render(); }   // 3.0: mở trang chi tiết hợp đồng vận chuyển
   if (act === 'themHd') return themHd();
   if (act === 'pcGanLoat') return pcGanLoat();
   if (act === 'xoaHd') return xoaHd();
@@ -48,14 +49,19 @@ document.addEventListener('click', async e => {
   if (act === 'inBaoCao') return inBaoCao();
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
-  if (act === 'hdHien') { hdDat(false); const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; return render(); }
+  if (act === 'hdHien') { hdDat(false); cur = null; curF = null; view = 'owner'; return render(); }   // 3.0: nút ở Cài đặt → Hướng dẫn; hướng dẫn hiện ở Tổng quan
   if (act === 'hdDi') return hdDi(el.dataset.buoc);
   if (act === 'svbGiuSo') return svbGiuSo(el.dataset.hd);
   if (act === 'vclMo') { const [oid, fid, ft] = (el.dataset.vcl || '').split('|'); if (db.rs[oid]) { cur = oid; curF = fid; tab = 'rung'; ftab = ft || 'xuat'; view = 'owner'; render(); } return; }
   if (act === 'luongLay') return luongLayDonGia();
   if (act === 'loTuLoCu') return loTuLoCuTao();
   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
-  if (act === 'openDm') { view = 'dm'; return render(); }
+  if (act === 'openDm' || act === 'openSetDt') { cur = null; curF = null; view = 'setdt'; cd.msg = null; return render(); }
+  if (act === 'openSetXe') { cur = null; curF = null; view = 'setxe'; cd.msg = null; return render(); }
+  if (act === 'openSetVt') { cur = null; curF = null; view = 'setvt'; cd.vtMsg = null; return render(); }
+  if (act === 'openSetGd') { cur = null; curF = null; view = 'setgd'; return render(); }
+  if (act === 'openSetHd') { cur = null; curF = null; view = 'sethd'; return render(); }
+  if (act === 'openSetCan') { cur = null; curF = null; view = 'setcan'; return render(); }
   if (act === 'openNorm') { view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
@@ -107,7 +113,23 @@ document.addEventListener('click', async e => {
     setTheme(dark ? 'light' : 'dark'); return;
   }
   if (act === 'backup') return backupAll();
-  if (act === 'ktGo') { const go = JSON.parse(el.dataset.go || '{}'); if (go.view) { view = go.view; return render(); } if (go.tab) { tab = go.tab; return render(); } ftab = go.ftab || 'finfo'; render(); const tgt = go.focus === 'pc' ? document.querySelector('[data-pcfix], #pcTable, .wrap table') : go.focus === 'mua' ? document.getElementById('mhDiemDen') : null; if (tgt && tgt.scrollIntoView) tgt.scrollIntoView({block: 'center'}); return; }
+  if (act === 'ktGo') {
+    const go = JSON.parse(el.dataset.go || '{}');
+    if (go.view) { view = go.view; return render(); }
+    if (go.tab) { tab = go.tab; return render(); }
+    ftab = go.ftab || 'finfo';
+    if (ftab === 'dx' && Number.isInteger(go.pcIndex)) {
+      const hd = curForest()?.hdvc || [];
+      hdMoDat('dx', hd.find(h => h.id === go.hdId)?.id || hd[0]?.id || null);
+      pcTatCa = true;
+    }
+    render();
+    const edit = Number.isInteger(go.pcIndex) && document.querySelector('#stTbl_pc [data-act=stEdit][data-i="' + go.pcIndex + '"]');
+    const tgt = go.focus === 'pc' ? (edit?.closest?.('tr') || document.getElementById('stTbl_pc') || document.getElementById('pcDs')) : go.focus === 'mua' ? document.getElementById('mhDiemDen') : null;
+    if (tgt?.scrollIntoView) tgt.scrollIntoView({block: 'center'});
+    if (edit) edit.focus({preventScroll: true});
+    return;
+  }
   if (act === 'lotBackup') return lotBackup();
   if (act === 'lotRestore') { const m = document.getElementById('moreMenu'); if (m) m.open = false; return lotRestoreOpen(); }
   if (act === 'lotCancel') { window.__lot = null; return $('#impBox').classList.remove('on'); }
@@ -234,8 +256,7 @@ setSkin(savedSkin);
 function setTheme(t) {
   document.documentElement.dataset.theme = t;
   try { localStorage.setItem('hskt.theme', t); } catch (e) {}
-  const b = document.getElementById('themeBtn');
-  if (b) b.textContent = t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối';
+  ['themeBtn', 'themeBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'; });
 }
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('hskt.theme'); } catch (e) {}

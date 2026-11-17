@@ -119,7 +119,11 @@ function checkPC(rec) {
     { const d = thieuKy.size ? doiXeOfPc(rec, r) : null; if (d && d.hd && thieuKy.has(d.hd.id)) mark(r, 'err', 'Biển ' + r.bienSo + ' thuộc đội xe chưa có người ký (chủ xe hoặc tài xế): vào tab Vận chuyển chọn người ký cho đội xe này'); }
     if (r.maRung && r.maRung !== rec.info.maRung) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
     if (!HAKDates.isValid(r.ngay)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(r.ngay).replace(/^thiếu ngày$/, 'thiếu ngày cân'));
-    if (!r.bienSo) mark(r, 'err', 'Thiếu biển kiểm soát'); else if (!keys.has(bienKey(r.bienSo))) mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)');
+    const coXe = r.xeRowId && rec.dx.some(x => x.id === r.xeRowId);   // 3.0: phiếu đã chọn xe (ID dòng xe) — BKS ghi trên phiếu giữ nguyên dù khác
+    if (!r.bienSo && !coXe) mark(r, 'err', 'Thiếu biển kiểm soát');
+    else if (!coXe && !keys.has(bienKey(r.bienSo))) { if (r.hdvcId && (rec.hdvc || []).some(h => h.id === r.hdvcId)) mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '') + ': BKS ' + r.bienSo + ' không khớp xe nào — chọn xe ở cột “Xe · hợp đồng” sau khi lưu'); else mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)'); }
+    { const sai = typeof phieuSaiHd === 'function' ? phieuSaiHd(rec.dx, r) : null, f = curForest();   // 3.0: BKS chỉ khớp xe ở hợp đồng khác → chưa lưu được, xử lý ở khung xem trước
+      if (sai) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '') + ' (BKS ' + r.bienSo + '): Xe này thuộc hợp đồng ' + sai.map(id => f ? nhanHdId(f, id) : id).join(', ') + ' — chọn xe hợp lệ của hợp đồng ' + (f ? nhanHdId(f, r.hdvcId) : '') + ', thêm xe vào hợp đồng này, hoặc đổi hợp đồng đích (khung xem trước phiếu nạp)'); }
     if (trim(r.ngay2) && !HAKDates.isValid(r.ngay2)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ngày cân 2 ' + HAKDates.why(r.ngay2));
     else HAKPhieuCan.ngay2Warn(r).forEach(m => mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + m));
     if (!r.soPhieu) mark(r, 'err', 'Thiếu số phiếu cân');
@@ -147,13 +151,33 @@ function pcSapTheoNgay(pc) {
   const ds = pc.map((r, i) => ({r, i, d: dateKey(r.ngay), k: bienKey(r.bienSo)})).sort((a, b) => (a.d - b.d) || (a.i - b.i));
   pcSapNho.set(pc, {ver: dataVer, n: pc.length, ds}); return ds;
 }
+/* phiếu thuộc nhóm xe g: phiếu đã gắn hợp đồng (3.0) theo hợp đồng của phiếu; phiếu chưa gắn theo BKS của xe trong nhóm (như trước) */
+const pcThuocNhom = (r, g, ks, rec) => r.hdvcId && g.hd && (!rec || (rec.hdvc || []).some(h => h.id === r.hdvcId)) ? r.hdvcId === g.hd.id : ks.has(bienKey(r.bienSo));   // hợp đồng của phiếu không còn (vừa gộp / tách đội xe, chưa lưu): theo BKS
+const pcKhopXeVC = (p, x) => p.xeRowId ? p.xeRowId === x.id : !!bienKey(p.bienSo) && bienKey(p.bienSo) === bienKey(x.bienSo);
+function pcNgoaiPhamViVC(rec) {
+  const pc = rec.pc || [];
+  return nhoTheoPc(pc, 'ngoaiBM0910', JSON.stringify([rec.id, rec.fid]), () => {
+    const lyDo = new Map();
+    pc.forEach(p => {
+      if (!HAKDates.isValid(p.ngay)) lyDo.set(p, 'Ngày cân không hợp lệ');
+      else if (!Number.isFinite(p.kl) || Math.round(p.kl * 1000) <= 0) lyDo.set(p, 'Khối lượng không hợp lệ');
+    });
+    HAKCheoLo.phieuTrung(db, rec.id, rec.fid, pc, cheoCtx()).forEach(({p, ma}) => {
+      if (!lyDo.has(p)) lyDo.set(p, 'Phiếu trùng với lô ' + ma);
+    });
+    return lyDo;
+  });
+}
 function tripsOf(rec, g) {
   const ks = new Set(g.xe.map(x => bienKey(x.bienSo)));
-  return pcSapTheoNgay(rec.pc || []).filter(x => ks.has(x.k)).map(x => x.r);
+  const ngoai = pcNgoaiPhamViVC(rec);
+  return pcSapTheoNgay(rec.pc || []).filter(({r}) => !ngoai.has(r) && pcThuocNhom(r, g, ks, rec) &&
+    g.xe.filter(x => pcKhopXeVC(r, x)).length === 1).map(x => x.r);
 }
 function payVC(rec, g) {
+  const cua = tripsOf(rec, g);
   const rows = g.xe.map(x => {
-    const t = (rec.pc || []).filter(r => bienKey(r.bienSo) === bienKey(x.bienSo)), kg = totalKg(t);
+    const t = cua.filter(r => pcKhopXeVC(r, x)), kg = totalKg(t);
     return {bienSo: x.bienSo, n: t.length, kg, tien: Math.round(kg * g.donGia / 1000)};
   }).filter(r => r.n);
   return {rows, n: rows.reduce((a, r) => a + r.n, 0), kg: rows.reduce((a, r) => a + r.kg, 0), tien: rows.reduce((a, r) => a + r.tien, 0)};
@@ -162,8 +186,9 @@ function payVC(rec, g) {
 const hdTenKhop = (F, h, ten) => HAKModel.hdTenKhop(F, h, ten);
 /* Phiếu cân → xe (khớp biển số) → đội xe (hợp đồng vận chuyển) của lô. Trả {hd, xe} hoặc null khi biển không thuộc xe nào của lô; lô cũ chưa có hdvc thì hd = null */
 function doiXeOfPc(rec, r) {
-  const x = (rec.dx || []).find(v => bienKey(v.bienSo) === bienKey(r.bienSo)); if (!x) return null;
-  return {xe: x, hd: (rec.hdvc || []).find(h => h.id === x.hdvcId) || null};
+  const x = (r.xeRowId && (rec.dx || []).find(v => v.id === r.xeRowId)) || (rec.dx || []).find(v => bienKey(v.bienSo) === bienKey(r.bienSo)), hId = r.hdvcId || (x && x.hdvcId);   // 3.0: theo xe / hợp đồng đã gắn của phiếu
+  if (!x && !hId) return null;
+  return {xe: x || null, hd: (rec.hdvc || []).find(h => h.id === hId) || null};
 }
 /* tên đội xe để hiện ở bảng phiếu cân: đơn vị vận chuyển / người ký của đội xe */
 function doiXeTen(rec, d) {
@@ -187,5 +212,26 @@ function nhoTheoPc(pc, ten, khoa, fn) {
 }
 const khoaXe = g => JSON.stringify(g.xe.map(x => [String(x.bienSo || ''), x.kdDen || '', x.hanBH || '', x.hanGplx || '', x.taiXe || '']));
 const hanLoiOf = (rec, g) => nhoTheoPc(rec.pc || [], 'han', khoaXe(g), () => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g)));
-const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
+const groupsPC = (rec, groups = groupsDX(rec)) => groups.filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
+
+/* Đối chiếu cùng phạm vi hợp đồng và quy tắc ghép xe mà BM-09/10 đang dùng. */
+function doiChieuPcVanChuyen(rec, groups = groupsDX(rec)) {
+  const pc = rec.pc || [], ngoai = pcNgoaiPhamViVC(rec);
+  const nhom = groups.map(g => ({g, ks: new Set(g.xe.map(x => bienKey(x.bienSo)))}));
+  const thieuKy = doiXeThieuKy(rec), daGhep = [], canSua = [], hetHan = [], ngoaiPhamVi = [];
+  pc.forEach((p, index) => {
+    if (ngoai.has(p)) { ngoaiPhamVi.push({p, index, hdId: p.hdvcId, lyDo: ngoai.get(p), ngoai: true}); return; }
+    const list = nhom.filter(({g, ks}) => pcThuocNhom(p, g, ks, rec)), g = list[0]?.g;
+    const xe = g ? g.xe.filter(x => pcKhopXeVC(p, x)) : [];
+    const hdId = (g && g.hd && g.hd.id) || p.hdvcId || '';
+    const lyDo = list.length > 1 ? 'Phiếu khớp nhiều hợp đồng'
+      : !g ? (p.hdvcId && (rec.hdvc || []).some(h => h.id === p.hdvcId) ? 'Hợp đồng chưa có xe' : 'Chưa xác định hợp đồng vận chuyển')
+      : xe.length !== 1 ? (xe.length ? 'BKS khớp nhiều xe trong hợp đồng' : 'Chưa ghép xe trong hợp đồng')
+      : thieuKy.has(hdId) ? 'Hợp đồng chưa có người ký' : '';
+    if (lyDo) canSua.push({p, index, hdId, lyDo});
+    else if (hanLoiOf(rec, g).length) hetHan.push({p, index, hdId, lyDo: 'Hợp đồng bị chặn do giấy tờ xe hết hạn'});
+    else daGhep.push(p);
+  });
+  return {pc, daGhep, canSua, hetHan, ngoaiPhamVi};
+}
 

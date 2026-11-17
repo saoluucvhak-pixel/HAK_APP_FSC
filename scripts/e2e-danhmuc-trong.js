@@ -11,7 +11,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-dmtr-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const B = lot('fb', 'R-B', {exp: {}, kl: null, pc: [], nc: [nv(1, 'Tổ trưởng', 'TỔ TRƯỞNG B', 'Tổ trưởng', '049085007009')]});
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'}));
   B.dx = B.dx.map((r, i) => ({...r, maRung: 'R-B', ...(i === 0 ? {bienSo: '92C-777.88', taiXe: 'Tư', cccdTx: '049000000009', gplx: 'GPTU', hanGplx: '01/01/2030', kdDen: '01/01/2027', hanBH: '01/01/2027', chuXe: 'Chủ cũ', _dmNgay: '01/01/2026'} : {})}));
@@ -43,16 +43,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.evaluate(() => document.getElementById('stForm').requestSubmit()); await w.waitForTimeout(400); await w.click('button[data-act=stSave]'); await w.waitForTimeout(600);
   F = (await dbAll()).rs.own1.forests.fb; x = F.dx.find(r => /555/.test(r.bienSo));
   ok('lưu: xe mới có thông tin chủ xe đủ và ngày chụp', !!x && x.cccd === '049085009999' && x.sdt === '0905123456' && x.nguoiKy === 'Chủ xe' && x._dmNgay === '01/11/2026', JSON.stringify(x));
-  // 4. Danh mục xe: form có trường chủ xe, lưu được, dòng cũ thiếu trường vẫn đọc được
-  await w.click('#navDm'); await w.click('[data-dmtab=xe]'); await w.waitForSelector('#dmXeForm');
-  const co = await w.$$eval('#dmXeForm [name]', e => e.map(i => i.name));
-  ok('form Danh mục xe có đủ trường chủ xe', ['loaiXe', 'cccd', 'ngaySinh', 'ngayCap', 'noiCap', 'diaChi', 'sdt', 'cavet', 'nguoiKy'].every(k => co.includes(k)), co.join(','));
-  const bang = await w.innerText('#dmXeTbl'); ok('bảng danh mục xe hiện cả dòng cũ thiếu trường mới lẫn dòng đủ chủ xe', /777\.88/.test(bang) && /555\.66/.test(bang) && /Xe ben/.test(bang));
-  await w.evaluate(() => { const f = document.getElementById('dmXeForm'); f.elements.ngayCapNhat.value = '02/11/2026'; f.elements.bienSo.value = '92C-111.22'; f.elements.cccd.value = '049085001111'; f.elements.ngaySinh.value = '31/11/1980'; f.requestSubmit(); }); await w.waitForTimeout(300);
-  ok('ngày sinh chủ xe không có thật bị từ chối, chưa lưu', !((await dbAll()).dmXeVC || []).some(r => /111\.22/.test(r.bienSo)) && /ngày sinh chủ xe/.test(await w.innerText('#main')));
-  await w.evaluate(() => { const f = document.getElementById('dmXeForm'); f.elements.ngaySinh.value = '01/01/1980'; f.elements.nguoiKy.value = 'Chủ xe'; f.requestSubmit(); }); await w.waitForTimeout(400);
-  const moi = ((await dbAll()).dmXeVC || []).find(r => /111\.22/.test(r.bienSo));
-  ok('lưu dòng xe có chủ xe vào SQLite', !!moi && moi.cccd === '049085001111' && moi.nguoiKy === 'Chủ xe' && moi.ngaySinh === '01/01/1980', JSON.stringify(moi));
+  // 4. (3.0) form Danh mục xe cũ đã thay bằng Danh mục xe mới — kiểm ở e2e-danhmuc30
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

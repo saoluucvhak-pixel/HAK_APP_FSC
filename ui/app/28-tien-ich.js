@@ -124,6 +124,7 @@ function hdDi(buoc) {
   const fid = Object.keys((db.rs[oid].forests) || {})[0];
   cur = oid; view = 'owner'; tab = 'rung'; curF = fid || null;
   if (fid) ftab = {lo: 'finfo', nc: 'nc', dx: 'dx', pc: 'dx', xuat: 'kt'}[buoc] || 'finfo';
+  if (fid && buoc === 'pc') { const f = db.rs[oid].forests[fid], h = HAKModel.hdOrder({dx: f.dx || [], hdvc: f.hdvc || []})[0]; if (h) hdMoDat('dx', h.id); }   // 3.0: phiếu cân nằm trong hợp đồng vận chuyển — mở hợp đồng đầu tiên
   render();
 }
 window.__tienIch = {chiXemData: () => { const f = curForest(), rec = curRec(); return f && rec ? chiXemData(rec, f, []) : null; }};

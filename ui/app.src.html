@@ -47,6 +47,8 @@ h3{font-size:14.5px;margin:20px 0 10px;color:var(--ink);font-weight:650}
 h4{font-size:13.5px}
 .mut{color:var(--mut-aa)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+/* 3.0: bảng dữ liệu rộng cuộn trong khung; cột Thao tác (Sửa, Xóa) ghim bên phải để luôn thấy ở 100–150 % */
+.wrap table[id^=stTbl_] th:last-child,.wrap table[id^=stTbl_] td:last-child{position:sticky;right:0;background:var(--card);box-shadow:-6px 0 6px -6px rgba(0,0,0,.25);z-index:1}
 .card>h3:first-child{margin-top:0}
 /* Nút */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--acc);background:var(--acc);color:var(--accInk);border-radius:var(--rs);padding:7px 14px;font:inherit;font-weight:550;cursor:pointer;text-decoration:none;transition:background .12s,box-shadow .12s}
@@ -136,7 +138,9 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 /* Hộp thoại dùng chung */
 #guideBox,#lkBox,#rpBox,#impBox,#stBox{position:fixed;inset:0;z-index:50;background:rgba(8,20,14,.55);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:22px 12px}
 #lkBox{z-index:55}#rpBox{z-index:56}#impBox{z-index:60}
-#guideBox.on,#lkBox.on,#rpBox.on,#impBox.on,#stBox.on{display:flex}
+#guideBox.on,#lkBox.on,#rpBox.on,#impBox.on,#stBox.on,#dlgBox.on{display:flex}
+#dlgBox{position:fixed;inset:0;z-index:70;background:rgba(8,20,14,.55);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:22px 12px}#dlgBox .gd{max-width:760px;width:100%}
+#dtNguoiTbl td,#dtBang td,#xeBang td{vertical-align:top}
 .gd{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;width:100%;padding:18px 24px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
 #guideBox .gd{max-width:880px}#lkBox .gd{max-width:1280px}#rpBox .gd{max-width:1180px}#impBox .gd{max-width:660px}#stBox .gd{max-width:980px}.stAct{white-space:nowrap;min-width:92px}.stAct .btn{display:block;width:100%;margin:0 0 4px}.stInfo{margin-bottom:6px;color:var(--mut-aa)}.stBarCard{padding:12px 14px}.stDirty{margin:10px 0 0}tr.stGone td{text-decoration:line-through;color:var(--mut-aa)}.stAct{white-space:nowrap}
 .gh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:sticky;top:-22px;background:var(--card);padding:4px 0 8px;z-index:3}
@@ -170,24 +174,10 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
     <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
-    <button class="nb" data-act="openDm" id="navDm">Danh mục</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
   <button class="hbtn" data-act="tkOpen" id="tkBtn" title="Tìm kiếm toàn cục (Ctrl+K)">🔍 Tìm (Ctrl+K)</button>
-  <button class="hbtn" data-act="theme" id="themeBtn">Chế độ tối</button>
-  <details class="menu" id="moreMenu"><summary class="hbtn">⋯ Thêm</summary><div class="pop">
-    <button class="mi" data-act="guide">Hướng dẫn sử dụng</button>
-    <button class="mi" data-act="hdHien" id="hdHienBtn">Hướng dẫn bắt đầu</button>
-    <button class="mi deskOnly" data-act="openSettings" id="openSettingsBtn">Cài đặt hệ thống</button>
-    <hr>
-    <div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu"></div>
-    <hr>
-    <button class="mi deskOnly" data-act="openSetBk" id="openSetBkBtn" hidden>Sao lưu và khôi phục (kho sao lưu)</button>
-    <button class="mi" data-act="backup">Sao lưu toàn bộ dữ liệu (.json)</button>
-    <label class="mi" style="cursor:pointer;flex-direction:row;color:var(--ink);font-size:14px;font-weight:400" id="restoreLbl">Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>
-    <button class="mi" data-act="lotRestore" id="lotRestoreBtn">Khôi phục lô rừng…</button>
-  </div></details>
 </header>
 <div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><button type="button" class="pill" id="bkChip" data-act="openSetBk" hidden></button><span class="pill" id="saveSt"></span></div>
 <div class="layout">
@@ -198,6 +188,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <div id="lkBox"><div class="gd" id="lkBody"></div></div>
 <div id="rpBox"><div class="gd" id="rpBody"></div></div>
 <div id="impBox"><div class="gd" id="impBody"></div></div>
+<div id="dlgBox" role="dialog" aria-modal="true"><div class="gd" id="dlgBody"></div></div>
 <div id="stBox"><div class="gd" id="stBody"></div></div>
 <div id="guideBox" data-act="guideBg"><div class="gd">
 <div class="gh"><h2>Hướng dẫn sử dụng</h2><button class="btn ghost sm" data-act="guideClose">✕ Đóng</button></div>
@@ -212,7 +203,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 </ul>
 <h3>0b. Nhập, sửa, lưu dữ liệu của lô (nhân công, xe, phiếu cân)</h3>
 <ol>
-<li><b>Nhập</b> bằng một trong ba cách: <b>thêm tay</b> (nút <b>+ Thêm nhân công / xe / phiếu cân</b> ở đúng tab), <b>nạp file Excel</b>, hoặc <b>đưa dữ liệu từ Tra cứu Google Sheets</b> sang lô. Thanh trên bảng luôn ghi rõ <b>chủ rừng, mã lô</b> và <b>nguồn</b> của lượt nhập.</li>
+<li><b>Nhân công và xe</b>: nạp và lưu Excel tại Cài đặt → Danh mục đối tượng hoặc Danh mục xe, rồi chọn vào hợp đồng. <b>Phiếu cân</b>: thêm tay, nạp Excel hoặc tra cứu HoSoKeo ngay tại hợp đồng vận chuyển.</li>
 <li><b>Xem trước và chỉnh sửa</b>: mọi nguồn chỉ tạo <b>bản nháp “Chưa lưu”</b>. Mỗi dòng có trạng thái <i>Thêm mới</i>, <i>Sửa</i>, <i>Sẽ xóa</i> hoặc <i>Đã lưu</i>, kèm nút <b>Sửa</b>, <b>Bỏ dòng</b> (dòng mới, chỉ bỏ khỏi lượt nhập) hoặc <b>Xóa đã lưu</b> (bản ghi đã lưu, có hỏi xác nhận và <b>Hoàn tác</b> được trước khi lưu). Bản ghi đã lưu mà file Excel không có vẫn được giữ.</li>
 <li><b>Phiếu cân và xe</b>: chọn xe thuộc lô; nếu chưa có thì chọn <b>+ Thêm xe mới…</b> ngay trong phiếu (thông tin đã nhập được giữ) hoặc bấm <b>+ Thêm xe</b> ở thanh nhắc biển số còn thiếu. Sửa biển số của xe đã có phiếu liên kết: phần mềm liệt kê các phiếu, đổi biển trên các phiếu đó và <b>không đổi</b> số chuyến, khối lượng hay tiền. Xe còn phiếu liên kết thì <b>không xóa được</b> cho đến khi xử lý các phiếu.</li>
 <li><b>Lưu dữ liệu vào lô</b>: phần mềm kiểm tra lại lô đích, quan hệ giữa các bản ghi và lỗi dữ liệu, rồi ghi một lần. Lỗi thì giữ nguyên dữ liệu đã lưu và bản nháp để bạn sửa hoặc thử lại. Phiếu có số trùng với lô khác phải đối chiếu mới được lưu.</li>
@@ -223,8 +214,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li>Khai <b>Công ty mua hàng</b> ở <b>Cài đặt → Công ty</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
 <li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số điện thoại</b>, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
 <li>Tạo <b>Lô rừng</b>: mã lô, địa điểm, tọa độ, diện tích, thời gian khai thác, giấy tờ pháp lý.</li>
-<li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo chức danh, rồi nạp Excel nhân công.</li>
-<li>Tab <b>Vận chuyển</b>: chọn cách tính cước, nạp Excel xe, nạp Excel phiếu cân, chọn <b>địa chỉ giao hàng</b>.</li>
+<li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo vị trí, rồi chọn nhân công từ danh mục.</li>
+<li>Tab <b>Vận chuyển</b>: chọn xe từ danh mục, chọn cách tính cước, nạp phiếu cân và chọn <b>địa chỉ giao hàng</b>.</li>
 <li>Tab <b>Kiểm tra trước khi xuất</b>: xử lý các mục chặn xuất và cần đối chiếu.</li>
 <li>Tab <b>Xuất hồ sơ</b>: nhập thông số biên bản, tải biểu mẫu (từng file hoặc ZIP).</li>
 <li><b>Sao lưu</b>: nút Sao lưu lô rừng, hoặc ⋯ Thêm → Sao lưu toàn bộ dữ liệu.</li>
@@ -377,6 +368,14 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@VIECCANLAM@@*/</script>
 <script>/*@@SOVB@@*/</script>
 <script>/*@@TIENICH@@*/</script>
+<script>/*@@SRC:bks@@*/</script>
+<script>/*@@SRC:vitri@@*/</script>
+<script>/*@@SRC:doituong@@*/</script>
+<script>/*@@SRC:xedm@@*/</script>
+<script>/*@@SRC:phanbo@@*/</script>
+<script>/*@@SRC:lienket@@*/</script>
+<script>/*@@SRC:quanhe@@*/</script>
+<script>/*@@SRC:goidm@@*/</script>
 <script>/*@@MODEL@@*/</script>
 <script>/*@@DINHMUC@@*/</script>
 <script>/*@@QUYTRINH@@*/</script>

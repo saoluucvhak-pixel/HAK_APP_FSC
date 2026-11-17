@@ -17,8 +17,8 @@ async function addOwner(w, ma, ten) {
   await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
 }
 const side = async w => (await w.innerText('#sideList').catch(() => '')) || '';
-const open = async (ud, env) => { const app = await launch(ud, env), w = await app.firstWindow(); w.on('dialog', d => d.accept()); await w.waitForLoadState('domcontentloaded'); return {app, w}; };
-const settingsView = async w => { await w.click('#moreMenu summary'); await w.click('#openSettingsBtn'); await w.waitForSelector('#setBox [data-set-path]'); };
+const open = async (ud, env) => { const app = await launch(ud, env), w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForLoadState('domcontentloaded'); return {app, w}; };
+const settingsView = async w => { await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]'); };
 const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((document.querySelector('#main') || {}).innerText || ''), re.source, {timeout: ms});
 
 (async () => {

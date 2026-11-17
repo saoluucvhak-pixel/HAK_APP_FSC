@@ -17,7 +17,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   const url = 'http://127.0.0.1:' + srv.address().port + '/export.xlsx';
   const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_SHEET_URL: url}});
   const pick = (app, p) => app.evaluate(({dialog}, p) => { dialog.showOpenDialog = async () => ({canceled: false, filePaths: [p]}); }, p);
-  let app = await launch(), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message));
+  let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message));
   w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   ok('menu Tra cứu Google Sheets hiện trên thanh điều hướng', await w.isVisible('header [data-act=lkOpen]'));
@@ -102,7 +102,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   await app.close();
   // Mở lại khi "mất mạng": máy chủ tắt, bản tra cứu và hồ sơ vẫn còn
   srv.close();
-  app = await launch(); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   ok('mở lại: hồ sơ 2 chủ rừng còn nguyên', (await w.$$('[data-open]')).length === 2);
   await w.click('header [data-act=lkOpen]'); await w.waitForTimeout(300);
   ok('mở lại khi mất kết nối: vẫn tra cứu được bản đã lưu', (await w.$$('[data-lkpick]')).length > 0 && /Google Sheets/.test(await w.innerText('#lkBody')));

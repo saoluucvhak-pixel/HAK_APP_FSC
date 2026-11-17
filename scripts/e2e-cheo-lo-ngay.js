@@ -12,7 +12,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 (async () => {
   const out = path.join(dir, 'out'); fs.mkdirSync(out, {recursive: true});
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
-  const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const mk = (id, ma, ngay, so, extra, bien) => { const l = lot(id, ma, {exp: {soKT: extra || '015', ngayKy: '02/10/2026', soVC: '07', ntSo: '03', pcSo: '09', pcNgay: '20/12/2026', ntNgay: '20/12/2026'}, kl: null, pc: [P(1, ngay, bien || '92C-12345', so || 'P1', 12.5)]}); l.nc = l.nc.map(r => ({...r, maRung: ma})); l.dx = l.dx.map(r => ({...r, maRung: ma})); l.pc = l.pc.map(r => ({...r, maRung: ma, ngay, bienSo: bien || '92C-12345', soPhieu: so || 'P1'})); return l; };
   const A = mk('fa', 'R-A', '1/11/2026', 'P1', '015'), B = mk('fb', 'R-B', '01/11/2026', 'P1', '016'), C = mk('fc', 'R-C', '03/11/2026', 'P7', '017');
   await w.evaluate(d => window.hak.save(d), seed([A, B, C, mk('fd', 'R-D', '02/11/2026', 'P1', '018'), mk('fe', 'R-E', '01/11/2026', 'P1', '019', '92C-67890')])); await w.reload(); await w.waitForSelector('#side');
@@ -39,7 +39,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await open('fb'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=vc]'); await w.waitForTimeout(400);
   const dv = async k => (await w.$$eval('button[data-act=dl][data-kind=' + k + ']', bs => bs.map(b => b.disabled)));
   const xv = await dv('xnvc'), tv = await dv('ttvc'), hv = await dv('hdvc');
-  ok('xuất lẻ BM-09 và BM-10 (tải tất cả và từng đội xe): mọi nút bị khóa; BM-04 vẫn xuất được', xv.length > 0 && tv.length > 0 && xv.every(Boolean) && tv.every(Boolean) && hv.some(x => !x), JSON.stringify([xv, tv, hv]));
+  ok('xuất lẻ BM-09 và BM-10 (tải tất cả và từng đội xe): mọi nút bị khóa; BM-04 vẫn xuất được', xv.length === hv.length && tv.length === hv.length && xv.length > 1 && xv.every(Boolean) && tv.every(Boolean) && hv.some(x => !x), JSON.stringify([xv, tv, hv]));
+  const dongTrung = w.locator('#doiChieuPcVC tr').filter({hasText: 'Phiếu trùng với lô R-A'});
+  ok('bảng đối chiếu ghi rõ lô bị trùng và có nút mở phiếu', await dongTrung.getByRole('button', {name: 'Mở phiếu'}).isVisible());
+  await dongTrung.getByRole('button', {name: 'Mở phiếu'}).click();
+  ok('Mở phiếu đưa tới dòng P1', /P1/.test(await w.evaluate(() => document.activeElement.closest('tr')?.innerText || '')));
+  await w.click('[data-ftab=xuat]');
   await w.click('[data-xtab=all]').catch(() => {}); await w.waitForTimeout(300); const cu = await dis('cuoi');
   if (cu.length && !cu[0]) { names = await zipNames2('cuoi'); ok('gói đợt 2: không có BM-08, 09, 10, 14', !names.some(n => /^(08|09|10|14)_/.test(n)), names.join(', ')); } else ok('gói đợt 2: nút bị khóa (không còn mẫu nào xuất được)', cu.length > 0 && cu[0], JSON.stringify(cu));
   // đối chứng: hai phiếu KHÁC NGÀY (lô D, 02/11/2026) và KHÁC BIỂN SỐ (lô E) so với lô A (P1, 1/11/2026, 92C-12345): không bị coi là trùng
@@ -59,6 +64,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side'); await open('fb'); await w.click('[data-ftab=kt]'); await w.waitForTimeout(500);
   const kt2 = await w.innerText('#main');
   ok('ngày 31/11/2026 không có thật ở cả hai lô: báo lỗi ngày (không có thật), không kết luận phiếu trùng', /không có thật|ngày/i.test(kt2) && !/giống hệt phiếu đã có ở lô/.test(kt2), kt2.slice(0, 500));
+  D.rs.own1.forests.fa.pc[0].ngay = '01/11/2026';
+  D.rs.own1.forests.fb.pc[0].ngay = '03/11/2026';
+  await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');
+  await open('fb'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=vc]');
+  ok('sau khi sửa phiếu trùng, mở lại tải BM-09/10 của xe có chuyến và đối chiếu đủ 12.500 kg',
+    (await dv('xnvc')).filter(x => !x).length === 2 && (await dv('ttvc')).filter(x => !x).length === 2 &&
+    /12\.500/.test(await w.innerText('#pcVCDu')) && /^0 phiếu/.test(await w.innerText('#pcVCNgoai')));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

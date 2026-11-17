@@ -12,7 +12,7 @@ if (!rootCu || !fs.existsSync(path.join(rootCu, 'package.json'))) { console.log(
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-cd-')), out = path.join(dir, 'out'), dbFile = path.join(dir, 'd.sqlite');
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const sha = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
-const launch = root => electron.launch({executablePath: require(path.join(rootMoi, 'node_modules', 'electron')), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
+const launch = root => electron.launch({executablePath: require(path.join(root, 'node_modules', 'electron')), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
 const gom = async w => {   // mở lô, xuất gói toàn bộ, trả {tên file: xml}
   await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.waitForTimeout(500);
   for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f));
@@ -25,7 +25,7 @@ const tomTat = db => { const f = db.rs.own1.forests.fa, i = f.info; return {chuc
 (async () => {
   fs.mkdirSync(out, {recursive: true});
   // ---- bản CŨ v1.4.33 ----
-  let app = await launch(rootCu), w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  let app = await launch(rootCu), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const ver0 = await app.evaluate(({app}) => app.getVersion()); ok('bản cũ đang chạy là v1.4.33', ver0 === '1.4.33', ver0);
   const A = lot('fa', 'R-A', {exp: EXP1, pc: PC, kl: 29.75}); A.info.donGiaTan = {'Tổ trưởng': 420000, 'Công nhân cưa': 380000, 'Công nhân khai thác': 330000};
   const D = seed([A]); const sv = await w.evaluate(d => window.hak.save(d), D); ok('bản cũ ghi hồ sơ một đội vào SQLite', sv && sv.ok, JSON.stringify(sv));
@@ -34,7 +34,7 @@ const tomTat = db => { const f = db.rs.own1.forests.fa, i = f.info; return {chuc
   await app.close();
   const kichThuoc0 = fs.statSync(dbFile).size;
   // ---- bản MỚI mở đúng file đó ----
-  app = await launch(rootMoi); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
+  app = await launch(rootMoi); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   const ver1 = await app.evaluate(({app}) => app.getVersion()); ok('bản mới đang chạy (không phải 1.4.33): ' + ver1, ver1 !== '1.4.33', ver1);
   const moi = await gom(w), dbMoi = await w.evaluate(() => window.hak.loadSync().db), tMoi = tomTat(dbMoi);
   const bk = fs.existsSync(path.join(dir, 'backups')) ? fs.readdirSync(path.join(dir, 'backups')) : [], bk2 = fs.existsSync(path.join(dir, 'ud')) ? fs.readdirSync(path.join(dir, 'ud')) : [];

@@ -25,7 +25,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
 async function readZip(file) { const z = await JSZip.loadAsync(fs.readFileSync(file)); const o = {}; for (const n of Object.keys(z.files).filter(n => n.endsWith('.docx'))) { const d = await JSZip.loadAsync(await z.file(n).async('nodebuffer')); o[n] = {xml: await d.file('word/document.xml').async('string'), foot: await d.file('word/footer1.xml').async('string')}; } return o; }
 const app0 = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
 (async () => {
-  let app = await app0(), w = await app.firstWindow(); const errs = [];
+  let app = await app0(), w = require('./_hd30').boc(await app.firstWindow()); const errs = [];
   const hook = () => { w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => { dialogs.push(d.message()); d.accept(); }); };
   const dialogs = []; hook(); await w.waitForSelector('#side');
   const open = async (fid = 'fa') => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]'); await w.waitForSelector('#d2Table'); };
@@ -63,7 +63,7 @@ const app0 = () => electron.launch({executablePath: require('electron'), args: [
   await w.waitForFunction(() => document.querySelectorAll('#d2Table tr[data-adv=cho]').length === 6);
   a = await adv(); ok('xác nhận cả bộ: sáu mục (BM-08, BM-14, BM-09/BM-10 mỗi nhóm) “đã in nền, chờ dữ liệu”', Object.values(a).every(v => v === 'cho'), JSON.stringify(a));
   await w.waitForTimeout(600);
-  await app.close(); app = await app0(); w = await app.firstWindow(); hook(); await w.waitForSelector('#side');
+  await app.close(); app = await app0(); w = require('./_hd30').boc(await app.firstWindow()); hook(); await w.waitForSelector('#side');
   await open(); a = await adv();
   ok('đóng rồi mở lại ứng dụng: vẫn nhớ đã in nền cho cả sáu mục', Object.values(a).every(v => v === 'cho'), JSON.stringify(a));
   // thêm số liệu: phiếu cân, ngày lập biên bản, khối lượng thực tế… (chỉ lấp ô trống, không đổi bố cục)

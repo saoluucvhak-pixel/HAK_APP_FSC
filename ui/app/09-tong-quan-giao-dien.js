@@ -94,7 +94,9 @@ function renderMsgs() {
 }
 
 function renderMain() {
-  if (view === 'dm') { $('#main').innerHTML = renderMsgs() + panelDanhMuc(); return; }
+  if (view === 'dm') view = 'setdt';   // 3.0: Danh mục cũ thay bằng Cài đặt → Danh mục đối tượng
+  const P30 = {setdt: panelSetDt, setxe: panelSetXe, setvt: panelSetVt, setgd: panelSetGd, sethd: panelSetHd, setcan: panelSetCan};
+  if (P30[view]) { $('#main').innerHTML = renderMsgs() + settingsFrame(view, P30[view]()); return; }
   if (view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
   if (view === 'cty') { $('#main').innerHTML = renderMsgs() + settingsFrame('cty', panelCty()); return; }
   if (view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
