@@ -57,7 +57,7 @@ function boc(w) {
     }
   };
   /* 3.0: danh sách rừng của chủ rừng nằm trong khối gập (details.rungTomTat): mở khối gập chứa phần tử trước khi bấm */
-  const moGap = async sel => { if (typeof sel === 'string') await w.evaluate(s => { let e; try { e = document.querySelector(s); } catch (x) { return; } for (let d = e && e.closest('details:not([open])'); d; d = d.parentElement && d.parentElement.closest('details:not([open])')) d.open = true; }, sel).catch(() => {}); };
+  const moGap = async sel => { if (typeof sel === 'string') await w.evaluate(s => { let e; try { e = document.querySelector(s); } catch (x) { return; } for (let d = e && e.closest('details:not([open])'); d; d = d.parentElement && d.parentElement.closest('details:not([open])')) { const tieuDe = e.closest('summary'); if (!(tieuDe && tieuDe.parentElement === d)) d.open = true; } }, sel).catch(() => {}); };   // bấm chính tiêu đề khối gập thì để thao tác bấm tự mở
   w.click = async (sel, o) => { await truoc(sel); await moGap(sel); const r = await goc.click(sel, o); await sau(sel); return r; };
   ['fill', 'check', 'uncheck', 'selectOption', 'setInputFiles', '$eval', '$$eval'].forEach(n => { w[n] = async (sel, ...a) => { await truoc(sel); return goc[n](sel, ...a); }; });
   /* đọc / thao tác khác: phần tử nằm ở mục chưa mở thì mở mục đó (không thấy ở mục nào thì giữ nguyên mục đang mở) */
