@@ -33,8 +33,11 @@ const file = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
     g.hdvc.find(h => h.id === hA).exp = {soVC: '01'}; g.hdvc.find(h => h.id === hB).exp = {soVC: '02'}; await w.evaluate(x => window.hak.save(x), d); await w.reload(); await w.waitForSelector('#side');
     await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]'); await w.waitForTimeout(200); }
   ok('trang danh sách: phiếu cân chỉ nêu số, mở hợp đồng để làm việc', !!(await w.$('#pcDs')) && !(await w.$('#pcHd')));
-  await w.click('#dsHdVcTbl tr[data-hd="' + hA + '"] button'); await w.waitForSelector('#pcHd');
-  ok('trang chi tiết hợp đồng: có “Nạp Excel”, “Thêm phiếu cân” (và “Tra cứu HoSoKeo” ở bản desktop)', await w.isVisible('#pcNapExcel') && await w.isVisible('#pcThem') && await w.isVisible('#pcTraCuu'));
+  await w.click('#dsHdVcTbl tr[data-hd="' + hA + '"] button');
+  await w.click('.mucNav [data-muc-lo=phieu]');
+  await w.waitForSelector('#pcHd');
+  ok('mục Phiếu cân có một nút chọn Excel, một nút thêm và nút tra cứu HoSoKeo', await w.locator('label:has(input[data-file=pc])').count() === 1 &&
+    await w.locator('[data-act=stAdd][data-kind=pc]').count() === 1 && await w.isVisible('#pcTraCuu'));
 
   // 1. nạp Excel khi đang mở HĐ A (số 01): P2 có BKS chỉ ở HĐ B (số 02)
   await w.setInputFiles('input[data-file=pc]', file('pc1.xlsx', [['P1', '05/10/2026', '92c 123.45', '12500'], ['P2', '06/10/2026', '92C-67890', '9000'], ['P3', '07/10/2026', '43A-99999', '8000']]));

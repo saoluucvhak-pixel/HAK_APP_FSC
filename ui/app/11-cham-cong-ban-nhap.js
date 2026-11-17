@@ -74,7 +74,7 @@ function stBlockText() {
 }
 function stBlockNote() { const t = stBlockText(); if (t) { pushNote(t, 'err'); const st = stCur(), k = st && HAKStage.dirty(st) ? HAKStage.dirtyKinds(st)[0] : null; if (k) ftab = ST_TAB[k]; render(); } return !!t; }
 /* thanh “Chưa lưu” của cả lô (mọi tab của lô) */
-function loBar() { const st = stCur(), chiBang = !loDirty.has(curF) && st && HAKStage.dirty(st) && (ftab === 'nc' || ftab === 'dx'); const t = chiBang ? '' : stBlockText(); return t ? '<div class="msg warn" id="loDirtyBar"><b>Chưa lưu</b> — ' + esc(t.replace(/ Bấm .*$/, '')) + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : ''; }
+function loBar() { const t = stBlockText(); return t ? '<div class="msg warn" id="loDirtyBar"><b>Chưa lưu</b> — ' + esc(t.replace(/ Bấm .*$/, '')) + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : ''; }
 /* lưu phần thông tin lô (khi không có bảng nháp) */
 async function luuLoTT(opt) {
   const f = curForest(); if (!f) return {ok: false};
@@ -89,7 +89,7 @@ function stErrBox() { return stErrList && stErrList.length ? '<div class="msg er
 function stBar(kind, rec) {
   const st = stCur(), o = curOwner(), c = st ? HAKStage.counts(st, kind) : null, dk = st ? HAKStage.dirtyKinds(st) : [];
   const info = '<div class="stInfo">Chủ rừng: <b>' + esc(o ? o.info.ten : '') + '</b> · Lô: <b>' + esc(rec.info.maRung || '(chưa có mã)') + '</b>' + (st && st.src[kind] ? ' · Nguồn lượt này: <b>' + esc(st.src[kind]) + '</b>' : '') + '</div>';
-  const add = '<button class="btn sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + '</button>';
+  const add = kind === 'pc' ? '' : '<button class="btn sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + '</button>';
   const sum = c ? ('Thêm mới <b>' + c.new + '</b> · Sửa <b>' + c.changed + '</b> · Xóa <b>' + c.removed + '</b> · Giữ nguyên <b>' + c.same + '</b>') : '';
   const bar = dk.length ? '<div class="msg warn stDirty" id="stDirty"><b>Chưa lưu</b> ' + (dk.length > 1 || dk[0] !== kind ? '(còn thay đổi ở ' + dk.map(k => ST_LABEL[k]).join(', ') + ') ' : '') + '— ' + (c && (c.new + c.changed + c.removed) ? sum + '. ' : '') + 'Hồ sơ chỉ dùng dữ liệu đã lưu.' +
     ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : '';
@@ -307,11 +307,11 @@ window.__doiKT = () => { const rec = curRec(); if (!rec) return null; const B = 
 /* Chặn rời lô khi còn bản nháp: bắt sự kiện bấm ở pha bắt (trước mọi xử lý khác) với các nút đổi lô, đổi chủ rừng, sang màn hình khác */
 document.addEventListener('click', e => {
   if (stBypass || !stDirtyCur()) return; const t = e.target; if (!t.closest || t.closest('#stBox')) return;
-  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],#navHome,[data-act=openNorm],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
+  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],[data-muc-lo],[data-act=hdQuayLai],[data-act=chonDoi],[data-act=chonHd],#navHome,[data-act=openNorm],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
+  if (nav.matches('[data-muc-lo][aria-current]')) return;
   if ((nav.dataset.sforest && nav.dataset.sforest === curF) || (nav.dataset.forest && nav.dataset.forest === curF)) return;   // bấm lại đúng lô đang mở
   e.preventDefault(); e.stopPropagation();
-  const d = nav.dataset, sel = d.sforest ? '[data-sforest="' + d.sforest + '"]' : d.forest ? '[data-forest="' + d.forest + '"]' : d.open ? '[data-open="' + d.open + '"]' : d.dash ? '[data-dash="' + d.dash + '"]' : nav.id ? '#' + nav.id : '[data-act="' + d.act + '"]';   // vẽ lại sau khi lưu/bỏ nên tìm lại đúng nút
-  stGuard(() => { const el = document.querySelector(sel) || nav; stBypass = true; try { el.click(); } finally { stBypass = false; } });
+  stGuard(() => { const el = timLai(nav); stBypass = true; try { el.click(); } finally { stBypass = false; } });
 }, true);
 
 /* So sánh số người thực tế (bản đang xem, kể cả bản nháp) với định mức nhân công; liệt kê nhiệm vụ từng vị trí */
@@ -329,7 +329,7 @@ function dinhBienPanel(rec) {
 /* Các đội của lô: mỗi Tổ trưởng một đội, mỗi đội một hợp đồng giao khoán, sản lượng chia theo số người */
 function doiPanel(rec) {
   const b = doiOf(rec), tt = (rec.nc || []).filter(isTT).length;
-  if (!b.multi) return tt <= 1 && (rec.nc || []).length ? '<div class="mut" id="doiInfo" style="margin:6px 0">Lô có 1 đội (1 Tổ trưởng): ký 1 hợp đồng giao khoán. Muốn ký với nhiều đội, thêm Tổ trưởng và ghi tên đội ở cột <b>Đội</b>: mỗi Tổ trưởng là một đội.</div>' : '';
+  if (!b.multi) return tt <= 1 && (rec.nc || []).length ? '<div class="mut" id="doiInfo" style="margin:6px 0">Mỗi hợp đồng nhân công quản lý một đội. Để thêm đội, quay lại danh sách hợp đồng nhân công.</div>' : '';
   const bq = basisOf(rec.info).qty, bs = bq === 'ha' ? 'ha' : 'tan', unit = bq === 'ha' ? 'ha' : 'tấn', fmtV = v => v == null ? '—' : formatNumber(v, 3);
   return '<details class="card" id="doiPanel" open><summary><b>Nhiều đội: ' + b.doi.length + ' đội, ' + b.doi.length + ' hợp đồng giao khoán</b></summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Đội</th><th>Tổ trưởng</th><th>Số người</th><th>Phần sản lượng (' + unit + ')</th><th>Số hợp đồng giao khoán</th></tr></thead><tbody>' +
     b.doi.map((d, di) => '<tr><td><b>' + esc(d.ten) + '</b></td><td>' + esc(d.tt.ten) + '</td><td style="text-align:center">' + d.n + '</td><td style="text-align:right">' + fmtV(bs === 'ha' ? d.dienTich : d.khoiLuong) + '</td><td>' + esc(soDoiSo(HAKHopDong.numbers(exOf(rec, 'day')).kt, di + 1).so) + '</td></tr>').join('') +
@@ -380,12 +380,23 @@ function doiCell(rec, r) {
 }
 function panelNC(rec) {
   if (rec.doi && !hdMoHopLe('nc', rec)) return panelDsNC(rec);   // 3.0: tab mở danh sách hợp đồng; chọn một hợp đồng mới vào trang chi tiết
-  const c = checkNC(rec), dMo = rec.doi ? rec.doi.find(d => d.id === hdMo('nc')) : null;
-  const head = (dMo ? hdDau('nc', rec, tenDoiNc(rec, dMo), soHdNc(rec, dMo)) : '') + panelDoiKT(rec) + panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec) + panelImport('nc', rec) + panelChamCong(recDoiChon(rec)) + stBar('nc', rec) + stErrBox();
-  if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có danh sách nhân công. Bấm “+ Thêm nhân công”, hoặc “Tải file mẫu”, điền rồi nạp lại.</div>' + panelDoiVB(rec);
+  const d = rec.doi?.find(x => x.id === hdMo('nc'));
+  const count = rec.nc.filter(r => !d || r.doiId === d.id).length;
+  return (d ? hdDau('nc', rec, tenDoiNc(rec, d), soHdNc(rec, d)) : '') + khungMucLo('nc', [
+    ['chung', 'Thông tin hợp đồng, bên nhận khoán', () => panelDoiKT(rec)],
+    ['dongia', 'Hình thức và đơn giá', () => panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec)],
+    ['thanhvien', 'Thành viên', () => panelThanhVien(rec), count],
+    ['chamcong', 'Chấm công', () => panelChamCong(recDoiChon(rec))],
+    ['vanban', 'Số và ngày văn bản', () => panelDoiVB(rec)]
+  ]);
+}
+function panelThanhVien(rec) {
+  const c = checkNC(rec), head = panelImport('nc', rec) + stBar('nc', rec) + stErrBox();
+  if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có nhân công. Bấm “+ Thêm nhân công” để chọn từ Danh mục đối tượng.</div>';
   const t = rec.doi && rec.doi.length > 1 && !ncTatCa ? curTeam() : null, only = t ? r => r.doiId === t.id || !rec.doi.some(d => d.id === r.doiId) : null;   // lô nhiều đội: chỉ người của đội đang chọn (và người chưa thuộc đội)
   const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' : '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';
-  return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', 'Đội', 'Đơn giá'],
-    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td><td>' + doiCell(rec, r) + '</td><td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>', c, null, only) + panelDoiVB(rec);
+  const hienDoi = rec.doi?.length > 1;
+  return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', ...(hienDoi ? ['Đội'] : []), 'Đơn giá'],
+    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td>' + (hienDoi ? '<td>' + doiCell(rec, r) + '</td>' : '') + '<td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>', c, null, only);
 }
 

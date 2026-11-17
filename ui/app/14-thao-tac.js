@@ -1,6 +1,6 @@
 /* ========== Thao tác ========== */
 function openRs(id) { cur = id; curF = null; tab = 'info'; view = 'owner'; render(); }
-function openForest(fid) { if (typeof hdMoS === 'object' && hdMoS) delete hdMoS[fid]; curF = fid;   /* 3.0: mở rừng → tab Nhân công / Vận chuyển bắt đầu ở danh sách hợp đồng */ ftab = 'finfo'; tab = 'rung'; view = 'owner'; render(); }
+function openForest(fid) { curF = fid; ftab = 'finfo'; tab = 'rung'; view = 'owner'; render(); }
 
 function newRs() {
   const id = 'rs' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);

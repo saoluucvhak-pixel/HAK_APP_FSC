@@ -26,7 +26,7 @@ function withCsp(html) {
   html = CSP.lf(html);
   if (/<script\s+[^>]/.test(html)) throw new Error('build-html: chỉ hỗ trợ thẻ <script> không thuộc tính (CSP theo mã băm)');
   if (/\son[a-z]+\s*=\s*["']/i.test(html.replace(/<script>[\s\S]*?<\/script>/g, '').replace(/<style>[\s\S]*?<\/style>/g, ''))) throw new Error('build-html: có thuộc tính sự kiện nội tuyến (onclick=...) sẽ bị CSP chặn');
-  const csp = CSP.policy(CSP.scriptHashes(html));   // src/csp.js: dùng chung với CSP của cửa sổ in phiếu cân (src/main.js)
+  const csp = CSP.policy(CSP.scriptHashes(html), {'frame-src': 'file:'});   // nhúng công cụ in phiếu cân đi kèm bộ cài
   return html.replace('<meta charset="utf-8">', () => '<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="' + csp + '">');
 }
 const OUT = path.join(root, 'renderer', 'index.html');

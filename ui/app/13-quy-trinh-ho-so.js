@@ -71,6 +71,31 @@ function qtMarkAct(codes, on) {
   if (loDirty.has(f.id)) persistLo(f); else persist();   // ghi nhận đã làm: ghi ngay khi lô không có thay đổi chưa lưu
 }
 /* In phiếu cân theo rừng (giống xuất hồ sơ): dùng đúng phiếu cân của rừng đang mở, bất kể phiếu đến từ file nhập ở rừng, Tra cứu Google Sheets hay cập nhật biển số */
+let pcInLoc = null, pcInDuLieu = null;
+function panelInPhieuCan() {
+  const saved = HB?.loadSync()?.db?.rs?.[cur]?.forests?.[curF];
+  if (!saved) return '<div class="msg warn">Chưa có lô đã lưu để in phiếu cân.</div>';
+  const rec = jobView(curOwner(), saved), loc = pcInLoc || {};
+  const from = loc.tu ? Number(loc.tu.replaceAll('-', '')) : 0;
+  const to = loc.den ? Number(loc.den.replaceAll('-', '')) : Infinity;
+  const pc = (rec.pc || []).filter(p => {
+    const d = HAKDates.parse(p.ngay);
+    const day = d ? d.y * 10000 + d.m * 100 + d.d : 0;
+    return (!loc.hd || p.hdvcId === loc.hd) && (!loc.xe || HAKStage.bienKey(p.bienSo) === loc.xe) &&
+      ((!loc.tu && !loc.den) || (day && day >= from && day <= to));
+  });
+  pcInDuLieu = HAKPhieuCan.aoa({...rec, pc});
+  const opt = (value, label, current) => '<option value="' + esc(value) + '"' + (value === current ? ' selected' : '') + '>' + esc(label) + '</option>';
+  const xe = new Map((rec.pc || []).filter(p => p.bienSo && (!loc.hd || p.hdvcId === loc.hd)).map(p => [HAKStage.bienKey(p.bienSo), p.bienSo]));
+  return '<div class="card"><h3>In phiếu cân</h3><form id="pcInLoc" class="row pcInLoc">' +
+    '<label>Hợp đồng <select name="hd">' + opt('', 'Cả rừng', loc.hd) + (rec.hdvc || []).map(h => opt(h.id, tenDoiVc(rec, h), loc.hd)).join('') + '</select></label>' +
+    '<label>Xe <select name="xe">' + opt('', 'Tất cả xe', loc.xe) + [...xe].map(([id, bks]) => opt(id, bks, loc.xe)).join('') + '</select></label>' +
+    '<label>Từ ngày <input type="date" name="tu" value="' + esc(loc.tu || '') + '"></label>' +
+    '<label>Đến ngày <input type="date" name="den" value="' + esc(loc.den || '') + '"></label></form>' +
+    '<p class="mut">' + pc.length + ' phiếu đã lưu. Chọn phiếu trong bản xem trước để in.</p>' +
+    '<button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify({ftab: 'dx', focus: 'pc', hdId: loc.hd})) + '">Mở bảng phiếu cân</button></div>' +
+    (pc.length ? '<iframe id="pcInFrame" name="phieuCanNhung" class="pcInFrame" title="Xem trước phiếu cân" src="PhieuCan.html?nhung=1"></iframe>' : '<div class="empty">Không có phiếu cân trong phạm vi đã chọn.</div>');
+}
 function pcPrintCard(rec) {
   const g = HAKPhieuCan.gaps(rec.pc), n = g.total, co = theCompany();
   const head = '<div class="card" id="pcPrintCard"><h3 style="margin-top:0">In phiếu cân <span class="mut" style="font-weight:400">giấy lỗ 240 × 279 mm, công cụ PhieuCan nguyên bản</span></h3>';
@@ -207,8 +232,22 @@ function render() {
   numStyle = (db && db.dinhDangSo === 'en') ? 'en' : 'vi';
   renderSide();
   renderMain();
+  const muc = document.querySelector('.mucNoiDung'), crumb = document.getElementById('loCrumbMuc');
+  if (muc && crumb) crumb.textContent = ' › ' + muc.getAttribute('aria-label');
   renderCtx();
   stApplyGate();
   loKhoaVoHieu();
+  const frame = document.getElementById('pcInFrame');
+  if (frame) frame.addEventListener('load', async () => {
+    const payload = pcInDuLieu;
+    if (!payload || !frame.isConnected) return;
+    const r = await HB.phieuCanNhung(payload, HAKPhieuCan.company(theCompany()), document.documentElement.dataset.theme === 'dark');
+    if (!r?.ok && frame.isConnected) {
+      const msg = document.createElement('div');
+      msg.className = 'msg err';
+      msg.textContent = 'Không tải được bản xem trước: ' + (r?.error || '');
+      frame.replaceWith(msg);
+    }
+  }, {once: true});
 }
 

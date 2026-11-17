@@ -65,7 +65,7 @@ function exportCheckTinh(job) {
   groupsDX(job).forEach(gr => hanLoiOf(job, gr).forEach(v => add('chan', 'Giấy tờ xe hết hạn lúc chạy phiếu', 'Đội xe “' + gr.ten + '”: ' + HAKGiayTo.text(v) + '. BM-09 và BM-10 của đội xe này bị chặn: sửa hạn giấy tờ của xe hoặc ngày cân của phiếu nếu nhập sai.', 'Phiếu ' + (v.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}, {loai: 'doiXe', ten: gr.ten})));
   g.dx.warns.forEach(e => add('doi', 'Giấy tờ xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
   const vcm = (i.vanChuyen || {}).mode;
-  g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'dx'}));
+  g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'finfo', muc: 'giaohang'}));
   // phiếu cân: thiếu/sai ngày, trùng, biển số chưa ghép, khối lượng…
   g.pc.errs.forEach(e => {
     const m = /^Dòng (\d+): (.*)$/.exec(e), r = m && pcRow(m[1]), so = r ? (r.soPhieu || '(không số)') : '', msg = m ? m[2] : e;
@@ -83,8 +83,8 @@ function exportCheckTinh(job) {
   // điểm đến theo địa chỉ giao đã chốt
   const dd = destOf(job), dr = HAKMuaHang.drift(i, db.congTy), mis = HAKMuaHang.mismatches(job.pc || [], dd.src === 'congty' ? dd : null);
   if (!dd.text) add('doi', 'Địa chỉ giao hàng', 'Chưa chọn địa chỉ giao hàng đã chốt: BM-04, BM-09, BM-10 sẽ in dòng chấm.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
-  else if (dd.src === 'thucong') add('doi', 'Địa chỉ giao hàng', 'Đang dùng điểm đến nhập tay cũ “' + dd.text + '”. Chọn địa chỉ giao của công ty để thay (chỉ đổi sau khi bạn xác nhận).', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
-  if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở tab Vận chuyển.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
+  else if (dd.src === 'thucong') add('doi', 'Địa chỉ giao hàng', 'Đang dùng điểm đến nhập tay cũ “' + dd.text + '”. Chọn địa chỉ giao của công ty để thay (chỉ đổi sau khi bạn xác nhận).', 'Địa điểm vận chuyển đến', {ftab: 'finfo', focus: 'mua'});
+  if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở Thông tin rừng → Công ty, địa chỉ giao và cước.', 'Địa điểm vận chuyển đến', {ftab: 'finfo', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
   if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
   ((job.doi) || []).forEach(d => { const c = d && d.benNhanKhoanBan; if (!c || isDirect(infoTeam(job, d))) return; const thieu = benNhanKhoanThieu(c);   // 3.0: bên nhận khoán đã chọn mà bản chụp thiếu thông tin in
@@ -99,7 +99,7 @@ function exportCheckTinh(job) {
   g.nhapLieu.forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go, x.doiTuong));   // của lô, từng đội và từng đội xe
   // các mục checklist FSC còn lại chưa được xét ở trên
   const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo chức danh', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
-  const goOf = lb => /Tọa độ|Giấy tờ pháp lý|Thời gian/.test(lb) ? {ftab: 'finfo'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo'};
+  const goOf = lb => /Tọa độ/.test(lb) ? {ftab: 'finfo', muc: 'toado'} : /Giấy tờ pháp lý/.test(lb) ? {ftab: 'finfo', muc: 'giay'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo', muc: 'chung'};
   checklistRung(job).filter(x => !x.ok && !covered.includes(x.label)).forEach(x => add(x.warn ? 'doi' : 'doi', 'Checklist FSC', x.label + (x.hint ? ': ' + x.hint : ''), x.label, goOf(x.label)));
   // thiếu dữ liệu cơ bản (chưa nạp)
   if (!job.nc.length) add('doi', 'Nhân công', 'Chưa nạp nhân công của lô.', '', {ftab: 'nc'});
@@ -107,15 +107,34 @@ function exportCheckTinh(job) {
   if (!(job.pc || []).length) add('doi', 'Phiếu cân', 'Chưa nạp phiếu cân của lô.', '', {ftab: 'dx', focus: 'pc'});
   return {items, chan: items.filter(x => x.muc === 'chan'), doi: items.filter(x => x.muc === 'doi'), g, tomTat: HAKKiemTra.tomTat(items), bieuMauBiChan: HAKKiemTra.bieuMauBiChan(items)};
 }
-/* Đường dẫn: Chủ rừng › Lô › màn đang xem › Đội / Đội xe đang chọn (nhân công thuộc đội; xe thuộc đội xe) */
+const mucLoDaMo = new Map();
+const mucLoKey = k => JSON.stringify([cur, curF, k, k === 'nc' || k === 'dx' ? hdMo(k) : null]);
+const mucLoDangMo = (k, macDinh = 'chung') => mucLoDaMo.get(mucLoKey(k)) || macDinh;
+function khungMucLo(k, cacMuc, macDinh = 'chung') {
+  const active = mucLoDangMo(k, macDinh);
+  const muc = cacMuc.find(x => x[0] === active) || cacMuc[0];
+  const menu = cacMuc.map(([id, ten, , dem]) =>
+    '<button type="button" data-muc-lo="' + id + '" data-lo-nhom="' + k + '"' +
+    (id === muc[0] ? ' aria-current="page"' : '') + '>' + esc(ten) +
+    (dem == null ? '' : ' <span class="pill">' + esc(dem) + '</span>') + '</button>').join('');
+  const khoa = ['finfo', 'nc', 'dx'].includes(k) && loKhoa(curForest());
+  return '<div class="mucLayout"><nav class="mucNav" aria-label="Các mục nhập liệu">' + menu +
+    '</nav><section class="mucNoiDung" aria-label="' + esc(muc[1]) + '">' +
+    (khoa ? '<fieldset disabled id="loKhoaFs" class="mucKhoa">' + muc[2]() + '</fieldset>' : muc[2]()) + '</section></div>';
+}
+/* Đường dẫn từ chủ rừng đến mục nhập đang mở. */
 function loCrumb(job) {
   const o = curOwner(), f = curForest(); if (!o || !f) return '';
-  const man = {finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', kt: 'Kiểm tra trước khi xuất', xuat: 'Xuất hồ sơ'}[ftab] || '';
+  const man = {finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', kt: 'Kiểm tra trước khi xuất', xuat: 'Xuất hồ sơ', inpc: 'In phiếu cân'}[ftab] || '';
   let doi = '';
   if (ftab === 'nc' && job.doi && curTeam(f)) { const t = curTeam(f); doi = 'Đội “' + esc(trim(t.ten) || 'Đội ' + (job.doi.findIndex(d => d.id === t.id) + 1)) + '”'; }
   if (ftab === 'dx' && job.hdvc) { const h = job.hdvc.find(x => x.id === curHd); if (h) { const k = job.hdvc.indexOf(h); doi = 'Đội xe “' + esc(trim(h.ten) || 'Đội xe ' + (k + 1)) + '”'; } }
-  const part = [['Chủ rừng “' + esc(o.info.ten || '') + '”', ''], ['Lô <b>' + esc(f.info.maRung || '(chưa có mã)') + '</b>', 'finfo'], man ? [man, ftab] : null, doi ? [doi, ''] : null].filter(Boolean);
-  return '<nav class="crumb" id="loCrumb" aria-label="Đường dẫn" style="font-size:13px;color:var(--mut,#667);margin:2px 0 6px">' + part.map(([t, k], i) => (i ? ' <span aria-hidden="true">›</span> ' : '') + (k && i < part.length - 1 ? '<button type="button" class="linkbtn" data-ftab="' + k + '">' + t + '</button>' : '<span>' + t + '</span>')).join('') + '</nav>';
+  const part = [['Chủ rừng “' + esc(o.info.ten || '') + '”', 'data-tab="info"'],
+    ['Lô <b>' + esc(f.info.maRung || '(chưa có mã)') + '</b>', 'data-ftab="finfo"']];
+  if (man && ftab !== 'finfo') part.push([man, doi ? 'data-act="hdQuayLai" data-kind="' + ftab + '"' : '']);
+  if (doi) part.push([doi, 'data-muc-lo="chung" data-lo-nhom="' + ftab + '"']);
+  return '<nav class="crumb" id="loCrumb" aria-label="Đường dẫn">' + part.map(([t, a], i) =>
+    (i ? ' <span aria-hidden="true">›</span> ' : '') + (a ? '<button type="button" class="linkbtn" ' + a + '>' + t + '</button>' : '<span>' + t + '</span>')).join('') + '<span id="loCrumbMuc"></span></nav>';
 }
 function panelKiemTra(job) {
   const c = exportCheck(job), nhom = list => [...new Set(list.map(x => x.nhom))];
@@ -139,10 +158,19 @@ function panelRung(own) {
   if (!f) return list;
   const job = curRec();
   const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'], ['xuat', 'Xuất hồ sơ']];
-  return list +
+  return '<details class="rungTomTat"><summary>Danh sách rừng · Tiến độ ' + progressOf(job).pct + '%</summary>' +
+    list + panelTienDo(job) + '</details>' +
     '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
-    loCrumb(job) + panelTienDo(job) + loBar() + '<div class="tabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
-    loKhoaBanner(f) + (loKhoa(f) && ['finfo', 'nc', 'dx'].includes(ftab) ? '<fieldset disabled id="loKhoaFs" style="border:0;padding:0;margin:0;min-width:0">' : '') + (ftab === 'finfo' ? panelForest(f) + panelGiay(f) : ftab === 'nc' ? panelNC(stJob(job)) : ftab === 'dx' ? panelDX(stJob(job)) + panelPhieuCan(stJob(job)) : ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu</b>.' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + chotBox(job) + soVanBanBox(job) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job)) + (loKhoa(f) && ['finfo', 'nc', 'dx'].includes(ftab) ? '</fieldset>' : '');
+    loCrumb(job) + loBar() + '<div class="tabs rungTabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
+    loKhoaBanner(f) +
+    (ftab === 'inpc' ? panelInPhieuCan() : ftab === 'finfo' ? khungMucLo('finfo', [
+      ['chung', 'Thông tin chung', () => panelForest(f, 'chung')],
+      ['toado', 'Tọa độ và cự ly', () => panelForest(f, 'toado')],
+      ['dinhmuc', 'Định mức, sản lượng', () => panelForest(f, 'dinhmuc')],
+      ['giay', 'Giấy tờ pháp lý', () => panelGiay(f), (f.info.giayTo || []).length],
+      ['giaohang', 'Công ty, địa chỉ giao và cước', () => panelMua(job) + panelVc(job)],
+      ['vanban', 'Số văn bản chung', () => soVanBanBox(job)]
+    ]) : ftab === 'nc' ? panelNC(stJob(job)) : ftab === 'dx' ? panelVanChuyen(stJob(job)) : ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu.</b>' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + chotBox(job) + soVanBanBox(job) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job));
 }
 
 /* Ô Định mức (tấn/ha) của rừng: để trống thì dùng định mức gỗ keo mặc định (hiệu lực theo ngày bắt đầu khai thác); tự điền thì dùng số của rừng */
@@ -196,23 +224,26 @@ function klDoiField(f) {
     '<small class="mut">Số nhập tay của bản cũ, đang dùng cho BM-08 và BM-14 của từng đội. Bỏ số hồ sơ cũ (nút ở ô khối lượng lô) thì khối lượng đội lấy theo phiếu cân đã gán đội.</small>' +
     (kq.klLoi ? '<div class="msg warn" style="margin-top:6px">' + esc(kq.klLoi) + '</div>' : '') + '</fieldset>';
 }
-function panelForest(f) {
+function panelForest(f, muc) {
   const i = fInfo(f);
+  const start = k => '<div class="mucForm" data-muc-form="' + k + '"' + (k === muc ? '' : ' hidden') + '>';
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
     '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
   return '<div class="card"><h3 style="margin-top:0">Thông tin khai thác của rừng</h3>' +
     (() => { const t = trim((i || {}).tuNgay); if (!t) return ''; const g = HAKDinhBien.get(db, t); return g.ngayLoi ? '<div class="msg err" id="tuNgayLoi" style="margin-bottom:8px"><b>Ngày bắt đầu khai thác sai:</b> ' + esc(g.ngayLoi) + '. Dữ liệu cũ được giữ nguyên để bạn sửa.</div>' : ''; })() +
     '<form id="forestForm" class="grid">' +
-    inp('maRung', 'Mã rừng', {req: true}) + inp('tenRung', 'Tên rừng / lô') + inp('diaDiem', 'Địa điểm khai thác (rừng)', {req: true, wide: true}) +
-    inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +
-    inp('dienTich', 'Diện tích (ha)') + dmField(i) +
+    start('chung') + inp('maRung', 'Mã rừng', {req: true}) + inp('tenRung', 'Tên rừng / lô') + inp('diaDiem', 'Địa điểm khai thác (rừng)', {req: true, wide: true}) +
+    inp('dienTich', 'Diện tích (ha)') + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + '</div>' +
+    start('toado') + inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +
+    inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p></div>' +
+    start('dinhmuc') + dmField(i) +
     dmTgField(i) + soDoiField(i, f.nc) + '<p class="mut" id="tgNote" style="grid-column:1/-1;margin:0">' + tgDuKienHtml(i, f.pc, nDoiOf(i, f.nc)) + '</p>' +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     (typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0
       ? '<label><span>Khối lượng thực tế của hồ sơ cũ (tấn) — chỉ hiển thị</span><div id="klCu"><b>' + fmtTan(i.klHoSoCu) + ' tấn</b> <span class="mut">— số nhập tay của bản cũ, đang được dùng làm khối lượng lô; tổng phiếu cân hiện là ' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn' : '—') + '.</span> <button type="button" class="linkbtn" data-act="boKlCu">Bỏ số hồ sơ cũ, lấy theo phiếu cân</button></div></label>'
       : '<label><span>Khối lượng khai thác thực tế (tấn)</span><div id="klPC"><b>' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn</b> <span class="mut">— tổng ' + (f.pc || []).filter(p => p.kl > 0).length + ' phiếu cân (một nguồn duy nhất)</span>' : '—</b> <span class="mut">chưa có phiếu cân: hồ sơ dùng sản lượng dự kiến</span>') + '</div></label>') +
-    klDoiField(f) + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p>' +
+    klDoiField(f) + '</div>' +
     /* Ô cũ “Đơn giá giao khoán Tổ trưởng”: chỉ còn hiện ở hồ sơ cũ đã có giá trị (để hợp đồng đã in không đổi). Lô mới nhập đơn giá Tổ trưởng ở bảng đơn giá theo vị trí (tab Nhân công);
      * đơn giá khoán của cả tổ luôn suy ra từ định biên. Xóa trống ô này thì ô biến mất và hợp đồng chuyển sang cách tính mới. */
     '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
@@ -236,7 +267,7 @@ function panelLuong(rec) {
   };
   const grp = (name, html) => '<div class="grid" data-grp="' + name + '" style="grid-column:1/-1;' + (cur === name ? '' : 'display:none') + '">' + html + '</div>';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá' + (t && rec.doi.length > 1 ? ' — đội “' + esc(t.ten || '') + '”' : '') + '</h3>' +
-    '<p class="mut" style="margin-top:0">Danh sách nhân công nạp từ file Excel. <b>Giao khoán</b>: chủ rừng ký với Tổ trưởng, công nhân ký một Giấy ủy quyền cho Tổ trưởng; tính theo tấn, ha hoặc ngày công. <b>Trực tiếp</b>: chủ rừng ký hợp đồng lao động với tất cả nhân công; tính theo tấn hoặc ngày công. Sản lượng (tấn, ha) hoặc số công chia đều cho mọi người; đơn giá theo từng vai trò.</p>' +
+    '<p class="mut" style="margin-top:0">Chọn thành viên từ Danh mục đối tượng. <b>Giao khoán</b>: chủ rừng ký với Tổ trưởng, công nhân ký một Giấy ủy quyền cho Tổ trưởng; tính theo tấn, ha hoặc ngày công. <b>Trực tiếp</b>: chủ rừng ký hợp đồng lao động với tất cả nhân công; tính theo tấn hoặc ngày công. Sản lượng (tấn, ha) hoặc số công chia đều cho mọi người; đơn giá theo từng vai trò.</p>' +
     '<form id="luongForm" class="grid">' +
     '<label style="grid-column:1/-1"><span>Hình thức hợp đồng</span><select name="moHinhKy">' +
       '<option value="giaokhoan"' + (!direct ? ' selected' : '') + '>Giao khoán: chủ rừng ký với Tổ trưởng; công nhân ký một Giấy ủy quyền cho Tổ trưởng</option>' +
@@ -416,7 +447,7 @@ function panelInfo(rec) {
     (rec.info && errs.length && rec.id ? '<div class="msg warn">Còn thiếu: ' + esc(errs.join('; ')) + '</div>' : '');
 }
 
-function panelImport(kind, rec) {
+function panelImport(kind, rec, heading = '') {
   if (kind !== 'pc' && !window.hak?.testLegacyImport) {
     const nc = kind === 'nc', label = nc ? 'Danh mục đối tượng' : 'Danh mục xe';
     return '<div class="row" style="margin:8px 0"><button class="btn ghost sm" data-act="' +
@@ -426,12 +457,13 @@ function panelImport(kind, rec) {
     dx: {name: 'DOI_XE', at: 'dxAt', file: 'dxFile', arr: 'dx', title: 'Nạp file vận chuyển'},
     pc: {name: 'PHIEU_CAN', at: 'pcAt', file: 'pcFile', arr: 'pc', title: 'Nạp file phiếu cân (mỗi chuyến một dòng)'}}[kind];
   const name = M.name, at = rec[M.at], file = rec[M.file], count = (rec[M.arr] || []).length;
-  return '<div class="card"><div class="row" style="justify-content:space-between">' +
+  return '<div class="card">' + heading + '<div class="row importActions">' +
     '<div><h3 style="margin:0">' + M.title + '</h3>' +
     '<div class="mut">Sheet ' + name + '. ' + (count ? 'Đã nạp ' + count + ' dòng' + (file ? ' từ ' + esc(file) : '') + (at ? ' lúc ' + esc(at) : '') : 'Chưa có dữ liệu.') + '</div></div>' +
-    '<div class="row"><button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">Tải file mẫu (có hướng dẫn)</button>' +
+    '<div class="row importActions"><button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">Tải file mẫu</button>' +
     '<label class="btn sm" style="cursor:pointer">Chọn file Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label><button class="btn ghost sm" data-act="danMo" data-kind="' + kind + '" title="Chép vùng ô trong Excel (gồm dòng tiêu đề) rồi dán vào phần mềm">Dán từ Excel</button>' +
-    (count ? '<button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu</button>' : '') + '</div></div></div>';
+    (kind === 'pc' ? '<button class="btn sm" data-act="stAdd" data-kind="pc">+ Thêm phiếu cân</button>' : '') +
+    '</div></div>' + (count && (kind !== 'pc' || !hdMo('dx')) ? '<p><button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu của lô</button></p>' : '') + '</div>';
 }
 
 /* kiểm thử B7: kết quả kiểm tra của lô đang mở (bản nháp nếu có) và phiên bản dữ liệu hiện tại */

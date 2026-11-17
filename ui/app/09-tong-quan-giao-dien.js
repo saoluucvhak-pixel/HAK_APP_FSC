@@ -109,9 +109,10 @@ function renderMain() {
     return;
   }
   const tabs = [['info', 'Thông tin chủ rừng'], ['rung', 'Rừng (' + forestList(own).length + ')']];
+  const trongRung = tab === 'rung' && !!curForest();
   $('#main').innerHTML = renderMsgs() +
-    '<div class="row" style="justify-content:space-between"><div><h2>' + esc(own.info.ten || '(chưa đặt tên)') + '</h2><div class="mut">Mã ' + esc(own.info.ma) + '</div></div>' +
-    '<button class="btn danger sm" data-act="delRs">Xóa chủ rừng</button></div>' +
+    (trongRung ? '' : '<div class="row" style="justify-content:space-between"><div><h2>' + esc(own.info.ten || '(chưa đặt tên)') + '</h2><div class="mut">Mã ' + esc(own.info.ma) + '</div></div>' +
+    '<button class="btn danger sm" data-act="delRs">Xóa chủ rừng</button></div>') +
     '<div class="tabs">' + tabs.map(([k, l]) => '<button class="' + (tab === k ? 'on' : '') + '" data-tab="' + k + '">' + l + '</button>').join('') + '</div>' +
     (tab === 'info' ? panelInfo(own) : panelRung(own));
 }

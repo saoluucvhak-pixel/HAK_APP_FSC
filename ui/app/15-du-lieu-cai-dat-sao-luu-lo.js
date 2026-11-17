@@ -31,7 +31,7 @@ async function issueAct(kind) {
 const SET_TABS = [['setdt', 'Danh mục đối tượng', 'openSetDt'], ['setxe', 'Danh mục xe', 'openSetXe'], ['setvt', 'Vị trí', 'openSetVt'], ['cty', 'Công ty mua hàng', 'openCty'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị số', 'openSetFmt'], ['setgd', 'Giao diện', 'openSetGd'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
 const SET_VIEWS = ['setdt', 'setxe', 'setvt', 'cty', 'settings', 'setbk', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
 function settingsFrame(active, inner) {
-  return '<h2>Cài đặt</h2>' + veLaiThanh() + '<div class="tabs">' + SET_TABS.map(([v, l, a]) => '<button class="' + (active === v ? 'on' : '') + '" data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') + '</div>' + inner;
+  return '<h2>Cài đặt</h2>' + veLaiThanh() + '<div class="mucLayout"><nav class="mucNav" aria-label="Các mục cài đặt">' + SET_TABS.map(([v, l, a]) => '<button' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') + '</nav><section class="mucNoiDung">' + inner + '</section></div>';
 }
 const setgs = {st: null, msg: null};
 function panelSetGs() {

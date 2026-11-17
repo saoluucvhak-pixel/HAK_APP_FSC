@@ -3,6 +3,13 @@ document.addEventListener('click', async e => {
   const t = e.target;
   const mm = document.getElementById('moreMenu'); if (mm && mm.open && (!t.closest('#moreMenu') || t.closest('.pop button.mi'))) mm.open = false;
   const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick); return; }
+  const muc = t.closest('[data-muc-lo]');
+  if (muc) {
+    mucLoDaMo.set(mucLoKey(muc.dataset.loNhom), muc.dataset.mucLo);
+    render();
+    document.querySelector('.mucNav [aria-current="page"]')?.focus({preventScroll: true});
+    return;
+  }
   const dsh = t.closest('[data-dash]'); if (dsh) { const [oid, fid] = dsh.dataset.dash.split('|'); openRs(oid); return openForest(fid); }
   const open = t.closest('[data-open]'); if (open) return openRs(open.dataset.open);
   const of = t.closest('[data-forest]'); if (of) { curDoi = null; curHd = null; return openForest(of.dataset.forest); }
@@ -67,7 +74,12 @@ document.addEventListener('click', async e => {
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
-  if (act === 'pcPrint') { if (stBlockNote()) return; const rec = curRec(); if (!rec) return; const co = theCompany(); if (!co || !co.ten) note('Chưa khai thông tin công ty (Cài đặt → Công ty): phiếu dùng tiêu đề mặc định của công cụ.', 'warn'); return HB.phieuCan(HAKPhieuCan.aoa(rec), HAKPhieuCan.company(co)).then(r => { if (!r || !r.ok) note('Không mở được công cụ in phiếu cân' + (r && r.error ? ': ' + r.error : ''), 'err'); }); }
+  if (act === 'pcPrint') {
+    if (!curRec() || stBlockNote()) return;
+    pcInLoc = {hd: el.dataset.hd || ''};
+    ftab = 'inpc';
+    return render();
+  }
   if (act === 'dbDel') { const tr = el.closest('tr'); tr.querySelectorAll('input,textarea').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'dbVerAdd') { const r = HAKDinhBien.addVersion(db, (document.getElementById('dbVerNew') || {}).value); if (!r.ok) return note('Chưa thêm phiên bản: ' + r.error, 'err'); dbVer = r.id; persist(); return note('Đã thêm phiên bản hiệu lực từ ' + r.id + ' (sao chép từ phiên bản đang hiệu lực tại ngày đó). Sửa số người, nhiệm vụ rồi Lưu.', 'ok'); }
   if (act === 'dbVerDel') { if (!confirm('Xóa phiên bản này? Các lô bắt đầu từ ngày này sẽ dùng phiên bản trước đó.')) return; HAKDinhBien.delVersion(db, dbVer); dbVer = ''; persist(); return note('Đã xóa phiên bản.', 'ok'); }
@@ -117,11 +129,14 @@ document.addEventListener('click', async e => {
     const go = JSON.parse(el.dataset.go || '{}');
     if (go.view) { view = go.view; return render(); }
     if (go.tab) { tab = go.tab; return render(); }
-    ftab = go.ftab || 'finfo';
-    if (ftab === 'dx' && Number.isInteger(go.pcIndex)) {
+    ftab = go.focus === 'mua' ? 'finfo' : go.ftab || 'finfo';
+    if (go.focus === 'mua') mucLoDaMo.set(mucLoKey('finfo'), 'giaohang');
+    if (ftab === 'finfo' && go.muc) mucLoDaMo.set(mucLoKey('finfo'), go.muc);
+    if (ftab === 'dx' && go.focus === 'pc') {
       const hd = curForest()?.hdvc || [];
-      hdMoDat('dx', hd.find(h => h.id === go.hdId)?.id || hd[0]?.id || null);
-      pcTatCa = true;
+      hdMoDat('dx', hd.find(h => h.id === go.hdId)?.id || hdMo('dx') || hd[0]?.id || null);
+      mucLoDaMo.set(mucLoKey('dx'), 'phieu');
+      if (Number.isInteger(go.pcIndex)) pcTatCa = true;
     }
     render();
     const edit = Number.isInteger(go.pcIndex) && document.querySelector('#stTbl_pc [data-act=stEdit][data-i="' + go.pcIndex + '"]');
@@ -176,6 +191,18 @@ document.addEventListener('click', async e => {
 });
 
 /* MỘT cách lưu cho lô: sửa một ô ở khung nào thì thay đổi vào BẢN NHÁP của lô (hiện thanh “Chưa lưu”); khung không còn nút Lưu riêng. Enter trong ô hoặc nút “Lưu dữ liệu vào lô” mới ghi SQLite. */
+document.addEventListener('keydown', e => {
+  const nav = e.target.closest?.('.mucNav');
+  if (nav && ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    const buttons = [...nav.querySelectorAll('button')];
+    const step = ['ArrowDown', 'ArrowRight'].includes(e.key) ? 1 : -1;
+    e.preventDefault();
+    buttons[(buttons.indexOf(e.target) + step + buttons.length) % buttons.length]?.focus();
+  }
+  if (e.key !== 'Escape' || e.defaultPrevented || !nav) return;
+  const back = document.getElementById('hdQuayLai');
+  if (back) { e.preventDefault(); back.click(); }
+});
 const KHUNG_LO = {forestForm: 'saveForest', luongForm: 'saveLuong', vcForm: 'saveVc', giayForm: 'saveGiay', doiForm: 'saveDoi', hdForm: 'saveHd'};
 document.addEventListener('change', e => {
   const t = e.target, fm = t && t.form; if (!fm || !KHUNG_LO[fm.id] || t.id === 'xeDm' || t.id === 'ncDm') return;
@@ -183,6 +210,13 @@ document.addEventListener('change', e => {
   const f = curForest(), truoc = f ? JSON.stringify(f) : '';
   nhapKhung = {can: false};
   try { fn(fm, true); } finally { const can = nhapKhung.can; nhapKhung = null; if (can && f && JSON.stringify(f) !== truoc) persistLo(f); }
+});
+document.addEventListener('change', e => {
+  const input = e.target;
+  if (input.form?.id !== 'pcInLoc') return;
+  pcInLoc = Object.fromEntries(new FormData(input.form));
+  if (input.name === 'hd') pcInLoc.xe = '';
+  render();
 });
 document.addEventListener('submit', e => {
   if (e.target.id === 'infoForm') { e.preventDefault(); saveInfo(e.target); }
