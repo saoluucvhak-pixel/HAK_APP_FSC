@@ -39,7 +39,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await open('fb'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=vc]'); await w.waitForTimeout(400);
   const dv = async k => (await w.$$eval('button[data-act=dl][data-kind=' + k + ']', bs => bs.map(b => b.disabled)));
   const xv = await dv('xnvc'), tv = await dv('ttvc'), hv = await dv('hdvc');
-  ok('xuất lẻ BM-09 và BM-10 (tải tất cả và từng đội xe): mọi nút bị khóa; BM-04 vẫn xuất được', xv.length > 0 && tv.length > 0 && xv.every(Boolean) && tv.every(Boolean) && hv.some(x => !x), JSON.stringify([xv, tv, hv]));
+  ok('xuất lẻ BM-09 và BM-10 (tải tất cả và từng đội xe): mọi nút bị khóa; BM-04 vẫn xuất được', xv.length === hv.length && tv.length === hv.length && xv.length > 1 && xv.every(Boolean) && tv.every(Boolean) && hv.some(x => !x), JSON.stringify([xv, tv, hv]));
+  const dongTrung = w.locator('#doiChieuPcVC tr').filter({hasText: 'Phiếu trùng với lô R-A'});
+  ok('bảng đối chiếu ghi rõ lô bị trùng và có nút mở phiếu', await dongTrung.getByRole('button', {name: 'Mở phiếu'}).isVisible());
+  await dongTrung.getByRole('button', {name: 'Mở phiếu'}).click();
+  ok('Mở phiếu đưa tới dòng P1', /P1/.test(await w.evaluate(() => document.activeElement.closest('tr')?.innerText || '')));
+  await w.click('[data-ftab=xuat]');
   await w.click('[data-xtab=all]').catch(() => {}); await w.waitForTimeout(300); const cu = await dis('cuoi');
   if (cu.length && !cu[0]) { names = await zipNames2('cuoi'); ok('gói đợt 2: không có BM-08, 09, 10, 14', !names.some(n => /^(08|09|10|14)_/.test(n)), names.join(', ')); } else ok('gói đợt 2: nút bị khóa (không còn mẫu nào xuất được)', cu.length > 0 && cu[0], JSON.stringify(cu));
   // đối chứng: hai phiếu KHÁC NGÀY (lô D, 02/11/2026) và KHÁC BIỂN SỐ (lô E) so với lô A (P1, 1/11/2026, 92C-12345): không bị coi là trùng
@@ -59,6 +64,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side'); await open('fb'); await w.click('[data-ftab=kt]'); await w.waitForTimeout(500);
   const kt2 = await w.innerText('#main');
   ok('ngày 31/11/2026 không có thật ở cả hai lô: báo lỗi ngày (không có thật), không kết luận phiếu trùng', /không có thật|ngày/i.test(kt2) && !/giống hệt phiếu đã có ở lô/.test(kt2), kt2.slice(0, 500));
+  D.rs.own1.forests.fa.pc[0].ngay = '01/11/2026';
+  D.rs.own1.forests.fb.pc[0].ngay = '03/11/2026';
+  await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');
+  await open('fb'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=vc]');
+  ok('sau khi sửa phiếu trùng, mở lại tải BM-09/10 của xe có chuyến và đối chiếu đủ 12.500 kg',
+    (await dv('xnvc')).filter(x => !x).length === 2 && (await dv('ttvc')).filter(x => !x).length === 2 &&
+    /12\.500/.test(await w.innerText('#pcVCDu')) && /^0 phiếu/.test(await w.innerText('#pcVCNgoai')));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

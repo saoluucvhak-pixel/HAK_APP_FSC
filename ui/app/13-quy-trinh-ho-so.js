@@ -85,10 +85,11 @@ function panelDoiChieuPcVC(rec, groups) {
   const kq = doiChieuPcVanChuyen(rec, groups);
   if (!kq.pc.length) return '';
   const chua = [...kq.canSua, ...kq.hetHan], tong = a => a.length + ' phiếu · ' + fmt(totalKg(a)) + ' kg';
-  const rows = [...chua, ...kq.ngoaiPhamVi].map(({p, index, hdId, lyDo}) => '<tr><td>' + esc(p.soPhieu || '(không số)') + '</td><td>' +
-    esc(p.bksNguon || p.bienSo || '—') + '</td><td>' + fmt(totalKg([p])) + '</td><td>' + esc(lyDo) +
-    '</td><td>' + (Number.isInteger(index) ? '<button class="btn ghost sm" data-act="ktGo" data-go="' +
-    esc(JSON.stringify({ftab: 'dx', focus: 'pc', hdId, pcIndex: index})) + '">Mở phiếu</button>' : 'Ngoài phạm vi') + '</td></tr>').join('');
+  const rows = [...chua, ...kq.ngoaiPhamVi].map(({p, index, hdId, lyDo, ngoai}) => '<tr><td>' + esc(p.soPhieu || '(không số)') + '</td><td>' +
+    esc(p.bksNguon || p.bienSo || '—') + '</td><td>' + fmt(totalKg([p])) + '</td><td>' +
+    (ngoai ? 'Ngoài phạm vi · ' : '') + esc(lyDo) +
+    '</td><td><button class="btn ghost sm" data-act="ktGo" data-go="' +
+    esc(JSON.stringify({ftab: 'dx', focus: 'pc', hdId, pcIndex: index})) + '">Mở phiếu</button></td></tr>').join('');
   return '<div class="card" id="doiChieuPcVC"><h3 style="margin-top:0">Đối chiếu khối lượng BM-09/10</h3>' +
     '<div class="row" style="flex-wrap:wrap;gap:12px"><span>Tổng rừng <b id="pcVCTong">' + tong(kq.pc) +
     '</b></span><span>Đủ điều kiện về xe và hợp đồng <b id="pcVCDu">' + tong(kq.daGhep) +
@@ -105,7 +106,7 @@ function panelXuat(rec) {
   const btn = (label, kind, idx, ok) => '<button class="btn sm ghost" ' + (ok ? '' : 'disabled') + ' data-act="dl" data-kind="' + kind + '"' + (idx != null ? ' data-idx="' + idx + '"' : '') + '>' + label + '</button>';
   const hdld = hdldList(rec);
   const pay = payrollPlan(rec, ex);
-  const groups = groupsDX(rec), gpc = groupsPC(rec);
+  const groups = groupsDX(rec), gpc = groupsPC(rec, groups), coPhieu = !!rec.pc?.length;
   const why = [];
   if (g.info.length) why.push('Thông tin chủ rừng: ' + g.info.join('; '));
   if (g.nc.errs.length) why.push('Nhân công: ' + g.nc.errs.length + ' lỗi');
@@ -151,11 +152,15 @@ function panelXuat(rec) {
     (g.dx.warns.length ? '<div class="msg warn">Vận chuyển có ' + g.dx.warns.length + ' dòng cần lưu ý (giấy tờ thiếu hoặc sắp hết hạn). Xem tab Vận chuyển, không chặn xuất hồ sơ.</div>' : '') +
     '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng vận chuyển (mỗi đội xe một hợp đồng)</h3>' + btn('Tải tất cả (.zip)', 'hdvc', null, g.ok('hdvc')) + '</div>' +
     (groups.length ? groups.map((x, i) => row(esc(x.ten), x.vaiTro + ' ký · ' + x.xe.length + ' xe · ' + fmt(x.donGia) + ' đ/tấn', btn('.docx', 'hdvc', i, g.ok('hdvc') && bmXeOk(rec, '04', x)))).join('') : '<p class="mut">Chưa có vận chuyển.</p>') + '</div>' +
-    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Xác nhận khối lượng và thanh toán tiền vận chuyển</h3>' + (gpc.length ? btn('Biên bản (.zip)', 'xnvc', null, g.ok('xnvc')) + btn('Bảng thanh toán (.zip)', 'ttvc', null, g.ok('ttvc')) : '') + '</div>' +
+    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Xác nhận khối lượng và thanh toán tiền vận chuyển</h3>' + (coPhieu ? btn('Biên bản (.zip)', 'xnvc', null, gpc.length && g.ok('xnvc')) + btn('Bảng thanh toán (.zip)', 'ttvc', null, gpc.length && g.ok('ttvc')) : '') + '</div>' +
     (!(rec.pc || []).length ? '<p class="mut">Chưa có phiếu cân. Nạp file phiếu cân ở tab Vận chuyển (mỗi chuyến một dòng).</p>'
       : g.pc.errs.length ? '<div class="msg err">Phiếu cân còn ' + g.pc.errs.length + ' lỗi, xem tab Vận chuyển.</div>' : '') +
     (g.pc.warns.length ? '<div class="msg warn">' + esc(g.pc.warns.join(' · ')) + '</div>' : '') +
-    gpc.map((x, i) => { const py = payVC(rec, x); return row(esc(x.ten), py.n + ' chuyến · ' + fmtT(py.kg) + ' tấn · ' + fmt(py.tien) + ' đồng', '<div class="row">' + btn('Biên bản', 'xnvc', i, g.ok('xnvc') && bmXeOk(rec, '09', x)) + btn('Thanh toán', 'ttvc', i, g.ok('ttvc') && bmXeOk(rec, '10', x)) + '</div>'); }).join('') + '</div>';
+    (coPhieu ? groups.map(x => {
+      const i = gpc.indexOf(x), py = payVC(rec, x);
+      const sub = i < 0 ? 'Chưa có chuyến đủ điều kiện xuất. Xem bảng đối chiếu khối lượng.' : py.n + ' chuyến · ' + fmtT(py.kg) + ' tấn · ' + fmt(py.tien) + ' đồng';
+      return row(esc(x.ten), sub, '<div class="row">' + btn('Biên bản', 'xnvc', i, i >= 0 && g.ok('xnvc') && bmXeOk(rec, '09', x)) + btn('Thanh toán', 'ttvc', i, i >= 0 && g.ok('ttvc') && bmXeOk(rec, '10', x)) + '</div>');
+    }).join('') : '') + '</div>';
   S.fsc = params('Thông số hồ sơ FSC và giám sát', [
       ['tdNgay', 'Thẩm định: ngày thẩm định', 'dd/mm/yyyy'], ['tdNguoi', 'Thẩm định: người thẩm định', 'trống = ký tay'],
       ['ckNhan', 'Cam kết: đơn vị nhận (Kính gửi)', buyerName(rec) ? 'mặc định: ' + buyerName(rec) + ' (Công ty mua hàng)' : 'VD: Công ty TNHH ... (hoặc khai Công ty mua hàng để tự điền)'], ['ckNgay', 'Cam kết: ngày lập', 'dd/mm/yyyy'],

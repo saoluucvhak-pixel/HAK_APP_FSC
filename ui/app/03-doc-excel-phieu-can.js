@@ -212,7 +212,7 @@ function nhoTheoPc(pc, ten, khoa, fn) {
 }
 const khoaXe = g => JSON.stringify(g.xe.map(x => [String(x.bienSo || ''), x.kdDen || '', x.hanBH || '', x.hanGplx || '', x.taiXe || '']));
 const hanLoiOf = (rec, g) => nhoTheoPc(rec.pc || [], 'han', khoaXe(g), () => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g)));
-const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
+const groupsPC = (rec, groups = groupsDX(rec)) => groups.filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
 
 /* Đối chiếu cùng phạm vi hợp đồng và quy tắc ghép xe mà BM-09/10 đang dùng. */
 function doiChieuPcVanChuyen(rec, groups = groupsDX(rec)) {
@@ -220,7 +220,7 @@ function doiChieuPcVanChuyen(rec, groups = groupsDX(rec)) {
   const nhom = groups.map(g => ({g, ks: new Set(g.xe.map(x => bienKey(x.bienSo)))}));
   const thieuKy = doiXeThieuKy(rec), daGhep = [], canSua = [], hetHan = [], ngoaiPhamVi = [];
   pc.forEach((p, index) => {
-    if (ngoai.has(p)) { ngoaiPhamVi.push({p, lyDo: ngoai.get(p)}); return; }
+    if (ngoai.has(p)) { ngoaiPhamVi.push({p, index, hdId: p.hdvcId, lyDo: ngoai.get(p), ngoai: true}); return; }
     const list = nhom.filter(({g, ks}) => pcThuocNhom(p, g, ks, rec)), g = list[0]?.g;
     const xe = g ? g.xe.filter(x => pcKhopXeVC(p, x)) : [];
     const hdId = (g && g.hd && g.hd.id) || p.hdvcId || '';
