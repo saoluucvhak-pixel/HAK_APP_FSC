@@ -31,6 +31,11 @@ exports.setExp = async (w, k, v) => {
   const back = await w.evaluate(() => ({ftab: (document.querySelector('[data-ftab].on') || {}).dataset?.ftab, xtab: (document.querySelector('[data-xtab].on') || {}).dataset?.xtab}));
   const go = await w.evaluate(k => window.__expTab(k), k);
   if (back.ftab !== go.ftab) await w.click('[data-ftab=' + go.ftab + ']');
+  if (go.ftab === 'nc') {
+    const rows = w.locator('#dsHdNcTbl tr[data-act=chonDoi]');
+    if (await rows.count()) await rows.first().click();
+  }
+  if (go.muc) await w.locator('.mucNav [data-muc-lo=' + go.muc + ']').click();
   if (go.xtab && (back.ftab !== 'xuat' || back.xtab !== go.xtab)) await w.click('[data-xtab=' + go.xtab + ']');
   await w.fill('[data-exp=' + k + ']', v); await w.dispatchEvent('[data-exp=' + k + ']', 'change');
   await w.evaluate(() => window.__stSaveCurrent());   // một cách lưu: ô vào bản nháp của lô, người dùng bấm “Lưu dữ liệu vào lô”

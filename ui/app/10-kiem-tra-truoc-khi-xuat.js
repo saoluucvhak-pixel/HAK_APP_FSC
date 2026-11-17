@@ -148,19 +148,19 @@ function panelKiemTra(job) {
 }
 
 function panelRung(own) {
-  const fl = forestList(own);
-  const list = '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Các rừng của chủ rừng</h3><button class="btn sm" data-act="newForest">+ Rừng mới</button></div>' +
+  const fl = forestList(own), f = curForest();
+  const add = '<button class="btn sm" data-act="newForest">+ Rừng mới</button>';
+  const list = '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Các rừng của chủ rừng</h3>' + (f ? '' : add) + '</div>' +
     '<p class="mut">Mỗi rừng có tổ khai thác, vận chuyển, hợp đồng và hồ sơ xuất riêng.</p>' + loTuLoCuBox(own) +
     (fl.length ? fl.map(f => '<button class="item ' + (f.id === curF ? 'on' : '') + '" data-forest="' + f.id + '"><span class="pill ' + (progressOf(jobView(own, f)).pct === 100 ? 'ok' : '') + '">' + progressOf(jobView(own, f)).pct + '%</span><b>' + esc(f.info.tenRung || f.info.maRung) +
       '</b><small>Mã ' + esc(f.info.maRung) + ' · ' + esc(f.info.diaDiem || 'chưa có địa điểm') + ' · ' + f.nc.length + ' người · ' + f.dx.length + ' xe</small></button>').join('')
       : '<p class="mut">Chưa có rừng. Bấm “+ Rừng mới”.</p>') + '</div>';
-  const f = curForest();
   if (!f) return list;
   const job = curRec();
   const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'], ['xuat', 'Xuất hồ sơ']];
   return '<details class="rungTomTat"><summary>Danh sách rừng · Tiến độ ' + progressOf(job).pct + '%</summary>' +
     list + panelTienDo(job) + '</details>' +
-    '<div class="row" style="justify-content:space-between"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
+    '<div class="row" style="justify-content:space-between;flex-wrap:wrap"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row" style="flex-wrap:wrap">' + add + '<button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
     loCrumb(job) + loBar() + '<div class="tabs rungTabs">' + ft.map(([k, l]) => '<button class="' + (ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
     loKhoaBanner(f) +
     (ftab === 'inpc' ? panelInPhieuCan() : ftab === 'finfo' ? khungMucLo('finfo', [

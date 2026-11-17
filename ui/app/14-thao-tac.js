@@ -155,16 +155,28 @@ function saveHd(form, nhap) {
     if (cuoc.mode === 'coDinh' && !(cuoc.coDinh > 0)) e.push('chưa nhập đơn giá cố định');
     if (cuoc.mode === 'tanKm' && !(cuoc.donGiaKm > 0)) e.push('chưa nhập đơn giá tấn/km');
   }
-  if (g('pcNgay') && !parseVN(g('pcNgay'))) e.push('ngày lập xác nhận khối lượng phải đúng dd/mm/yyyy');
   if (e.length) return formMsg(form, chuaLuu(nhap) + e.join('; '));
   clearFormMsg(form);
   const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? HAKDanhMuc.timDoiTac(dmDoiTacAll(), ky.slice(2)) : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
-  const patch = {ten: g('ten'), cuoc, exp: {soVC: g('soVC'), vcChiPhi: g('vcChiPhi'), pcSo: g('pcSo'), pcNgay: g('pcNgay')}};
+  const patch = {ten: g('ten'), cuoc};
   if (dv) { if (HAKDanhMuc.chuanDoiTacId(cur.donViId) !== dv.id) patch.donVi = dv; } else if (ky.startsWith('p:')) patch.key = ky.slice(2);   // người ký: người trong đội hoặc doanh nghiệp
   const r = HAKModel.updateHd(f, curHd, patch); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
   { const h = (r.f.hdvc || []).find(x => x.id === curHd);   // 3.0: liên kết bên ký tới Danh mục đối tượng (ID), bản chụp h.ben vẫn dùng để in
     if (h) { const d = dv && dv.doiTuongId ? {doiTuongId: dv.doiTuongId, nguoiId: dv.nguoiId || ''} : !dv && ky.startsWith('p:') ? (a => a ? {doiTuongId: a.dt.id, nguoiId: a.ng.id} : null)(HAKDoiTuong.timCccd(dmDT(), ky.slice(2))) : null; if (d) h.benKy = d; else if (dv || ky.startsWith('p:')) delete h.benKy; } }
   Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); if (nhap) { persistLo(); return; } render(); luuLo().then(x => { if (x && x.ok) note('Đã lưu đội xe và hợp đồng vận chuyển.'); });
+}
+function saveHdVb(form, nhap) {
+  const f = curForest();
+  if (!f || !curHd) return;
+  const fd = new FormData(form);
+  const exp = Object.fromEntries(['soVC', 'vcChiPhi', 'pcSo', 'pcNgay'].map(k => [k, trim(fd.get(k))]));
+  if (exp.pcNgay && !parseVN(exp.pcNgay)) return formMsg(form, chuaLuu(nhap) + 'ngày lập xác nhận khối lượng phải đúng dd/mm/yyyy');
+  const r = HAKModel.updateHd(f, curHd, {exp});
+  if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
+  clearFormMsg(form);
+  f.hdvc = r.f.hdvc;
+  if (nhap) return persistLo();
+  return luuLo();
 }
 function xoaHd() {
   const f = curForest(); if (!f || !curHd) return;

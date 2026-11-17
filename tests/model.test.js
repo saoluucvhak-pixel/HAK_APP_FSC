@@ -128,7 +128,10 @@ test('đội xe: thêm đội, chuyển xe, chọn người ký trong đội ho�
   assert.deepStrictEqual(M.ensureForest(f), f);
   const d2 = M.addHdDonVi(f, dv); f = d2.f; f = M.moveXe(f, [1], d2.id).f;
   assert.deepStrictEqual(M.hdOrder(f).map(h => h.id), [t.id, d2.id]);
-  assert.ok(M.removeHd(M.moveXe(f, [1], t.id).f, d2.id).ok);
+  const noXe = M.moveXe(f, [1], t.id).f;
+  assert.ok(M.removeHd(noXe, d2.id).ok);
+  noXe.pc = [{soPhieu: 'PC01', hdvcId: d2.id}];
+  assert.match(M.removeHd(noXe, d2.id).error, /còn 1 phiếu cân/);
 });
 
 test('phiếu cân gắn đội: lô một đội tự gán; lô nhiều đội phiếu cũ chưa gán, phiếu mới theo cột Đội; gán hàng loạt; chặn xóa đội còn phiếu; dựng lại dạng cũ bỏ doiId', () => {

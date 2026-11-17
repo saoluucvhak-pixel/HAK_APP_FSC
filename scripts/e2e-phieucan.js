@@ -76,6 +76,11 @@ const P = (stt, so, bien, c1, c2, kg, kh, g1, g2, gia, tien) => ({donGia: gia ==
   ok('nội dung phiếu: tên công ty, “PHIẾU CÂN”, số phiếu, biển số, cân lần 1/2 (kg), khối lượng, giờ cân, địa chỉ rừng, khách hàng', /CÔNG TY TNHH MẪU PHÁT/.test(txt) && /PHIẾU CÂN/.test(txt) && /PA1/.test(txt) && /92C-12345/.test(txt) && /40\.400/.test(txt) && /15\.000/.test(txt) && /25\.400/.test(txt) && /05\/10\/2026 08:15:00/.test(txt) && /Thôn A/.test(txt) && /NGUYỄN VĂN AN/.test(txt), txt.slice(0, 500));
   ok('phiếu không khách hàng lấy tên chủ rừng; giá mua 1.250 đ/kg (đơn giá 1.250.000 đ/tấn) và thành tiền 31.750.000 lấy từ phiếu cân', /NGUYỄN VĂN MỘT/.test(txt) && /Giá mua\s*:\s*1\.250\s*đ\/kg/.test(txt) && /31\.750\.000\s*\(vnđ\)/.test(txt), txt.slice(0, 700));
 
+  // Xuất đối chứng tại cùng trạng thái ban đầu, trước khi đổi khổ giấy và gọi printToPDF.
+  clearOut();
+  await pw.$eval('#pdf', b => b.click());
+  const pdfGoc = await choPdf();
+
   // 2. PDF in ra đúng khổ giấy
   const pdfOf = async () => Buffer.from(await app.evaluate(async ({BrowserWindow}) => { const t = BrowserWindow.getAllWindows().find(x => x.getTitle() === 'PhieuCan'); return (await t.webContents.printToPDF({preferCSSPageSize: true, printBackground: true})).toString('base64'); }), 'base64');
   let b = box(await pdfOf());
@@ -85,9 +90,6 @@ const P = (stt, so, bien, c1, c2, kg, kh, g1, g2, gia, tien) => ({donGia: gia ==
   await pw.$eval('#paper', (e, v) => { e.value = v; e.dispatchEvent(new Event('input', {bubbles: true})); }, '240x279'); await pw.waitForTimeout(300);
 
   // 3. nút “Tải PDF PhieuCan” của công cụ
-  clearOut();
-  await pw.$eval('#pdf', b => b.click());
-  const pdfGoc = await choPdf();
   b = box(pdfGoc);
   ok('“Tải PDF PhieuCan”: file PhieuCan.pdf có 2 trang, mỗi trang 240 × 279 mm', b.length === 2 && b.every(x => Math.abs(x[0] - 240) <= 0.3 && Math.abs(x[1] - 279) <= 0.3), JSON.stringify(b));
   const anhNhung = pdfAnh(pdfNhung), anhGoc = pdfAnh(pdfGoc);
