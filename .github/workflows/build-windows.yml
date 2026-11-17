@@ -70,7 +70,9 @@ jobs:
       - run: npm ci
       - run: npm run build:html
       - name: Kiểm tra quyền tệp khi di chuyển dữ liệu trên Linux
-        run: ELECTRON_RUN_AS_NODE=1 "$(node -p "require('electron')")" --test tests/datamove.test.js
+        run: |
+          node -e "require('electron')"
+          ELECTRON_RUN_AS_NODE=1 "$(node -p "require('electron')")" --test tests/datamove.test.js
       - name: Chuẩn bị mã nguồn và Electron của v1.4.33
         run: |
           old="$RUNNER_TEMP/hakqn-v1.4.33"
