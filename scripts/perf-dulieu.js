@@ -27,14 +27,14 @@ function duLieu() {
   const giu = arg('--giu');   // --giu <thư mục>: dựng dữ liệu một lần rồi dùng lại (đo nhiều lần, chạy profiler)
   const dir = giu || fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-perfdl-')); fs.mkdirSync(dir, {recursive: true});
   const dbFile = path.join(dir, 'p.sqlite'), env = {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud')}, coSan = giu && fs.existsSync(dbFile);
-  let app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env}); let w = require('./_hd30').boc(await app.firstWindow()); await w.waitForSelector('#side', {timeout: 120000});
+  let app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env}); let w = await app.firstWindow(); await w.waitForSelector('#side', {timeout: 120000});
   if (!coSan) { const D = duLieu(); await w.evaluate(d => window.hak.save(d, {allowBulkDelete: true}), D); }
   // 10 lô đã chốt: chốt bằng hàm của app (gói đóng băng như người dùng chốt)
   if (!coSan) await w.evaluate(n => { const db = window.hak.loadSync().db; Object.values(db.rs.own1.forests).slice(0, n).forEach(f => HAKVongDoi.chot(f, 'Đo hiệu năng', new Date().toISOString(), [])); return window.hak.save(db, {allowBulkDelete: true}); }, N_CHOT);
   await app.close();
   const kq = {duLieu: {lo: N_LO, phieuMoiLo: N_PC, nhanCong: N_NC, xe: N_XE, danhMucNguoi: N_NGUOI * 3, danhMucXe: N_XEDM * 3, loChot: N_CHOT}};
   kq.fileSQLiteMB = Math.round(fs.statSync(dbFile).size / 1048576 * 10) / 10;
-  const t0 = Date.now(); app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env}); w = require('./_hd30').boc(await app.firstWindow()); await w.waitForSelector('#side', {timeout: 120000}); kq.moAppMs = Date.now() - t0;
+  const t0 = Date.now(); app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env}); w = await app.firstWindow(); await w.waitForSelector('#side', {timeout: 120000}); kq.moAppMs = Date.now() - t0;
   if (process.argv.includes('--profile')) {   // hồ sơ CPU khi vẽ tab Thông tin rừng: hàm nào tốn thời gian nhất (tự thân)
     const cdp = await w.context().newCDPSession(w); await cdp.send('Profiler.enable'); await cdp.send('Profiler.start');
     const pt = (arg('--profile-tab') || 'finfo').split(':');   // --profile-tab xuat:all: tab cần đo
@@ -49,6 +49,8 @@ function duLieu() {
   kq.dungLuong = await w.evaluate(() => window.__perf.dungLuong());
   // một lần lưu khi sửa một ô (số HĐ của đội) rồi Lưu dữ liệu vào lô
   await w.evaluate(() => window.__perf.ve('own1', 'f11', 'nc'));
+  if (await w.locator('#dsHdNcTbl tr[data-act=chonDoi]').count()) await w.locator('#dsHdNcTbl tr[data-act=chonDoi]').first().click();
+  await w.click('.mucNav [data-muc-lo=vanban]');
   const a = Date.now(); await w.fill('#doiKTVb input[data-exp=soKT]', '099'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change');
   const r = await w.evaluate(async () => { const a = performance.now(); const r = await window.__stSaveCurrent(); return {ok: r && r.ok, ms: Math.round(performance.now() - a), cach: window.__saveStats.last}; }); kq.luuMotO = Object.assign(r, {tongMs: Date.now() - a});
   // lần lưu thứ hai (đã có ảnh chụp của lần trước: lưu theo phần thay đổi — trường hợp thường gặp)

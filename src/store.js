@@ -521,8 +521,9 @@ class Store {
     const cur = this.load();
     let next;
     if (strategy === 'replace') {
-      next = incoming;
-      if (!('congTy' in incoming)) next = Object.assign({}, incoming, {congTy: cur.congTy || {}});   // bản sao lưu cũ chưa có danh mục công ty: không xóa danh mục của máy
+      next = structuredClone(incoming);
+      if (!('congTy' in next)) next.congTy = cur.congTy || {}; // bản sao lưu cũ chưa có danh mục công ty
+      if (!LK.daChuyen(next)) LK.chuyenDoi(next);
     } else {
       if (!['skip', 'overwrite', 'both'].includes(strategy)) throw new Error('Cách xử lý không hợp lệ: ' + strategy);
       next = LoRung.mergeImport(cur, incoming, strategy, null, opts || {}).next;     // ném lỗi nếu có hồ sơ mâu thuẫn, trước khi sao lưu hay ghi
@@ -530,6 +531,16 @@ class Store {
       next.congTy = {...(cur.congTy || {})};
       Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || strategy === 'overwrite') next.congTy[id] = c; });
       Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
+      if (!LK.daChuyen(incoming)) {
+        for (const [oid, owner] of Object.entries(next.rs)) {
+          for (const [fid, forest] of Object.entries(owner.forests || {})) {
+            const previous = cur.rs[oid]?.forests?.[fid];
+            if (previous && JSON.stringify(previous) === JSON.stringify(forest)) continue;
+            LK.chuanLo(forest);
+            LK.noiDanhMuc(forest, next);
+          }
+        }
+      }
     }
     const backup = this.snapshotFile('truoc-khoi-phuc', {keep: 20});   // giữ 20 bản gần nhất (như truoc-xoa): mỗi bản là cả cơ sở dữ liệu, không để thư mục sao lưu lớn mãi
     const kq = this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace', goiLichSu: opts && opts.goiLichSu});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
@@ -542,6 +553,9 @@ class Store {
     { const e = LoRung.loiToanVen(pkg && pkg.lo); if (e) throw Object.assign(new Error(e.moTa + ' Dữ liệu trên máy chưa bị thay đổi.'), {code: 'GOI_HONG', toanVen: e.toanVen}); }   // trước khi sao lưu hay ghi
     const cur = this.load(), r = LoRung.applyLot(cur, pkg, action);
     if (!r.doi) return {backup: '', plan: r.plan, doi: false};                  // lô đã có và giữ bản hiện có: không ghi gì
+    const forest = r.next.rs[r.ownerId].forests[r.forestId];
+    LK.chuanLo(forest);
+    LK.noiDanhMuc(forest, r.next);
     const backup = this.snapshotFile('truoc-khoi-phuc-lo', {keep: 20});
     this.save(r.next);
     return {backup, plan: r.plan, doi: true, ownerId: r.ownerId, forestId: r.forestId};

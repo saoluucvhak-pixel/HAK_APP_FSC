@@ -427,6 +427,17 @@ function registerIpc() {
   ipcMain.handle('bk:delete', (e, f) => wrap(() => { const r = KhoSaoLuu.xoa(bkDirs(), f, loc.dbFile); log('INFO', 'Xóa bản sao lưu ' + r.name); return r; }, true)());
   ipcMain.handle('bk:autoNow', afterReloc(async () => { if (!store) return {ok: false, error: NO_STORE(), unavailable: true}; await runAutoBackup(true); return {ok: !!(autoBk && autoBk.ok), auto: autoBk, error: autoBk && !autoBk.ok ? autoBk.error : undefined}; }));
   ipcMain.handle('phieucan:open', async (e, rows, company) => { try { await openPhieuCan(rows, company); return {ok: true}; } catch (err) { log('ERROR', 'phieucan: ' + err.message); return {ok: false, error: err.message}; } });
+  ipcMain.handle('phieucan:nhung', async (e, rows, company, dark) => {
+    try {
+      if (!win || e.sender !== win.webContents || e.senderFrame !== e.sender.mainFrame) throw new Error('Không phải màn hồ sơ');
+      const frame = e.sender.mainFrame.frames.find(f => f.name === 'phieuCanNhung' && f.url === PC_FRAME_URL);
+      if (!frame) throw new Error('Chưa tải công cụ in phiếu cân');
+      const {injectEmbedded} = require('./phieucan');
+      const result = await frame.executeJavaScript(injectEmbedded(pcRows(rows), pcCompany(company), dark === true));
+      if (result !== true) throw new Error(String(result));
+      return {ok: true};
+    } catch (err) { return {ok: false, error: err.message}; }
+  });
   ipcMain.handle('app:openData', () => { shell.showItemInFolder(loc.dbFile); return {ok: true}; });
 }
 
@@ -605,7 +616,8 @@ async function smoke() {
  * tính từ chính file, không tải tài nguyên ngoài). Mọi file khác đi qua nguyên vẹn. Giữ phiên mặc định để công cụ còn đọc được cài đặt
  * đã lưu trong localStorage. HAKQN_PC_CSP_EXTRA (chỉ khi chạy từ mã nguồn): JSON bổ sung chỉ thị, dùng khi rà vi phạm CSP. */
 const PC_FILE = path.join(__dirname, '..', 'renderer', 'PhieuCan.html');
-let pcCsp = null;
+const PC_FRAME_URL = require('url').pathToFileURL(PC_FILE).href + '?nhung=1';
+let pcCsp = null, pcEmbedded = null;
 function phieuCanCsp() {
   if (pcCsp) return pcCsp;
   const CSP = require('./csp');
@@ -621,14 +633,24 @@ function installFileCsp() {
     let p = ''; try { p = fileURLToPath(req.url.split(/[?#]/)[0]); } catch (e) { return res; }
     if (!samePath(p, PC_FILE)) return res;
     const h = new Headers(res.headers); h.set('Content-Security-Policy', phieuCanCsp());
+    if (new URL(req.url).searchParams.get('nhung') === '1') {
+      if (!pcEmbedded) {
+        const CSP = require('./csp');
+        const html = require('./phieucan').embeddedHtml(fs.readFileSync(PC_FILE, 'utf8'));
+        pcEmbedded = {html, csp: CSP.policy(CSP.scriptHashes(html))};
+      }
+      return new Response(pcEmbedded.html, {headers: {'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': pcEmbedded.csp}});
+    }
     return new Response(res.body, {status: res.status, statusText: res.statusText, headers: h});
   });
 }
 
 /* In phiếu cân: mở NGUYÊN BẢN công cụ renderer/PhieuCan.html (không sửa file) trong cửa sổ riêng, nạp sẵn phiếu cân của rừng bằng ô chọn file của chính công cụ (src/phieucan.js) */
 let pcWin = null;
+const pcRows = rows => Array.isArray(rows) ? rows.map(r => Array.isArray(r) ? r.slice(0, 40).map(v => (typeof v === 'number' || typeof v === 'string') ? v : '') : []) : [];
+const pcCompany = company => company && typeof company === 'object' ? Object.fromEntries(['coName', 'coAddr', 'coPhone', 'coFax', 'place'].map(k => [k, typeof company[k] === 'string' ? company[k] : ''])) : {};
 async function openPhieuCan(rows, company) {
-  const list = Array.isArray(rows) ? rows.slice(0, 5001).map(r => Array.isArray(r) ? r.slice(0, 40).map(v => (typeof v === 'number' || typeof v === 'string') ? v : '') : []) : [];
+  const list = pcRows(Array.isArray(rows) ? rows.slice(0, 5001) : []);
   if (!pcWin || pcWin.isDestroyed()) {
     pcWin = new BrowserWindow({width: 1280, height: 860, minWidth: 900, minHeight: 600, title: 'In phiếu cân', autoHideMenuBar: true, backgroundColor: '#f5f2ec',
       webPreferences: {contextIsolation: true, nodeIntegration: false, sandbox: true}});
@@ -644,7 +666,7 @@ async function openPhieuCan(rows, company) {
     w.loadFile(path.join(__dirname, '..', 'renderer', 'PhieuCan.html')).catch(() => { /* lỗi đã báo qua did-fail-load */ });
   });
   await w.webContents.insertCSS(require('./phieucan').SIMPLE_CSS);
-  const co = company && typeof company === 'object' ? Object.fromEntries(['coName', 'coAddr', 'coPhone', 'coFax', 'place'].map(k => [k, typeof company[k] === 'string' ? company[k] : ''])) : {};
+  const co = pcCompany(company);
   { const r = await w.webContents.executeJavaScript(require('./phieucan').inject(list, co)); if (r !== true) throw new Error('Không nạp được dữ liệu vào công cụ in phiếu cân: ' + r); }
 }
 
@@ -655,6 +677,9 @@ function createWindow() {
       additionalArguments: !app.isPackaged && process.env.HAKQN_TEST_LEGACY_IMPORT === '1' ? ['--hakqn-test-legacy-import'] : []}
   });
   win.webContents.on('will-navigate', e => e.preventDefault());
+  win.webContents.on('will-frame-navigate', e => {
+    if (!e.isMainFrame && e.url !== PC_FRAME_URL && e.url !== 'about:blank') e.preventDefault();
+  });
   // Tải biểu mẫu/ZIP: hỏi nơi lưu (mặc định thư mục Tải về). Khi kiểm thử tự động: lưu thẳng vào HAKQN_DOWNLOAD_DIR.
   win.webContents.session.on('will-download', (e, item) => {
     const dir = process.env.HAKQN_DOWNLOAD_DIR;

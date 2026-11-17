@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld('hak', {
   },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
   phieuCan: (rows, company) => ipcRenderer.invoke('phieucan:open', rows, company),
+  phieuCanNhung: (rows, company, dark) => ipcRenderer.invoke('phieucan:nhung', rows, company, dark),
   google: {
     status: () => ipcRenderer.invoke('google:status'),
     login: () => ipcRenderer.invoke('google:login'),

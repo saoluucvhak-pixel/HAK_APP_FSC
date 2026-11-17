@@ -82,11 +82,10 @@ function pgDoiHd(id, hId) { const st = stCur(), f = curForest(), p = st && st.cu
 /* đầu phần Phiếu cân của trang chi tiết hợp đồng */
 function pcDauHd(rec, hMo) {
   const pc = rec.pc || [], cua = pc.filter(p => p.hdvcId === hMo.id).length, chua = pc.filter(p => !p.hdvcId).length;
-  return '<div class="card" id="pcHd"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Phiếu cân của hợp đồng: ' + cua + (chua ? ' <small class="mut">· ' + chua + ' phiếu của rừng chưa thuộc hợp đồng nào</small>' : '') + '</h3>' +
+  return '<div id="pcHd"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Phiếu cân của hợp đồng: ' + cua + (chua ? ' <small class="mut">· ' + chua + ' phiếu của rừng chưa thuộc hợp đồng nào</small>' : '') + '</h3>' +
     '<span class="row" style="gap:6px;flex-wrap:wrap">' + (HB ? '<button class="btn ghost sm" data-act="lkOpen" id="pcTraCuu">Tra cứu HoSoKeo</button>' : '') +
-    '<button class="btn ghost sm" data-act="pcNapExcel" id="pcNapExcel">Nạp Excel</button>' +
-    '<button class="btn sm" data-act="stAdd" data-kind="pc" id="pcThem">+ Thêm phiếu cân</button></span></div>' +
-    '<div class="row" style="margin-top:6px">' + (pcTatCa ? '<span class="mut">Đang xem mọi phiếu cân của rừng.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ phiếu của hợp đồng này</button>' : '<span class="mut">Đang xem phiếu của hợp đồng này (và phiếu chưa thuộc hợp đồng).</span> <button class="btn ghost sm" data-act="pcTatCa">Xem mọi phiếu của rừng</button>') + '</div></div>' + pcGanBaoHtml();
+    '<button class="btn ghost sm" data-act="pcPrint" data-hd="' + esc(hMo.id) + '">In phiếu cân</button></span></div>' +
+    '<div class="row importActions">' + (pcTatCa ? '<span class="mut">Đang xem mọi phiếu cân của rừng.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ phiếu của hợp đồng này</button>' : '<span class="mut">Gồm phiếu của hợp đồng này và phiếu chưa gán.</span> <button class="btn ghost sm" data-act="pcTatCa">Xem mọi phiếu của rừng</button>') + '</div></div>';
 }
 /* hai cột của trang chi tiết: Xe của hợp đồng (ID dòng xe; giữ BKS gốc của phiếu) và Hợp đồng (chuyển phiếu) */
 function pcCotHd(rec, r, hMo) {
@@ -100,7 +99,7 @@ function pcCotHd(rec, r, hMo) {
   if (hId && !cur) { const c = chonXePhieu(f || rec, rec.dx, hId, r.bienSo); if (!c.xe || !c.xe.id) xeHtml += '<br><small class="mut">' + esc(c.lyDo || 'chọn xe trong hợp đồng') + '</small>'; }
   if (cur && HAKBks.khoa(cur.bienSo) !== HAKBks.khoa(r.bienSo)) xeHtml += '<br><small class="mut" title="BKS ghi trên phiếu (nguồn) được giữ nguyên">BKS phiếu: ' + esc(r.bienSo) + '</small>';
   const list = rec.hdvc || [];
-  const hdHtml = sua && list.length > 1 ? '<select data-pchd="' + ix + '" style="max-width:130px">' + (hId ? '' : '<option value="" selected>(chưa thuộc)</option>') + list.map(h => '<option value="' + esc(h.id) + '"' + (h.id === hId ? ' selected' : '') + '>' + esc(tenDoiVc(rec, h)) + '</option>').join('') + '</select>'
+  const hdHtml = sua && (list.length > 1 || (!hId && list.length)) ? '<select aria-label="Hợp đồng của phiếu" data-pchd="' + ix + '" style="max-width:130px">' + (hId ? '' : '<option value="" selected>(chưa thuộc)</option>') + list.map(h => '<option value="' + esc(h.id) + '"' + (h.id === hId ? ' selected' : '') + '>' + esc(tenDoiVc(rec, h)) + '</option>').join('') + '</select>'
     : hId ? esc(tenDoiVc(rec, list.find(h => h.id === hId) || {ten: hId})) : '<span class="pill warn">chưa thuộc</span>';
   return '<td>' + xeHtml + '<div style="margin-top:4px" title="Hợp đồng vận chuyển của phiếu"><small class="mut">Hợp đồng:</small> ' + hdHtml + '</div></td>';   // một cột: bảng không rộng thêm (nút Sửa, Xóa vẫn trong tầm nhìn)
 }
@@ -152,6 +151,6 @@ document.addEventListener('click', e => {
   if (el.dataset.act === 'pgThemXe') pgThemXe(el.dataset.id); else pgDoiHd(el.dataset.id, el.dataset.hd);
 });
 document.addEventListener('click', e => {
-  const el = e.target && e.target.closest && e.target.closest('[data-act=pcTatCa],[data-act=pcTheoHd],[data-act=pcGanDong],[data-act=pcNapExcel],[data-act=xeTatCa],[data-act=xeTheoHd]'); if (!el) return;
-  const a = el.dataset.act; if (a === 'pcNapExcel') { const i = document.querySelector('input[data-file=pc]'); if (i) i.click(); return; } if (a === 'xeTatCa') xeTatCa = true; else if (a === 'xeTheoHd') xeTatCa = false; else if (a === 'pcTatCa') pcTatCa = true; else if (a === 'pcTheoHd') pcTatCa = false; else pcGanBao = null; render();
+  const el = e.target && e.target.closest && e.target.closest('[data-act=pcTatCa],[data-act=pcTheoHd],[data-act=pcGanDong],[data-act=xeTatCa],[data-act=xeTheoHd]'); if (!el) return;
+  const a = el.dataset.act; if (a === 'xeTatCa') xeTatCa = true; else if (a === 'xeTheoHd') xeTatCa = false; else if (a === 'pcTatCa') pcTatCa = true; else if (a === 'pcTheoHd') pcTatCa = false; else pcGanBao = null; render();
 });

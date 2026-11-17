@@ -160,7 +160,27 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .hak-ui .hak-detail-tabs{gap:6px;padding:4px 0}
 @media (max-width:1100px){.grid2{grid-template-columns:1fr}}
 @media (max-width:900px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}main{padding:14px}header.top,#ctxBar{position:static}header.top h1 small{display:none}header.top{padding:8px 12px;gap:6px}.nav .nb,.hbtn{padding:5px 10px;font-size:13px}.nav{order:3;flex:1 1 100%}}
-@media print{header.top,#ctxBar,aside,.btn,.tabs{display:none!important}.layout{display:block}main{padding:0}.card{box-shadow:none;break-inside:avoid}}
+.mucLayout{display:grid;grid-template-columns:minmax(140px,185px) minmax(0,1fr);gap:12px;align-items:start}
+.mucNav{display:grid;gap:4px;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px}
+.mucNav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;padding:8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
+.mucNav button[aria-current]{border-color:var(--line);background:var(--hover);font-weight:700}
+.mucNoiDung,.mucKhoa{min-width:0}
+.mucKhoa{padding:0;margin:0;border:0}
+.mucForm:not([hidden]){display:contents}
+.rungTomTat{margin:8px 0;color:var(--mut)}
+.rungTomTat summary{cursor:pointer}
+.rungTabs{flex-wrap:wrap}
+#loCrumb{margin:4px 0 8px;color:var(--mut);font-size:13px}
+#stTbl_pc{min-width:1100px}
+.wrap:has(> #stTbl_pc){max-height:55vh;overflow:auto}
+#stTbl_pc thead th{position:sticky;top:0;z-index:1}
+.pcInLoc{flex-wrap:wrap;gap:10px}
+.importActions{flex-wrap:wrap;gap:6px}
+.pcInFrame{display:block;width:100%;height:70vh;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+@media (max-width:1100px){header.top{gap:8px;padding-inline:10px}.brand h1{font-size:13px}.brand h1 small{display:none}.nav .nb,.hbtn{padding-inline:8px}}
+@media (min-width:700px) and (max-width:950px){header.top{flex-wrap:nowrap}.brand h1{display:none}.nav{flex:1 1 auto;order:0;flex-wrap:nowrap}}
+@media (max-width:650px){.mucLayout{grid-template-columns:minmax(0,1fr)}.mucNav{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media print{header.top,#ctxBar,aside,.btn,.tabs,.mucNav{display:none!important}.layout,.mucLayout{display:block}main{padding:0}.card{box-shadow:none;break-inside:avoid}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -172,12 +192,12 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
   </button>
   <nav class="nav">
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
-    <button class="nb deskOnly" data-act="lkOpen" hidden>Tra cứu Google Sheets</button>
+    <button class="nb deskOnly" data-act="lkOpen" title="Tra cứu Google Sheets" hidden>Tra cứu</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
-  <button class="hbtn" data-act="tkOpen" id="tkBtn" title="Tìm kiếm toàn cục (Ctrl+K)">🔍 Tìm (Ctrl+K)</button>
+  <button class="hbtn" data-act="tkOpen" id="tkBtn" title="Tìm kiếm toàn cục (Ctrl+K)">🔍 Tìm</button>
 </header>
 <div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><button type="button" class="pill" id="bkChip" data-act="openSetBk" hidden></button><span class="pill" id="saveSt"></span></div>
 <div class="layout">

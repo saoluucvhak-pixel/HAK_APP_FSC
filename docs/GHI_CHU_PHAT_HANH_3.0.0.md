@@ -3,6 +3,8 @@
 > Trạng thái: **chưa phát hành**. Chưa gắn thẻ, chưa tạo Release. Bản công khai gần nhất: **v2.2.0**. Bộ cài của bản này: `HAKQN-HoSoKhaiThac-Setup-3.0.0.exe` (artifact CI, kèm `BUILD_INFO.txt`).
 
 ## Có gì mới so với v2.3.0
+- **Màn nhập theo từng mục.** Trong Thông tin rừng hoặc chi tiết hợp đồng, chọn mục ở danh sách bên trái. Xe, thành viên, phiếu cân và số văn bản có màn riêng. Công ty và cước chung nằm trong Thông tin rừng.
+- **In phiếu cân trong cửa sổ chính.** Mở từ Xuất hồ sơ hoặc mục Phiếu cân của hợp đồng, lọc phạm vi và chọn phiếu đã lưu để in.
 - **Cài đặt nằm trên thanh chính.** Hướng dẫn, Giao diện, Sao lưu và khôi phục chuyển vào Cài đặt; không còn menu “⋯ Thêm”.
 - **Danh mục đối tượng** (Cài đặt): pháp nhân (công ty, ký qua người đại diện) hoặc thể nhân (bảng Đối tác gồm các người). Một người có thể vừa là Nhân công, Tài xế, Chủ xe. Quyền ký hợp đồng (Vận chuyển / Nhân công / cả hai) khai riêng. Lọc theo vai trò, tìm kiếm, ngừng sử dụng, nhập Excel có xem trước.
 - **Danh mục xe** (Cài đặt): BKS, hạn kiểm định, hạn bảo hiểm, loại xe, chủ xe. Nhập Excel: chọn file → xem trước → sửa hoặc bỏ dòng → lưu. BKS đã có mà khác chủ xe thì hiện cả hai.

@@ -73,6 +73,51 @@
     return '(function(){try{' + SIMPLE_JS + fill + (rows && rows.length > 1 ? 'var a=' + JSON.stringify(rows).replace(/\u2028|\u2029/g, '') + ';var ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"PHIEU_CAN");' +
       'var buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});var f=new File([buf],"PhieuCan_HAKQN.xlsx",{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});var dt=new DataTransfer();dt.items.add(f);var i=document.getElementById("file");i.files=dt.files;i.dispatchEvent(new Event("change",{bubbles:true}));' : '') + 'return true}catch(e){return String(e&&e.message||e)}})()';
   }
-  const api = {HEAD, aoa, inject, company, gaps, FIELDS, SIMPLE_CSS, suyNgay2, ngay2Of, ngay2Warn, chuanHoaNgay2};
+  // Công cụ gốc vẫn dựng và in từng trang. Chỉ đưa các trường đã lưu vào
+  // cấu trúc hàng mà công cụ dùng sau khi đọc file, không tạo bảng tính.
+  function embeddedHtml(html) {
+    const bridge = function (input, css) {
+      try {
+        let style = document.getElementById('hak-nhung-css');
+        if (!style) {
+          style = document.createElement('style');
+          style.id = 'hak-nhung-css';
+          style.textContent = css;
+          document.head.append(style);
+        }
+        document.querySelector('.sec p')?.replaceChildren('Chọn phiếu để in hoặc tải PDF.');
+        const theme = document.getElementById('theme');
+        const darkNow = document.documentElement.dataset.theme === 'dark';
+        if (theme && darkNow !== input.dark) theme.click();
+        for (const [id, value] of Object.entries(input.co)) {
+          if (value || (id === 'coFax' && input.co.coName)) document.getElementById(id).value = value;
+        }
+        heads = input.data[0] || [];
+        rows = input.data.slice(1).flatMap(r => {
+          if (r[0] === '' && r[9] === '') return [];
+          const c1 = num(r[6]), c2 = num(r[7]);
+          return [{raw: r, so: String(r[0]).trim(), d1: toDate(r[1]), t1: toTime(r[2]), d2: toDate(r[3]), t2: toTime(r[4]),
+            bs: String(r[5]).trim(), c1, c2, kl: num(r[8]) ?? (c1 != null && c2 != null ? c1 - c2 : null),
+            kh: String(r[9]).trim(), dc: String(r[10]).trim(), ag: num(r[11]), tc: null, tn: num(r[12]), tt: String(r[13]).trim(), ct: ''}];
+        });
+        rows.forEach((r, id) => { r.id = id; });
+        fillKh(9);
+        sel = new Set(rows.filter(r => !r.tt || r.tt.toUpperCase() === 'OK').map(r => r.id));
+        curId = rows[0]?.id ?? null;
+        cur = 0;
+        renderList();
+        renderPreview();
+        return true;
+      } catch (e) { return e.message; }
+    };
+    const end = html.lastIndexOf('})();');
+    if (end < 0) throw new Error('Không tìm thấy điểm nối của công cụ in phiếu cân');
+    return html.slice(0, end) + 'window.hakNapPhieuDaLuu = ' + bridge.toString() + ';\n' + html.slice(end);
+  }
+  function injectEmbedded(data, co, dark) {
+    const payload = JSON.stringify({data, co, dark}).replace(/\u2028|\u2029/g, '');
+    return 'window.hakNapPhieuDaLuu(' + payload + ',' + JSON.stringify(SIMPLE_CSS + '#theme{display:none!important}') + ')';
+  }
+  const api = {HEAD, aoa, inject, injectEmbedded, embeddedHtml, company, gaps, FIELDS, SIMPLE_CSS, suyNgay2, ngay2Of, ngay2Warn, chuanHoaNgay2};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKPhieuCan = api;
 })(typeof window !== 'undefined' ? window : globalThis);

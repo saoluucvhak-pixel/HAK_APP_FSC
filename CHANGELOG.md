@@ -2,6 +2,12 @@
 
 ## 3.0.0 — Danh mục đối tượng và xe, hợp đồng theo danh sách, phiếu cân trong hợp đồng, phân bổ khối lượng
 
+### Nâng cấp đang kiểm thử
+
+- Thông tin rừng và chi tiết hợp đồng có danh sách mục bên trái. Thông tin giao hàng và cước chung thuộc cấp rừng. Cài đặt dùng danh sách dọc.
+- Thêm màn xem trước phiếu cân trong ứng dụng, lấy phiếu đã lưu và lọc theo hợp đồng, biển kiểm soát, khoảng ngày. File công cụ in gốc được giữ nguyên.
+- Khi khôi phục dữ liệu cũ, nhân công và xe chưa nối được với danh mục xuất hiện trong Cần đối chiếu.
+
 Cấu trúc SQLite v15 (chuyển một chiều, tự sao lưu file trước khi chuyển). Biểu mẫu in ra không đổi so với 2.3.0 (so bản in: 206/206 tài liệu giống từng byte).
 
 ### Bố cục
