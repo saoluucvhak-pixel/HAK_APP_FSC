@@ -103,8 +103,14 @@ test('cùng ca, qua luồng nhập bản sao lưu toàn bộ cũ với lựa ch�
   const db = s.load(); db.rs.o1.forests.fa.pc.push(pc('PX', 5)); db.rs.o1.forests.fb.pc.push(pc('PB', 1)); db.rs.o2.forests.fc.pc.push(pc('PC', 2)); s.save(db);
   const justA = {v: 2, rs: {o1: Object.assign(clone(full.rs.o1), {forests: {fa: full.rs.o1.forests.fa}})}};              // file chỉ chứa lô A
   s.applyImport(justA, 'overwrite'); const after = s.load();
-  assert.deepStrictEqual(after.rs.o1.forests.fa, full.rs.o1.forests.fa); assert.strictEqual(after.rs.o1.forests.fb.pc.length, 3); assert.strictEqual(after.rs.o2.forests.fc.pc.length, 3);
-  s.applyImport(full, 'overwrite'); assert.deepStrictEqual(s.load().rs.o1.forests.fb, full.rs.o1.forests.fb, 'ghi đè bằng bản sao lưu đầy đủ vẫn đúng');
+  const {canDoiChieu, ...restoredA} = after.rs.o1.forests.fa;
+  assert.deepStrictEqual(restoredA, full.rs.o1.forests.fa);
+  assert.deepStrictEqual(canDoiChieu.map(x => x.loai), ['nhancong', 'xe']);
+  assert.strictEqual(after.rs.o1.forests.fb.pc.length, 3); assert.strictEqual(after.rs.o2.forests.fc.pc.length, 3);
+  s.applyImport(full, 'overwrite');
+  const {canDoiChieu: canB, ...restoredB} = s.load().rs.o1.forests.fb;
+  assert.deepStrictEqual(restoredB, full.rs.o1.forests.fb, 'ghi đè bằng bản sao lưu đầy đủ vẫn đúng');
+  assert.deepStrictEqual(canB.map(x => x.loai), ['nhancong', 'xe']);
 });
 
 test('chuyển sang máy mới: tạo chủ mới, đủ dữ liệu, tổng tấn khớp, thêm thiết lập dùng chung còn thiếu, giữ thiết lập của máy đích', () => {

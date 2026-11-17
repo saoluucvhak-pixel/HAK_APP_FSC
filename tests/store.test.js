@@ -12,6 +12,23 @@ const sample = () => ({v: 2, norm: {x: 1}, rs: {
 const boNgayChup = x => JSON.parse(JSON.stringify(x, (k, v) => k === '_dmNgay' ? undefined : v));   // _dmNgay (A4, SQLite v11) là ngày chụp danh mục, không in ra biểu mẫu
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-'));
 
+test('khôi phục JSON 2.x thiếu danh mục: báo người và xe cần đối chiếu, giữ nguyên hồ sơ nguồn', () => {
+  const source = sample();
+  const f = source.rs.r1.forests.f1;
+  f.nc = [{ten: 'Nguyễn Văn A', cccd: '049085000001'}];
+  f.dx = [{bienSo: '92C-12345'}];
+  f.pc = [];
+  const before = JSON.stringify(source);
+  const s = new Store(path.join(tmp(), 'khoi-phuc.sqlite'));
+  try {
+    s.applyImport(source, 'replace');
+    const restored = s.load().rs.r1.forests.f1;
+    assert.ok(restored.canDoiChieu.some(x => x.loai === 'nhancong' && /049085000001/.test(x.lyDo)));
+    assert.ok(restored.canDoiChieu.some(x => x.loai === 'xe' && /92C-12345/.test(x.lyDo)));
+    assert.strictEqual(JSON.stringify(source), before);
+  } finally { s.close(); }
+});
+
 test('lưu và đọc lại đúng từng rừng, giữ CCCD dạng chuỗi có số 0 đầu', () => {
   const d = tmp(), f = path.join(d, 'a.sqlite');
   let s = new Store(f); s.save(sample()); s.close();
