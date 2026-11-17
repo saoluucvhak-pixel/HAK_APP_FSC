@@ -157,7 +157,7 @@ const stm = {kind: '', id: null, vals: {}, parent: null, errs: []};   // trạng
 const stStr = v => v == null ? '' : typeof v === 'number' ? String(v).replace('.', ',') : String(v);
 function stAct(act, el) {
   const kind = el.dataset.kind, i = el.dataset.i != null ? +el.dataset.i : null;
-  pcGanBao = null;   // 3.0: bảng kết quả nạp phiếu chỉ hiện ngay sau lượt nạp; thao tác tiếp trên bản nháp thì ẩn
+  if (act !== 'stSave' && act !== 'stClose') pcGanBao = null;   // 3.0: khung xem trước phiếu nạp chỉ hiện ngay sau lượt nạp; thao tác khác trên bản nháp thì ẩn (bấm Lưu bị chặn vẫn giữ để xử lý)
   if (act === 'stAdd') return stOpen(kind, null);
   if (act === 'stEdit') return stOpen(kind, i);
   if (act === 'stDel') return stDelete(kind, i);
@@ -223,10 +223,11 @@ function stFinishRow() {
   }
   row._nguon = old && old._nguon ? old._nguon : 'Nhập tay';
   if (old && old.id && !row.id) row.id = old.id;
-  if (kind === 'pc') { ['hdvcId', 'xeRowId'].forEach(k => { if (old && old[k] && !row[k]) row[k] = old[k]; }); if (!old && hdMo('dx')) { const f = curForest(), c = f && phieuDich(f, st.cur.dx, hdMo('dx'), row.bienSo); if (c) { row.hdvcId = c.hdvcId; if (c.xe && c.xe.id) row.xeRowId = c.xe.id; } } }   // 3.0: phiếu thêm tay ở hợp đồng đang mở   // 3.0: ID dòng (chấm công, phiếu cân, phân bổ nối theo ID) không đổi khi sửa
+  if (kind === 'pc') { ['hdvcId', 'xeRowId', 'xeTay'].forEach(k => { if (old && old[k] && !row[k]) row[k] = old[k]; }); if (!old && hdMo('dx')) { const f = curForest(), c = f && phieuDich(f, st.cur.dx, hdMo('dx'), row.bienSo); if (c) { row.hdvcId = c.hdvcId; if (c.xe && c.xe.id) row.xeRowId = c.xe.id; } } }   // 3.0: phiếu thêm tay ở hợp đồng đang mở   // 3.0: ID dòng (chấm công, phiếu cân, phân bổ nối theo ID) không đổi khi sửa
   ['nguoiId', 'viTriId', 'xeId', 'taiXeId'].forEach(k => { const v = vals[k] != null ? vals[k] : old && old[k]; if (v) row[k] = v; });   // 3.0: liên kết danh mục (chọn từ danh mục; sửa tay giữ liên kết)
   { const dmN = vals._dmNgay != null ? vals._dmNgay : old && old._dmNgay; if (dmN != null && (kind === 'nc' || kind === 'dx')) row._dmNgay = dmN; }   // ngày chụp danh mục: giữ khi sửa tay, mới khi chọn từ danh mục
-  if (old) HAKStage.updateRow(st, kind, old._id, row); else HAKStage.addRow(st, kind, row);
+  if (!old && kind === 'dx') pgSauThemXe(st, row);   // 3.0: xe thêm ở hợp đồng đang mở vào đúng hợp đồng, có ID dòng; phiếu chờ xe nhận xe này
+  if (old) HAKStage.updateRow(st, kind, old._id, row); else { const nid = HAKStage.addRow(st, kind, row); if (kind === 'pc' && hdMo('dx')) pcGanThem(nid); }   // 3.0: phiếu nhập tay cũng hiện ở khung xem trước (cùng quy tắc hợp đồng đích)
   st.src[kind] = st.src[kind] || 'Nhập tay';
   stErrList = null; const parent = stm.parent; stm.errs = []; $('#stBox').classList.remove('on');
   if (parent) { parent.vals.bienSo = row.bienSo; stOpen(parent.kind, parent.id ? st.cur[parent.kind].findIndex(r => r._id === parent.id) : null, parent.vals); return; }

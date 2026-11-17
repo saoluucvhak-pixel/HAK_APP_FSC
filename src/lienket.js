@@ -65,8 +65,7 @@
       if (p.xeRowId) { const h = byId.get(p.xeRowId).hdvcId; if (h && p.hdvcId !== h) { p.hdvcId = h; n++; } return; }
       if (p.hdvcId && !hd.has(p.hdvcId)) { delete p.hdvcId; n++; }
       const k = B().khoa(p.bienSo); if (!k) return;
-      const m = dx.filter(r => B().khoa(r.bienSo) === k); if (m.length !== 1 || !m[0].hdvcId) return;
-      if (p.hdvcId && p.hdvcId !== m[0].hdvcId) return;   // đã chọn hợp đồng khác: không tự đổi
+      const m = dx.filter(r => B().khoa(r.bienSo) === k && (!p.hdvcId || r.hdvcId === p.hdvcId)); if (m.length !== 1 || !m[0].hdvcId) return;   // phiếu đã có hợp đồng: chỉ xe của hợp đồng đó (không tự chuyển hợp đồng)
       p.xeRowId = m[0].id; p.hdvcId = m[0].hdvcId; n++;
     });
     return n;

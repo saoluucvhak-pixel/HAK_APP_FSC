@@ -20,7 +20,7 @@ function dmCu() {
 
 /* ---------- hộp thoại riêng (#dlgBox) ---------- */
 function dlgMo(html) { const b = document.getElementById('dlgBox'); if (!b) return; document.getElementById('dlgBody').innerHTML = html; b.classList.add('on'); const f = b.querySelector('input,select,button'); if (f) f.focus(); }
-function dlgDong() { const b = document.getElementById('dlgBox'); if (b) b.classList.remove('on'); }
+function dlgDong() { const b = document.getElementById('dlgBox'); if (b) { b.classList.remove('on'); const d = document.getElementById('dlgBody'); if (d) d.innerHTML = ''; } }   // đóng là xóa nội dung (không còn form ẩn trùng id)
 
 /* ---------- RỜI TRANG KHI CÒN THAY ĐỔI: Lưu / Bỏ thay đổi / Tiếp tục chỉnh sửa ---------- */
 /* các màn chi tiết đăng ký bản nháp của mình: {ten, dirty(), luu() → true nếu lưu được, bo()} */

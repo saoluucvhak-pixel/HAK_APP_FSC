@@ -122,6 +122,8 @@ function checkPC(rec) {
     const coXe = r.xeRowId && rec.dx.some(x => x.id === r.xeRowId);   // 3.0: phiếu đã chọn xe (ID dòng xe) — BKS ghi trên phiếu giữ nguyên dù khác
     if (!r.bienSo && !coXe) mark(r, 'err', 'Thiếu biển kiểm soát');
     else if (!coXe && !keys.has(bienKey(r.bienSo))) { if (r.hdvcId && (rec.hdvc || []).some(h => h.id === r.hdvcId)) mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '') + ': BKS ' + r.bienSo + ' không khớp xe nào — chọn xe ở cột “Xe · hợp đồng” sau khi lưu'); else mark(r, 'err', 'Biển ' + r.bienSo + ' chưa có trong danh sách xe (tab Vận chuyển)'); }
+    { const sai = typeof phieuSaiHd === 'function' ? phieuSaiHd(rec.dx, r) : null, f = curForest();   // 3.0: BKS chỉ khớp xe ở hợp đồng khác → chưa lưu được, xử lý ở khung xem trước
+      if (sai) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '') + ' (BKS ' + r.bienSo + '): Xe này thuộc hợp đồng ' + sai.map(id => f ? nhanHdId(f, id) : id).join(', ') + ' — chọn xe hợp lệ của hợp đồng ' + (f ? nhanHdId(f, r.hdvcId) : '') + ', thêm xe vào hợp đồng này, hoặc đổi hợp đồng đích (khung xem trước phiếu nạp)'); }
     if (trim(r.ngay2) && !HAKDates.isValid(r.ngay2)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ngày cân 2 ' + HAKDates.why(r.ngay2));
     else HAKPhieuCan.ngay2Warn(r).forEach(m => mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + m));
     if (!r.soPhieu) mark(r, 'err', 'Thiếu số phiếu cân');
