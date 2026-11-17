@@ -40,6 +40,7 @@ const D2_PKG = {trang: ['dot2_IN_GIAY_TRANG', '', 'In đầy đủ đợt 2 – 
 async function exportDot2(mode, keys) {
   if (stBlockNote()) return;
   const rec = curRec(); if (!rec || !keys || !keys.length) return;
+  if (mode !== 'nen' && keys.some(k => /^(09|10)\b|^(09|10):/.test(k))) { const d = doiChieuKL(rec); if (d.can.n) { note('Chưa in ' + (mode === 'de' ? 'phần in đè' : 'bản đầy đủ') + ' BM-09/10: còn ' + d.can.n + ' phiếu (' + fmtT(d.can.kg) + ' tấn) thuộc phạm vi mẫu chưa vào biên bản. Xử lý ở “Đối chiếu khối lượng trước khi in BM-09, BM-10” (tab Xuất hồ sơ → Mở dòng), lưu rồi in lại.', 'warn'); render(); return; } }   // 3.0
   const docM = {trang: 'day', nen: 'trong', de: 'de'}[mode], P_ = D2_PKG[mode];
   docMode = docM;
   try {

@@ -152,7 +152,7 @@ function pcSapTheoNgay(pc) {
   pcSapNho.set(pc, {ver: dataVer, n: pc.length, ds}); return ds;
 }
 /* phiếu thuộc nhóm xe g: phiếu đã gắn hợp đồng (3.0) theo hợp đồng của phiếu; phiếu chưa gắn theo BKS của xe trong nhóm (như trước) */
-const pcThuocNhom = (r, g, ks, rec) => r.hdvcId && g.hd && (!rec || (rec.hdvc || []).some(h => h.id === r.hdvcId)) ? r.hdvcId === g.hd.id : ks.has(bienKey(r.bienSo));   // hợp đồng của phiếu không còn (vừa gộp / tách đội xe, chưa lưu): theo BKS
+const pcThuocNhom = (r, g, ks, rec) => r.hdvcId && g.hd && (!rec || (rec.hdvc || []).some(h => h.id === r.hdvcId)) ? r.hdvcId === g.hd.id && (r.xeRowId ? g.xe.some(x => x.id === r.xeRowId) : ks.has(bienKey(r.bienSo))) : ks.has(bienKey(r.bienSo));   // 3.0: phiếu của hợp đồng chỉ vào mẫu khi có xe hợp lệ (ID dòng hoặc BKS của xe trong hợp đồng)   // hợp đồng của phiếu không còn (vừa gộp / tách đội xe, chưa lưu): theo BKS
 function tripsOf(rec, g) {
   const ks = new Set(g.xe.map(x => bienKey(x.bienSo)));
   return pcSapTheoNgay(rec.pc || []).filter(x => pcThuocNhom(x.r, g, ks, rec)).map(x => x.r);
@@ -164,8 +164,6 @@ function payVC(rec, g) {
     const t = cuaXe(x); t.forEach(r => daTinh.add(r)); const kg = totalKg(t);
     return {bienSo: x.bienSo, n: t.length, kg, tien: Math.round(kg * g.donGia / 1000)};
   }).filter(r => r.n);
-  const con = cua.filter(r => !daTinh.has(r));   // phiếu của hợp đồng chưa chọn xe: một dòng theo BKS ghi trên phiếu
-  [...new Set(con.map(r => r.bienSo || ''))].forEach(b => { const t = con.filter(r => (r.bienSo || '') === b), kg = totalKg(t); rows.push({bienSo: b || '(chưa có BKS)', n: t.length, kg, tien: Math.round(kg * g.donGia / 1000)}); });
   return {rows, n: rows.reduce((a, r) => a + r.n, 0), kg: rows.reduce((a, r) => a + r.kg, 0), tien: rows.reduce((a, r) => a + r.tien, 0)};
 }
 /* Tên một đội xe để so với cột “Đội xe” của file: tên đội xe đã đặt, tên đơn vị vận chuyển (doanh nghiệp) hoặc tên người ký (chủ xe / tài xế) */

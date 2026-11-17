@@ -130,7 +130,8 @@ function draftCtx(rec) {
   return {ngayKy: has(ex.ngayKy), diaChiGiao: !!destOf(rec).text, klThucTe: ngc || !!(vol && vol.src === 'thực tế'), ntNgay: has(ex.ntNgay), pcNgay: has(ex.pcNgay), nguoiMua: !!(ex.ckNhan || buyerName(rec)),
     chamCong: !ngc || HAKChamCong.hasAny(rec.cc),                                  // ngày công: bản chính thức cần chấm công thực tế
     cuLyThuc: vcm !== 'tanKm' || HAKCuLy.eff(i).nguon !== 'tự tính',
-    klDoi: (() => { try { return !doiOf(rec).klLoi; } catch (e) { return true; } })()};               // tấn/km: bản chính thức cần quãng đường nhập tay, không dùng đường chim bay
+    klDoi: (() => { try { return !doiOf(rec).klLoi; } catch (e) { return true; } })(),
+    pcDoiChieu: (() => { try { return !doiChieuKL(rec).can.n; } catch (e) { return true; } })()};   // 3.0: phiếu thuộc phạm vi BM-09/10 đã vào mẫu hết               // tấn/km: bản chính thức cần quãng đường nhập tay, không dùng đường chim bay
 }
 const draftList = rec => { const c = draftCtx(rec); return Object.keys(HAKBanNhap.FORMS).map(code => ({code, label: HAKBanNhap.label(code), issues: HAKBanNhap.issues(code, c)})); };
 /* Xuất lẻ và xuất theo gói dùng chung: file thiếu điều kiện chính thức của riêng mẫu đó được gắn BẢN NHÁP (tên file + nhãn đầu tài liệu + chân trang).

@@ -134,7 +134,7 @@ function panelXuat(rec) {
     (g.dx.warns.length ? '<div class="msg warn">Vận chuyển có ' + g.dx.warns.length + ' dòng cần lưu ý (giấy tờ thiếu hoặc sắp hết hạn). Xem tab Vận chuyển, không chặn xuất hồ sơ.</div>' : '') +
     '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Hợp đồng vận chuyển (mỗi đội xe một hợp đồng)</h3>' + btn('Tải tất cả (.zip)', 'hdvc', null, g.ok('hdvc')) + '</div>' +
     (groups.length ? groups.map((x, i) => row(esc(x.ten), x.vaiTro + ' ký · ' + x.xe.length + ' xe · ' + fmt(x.donGia) + ' đ/tấn', btn('.docx', 'hdvc', i, g.ok('hdvc') && bmXeOk(rec, '04', x)))).join('') : '<p class="mut">Chưa có vận chuyển.</p>') + '</div>' +
-    '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Xác nhận khối lượng và thanh toán tiền vận chuyển</h3>' + (gpc.length ? btn('Biên bản (.zip)', 'xnvc', null, g.ok('xnvc')) + btn('Bảng thanh toán (.zip)', 'ttvc', null, g.ok('ttvc')) : '') + '</div>' +
+    doiChieuKLHtml(rec) + '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Xác nhận khối lượng và thanh toán tiền vận chuyển</h3>' + (gpc.length ? btn('Biên bản (.zip)', 'xnvc', null, g.ok('xnvc')) + btn('Bảng thanh toán (.zip)', 'ttvc', null, g.ok('ttvc')) : '') + '</div>' +
     (!(rec.pc || []).length ? '<p class="mut">Chưa có phiếu cân. Nạp file phiếu cân ở tab Vận chuyển (mỗi chuyến một dòng).</p>'
       : g.pc.errs.length ? '<div class="msg err">Phiếu cân còn ' + g.pc.errs.length + ' lỗi, xem tab Vận chuyển.</div>' : '') +
     (g.pc.warns.length ? '<div class="msg warn">' + esc(g.pc.warns.join(' · ')) + '</div>' : '') +

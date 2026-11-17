@@ -39,3 +39,9 @@ test('điều kiện mới (1.4.37): ngày công cần chấm công; cước t�
   for (const c of ['01', '04', '08', '09', '10', '14']) assert.deepStrictEqual(B.issues(c, all), [], 'không truyền cờ mới: ' + c);
   assert.match(B.issues('04', {...all, cuLyThuc: false})[0].text, /đường chim bay/);
 });
+test('3.0: BM-09, BM-10 cần đối chiếu đủ phiếu thuộc phạm vi mẫu (pcDoiChieu); lời gọi cũ không truyền cờ thì không đổi', () => {
+  const k = (code, c) => B.issues(code, Object.assign({}, FULL, c)).map(x => x.key);
+  assert.deepStrictEqual(k('09', {pcDoiChieu: false}), ['pcDoiChieu']); assert.deepStrictEqual(k('10', {pcDoiChieu: false}), ['pcDoiChieu']);
+  assert.deepStrictEqual(k('08', {pcDoiChieu: false}), [], 'BM-08 không theo đối chiếu xe'); assert.deepStrictEqual(k('09', {}), []);
+  assert.ok(B.issues('09', {pcDoiChieu: false}).find(x => x.key === 'pcDoiChieu').where.includes('Đối chiếu khối lượng'));
+});
