@@ -417,6 +417,11 @@ function panelInfo(rec) {
 }
 
 function panelImport(kind, rec) {
+  if (kind !== 'pc' && !window.hak?.testLegacyImport) {
+    const nc = kind === 'nc', label = nc ? 'Danh mục đối tượng' : 'Danh mục xe';
+    return '<div class="row" style="margin:8px 0"><button class="btn ghost sm" data-act="' +
+      (nc ? 'openSetDt' : 'openSetXe') + '" data-quaylai="' + kind + '">Nhập Excel tại ' + label + '</button></div>';
+  }
   const M = {nc: {name: 'NHAN_CONG', at: 'ncAt', file: 'ncFile', arr: 'nc', title: 'Nạp file nhân công'},
     dx: {name: 'DOI_XE', at: 'dxAt', file: 'dxFile', arr: 'dx', title: 'Nạp file vận chuyển'},
     pc: {name: 'PHIEU_CAN', at: 'pcAt', file: 'pcFile', arr: 'pc', title: 'Nạp file phiếu cân (mỗi chuyến một dòng)'}}[kind];

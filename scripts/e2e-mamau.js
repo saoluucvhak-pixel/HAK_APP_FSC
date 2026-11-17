@@ -19,7 +19,7 @@ const build = (kind, mode) => {   // mode: 'khong' (như mẫu mới) | 'trong' 
   const f = path.join(dir, kind + '_' + mode + '.xlsx'); XLSX.writeFile(wb, f); return f;
 };
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'm.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_TEST_LEGACY_IMPORT: '1', HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'm.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud')}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');
   const forest = () => w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.f1);

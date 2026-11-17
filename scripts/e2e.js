@@ -7,7 +7,7 @@ const root = path.join(__dirname, '..');
 const FIX = process.env.FIXTURES || path.join(root, 'tests', 'fixtures');
 const dbFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-e2e-')), 'e2e.sqlite');
 let fail = 0; const ok = (name, cond) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name); if (!cond) fail++; };
-const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_TEST_LEGACY_IMPORT: '1', HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
 
 (async () => {
   let app = await launch(), win = require('./_hd30').boc(await app.firstWindow()); const errs = []; win.on('pageerror', e => errs.push(e.message)); win.on('dialog', d => d.accept());

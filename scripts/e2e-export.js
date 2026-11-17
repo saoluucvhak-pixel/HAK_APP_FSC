@@ -8,7 +8,7 @@ const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixture
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-ex-')), out = process.env.OUT || path.join(dir, 'out');
 let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + n); if (!c) fail++; };
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'ex.sqlite'), HAKQN_DOWNLOAD_DIR: out}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_TEST_LEGACY_IMPORT: '1', HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'ex.sqlite'), HAKQN_DOWNLOAD_DIR: out}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   await w.click('text=+ Chủ rừng mới');

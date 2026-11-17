@@ -15,7 +15,7 @@ const {GoogleAuth, fileIdOf} = require('./google-auth');
 /* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
  * để không tiến trình nào trên máy đặt được chúng nhằm bỏ qua hộp thoại xác nhận hay đổi nguồn dữ liệu. HAKQN_USERDATA/HAKQN_DB/HAKQN_SMOKE* vẫn dùng cho kiểm tra khói bản cài. */
 const TEST_ONLY_ENV = ['HAKQN_CHECK_MODEL', 'HAKQN_FAIL_SAVE', 'HAKQN_SHEET_URL', 'HAKQN_TEST_BACKUP_FAIL', 'HAKQN_LOT_DIR', 'HAKQN_LOT_FILE', 'HAKQN_PICK_DIR', 'HAKQN_PICK_CHOICE',
-  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE', 'HAKQN_PRINT_DIR'];
+  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE', 'HAKQN_PRINT_DIR', 'HAKQN_TEST_LEGACY_IMPORT'];
 if (app.isPackaged) TEST_ONLY_ENV.forEach(k => { delete process.env[k]; });
 /* Đường dẫn file do giao diện gửi lên (thay hộp thoại chọn file) chỉ nhận khi chạy từ mã nguồn (kiểm thử); bản cài luôn hỏi qua hộp thoại của hệ điều hành */
 const rendererPath = p => (!app.isPackaged && typeof p === 'string' && p) ? p : null;
@@ -586,7 +586,12 @@ async function smoke() {
     if (app.isPackaged) r.checks.testEnvOff = TEST_ONLY_ENV.every(k => !(k in process.env));   // bản cài: biến môi trường kiểm thử đã bị xóa
     r.checks.reportMenu = r.dom.reportMenu && r.dom.reports >= 5; r.checks.smartFilter = r.dom.sideFilter && r.dom.filter === true; r.checks.lookupMenu = r.dom.lookupMenu === true;
     if (phase === 'upgrade') r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('CHỦ RỪNG CŨ')"); // giao diện hiện lại chủ rừng cũ
-    if (phase === 'verify') r.checks.ownerInUi = r.dom.ownerShown; // sau khi đóng và mở lại, giao diện phải hiện lại chủ rừng đã lưu
+    if (phase === 'verify' || phase === 'verify230') r.checks.ownerInUi = r.dom.ownerShown;
+    if (phase === 'verify230') {
+      r.checks.up230Schema = store.db.pragma('user_version', {simple: true}) === SCHEMA_VERSION;
+      r.checks.up230Backup = fs.existsSync(store.backupDir) && fs.readdirSync(store.backupDir)
+        .some(name => name.startsWith('truoc-nang-cap-v14-len-v' + SCHEMA_VERSION + '-'));
+    }
   } catch (e) { r.error = e.message; }
   if (autoBkP) { try { await autoBkP; } catch (e) { /* đã ghi vào autoBk */ } }   // không thoát giữa lúc đang tự sao lưu
   r.autoBackup = autoBk;
@@ -646,7 +651,8 @@ async function openPhieuCan(rows, company) {
 function createWindow() {
   win = new BrowserWindow({
     width: 1366, height: 820, minWidth: 1024, minHeight: 640, title: TITLE, backgroundColor: '#f4f6f8',
-    webPreferences: {preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true}
+    webPreferences: {preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true,
+      additionalArguments: !app.isPackaged && process.env.HAKQN_TEST_LEGACY_IMPORT === '1' ? ['--hakqn-test-legacy-import'] : []}
   });
   win.webContents.on('will-navigate', e => e.preventDefault());
   // Tải biểu mẫu/ZIP: hỏi nơi lưu (mặc định thư mục Tải về). Khi kiểm thử tự động: lưu thẳng vào HAKQN_DOWNLOAD_DIR.

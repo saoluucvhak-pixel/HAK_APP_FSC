@@ -35,6 +35,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.focus('#dsHdNcTbl tbody tr[data-act]'); await w.keyboard.press('Enter'); await w.waitForTimeout(200);
   ok('bàn phím: Enter trên dòng danh sách mở hợp đồng', !!(await w.$('#hdDau')) && !(await w.$('#dsHdNcTbl')));
   const ten1 = await w.innerText('#hdDauTen');
+  ok('hợp đồng nhân công: nhập Excel ở Danh mục đối tượng', !await w.locator('input[data-file=nc], [data-act=danMo][data-kind=nc]').count() &&
+    await w.getByRole('button', {name: 'Nhập Excel tại Danh mục đối tượng'}).isVisible());
   ok('trang chi tiết nhân công: một bảng chính (nhân công), không còn bảng danh sách đội', !(await w.$('#doiKT .normTbl')) && (await w.$$('#main table')).length >= 1);
   await w.fill('#doiForm [name=dienTich]', '1,5'); await w.press('#doiForm [name=dienTich]', 'Enter'); await w.waitForTimeout(300);
   if (await w.$('#loDirtyBar [data-act=stSave]')) { await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(500); }
@@ -47,6 +49,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const h2 = f.hdvc.find(h => f.dx.some(r => r.hdvcId === h.id && r.chuXe === 'TRẦN BÌNH'));
   await w.click('#dsHdVcTbl tr[data-hd="' + h2.id + '"] button'); await w.waitForTimeout(200);
   const bienSo = await w.$$eval('#stTbl_dx tbody tr', t => t.map(x => x.innerText).join('|'));
+  ok('hợp đồng vận chuyển: nhập Excel xe ở Danh mục xe; nạp phiếu cân vẫn tại hợp đồng',
+    !await w.locator('input[data-file=dx], [data-act=danMo][data-kind=dx]').count() &&
+    await w.getByRole('button', {name: 'Nhập Excel tại Danh mục xe'}).isVisible() && await w.isVisible('#pcNapExcel'));
   ok('chi tiết hợp đồng vận chuyển: bảng xe chỉ có xe của hợp đồng (92C-67890), không có xe của hợp đồng khác', /92C-67890/.test(bienSo) && !/92C-12345/.test(bienSo), bienSo.slice(0, 300));
   ok('chi tiết hợp đồng vận chuyển: tên rừng, đội xe, số hợp đồng', /R-A/.test(await w.innerText('#hdDauRung')) && !!(await w.innerText('#hdDauSo')));
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);

@@ -388,52 +388,16 @@ jobs:
           $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ($r.version -ne $ver) { throw "Sau khi cài đè vẫn chạy phiên bản $($r.version), mong đợi $ver" }
           Copy-Item $out dist/smoke-upgrade200.json
-      - name: Nâng cấp từ bộ cài THẬT v2.2.0 (bản phát hành gần nhất) — dữ liệu và lô đã chốt do chính bản 2.2.0 tạo, cài đè bản mới, kiểm tra dữ liệu, lô đã chốt còn chỉ đọc và nguyên vẹn
+      - name: Nâng cấp từ bộ cài phát hành v2.2.0
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          . ./scripts/ci-install.ps1
-          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          if ($ver -eq '2.2.0') { Write-Host 'Bản đang dựng chính là 2.2.0: bỏ qua bước cài đè lên 2.2.0.'; exit 0 }
-          $old = Join-Path $env:RUNNER_TEMP 'old-release-220'; New-Item -ItemType Directory $old | Out-Null
-          gh release download v2.2.0 --repo $env:GITHUB_REPOSITORY -p 'HAKQN-HoSoKhaiThac-Setup-2.2.0.exe' -D $old
-          $oldSetup = Join-Path $old 'HAKQN-HoSoKhaiThac-Setup-2.2.0.exe'
-          if (-not (Test-Path $oldSetup)) { Write-Host "::warning::Bản phát hành v2.2.0 không còn trên GitHub Releases nên bỏ qua bước nâng cấp từ bộ cài thật của bản này. Hãy cập nhật bước này sang bản phát hành gần nhất còn trên Releases."; exit 0 }
-          $h = (Get-FileHash $oldSetup -Algorithm SHA256).Hash
-          if ($h -ne '6073B85F6D59A738E9A85473633196B12B06EF9D439D0497CAA5857630DC99F1') { throw "Bộ cài v2.2.0 tải về không khớp mã băm công bố: $h" }
-          $dir = Join-Path $env:RUNNER_TEMP 'HAKQN-upgrade220'; $ud = Join-Path $env:RUNNER_TEMP 'hakqn-upgrade220-userdata'
-          $ec = Install-Setup -Setup $oldSetup -Dir $dir -Tag 'upgrade-v220-old'
-          if ($ec -ne 0) { throw "Cài v2.2.0 lỗi, mã thoát $ec" }
-          $oldApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
-          if (-not $oldApp) { throw 'Không thấy file chạy của v2.2.0 sau khi cài' }
-          # chính bản v2.2.0 đã cài ghi dữ liệu (1 chủ rừng, 2 lô, phiếu cân) và chốt một lô (fchot) rồi tự thoát
-          $env:HAKQN_USERDATA = $ud; $env:HAKQN_SMOKE = Join-Path $env:RUNNER_TEMP 'smoke-v220-old.json'; $env:HAKQN_SMOKE_PHASE = 'create'
-          $pr = Start-Process -FilePath $oldApp.FullName -PassThru
-          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'v2.2.0: ứng dụng không tự thoát sau 120 giây' }
-          Get-Content $env:HAKQN_SMOKE -Raw
-          if ($pr.ExitCode -ne 0) { throw "v2.2.0 không tạo được dữ liệu thử (mã thoát $($pr.ExitCode))" }
-          $oldRes = Get-Content $env:HAKQN_SMOKE -Raw | ConvertFrom-Json
-          if ($oldRes.version -ne '2.2.0') { throw "Bản cũ chạy không đúng phiên bản: $($oldRes.version)" }
-          if ($oldRes.chotTaoLuc -ne 'create') { throw 'Bản 2.2.0 không tạo được lô đã chốt để thử cài đè' }
-          # cài đè bản mới lên đúng thư mục đã cài v2.2.0
-          $setup = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
-          $ec = Install-Setup -Setup $setup -Dir $dir -Tag 'upgrade-v220-new'
-          if ($ec -ne 0) { throw "Cài đè bản mới lên v2.2.0 lỗi, mã thoát $ec" }
-          $newApp = Get-ChildItem $dir -Filter '*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
-          $out = Join-Path $env:RUNNER_TEMP 'smoke-upgrade220.json'
-          $env:HAKQN_SMOKE = $out; $env:HAKQN_SMOKE_PHASE = 'verify'
-          $pr = Start-Process -FilePath $newApp.FullName -PassThru
-          if (-not $pr.WaitForExit(120000)) { $pr.Kill(); throw 'Nâng cấp 2.2.0: ứng dụng không tự thoát sau 120 giây' }
-          if (-not (Test-Path $out)) { throw "Nâng cấp 2.2.0: không có file kết quả (mã thoát $($pr.ExitCode))" }
-          Get-Content $out -Raw
-          if ($pr.ExitCode -ne 0) { throw "Nâng cấp 2.2.0: kiểm tra dữ liệu thất bại (mã thoát $($pr.ExitCode))" }
-          $r = Get-Content $out -Raw | ConvertFrom-Json
-          if ($r.version -ne $ver) { throw "Sau khi cài đè vẫn chạy phiên bản $($r.version), mong đợi $ver" }
-          # lô đã chốt là lô do bản 2.2.0 tạo (bản mới không tạo lại) và vẫn chỉ đọc, đúng phiên bản chốt, nguyên vẹn sau khi cài đè
-          if ($r.chotTaoLuc) { throw 'Sau khi cài đè không còn lô đã chốt của bản 2.2.0 (bản mới phải tạo lại)' }
-          if (-not ($r.checks.chotReadOnly -and $r.checks.chotVersion -and $r.checks.chotIntegrity -and $r.checks.chotUi)) { throw 'Sau khi cài đè lên 2.2.0: lô đã chốt không còn chỉ đọc / sai phiên bản / không nguyên vẹn' }
-          Copy-Item $out dist/smoke-upgrade220.json
+        run: ./scripts/ci-upgrade-release.ps1 -OldVersion 2.2.0 -Sha256 6073B85F6D59A738E9A85473633196B12B06EF9D439D0497CAA5857630DC99F1 -AllowMissingRelease
+      - name: Nâng cấp từ bộ cài phát hành v2.3.0
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/ci-upgrade-release.ps1 -OldVersion 2.3.0 -Sha256 B8BCBDAE1B3655E885741C07A72E161C4C19B393216ABF32FA00026D292E63A5
       - name: Thu thập chẩn đoán cài đặt (chỉ khi một bước ở trên thất bại)
         if: failure()
         shell: pwsh
