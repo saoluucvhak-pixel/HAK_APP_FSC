@@ -12,7 +12,7 @@
  * KHÔI PHỤC TỪ BẢN .sqlite (khoiPhuc): KHÔNG chép đè file cơ sở dữ liệu đang dùng. Bản sao lưu được chép ra thư mục tạm, mở bằng Store (bản cấu trúc cũ được nâng cấp
  * TRÊN BẢN CHÉP, file sao lưu gốc không bị đụng), đọc thành dữ liệu hồ sơ rồi đi qua đúng đường "Khôi phục toàn bộ → thay toàn bộ" (Store.applyImport 'replace'):
  * kiểm toàn vẹn hồ sơ đã chốt, sao lưu file hiện tại (truoc-khoi-phuc-…) rồi ghi trong MỘT giao dịch. Lỗi ở bước nào dữ liệu đang dùng cũng còn nguyên.
- * Bản chụp của các lần chốt trước (bảng chot_goi) trong bản sao lưu được chép thêm cho các lô còn tồn tại. Bản tra cứu Google Sheets của máy giữ nguyên. */
+ * Bản chụp của các lần chốt trước (bảng chot_goi) trong bản sao lưu được chép thêm cho các lô còn tồn tại, trong cùng giao dịch đó. Bản tra cứu Google Sheets của máy giữ nguyên. */
 const fs = require('fs'), path = require('path'), os = require('os');
 const DM = require('./datamove');
 
@@ -100,13 +100,10 @@ function khoiPhuc(store, file, supportedVersion) {
   if (!kt.ok) throw Object.assign(new Error('Bản sao lưu không dùng được: ' + kt.error + ' Dữ liệu trên máy chưa bị thay đổi.'), {code: 'BAN_HONG'});
   if (store.file !== ':memory:' && cungFile(store.file, file)) throw new Error('Đây chính là cơ sở dữ liệu đang dùng, không phải bản sao lưu.');
   const b = docBanSqlite(file);
-  const r = store.applyImport(b.data, 'replace');   // kiểm toàn vẹn lô đã chốt → sao lưu truoc-khoi-phuc → ghi trong một giao dịch
-  let goiCu = 0;
-  if (b.goi.length && store._coBangGoi()) {   // bản chụp của các lần chốt TRƯỚC: chép thêm cho lô còn tồn tại, không ghi đè bản đã có
-    const co = store.db.prepare('SELECT 1 FROM forests WHERE id=?'), put = store.db.prepare('INSERT OR IGNORE INTO chot_goi(forest_id,phien_ban,hash,at,data) VALUES(?,?,?,?,?)');
-    store.db.transaction(() => { b.goi.forEach(g => { if (co.get(g.forest_id)) goiCu += put.run(g.forest_id, g.phien_ban, g.hash, g.at, g.data).changes; }); })();
-  }
-  return {backup: r.backup, counts: r.counts, goiCu};
+  /* kiểm toàn vẹn lô đã chốt → sao lưu truoc-khoi-phuc → ghi hồ sơ VÀ lịch sử bản chụp của các lần chốt trước trong MỘT giao dịch (Store.save goiLichSu):
+   * lỗi ở bất kỳ bước ghi nào thì hoàn tác tất cả, dữ liệu đang dùng và các bản chụp của nó còn nguyên. */
+  const r = store.applyImport(b.data, 'replace', {goiLichSu: b.goi});
+  return {backup: r.backup, counts: r.counts, goiCu: r.goiCu};
 }
 
 /* Xóa MỘT bản sao lưu trong kho (chỉ file đang có trong danh sách; không bao giờ xóa cơ sở dữ liệu đang dùng) */
