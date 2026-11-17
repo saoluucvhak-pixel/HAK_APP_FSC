@@ -110,6 +110,8 @@ function exportCheckTinh(job) {
 const mucLoDaMo = new Map();
 const mucLoKey = k => JSON.stringify([cur, curF, k, k === 'nc' || k === 'dx' ? hdMo(k) : null]);
 const mucLoDangMo = (k, macDinh = 'chung') => mucLoDaMo.get(mucLoKey(k)) || macDinh;
+window.__mucLo = (k, id) => { mucLoDaMo.set(mucLoKey(k), id); render(); };
+window.__hdMo = (k, id) => { hdMoDat(k, id || null); render(); };   // kiểm thử đầu-cuối: mở / đóng trang chi tiết hợp đồng trong cùng lô (bản nháp của lô vẫn giữ)   // kiểm thử đầu-cuối: mở một mục nhập (không qua hộp hỏi lưu bản nháp — bản nháp của lô vẫn giữ)
 function khungMucLo(k, cacMuc, macDinh = 'chung') {
   const active = mucLoDangMo(k, macDinh);
   const muc = cacMuc.find(x => x[0] === active) || cacMuc[0];
