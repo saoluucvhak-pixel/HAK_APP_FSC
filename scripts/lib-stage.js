@@ -3,6 +3,14 @@
  * để các kịch bản kiểm tra dữ liệu đã lưu. Luồng bấm nút thật được kiểm ở scripts/e2e-luuvaolo.js. */
 exports.saveStage = async w => { const r = await w.evaluate(async () => (window.__stDirty && window.__stDirty().length) ? await window.__stSaveCurrent() : null); await w.waitForTimeout(500); return r; };
 
+exports.fillForestSection = async (w, section, fields) => {
+  if (!await w.locator('.rungTabs [data-ftab=finfo].on').count()) await w.locator('.rungTabs [data-ftab=finfo]').click();
+  await w.locator('.mucNav [data-muc-lo=' + section + ']').click();
+  for (const [name, value] of Object.entries(fields)) await w.fill('#forestForm [name=' + name + ']', value);
+  await w.$eval('#forestForm', form => form.requestSubmit());
+  await exports.saveStage(w);
+};
+
 /* File thử cũ chứa phiếu của nhiều hợp đồng. Xác nhận từng dòng có đúng một đích theo BKS trước khi lưu. */
 exports.xacNhanHopDongPhieu = async w => {
   const doiDich = w.locator('#pcGanTbl tr:has([data-act=pgDoiHd])');
