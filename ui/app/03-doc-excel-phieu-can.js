@@ -200,3 +200,26 @@ const khoaXe = g => JSON.stringify(g.xe.map(x => [String(x.bienSo || ''), x.kdDe
 const hanLoiOf = (rec, g) => nhoTheoPc(rec.pc || [], 'han', khoaXe(g), () => HAKGiayTo.quaHan(g.xe, tripsOf(rec, g)));
 const groupsPC = rec => groupsDX(rec).filter(g => tripsOf(rec, g).length && !hanLoiOf(rec, g).length);
 
+/* Đối chiếu cùng phạm vi hợp đồng và quy tắc ghép xe mà BM-09/10 đang dùng. */
+function doiChieuPcVanChuyen(rec, groups = groupsDX(rec)) {
+  const pc = rec.pc || [], theoPhieu = new Map();
+  groups.forEach(g => tripsOf(rec, g).forEach(p => {
+    const list = theoPhieu.get(p) || [];
+    list.push(g);
+    theoPhieu.set(p, list);
+  }));
+  const daGhep = [], canSua = [], hetHan = [];
+  pc.forEach((p, index) => {
+    const list = theoPhieu.get(p) || [], g = list[0];
+    const xe = g ? g.xe.filter(x => p.xeRowId ? x.id === p.xeRowId : bienKey(x.bienSo) === bienKey(p.bienSo)) : [];
+    const lyDo = list.length > 1 ? 'Phiếu khớp nhiều hợp đồng'
+      : !g ? (p.hdvcId && (rec.hdvc || []).some(h => h.id === p.hdvcId) ? 'Hợp đồng chưa có xe' : 'Chưa xác định hợp đồng vận chuyển')
+      : xe.length !== 1 ? (xe.length ? 'BKS khớp nhiều xe trong hợp đồng' : 'Chưa ghép xe trong hợp đồng') : '';
+    const hdId = (g && g.hd && g.hd.id) || p.hdvcId || '';
+    if (lyDo) canSua.push({p, index, hdId, lyDo});
+    else if (hanLoiOf(rec, g).length) hetHan.push({p, index, hdId, lyDo: 'Hợp đồng bị chặn do giấy tờ xe hết hạn'});
+    else daGhep.push(p);
+  });
+  return {pc, daGhep, canSua, hetHan};
+}
+

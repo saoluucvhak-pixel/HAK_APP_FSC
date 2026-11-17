@@ -81,6 +81,22 @@ function pcPrintCard(rec) {
     '<div class="mut">Tiêu đề phiếu lấy từ <b>Cài đặt → Công ty</b>' + (co && co.ten ? ': ' + esc(co.ten) : ' (chưa khai: dùng tiêu đề mặc định của công cụ)') + '. Địa chỉ rừng và khách hàng lấy theo hồ sơ rừng.</div></div>' +
     '<div class="d2btns"><button class="btn" style="white-space:nowrap" data-act="pcPrint"' + (n ? '' : ' disabled') + '>In phiếu cân</button>' + (n ? '' : '<button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify({ftab: 'dx'})) + '">Mở tab Vận chuyển</button>') + '</div></div></div>';
 }
+function panelDoiChieuPcVC(rec, groups) {
+  const kq = doiChieuPcVanChuyen(rec, groups);
+  if (!kq.pc.length) return '';
+  const chua = [...kq.canSua, ...kq.hetHan], tong = a => a.length + ' phiếu · ' + fmt(totalKg(a)) + ' kg';
+  const rows = chua.map(({p, index, hdId, lyDo}) => '<tr><td>' + esc(p.soPhieu || '(không số)') + '</td><td>' +
+    esc(p.bksNguon || p.bienSo || '—') + '</td><td>' + fmt(totalKg([p])) + '</td><td>' + esc(lyDo) +
+    '</td><td><button class="btn ghost sm" data-act="ktGo" data-go="' +
+    esc(JSON.stringify({ftab: 'dx', focus: 'pc', hdId, pcIndex: index})) + '">Mở phiếu</button></td></tr>').join('');
+  return '<div class="card" id="doiChieuPcVC"><h3 style="margin-top:0">Đối chiếu khối lượng BM-09/10</h3>' +
+    '<div class="row" style="flex-wrap:wrap;gap:12px"><span>Tổng rừng <b id="pcVCTong">' + tong(kq.pc) +
+    '</b></span><span>Đủ điều kiện về xe và hợp đồng <b id="pcVCDu">' + tong(kq.daGhep) +
+    '</b></span><span>Cần xử lý <b id="pcVCThieu">' + tong(chua.map(x => x.p)) + '</b></span></div>' +
+    (rows ? '<div class="wrap" style="margin-top:8px;max-height:240px"><table><thead><tr><th>Số phiếu</th><th>BKS nguồn</th><th>Kg</th><th>Lý do</th><th>Thao tác</th></tr></thead><tbody>' +
+      rows + '</tbody></table></div>' : '') + '</div>';
+}
+
 function panelXuat(rec) {
   const g = gate(rec);
   const tSel = rec.doi && rec.doi.length > 1 ? curTeam() : null, ex = tSel ? Object.assign({}, rec.exp, tSel.exp) : (rec.exp || {});   // lô nhiều đội: ô số văn bản hiện và ghi của ĐỘI ĐANG CHỌN
@@ -161,7 +177,7 @@ function panelXuat(rec) {
     '<div class="card"><h3 style="margin-top:0">Tải hồ sơ theo đợt</h3><p class="mut" style="margin:0 0 8px">Chưa xong khai thác thì in <b>đợt 1</b> trước; khi rừng xong, cập nhật phiếu cân và khối lượng thực tế rồi in <b>đợt 2</b> (mỗi biểu mẫu là một file Word riêng nên thay hoặc chèn vào bộ hồ sơ đã in rất dễ). Đợt 2 muốn in nền rồi in đè thì dùng mục “In hồ sơ đợt 2” ngay bên dưới.</p>' +
       '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('Tải đợt 1', 'dau', null, g.ok('dau')) + '</div>' +
       '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') + '</div></div>' + btn('Tải đợt 2', 'cuoi', null, g.ok('cuoi')) + '</div></div>' +
-    d2Panel(rec) + pcPrintCard(rec) +
+    panelDoiChieuPcVC(rec, groups) + d2Panel(rec) + pcPrintCard(rec) +
     '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') + 'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung. <b>Hồ sơ đã đủ dữ liệu thì in một lần bằng nút này</b>; mục nào chưa đủ (phiếu cân, khối lượng thực tế, ngày lập, địa chỉ giao…) sẽ được nêu ngay sau khi tải.</div></div>' + btn('Tải toàn bộ hồ sơ', 'all', null, g.ok('all')) + '</div>' +
     draftCard +
     '<div class="tabs" style="margin-top:6px">' + TABS.map(([k, l]) => '<button class="' + (cur === k ? 'on' : '') + '" data-xtab="' + k + '">' + l + '</button>').join('') + '</div>' +

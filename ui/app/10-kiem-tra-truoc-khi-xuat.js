@@ -74,6 +74,12 @@ function exportCheckTinh(job) {
     add('chan', nhom, m ? 'Dòng ' + m[1] + ': ' + msg : msg, so ? 'Phiếu ' + so : '', {ftab: 'dx', focus: 'pc'});
   });
   g.pc.warns.forEach(e => add('doi', /lệch/.test(e) ? 'Chênh lệch sản lượng' : 'Phiếu cân', e, '', {ftab: 'dx', focus: 'pc'}));
+  const pcVC = doiChieuPcVanChuyen(job);
+  if (pcVC.canSua.length) {
+    const first = pcVC.canSua[0], kg = totalKg(pcVC.canSua.map(x => x.p));
+    add('chan', 'Phiếu cân: biển số chưa ghép với xe', pcVC.canSua.length + ' phiếu (' + fmt(kg) + ' kg) cần đối chiếu hợp đồng hoặc xe trước khi xuất BM-09/10.',
+      'Phiếu ' + (first.p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc', hdId: first.hdId, pcIndex: first.index});
+  }
   // điểm đến theo địa chỉ giao đã chốt
   const dd = destOf(job), dr = HAKMuaHang.drift(i, db.congTy), mis = HAKMuaHang.mismatches(job.pc || [], dd.src === 'congty' ? dd : null);
   if (!dd.text) add('doi', 'Địa chỉ giao hàng', 'Chưa chọn địa chỉ giao hàng đã chốt: BM-04, BM-09, BM-10 sẽ in dòng chấm.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});

@@ -113,7 +113,23 @@ document.addEventListener('click', async e => {
     setTheme(dark ? 'light' : 'dark'); return;
   }
   if (act === 'backup') return backupAll();
-  if (act === 'ktGo') { const go = JSON.parse(el.dataset.go || '{}'); if (go.view) { view = go.view; return render(); } if (go.tab) { tab = go.tab; return render(); } ftab = go.ftab || 'finfo'; render(); const tgt = go.focus === 'pc' ? document.querySelector('[data-pcfix], #pcTable, .wrap table') : go.focus === 'mua' ? document.getElementById('mhDiemDen') : null; if (tgt && tgt.scrollIntoView) tgt.scrollIntoView({block: 'center'}); return; }
+  if (act === 'ktGo') {
+    const go = JSON.parse(el.dataset.go || '{}');
+    if (go.view) { view = go.view; return render(); }
+    if (go.tab) { tab = go.tab; return render(); }
+    ftab = go.ftab || 'finfo';
+    if (ftab === 'dx' && Number.isInteger(go.pcIndex)) {
+      const hd = curForest()?.hdvc || [];
+      hdMoDat('dx', hd.find(h => h.id === go.hdId)?.id || hd[0]?.id || null);
+      pcTatCa = true;
+    }
+    render();
+    const edit = Number.isInteger(go.pcIndex) && document.querySelector('#stTbl_pc [data-act=stEdit][data-i="' + go.pcIndex + '"]');
+    const tgt = go.focus === 'pc' ? (edit?.closest?.('tr') || document.getElementById('stTbl_pc') || document.getElementById('pcDs')) : go.focus === 'mua' ? document.getElementById('mhDiemDen') : null;
+    if (tgt?.scrollIntoView) tgt.scrollIntoView({block: 'center'});
+    if (edit) edit.focus({preventScroll: true});
+    return;
+  }
   if (act === 'lotBackup') return lotBackup();
   if (act === 'lotRestore') { const m = document.getElementById('moreMenu'); if (m) m.open = false; return lotRestoreOpen(); }
   if (act === 'lotCancel') { window.__lot = null; return $('#impBox').classList.remove('on'); }

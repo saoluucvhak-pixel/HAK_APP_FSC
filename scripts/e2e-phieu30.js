@@ -64,8 +64,21 @@ const file = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
 
   // 3. chọn xe cho phiếu: lưu ID dòng, giữ BKS gốc
   const ix3 = f.pc.findIndex(x => x.soPhieu === 'P3');
+  await w.click('[data-ftab=xuat]');
+  ok('BM-09/10: thấy đủ 36.500 kg, 28.500 kg đủ liên kết và 8.000 kg cần ghép xe',
+    /36\.500/.test(await w.innerText('#pcVCTong')) && /28\.500/.test(await w.innerText('#pcVCDu')) &&
+    /8\.000/.test(await w.innerText('#pcVCThieu')) && /P3.*43A-99999.*Chưa ghép xe/.test((await w.innerText('#doiChieuPcVC tbody')).replace(/\s+/g, ' ')),
+    await w.innerText('#doiChieuPcVC'));
+  await w.click('#doiChieuPcVC [data-act=ktGo]');
+  ok('Mở phiếu: tới đúng dòng P3 trong bảng phiếu cân',
+    await w.evaluate(i => document.activeElement.matches('#stTbl_pc [data-act=stEdit][data-i="' + i + '"]'), ix3));
+  if (await w.isVisible('[data-act=pcTheoHd]')) await w.click('[data-act=pcTheoHd]');
   await w.selectOption('select[data-pcxe="' + ix3 + '"]', xA); await w.waitForTimeout(400); await luu(); f = await lotDb();
   ok('chọn xe cho P3: lưu ID dòng xe, BKS trên phiếu giữ “43A-99999”', p('P3').xeRowId === xA && p('P3').xeTay === true && p('P3').bienSo === '43A-99999' && p('P3').hdvcId === hA, JSON.stringify(p('P3')));
+  await w.click('[data-ftab=xuat]');
+  ok('BM-09/10: sau khi ghép xe, đủ 36.500 kg; không còn phiếu cần xử lý',
+    /36\.500/.test(await w.innerText('#pcVCDu')) && /^0 phiếu/.test(await w.innerText('#pcVCThieu')));
+  await w.click('[data-ftab=dx]');
 
   // 4. chuyển P1 (đã lưu) sang HĐ B: hộp xác nhận hợp đồng cũ, mới, xe, cước; lưu ngay một giao dịch
   const P1 = JSON.parse(JSON.stringify(p('P1'))), ix1 = f.pc.findIndex(x => x.soPhieu === 'P1');
