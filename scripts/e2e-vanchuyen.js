@@ -4,7 +4,7 @@
  *  2. Tấn/km: đơn giá đồng/tấn/km × cự ly của rừng.
  * Kiểm tra số liệu trong hợp đồng vận chuyển (BM-04) và bảng thanh toán tiền vận chuyển (BM-10), kiểm tra dữ liệu nhập, và hồ sơ cũ còn chọn “theo bậc cự ly”. */
 const {_electron: electron} = require('playwright-core');
-const {saveStage: stSave} = require('./lib-stage');
+const {saveStage: stSave, xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip'), XLSX = require('xlsx');
 const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixtures');
@@ -46,7 +46,7 @@ async function zipTexts(file) {
   for (const [k, v] of [[0, 340000], [1, 200000], [2, 250000]]) await w.fill(`#luongForm [name=dt_${k}]`, String(v));
   await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(200);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
-  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
+  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await xacNhanHopDongPhieu(w); await stSave(w);
 
   // ===== chỉ còn hai cách tính =====
   const opts = () => w.$$eval('#vcForm [name=vcMode] option', o => o.map(x => x.value));

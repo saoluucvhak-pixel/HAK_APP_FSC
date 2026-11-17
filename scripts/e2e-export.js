@@ -1,7 +1,7 @@
 'use strict';
 /* Kiểm thử xuất biểu mẫu Word BM-01..BM-19 và ZIP trong Electron thật (xvfb-run node scripts/e2e-export.js) */
 const {_electron: electron} = require('playwright-core');
-const {saveStage: stSave} = require('./lib-stage');
+const {saveStage: stSave, xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip');
 const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixtures');
@@ -23,7 +23,7 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   await w.click('[data-ftab=nc]'); await w.evaluate(() => document.querySelectorAll('#luongForm details').forEach(d => { d.open = true; }));   /* vị trí chưa có người nằm trong mục gập */ await w.fill('#luongForm [name=dt_0]', '340000'); await w.fill('#luongForm [name=dt_1]', '200000'); await w.fill('#luongForm [name=dt_2]', '250000'); await w.$eval('#luongForm', f => f.requestSubmit()); await w.waitForTimeout(150);
   await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(400); await stSave(w);
   await w.click('[data-ftab=dx]'); await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
-  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
+  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await xacNhanHopDongPhieu(w); await stSave(w);
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');
   for (const [k, v] of [['soKT', '07'], ['soVC', '09'], ['ngayKy', '01/10/2026']]) await require('./lib-stage').setExp(w, k, v);
   const btns = await w.$$('button[data-act=dl]'); let done = 0; const disabled = [];

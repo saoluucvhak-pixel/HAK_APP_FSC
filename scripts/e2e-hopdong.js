@@ -4,7 +4,7 @@
  *  2. Trực tiếp: chủ rừng ký hợp đồng lao động (BM-03) với tất cả nhân công; tính theo tấn hoặc ngày công.
  *  Đơn giá theo từng vai trò; sản lượng (tấn, ha) hoặc số công chia đều cho mọi người. Kiểm tra số liệu trong BM-01, BM-08, BM-14, BM-20. */
 const {_electron: electron} = require('playwright-core');
-const {saveStage: stSave} = require('./lib-stage');
+const {saveStage: stSave, xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip'), XLSX = require('xlsx');
 const root = path.join(__dirname, '..'), FIX = path.join(root, 'tests', 'fixtures');
@@ -45,7 +45,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   await w.click('[data-ftab=nc]'); await w.setInputFiles('input[data-file="nc"]', path.join(FIX, 'test_nhancong.xlsx')); await w.waitForTimeout(500); await stSave(w);
   await w.click('[data-ftab=dx]'); await w.fill('#vcForm [name=vcKm]', '1000'); await w.$eval('#vcForm', f => f.requestSubmit());   // vận chuyển: để gói “tải tất cả” đủ điều kiện
   await w.setInputFiles('input[data-file="dx"]', path.join(FIX, 'test_doixe.xlsx')); await w.waitForTimeout(400); await stSave(w);
-  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await stSave(w);
+  await w.setInputFiles('input[data-file="pc"]', path.join(FIX, 'test_phieucan.xlsx')); await w.waitForTimeout(400); await xacNhanHopDongPhieu(w); await stSave(w);
   await w.click('[data-ftab=nc]');
 
   // ===== GIAO KHOÁN =====

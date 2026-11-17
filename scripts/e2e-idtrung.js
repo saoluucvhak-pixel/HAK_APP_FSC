@@ -5,7 +5,7 @@
  * Chạy: xvfb-run -a node scripts/e2e-idtrung.js */
 const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os');
-const {saveStage, addXe} = require('./lib-stage');
+const {saveStage, addXe, xacNhanHopDongPhieu} = require('./lib-stage');
 const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
 const {nv, xe, lot, seed} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {nv, xe, lot, seed};')();
 const root = path.join(__dirname, '..');
@@ -23,7 +23,7 @@ const tongTan = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 
   const set = async o => { for (const [k, v] of Object.entries(o)) { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); } };
   const addNc = async (ten, cccd, to) => { await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm'); await set({vaiTro: to ? 'Tổ trưởng' : 'Công nhân', danhXung: 'Ông', ten, ngaySinh: '01/01/1990', cccd, ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: to ? 'Tổ trưởng' : 'Công nhân khai thác'}); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300); };
   const addPc = async (so, bien, kg) => { await w.click('[data-act=stAdd][data-kind=pc]'); await w.waitForSelector('#stForm'); await set({soPhieu: so, ngay: '10/10/2026', bienSo: bien, klKg: String(kg)}); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300); };
-  const rowBtn = async (kind, text, act) => { const i = await w.$$eval('#main tr', (trs, t) => trs.findIndex(r => r.innerText.includes(t)), text); const trs = await w.$$('#main tr'); const b = await trs[i].$('[data-act=' + act + ']'); await b.click(); };
+  const rowBtn = (kind, text, act) => w.locator('#stTbl_' + kind + ' tr').filter({hasText: text}).locator('[data-act=' + act + ']').click();
   const ids = f => ['nc', 'dx', 'pc'].flatMap(k => (f[k] || []).map(r => r._id));
 
   // ===== nhân công =====
@@ -43,12 +43,12 @@ const tongTan = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 
   await openLot('fa', 'dx'); await addXe(w, '92C-22222', 'CHỦ XE HAI'); await saveStage(w);
   let dx = (await forest('fa')).dx; ok('xe: hai xe lưu qua hai lượt mở có _id khác nhau', dx.length === 2 && new Set(ids({dx})).size === 2);
   await openLot('fa', 'dx'); await addPc('PX1', '92C-11111', 10000); await addPc('PX2', '92C-11111', 5000); await saveStage(w);
-  await openLot('fa', 'dx'); await addPc('PX3', '92C-22222', 7000);
+  await openLot('fa', 'dx'); await addPc('PX3', '92C-22222', 7000); await xacNhanHopDongPhieu(w);
   await rowBtn('pc', 'PX3', 'stEdit'); await w.waitForSelector('#stForm'); await set({kl: '7,5'}); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
   let f = await forest('fa'); ok('phiếu cân: sửa phiếu mới PX3 trước khi lưu — phiếu PX1, PX2 đã lưu không đổi (10 t, 5 t)', f.pc.length === 2 && f.pc.find(p => p.soPhieu === 'PX1').kl === 10 && f.pc.find(p => p.soPhieu === 'PX2').kl === 5);
   await saveStage(w); f = await forest('fa');
   ok('phiếu cân: sau lưu và mở lại — 3 phiếu, 3 chuyến, tổng 22,5 tấn; PX3 = 7,5 t; _id duy nhất', f.pc.length === 3 && tongTan(f) === 22.5 && f.pc.find(p => p.soPhieu === 'PX3').kl === 7.5 && new Set(ids(f)).size === ids(f).length, JSON.stringify(f.pc.map(p => [p.soPhieu, p.kl, p._id])));
-  await openLot('fa', 'dx'); await rowBtn('pc', 'PX3', 'stDel'); await saveStage(w); f = await forest('fa');
+  await openLot('fa', 'dx'); await w.click('[data-act=pcTatCa]'); await rowBtn('pc', 'PX3', 'stDel'); await saveStage(w); f = await forest('fa');
   ok('phiếu cân: xóa PX3 rồi lưu — còn PX1, PX2 đúng nội dung, tổng 15 tấn', f.pc.length === 2 && tongTan(f) === 15 && f.pc.every(p => p.soPhieu !== 'PX3'));
   // sửa biển số xe có phiếu liên kết: chỉ phiếu của xe đó đổi
   await openLot('fa', 'dx'); await rowBtn('dx', '92C-11111', 'stEdit'); await w.waitForSelector('#stForm'); await set({bienSo: '92C-99999'}); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300); await saveStage(w);

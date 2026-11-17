@@ -2,6 +2,7 @@
 /* Nhập Excel theo bảng con: file nhân công, xe, phiếu cân vào đúng ĐỘI / ĐỘI XE bằng cột tùy chọn Đội, Đội xe, Đội; tên lạ báo lỗi dòng; file cũ không có cột mới nạp y như trước (Electron thật, SQLite thật).
  * Chạy: xvfb-run -a node scripts/e2e-excel-bangcon.js */
 const {_electron: electron} = require('playwright-core');
+const {xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const XLSX = require('xlsx');
 const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
@@ -56,7 +57,7 @@ const book = (sheet, rows, name) => { const wb = XLSX.utils.book_new(); XLSX.uti
   ok('file phiếu cân: tên đội lạ báo lỗi dòng', /Đội “Đội 9” không có trong lô/.test(t), t.slice(0, 500));
   await w.click('button[data-act=stDiscard]'); await w.waitForTimeout(400);
   await w.setInputFiles('input[data-file="pc"]', book('PHIEU_CAN', [phieu('PX1', '05/10/2026', '92C-12345', 12500, 'Đội 2'), phieu('PX2', '06/10/2026', '92C-12345', 9000), phieu('PX3', '07/10/2026', '92C-67890', 6000, 'Đội 1')], 'pc2.xlsx')); await w.waitForTimeout(800);
-  await save(); F = await db(); const pcs = Object.fromEntries(F.fa.pc.map(x => [x.soPhieu, x.doiId]));
+  await xacNhanHopDongPhieu(w); await save(); F = await db(); const pcs = Object.fromEntries(F.fa.pc.map(x => [x.soPhieu, x.doiId]));
   ok('phiếu ghi tên đội vào đúng đội; phiếu để trống cột Đội chưa gán (lô nhiều đội)', pcs.PX1 === d2 && pcs.PX3 === d1 && pcs.PX2 === '', JSON.stringify(pcs));
   // 4. lô một đội, file cũ không có cột mới: nạp y như trước, phiếu tự thuộc đội duy nhất
   await open('fb', 'dx');

@@ -2,6 +2,7 @@
 /* TIỆN ÍCH BẢN 2.3 (Electron thật, SQLite thật, dữ liệu giả lập ở thư mục tạm): hướng dẫn lần đầu, dán từ Excel, mục lục gói in, gói Chỉ xem, in trong app (ghi PDF khi kiểm thử),
  * phụ lục in lại / ký lại. Chạy: xvfb-run -a node scripts/e2e-tien-ich.js */
 const {_electron: electron} = require('playwright-core');
+const {xacNhanHopDongPhieu} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const JSZip = require('jszip');
 const root = path.join(__dirname, '..');
@@ -47,6 +48,7 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   await w.fill('#danText', 'Số phiếu\tNgày cân 1\tBiển số 1\tKhối lượng (tấn)\tGhi chú\r\nPA1\t05/10/2026\t92C-12345\t12,5\t"ghi chú\ncó xuống dòng"\r\nPA2\t06/10/2026\t92C-67890\t9,25\t\r\nPA3\t07/10/2026\t92C-12345\t8\t\r\n');
   ok('dán đúng (có tiêu đề, số kiểu Việt Nam 12,5): đọc được 3 dòng dữ liệu', /Đọc được 3 dòng dữ liệu, 5 cột/.test(await w.innerText('#danMsg')), await w.innerText('#danMsg'));
   await w.click('[data-act=danNap]'); await w.waitForTimeout(1200);
+  await xacNhanHopDongPhieu(w);
   await w.click('button[data-act=stSave]').catch(() => {}); await w.waitForTimeout(900);
   let F = await lo();
   ok('nạp dữ liệu đã dán và lưu: lô có 3 phiếu cân PA1, PA2, PA3; khối lượng 12,5 + 9,25 + 8 = 29,75 tấn; ngày và biển số đúng', F.pc.length === 3 && F.pc.map(p => p.soPhieu).join() === 'PA1,PA2,PA3' && Math.abs(F.pc.reduce((a, p) => a + p.kl, 0) - 29.75) < 1e-9 && F.pc[0].ngay === '05/10/2026' && F.pc[1].bienSo === '92C-67890', JSON.stringify(F.pc.map(p => [p.soPhieu, p.ngay, p.bienSo, p.kl])));
