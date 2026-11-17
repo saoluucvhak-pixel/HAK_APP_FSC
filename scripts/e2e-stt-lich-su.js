@@ -31,7 +31,7 @@ const launch = (env = {}, name = 'd') => electron.launch({executablePath: requir
   ok('số văn bản theo quy tắc: đội 02 = 02/2026/HĐGK-RA; đội xe 02 = 02/2026/HĐVC-RA', /^02\/2026\/HĐGK-RA$/.test(so2) && /^02\/2026\/HĐVC-RA$/.test(soxe2), so2 + ' | ' + soxe2);
   // 2. xóa đội 01 và đội xe 01 → lưu
   await open('nc'); await w.click('[data-act=chonDoi][data-doi="' + idDoi1 + '"]'); await w.waitForTimeout(300); await w.click('[data-act=xoaDoi]'); await w.waitForTimeout(500);
-  await open('dx'); await w.click('[data-act=chonHd][data-hd="' + idHd1 + '"]'); await w.waitForTimeout(300); await w.click('[data-act=xoaHd]'); await w.waitForTimeout(500); await save();
+  await open('dx'); await w.evaluate(id => window.__hdMo('dx', id), idHd1); /* lô đã có thay đổi chưa lưu (xóa đội): chọn hợp đồng không qua hộp hỏi lưu */ await w.waitForTimeout(300); await w.evaluate(() => window.__mucLo('dx', 'chung')); await w.click('[data-act=xoaHd]'); await w.waitForTimeout(500); await save();
   F = await forest();
   ok('đã xóa đội 01 và đội xe 01; lịch sử STT vẫn giữ [1, 2]', F.doi.length === 1 && F.hdvc.length === 1 && F.sttDaCap.doi.join() === '1,2' && F.sttDaCap.doiXe.join() === '1,2', JSON.stringify([F.doi.length, F.hdvc.length, F.sttDaCap]));
   // 3. đóng và mở lại app

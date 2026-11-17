@@ -24,6 +24,16 @@ exports.xacNhanHopDongPhieu = async w => {
   if (await doiDich.count()) throw new Error('Còn phiếu thử chưa xác nhận được hợp đồng đích');
 };
 
+/* 3.0: công cụ in phiếu cân chạy NHÚNG trong màn chính (khung #pcInFrame), không mở cửa sổ mới.
+ * Trả về khung (Frame) dùng như trang công cụ: waitForFunction, $eval, $$eval, innerText…; close() quay lại tab Xuất hồ sơ. */
+exports.moInPhieuCan = async w => {
+  await w.$eval('#pcPrintCard [data-act=pcPrint]', b => b.click());
+  const fr = await (await w.waitForSelector('#pcInFrame')).contentFrame();
+  await fr.waitForLoadState('domcontentloaded');
+  fr.close = async () => { await w.click('.rungTabs [data-ftab=xuat]'); };
+  return fr;
+};
+
 /* Thêm một xe vào BẢN NHÁP bằng hộp thoại (đang ở tab Vận chuyển): đủ trường bắt buộc của người ký là chủ xe */
 exports.addXe = async (w, bienSo, chuXe) => {
   await w.click('[data-act=stAdd][data-kind=dx]'); await w.waitForSelector('#stForm');

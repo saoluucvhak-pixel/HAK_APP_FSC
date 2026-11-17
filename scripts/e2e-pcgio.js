@@ -14,7 +14,7 @@ const P = (stt, so, ngay, g1, g2, extra) => ({_row: stt + 1, maRung: 'R-A', stt:
   const D = seed([L]); D.congTy = {c1: {id: 'c1', ten: 'CÔNG TY MẪU', mst: '', diaChi: 'KCN', nguoiDaiDien: '', chucVu: '', sdt: '', fax: '', noiLap: 'Điện Bàn', email: '', diaChiGiao: [], ghiChu: ''}};
   await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
-  const [pw] = await Promise.all([app.waitForEvent('window'), w.$eval('#pcPrintCard [data-act=pcPrint]', b => b.click())]); await pw.waitForLoadState('domcontentloaded');
+  const pw = await require('./lib-stage').moInPhieuCan(w);
   await pw.waitForFunction(() => document.querySelectorAll('#tb tr.row').length === 4, null, {timeout: 15000});
   const txt = await pw.$eval('#render', r => r.innerText);
   const lines = (await pw.$$eval('#render .sheet', sh => sh.map(x => [...x.querySelectorAll('div,p')].map(e => e.textContent.replace(/\s+/g, ' ').trim()).filter(t => /^(Số phiếu|Giờ cân vào|Giờ cân ra|Trọng lượng xe)/.test(t) && t.length < 120)))).flat();

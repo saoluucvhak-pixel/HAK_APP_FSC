@@ -63,9 +63,9 @@ const doc = q => { const s = new Store(file, {migrations: MIGRATIONS}); try { re
   ok('lô đang lập: phần dữ liệu gốc không đổi (bỏ ID dòng, liên kết, chấm công đã chuyển khóa)', JSON.stringify(boCC(fa)) === JSON.stringify(boCC(goc)));
   const fbGoc = truoc.lo.find(r => r.id === 'fb').data;
   ok('lô đã chốt: không đổi một byte, dấu vân tay khớp, vẫn chỉ đọc', doc(s => s.db.prepare("SELECT data FROM forests WHERE id = 'fb'").get().data) === fbGoc && V.bamDuLieu(fb) === fb.chot.hashDL);
-  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fb]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300);
+  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.evaluate(() => { const d = document.querySelector('.rungTomTat'); if (d) d.open = true; }); await w.click('[data-forest=fb]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300);
   ok('lô đã chốt mở ra chỉ đọc, không báo khác bản đã chốt', !!(await w.$('#loKhoaBar')) && !/khác bản đã chốt/.test(await w.innerText('#loKhoaBar')));
-  ok('màn mới mở được: danh sách hợp đồng của lô đang lập', await (async () => { await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(200); return !!(await w.$('#dsHdNcTbl')); })());
+  ok('màn mới mở được: danh sách hợp đồng của lô đang lập', await (async () => { await w.evaluate(() => { const d = document.querySelector('.rungTomTat'); if (d) d.open = true; }); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(200); return !!(await w.$('#dsHdNcTbl')); })());
   ok('không có lỗi JavaScript', w.errs.length === 0, w.errs.join('|'));
   await app.close();
   const kq = doc(s => ({ver: s.db.pragma('user_version', {simple: true}), data: s.db.prepare('SELECT id, hash FROM forests ORDER BY id').all(), dm: s.db.prepare('SELECT kind, ord, hash FROM danh_muc ORDER BY kind, ord').all()}));

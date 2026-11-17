@@ -42,7 +42,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
 
   // ---- 1. một người ở hai đội ----
   const themTuDanhMuc = async doiId => {
-    await moRung('fa', 'nc'); await w.click('#dsHdNcTbl tr[data-doi="' + doiId + '"] button'); await w.waitForSelector('#hdDau');
+    await moRung('fa', 'nc'); await w.evaluate(id => window.__hdMo('nc', id), doiId); await w.waitForSelector('#hdDau'); /* mở thẳng trang hợp đồng của đội: tab nhớ hợp đồng đang mở */ await w.evaluate(() => window.__mucLo('nc', 'thanhvien'));   // 3.0: nhân công ở mục Thành viên
     await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#ncDm');
     const nhan = await w.$eval('#ncDm', s => [...s.options].map(o => o.textContent).find(t => /PHAN HAI ĐỘI/.test(t)) || '');
     await w.selectOption('#ncDm', '049085009001'); await w.waitForTimeout(250);

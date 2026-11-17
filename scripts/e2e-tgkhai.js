@@ -69,7 +69,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   let lech = await w.innerText('#tgLech').catch(() => '');
   ok('đến ngày 31/10/2026: hiện ngay cảnh báo nêu thực tế 27 ngày (01–31/10 bỏ 4 Chủ nhật), dự kiến 10 ngày, +17 ngày, ngưỡng 3 ngày', /Cảnh báo: Thời gian khai thác thực tế 27 ngày/.test(lech) && /DÀI hơn dự kiến 10 ngày: \+17 ngày/.test(lech) && /lệch quá 3 ngày/.test(lech), lech);
   await w.fill('#forestForm [name=denNgay]', '13/10/2026'); await w.waitForTimeout(300);
-  ok('đến ngày 13/10/2026 (11 ngày, lệch +1 trong ngưỡng 3): không còn cảnh báo', !(await w.$('#tgLech')));
+  ok('đến ngày 13/10/2026 (11 ngày, lệch +1 trong ngưỡng 3): không còn cảnh báo', !(await w.evaluate(() => !!document.querySelector('#tgLech'))));   // đọc trực tiếp: w.$ (bọc) sẽ đi tìm ở mục khác
   await w.fill('#forestForm [name=denNgay]', '07/10/2026'); await w.waitForTimeout(300); lech = await w.innerText('#tgLech').catch(() => '');
   ok('đến ngày 07/10/2026 (6 ngày, ngắn hơn 4): cũng cảnh báo “NGẮN hơn”', /NGẮN hơn dự kiến 10 ngày: -4 ngày/.test(lech), lech);
   await w.fill('#forestForm [name=denNgay]', '31/10/2026'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);

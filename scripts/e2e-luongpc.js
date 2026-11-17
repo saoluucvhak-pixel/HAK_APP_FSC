@@ -19,7 +19,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   const find = async q => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lktab="HoSoKeo_QC"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250); };
   const printText = async expectRows => {
     await w.click('[data-ftab=xuat]'); await w.waitForSelector('#pcPrintCard');
-    const [pw] = await Promise.all([app.waitForEvent('window'), w.$eval('#pcPrintCard [data-act=pcPrint]', b => b.click())]);
+    const pw = await require('./lib-stage').moInPhieuCan(w);
     await pw.waitForFunction(n => document.querySelectorAll('#tb tr.row').length === n, expectRows, {timeout: 15000});
     const t = await pw.$eval('#render', r => r.innerText), c = await pw.innerText('#count'); await pw.close(); return {t, c};
   };
