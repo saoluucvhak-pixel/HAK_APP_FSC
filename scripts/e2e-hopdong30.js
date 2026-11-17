@@ -85,7 +85,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   if (await w.$('#loDirtyBar [data-act=stSave]')) { await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(500); }
   const dNK = (await lotDb()).doi.find(d => d.benNhanKhoan);
   ok('lưu: đội nhận liên kết bên nhận khoán theo ID (đối tượng, người)', !!dNK && /^dt/.test(dNK.benNhanKhoan.doiTuongId) && /^ng/.test(dNK.benNhanKhoan.nguoiId), JSON.stringify((await lotDb()).doi));
-  ok('bên nhận khoán chưa là Tổ trưởng của đội: nhắc thêm vào đội', await w.isVisible('#benNKLech'));
+  ok('bản in dùng bên nhận khoán đã chọn (bản chụp), Tổ trưởng vẫn ở các mục của đội', /TRẦN SƠN/.test(await w.innerText('#benNKIn')) && /Tổ trưởng vẫn đứng tên/.test(await w.innerText('#benNKIn')) && !!(await lotDb()).doi.find(d => d.benNhanKhoanBan && d.benNhanKhoanBan.cccd === '049085000123'));
   await w.click('#hdQuayLai'); ok('danh sách hợp đồng nhân công hiện bên nhận khoán', /TRẦN SƠN/.test(await w.innerText('#dsHdNcTbl')));
 
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));

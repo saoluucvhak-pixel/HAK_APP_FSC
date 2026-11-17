@@ -124,11 +124,40 @@ function benNhanKhoanHtml(t) {
     (cur && !L.some(({dt, ng}) => (ng ? 'ng:' + ng.id : 'dt:' + dt.id) === cur) ? '<option value="' + esc(cur) + '" selected>' + esc(benTen(t.benNhanKhoan) || '(đã ngừng / không còn quyền ký)') + '</option>' : '') +
     '</select><small class="mut">Chưa có? <button type="button" class="btn ghost sm" data-act="openSetDt" data-quaylai="nc">Mở Danh mục đối tượng</button></small></label>';
 }
-/* cảnh báo: bên nhận khoán là người (thể nhân) mà chưa là Tổ trưởng của đội (biểu mẫu giao khoán in Tổ trưởng) */
+/* bên nhận khoán: danh mục đã đổi sau khi chụp (cập nhật có chủ ý); thông tin còn thiếu để in */
 function benNhanKhoanCanhBao(rec, t) {
+  const c = t.benNhanKhoanBan, thieu = benNhanKhoanThieu(c);
+  return (benNhanKhoanLech(t) ? '<div class="msg warn" id="benNKDoi" style="grid-column:1/-1">Danh mục đã sửa thông tin bên nhận khoán sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button type="button" class="btn ghost sm" data-act="benNKCapNhat">Cập nhật theo danh mục</button></div>' : '') +
+    (c && thieu.length ? '<div class="msg err" id="benNKThieu" style="grid-column:1/-1">Bên nhận khoán còn thiếu ' + esc(thieu.join(', ')) + ': bổ sung ở Danh mục đối tượng rồi “Cập nhật theo danh mục” trước khi xuất bản chính thức.</div>' : '') +
+    (c ? '<div class="mut" id="benNKIn" style="grid-column:1/-1">Bản in: <b>' + esc(c.ten) + '</b>' + (c.loai === 'phapnhan' ? ' · MST ' + esc(c.mst || '…') + ' · đại diện ' + esc(c.daiDien || '…') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '') : (c.cccd ? ' · CCCD ' + esc(c.cccd) : '')) + '. Tổ trưởng vẫn đứng tên ở các mục của đội (danh sách, ủy quyền, chấm công).</div>' : '');
+}
+/* (bản cũ) bên nhận khoán là người chưa là Tổ trưởng của đội */
+function benNhanKhoanTT(rec, t) {
   const x = benTim(t.benNhanKhoan); if (!x || !x.ng) return '';
   const tt = (rec.nc || []).filter(r => r.doiId === t.id && isTT(r));
   const k = HAKModel.cccdSo(x.ng.cccd || '');
   if (tt.some(r => r.nguoiId === x.ng.id || (k && HAKModel.cccdSo(r.cccd) === k))) return '';
   return '<div class="msg warn" id="benNKLech" style="grid-column:1/-1">Bên nhận khoán <b>' + esc(x.ng.hoTen) + '</b> chưa là Tổ trưởng của đội: biểu mẫu giao khoán in theo Tổ trưởng. Thêm người này vào đội với vai trò Tổ trưởng (chọn từ danh mục khi thêm nhân công).</div>';
 }
+
+/* ---------- BẢN CHỤP BÊN NHẬN KHOÁN (in biểu mẫu giao khoán) ----------
+ * pháp nhân: {loai:'phapnhan', ten, mst, diaChi, sdt, daiDien, chucVu}; thể nhân: {loai:'canhan', ten (họ tên), danhXung, ngaySinh, cccd, ngayCap, noiCap, diaChi, sdt, chucVu (chức danh khi ký), doiTuongTen} */
+function benNhanKhoanChup(b) {
+  const x = benTim(b); if (!x) return null;
+  if (!x.ng) return {loai: 'phapnhan', ten: x.dt.ten || '', mst: x.dt.mst || '', diaChi: x.dt.diaChi || '', sdt: x.dt.sdt || '', daiDien: x.dt.daiDien || '', chucVu: x.dt.chucVuDaiDien || ''};
+  const p = x.ng; return {loai: 'canhan', ten: p.hoTen || '', danhXung: p.gioiTinh === 'Nữ' ? 'Bà' : p.gioiTinh === 'Nam' ? 'Ông' : '', ngaySinh: p.ngaySinh || '', cccd: p.cccd || '', ngayCap: p.ngayCap || '', noiCap: p.noiCap || '', diaChi: p.diaChi || x.dt.diaChi || '', sdt: p.sdt || '', chucVu: p.chucDanhKy || '', doiTuongTen: x.dt.ten || ''};
+}
+/* thông tin còn thiếu để in bên nhận khoán (theo bản chụp): [tên trường] */
+function benNhanKhoanThieu(c) {
+  if (!c) return [];
+  const k = c.loai === 'phapnhan' ? [['ten', 'tên pháp nhân'], ['mst', 'mã số thuế'], ['diaChi', 'địa chỉ trụ sở'], ['daiDien', 'người đại diện'], ['chucVu', 'chức danh người đại diện']]
+    : [['ten', 'họ tên'], ['cccd', 'số CCCD'], ['ngayCap', 'ngày cấp CCCD'], ['noiCap', 'nơi cấp CCCD'], ['diaChi', 'địa chỉ thường trú']];
+  return k.filter(([f]) => !trim(c[f] || '')).map(([, t]) => t);
+}
+/* danh mục đã đổi so với bản chụp đang in */
+function benNhanKhoanLech(t) { const c = t && t.benNhanKhoanBan, m = t && benNhanKhoanChup(t.benNhanKhoan); if (!c || !m) return false; return JSON.stringify(c) !== JSON.stringify(m); }
+document.addEventListener('click', e => {   // cập nhật bản chụp bên nhận khoán theo danh mục (có chủ ý)
+  const el = e.target && e.target.closest && e.target.closest('[data-act=benNKCapNhat]'); if (!el) return;
+  const f = curForest(), t = f && curTeam(f); if (!t || !t.benNhanKhoan || loKhoa(f)) return;
+  t.benNhanKhoanBan = benNhanKhoanChup(t.benNhanKhoan); persistLo(); note('Đã cập nhật thông tin bên nhận khoán theo Danh mục đối tượng (chưa lưu).', 'ok'); render();
+});

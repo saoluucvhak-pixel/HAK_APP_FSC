@@ -241,7 +241,8 @@
     if (has(patch, 'ten')) { const cu = d.ten; d.ten = trim(patch.ten); if (d.ten && d.ten !== cu) membersOf(out, d).forEach(r => { r.doi = d.ten; }); }   // đổi tên đội: cột Đội của người trong đội đổi theo
     if (patch.hinhThuc) d.hinhThuc = Object.assign({}, d.hinhThuc, clone(patch.hinhThuc));
     if (has(patch, 'dienTich')) d.dienTich = typeof patch.dienTich === 'number' && patch.dienTich >= 0 ? patch.dienTich : null;
-    if (has(patch, 'benNhanKhoan')) { if (patch.benNhanKhoan && patch.benNhanKhoan.doiTuongId) d.benNhanKhoan = {doiTuongId: String(patch.benNhanKhoan.doiTuongId), nguoiId: String(patch.benNhanKhoan.nguoiId || '')}; else delete d.benNhanKhoan; }   // 3.0: bên nhận khoán (ID Danh mục đối tượng)
+    if (has(patch, 'benNhanKhoan')) { if (patch.benNhanKhoan && patch.benNhanKhoan.doiTuongId) d.benNhanKhoan = {doiTuongId: String(patch.benNhanKhoan.doiTuongId), nguoiId: String(patch.benNhanKhoan.nguoiId || '')}; else delete d.benNhanKhoan; }
+    if (has(patch, 'benNhanKhoanBan')) { if (patch.benNhanKhoanBan && d.benNhanKhoan) d.benNhanKhoanBan = clone(patch.benNhanKhoanBan); else delete d.benNhanKhoanBan; }   // bản chụp thông tin bên nhận khoán để in (danh mục đổi sau không làm sai bản in lại)   // 3.0: bên nhận khoán (ID Danh mục đối tượng)
     if (patch.exp) d.exp = Object.assign({}, d.exp, clone(patch.exp));
     return {ok: true, f: out};
   }

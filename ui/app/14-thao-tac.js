@@ -121,7 +121,7 @@ function saveDoi(form, nhap) {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
   const dt = trim(form.elements.dienTich.value), v = dt ? toDec(dt) : null;
   if (dt && !(typeof v === 'number' && v > 0)) return formMsg(form, chuaLuu(nhap) + 'diện tích của đội phải là số lớn hơn 0 (ha) hoặc để trống');
-  const patch = {ten: trim(form.elements.ten.value), dienTich: v}; if (form.elements.benNK) patch.benNhanKhoan = benTuGiaTri(form.elements.benNK.value);   // 3.0: liên kết bên nhận khoán
+  const patch = {ten: trim(form.elements.ten.value), dienTich: v}; if (form.elements.benNK) { patch.benNhanKhoan = benTuGiaTri(form.elements.benNK.value); const daCo = t.benNhanKhoan && patch.benNhanKhoan && t.benNhanKhoan.doiTuongId === patch.benNhanKhoan.doiTuongId && (t.benNhanKhoan.nguoiId || '') === (patch.benNhanKhoan.nguoiId || '') && t.benNhanKhoanBan; patch.benNhanKhoanBan = daCo ? t.benNhanKhoanBan : benNhanKhoanChup(patch.benNhanKhoan); }   // chụp khi chọn bên mới; giữ bản chụp khi không đổi   // 3.0: liên kết bên nhận khoán
   const r = HAKModel.updateTeam(f, t.id, patch); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
   clearFormMsg(form);
   const tenD = trim(form.elements.ten.value) || 'đội'; f.doi = r.f.doi; if (nhap) { persistLo(); return; } render(); luuLo().then(x => { if (x && x.ok) note('Đã lưu đội “' + tenD + '”.'); });

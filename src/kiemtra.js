@@ -19,6 +19,7 @@
   const PC4 = ['08', '09', '10', '14'];
   const NHOM = {
     'chu-rung': {ten: 'Thông tin chủ rừng', bieuMau: TAT_CA}, 'rung': {ten: 'Thông tin rừng', bieuMau: TAT_CA}, 'lo-trung-ma': {ten: 'Mã lô trùng (dữ liệu cũ)', bieuMau: TAT_CA},
+    'ben-nhan-khoan': {ten: 'Bên nhận khoán thiếu thông tin', bieuMau: ['01', '14']},   /* 3.0: bản chụp bên nhận khoán thiếu thông tin in */
     'don-gia': {ten: 'Hình thức, đơn giá', bieuMau: ['01', '03', '08', '14', '20']}, 'nhan-cong': {ten: 'Nhân công', bieuMau: NC}, 'dinh-muc-bhld': {ten: 'Định mức BHLĐ', bieuMau: ['02']},
     'doi-xe': {ten: 'Đội xe', bieuMau: VAN_CHUYEN}, 'giay-to-xe': {ten: 'Giấy tờ xe', bieuMau: VAN_CHUYEN}, 'giay-to-xe-het-han': {ten: 'Giấy tờ xe hết hạn lúc chạy phiếu', bieuMau: ['09', '10'], pc: true},
     'cuoc-vc': {ten: 'Cước vận chuyển', bieuMau: VAN_CHUYEN},
