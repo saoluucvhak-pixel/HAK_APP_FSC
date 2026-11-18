@@ -223,3 +223,40 @@ Khi sẵn sàng, bình luận `KCS_FSC sẵn sàng` trên Issue #43 và bắt đ
 ### 11.5 Lời nhắc khởi động v2
 **KCS_FSC:** "Bạn là KCS_FSC. Đọc docs/PHOI_HOP_CEO_STAFF.md mục 11. Việc của bạn: kiểm PR của STAFF đã đầy đủ chưa theo phiếu và 8 điều kiện; thiếu thì bình luận `[KCS: CHƯA ĐẦY ĐỦ #NN]` và nhãn `can-bo-sung`; đủ thì gộp squash đúng head, bàn giao CEO. Không phát hành, không gộp PR do chính bạn viết."
 **STAFF_FSC:** "Bạn là STAFF_FSC. Làm theo phiếu trên Issue nhãn `phieu` theo đúng thứ tự, mở PR, sửa ngay theo `[KCS: CHƯA ĐẦY ĐỦ #NN]`, không gộp PR, không phát hành."
+
+## 12. Nhịp làm việc tự động (có hiệu lực từ 18/11/2026, 21:50 giờ Việt Nam)
+
+Mục tiêu: ba agent trao đổi qua GitHub và tự làm tiếp mà **CHỦ không phải nhắn từng lần**. Mỗi agent không đánh thức được agent khác, nên **mỗi agent tự đặt lịch đánh thức cho chính phiên của mình** (nhắc hẹn gắn vào phiên, như `send_later` hoặc tác vụ lặp). Lịch mất khi phiên hết hạn; khi đó bảng điều phối cảnh báo "quá 1 giờ chưa có hoạt động" và CHỦ chỉ cần dán lại đoạn khởi động (12.3).
+
+### 12.1 Nhịp chung
+| Agent | Chu kỳ thức | Việc mỗi lần thức |
+| --- | --- | --- |
+| CEO_FSC | hằng giờ (phút 21) và khi có sự kiện PR | Mục 11.2 (nghiệm thu trên `main`), viết phiếu, cập nhật bảng điều phối, nhắc agent im quá 1 giờ |
+| KCS_FSC | **30 phút** | Kiểm PR đang mở của STAFF; thiếu thì `[KCS: CHƯA ĐẦY ĐỦ]`; đủ thì gộp; không còn PR cần kiểm thì làm phiếu kế tiếp chưa ai giữ (khi STAFF nghỉ) |
+| STAFF_FSC | **30 phút** | Sửa theo `[KCS: CHƯA ĐẦY ĐỦ]`; làm phiếu kế tiếp chưa ai giữ; mở PR |
+
+### 12.2 Quy tắc mỗi lần thức (cả STAFF và KCS)
+1. Đọc Issue `[QUY TRÌNH V2]` (#56), liệt kê Issue nhãn `phieu` và PR mở, đọc bình luận mới kể từ lần thức trước.
+2. **Nhận việc bằng bình luận trước khi bắt đầu** (`[NHẬN VIỆC #NN]`, nhãn `staff-nhan` hoặc `kcs-nhan`); xem Issue trước khi làm sẵn để không làm trùng.
+3. **Nhịp tim:** cập nhật (sửa) một bình luận duy nhất `[NHỊP — <AGENT>]` trên Issue #56 với giờ Việt Nam, việc đang làm và việc kế tiếp. Dòng này là bằng chứng "còn sống" cho CEO và bảng điều phối, kể cả khi không có commit hay PR. Không đăng bình luận mới mỗi lần.
+4. Không có việc cần làm thì **im lặng**, trừ nhịp tim. Làm lâu thì bình luận tiến độ trên Issue của phiếu ít nhất mỗi giờ.
+5. Hết phiếu của đợt (#02 đến #10 đã `da-gop` hoặc CEO báo xong): dừng lịch lặp và bình luận `[HẾT VIỆC — <AGENT>]` trên Issue #56.
+
+### 12.3 Đoạn dán một lần khi mở phiên (CHỦ dán)
+**KCS_FSC:**
+```
+Bạn là KCS_FSC (dự án HAK_APP_FSC). Đọc docs/PHOI_HOP_CEO_STAFF.md mục 11 và 12 và Issue #56.
+BƯỚC ĐẦU TIÊN: tự đặt cho chính phiên này một lịch lặp mỗi 30 phút (nhắc hẹn gắn vào phiên). Nội dung mỗi lần thức: làm đúng mục 12.2 và vai trò KCS (kiểm PR của STAFF theo phiếu và 8 điều kiện, gộp khi đủ và CI Windows xanh trên đúng head, bàn giao CEO; khi STAFF nghỉ thì làm phiếu kế tiếp chưa ai giữ). Giờ ghi trên GitHub là giờ Việt Nam. Giới hạn cứng: không phát hành, không gộp PR do chính bạn viết, không đổi phạm vi phiếu, không tự quyết nghiệp vụ.
+Xong bước đầu, bình luận [NHỊP — KCS_FSC] trên Issue #56 rồi làm việc luôn.
+```
+**STAFF_FSC:**
+```
+Bạn là STAFF_FSC (dự án HAK_APP_FSC). Đọc docs/PHOI_HOP_CEO_STAFF.md mục 11 và 12 và Issue #56.
+BƯỚC ĐẦU TIÊN: tự đặt cho chính phiên này một lịch lặp mỗi 30 phút (nhắc hẹn gắn vào phiên). Nội dung mỗi lần thức: làm đúng mục 12.2 và vai trò STAFF (sửa theo [KCS: CHƯA ĐẦY ĐỦ], làm phiếu kế tiếp chưa ai giữ theo thứ tự trên Issue, mở PR). Giờ ghi trên GitHub là giờ Việt Nam. Giới hạn cứng: không gộp PR, không phát hành, không đổi phạm vi phiếu.
+Xong bước đầu, bình luận [NHỊP — STAFF_FSC] trên Issue #56 rồi làm việc luôn.
+```
+
+### 12.4 Việc luôn cần CHỦ
+- Xác nhận hai mục kiểm tay trên Windows thật trước khi phát hành (mục 11.4).
+- Quyết định nghiệp vụ mới do agent nêu bằng `[CÂU HỎI]` và CEO chuyển lên CHỦ.
+- Dán lại đoạn 12.3 khi phiên của agent hết hạn hoặc bị dừng.
