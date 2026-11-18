@@ -5,7 +5,8 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('fs'), path = require('path');
 const DIR = path.join(__dirname, '..', 'ui', 'app');
 const MUT = /\b(f|f0|ff|fo)\.(nc|dx|pc|doi|hdvc|info|exp|cc|inDot2|inAn|chot|dung|luuTru|nhatKy|giayTo|bienLog)\s*=(?!=)|\bObject\.assign\((f|f0)\s*,|\bdb\.[a-zA-Z]+\s*=(?!=)|\bdb\s*=(?!=)/;
-const OK = /\b(persist|persistLo|persistNow|luuLo|stSave|doiDuLieu|loVeBanDaLuu|luuLoTT)\s*\(/;
+/* ccCommit là hàm bọc: gọi persistLo (ui/app/11-a-cham-cong.js) rồi báo kết quả; bộ lắng nghe chấm công đi qua nó. */
+const OK = /\b(persist|persistLo|persistNow|luuLo|stSave|doiDuLieu|loVeBanDaLuu|luuLoTT|ccCommit)\s*\(/;
 const NGOAI_LE = {
   'loadDb': 'nạp dữ liệu lúc mở app (chưa có kết quả nhớ tạm nào)',
   'curTeam': 'chuẩn hóa cấu trúc đội lúc đọc (ensureForest: không đổi nội dung, chạy lại không đổi)',
@@ -38,7 +39,7 @@ test('mọi hàm giao diện sửa dữ liệu lô / db đều tăng phiên bả
 test('các đường đổi dữ liệu chung đều tăng phiên bản: persist, persistLo, persistNow, bỏ thay đổi, bản nháp (HAKStage bọc, stages là Proxy)', () => {
   const doc = n => fs.readFileSync(path.join(DIR, n), 'utf8');
   const {docUi} = require('./_ui');
-  const m02 = doc('02-luu-tru-trang-thai.js'), m11 = doc('11-cham-cong-ban-nhap.js'), m17 = doc('17-tra-cuu-google-sheets.js'), m10 = docUi('10');
+  const m02 = doc('02-luu-tru-trang-thai.js'), m11 = docUi('11'), m17 = doc('17-tra-cuu-google-sheets.js'), m10 = docUi('10');
   assert.match(m02, /function persist\(\) \{\n  doiDuLieu\(\);/);
   assert.match(m02, /function persistLo\(f\) \{\n  doiDuLieu\(\);/);
   assert.match(m02, /function loVeBanDaLuu\(fid\) \{\n  doiDuLieu\(\);/);
