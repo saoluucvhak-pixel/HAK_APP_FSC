@@ -36,7 +36,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
     f0.doi[1].hinhThuc = Object.assign({}, f0.doi[1].hinhThuc, {moHinhKy: 'tructiep', hinhThucLuong: 'sanluong'}); f0.pc.forEach(x => { x.doiId = x.soPhieu === 'PA2' ? f0.doi[1].id : f0.doi[0].id; });
     await w.evaluate(d => window.hak.save(d), d0); await w.reload(); await w.waitForSelector('#side'); }
   const lotDb = async id => (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests[id];
-  const moRung = async (id, tab) => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + id + ']'); await w.click('[data-ftab=' + tab + ']'); await w.waitForTimeout(200); };
+  const moRung = async (id, tab) => { if (!(await w.$eval('#side', e => getComputedStyle(e).display !== 'none').catch(() => true))) await w.click('#navHome'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + id + ']'); await w.click('[data-ftab=' + tab + ']'); await w.waitForTimeout(200); };
   const luu = async () => { const b = await w.$('button[data-act=stSave]'); if (b) { await b.click(); await w.waitForTimeout(600); } };
   let f = await lotDb('fa'); const d1 = f.doi[0].id, d2 = f.doi[1].id;
 
