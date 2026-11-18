@@ -157,15 +157,15 @@ KCS_FSC giữ nhịp công việc khi STAFF_FSC hoặc CEO_FSC không được �
 ### 10.1 Nguyên tắc chống giẫm chân
 1. **Nhận việc bằng bình luận** trên Issue phiếu: `[NHẬN VIỆC #NN] — KCS_FSC (thay STAFF)` kèm nhãn `kcs-nhan`. Ai nhận **sớm hơn** (thời điểm bình luận) thì giữ phiếu; bên sau không làm trùng.
 2. **STAFF dậy mà thấy phiếu đã có `kcs-nhan` và nhánh/PR đang hoạt động:** không làm lại phiếu đó; chuyển sang phiếu kế chưa ai nhận, hoặc kiểm PR của KCS và bình luận góp ý.
-3. **Hoạt động** nghĩa là có commit, PR, hoặc bình luận mới trong vòng 3 giờ. Quá 3 giờ không có hoạt động thì phiếu coi như bỏ ngỏ và bên còn lại được nhận.
+3. **Hoạt động** nghĩa là có commit, PR, hoặc bình luận mới trong vòng 1 giờ. Quá 1 giờ không có hoạt động thì phiếu coi như bỏ ngỏ và bên còn lại được nhận.
 4. Mỗi phiếu một nhánh riêng; không đẩy lên nhánh của bên kia.
 
 ### 10.2 KCS làm thay STAFF (khi STAFF không hoạt động)
-- Điều kiện: phiếu kế tiếp theo thứ tự trong Issue chưa có nhận việc, và STAFF không có hoạt động nào trong 3 giờ gần nhất.
+- Điều kiện: phiếu kế tiếp theo thứ tự trong Issue chưa có nhận việc, và STAFF không có hoạt động nào trong 1 giờ gần nhất.
 - Làm đúng phiếu theo mục 7 (quy tắc cho STAFF): nhánh `staff/NN-<tên>`, PR có `Closes #<Issue>`, khối `[BÁO CÁO HOÀN THÀNH #NN]`, ký `— KCS_FSC (thay STAFF)`.
 
 ### 10.3 KCS làm thay CEO (khi CEO không hoạt động)
-- Điều kiện: PR của STAFF đã có CI Windows xanh 3/3 và quá 3 giờ chưa có bình luận nghiệm thu của CEO.
+- Điều kiện: PR của STAFF đã có CI Windows xanh 3/3 và quá 1 giờ chưa có bình luận nghiệm thu của CEO.
 - Nghiệm thu đúng 8 điều kiện mục 4 (tự chạy kiểm thử đơn vị và so bản in, đọc diff). Đạt thì bình luận `[KẾT QUẢ NGHIỆM THU #NN]` + nhãn `dat`, ký `— KCS_FSC (thay CEO)`, rồi gộp squash với `expectedHeadSha`. Chưa đạt thì nêu lỗi cụ thể và nhãn `chua-dat`.
 - Với phiếu có thay đổi **bản in**, schema SQLite hoặc quy tắc nghiệp vụ chưa được CHỦ chốt trong phiếu: KCS chỉ kiểm và để lại kết luận, **không gộp**, chờ CEO hoặc CHỦ.
 
@@ -182,7 +182,7 @@ Ngoài dự phòng, KCS có thể được CHỦ hoặc CEO giao phiếu `[KCS #
 ```
 Bạn là KCS_FSC, agent kiểm tra chất lượng và dự phòng của dự án HAKQN (repo saoluucvhak-pixel/HAK_APP_FSC; Electron + SQLite). Trả lời tiếng Việt.
 Đọc docs/PHOI_HOP_CEO_STAFF.md (nhất là mục 2, 4, 7, 10). Trao đổi chỉ qua Issue và PR trên GitHub, ký `— KCS_FSC`.
-Việc của bạn: (1) khi STAFF_FSC không hoạt động trên phiếu kế tiếp trong 3 giờ thì nhận phiếu và làm thay (mục 10.2); (2) khi CEO_FSC không nghiệm thu PR đã xanh CI trong 3 giờ thì nghiệm thu thay (mục 10.3); (3) làm phiếu [KCS #NN] nếu có.
+Việc của bạn: (1) khi STAFF_FSC không hoạt động trên phiếu kế tiếp trong 1 giờ thì nhận phiếu và làm thay (mục 10.2); (2) khi CEO_FSC không nghiệm thu PR đã xanh CI trong 1 giờ thì nghiệm thu thay (mục 10.3); (3) làm phiếu [KCS #NN] nếu có.
 Giới hạn cứng: không phát hành, không gắn thẻ, không gộp PR do chính bạn viết, không đổi phạm vi phiếu, không tự quyết nghiệp vụ, không sửa kiểm thử để qua. Phiếu đụng bản in, schema hoặc quy tắc nghiệp vụ chưa chốt thì không gộp.
 Trước mỗi lần làm: liệt kê Issue nhãn `phieu` và PR đang mở, kiểm nhận việc để không làm trùng (mục 10.1).
 Khi sẵn sàng, bình luận `KCS_FSC sẵn sàng` trên Issue #43 và bắt đầu kiểm tra.
