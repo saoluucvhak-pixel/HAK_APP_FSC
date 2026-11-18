@@ -29,8 +29,23 @@
   }
   /* khối lượng (tấn) của từng đội theo phân bổ: {doiId: tấn}; đội chưa có phiếu gán nhận 0 */
   const theoDoi = (f, cd) => Object.fromEntries(tinh(f, cd).doi.map(d => [d.id, d.tan]));
+  /* CẢNH BÁO KHI XUẤT (phiếu #03, quyết định của CHỦ 18/11/2026: không chặn xuất): ở chế độ “theo phiếu” còn phiếu chưa gán đội thì khối lượng từng đội ở BM-08 / BM-14
+   * lặng lẽ chia THEO SỐ NGƯỜI (doiOf), còn màn Phân bổ chỉ hiện “chưa phân bổ”. Hàm này nhận kết quả doiOf (b) và trả nội dung cảnh báo, hoặc null khi không rơi vào trường hợp đó
+   * (gán đủ, chia đều, một đội, số nhập tay của hồ sơ cũ, không có phiếu). Chỉ đọc: không đổi dữ liệu và không đổi số in.
+   * → {soPhieu, kg, tan, phieu: [{soPhieu, ngay, bienSo, kg, tan}], chia: [{ten, tan}] (phần từng đội sẽ in), nguon: 'songuoi'} */
+  function chuaGanXuat(b) {
+    if (!b || !b.multi || b.klNguon !== 'songuoi') return null;
+    const ds = (b.phieuChuaGan || []).filter(p => kgCua(p) > 0); if (!ds.length) return null;
+    const kg = ds.reduce((a, p) => a + kgCua(p), 0);
+    return {soPhieu: ds.length, kg, tan: kg / 1000, phieu: ds.map(p => ({soPhieu: p.soPhieu == null ? '' : String(p.soPhieu), ngay: p.ngay || '', bienSo: p.bienSo || '', kg: kgCua(p), tan: kgCua(p) / 1000})),
+      chia: (b.doi || []).map(d => ({ten: d.ten || '', tan: d.khoiLuong})), nguon: 'songuoi'};
+  }
+  const tanVN = t => String(Math.round(t * 1000) / 1000).replace('.', ',');
+  /* một dòng giải thích dùng ở màn Phân bổ và danh sách hợp đồng (thay cho “0 t” / “—” im lặng) */
+  const chuaGanDong = c => !c ? '' : tanVN(c.tan) + ' t (' + c.soPhieu + ' phiếu) chưa gán đội; khi in BM-08 và BM-14, khối lượng sẽ chia theo số người của từng đội' +
+    (c.chia && c.chia.length ? ' (' + c.chia.map(x => (x.ten || 'đội') + ' ' + tanVN(x.tan) + ' t').join(', ') + ')' : '') + '.';
   /* có phân bổ đầy đủ (không còn phiếu chưa gán) */
   const du = (f, cd) => { const t = tinh(f, cd); return t.chuaGanPhieu === 0; };
-  const api = {CHE_DO, cheDo, cheDoHopLe, tinh, theoDoi, du, kgCua};
+  const api = {CHE_DO, cheDo, cheDoHopLe, tinh, theoDoi, du, kgCua, chuaGanXuat, chuaGanDong};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKPhanBo = api;
 })(typeof self !== 'undefined' ? self : this);

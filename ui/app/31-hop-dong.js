@@ -31,7 +31,12 @@ function panelDsNC(rec) {
   const ds = rec.doi || [], pc = rec.pc || [], nhieu = ds.length > 1, chua = (rec.nc || []).filter(r => !ds.some(d => d.id === r.doiId)).length;
   const tt = d => { const x = (rec.nc || []).find(r => r.doiId === d.id && isTT(r)); return x ? x.ten : ''; };
   const ben = d => { const n = benTen(d.benNhanKhoan); if (n) return esc(n) + ' <small class="mut">(bên nhận khoán)</small>'; const t = tt(d); return t ? esc(t) + ' <small class="mut">(Tổ trưởng)</small>' : '<span class="mut">—</span>'; };
-  const pbk = HAKPhanBo.tinh(rec), kl = d => { const x = pbk.doi.find(y => y.id === d.id); return x && x.kg > 0 ? fmtT(x.kg) + ' tấn' : '—'; };   // 3.0: khối lượng theo phân bổ (cùng kết quả với biểu mẫu)
+  const pbk = HAKPhanBo.tinh(rec), cg = pbk.cheDo === 'theoPhieu' ? chuaGanCuaLo(rec) : null;   // phiếu #03: còn phiếu chưa gán đội → nói rõ thay cho “—” im lặng
+  const kl = d => {
+    const x = pbk.doi.find(y => y.id === d.id);
+    if (x && x.kg > 0) return fmtT(x.kg) + ' tấn';
+    return cg ? '<span class="mut" title="' + esc(HAKPhanBo.chuaGanDong(cg)) + '">chưa gán phiếu</span>' : '—';
+  };   // 3.0: khối lượng theo phân bổ (cùng kết quả với biểu mẫu)
   const row = (d, i) => { const info = infoTeam(rec, d), so = soHdNc(rec, d);
     return '<tr data-act="chonDoi" data-doi="' + esc(d.id) + '" tabindex="0" style="cursor:pointer"><td style="text-align:center">' + (i + 1) + '</td><td>' + (so ? '<b>' + esc(so) + '</b>' : '<span class="mut">chưa có số</span>') + '</td><td><b>' + esc(tenDoiNc(rec, d)) + '</b></td><td>' +
     (isDirect(info) ? 'Ký với cá nhân' : 'Giao khoán') + '</td><td>' + ben(d) + '</td>' +

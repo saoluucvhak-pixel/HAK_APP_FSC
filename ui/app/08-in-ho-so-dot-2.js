@@ -48,6 +48,7 @@ async function exportDot2(mode, keys) {
     if (chua.length) {
     note('Chưa in ' + (mode === 'de' ? 'phần in đè' : 'bản đầy đủ') + ' BM-09/10: còn ' + chua.length + ' phiếu (' + fmt(totalKg(chua.map(x => x.p))) + ' kg) thuộc phạm vi mẫu chưa vào biên bản. Xử lý ở tab Xuất hồ sơ → Đối chiếu khối lượng BM-09/10 → Mở phiếu, rồi in lại.', 'warn'); return; }
   }
+  if (mode !== 'nen' && !(await chuaGanKiemTra(rec, keys))) return;   // phiếu #03: in đủ / in đè BM-08, BM-14 mang khối lượng đội; mẫu nền không mang số liệu nên không hỏi
   docMode = docM;
   try {
     /* mẫu nền không mang số liệu phiếu cân: nhóm chặn về phiếu cân (pc) không chặn in nền — đúng như bảng “Còn thiếu để in” ở trên (chanMiss) */
@@ -190,13 +191,16 @@ function exportAllAsk(kind, printed, E) {
     '<button class="btn ghost" id="allqFull">In lại đầy đủ đợt 2 trên giấy trắng</button><button class="btn ghost" id="allqCancel">Hủy</button></div>';
   $('#stBox').classList.add('on');
   $('#allqCancel').onclick = () => $('#stBox').classList.remove('on');
-  $('#allqFull').onclick = async () => { $('#stBox').classList.remove('on'); await exportKind(kind, null, {full: true}); };
+  $('#allqFull').onclick = async () => { $('#stBox').classList.remove('on'); await chuaGanTrong(() => exportKind(kind, null, {full: true})); };
   $('#allqDe').onclick = async () => {
     if (list.some(x => x.advice === 'kiemtra') && !confirm('Có mẫu nền in từ trước khi có chức năng này: chưa biết bố cục tờ nền. Đã đối chiếu tờ nền với mẫu hiện tại (khổ giấy, hướng, lề, chữ cố định, số dòng) chưa?')) return;
     $('#stBox').classList.remove('on');
-    if (kind === 'all') await exportKind('dau', null, {full: true});
-    if (canDe.length) await exportDot2('de', canDe.map(x => x.key));
-    if (full.length) await exportDot2('trang', full.map(x => x.key));
+    await chuaGanTrong(async () => {   // phiếu #03: hỏi MỘT lần ngay từ đầu (trước khi tải gói đợt 1), không hỏi lại ở từng gói
+      const rec0 = curRec(); if (rec0 && !(await chuaGanKiemTra(rec0, [...canDe, ...full].map(x => x.key)))) return;
+      if (kind === 'all') await exportKind('dau', null, {full: true});
+      if (canDe.length) await exportDot2('de', canDe.map(x => x.key));
+      if (full.length) await exportDot2('trang', full.map(x => x.key));
+    });
   };
 }
 async function exportKind(kind, idx, opt) {
@@ -207,6 +211,7 @@ async function exportKind(kind, idx, opt) {
   const g = gate(rec);
   const ok = kindOk(g)[kind];
   if (!ok) { note('Hồ sơ còn lỗi hoặc thiếu dữ liệu, chưa xuất. Xem tab Xuất hồ sơ.', 'err'); return; }
+  if (!(await chuaGanKiemTra(rec, kind))) return;   // phiếu #03: còn phiếu cân chưa gán đội → cảnh báo trước khi xuất BM-08 / BM-14 (không chặn)
   docMode = 'day';
   try {
     const files = buildFiles(rec, kind), kt = exportCheck(rec);
