@@ -12,7 +12,8 @@ function panelMua(rec) {
   else if (dd.src === 'thucong') cur = '<div class="msg warn">Rừng này chưa chọn địa chỉ giao của công ty. Đang dùng điểm đến nhập tay trước đây: <b>' + esc(dd.text) + '</b>. Chọn địa chỉ giao để dùng địa chỉ trong hồ sơ công ty.</div>';
   else cur = '<div class="msg warn">Chưa chọn địa chỉ giao hàng cho rừng này: địa điểm vận chuyển đến đang trống, các biểu mẫu cần điểm đến (BM-04, BM-09, BM-10) sẽ in dòng chấm.</div>';
   let drift = '';
-  if (dr.state === 'thaydoi') drift = '<div class="msg warn">Thông tin công ty đã thay đổi (' + esc(dr.why) + '). Hồ sơ rừng vẫn GIỮ: <b>' + esc(dr.saved.ten) + ' – ' + esc(dr.saved.diaChi) + '</b>. Hồ sơ công ty hiện là: <b>' + esc(dr.current.ten) + (dr.current.diaChi ? ' – ' + esc(dr.current.diaChi) : '') + '</b>. <button class="btn sm" data-act="mhOpen">Xem và cập nhật</button></div>';
+  if (dr.state === 'thaydoi') drift = '<div class="msg warn">Thông tin công ty đã thay đổi (' + esc(dr.why) + '). Hồ sơ rừng vẫn GIỮ: <b>' + esc(dr.saved.ten) + ' – ' + esc(dr.saved.diaChi) + '</b>. Hồ sơ công ty hiện là: <b>' + esc(dr.current.ten) + (dr.current.diaChi ? ' – ' +
+  esc(dr.current.diaChi) : '') + '</b>. <button class="btn sm" data-act="mhOpen">Xem và cập nhật</button></div>';
   else if (dr.state === 'xoa') drift = '<div class="msg warn">Hồ sơ công ty “' + esc(dr.saved.ten) + '” không còn trong phần mềm. Hồ sơ rừng vẫn giữ tên và địa chỉ đã lưu.</div>';
   const misBox = mis.length ? '<div class="msg warn">Nơi giao trên <b>' + mis.length + ' phiếu cân</b> khác địa chỉ giao đã chọn (' + esc([...new Set(mis.map(p => p.noiGiao))].slice(0, 4).join('; ')) + '). Nội dung gốc của phiếu được giữ nguyên; hãy đối chiếu phiếu hoặc điểm đến.</div>' : '';
   let pick = '';
@@ -30,7 +31,8 @@ function panelMua(rec) {
     pick += '<div class="row" style="margin-top:8px"><button class="btn" data-act="mhConfirm">Xác nhận và lưu vào hồ sơ rừng</button><button class="btn ghost" data-act="mhCancel">Hủy</button></div></div>';
   }
   const ddBox = '<label style="margin-top:8px"><span>Địa điểm vận chuyển đến (tự điền từ địa chỉ giao đã chọn)</span><input id="mhDiemDen" readonly value="' + esc(dd.diaChi) + '" placeholder="Chưa có: chọn địa chỉ giao hàng"></label>';
-  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Địa chỉ giao hàng và điểm đến vận chuyển</h3>' + (co ? '<button class="btn' + (m ? ' ghost' : '') + '" data-act="mhOpen">' + (m ? 'Đổi địa chỉ giao' : 'Chọn địa chỉ giao hàng') + '</button>' : '') + '</div>' +
+  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Địa chỉ giao hàng và điểm đến vận chuyển</h3>' + (co ? '<button class="btn' + (m ? ' ghost' : '') + '" data-act="mhOpen">' + (m ? 'Đổi địa chỉ giao' : 'Chọn địa chỉ giao hàng') + '</button>' :
+  '') + '</div>' +
     '<p class="mut" style="margin:4px 0 8px">Công ty mua hàng khai một lần ở <b>Cài đặt → Công ty</b> (menu ngang trên cùng); mỗi rừng chọn địa chỉ giao của công ty đó. Địa chỉ đã chọn là địa điểm đến ở màn hình này, trong BM-04, BM-09, BM-10 và Sổ phiếu cân.</p>' +
     (msg ? '<div class="msg ' + msg.kind + '">' + esc(msg.text) + '</div>' : '') + cur + ddBox + drift + misBox + pick + '</div>';
 }

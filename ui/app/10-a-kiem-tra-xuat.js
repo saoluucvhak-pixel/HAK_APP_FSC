@@ -46,15 +46,18 @@ function exportCheckTinh(job) {
   forestErrors(i, job.fid).forEach(e => add('chan', 'Thông tin rừng', e, '', {ftab: 'finfo'}));
   giaErrorsRec(job).forEach(e => { const m = /^Đội “([^”]*)”: /.exec(e); add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}, m ? {loai: 'doi', ten: m[1]} : null); });   // từng đội theo hình thức của đội
   // mã lô trùng ở dữ liệu cũ: liệt kê đủ các lô khớp để đối chiếu, không tự sửa
-  HAKLoRung.duplicateGroups(db).filter(x => x.lots.some(l => l.forest === job.fid)).forEach(x => add('chan', 'Mã lô trùng (dữ liệu cũ)', 'Mã “' + x.ma + '” đang dùng cho ' + x.lots.length + ' lô: ' + x.lots.map(l => l.lo + ' (chủ ' + l.chu + '; ' + l.nc + ' nhân công, ' + l.dx + ' xe, ' + l.pc + ' phiếu cân)').join('; ') + '. Đổi mã các lô thừa ở tab Thông tin rừng, dữ liệu không bị đổi trước khi bạn xác nhận.', x.ma, {ftab: 'finfo'}));
+  HAKLoRung.duplicateGroups(db).filter(x => x.lots.some(l => l.forest === job.fid)).forEach(x => add('chan', 'Mã lô trùng (dữ liệu cũ)',
+  'Mã “' + x.ma + '” đang dùng cho ' + x.lots.length + ' lô: ' + x.lots.map(l => l.lo + ' (chủ ' + l.chu + '; ' + l.nc + ' nhân công, ' + l.dx + ' xe, ' + l.pc + ' phiếu cân)').join('; ') + '. Đổi mã các lô thừa ở tab Thông tin rừng, dữ liệu không bị đổi trước khi bạn xác nhận.', x.ma, {ftab: 'finfo'}));
   // chồng lấn giữa các lô (src/cheolo.js): phiếu cân trùng, xe trùng giờ, người ở hai lô, lệch sản lượng dự kiến
   try { HAKCheoLo.kiemTra(db, job.id, job.fid, {chiMuc: cheoCtx()}).forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go)); } catch (e) { /* không kiểm được chéo lô: bỏ qua, không chặn */ }
   try { HAKSoVB.trung(db, job.id, job.fid).forEach(x => add('doi', 'Số văn bản trùng', 'Số “' + x.so + '” cũng đang dùng ở lô ' + x.ma + ': hai văn bản không được trùng số.', x.so, {ftab: 'xuat'})); } catch (e) { /* bỏ qua */ }
-  try { HAKSoVB.trungTrongLo(curForest() && curForest().id === job.fid ? curForest() : ((db.rs[job.id] || {}).forests || {})[job.fid] || {}).forEach(x => add('doi', 'Số văn bản trùng', 'Hai đội của lô cùng dùng số “' + x.so + '” (đội “' + x.ten + '”): kiểm tra, số của đội đã xóa có thể bị cấp lại ở dữ liệu cũ.', x.so, {ftab: 'xuat'})); } catch (e) { /* bỏ qua */ }
+  try { HAKSoVB.trungTrongLo(curForest() && curForest().id === job.fid ? curForest() : ((db.rs[job.id] || {}).forests || {})[job.fid] || {}).forEach(x => add('doi', 'Số văn bản trùng',
+  'Hai đội của lô cùng dùng số “' + x.so + '” (đội “' + x.ten + '”): kiểm tra, số của đội đã xóa có thể bị cấp lại ở dữ liệu cũ.', x.so, {ftab: 'xuat'})); } catch (e) { /* bỏ qua */ }
   /* số văn bản theo đội xe (src/sovb.js): hai đội xe có SỐ RIÊNG trùng nhau → chặn BM-04, BM-09, BM-10 của các đội đó, nêu đủ các đội; các đội cùng in số chung của lô → đối chiếu, mời xác nhận số trên giấy / cấp số */
   try { const fLo = curForest() && curForest().id === job.fid ? curForest() : ((db.rs[job.id] || {}).forests || {})[job.fid] || {}, gs = job.hdvc ? groupsDX(job).filter(x => x.hd) : [], tenG = id => (gs.find(x => x.hd.id === id) || {}).ten || '';
     HAKSoVB.trungDoiXe(fLo, gs.map(x => x.hd.id)).forEach(x => { const ds = x.doi.map(d => '“' + d.ten + '”').join(', ');
-      if (x.loai === 'rieng') x.doi.forEach(d => add('chan', 'Số văn bản đội xe trùng', 'Các đội xe ' + ds + ' cùng lưu số “' + x.so + '” cho ' + x.mau + ': mỗi đội xe là một bên vận chuyển riêng nên không được trùng số. Sửa số riêng của từng đội ở tab Vận chuyển (phần mềm không tự đổi số đã lưu).', x.so, {ftab: 'dx'}, {loai: 'doiXe', ten: tenG(d.id)}));
+      if (x.loai === 'rieng') x.doi.forEach(d => add('chan', 'Số văn bản đội xe trùng', 'Các đội xe ' + ds + ' cùng lưu số “' + x.so + '” cho ' + x.mau + ': mỗi đội xe là một bên vận chuyển riêng nên không được trùng số. Sửa số riêng của từng đội ở tab Vận chuyển (phần mềm không tự đổi số đã lưu).',
+      x.so, {ftab: 'dx'}, {loai: 'doiXe', ten: tenG(d.id)}));
       else add('doi', 'Số văn bản đội xe dùng chung', 'Các đội xe ' + ds + ' đang cùng in số “' + x.so + '” cho ' + x.mau + ' (số chung của lô). Mở Sổ văn bản (tab Xuất hồ sơ): xác nhận số trên giấy cho đội đã in, hoặc cấp số riêng cho đội chưa có số.', x.so, {ftab: 'xuat'}); }); } catch (e) { /* bỏ qua */ }
   // nhân công, định mức, tuổi
   g.nc.errs.forEach(e => add('chan', 'Nhân công', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'nc'}));
@@ -62,7 +65,8 @@ function exportCheckTinh(job) {
   // người dưới 18 tuổi: đã là lỗi của từng dòng nhân công (checkNC) nên chặn mọi biểu mẫu có tên người đó
   // vận chuyển
   g.dx.errs.forEach(e => add('chan', 'Đội xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
-  groupsDX(job).forEach(gr => hanLoiOf(job, gr).forEach(v => add('chan', 'Giấy tờ xe hết hạn lúc chạy phiếu', 'Đội xe “' + gr.ten + '”: ' + HAKGiayTo.text(v) + '. BM-09 và BM-10 của đội xe này bị chặn: sửa hạn giấy tờ của xe hoặc ngày cân của phiếu nếu nhập sai.', 'Phiếu ' + (v.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}, {loai: 'doiXe', ten: gr.ten})));
+  groupsDX(job).forEach(gr => hanLoiOf(job, gr).forEach(v => add('chan', 'Giấy tờ xe hết hạn lúc chạy phiếu', 'Đội xe “' + gr.ten + '”: ' + HAKGiayTo.text(v) + '. BM-09 và BM-10 của đội xe này bị chặn: sửa hạn giấy tờ của xe hoặc ngày cân của phiếu nếu nhập sai.',
+  'Phiếu ' + (v.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}, {loai: 'doiXe', ten: gr.ten})));
   g.dx.warns.forEach(e => add('doi', 'Giấy tờ xe', e, (e.match(/^Dòng \d+/) || [''])[0], {ftab: 'dx'}));
   const vcm = (i.vanChuyen || {}).mode;
   g.vc.forEach(e => add('chan', 'Cước vận chuyển', e, 'Đơn giá vận chuyển', {ftab: 'finfo', muc: 'giaohang'}));
@@ -84,16 +88,22 @@ function exportCheckTinh(job) {
   const dd = destOf(job), dr = HAKMuaHang.drift(i, db.congTy), mis = HAKMuaHang.mismatches(job.pc || [], dd.src === 'congty' ? dd : null);
   if (!dd.text) add('doi', 'Địa chỉ giao hàng', 'Chưa chọn địa chỉ giao hàng đã chốt: BM-04, BM-09, BM-10 sẽ in dòng chấm.', 'Địa điểm vận chuyển đến', {ftab: 'dx', focus: 'mua'});
   else if (dd.src === 'thucong') add('doi', 'Địa chỉ giao hàng', 'Đang dùng điểm đến nhập tay cũ “' + dd.text + '”. Chọn địa chỉ giao của công ty để thay (chỉ đổi sau khi bạn xác nhận).', 'Địa điểm vận chuyển đến', {ftab: 'finfo', focus: 'mua'});
-  if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng', 'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở Thông tin rừng → Công ty, địa chỉ giao và cước.', 'Địa điểm vận chuyển đến', {ftab: 'finfo', focus: 'mua'});
+  if (dr.state === 'thaydoi') add('doi', 'Địa chỉ giao hàng',
+  'Hồ sơ công ty đã đổi (' + dr.why + '). Hồ sơ rừng vẫn giữ “' + dr.saved.diaChi + '”; hồ sơ công ty hiện là “' + (dr.current.diaChi || '(không còn địa chỉ này)') + '”. Xem cũ/mới và xác nhận ở Thông tin rừng → Công ty, địa chỉ giao và cước.', 'Địa điểm vận chuyển đến', {ftab: 'finfo', focus: 'mua'});
   if (mis.length) mis.forEach(p => add('doi', 'Nơi giao trên phiếu khác địa chỉ giao đã chốt', 'Nơi giao ghi trên phiếu: “' + p.noiGiao + '”; địa chỉ đã chốt: “' + dd.diaChi + '”. Nội dung phiếu giữ nguyên.', 'Phiếu ' + (p.soPhieu || '(không số)'), {ftab: 'dx', focus: 'pc'}));
-  if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển', !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
+  if (vcm === 'tanKm' && dd.text && (dr.state === 'thaydoi' || !(HAKCuLy.eff(i).km > 0))) add('doi', 'Cự ly vận chuyển',
+  !(HAKCuLy.eff(i).km > 0) ? 'Cước tấn/km cần cự ly nhưng chưa có: ' + HAKCuLy.eff(i).thieu + '.' : 'Cước tính theo tấn/km: khi đổi điểm đến hãy kiểm tra lại cự ly (' + HAKCuLy.eff(i).km + ' km, ' + HAKCuLy.eff(i).nguon + '). Phần mềm không tự sửa cự ly nhập tay hay đơn giá.', 'Cự ly', {ftab: 'finfo'});
   ((job.doi) || []).forEach(d => { const c = d && d.benNhanKhoanBan; if (!c || isDirect(infoTeam(job, d))) return; const thieu = benNhanKhoanThieu(c);   // 3.0: bên nhận khoán đã chọn mà bản chụp thiếu thông tin in
-    if (thieu.length) add('chan', 'Bên nhận khoán thiếu thông tin', 'Đội “' + (d.ten || 'khai thác') + '”: bên nhận khoán “' + c.ten + '” còn thiếu ' + thieu.join(', ') + ' — bổ sung ở Cài đặt → Danh mục đối tượng rồi bấm “Cập nhật theo danh mục” ở hợp đồng nhân công.', 'Bên nhận khoán', {ftab: 'nc'}); });
-  { const bd = doiOf(job); if (bd.pcChuaGan) add('doi', 'Phiếu cân chưa gán đội', 'Lô có ' + bd.doi.length + ' đội nhưng ' + bd.pcChuaGan + ' phiếu cân chưa gán đội: khối lượng từng đội đang ' + (bd.klNguon === 'nhap' ? 'theo số nhập tay của hồ sơ cũ' : 'chia theo số người') + '. Gán đội cho phiếu cân (gán hàng loạt theo bộ lọc) để khối lượng đội lấy đúng theo phiếu cân.', '', {ftab: 'dx', focus: 'pc'}); }
+    if (thieu.length) add('chan', 'Bên nhận khoán thiếu thông tin', 'Đội “' + (d.ten || 'khai thác') + '”: bên nhận khoán “' + c.ten + '” còn thiếu ' + thieu.join(', ') + ' — bổ sung ở Cài đặt → Danh mục đối tượng rồi bấm “Cập nhật theo danh mục” ở hợp đồng nhân công.', 'Bên nhận khoán', {
+    ftab: 'nc'}); });
+  { const bd = doiOf(job); if (bd.pcChuaGan) add('doi', 'Phiếu cân chưa gán đội',
+  'Lô có ' + bd.doi.length + ' đội nhưng ' + bd.pcChuaGan + ' phiếu cân chưa gán đội: khối lượng từng đội đang ' + (bd.klNguon === 'nhap' ? 'theo số nhập tay của hồ sơ cũ' : 'chia theo số người') + '. Gán đội cho phiếu cân (gán hàng loạt theo bộ lọc) để khối lượng đội lấy đúng theo phiếu cân.', '', {
+  ftab: 'dx', focus: 'pc'}); }
   { const bd = doiOf(job); if (bd.klLoi) add('doi', 'Số đội', 'Khối lượng thực tế từng đội: ' + bd.klLoi + '. BM-08 và BM-14 của từng đội sẽ là bản nháp cho đến khi sửa.', 'Khối lượng thực tế từng đội', {ftab: 'finfo'}); }
   { const rows = viTriRowsTai((job.info || {}).tuNgay), bd = doiOf(job);   // theo ĐỘI THẬT (bảng Nhân công khai thác), không chia lại theo cột chữ
     if (rows.ngayLoi) add('chan', 'Định mức nhân công: ngày bắt đầu sai', rows.ngayLoi, '', {ftab: 'finfo'}); else (bd.multi ? bd.doi.map(d => ({lb: ' của đội “' + d.ten + '”', ten: d.ten, nc: [d.tt, ...d.members]})) : [{lb: '', nc: job.nc || []}]).forEach(u => { const sc = HAKDinhBien.soSanh(rows, u.nc);
-      if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}, u.ten ? {loai: 'doi', ten: u.ten} : null); }); }
+      if (u.nc.length && (sc.lech.length || sc.ngoai.length)) add('doi', 'Định mức nhân công', 'Số người' + u.lb + ' khác định mức (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '): ' + HAKDinhBien.lechText(sc) + '.', 'Định mức nhân công', {ftab: 'nc'}, u.ten ? {loai: 'doi', ten: u.ten} : null);
+      }); }
   { const L = tgLechOf(i, job.pc, nDoiOf(i, job.nc)); if (L && L.canhBao) add('doi', 'Thời gian khai thác', tgLechText(i, L), 'Thời gian khai thác', {ftab: 'finfo'}); }
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
   g.nhapLieu.forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go, x.doiTuong));   // của lô, từng đội và từng đội xe

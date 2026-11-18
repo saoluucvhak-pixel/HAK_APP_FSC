@@ -4,11 +4,13 @@
  * - Nút “Cập nhật từ danh mục”: làm mới có chủ ý bản chụp trong bản nháp của lô. */
 const dmNguonLd = () => {
   /* 3.0: trước hết người có vai trò Nhân công trong Danh mục đối tượng (nhãn: đối tượng — người); sau đó danh mục lao động cũ và người đã có ở các lô (chưa có trong danh mục mới) */
-  const moi = HAKDoiTuong.nguoiTheoVaiTro(dmDT(), 'nhanCong').map(({dt, ng}) => ({ngayCapNhat: dt.ngayCapNhat || '', cccd: HAKDanhMuc.cccdSo(ng.cccd), ten: ng.hoTen, gioiTinh: ng.gioiTinh || '', ngaySinh: ng.ngaySinh || '', diaChi: ng.diaChi || '', ngayCap: ng.ngayCap || '', noiCap: ng.noiCap || '', sdt: ng.sdt || '',
+  const moi = HAKDoiTuong.nguoiTheoVaiTro(dmDT(), 'nhanCong').map(({dt, ng}) => ({ngayCapNhat: dt.ngayCapNhat || '', cccd: HAKDanhMuc.cccdSo(ng.cccd), ten: ng.hoTen, gioiTinh: ng.gioiTinh || '', ngaySinh: ng.ngaySinh || '', diaChi: ng.diaChi || '', ngayCap: ng.ngayCap || '', noiCap: ng.noiCap || '',
+  sdt: ng.sdt || '',
     chucVu: '', viTri: ten30(ng.viTriId), _ngId: ng.id, _viTriId: ng.viTriId || '', _nhan: HAKDoiTuong.nhanNguoi(dt, ng)})).filter(r => r.cccd);
   const coMoi = new Set(moi.map(r => r.cccd));
   const dm = HAKDanhMuc.laoDongHieuLuc(db.dmLaoDong || []).filter(r => !coMoi.has(HAKDanhMuc.cccdSo(r.cccd))), co = new Set(dm.map(r => HAKDanhMuc.cccdSo(r.cccd)).concat([...coMoi]));
-  const them = HAKModel.nguoiDanhMuc(db.rs).filter(r => !co.has(HAKDanhMuc.cccdSo(r.cccd))).map(r => ({ngayCapNhat: '', cccd: HAKDanhMuc.cccdSo(r.cccd), ten: r.ten, gioiTinh: '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '', chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}));
+  const them = HAKModel.nguoiDanhMuc(db.rs).filter(r => !co.has(HAKDanhMuc.cccdSo(r.cccd))).map(r => ({ngayCapNhat: '', cccd: HAKDanhMuc.cccdSo(r.cccd), ten: r.ten, gioiTinh: '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '',
+  chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}));
   return moi.concat(dm.concat(them).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi')));
 };
 const dmNguonXe = () => {
@@ -17,7 +19,9 @@ const dmNguonXe = () => {
   const cu = HAKDanhMuc.xeHieuLuc(db.dmXeVC || []).map(x => Object.assign({}, x, {_xeId: xeId(x.bienSo)})), coCu = new Set(cu.map(r => HAKDanhMuc.bienKey(r.bienSo)));   // dòng cũ đầy đủ hơn (tài xế, cà vẹt): giữ, nối ID xe mới
   const moi = dmCu().dmXeVC.filter(x => x.bienSo && !coCu.has(HAKDanhMuc.bienKey(x.bienSo))).map(x => Object.assign(x, {_xeId: xeId(x.bienSo)}));
   const dm = cu.concat(moi), co = new Set(dm.map(r => HAKDanhMuc.bienKey(r.bienSo)));
-  const them = xeDanhMuc().filter(r => !co.has(HAKDanhMuc.bienKey(r.bienSo))).map(r => ({ngayCapNhat: '', bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || '', loaiXe: r.loaiXe || '', cccd: r.cccd || '', ngaySinh: r.ngaySinh || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', diaChi: r.diaChi || '', sdt: r.sdt || '', cavet: r.cavet || '', nguoiKy: r.nguoiKy || '', _goc: r}));   // _goc: các trường riêng của xe ở lô cũ (chủ xe, loại xe…) để điền sẵn
+  const them = xeDanhMuc().filter(r => !co.has(HAKDanhMuc.bienKey(r.bienSo))).map(r => ({ngayCapNhat: '', bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '',
+  hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || '', loaiXe: r.loaiXe || '', cccd: r.cccd || '', ngaySinh: r.ngaySinh || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', diaChi: r.diaChi || '', sdt: r.sdt || '', cavet: r.cavet || '', nguoiKy: r.nguoiKy || '',
+  _goc: r}));   // _goc: các trường riêng của xe ở lô cũ (chủ xe, loại xe…) để điền sẵn
   return dm.concat(them).sort((a, b) => String(a.bienSo).localeCompare(String(b.bienSo)));
 };
 /* điền ô hộp thoại thêm người từ một dòng danh mục */
@@ -41,11 +45,14 @@ function dmGhiTuLo(st) {
   const bn = baseIds('nc'), bx = baseIds('dx'); let ld = db.dmLaoDong || [], xe = db.dmXeVC || [];
   st.cur.nc.forEach(r => {
     if (bn.has(r._id)) return; const k = HAKDanhMuc.cccdSo(r.cccd); if (k.length !== 12 || !trim(r.ten) || HAKDanhMuc.layLaoDong(ld, k)) return;
-    const t = HAKDanhMuc.themLaoDong(ld, {ngayCapNhat: hom, cccd: k, ten: r.ten, gioiTinh: r.danhXung === 'Bà' ? 'Nữ' : r.danhXung === 'Ông' ? 'Nam' : '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '', chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}); ld = t.list; n++; daGhi.nc.push(r._id);
+    const t = HAKDanhMuc.themLaoDong(ld, {
+    ngayCapNhat: hom, cccd: k, ten: r.ten, gioiTinh: r.danhXung === 'Bà' ? 'Nữ' : r.danhXung === 'Ông' ? 'Nam' : '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '', chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}); ld = t.list;
+    n++; daGhi.nc.push(r._id);
   });
   st.cur.dx.forEach(r => {
     if (bx.has(r._id)) return; if (!HAKDanhMuc.bienKey(r.bienSo) || HAKDanhMuc.layXe(xe, r.bienSo)) return;
-    const t = HAKDanhMuc.themXe(xe, {ngayCapNhat: hom, bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || '', loaiXe: trim(r.loaiXe), cccd: HAKDanhMuc.cccdSo(r.cccd), ngaySinh: trim(r.ngaySinh), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), diaChi: trim(r.diaChi), sdt: trim(r.sdt), cavet: trim(r.cavet), nguoiKy: trim(r.nguoiKy)}); xe = t.list; n++; daGhi.dx.push(r._id);
+    const t = HAKDanhMuc.themXe(xe, {ngayCapNhat: hom, bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '',
+    hanBaoHiem: r.hanBH || '', loaiXe: trim(r.loaiXe), cccd: HAKDanhMuc.cccdSo(r.cccd), ngaySinh: trim(r.ngaySinh), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), diaChi: trim(r.diaChi), sdt: trim(r.sdt), cavet: trim(r.cavet), nguoiKy: trim(r.nguoiKy)}); xe = t.list; n++; daGhi.dx.push(r._id);
   });
   if (n) {
     db.dmLaoDong = ld; db.dmXeVC = xe;
@@ -66,7 +73,8 @@ function dmLechLo(kind, rows) {
 function dmThanhLech(kind) {
   const st = stCur(), rec = curRec(); const rows = st ? st.cur[kind] : (rec && rec[kind]) || [];
   const l = dmLechLo(kind, rows); if (!l.length) return '';
-  return '<div class="msg warn" id="dmLech' + kind + '">Danh mục có thông tin <b>mới hơn</b> bản chụp trong lô cho ' + l.length + ' ' + (kind === 'nc' ? 'người' : 'xe') + ': ' + l.slice(0, 6).map(x => esc((kind === 'nc' ? x.row.ten : x.row.bienSo) + ' (' + x.khac.join(', ') + ')')).join('; ') + (l.length > 6 ? ' …' : '') + '. <button class="btn sm" data-act="dmCapNhatLo" data-kind="' + kind + '">Cập nhật từ danh mục</button> <span class="mut">Chỉ đổi trong bản nháp; hồ sơ lô đổi khi bấm “Lưu dữ liệu vào lô”.</span></div>';
+  return '<div class="msg warn" id="dmLech' + kind + '">Danh mục có thông tin <b>mới hơn</b> bản chụp trong lô cho ' + l.length + ' ' + (kind === 'nc' ? 'người' : 'xe') + ': ' + l.slice(0, 6).map(x => esc((kind === 'nc' ? x.row.ten : x.row.bienSo) + ' (' + x.khac.join(', ') + ')')).join('; ') +
+  (l.length > 6 ? ' …' : '') + '. <button class="btn sm" data-act="dmCapNhatLo" data-kind="' + kind + '">Cập nhật từ danh mục</button> <span class="mut">Chỉ đổi trong bản nháp; hồ sơ lô đổi khi bấm “Lưu dữ liệu vào lô”.</span></div>';
 }
 function dmCapNhatLo(kind) {
   const st = stGet(true); if (!st) return;
@@ -147,7 +155,8 @@ function loTuLoCuTao() {
   const base = (o.info.ma || 'CR') + '-R'; let k = forestList(o).length + 1, code = base + k; while (HAKLoRung.lotsByMa(db, code).length) code = base + (++k);
   const id = newId('f'), r = HAKDanhMuc.loTuLoCu(src, {id, maRung: code, tenRung: 'Rừng ' + k, dmLaoDong: db.dmLaoDong, dmXe: db.dmXeVC});
   o.forests[id] = r.f; NAV.curF = id; NAV.ftab = 'finfo'; NAV.tab = 'rung'; persist();
-  note('Đã tạo lô ' + code + ' từ lô ' + (src.info.maRung || '?') + ': ' + (r.f.nc || []).length + ' nhân công, ' + (r.f.dx || []).length + ' xe (làm mới từ Danh mục: ' + r.nguoi + ' người, ' + r.xe + ' xe). Nhập thông tin rừng, thời gian khai thác rồi Lưu; phiếu cân và số/ngày văn bản nhập mới.', 'ok'); render();
+  note('Đã tạo lô ' + code + ' từ lô ' + (src.info.maRung || '?') + ': ' + (r.f.nc || []).length + ' nhân công, ' + (r.f.dx || []).length + ' xe (làm mới từ Danh mục: ' + r.nguoi + ' người, ' + r.xe + ' xe). Nhập thông tin rừng, thời gian khai thác rồi Lưu; phiếu cân và số/ngày văn bản nhập mới.',
+  'ok'); render();
 }
 
 /* ========== Nhật ký nạp và hoàn tác lần nạp (bản 2.2, mục 11.3 điểm 10) ==========
@@ -163,7 +172,8 @@ function nhatKyNapGhi(st, kind, nguon, rep, snap) {
 function nhatKyNapBox(kind) {
   const st = stCur(), ds = st && (st.nhatKy || []).filter(x => x.kind === kind); if (!ds || !ds.length) return '';
   const g = ds[ds.length - 1];
-  return '<div class="card" id="nhatKyNap" style="margin-top:8px"><b>Nhật ký nạp (' + ds.length + ' lần, chưa lưu vào lô)</b><ul style="margin:4px 0 6px">' + ds.slice(-5).reverse().map(x => '<li>' + esc(new Date(x.at).toLocaleTimeString('vi-VN')) + ' · ' + esc(x.nguon) + ': thêm ' + x.them + ', cập nhật ' + x.capNhat + ', giữ nguyên ' + x.giu + ', lỗi ' + x.loi + '</li>').join('') + '</ul>' +
+  return '<div class="card" id="nhatKyNap" style="margin-top:8px"><b>Nhật ký nạp (' + ds.length + ' lần, chưa lưu vào lô)</b><ul style="margin:4px 0 6px">' + ds.slice(-5).reverse().map(x => '<li>' + esc(new Date(x.at).toLocaleTimeString('vi-VN')) + ' · ' + esc(x.nguon) + ': thêm ' + x.them +
+  ', cập nhật ' + x.capNhat + ', giữ nguyên ' + x.giu + ', lỗi ' + x.loi + '</li>').join('') + '</ul>' +
     '<button class="btn ghost sm" data-act="napHoanTac" data-kind="' + kind + '">Hoàn tác lần nạp gần nhất (' + esc(g.nguon) + ')</button> <span class="mut">Trả bản nháp về như trước lần nạp đó; các sửa tay sau đó cũng mất.</span></div>';
 }
 function nhatKyNapHoanTac(kind) {

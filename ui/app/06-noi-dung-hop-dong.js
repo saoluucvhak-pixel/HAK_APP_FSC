@@ -52,4 +52,5 @@ const KT_NOIDUNGHOPDONG = HAKNoiDungHopDong.create({
   get vcCtx() { return vcCtx; },
   get volumeOf() { return volumeOf; }
 });
-const {DT_NOIDUNG, LAW_BLDS, LAW_LD, TITLE_HEAD, ageAt, benBGiaoKhoan, benKhoanIn, buyerName, docBHLD, docCamKetLaoDong, docCamKetNguonGoc, docGiaoKhoan, docHDLD, docHDVC, docKiemTraHienTruong, docKiemTraThietBi, docNghiemThu, docNhatKy, docPhoBienFSC, docSoTaiNan, docTTVC, docThamDinh, docXNKLVC, dot, hdRef, kyBenB, listDays, minorsOf, ngayLine, partyBlock, rungRef, sign3, signTable, todayStr} = KT_NOIDUNGHOPDONG;
+const {DT_NOIDUNG, LAW_BLDS, LAW_LD, TITLE_HEAD, ageAt, benBGiaoKhoan, benKhoanIn, buyerName, docBHLD, docCamKetLaoDong, docCamKetNguonGoc, docGiaoKhoan, docHDLD, docHDVC, docKiemTraHienTruong, docKiemTraThietBi, docNghiemThu, docNhatKy, docPhoBienFSC, docSoTaiNan, docTTVC, docThamDinh, docXNKLVC,
+dot, hdRef, kyBenB, listDays, minorsOf, ngayLine, partyBlock, rungRef, sign3, signTable, todayStr} = KT_NOIDUNGHOPDONG;

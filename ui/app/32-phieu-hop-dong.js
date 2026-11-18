@@ -62,13 +62,16 @@ function pcGanBaoHtml() {
       '<button class="btn ghost sm" data-act="pgThemXe" data-id="' + esc(p._id) + '">Thêm xe vào hợp đồng này</button>' +
       sai.map(id => '<button class="btn ghost sm" data-act="pgDoiHd" data-id="' + esc(p._id) + '" data-hd="' + esc(id) + '">Đổi đích sang hợp đồng ' + esc(nhanHdId(f, id)) + '</button>').join('') + '</div>';
   };
-  return '<div class="card" id="pcGanBao"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h4 style="margin:0">Xem trước phiếu nạp — rừng <b id="pgRung">' + esc([f.info.maRung, f.info.tenRung].filter(Boolean).join(' · ')) + '</b> · hợp đồng đích <b id="pgDich">' + esc(nhanHdId(f, b.hdId)) + '</b>: ' + rows.length + ' phiếu' +
+  return '<div class="card" id="pcGanBao"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h4 style="margin:0">Xem trước phiếu nạp — rừng <b id="pgRung">' + esc([f.info.maRung,
+  f.info.tenRung].filter(Boolean).join(' · ')) + '</b> · hợp đồng đích <b id="pgDich">' + esc(nhanHdId(f, b.hdId)) + '</b>: ' + rows.length + ' phiếu' +
     (can ? ', <span style="color:var(--err)" id="pgCan">' + can + ' phiếu cần xử lý trước khi lưu</span>' : '') + '</h4><button class="btn ghost sm" data-act="pcGanDong">Đóng</button></div>' +
     '<div class="wrap" style="max-height:320px"><table id="pcGanTbl"><thead><tr><th>Số phiếu</th><th>Ngày</th><th style="text-align:right">KL (tấn)</th><th>BKS nguồn</th><th>Hợp đồng</th><th>Xe được chọn</th></tr></thead><tbody>' +
-    rows.map(p => '<tr data-pg="' + esc(p._id) + '"><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td style="text-align:right">' + (typeof p.kl === 'number' ? fmtTan(p.kl) : esc(p.kl)) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(nhanHdId(f, p.hdvcId)) + '</td><td>' + dongXe(p) + '</td></tr>').join('') + '</tbody></table></div></div>';
+    rows.map(p => '<tr data-pg="' + esc(p._id) + '"><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td style="text-align:right">' + (typeof p.kl === 'number' ? fmtTan(p.kl) : esc(p.kl)) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(nhanHdId(f, p.hdvcId)) + '</td><td>' + dongXe(p) +
+    '</td></tr>').join('') + '</tbody></table></div></div>';
 }
 /* ba cách xử lý phiếu trong khung xem trước (sửa bản nháp, chưa ghi) */
-function pgChonXe(id, xeId) { const st = stCur(), p = st && st.cur.pc.find(x => x._id === id), x = st && st.cur.dx.find(r => r.id === xeId); /* xe của hợp đồng đích (đã lưu hoặc vừa thêm trong bản nháp) */ if (!p || !x || x.hdvcId !== p.hdvcId) return; p.xeRowId = x.id; p.xeTay = true; doiDuLieu(); render(); }
+function pgChonXe(id, xeId) { const st = stCur(), p = st && st.cur.pc.find(x => x._id === id), x = st && st.cur.dx.find(r => r.id === xeId); /* xe của hợp đồng đích (đã lưu hoặc vừa thêm trong bản nháp) */ if (!p || !x || x.hdvcId !== p.hdvcId) return; p.xeRowId = x.id; p.xeTay = true; doiDuLieu();
+render(); }
 /* “Thêm xe vào hợp đồng này”: mở form thêm xe (chọn từ Danh mục xe hoặc nhập) vào hợp đồng đích; xe thêm xong gán ngay cho phiếu (BKS nguồn của phiếu giữ nguyên).
  * Một BKS chỉ có một dòng xe trong lô: xe đang thuộc hợp đồng khác thì dùng “Đổi đích” hoặc chọn xe khác. */
 function pgThemXe(id) { const st = stCur(), p = st && st.cur.pc.find(x => x._id === id); if (!p) return; pgChoXe = id; const gan = pcGanBao; stOpen('dx', null); pcGanBao = gan; }
@@ -78,14 +81,16 @@ function pgSauThemXe(st, row) {
   const p = pgChoXe && st.cur.pc.find(x => x._id === pgChoXe); pgChoXe = null;
   if (p && row.hdvcId === p.hdvcId) { p.xeRowId = row.id; p.xeTay = true; }
 }
-function pgDoiHd(id, hId) { const st = stCur(), f = curForest(), p = st && st.cur.pc.find(x => x._id === id); if (!p || !f) return; const c = chonXePhieu(f, st.cur.dx, hId, p.bienSo); p.hdvcId = hId; delete p.xeTay; if (c.xe && c.xe.id) p.xeRowId = c.xe.id; else delete p.xeRowId; doiDuLieu(); note('Đã đổi hợp đồng đích của phiếu ' + (p.soPhieu || '') + ' sang ' + nhanHdId(f, hId) + (c.xe ? ' (xe ' + c.xe.bienSo + ')' : '') + '.', 'ok'); render(); }
+function pgDoiHd(id, hId) { const st = stCur(), f = curForest(), p = st && st.cur.pc.find(x => x._id === id); if (!p || !f) return; const c = chonXePhieu(f, st.cur.dx, hId, p.bienSo); p.hdvcId = hId; delete p.xeTay; if (c.xe && c.xe.id) p.xeRowId = c.xe.id; else delete p.xeRowId; doiDuLieu();
+note('Đã đổi hợp đồng đích của phiếu ' + (p.soPhieu || '') + ' sang ' + nhanHdId(f, hId) + (c.xe ? ' (xe ' + c.xe.bienSo + ')' : '') + '.', 'ok'); render(); }
 /* đầu phần Phiếu cân của trang chi tiết hợp đồng */
 function pcDauHd(rec, hMo) {
   const pc = rec.pc || [], cua = pc.filter(p => p.hdvcId === hMo.id).length, chua = pc.filter(p => !p.hdvcId).length;
   return '<div id="pcHd"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Phiếu cân của hợp đồng: ' + cua + (chua ? ' <small class="mut">· ' + chua + ' phiếu của rừng chưa thuộc hợp đồng nào</small>' : '') + '</h3>' +
     '<span class="row" style="gap:6px;flex-wrap:wrap">' + (HB ? '<button class="btn ghost sm" data-act="lkOpen" id="pcTraCuu">Tra cứu HoSoKeo</button>' : '') +
     '<button class="btn ghost sm" data-act="pcPrint" data-hd="' + esc(hMo.id) + '">In phiếu cân</button></span></div>' +
-    '<div class="row importActions">' + (pcTatCa ? '<span class="mut">Đang xem mọi phiếu cân của rừng.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ phiếu của hợp đồng này</button>' : '<span class="mut">Gồm phiếu của hợp đồng này và phiếu chưa gán.</span> <button class="btn ghost sm" data-act="pcTatCa">Xem mọi phiếu của rừng</button>') + '</div></div>';
+    '<div class="row importActions">' + (pcTatCa ? '<span class="mut">Đang xem mọi phiếu cân của rừng.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ phiếu của hợp đồng này</button>' :
+    '<span class="mut">Gồm phiếu của hợp đồng này và phiếu chưa gán.</span> <button class="btn ghost sm" data-act="pcTatCa">Xem mọi phiếu của rừng</button>') + '</div></div>';
 }
 /* hai cột của trang chi tiết: Xe của hợp đồng (ID dòng xe; giữ BKS gốc của phiếu) và Hợp đồng (chuyển phiếu) */
 function pcCotHd(rec, r, hMo) {
@@ -94,12 +99,15 @@ function pcCotHd(rec, r, hMo) {
   const cur = xe.find(x => x.id === r.xeRowId) || (tuDong && tuDong.xe && xe.includes(tuDong.xe) ? tuDong.xe : null);   // chưa lưu ID xe: BKS khớp duy nhất một xe của hợp đồng
   let xeHtml;
   if (!hId) xeHtml = '<span class="mut">—</span>';
-  else if (sua && xe.length) xeHtml = '<select data-pcxe="' + ix + '" style="max-width:130px"><option value="">— chưa chọn xe —</option>' + xe.map(x => '<option value="' + esc(x.id) + '"' + (cur === x ? ' selected' : '') + '>' + esc(x.bienSo + (x.taiXe ? ' · ' + x.taiXe : '')) + '</option>').join('') + '</select>';
+  else if (sua && xe.length) xeHtml = '<select data-pcxe="' + ix + '" style="max-width:130px"><option value="">— chưa chọn xe —</option>' + xe.map(x => '<option value="' + esc(x.id) + '"' + (cur === x ? ' selected' : '') + '>' + esc(x.bienSo + (x.taiXe ? ' · ' + x.taiXe : '')) +
+  '</option>').join('') + '</select>';
   else xeHtml = cur ? esc(cur.bienSo) : '<span class="pill warn">chưa chọn</span>';
   if (hId && !cur) { const c = chonXePhieu(f || rec, rec.dx, hId, r.bienSo); if (!c.xe || !c.xe.id) xeHtml += '<br><small class="mut">' + esc(c.lyDo || 'chọn xe trong hợp đồng') + '</small>'; }
   if (cur && HAKBks.khoa(cur.bienSo) !== HAKBks.khoa(r.bienSo)) xeHtml += '<br><small class="mut" title="BKS ghi trên phiếu (nguồn) được giữ nguyên">BKS phiếu: ' + esc(r.bienSo) + '</small>';
   const list = rec.hdvc || [];
-  const hdHtml = sua && (list.length > 1 || (!hId && list.length)) ? '<select aria-label="Hợp đồng của phiếu" data-pchd="' + ix + '" style="max-width:130px">' + (hId ? '' : '<option value="" selected>(chưa thuộc)</option>') + list.map(h => '<option value="' + esc(h.id) + '"' + (h.id === hId ? ' selected' : '') + '>' + esc(tenDoiVc(rec, h)) + '</option>').join('') + '</select>'
+  const hdHtml = sua && (list.length > 1 || (!hId && list.length)) ? '<select aria-label="Hợp đồng của phiếu" data-pchd="' + ix + '" style="max-width:130px">' + (hId ? '' : '<option value="" selected>(chưa thuộc)</option>') + list.map(h => '<option value="' + esc(h.id) + '"' + (h.id === hId ?
+  ' selected' : '') + '>' + esc(tenDoiVc(rec,
+  h)) + '</option>').join('') + '</select>'
     : hId ? esc(tenDoiVc(rec, list.find(h => h.id === hId) || {ten: hId})) : '<span class="pill warn">chưa thuộc</span>';
   return '<td>' + xeHtml + '<div style="margin-top:4px" title="Hợp đồng vận chuyển của phiếu"><small class="mut">Hợp đồng:</small> ' + hdHtml + '</div></td>';   // một cột: bảng không rộng thêm (nút Sửa, Xóa vẫn trong tầm nhìn)
 }
@@ -119,7 +127,8 @@ function pcChuyenHd(ix, hId) {
   dlgMo('<form id="pcChuyenForm"><h3 style="margin-top:0">Chuyển phiếu ' + esc(p.soPhieu || '') + ' sang hợp đồng khác</h3>' +
     '<table id="pcChuyenTbl"><tr><th></th><th>Hợp đồng cũ</th><th>Hợp đồng mới</th></tr>' +
     '<tr><td>Hợp đồng</td><td>' + esc(p.hdvcId ? nhanHdId(f, p.hdvcId) : '(chưa thuộc)') + '</td><td><b>' + esc(nhanHdId(f, hId)) + '</b></td></tr>' +
-    '<tr><td>Xe</td><td>' + esc(xeCu ? xeCu.bienSo : '—') + '</td><td>' + (xe.length ? '<select name="xe"><option value="">— chọn xe của hợp đồng mới —</option>' + xe.map(r => '<option value="' + esc(r.id) + '"' + (c.xe === r ? ' selected' : '') + '>' + esc(r.bienSo + (r.taiXe ? ' · ' + r.taiXe : '')) + '</option>').join('') + '</select>' : '<span class="pill err">hợp đồng mới chưa có xe</span>') + '</td></tr>' +
+    '<tr><td>Xe</td><td>' + esc(xeCu ? xeCu.bienSo : '—') + '</td><td>' + (xe.length ? '<select name="xe"><option value="">— chọn xe của hợp đồng mới —</option>' + xe.map(r => '<option value="' + esc(r.id) + '"' + (c.xe === r ? ' selected' : '') + '>' + esc(r.bienSo + (r.taiXe ? ' · ' + r.taiXe :
+    '')) + '</option>').join('') + '</select>' : '<span class="pill err">hợp đồng mới chưa có xe</span>') + '</td></tr>' +
     '<tr><td>Cước áp dụng</td><td>' + esc(p.hdvcId ? cuocHd(f, p.hdvcId) : '—') + '</td><td>' + esc(cuocHd(f, hId)) + '</td></tr>' +
     '<tr><td>Phiếu</td><td colspan="2">' + esc(p.soPhieu || '') + ' · ' + esc(p.ngay || '') + ' · BKS ' + esc(p.bienSo || '') + ' · ' + (typeof p.kl === 'number' ? fmtTan(p.kl) + ' tấn' : '') + ' (giữ nguyên định danh, BKS, khối lượng, đội phân bổ)</td></tr></table>' +
     '<div id="pcChuyenLoi"></div><div class="row" style="gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn" type="submit" id="pcChuyenOk"' + (xe.length ? '' : ' disabled') + '>Chuyển và lưu</button><button class="btn ghost" type="button" data-act="dlgDong" id="pcChuyenHuy">Hủy</button></div></form>');
