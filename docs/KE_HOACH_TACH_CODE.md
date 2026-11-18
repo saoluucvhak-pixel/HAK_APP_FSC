@@ -1,6 +1,8 @@
-# Kế hoạch tách code (bản đề xuất, chưa thực hiện)
+# Kế hoạch tách code (đã thực hiện xong Bước 1–4)
 
-Ngày lập: 17/11/2026, sau khi gộp PR #27 vào main (9667ec7).
+Ngày lập: 17/11/2026, sau khi gộp PR #27 vào main (9667ec7). Cập nhật 18/11/2026 sau khi gộp PR #38.
+
+**Tình trạng:** Bước 1 (PR #29, #30, #31), Bước 2 (PR #32, #33), Bước 3 (PR #34, #35, #36, #37) và Bước 4 (PR #38) đã gộp vào main. Các mục dưới đây giữ nguyên nội dung kế hoạch; tên file đã đổi được ghi theo tên hiện tại. Số liệu ở mục 2 là lúc lập kế hoạch (trước khi tách).
 
 ## 1. Kết luận ngắn
 
@@ -41,26 +43,26 @@ Phát hiện quan trọng: các module `03-doc-excel-phieu-can`, `04-kiem-tra-du
 
 ### Bước 1 — Chuyển logic thuần ra `src/` (rủi ro thấp, giá trị cao)
 Ứng viên theo thứ tự:
-1. `04-kiem-tra-du-lieu-nhieu-doi` → `src/kiemtra-nhieudoi.js` (37 KB, không chạm DOM).
-2. `06-noi-dung-hop-dong` → `src/noidung-hopdong.js` (72 KB, không chạm DOM; kiểm bằng so bản in).
-3. `03-doc-excel-phieu-can` → `src/doc-phieucan.js` (đọc Excel, không chạm DOM).
-- Cách làm: mỗi module nhận dữ liệu qua tham số thay vì đọc biến toàn cục; nhúng bằng cơ chế `/*@@SRC:ten@@*/` đang có.
+1. `ui/app/04-kiem-tra-du-lieu-nhieu-doi.js` → `src/kiemtranhieudoi.js` (37 KB, không chạm DOM); kiểm thử `tests/kiemtranhieudoi.test.js`.
+2. `ui/app/06-noi-dung-hop-dong.js` → `src/noidunghopdong.js` (72 KB, không chạm DOM; kiểm bằng so bản in); kiểm thử `tests/noidunghopdong.test.js`.
+3. `ui/app/03-doc-excel-phieu-can.js` → `src/docphieucan.js` (đọc Excel, không chạm DOM); kiểm thử `tests/docphieucan.test.js`.
+- Cách làm: mỗi module `src/` xuất `create(ctx)` nhận dữ liệu và hàm qua tham số thay vì đọc biến toàn cục; file `ui/app/NN-*.js` còn lại là phần nối (adaptor) dựng `ctx` rồi lấy các tên cần dùng; nhúng bằng cơ chế `/*@@SRC:ten@@*/` đang có. Mỗi bài kiểm thử kiểm danh sách `TEN_NGOAI` khớp với tên dùng trong `ctx` và trong adaptor.
 - Kết quả: kiểm thử đơn vị được từng phần, giảm dần phụ thuộc vào e2e.
 
 ### Bước 2 — Giảm biến toàn cục
-- Gom 55 biến toàn cục thành vài đối tượng trạng thái có tên rõ: `dieuHuong` (tab, mục, hợp đồng đang mở), `banNhap` (stage), `chonLoc` (các cờ `pcTatCa`, `xeTatCa`, `ncTatCa`).
-- Đổi từng nhóm một, mỗi nhóm một PR. Thay các móc `window.__*` ở mã ứng dụng bằng một cổng kiểm thử duy nhất `window.__hak` (chỉ đọc và điều hướng), để kịch bản e2e không phải thêm móc mới.
+- Đã gom biến điều hướng thành đối tượng `NAV` (`ui/app/02-luu-tru-trang-thai.js`: `cur`, `curF`, `tab`, `xtab`, `ftab`, `view`, `curDoi`, `curHd`, `ncTatCa`) — PR #32. Bản đề xuất ban đầu là `dieuHuong`, `banNhap`, `chonLoc`; thực tế chỉ gom nhóm điều hướng.
+- Đổi từng nhóm một, mỗi nhóm một PR. Đã thay các móc `window.__*` ở mã ứng dụng bằng một cổng kiểm thử duy nhất `window.__hak` (sổ đăng ký `CONG_KT` ở module 02, mở ở `ui/app/35-cong-kiem-thu.js`; chỉ có khi chạy không đóng gói với cờ `--hakqn-test-hooks`) — PR #33. Giữ các cầu `window.__stDirty`, `__stSaveCurrent`, `__nhapTamXoa` vì `src/main.js` dùng ở bản thật.
 
 ### Bước 3 — Chia 4 module giao diện lớn nhất
-- `10-kiem-tra-truoc-khi-xuat`: tách `exportCheck` (logic) khỏi `panelForest`/`panelLuong`/`khungMucLo` (giao diện).
-- `11-cham-cong-ban-nhap`: tách bản nháp (`stBar`, `stTable`, `stSave`) khỏi chấm công.
-- `17-tra-cuu-google-sheets`: tách phần gọi/ghép dữ liệu khỏi phần vẽ hộp thoại; ngắt dòng dài nhất (1.385 ký tự).
-- `12-cong-ty-mua-hang`: tách công ty, địa chỉ giao khỏi vận chuyển và phiếu cân.
-- Đặt tên theo quy ước hiện có (`NN-ten.js`); chỉ chia, không đổi nội dung.
+- `10-kiem-tra-truoc-khi-xuat` → `10-a-kiem-tra-xuat`, `10-b-khung-man-lo`, `10-c-o-thong-tin-rung`, `10-d-dinh-muc-nhap-excel` (PR #34).
+- `11-cham-cong-ban-nhap` → `11-a-cham-cong`, `11-b-ban-nhap`, `11-c-hop-thoai-dong`, `11-d-luu-ban-nhap` (PR #35).
+- `17-tra-cuu-google-sheets` → `17-a-tra-cuu`, `17-b-bo-loc-thong-minh`, `17-c-chon-ket-qua`, `17-d-xem-truoc`, `17-e-ghi-vao-ho-so` (PR #36).
+- `12-cong-ty-mua-hang` → `12-a-cong-ty`, `12-b-dia-chi-giao`, `12-c-hop-dong-vc`, `12-d-trang-van-chuyen`, `12-e-loi-so-dot-2` (PR #37).
+- Quy ước tên: `NN-<chữ cái>-ten.js` trong `ui/app/` (thứ tự chữ cái chính là thứ tự ghép). Chỉ chia theo ranh giới dòng, không đổi nội dung: `renderer/index.html` giống hệt từng byte. Các bài kiểm thử đọc mã module nay dùng `tests/_ui.js` (`tepUi`, `docUi`) để đọc mọi phần của một module.
 
 ### Bước 4 — Định dạng và kiểm soát
-- Ngắt các dòng trên 200 ký tự bằng công cụ tự động (một PR riêng, chỉ đổi khoảng trắng, kiểm bằng so bản in và so mã đã build sau khi bỏ khoảng trắng).
-- Đặt ngưỡng cảnh báo trong CI: file trên 40 KB hoặc dòng trên 300 ký tự.
+- Đã ngắt dòng dài trong `ui/app` bằng công cụ phân tích cú pháp (PR #38): số dòng trên 300 ký tự giảm từ 451 xuống 327; phần còn lại chủ yếu là chuỗi/mẫu HTML dán sẵn không ngắt an toàn được. Kiểm bằng so bản in (206/206 tài liệu giống từng byte) và e2e đầy đủ trên CI Windows.
+- Đã đặt cảnh báo trong CI (`scripts/kiem-kich-thuoc.js`, job `quality`): file trên 40 KB hoặc dòng trên 300 ký tự trong `src` và `ui/app`; chỉ cảnh báo, không chặn.
 
 ## 6. Kiểm chứng sau mỗi bước
 
