@@ -43,7 +43,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
   ok('tab Nhân công mở danh sách hợp đồng (chưa vào chi tiết)', !!(await w.$('#dsHdNcTbl')) && !(await w.$('#hdDau')) && (await w.$$('#dsHdNcTbl tbody tr[data-act]')).length === 1);
   await w.fill('#doiMoiTen', 'Đội Hai'); await w.click('[data-act=themDoi]'); await w.waitForTimeout(300);
-  ok('thêm hợp đồng (đội): mở ngay trang chi tiết của đội mới, có tên rừng và nút quay lại', /Đội Hai/.test(await w.innerText('#hdDauTen')) && /R-A/.test(await w.innerText('#hdDauRung')) && await w.isVisible('#hdQuayLai'));
+  ok('thêm hợp đồng (đội): mở ngay trang chi tiết của đội mới, có tên rừng và nút quay lại', /Đội Hai/.test(await w.innerText('#hdDauTen')) && /R-A/.test(await w.innerText('#loCrumb')) && await w.isVisible('#hdQuayLai'));
   await w.click('#hdQuayLai'); await w.waitForTimeout(200);
   await w.click('#stGSave');
   const dsNc = await w.innerText('#dsHdNcTbl');
@@ -74,7 +74,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
     !await w.locator('input[data-file=dx], [data-act=danMo][data-kind=dx]').count() &&
     napXe && await w.isVisible('label:has(input[data-file=pc])') && !(await w.$('#stTbl_dx')));
   ok('chi tiết hợp đồng vận chuyển: bảng xe chỉ có xe của hợp đồng (92C-67890), không có xe của hợp đồng khác', /92C-67890/.test(bienSo) && !/92C-12345/.test(bienSo), bienSo.slice(0, 300));
-  ok('chi tiết hợp đồng vận chuyển: tên rừng, đội xe, số hợp đồng', /R-A/.test(await w.innerText('#hdDauRung')) && !!(await w.innerText('#hdDauSo')));
+  ok('chi tiết hợp đồng vận chuyển: tên rừng, đội xe, số hợp đồng', /R-A/.test(await w.innerText('#loCrumb')) && !!(await w.innerText('#hdDauSo')));
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
   ok('chuyển tab rồi quay lại: Nhân công vẫn mở đúng hợp đồng đã mở', (await w.innerText('#hdDauTen').catch(() => '')) === ten1);
   await w.click('[data-tab=info]'); await w.click('[data-tab=rung]'); await w.click('[data-ftab=dx]');
@@ -93,7 +93,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.evaluate(() => { const f = document.getElementById('ngForm'); f.elements.hoTen.value = 'PHẠM VĂN CHÍN'; f.elements.cccd.value = '049085000099'; f.elements.vtChuXe.checked = true; f.elements.kyVC.checked = true; });
   await w.click('#ngLuu'); await w.waitForTimeout(150); await w.click('#dtLuu'); await w.waitForTimeout(400);
   await w.click('#veLaiBtn'); await w.waitForSelector('#hdDau');
-  ok('“Quay lại”: về đúng hợp đồng vận chuyển đang mở', !!(await w.$('#hdForm')) && /R-A/.test(await w.innerText('#hdDauRung')));
+  ok('“Quay lại”: về đúng hợp đồng vận chuyển đang mở', !!(await w.$('#hdForm')) && /R-A/.test(await w.innerText('#loCrumb')));
   const ky = await w.$$eval('#hdForm [name=ky] option', o => o.map(x => x.textContent));
   ok('ô Người ký có người của Danh mục đối tượng (quyền ký Vận chuyển), hiện cả tên đối tượng và tên người', ky.some(t => /HỘ KINH DOANH VẬN TẢI CHÍN — PHẠM VĂN CHÍN/.test(t)), ky.join(' | '));
   await w.selectOption('#hdForm [name=ky]', 'd:ct:049085000099'); await w.$eval('#hdForm', x => x.requestSubmit()); await w.waitForTimeout(500);

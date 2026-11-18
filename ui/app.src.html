@@ -48,7 +48,14 @@ h4{font-size:13.5px}
 .mut{color:var(--mut-aa)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
 /* 3.0: bảng dữ liệu rộng cuộn trong khung; cột Thao tác (Sửa, Xóa) ghim bên phải để luôn thấy ở 100–150 % */
-.wrap table[id^=stTbl_] th:last-child,.wrap table[id^=stTbl_] td:last-child{position:sticky;right:0;background:var(--card);box-shadow:-6px 0 6px -6px rgba(0,0,0,.25);z-index:1}
+/* phiếu #06 (D-01, D-02, D-03, D-04): cột Thao tác đứng sau cột Dòng (không dính mép phải đè cột số); tiêu đề một dòng; đầu hợp đồng và thanh công cụ gọn một dòng */
+.wrap table[id^=stTbl_] th{white-space:nowrap}
+.hdDau{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}.hdDauTen{font-size:15px;min-width:0}
+.stToolbar{gap:8px;flex-wrap:wrap;align-items:center}.stToolbar .stInfo{font-size:12px}
+.napCard{padding:10px 14px}.napThanh{gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}.napTinhTrang{font-size:12px;margin-left:auto}
+.pcHdDau{gap:8px;flex-wrap:wrap;align-items:baseline}
+.mucNav .pill{white-space:nowrap}.mucNav button{white-space:nowrap}   /* phiếu #06 (D-08): nhãn mục một dòng ở 150% */
+#stTbl_pc td{white-space:nowrap}#stTbl_pc select{padding:3px 6px;font-size:13px}.pcXeHd .pcXe,.pcXeHd .pcHdCua{display:inline-flex;align-items:center;gap:4px}
 .card>h3:first-child{margin-top:0}
 /* Nút */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--acc);background:var(--acc);color:var(--accInk);border-radius:var(--rs);padding:7px 14px;font:inherit;font-weight:550;cursor:pointer;text-decoration:none;transition:background .12s,box-shadow .12s}
@@ -142,7 +149,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 #dlgBox{position:fixed;inset:0;z-index:70;background:rgba(8,20,14,.55);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:22px 12px}#dlgBox .gd{max-width:760px;width:100%}
 #dtNguoiTbl td,#dtBang td,#xeBang td{vertical-align:top}
 .gd{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;width:100%;padding:18px 24px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
-#guideBox .gd{max-width:880px}#lkBox .gd{max-width:1280px}#rpBox .gd{max-width:1180px}#impBox .gd{max-width:660px}#stBox .gd{max-width:980px}.stAct{white-space:nowrap;min-width:92px}.stAct .btn{display:block;width:100%;margin:0 0 4px}.stInfo{margin-bottom:6px;color:var(--mut-aa)}.stBarCard{padding:12px 14px}.stDirty{margin:10px 0 0}tr.stGone td{text-decoration:line-through;color:var(--mut-aa)}.stAct{white-space:nowrap}
+#guideBox .gd{max-width:880px}#lkBox .gd{max-width:1280px}#rpBox .gd{max-width:1180px}#impBox .gd{max-width:660px}#stBox .gd{max-width:980px}.stAct{white-space:nowrap}.stAct .btn{display:inline-block;margin:0 4px 0 0}.stInfo{margin-bottom:6px;color:var(--mut-aa)}.stBarCard{padding:12px 14px}.stDirty{margin:10px 0 0}tr.stGone td{text-decoration:line-through;color:var(--mut-aa)}.stAct{white-space:nowrap}
 .gh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:sticky;top:-22px;background:var(--card);padding:4px 0 8px;z-index:3}
 .gh h2{font-size:19px}
 #guideBox h2{margin:0 0 4px;font-size:21px}#guideBox h3{margin:20px 0 6px;font-size:15px;color:var(--acc)}
@@ -160,7 +167,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .hak-ui .hak-detail-tabs{gap:6px;padding:4px 0}
 @media (max-width:1100px){.grid2{grid-template-columns:1fr}}
 @media (max-width:900px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}main{padding:14px}header.top,#ctxBar{position:static}header.top h1 small{display:none}header.top{padding:8px 12px;gap:6px}.nav .nb,.hbtn{padding:5px 10px;font-size:13px}.nav{order:3;flex:1 1 100%}}
-.mucLayout{display:grid;grid-template-columns:minmax(140px,185px) minmax(0,1fr);gap:12px;align-items:start}
+.mucLayout{display:grid;grid-template-columns:minmax(150px,212px) minmax(0,1fr);gap:12px;align-items:start}
 .mucNav{display:grid;gap:4px;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px}
 .mucNav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;padding:8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
 .mucNav button[aria-current]{border-color:var(--line);background:var(--hover);font-weight:700}
