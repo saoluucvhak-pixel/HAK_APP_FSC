@@ -46,7 +46,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   ok('xem trước: phiếu lệch tấn/kg cần kiểm tra', /cần kiểm tra — Phiếu cân 1003\/2026\/NK: khối lượng lệch, cột Tấn = 4.9 và cột KG = 5000/.test(pv));
   await w.fill('[data-lkalias]', '92C-99999'); await w.dispatchEvent('[data-lkalias]', 'change'); await w.waitForTimeout(100);
   await w.click('[data-act=lkPcAll]');
-  await w.check('[data-lkkl]');
+  // phiếu #09: ô “Điền tổng … vào Khối lượng khai thác thực tế” đã bỏ (khối lượng thực tế lấy tự động từ tổng phiếu cân); xem kiểm tra “không ghi số nhập tay” bên dưới
   await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   ok('đã tạo chủ rừng mới từ kết quả', (await w.innerText('#side')).includes('NGUYỄN VĂN AN'));
   ok('thanh ngữ cảnh: mã rừng 20260110_001', /20260110_001/.test(await w.innerText('#ctxForest')));

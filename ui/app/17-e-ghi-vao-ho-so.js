@@ -152,7 +152,6 @@ document.addEventListener('change', e => {
   if (sel.lkgps != null) { s.gps = /^\d+$/.test(sel.lkgps) ? +sel.lkgps : sel.lkgps; return; }
   if (sel.lkdoc != null) { s.docs[sel.lkdoc] = t.checked; return; }
   if (sel.lkpc != null) { s.phieu[sel.lkpc] = t.checked; return lkRender(); }
-  if ('lkkl' in sel) { s.kl = t.checked; return; }
   if ('lkplonly' in sel) { s.plateOnly = t.checked; return lkRender(); }
   if ('lkref' in sel) { s.ref = t.checked; return; }
   if (sel.lkov != null) { lk.plateOv = lk.plateOv || {}; const v = t.value.trim().toUpperCase(), k = sel.lkov.toUpperCase(); if (v) lk.plateOv[k] = v; else delete lk.plateOv[k]; lkPhieuDefaultsKeep(); return lkRender(); }

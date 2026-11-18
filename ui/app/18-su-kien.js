@@ -244,6 +244,12 @@ document.addEventListener('change', e => {
   if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persistLo(); render(); return; }
   if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persistLo(); render(); return; }
   if (t.id === 'dbVerSel') { dbVer = t.value; return render(); }
+  if (t.id === 'infoDm') {   // phiếu #09 (ND-08): chọn chủ rừng từ Danh mục đối tượng → điền sẵn các ô (chưa lưu; bấm “Lưu thông tin”)
+    const fm = t.form, c = t.value ? HAKDoiTuong.chupChuRung(db.dmDoiTuong || [], t.value) : null; if (!fm) return;
+    if (c) ['danhXung', 'ten', 'cccd', 'ngayCap', 'noiCap', 'diaChi', 'sdt'].forEach(k => { const el = fm.elements[k]; if (el && (c[k] || k !== 'sdt')) el.value = c[k]; });
+    if (fm.elements.nguoiDmId) fm.elements.nguoiDmId.value = c ? c.nguoiDmId : '';
+    return;
+  }
   if (t.id === 'ncDm' && t.value) { const x = dmNguonLd().find(z => HAKModel.cccdSo(z.cccd) === t.value); if (x) { stRead(); dmDienNguoi(x); stRender(); } return; }
   if (t.id === 'xeDm' && t.value) { const x = dmNguonXe().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); dmDienXe(x); stRender(); } return; }
   if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persistLo(); render(); return; }
