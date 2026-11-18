@@ -3,6 +3,7 @@
  * Tách từ ui/app/04-kiem-tra-du-lieu-nhieu-doi.js: mã giữ nguyên; mọi tên dùng từ phần còn lại của giao diện (cơ sở dữ liệu đang mở, tiện ích, các module khác)
  * đi qua đối tượng ctx do giao diện cấp (getter, đọc giá trị hiện tại lúc gọi). Kiểm thử đơn vị truyền ctx giả. */
 (function (root) {
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   function create(ctx) {
     /* ========== Kiểm tra dữ liệu ========== */
     function infoErrors(info, selfId) {
@@ -104,8 +105,8 @@
         if (ctx.trim(r.doiXe) && rec.hdvc && !rec.hdvc.some(h => ctx.hdTenKhop({dx: rec.dx, hdvc: rec.hdvc}, h, r.doiXe))) bad('Đội xe “' + ctx.trim(r.doiXe) + '” không có trong lô: thêm đội xe ở tab Vận chuyển trước, hoặc để trống ô Đội xe');
         if (!r.chuXe) bad('thiếu Chủ xe');
         if (!r.bienSo) bad('thiếu Biển kiểm soát');
-        else if (plates[r.bienSo]) bad('Biển kiểm soát trùng dòng ' + plates[r.bienSo]);
-        else plates[r.bienSo] = r._row;
+        else if (plates[BKS().khoa(r.bienSo)]) bad('Biển kiểm soát trùng dòng ' + plates[BKS().khoa(r.bienSo)] + ' (so theo biển số đã chuẩn hóa: bỏ khoảng trắng, dấu chấm, gạch)');
+        else plates[BKS().khoa(r.bienSo)] = r._row;
         const nk = ctx.trim(r.nguoiKy), ky = kyOfXe(rec, r), tx = ky ? ky.tx : driverSigns(r);
         if (nk && nk !== 'Chủ xe' && nk !== 'Tài xế') bad('Người ký HĐ vận chuyển phải là "Chủ xe" hoặc "Tài xế" (đang là "' + nk + '")');
         if (ky !== false) {   // xe là nguồn người ký (hoặc hồ sơ cũ: mỗi xe tự ký); xe trong đội ký với doanh nghiệp / người khác thì không bắt thông tin người ký
