@@ -211,10 +211,11 @@
     function klTheoPhieu(rec, b) {
       if (!rec.doi) return null;
       const pcs = (rec.pc || []).filter(p => typeof p.kl === 'number' && p.kl > 0), ids = new Set(b.doi.map(d => d.id)), gan = pcs.filter(p => ids.has(p.doiId));
-      if (!gan.length) return pcs.length ? {chuaGan: pcs.length} : null;
+      const ds = pcs.filter(p => !ids.has(p.doiId));   // phiếu CHƯA gán đội (phiếu #03: để cảnh báo trước khi xuất; không ảnh hưởng số in)
+      if (!gan.length) return pcs.length ? {chuaGan: pcs.length, ds} : null;
       const vals = b.doi.map(d => ctx.klPhieu(pcs.filter(p => p.doiId === d.id))), thieu = pcs.length - gan.length, rong = b.doi.filter((d, i) => !vals[i]);
       const loi = thieu ? 'còn ' + thieu + '/' + pcs.length + ' phiếu cân chưa gán đội: gán ở bảng phiếu cân (tab Vận chuyển)' : rong.length ? 'đội ' + rong.map(d => '“' + (d.ten || '') + '”').join(', ') + ' chưa có phiếu cân nào' : '';
-      return {vals, nguon: 'phieucan', loi};
+      return {vals, nguon: 'phieucan', loi, ds};
     }
     const doiKl = (rec, b, ha) => {
       const kp = b.multi ? klTheoPhieu(rec, b) : null;
@@ -223,6 +224,8 @@
       if (pb && pb.tongKg > 0) kq = {vals: b.doi.map(d => { const x = pb.doi.find(y => y.id === d.id); return x ? x.tan : 0; }), nguon: 'chiadeu', loi: ''};
       else if (kp && kp.vals) kq = kp.loi ? Object.assign({}, kq, {loi: kp.loi}) : kp;   // gán đủ: khối lượng đội = phiếu cân của đội
       else if (kp && kp.chuaGan && kq.nguon !== 'nhap' && !pb) kq = Object.assign({}, kq, {chuaGan: kp.chuaGan});   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
+      /* phiếu #03: còn phiếu chưa gán đội mà khối lượng đội đang CHIA THEO SỐ NGƯỜI (không dùng phiếu cân) → danh sách phiếu đó (rỗng nếu không rơi vào trường hợp này). Chỉ ghi nhận, KHÔNG đổi số. */
+      b.phieuChuaGan = kp && kq.nguon === 'songuoi' ? (kp.ds || []) : [];
       b.klNguon = kq.nguon; b.klLoi = kq.loi; b.pcChuaGan = kq.chuaGan || 0; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
     /* hồ sơ của ĐỘI ĐANG CHỌN (màn Nhân công khai thác): nhân công và hình thức của đội; lô một đội: cả lô */
     const recDoiChon = rec => {

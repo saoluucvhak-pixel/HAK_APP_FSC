@@ -79,12 +79,13 @@ async function chiXemTai() {
   docMode = 'day';
   try {
     const files = chiXemFiles(rec), z = new JSZip();
+    if (files.some(x => chuaGanMaMau(x.path)) && !(await chuaGanKiemTra(rec, files.map(x => x.path)))) return;   // phiếu #03: gói Chỉ xem có BM-08 / BM-14
     for (const x of files) z.file('Bieu_mau/' + x.path, await makeDocx(x.blocks, docOpts(x, rec)));
     if (files.length) z.file('Bieu_mau/00_Muc_luc.docx', await mucLucDocx(rec, files, 'Gói chỉ xem'));
     z.file('XEM_HO_SO.html', HAKTienIch.chiXemHtml(chiXemData(rec, f, files.map(x => x.path))));
     download(await z.generateAsync({type: 'blob'}), 'HoSo_' + slug(rec.info.ten) + '_' + slug(rec.info.maRung || '') + '_CHI_XEM.zip');
     note('Đã tải gói Chỉ xem: mở file XEM_HO_SO.html bằng trình duyệt để xem' + (files.length ? '; thư mục Bieu_mau có ' + files.length + ' biểu mẫu và mục lục.' : '. Hồ sơ còn mục chặn nên gói chưa kèm biểu mẫu.') + ' Gói này không nhập lại được vào phần mềm.', 'ok');
-  } catch (e) { note('Không tạo được gói Chỉ xem: ' + e.message, 'err'); } finally { docMode = 'day'; }
+  } catch (e) { note('Không tạo được gói Chỉ xem: ' + e.message, 'err'); } finally { docMode = 'day'; chuaGanDaHoi = false; }
 }
 async function inHtml(html, ten) {
   if (!HB || !HB.inHtml) return note('In trong app cần bản cài trên Windows.', 'err');

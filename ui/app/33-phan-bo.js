@@ -16,10 +16,14 @@ function panelPhanBo(rec) {
     '</tbody><tfoot><tr><td><b>Tổng phiếu cân của rừng</b></td><td style="text-align:right"><b id="pbTong">' + fmtT(kq.tongKg) + '</b></td><td style="text-align:right">' + kq.soPhieu + '</td></tr>' +
     (kq.chuaGanPhieu ? '<tr><td style="color:var(--err)">Chưa phân bổ</td><td style="text-align:right;color:var(--err)" id="pbChua">' + fmtT(kq.chuaGanKg) + '</td><td style="text-align:right;color:var(--err)">' + kq.chuaGanPhieu + '</td></tr>' : '') + '</tfoot></table></div>';
   const theoPhieu = kq.cheDo === 'theoPhieu' && !khoa && !stCur() ? pbPhieuHtml(rec, f) : '';
+  /* phiếu #03: phần chưa gán đội sẽ được BM-08 / BM-14 chia theo số người — nói rõ ở đây để màn Phân bổ và biểu mẫu cùng thông tin */
+  const cg = kq.cheDo === 'theoPhieu' && !khoa ? chuaGanCuaLo(rec) : null;
+  const cgDong = cg ? '<div class="msg warn" id="pbChuaGanXuat" style="margin-top:6px">' + esc(HAKPhanBo.chuaGanDong(cg)) +
+    ' Gán đội cho phiếu ở bảng bên dưới để khối lượng đội lấy đúng theo phiếu.</div>' : '';
   return '<div class="card" id="pbBox"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Phân bổ khối lượng cho đội: ' + esc(kq.ten) + '</h3>' +
     (khoa ? '<span class="pill">lô đã chốt: kết quả lúc chốt</span>' : n === 2 ? '<button class="btn sm" data-act="pbLuu" id="pbLuu"' + (doi ? '' : ' disabled') + '>Lưu phân bổ</button>' : '') + '</div>' +
     '<p class="mut" style="margin:6px 0">Từ phiếu cân đã lưu của rừng (mọi hợp đồng vận chuyển). ' + (n <= 1 ? 'Một đội nhận toàn bộ khối lượng.' : n === 2 ? 'Hai đội: chọn phiếu cho từng đội, hoặc chia đều (1 kg lẻ cho đội đứng trước).' : 'Từ ba đội: chọn phiếu cho từng đội.') + ' Kết quả dùng chung cho tổng hợp, biểu mẫu và tiền khoán.</p>' +
-    chon + (doi ? '<div class="msg warn" id="pbChuaLuu">Đang xem trước “' + esc(HAKPhanBo.CHE_DO[cd]) + '”: bấm “Lưu phân bổ” để áp dụng.</div>' : '') + bang + theoPhieu + '</div>';
+    chon + (doi ? '<div class="msg warn" id="pbChuaLuu">Đang xem trước “' + esc(HAKPhanBo.CHE_DO[cd]) + '”: bấm “Lưu phân bổ” để áp dụng.</div>' : '') + bang + cgDong + theoPhieu + '</div>';
 }
 /* chọn phiếu theo đội: mỗi phiếu tối đa một đội (pc.doiId); ghi ngay như ô Đội của bảng phiếu cân */
 function pbPhieuHtml(rec, f) {
