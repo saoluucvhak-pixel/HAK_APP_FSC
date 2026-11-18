@@ -6,10 +6,11 @@ const path = require('path'), fs = require('fs'), os = require('os');
 const root = path.join(__dirname, '..');
 const base = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-cd-')), ud = path.join(base, 'ud'), bk = path.join(base, 'saoluu'), dd = path.join(base, 'dulieu');
 fs.mkdirSync(bk); fs.mkdirSync(dd);
+const sideSan = (w, timeout = 30000) => w.waitForFunction(() => { const e = document.getElementById('sideList'); return !!e && e.textContent.trim().length > 0; }, null, {timeout});   // phiếu #06b (D-05): màn Cài đặt ẩn cột chủ rừng nên không chờ “hiện”; chờ danh sách chủ rừng đã vẽ xong (app đã mở dữ liệu)
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const launch = env => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_USERDATA: ud, ...env}});
 (async () => {
-  let app = await launch({HAKQN_PICK_DIR: bk}); let w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  let app = await launch({HAKQN_PICK_DIR: bk}); let w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await sideSan(w);
   await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', 'CR-CD'); await w.fill('#infoForm [name="ten"]', 'NGUYỄN CÀI ĐẶT'); for (const [k, v] of Object.entries({cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v); await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
   await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]');
   let t = await w.innerText('#main');
@@ -24,24 +25,24 @@ const launch = env => electron.launch({executablePath: require('electron'), args
   const r0 = await w.evaluate(() => window.hak.settings.setRemind(30));
   ok('đổi mức nhắc sao lưu được lưu', r0.ok && r0.settings.remind.remindDays === 30);
   // đổi thư mục dữ liệu
-  await app.close(); app = await launch({HAKQN_PICK_DIR: dd}); w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  await app.close(); app = await launch({HAKQN_PICK_DIR: dd}); w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await sideSan(w);
   ok('mở lại: dữ liệu và thư mục sao lưu được nhớ', /CÀI ĐẶT/i.test(await w.innerText('#sideList')));
   await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]');
-  await w.click('[data-act=setData]'); await w.waitForFunction(() => /Đã chuyển dữ liệu/.test((document.querySelector('#main') || {}).innerText || ''), null, {timeout: 25000}); await w.waitForSelector('#side');
+  await w.click('[data-act=setData]'); await w.waitForFunction(() => /Đã chuyển dữ liệu/.test((document.querySelector('#main') || {}).innerText || ''), null, {timeout: 25000}); await sideSan(w);
   const t2 = await w.innerText('#main');
   ok('đổi thư mục dữ liệu: file mới có trong thư mục đã chọn, bản cũ còn nguyên', fs.existsSync(path.join(dd, 'hakqn.sqlite')) && fs.existsSync(path.join(ud, 'hakqn.sqlite')));
   ok('sau khi đổi: thông báo nêu vị trí mới và bản cũ', /Đã chuyển dữ liệu/.test(t2) && t2.includes(dd), t2.slice(0, 300));
   await w.click('[data-act=goHome]').catch(() => {});
   ok('dữ liệu chủ rừng còn nguyên sau khi đổi thư mục', /CÀI ĐẶT/i.test(await w.innerText('#sideList')));
   await app.close();
-  app = await launch({HAKQN_PICK_CHOICE: 'overwrite'}); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  app = await launch({HAKQN_PICK_CHOICE: 'overwrite'}); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await sideSan(w);
   ok('mở lại lần nữa: vẫn dùng thư mục dữ liệu mới và còn dữ liệu', /CÀI ĐẶT/i.test(await w.innerText('#sideList')));
   const st = await w.evaluate(() => window.hak.settings.get());
   ok('cài đặt báo đúng đường dẫn', st.settings.dbFile === path.join(dd, 'hakqn.sqlite') && st.settings.backupDir === bk && st.settings.customData && st.settings.customBackup, JSON.stringify(st.settings));
   const rb = await w.evaluate(() => window.hak.settings.setBackup(true));
   ok('về thư mục sao lưu mặc định (cạnh file dữ liệu)', rb.ok && !rb.settings.customBackup && rb.settings.backupDir === path.join(dd, 'backups'), JSON.stringify(rb));
   const rd = await w.evaluate(() => window.hak.settings.setData(true));   // về mặc định: thư mục mặc định đã có dữ liệu cũ → ghi đè (đã chọn 'overwrite')
-  await w.waitForSelector('#side');
+  await sideSan(w);
   ok('về thư mục dữ liệu mặc định: thành công, bản có sẵn được lưu lại trước khi ghi đè', rd.ok && rd.choice === 'overwrite' && !rd.settings.customData && fs.readdirSync(path.join(dd, 'backups')).some(f => /^truoc-ghi-de-/.test(f)), JSON.stringify(rd));
   ok('dữ liệu vẫn còn sau khi về mặc định', /CÀI ĐẶT/i.test(await w.innerText('#sideList')));
   await app.close(); ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
