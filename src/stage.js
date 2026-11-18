@@ -14,7 +14,7 @@
   const KEY = {
     nc: r => cccd(r.cccd) || fold(r.ten),
     dx: r => bienKey(r.bienSo),
-    pc: r => String(r.soPhieu == null ? '' : r.soPhieu).trim().toUpperCase()
+    pc: r => BKS().soPhieu(r.soPhieu)   // số phiếu chuẩn hóa như HAKBks.khoaPhieu (viết hoa, bỏ khoảng trắng): “PA 1” và “PA1” là một số phiếu
   };
   const KINDS = ['nc', 'dx', 'pc'];
   const sig = r => JSON.stringify(Object.keys(r).filter(k => k[0] !== '_').sort().map(k => [k, r[k]]));
@@ -143,9 +143,12 @@
       list[list.findIndex(x => x._id === tid)] = next; st.pending.splice(i, 1); return {ok: true, id: tid};
     }
     if (action === 'other') {
-      const so = String(opt.soPhieu == null ? '' : opt.soPhieu).trim(); if (!so) return {ok: false, error: 'Chuyến khác phải có số phiếu riêng: nhập số phiếu mới.'};
-      if (list.some(x => KEY.pc(x) === so.toUpperCase()) || (st.pending || []).some(q => q !== p && q.kind === p.kind && q.key === so.toUpperCase())) return {ok: false, error: 'Số phiếu ' + so + ' đã có trong lô.'};
-      const r = clone(p.incoming); r.soPhieu = so; r._id = newId(st); r._srcRow = r._row; r._row = nextRow(list); list.push(r); st.pending.splice(i, 1); return {ok: true, id: r._id};
+      /* chuyến khác: khóa phiếu = số phiếu + ngày. Cùng số phiếu nhưng KHÁC ngày là hợp lệ (giữ số phiếu của dòng nguồn); cùng số và cùng ngày (hoặc thiếu ngày) phải có số phiếu mới */
+      const nhap = String(opt.soPhieu == null ? '' : opt.soPhieu).trim(), r = clone(p.incoming); if (nhap) r.soPhieu = nhap;
+      const so = String(r.soPhieu == null ? '' : r.soPhieu).trim(); if (!so) return {ok: false, error: 'Chuyến khác phải có số phiếu riêng: nhập số phiếu mới.'};
+      const kp = BKS().khoaPhieu(r), trung = kp ? x => BKS().khoaPhieu(x) === kp : x => KEY.pc(x) === KEY.pc(r);
+      if (list.some(trung) || (st.pending || []).some(q => q !== p && q.kind === p.kind && trung(q.incoming))) return {ok: false, error: 'Số phiếu ' + so + (kp ? ' cùng ngày ' + r.ngay : '') + ' đã có trong lô: nhập số phiếu khác' + (kp ? ' hoặc sửa ngày cân' : '') + '.'};
+      r._id = newId(st); r._srcRow = r._row; r._row = nextRow(list); list.push(r); st.pending.splice(i, 1); return {ok: true, id: r._id};
     }
     return {ok: false, error: 'Lựa chọn không hợp lệ.'};
   }

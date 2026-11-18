@@ -296,7 +296,7 @@ function targetForestFor(rows, f) {
 }
 
 /* Trước khi ghi: số dòng hợp lệ/lỗi theo số dòng, và khi nạp lại thì số bản ghi sẽ thêm / cập nhật / giữ nguyên / bỏ */
-const ROW_KEY = {nc: r => normCccd(r.cccd) || foldKey(r.ten), dx: r => bienKey(r.bienSo), pc: r => String(r.soPhieu || '').toUpperCase()};
+const ROW_KEY = {nc: r => normCccd(r.cccd) || foldKey(r.ten), dx: r => bienKey(r.bienSo), pc: r => HAKBks.soPhieu(r.soPhieu)};
 const foldKey = v => trim(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const rowSig = r => JSON.stringify(Object.keys(r).filter(k => k[0] !== '_').sort().map(k => [k, r[k]]));
 function confirmImport(kind, f, rows, fileName) {
