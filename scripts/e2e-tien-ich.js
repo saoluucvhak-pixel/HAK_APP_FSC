@@ -31,7 +31,7 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   await w.reload(); await w.waitForSelector('#side'); await w.waitForTimeout(300);
   ok('mở lại trang: vẫn ẩn (ghi nhớ lựa chọn)', !(await w.$('#huongDan')));
   await w.click('#navSet'); await w.click('#setTab_sethd'); await w.click('#hdHienBtn'); await w.waitForSelector('#huongDan');
-  ok('⋯ Thêm → Hướng dẫn bắt đầu: hiện lại', !!(await w.$('#huongDan')));
+  ok('Cài đặt → Hướng dẫn: hiện lại bước bắt đầu', !!(await w.$('#huongDan')));
   const A = M.ensureForest(lot('fa', 'R-A', {exp: EXP1, pc: [], kl: null}));
   await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.waitForSelector('#huongDan');
   ok('đã có chủ rừng, lô, nhân công, xe: 4/6 bước xong, bước làm tiếp là “Nhập phiếu cân”', (await w.getAttribute('#huongDan', 'data-xong')) === '4' && (await w.getAttribute('#huongDan', 'data-tiep')) === 'pc' && (await w.$$('#huongDan li[data-xong="1"]')).length === 4);

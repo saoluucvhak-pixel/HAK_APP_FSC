@@ -40,6 +40,7 @@ header.top h1 small{display:block;font-size:11.5px;font-weight:400;opacity:.72;m
 #saveSt.err{background:var(--errBg);color:var(--err)}
 /* Bố cục */
 .layout{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:calc(100vh - 86px)}
+.layout.khongSide{grid-template-columns:minmax(0,1fr)}.layout.khongSide #side{display:none}
 aside{background:var(--card);border-right:1px solid var(--line);padding:14px;overflow:auto;max-height:calc(100vh - 86px);position:sticky;top:86px;align-self:start}
 main{padding:22px 26px;min-width:0;max-width:1400px}
 h2{font-size:20px;margin:0 0 2px;font-weight:650;letter-spacing:-.1px}
@@ -62,7 +63,8 @@ h4{font-size:13.5px}
 .btn:hover{background:var(--accHi);border-color:var(--accHi)}
 .btn.ghost{background:var(--card);color:var(--acc);border-color:var(--inbd)}.btn.ghost:hover{background:var(--accSoft);border-color:var(--acc)}
 .btn.danger{background:var(--card);color:var(--err);border-color:var(--err)}.btn.danger:hover{background:var(--errBg)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
+/* phiếu #06b (D-09): nút bị khóa vẫn nhận ra là nút (viền nét đứt, chữ đạt AA ≥ 4,5:1 trên nền thẻ) thay cho làm mờ 45 % */
+.btn:disabled,.btn:disabled:hover{opacity:1;background:var(--card);color:var(--mut-aa);border:1px dashed var(--mut-aa);cursor:not-allowed;box-shadow:none}
 .btn.sm{padding:4px 10px;font-size:13px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 /* Danh sách bên trái */
@@ -118,6 +120,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 .msg{padding:10px 14px;border-radius:var(--rs);margin:10px 0;white-space:pre-line;border-left:4px solid currentColor}
 .msg.err{background:var(--errBg);color:var(--err)}.msg.warn{background:var(--warnBg);color:var(--warn)}.msg.ok{background:var(--okBg);color:var(--ok)}
 .issues{margin:6px 0 0 18px;padding:0;font-size:13px}
+.msg.issWarn{padding:5px 14px;margin:6px 0}.issWarnDong{gap:10px;justify-content:space-between;flex-wrap:nowrap}
 .pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:550;background:var(--accSoft);color:color-mix(in srgb,var(--acc) 72%,#000)}:root[data-theme=dark] .pill{color:color-mix(in srgb,var(--acc) 70%,#fff)}
 .pill.err{background:var(--errBg);color:var(--err)}.pill.warn{background:var(--warnBg,#faf3e3);color:var(--warnFg,#6b4a10)}.pill.ok{background:var(--okBg);color:var(--ok)}
 .qtSteps{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.qtStep{flex:1;min-width:130px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--rs);display:flex;flex-direction:column;gap:2px}.qtStep small{color:var(--mut-aa)}.qtStep.ok{border-color:var(--ok);background:var(--okSoft,transparent)}.qtStep.warn{border-color:var(--brand)}
@@ -245,7 +248,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li>Tab <b>Vận chuyển</b>: chọn xe từ danh mục, chọn cách tính cước, nạp phiếu cân và chọn <b>địa chỉ giao hàng</b>.</li>
 <li>Tab <b>Kiểm tra trước khi xuất</b>: xử lý các mục chặn xuất và cần đối chiếu.</li>
 <li>Tab <b>Xuất hồ sơ</b>: nhập thông số biên bản, tải biểu mẫu (từng file hoặc ZIP).</li>
-<li><b>Sao lưu</b>: nút Sao lưu lô rừng, hoặc ⋯ Thêm → Sao lưu toàn bộ dữ liệu.</li>
+<li><b>Sao lưu</b>: nút Sao lưu lô rừng, hoặc Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu.</li>
 </ol>
 <p>Mỗi lô có tổ khai thác, xe, hợp đồng, giá, giấy tờ và địa chỉ giao riêng; chủ rừng chỉ giữ thông tin chung.</p>
 <h3>2. Mã lô</h3>
@@ -338,10 +341,10 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <h3>9. Sao lưu và khôi phục</h3>
 <ul>
 <li>Phần mềm tự sao lưu cơ sở dữ liệu vào thư mục <code>backups</code> trước mỗi lần nâng cấp và khôi phục; ghi trong một giao dịch, lỗi giữa chừng thì dữ liệu cũ giữ nguyên.</li>
-<li><b>⋯ Thêm → Sao lưu toàn bộ dữ liệu (.json)</b>. <b>⋯ Thêm → Khôi phục toàn bộ dữ liệu (.json)</b> (cũng dùng để nhập bản sao lưu từ bản HTML cũ): xem trước từng chủ/lô là <b>THÊM</b>, <b>TRÙNG</b> hay <b>GIỮ</b>; chọn <i>giữ bản trên máy</i>, <i>ghi đè lô trùng</i> (chỉ thay đúng lô trùng, lô khác của chủ được giữ), <i>giữ cả hai</i> (xác nhận <b>mã mới</b> cho từng lô nhân bản) hoặc <i>thay toàn bộ</i> (có xác nhận nêu rõ phạm vi). ID, mã lô, chủ rừng mâu thuẫn thì dừng và liệt kê hồ sơ cần đối chiếu.</li>
-<li><b>⋯ Thêm → Cài đặt hệ thống</b>: chọn <b>thư mục dữ liệu</b> (nơi lưu cơ sở dữ liệu; khi đổi, dữ liệu được sao chép sang thư mục mới, bản cũ giữ nguyên) và <b>thư mục sao lưu</b> (sao lưu toàn bộ lưu thẳng vào đó; bản tự động trước khi nâng cấp cũng ở đó). Nên chọn ổ cứng của máy, không chọn ổ mạng hay thư mục đồng bộ đám mây.</li>
+<li><b>Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (.json)</b>. <b>Cài đặt → Sao lưu và khôi phục → Khôi phục toàn bộ dữ liệu (.json)</b> (cũng dùng để nhập bản sao lưu từ bản HTML cũ): xem trước từng chủ/lô là <b>THÊM</b>, <b>TRÙNG</b> hay <b>GIỮ</b>; chọn <i>giữ bản trên máy</i>, <i>ghi đè lô trùng</i> (chỉ thay đúng lô trùng, lô khác của chủ được giữ), <i>giữ cả hai</i> (xác nhận <b>mã mới</b> cho từng lô nhân bản) hoặc <i>thay toàn bộ</i> (có xác nhận nêu rõ phạm vi). ID, mã lô, chủ rừng mâu thuẫn thì dừng và liệt kê hồ sơ cần đối chiếu.</li>
+<li><b>Cài đặt → Hệ thống</b>: chọn <b>thư mục dữ liệu</b> (nơi lưu cơ sở dữ liệu; khi đổi, dữ liệu được sao chép sang thư mục mới, bản cũ giữ nguyên) và <b>thư mục sao lưu</b> (sao lưu toàn bộ lưu thẳng vào đó; bản tự động trước khi nâng cấp cũng ở đó). Nên chọn ổ cứng của máy, không chọn ổ mạng hay thư mục đồng bộ đám mây.</li>
 <li><b>Sao lưu lô rừng</b> (đầu hồ sơ lô): file <code>HAKQN_LoRung_&lt;MaLo&gt;_&lt;Ngày&gt;.json</code> chứa đúng một lô, kèm địa chỉ giao đã chốt; không chứa lô khác, tra cứu hay thông tin đăng nhập.</li>
-<li><b>⋯ Thêm → Khôi phục lô rừng…</b>: xem trước chủ, mã lô, thời điểm sao lưu, số nhân công/xe/phiếu cân/tổng tấn. Thêm vào đúng chủ đã có hoặc tạo chủ mới. Lô đã có: mặc định giữ bản hiện có; thay thì chỉ thay đúng lô đó và có bảng trước/sau. Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: máy đích giữ thiết lập của mình, màn hình nêu phần hồ sơ có thể khác. File hỏng, sai loại/phiên bản hoặc không xác định được lô đích thì báo lỗi và không ghi.</li>
+<li><b>Cài đặt → Sao lưu và khôi phục → Khôi phục lô rừng…</b>: xem trước chủ, mã lô, thời điểm sao lưu, số nhân công/xe/phiếu cân/tổng tấn. Thêm vào đúng chủ đã có hoặc tạo chủ mới. Lô đã có: mặc định giữ bản hiện có; thay thì chỉ thay đúng lô đó và có bảng trước/sau. Định mức BHLĐ hoặc ánh xạ biển số khác máy đích: máy đích giữ thiết lập của mình, màn hình nêu phần hồ sơ có thể khác. File hỏng, sai loại/phiên bản hoặc không xác định được lô đích thì báo lỗi và không ghi.</li>
 </ul>
 <h3>9b. Bản 2.0: đội khai thác, đội xe, phiếu cân, một cách lưu</h3>
 <ul>

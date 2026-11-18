@@ -68,6 +68,6 @@ function panelRung(own) {
       ['vanban', 'Số văn bản chung', () => soVanBanBox(job)]
     ]) : NAV.ftab === 'nc' ? panelNC(stJob(job)) : NAV.ftab === 'dx' ? panelVanChuyen(stJob(job)) : NAV.ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' +
     kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu.</b>' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' +
-    chotBox(job) + soVanBanBox(job) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job));
+    chotBox(job) + soVanBanBox(job, true) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job));
 }
 
