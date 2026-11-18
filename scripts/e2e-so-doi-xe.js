@@ -15,6 +15,7 @@ const M = require(path.join(root, 'src', 'model.js')), V = require(path.join(roo
 const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
 const {lot, seed, P, EXP1} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed, P, EXP1};')();
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-sdx-')), out = path.join(dir, 'out');
+const moSo = async w => { await w.waitForSelector('#soVanBan', {state: 'attached'}); await w.evaluate(() => { const d = document.getElementById('soVanBan'); if (d && !d.open) d.open = true; }); await w.waitForTimeout(100); };   // phiếu #06b (D-07): khung Sổ văn bản gập mặc định ở tab Xuất hồ sơ
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('');
 const launch = async () => { const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
@@ -49,7 +50,7 @@ const mk = (id, ma) => M.ensureForest(dungMa(lot(id, ma, {exp: EXP1, pc: PCx(id.
   await open('fa', 'xuat'); let D = await taiGoi();
   ok('hai đội xe dùng số chung: BM-04, BM-09, BM-10 của cả hai đội in 07/2026-HĐVC và 09/2026-XNKL, không có hậu tố theo vị trí', [A, B].every(b => ['04', '09', '10'].every(c => cua(D, c, b).includes('07/2026-HĐVC') && !/0[79]\.\d\/2026/.test(cua(D, c, b)))) && [A, B].every(b => cua(D, '09', b).includes('Số: 09/2026-XNKL')), Object.keys(D).join(', '));
   ok('xem trước và tải file không tự cấp số, không ghi thay đổi vào lô', JSON.stringify(await lo('fa')) === truocTai && (await w.evaluate(() => window.__stDirty().length)) === 0);
-  await w.waitForSelector('#soDoiXe');
+  await moSo(w); await w.waitForSelector('#soDoiXe');
   let sdx = await w.innerText('#soDoiXe');
   ok('Sổ văn bản nêu cả hai đội xe đang cùng in số chung của lô, nguồn “số chung của lô”', !!(await w.$('#soDoiXeTrung')) && /cùng in số 07\/2026-HĐVC/.test(sdx.replace(/\s+/g, ' ')) && (await w.$$('#soDoiXe tr[data-nguon=chung]')).length === 4, sdx.slice(0, 400));
   await w.click('[data-ftab=kt]'); await w.waitForTimeout(300);
@@ -109,7 +110,7 @@ const mk = (id, ma) => M.ensureForest(dungMa(lot(id, ma, {exp: EXP1, pc: PCx(id.
 
   // ---------- 5. hồ sơ cũ đã in bằng số chung: xác nhận số trên giấy; lô đã chốt ----------
   const fdTruoc = JSON.stringify(await lo('fd')), idD1 = (await lo('fd')).hdvc[0].id, idD2 = (await lo('fd')).hdvc[1].id;
-  await open('fd', 'xuat'); await w.waitForSelector('#soDoiXe');
+  await open('fd', 'xuat'); await moSo(w); await w.waitForSelector('#soDoiXe');
   ok('hồ sơ cũ: Sổ văn bản hiện số đang in của từng đội xe (07/2026-HĐVC, 09/2026-XNKL) và nút “Xác nhận số trên giấy”; chưa bấm thì dữ liệu chưa đổi', /07\/2026-HĐVC/.test(await w.innerText('#soDoiXe')) && (await w.$$('#soDoiXe [data-act=svbGiuSo]')).length === 2 && JSON.stringify(await lo('fd')) === fdTruoc);
   await w.click('#soDoiXe [data-act=svbGiuSo][data-hd="' + idD1 + '"]'); await w.waitForTimeout(400);
   ok('bấm xác nhận: mới ghi vào bản nháp, SQLite chỉ đổi sau khi bấm Lưu', JSON.stringify(await lo('fd')) === fdTruoc);
@@ -118,7 +119,7 @@ const mk = (id, ma) => M.ensureForest(dungMa(lot(id, ma, {exp: EXP1, pc: PCx(id.
   db = await dbNow(); db.rs.own1.forests.fd.exp.soVC = '55'; await saveDb(db); await open('fd', 'xuat'); D = await taiGoi();
   ok('đổi số chung của lô sau đó: đội đã xác nhận vẫn in 07/2026-HĐVC, đội chưa xác nhận theo số chung mới 55/2026-HĐVC', cua(D, '04', A).includes('Số: 07/2026-HĐVC') && cua(D, '04', B).includes('Số: 55/2026-HĐVC'), cua(D, '04', B).slice(0, 200));
   const feTruoc = JSON.stringify(await lo('fe')), idE1 = (await lo('fe')).hdvc[0].id;
-  await open('fe', 'xuat'); await w.waitForSelector('#soDoiXe');
+  await open('fe', 'xuat'); await moSo(w); await w.waitForSelector('#soDoiXe');
   await w.evaluate(id => { const b = document.querySelector('#soDoiXe [data-act=svbGiuSo][data-hd="' + id + '"]'); if (b) { b.disabled = false; b.click(); } }, idE1); await w.waitForTimeout(400);
   await w.evaluate(() => { const b = document.querySelector('[data-act=svbDien]'); if (b) { b.disabled = false; b.click(); } }); await w.waitForTimeout(400);
   ok('lô đã chốt: xác nhận số / cấp số bị chặn (chỉ đọc), dữ liệu và dấu vân tay không đổi; hồ sơ vẫn hiện số đang in', JSON.stringify(await lo('fe')) === feTruoc && /07\/2026-HĐVC/.test(await w.innerText('#soDoiXe')) && !!(await w.$('#loKhoaBar')));

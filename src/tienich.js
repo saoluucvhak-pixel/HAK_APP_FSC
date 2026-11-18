@@ -98,7 +98,7 @@
       {id: 'lo', ten: 'Tạo lô rừng', moTa: 'Trong hồ sơ chủ rừng, thêm lô: mã lô, địa điểm, diện tích, thời gian khai thác.', xong: lots.length > 0},
       {id: 'nc', ten: 'Nhập đội khai thác và nhân công', moTa: 'Tab Nhân công: chọn từ Danh mục, nạp file Excel hoặc dán từ Excel; khai đơn giá theo vị trí.', xong: co(f => (f.nc || []).length > 0)},
       {id: 'dx', ten: 'Nhập xe và đội xe', moTa: 'Tab Vận chuyển: thêm xe, người ký của từng đội xe, cước vận chuyển.', xong: co(f => (f.dx || []).length > 0)},
-      {id: 'pc', ten: 'Nhập phiếu cân', moTa: 'Tab Phiếu cân: nạp file, dán từ Excel hoặc nhập từng phiếu; khối lượng của lô lấy từ phiếu cân.', xong: co(f => (f.pc || []).length > 0)},
+      {id: 'pc', ten: 'Nhập phiếu cân', moTa: 'Phiếu cân của hợp đồng vận chuyển: nạp file, dán từ Excel hoặc nhập từng phiếu; khối lượng của lô lấy từ phiếu cân.', xong: co(f => (f.pc || []).length > 0)},
       {id: 'xuat', ten: 'Kiểm tra và xuất hồ sơ', moTa: 'Tab Kiểm tra nêu mục còn thiếu; tab Xuất hồ sơ tải biểu mẫu Word, rồi đánh dấu đã in, đã ký.', xong: co(f => items(f) > 0)}
     ];
   }

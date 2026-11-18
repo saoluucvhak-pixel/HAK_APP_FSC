@@ -1,7 +1,10 @@
+let issWarnMo = false;   // khung cảnh báo đang mở (giữ qua các lần vẽ lại)
 function issuesBox(errs, warns) {
   let h = '';
   if (errs.length) h += '<div class="msg err"><b>Lỗi (' + errs.length + ') — kiểm tra thông báo rồi sửa dòng tương ứng:</b><ul class="issues">' + errs.slice(0, 40).map(e => '<li>' + esc(e) + '</li>').join('') + (errs.length > 40 ? '<li>… còn ' + (errs.length - 40) + ' lỗi</li>' : '') + '</ul></div>';
-  if (warns.length) h += '<div class="msg warn"><b>Cảnh báo (' + warns.length + '):</b><ul class="issues">' + warns.slice(0, 20).map(e => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
+  /* phiếu #06b: khung cảnh báo KHÔNG chặn mặc định gập thành một dòng tóm tắt có số lượng và nút “Xem” (không mất cảnh báo nào); khung lỗi chặn ở trên luôn mở */
+  if (warns.length) h += '<div class="msg warn issWarn" id="issWarn"><div class="row issWarnDong"><b>Cảnh báo (' + warns.length + ')</b>' + (issWarnMo ? '' : '<span class="mut">— không chặn lưu, xuất</span>') + '<button class="btn ghost sm" data-act="issWarn" aria-expanded="' + issWarnMo + '">' + (issWarnMo ? 'Ẩn' : 'Xem') + '</button></div>' +
+    (issWarnMo ? '<ul class="issues">' + warns.slice(0, 20).map(e => '<li>' + esc(e) + '</li>').join('') + (warns.length > 20 ? '<li>… còn ' + (warns.length - 20) + ' cảnh báo</li>' : '') + '</ul>' : '') + '</div>';
   return h;
 }
 

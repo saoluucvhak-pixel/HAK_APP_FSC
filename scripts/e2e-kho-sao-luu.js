@@ -105,6 +105,7 @@ const moKho = async w => { await w.click('#navSet'); await w.click('#setTab_setb
   ok('Tự sao lưu ngay: bản hôm nay chứa dữ liệu hiện tại, hết báo “chưa vào bản hôm nay”', /Đã tự sao lưu và kiểm tra/.test(await w.innerText('#kslMsg')) && klTrong(todayFile).kl === 20 && klTrong(todayFile).lo === 1 && !(await w.$('#kslChuaVao')), await w.innerText('#kslMsg'));
 
   // Ctrl+S lưu lô đang mở
+  if (!(await w.$eval('#side', e => getComputedStyle(e).display !== 'none').catch(() => true))) await w.click('#navHome'); /* phiếu #06b (D-05): Cài đặt ẩn cột chủ rừng; về Tổng quan như người dùng */
   await w.click('#side [data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.waitForSelector('[data-ftab=finfo]');
   await w.keyboard.press('Control+s'); await w.waitForTimeout(200);
   ok('Ctrl+S khi không có gì chưa lưu: chỉ báo, không lỗi', /Không có thay đổi chưa lưu/.test(await w.innerText('#saveSt')), await w.innerText('#saveSt'));

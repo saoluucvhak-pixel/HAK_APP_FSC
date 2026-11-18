@@ -13,6 +13,7 @@ const M = require(path.join(root, 'src', 'model.js'));
 const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
 const {lot, seed, P, EXP0, EXP1} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed, P, EXP0, EXP1};')();
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-ndx-')), out = path.join(dir, 'out');
+const moSo = async w => { await w.waitForSelector('#soVanBan', {state: 'attached'}); await w.evaluate(() => { const d = document.getElementById('soVanBan'); if (d && !d.open) d.open = true; }); await w.waitForTimeout(100); };   // phiếu #06b (D-07): khung Sổ văn bản gập mặc định ở tab Xuất hồ sơ
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('');
 const launch = async () => { const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--proxy-server=http://127.0.0.1:9'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
@@ -49,7 +50,7 @@ const phieu = (ma, t) => BIEN.map((b, i) => Object.assign(P(i + 1, '0' + (5 + i)
   // ---------- 1. bốn đội dùng số chung ----------
   await open('fg', 'xuat'); let D = await taiGoi();
   ok('bốn đội xe dùng số chung: mỗi đội có BM-04, BM-09, BM-10 riêng, đều in 07/2026-HĐVC, không hậu tố', BIEN.every((b, i) => ['04', '09', '10'].every(c => cua(D, c, CHU(i)).includes('07/2026-HĐVC') && !/0[79]\.\d\/2026/.test(cua(D, c, CHU(i))))), Object.keys(D).join(', '));
-  await w.waitForSelector('#soDoiXeTrung'); const tr = (await w.innerText('#soDoiXeTrung')).replace(/\s+/g, ' ');
+  await moSo(w); await w.waitForSelector('#soDoiXeTrung'); const tr = (await w.innerText('#soDoiXeTrung')).replace(/\s+/g, ' ');
   ok('Sổ văn bản nêu ĐỦ bốn đội xe đang cùng in số chung (không chỉ hai đội)', ((tr.match(/Các đội xe ((?:“[^”]+”(?:, )?)+) cùng in số 07\/2026-HĐVC/) || [])[1] || '').split('“').length - 1 === 4, tr.slice(0, 400));
 
   // ---------- 2. hai trong bốn đội trùng số riêng ----------

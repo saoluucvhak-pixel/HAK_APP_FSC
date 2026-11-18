@@ -11,6 +11,7 @@ const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
 const {lot, seed} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed};')();
 const root = path.join(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-pcmau-'));
+const xemCb = async w => { const b = await w.$('#issWarn button'); if (b && /Xem/.test(await b.innerText())) { await b.click(); await w.waitForTimeout(120); } };   // phiếu #06b: khung cảnh báo không chặn gập mặc định, bấm “Xem” để đọc
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
   // 1. file mẫu do phần mềm tạo có đủ cột mới
@@ -41,7 +42,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('PC001 có đơn giá 1.250.000 và thành tiền 31.750.000; PC003 không có giá thì để trống', by('PC001').donGia === 1250000 && by('PC001').thanhTien === 31750000 && by('PC003').donGia == null, JSON.stringify([by('PC001'), by('PC003')]));
   ok('PC002: giờ dạng chữ giữ nguyên', !!by('PC002') && by('PC002').gioCan1 === '08:30' && by('PC002').gioCan2 === '10:05');
   ok('PC003: chỉ có kg (20.000) → tấn = 20', !!by('PC003') && by('PC003').kl === 20 && by('PC003').klKg === 20000, JSON.stringify(by('PC003')));
-  const txt = await w.innerText('#main');
+  await xemCb(w); const txt = await w.innerText('#main');
   ok('PC004: kg (30.000) và tấn (31) lệch nhau → cảnh báo, vẫn nạp', !!by('PC004') && /không khớp nhau/.test(txt));
   ok('danh sách phiếu cân hiện các cột mới', ['Cân lần 1', 'Cân lần 2', 'Cân 1 (kg)', 'Khách hàng']   /* phiếu #06: tiêu đề ngắn một dòng */.every(h => txt.includes(h)) && /08:15:00/.test(txt));
   ok('PC005: chỉ có Cân 1 và Cân 2 → KL tự tính 20.500 kg (20,5 tấn); Đơn giá_TC dùng khi ĐG_AD trống; Trạng thái HỦY được giữ', by('PC005').klKg === 20500 && by('PC005').kl === 20.5 && by('PC005').donGia === 1300000 && by('PC005').trangThai === 'HỦY', JSON.stringify(by('PC005')));

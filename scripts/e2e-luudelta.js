@@ -20,6 +20,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const waitSaved = async n => { for (let i = 0; i < 100; i++) { const s = await stats(); if (s.delta + s.full >= n) return s; await w.waitForTimeout(100); } return stats(); };
   const addOwner = async (ma, ten) => {
+    if (!(await w.$eval('#side', e => getComputedStyle(e).display !== 'none').catch(() => true))) await w.click('#navHome'); /* phiếu #06b (D-05): Cài đặt ẩn cột chủ rừng; về Tổng quan như người dùng */
     await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', ma); await w.fill('#infoForm [name="ten"]', ten);
     for (const [k, v] of Object.entries({cccd: '049067005' + ma.slice(-3), ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v);
     await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]');

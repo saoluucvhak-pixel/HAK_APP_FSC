@@ -6,6 +6,7 @@ const path = require('path'), fs = require('fs'), os = require('os');
 const XLSX = require('xlsx');
 const root = path.join(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-nc-'));
+const xemCb = async w => { const b = await w.$('#issWarn button'); if (b && /Xem/.test(await b.innerText())) { await b.click(); await w.waitForTimeout(120); } };   // phiếu #06b: khung cảnh báo không chặn gập mặc định, bấm “Xem” để đọc
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const xe = (bien, ma) => ({_row: 2, maRung: ma, stt: '1', chuXe: 'CHỦ XE ' + bien, ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', bienSo: bien, loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'});
 const P = (stt, so, ngay, g1, g2, extra) => ({_row: stt + 1, maRung: 'R-A', stt: String(stt), ngay, bienSo: '92C-12345', soPhieu: so, kl: 10, gioCan1: g1, gioCan2: g2, noiGiao: 'KCN', ghiChu: '', ...extra});
@@ -37,7 +38,7 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   ok('N3 qua năm (31/12 23:00 → 01:00): ngày cân 2 = 01/01/2027 suy ra', /31\/12\/2026 23:00:00 01\/01\/2027 suy ra 01:00:00/.test(await row('N3')), await row('N3'));
   ok('N4 thiếu giờ cân: ngày cân 2 theo ngày cân 1, ghi rõ lý do', /07\/10\/2026 07\/10\/2026 theo ngày cân 1/.test(await row('N4')), await row('N4'));
   ok('N6 có ngày cân 2 nhập thật 11/10/2026: hiện nguyên, không ghi “suy ra”', /10\/10\/2026 23:50:00 11\/10\/2026 00:20:00/.test(await row('N6')) && !/suy ra/.test(await row('N6')), await row('N6'));
-  const t = await w.innerText('#main');
+  await xemCb(w); const t = await w.innerText('#main');
   ok('N5 ngày cân 2 nhập thật mâu thuẫn giờ cân (cách hơn 24 giờ): có cảnh báo nêu số phiếu', /Phiếu N5: ngày cân 2 là ngày hôm sau nhưng giờ cân 2 \(09:00:00\) không sớm hơn giờ cân 1 \(08:00:00\)/.test(t), t.slice(0, 200));
   ok('phiếu suy ra (N1–N4, N6) không bị cảnh báo ngày cân 2', !/Phiếu N[1234]: .*ngày cân 2/.test(t) && !/Phiếu N6: .*ngày cân 2/.test(t));
   // sửa phiếu: có ô Ngày cân 2; nhập ngày cân 2 sai định dạng bị báo
@@ -47,7 +48,7 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   await w.fill('#stForm [name=ngay2]', '31/02/2026'); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
   ok('ngày cân 2 không có thật (31/02/2026): bị chặn ngay trong hộp thoại, nêu lý do', /ngày cân 2/i.test(await w.innerText('#stForm')) && (await w.$('#stForm')) !== null, (await w.innerText('#stForm')).slice(-300));
   await w.fill('#stForm [name=ngay2]', '06/10/2026'); await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
-  ok('nhập ngày cân 2 thật: hiện đúng và có cảnh báo cách hơn 1 ngày nếu cần (ở đây 06/10 sau 05/10 và giờ 08:15 → 09:40: cách hơn 24 giờ)', /Phiếu N1: ngày cân 2 là ngày hôm sau/.test(await w.innerText('#main')));
+  ok('nhập ngày cân 2 thật: hiện đúng và có cảnh báo cách hơn 1 ngày nếu cần (ở đây 06/10 sau 05/10 và giờ 08:15 → 09:40: cách hơn 24 giờ)', /Phiếu N1: ngày cân 2 là ngày hôm sau/.test(await xemCb(w).then(() => w.innerText('#main'))));
   await w.click('[data-act=stDiscard]');
   // Excel không có cột Ngày cân 2: ngày cân 2 được suy ra khi hiển thị
   const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet([['Số phiếu', 'Ngày cân 1', 'Giờ cân 1', 'Giờ cân 2', 'Biển số 1', 'KL'], ['X1', '20/10/2026', '23:40:00', '00:10:00', '92C-12345', 5000]]); XLSX.utils.book_append_sheet(wb, ws, 'PHIEU_CAN');
