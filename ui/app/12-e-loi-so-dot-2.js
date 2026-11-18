@@ -1,7 +1,6 @@
 function issuesBox(errs, warns) {
   let h = '';
   if (errs.length) h += '<div class="msg err"><b>Lỗi (' + errs.length + ') — kiểm tra thông báo rồi sửa dòng tương ứng:</b><ul class="issues">' + errs.slice(0, 40).map(e => '<li>' + esc(e) + '</li>').join('') + (errs.length > 40 ? '<li>… còn ' + (errs.length - 40) + ' lỗi</li>' : '') + '</ul></div>';
-  else h += '<div class="msg ok">Không có lỗi.</div>';
   if (warns.length) h += '<div class="msg warn"><b>Cảnh báo (' + warns.length + '):</b><ul class="issues">' + warns.slice(0, 20).map(e => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
   return h;
 }
