@@ -178,7 +178,7 @@ document.addEventListener('click', async e => {
         }
       }
       if (!keys.length) { note('Không có mẫu nào để tải.', 'warn'); return; }
-      await exportDot2(mode, keys);
+      await chuaGanTrong(() => exportDot2(mode, keys));
     } catch (err) { note('Lỗi khi tạo file: ' + err.message, 'err'); }
     return;
   }
@@ -187,7 +187,7 @@ document.addEventListener('click', async e => {
   if (act === 'd2undo') { const f = curForest(), st = HAKInAn2.stateOf(f); (el.dataset.keys || '').split('|').filter(Boolean).forEach(k => HAKInAn2.unconfirm(st, k)); persist(); note('Đã bỏ xác nhận in nền.', 'ok'); return render(); }
   if (act === 'dl') {
     const idx = el.dataset.idx != null ? Number(el.dataset.idx) : null;
-    try { await exportKind(el.dataset.kind, idx); }
+    try { await chuaGanTrong(() => exportKind(el.dataset.kind, idx)); }
     catch (err) { note('Lỗi khi tạo file: ' + err.message, 'err'); }
     return;
   }

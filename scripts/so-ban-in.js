@@ -43,7 +43,10 @@ const clone = x => JSON.parse(JSON.stringify(x));
     await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + L[k].id + ']'); await w.click('[data-ftab=xuat]'); await w.waitForTimeout(400);
     for (const f of fs.readdirSync(dl)) fs.unlinkSync(path.join(dl, f));
     if (process.env.DBG) console.log('GATE>>', k, (await w.innerText('#main')).replace(/\n/g, ' ').slice(0, 700));
-    await w.click('button[data-act=dl][data-kind=all]', {timeout: 8000}).catch(() => {}); let f = null; for (let i = 0; i < 120 && !f; i++) { f = fs.readdirSync(dl).find(x => x.endsWith('.zip')); await w.waitForTimeout(200); } await w.waitForTimeout(600);
+    await w.click('button[data-act=dl][data-kind=all]', {timeout: 8000}).catch(() => {});
+    /* phiếu #03: lô nhiều đội còn phiếu chưa gán đội hiện hộp cảnh báo; “Vẫn xuất, chia theo số người” xuất đúng như trước (số in không đổi) nên bản in vẫn so được với bản cũ (bản cũ không có hộp: vòng chờ hết hạn, không làm gì) */
+    for (let i = 0; i < 10; i++) { if (await w.evaluate(() => !!document.getElementById('chuaGanXuat'))) { await w.evaluate(() => document.getElementById('chuaGanXuat').click()); break; } await w.waitForTimeout(150); }
+    let f = null; for (let i = 0; i < 120 && !f; i++) { f = fs.readdirSync(dl).find(x => x.endsWith('.zip')); await w.waitForTimeout(200); } await w.waitForTimeout(600);
     if (!f) { res[k + '/(không xuất được gói)'] = 'x'; continue; }
     const z = await JSZip.loadAsync(fs.readFileSync(path.join(dl, f)));
     for (const n of Object.keys(z.files).filter(n => n.endsWith('.docx')).sort()) {
