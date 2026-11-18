@@ -168,8 +168,17 @@ document.addEventListener('keydown', async e => {
     const n = document.getElementById(id); if (n) { n.focus(); try { const L = n.value.length; n.setSelectionRange(L, L); } catch (er) { /* ô ngày không có vùng chọn */ } }   // vẽ lại không làm mất tiêu điểm bàn phím
     return;
   }
+  /* phiếu #10: hộp thoại đang mở giữ tiêu điểm bên trong — Tab / Shift+Tab đi vòng trong hộp, không ra trang bên dưới */
+  if (e.key === 'Tab') {
+    const hop = ['stBox', 'impBox', 'rpBox', 'lkBox', 'guideBox'].map(id => document.getElementById(id)).filter(b => b && b.classList.contains('on')).pop();
+    if (hop) {
+      const ds = [...hop.querySelectorAll('button, input:not([type=hidden]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent);
+      if (ds.length) { const i = ds.indexOf(document.activeElement), j = i < 0 ? 0 : (i + (e.shiftKey ? -1 : 1) + ds.length) % ds.length; if (i < 0 || (e.shiftKey ? i === 0 : i === ds.length - 1)) { ds[j].focus(); e.preventDefault(); return; } }
+    }
+  }
   if (e.key === 'Escape' && !e.defaultPrevented) {   // Esc đóng hộp thoại trên cùng (hộp nhập/khôi phục → báo cáo → tra cứu → hướng dẫn); hộp nhập/khôi phục = Hủy, không ghi gì
     const open = id => { const b = document.getElementById(id); return b && b.classList.contains('on') ? b : null; };
+    { const sb = open('stBox'), nut = sb && (sb.querySelector('#stGBack') || sb.querySelector('[data-act=stClose]')); if (nut) { nut.click(); e.preventDefault(); return; } }   // phiếu #10: hộp Lưu / Bỏ / Quay lại → Quay lại; hộp có nút Đóng → Đóng
     if (open('impBox')) { window.__imp = null; $('#impBox').classList.remove('on'); e.preventDefault(); return; }
     if (open('rpBox')) { rpClose(); e.preventDefault(); return; }
     if (open('lkBox')) { lkClose(); e.preventDefault(); return; }

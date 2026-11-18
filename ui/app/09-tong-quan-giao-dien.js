@@ -118,12 +118,13 @@ function renderMain() {
     return;
   }
   const tabs = [['info', 'Thông tin chủ rừng'], ['rung', 'Rừng (' + forestList(own).length + ')']];
+  const chuTabs = ds => ds.map(([k, l]) => '<button class="' + (NAV.tab === k ? 'on' : '') + '" data-tab="' + k + '">' + l + '</button>').join('');
   const trongRung = NAV.tab === 'rung' && !!curForest();
   $('#main').innerHTML = renderMsgs() +
     (trongRung ? '' : '<div class="row" style="justify-content:space-between"><div><h2>' + esc(own.info.ten || '(chưa đặt tên)') + '</h2><div class="mut">Mã ' + esc(own.info.ma) + '</div></div>' +
     '<button class="btn danger sm" data-act="delRs">Xóa chủ rừng</button></div>') +
-    '<div class="tabs">' + tabs.map(([k, l]) => '<button class="' + (NAV.tab === k ? 'on' : '') + '" data-tab="' + k + '">' + l + '</button>').join('') + '</div>' +
-    (NAV.tab === 'info' ? panelInfo(own) : panelRung(own));
+    (trongRung ? '' : '<div class="tabs">' + chuTabs(tabs) + '</div>') +   // phiếu #10: đang mở lô thì tab chủ rừng nằm trong hàng đầu lô (panelRung)
+    (NAV.tab === 'info' ? panelInfo(own) : panelRung(own, trongRung ? chuTabs(tabs) : ''));
 }
 
 function checklistRung(job) {
