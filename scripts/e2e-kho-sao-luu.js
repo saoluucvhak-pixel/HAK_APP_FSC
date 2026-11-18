@@ -137,9 +137,9 @@ const moKho = async w => { await w.click('#navSet'); await w.click('#setTab_setb
   await w.click('#navSet'); await w.waitForSelector('#stGDrop'); await w.click('#stGDrop'); await w.click('#setTab_setbk'); await w.click('#lotRestoreBtn'); await w.waitForSelector('input[name=lotAct][value=thay]'); await w.check('input[name=lotAct][value=thay]'); await w.click('[data-act=lotGo]');
   await settle(w, async () => (await tenDb(w)) === 'Rừng A');
   ok('D1: khôi phục lô (thay) ghi bản trong gói (Rừng A), không còn dấu chưa lưu', (await tenDb(w)) === 'Rừng A' && (await w.evaluate(() => window.__stDirty().length)) === 0, await tenDb(w));
-  const s0 = await w.evaluate(() => window.__saveStats.delta + window.__saveStats.full);
+  const s0 = await w.evaluate(() => window.__hak.saveStats.delta + window.__hak.saveStats.full);
   await w.click('#navSet'); await w.click('#setTab_setfmt'); await w.check('input[name=numStyle][value=en]');
-  await settle(w, async () => (await w.evaluate(() => window.__saveStats.delta + window.__saveStats.full)) > s0);
+  await settle(w, async () => (await w.evaluate(() => window.__hak.saveStats.delta + window.__hak.saveStats.full)) > s0);
   ok('D1: lần lưu kế tiếp ở nơi khác (Hiển thị số) đã ghi và lô vẫn là bản vừa khôi phục (Rừng A)', (await w.evaluate(() => window.hak.loadSync().db.dinhDangSo)) === 'en' && (await tenDb(w)) === 'Rừng A', await tenDb(w));
   await app.close();
   ok('không có lỗi JavaScript', errs.length === 0, errs.join(' | '));

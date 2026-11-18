@@ -14,16 +14,16 @@ function boc(w) {
     if (!(await goc.$(DS[k]))) return;
     const attr = k === 'nc' ? 'data-doi' : 'data-hd', sel = nho[k] && (await goc.$(DS[k] + '[' + attr + '="' + nho[k] + '"]')) ? DS[k] + '[' + attr + '="' + nho[k] + '"]' : DS[k];
     const id = await w.$eval(sel, (e, a) => e.getAttribute(a), attr);
-    await w.evaluate(([k, id]) => window.__hdMo(k, id), [k, id]); await w.waitForTimeout(150);   // không qua hộp hỏi lưu bản nháp: cùng lô, bản nháp giữ nguyên
+    await w.evaluate(([k, id]) => window.__hak.hdMo(k, id), [k, id]); await w.waitForTimeout(150);   // không qua hộp hỏi lưu bản nháp: cùng lô, bản nháp giữ nguyên
   };
-  const quayLai = async () => { const k = await ghiNho(); if (k) await w.evaluate(k => window.__hdMo(k, null), k); else await goc.click('#hdQuayLai'); await w.waitForTimeout(150); return k; };
+  const quayLai = async () => { const k = await ghiNho(); if (k) await w.evaluate(k => window.__hak.hdMo(k, null), k); else await goc.click('#hdQuayLai'); await w.waitForTimeout(150); return k; };
   const ghiNho = async () => { try { const v = await w.evaluate(() => { const b = document.getElementById('hdQuayLai'); return b ? b.dataset.kind : null; }); return v; } catch (e) { return null; } };
   /* 3.0 tách màn nhập thành các mục (.mucNav): chỉ mục đang mở được vẽ. Phần tử không có thì thử lần lượt các mục của màn đang mở. */
   const thay = async (sel, hien) => { const e = await goc.$(sel); return !!e && (!hien || await e.isVisible().catch(() => true)); };
   /* đổi mục thì màn vẽ lại: giữ giá trị các ô đang gõ dở (chưa lưu) của mục đang mở để trả lại khi quay về */
   const chupNhap = () => w.evaluate(() => [...document.querySelectorAll('.mucNoiDung input, .mucNoiDung select, .mucNoiDung textarea')].filter(e => e.name && e.type !== 'file').map(e => [(e.form && e.form.id) || '', e.name, e.type, e.type === 'checkbox' || e.type === 'radio' ? e.checked : e.value, e.value])).catch(() => []);
   const veMuc = async (m, oNhap) => {
-    await w.evaluate(([k, id]) => window.__mucLo(k, id), m);
+    await w.evaluate(([k, id]) => window.__hak.mucLo(k, id), m);
     if (oNhap && oNhap.length) await w.evaluate(ds => ds.forEach(([f, n, t, v, val]) => { const root = f ? document.getElementById(f) : document; if (!root) return; const els = [...(f ? root.elements : root.querySelectorAll('[name]'))].filter(e => e.name === n && (t !== 'radio' || e.value === val)); els.forEach(e => { if (t === 'checkbox' || t === 'radio') e.checked = v; else if (e.value !== v) e.value = v; }); }), oNhap).catch(() => {});
   };
   const timMuc = async (sel, hien) => {
@@ -81,7 +81,7 @@ function boc(w) {
     const ds = await w.evaluate(() => [...document.querySelectorAll('.mucNav [data-muc-lo]')].map(b => [b.dataset.loNhom, b.dataset.mucLo, b.hasAttribute('aria-current')])).catch(() => []);
     const dau = await goc.innerText(sel, ...a); if (!ds.length) return dau;
     const parts = [dau], dangMo = ds.find(x => x[2]), oNhap = await chupNhap();
-    for (const [k, id, on] of ds) { if (on) continue; await w.evaluate(([k, id]) => window.__mucLo(k, id), [k, id]); parts.push(await goc.innerText(sel, ...a)); }
+    for (const [k, id, on] of ds) { if (on) continue; await w.evaluate(([k, id]) => window.__hak.mucLo(k, id), [k, id]); parts.push(await goc.innerText(sel, ...a)); }
     if (dangMo) await veMuc(dangMo, oNhap);
     return parts.join('\n');
   };

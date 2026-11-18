@@ -18,7 +18,7 @@ const moRung = async (w, tab) => {
   await w.evaluate(() => { const d = document.querySelector('.rungTomTat'); if (d) d.open = true; });
   await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + tab + ']');
 };
-const muc = (w, k, id) => w.evaluate(([k, id]) => window.__mucLo && window.__mucLo(k, id), [k, id]);
+const muc = (w, k, id) => w.evaluate(([k, id]) => window.__hak.mucLo && window.__hak.mucLo(k, id), [k, id]);
 /* các màn cần chụp: tên → hàm điều hướng (trả false nếu màn chưa có ở bản này) */
 const MAN = {
   home: async w => { await w.click('[data-act=goHome]'); return true; },

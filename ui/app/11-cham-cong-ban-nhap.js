@@ -301,9 +301,9 @@ function stGuard(proceed) {
 }
 window.__stDirty = () => stDirtyList();
 window.__stSaveCurrent = () => stSave();
-window.__checkDX = () => { const rec = curRec(); return rec ? checkDX(rec) : null; };
-window.__rpXe = () => rpData().map(x => ({maRung: x.maRung, xe: x.dxList.map(d => ({bienSo: d.bienSo, ky: d.ky}))}));
-window.__doiKT = () => { const rec = curRec(); if (!rec) return null; const B = doiOf(rec); return {loi: checkNC(rec).errs, doi: B.doi.map(d => [d.ten, d.n, d.dienTich, d.khoiLuong]), hdld: hdldList(rec).map(r => r.ten), uq: ucList(rec).map(r => r.ten), g: gate(rec)}; };   // kiểm thử đầu-cuối đọc cấu trúc đội của lô đang mở
+CONG_KT.checkDX = () => { const rec = curRec(); return rec ? checkDX(rec) : null; };
+CONG_KT.rpXe = () => rpData().map(x => ({maRung: x.maRung, xe: x.dxList.map(d => ({bienSo: d.bienSo, ky: d.ky}))}));
+CONG_KT.doiKT = () => { const rec = curRec(); if (!rec) return null; const B = doiOf(rec); return {loi: checkNC(rec).errs, doi: B.doi.map(d => [d.ten, d.n, d.dienTich, d.khoiLuong]), hdld: hdldList(rec).map(r => r.ten), uq: ucList(rec).map(r => r.ten), g: gate(rec)}; };   // kiểm thử đầu-cuối đọc cấu trúc đội của lô đang mở
 /* Chặn rời lô khi còn bản nháp: bắt sự kiện bấm ở pha bắt (trước mọi xử lý khác) với các nút đổi lô, đổi chủ rừng, sang màn hình khác */
 document.addEventListener('click', e => {
   if (stBypass || !stDirtyCur()) return; const t = e.target; if (!t.closest || t.closest('#stBox')) return;

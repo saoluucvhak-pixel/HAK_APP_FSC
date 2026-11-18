@@ -117,7 +117,7 @@ const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want)
   await openForest(w, 'o1', 'fb', 'kt'); kt = await w.innerText('#main');
   ok('hồ sơ cũ cước theo bậc cự ly (SQLite v6): chuyển sang tấn/km, không còn mục chặn “chọn lại”, dữ liệu bậc giữ ở bacCu', !/Cước theo bậc cự ly \(hồ sơ cũ\)/.test(kt) && (await dbOf(w)).rs.o1.forests.fb.info.vanChuyen.bacCu.length === 1 && (await dbOf(w)).rs.o1.forests.fb.info.vanChuyen.mode === 'tanKm');
   ok('lô chưa chọn địa chỉ giao: mục đối chiếu nêu thiếu địa chỉ', /Chưa chọn địa chỉ giao hàng đã chốt|nhập tay/.test(kt));
-  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__mucLo('finfo', 'giaohang'));   /* 3.0: địa chỉ giao và cước ở Thông tin rừng */ ok('mở mục Công ty, địa chỉ giao và cước để sửa cước', await w.isVisible('#vcForm'));
+  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__hak.mucLo('finfo', 'giaohang'));   /* 3.0: địa chỉ giao và cước ở Thông tin rừng */ ok('mở mục Công ty, địa chỉ giao và cước để sửa cước', await w.isVisible('#vcForm'));
   await openForest(w, 'o2', 'fc', 'kt'); kt = await w.innerText('#main');
   ok('cước tấn/km khi địa chỉ công ty đổi: nhắc kiểm tra lại cự ly (không tự sửa)', /Cự ly vận chuyển/.test(kt) && /không tự sửa cự ly/.test(kt));
   await w.click('[data-ftab=xuat]'); ok('tab Xuất hồ sơ có nhắc và liên kết sang màn hình kiểm tra', /Kiểm tra hồ sơ trước khi xuất/.test(await w.innerText('#main')));

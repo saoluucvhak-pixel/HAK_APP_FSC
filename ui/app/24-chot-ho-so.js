@@ -101,4 +101,4 @@ function loKhoaVoHieu() {
   document.querySelectorAll('#main ' + NHAP_GHI_LO.split(',').join(', #main ')).forEach(x => { x.disabled = true; x.title = 'Lô chỉ đọc'; });
   document.querySelectorAll('#main [data-act]').forEach(b => { if (ACT_GHI_LO.test(b.dataset.act)) { b.disabled = true; b.title = 'Lô chỉ đọc'; } });
 }
-window.__khoaTest = {lo: () => curForest(), persistLo: f => persistLo(f), persist: () => persist(), chuaLuu: () => loDirty.size};   // chỉ cho kiểm thử đầu-cuối
+CONG_KT.khoaTest = {lo: () => curForest(), persistLo: f => persistLo(f), persist: () => persist(), chuaLuu: () => loDirty.size};   // chỉ cho kiểm thử đầu-cuối

@@ -73,7 +73,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('[data-act=chonDoi][data-doi=doi1]'); await w.waitForTimeout(300);
   ok('chấm công: chọn đội 2 (ngày công) hiện bảng chấm công của đúng 2 người đội 2; chọn đội 1 (theo tấn) không có bảng', JSON.stringify(cc2.sort()) === JSON.stringify(['NGUYỄN BỐN', 'PHẠM BA']) && !(await w.$('#ccCard')), JSON.stringify(cc2));
   await w.click('[data-act=chonDoi][data-doi=doi2]'); await w.waitForTimeout(200);
-  const ch = await w.evaluate(() => window.__doiKT());
+  const ch = await w.evaluate(() => window.__hak.doiKT());
   ok('không còn lỗi nhân công; 2 đội 2 người mỗi đội; đội 2 nhập 1,2 ha thì đội 1 nhận phần còn lại 1,8 ha của lô 3 ha', !ch.loi.length && ch.doi.length === 2 && ch.doi[0][1] === 2 && ch.doi[1][1] === 2 && ch.doi[1][2] === 1.2 && ch.doi[0][2] === 1.8, JSON.stringify(ch));
   ok('hợp đồng lao động chỉ cho người đội trực tiếp (NGUYỄN BỐN, PHẠM BA); ủy quyền chỉ người đội giao khoán (LÊ HAI)', JSON.stringify(ch.hdld.sort()) === JSON.stringify(['NGUYỄN BỐN', 'PHẠM BA']) && JSON.stringify(ch.uq) === JSON.stringify(['LÊ HAI']), JSON.stringify(ch));
   ok('lô có cả hai loại đội: vẫn được lập hợp đồng giao khoán, ủy quyền và hợp đồng lao động', ch.g.canGK && ch.g.canUQ && ch.g.canHDLD, JSON.stringify(ch.g));

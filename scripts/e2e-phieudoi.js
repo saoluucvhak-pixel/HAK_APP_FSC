@@ -40,12 +40,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.fill('#pgBien', ''); await w.selectOption('#pgDoi', 'doi2'); await w.click('[data-act=pcGanLoat]'); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   F = await db();
   ok('lọc “chỉ phiếu chưa gán” → gán Đội 2: PA2, PA4; phiếu đã gán giữ nguyên', JSON.stringify(F.fa.pc.map(x => x.doiId)) === JSON.stringify(['doi1', 'doi2', 'doi1', 'doi2']));
-  let k = await w.evaluate(() => window.__doiKT());
+  let k = await w.evaluate(() => window.__hak.doiKT());
   ok('khối lượng từng đội = tổng phiếu cân của đội: Đội 1 20,5 tấn, Đội 2 15,25 tấn', k.doi[0][3] === 20.5 && k.doi[1][3] === 15.25, JSON.stringify(k.doi));
   // sửa một phiếu ở cột Đội
   const ix = F.fa.pc.findIndex(x => x.soPhieu === 'PA4');
   await w.selectOption('select[data-pcdoi="' + ix + '"]', 'doi1'); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
-  k = await w.evaluate(() => window.__doiKT());
+  k = await w.evaluate(() => window.__hak.doiKT());
   ok('chọn đội tại dòng: PA4 sang Đội 1 → Đội 1 26,5 tấn, Đội 2 9,25 tấn', (await db()).fa.pc[ix].doiId === 'doi1' && k.doi[0][3] === 26.5 && k.doi[1][3] === 9.25, JSON.stringify(k.doi));
   await w.click('[data-ftab=kt]'); await w.waitForTimeout(300);
   ok('gán đủ: hết cảnh báo phiếu cân chưa gán', !/phiếu cân chưa gán đội/.test(await w.innerText('#main')));

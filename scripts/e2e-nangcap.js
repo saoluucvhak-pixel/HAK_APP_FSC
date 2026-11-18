@@ -28,11 +28,11 @@ const openForest = async (w, fid, ftab) => { await w.click('[data-open=own1]'); 
   const lk = await w.evaluate(() => window.hak.lookup.status()); ok('bản tra cứu ba tab lưu offline còn nguyên sau nâng cấp', lk.ok && (lk.counts ? Object.values(lk.counts).every(n => n > 0) : JSON.stringify(lk).length > 20), JSON.stringify(lk).slice(0, 300));
 
   // địa chỉ cũ còn hiển thị; chỉ đổi sau khi xác nhận
-  await openForest(w, 'f1', 'finfo'); await w.evaluate(() => window.__mucLo('finfo', 'giaohang'));   /* 3.0: địa chỉ giao và cước ở Thông tin rừng */ let main = await w.innerText('#main');
+  await openForest(w, 'f1', 'finfo'); await w.evaluate(() => window.__hak.mucLo('finfo', 'giaohang'));   /* 3.0: địa chỉ giao và cước ở Thông tin rừng */ let main = await w.innerText('#main');
   ok('lô R-CU1: địa chỉ nhập tay cũ còn hiển thị, báo chưa chọn địa chỉ công ty', /Nhà máy dăm Quảng Nam, KCN Điện Nam – Điện Ngọc/.test(main) && /nhập tay/.test(main), main.slice(main.indexOf('Địa chỉ giao hàng'), main.indexOf('Địa chỉ giao hàng') + 400));
   await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
   await w.fill('#ctyForm [name=ten]', 'CÔNG TY TNHH DĂM AN PHÁT'); await w.fill('#ctyForm [name=diaChi]', 'KCN Điện Nam – Điện Ngọc, Điện Bàn, Quảng Nam'); await w.click('#ctyForm button[type=submit]'); await w.waitForTimeout(700);
-  await openForest(w, 'f1', 'finfo'); await w.evaluate(() => window.__mucLo('finfo', 'giaohang'));   /* 3.0: địa chỉ giao và cước ở Thông tin rừng */ await w.click('[data-act=mhOpen]'); main = await w.innerText('#main');
+  await openForest(w, 'f1', 'finfo'); await w.evaluate(() => window.__hak.mucLo('finfo', 'giaohang'));   /* 3.0: địa chỉ giao và cước ở Thông tin rừng */ await w.click('[data-act=mhOpen]'); main = await w.innerText('#main');
   ok('chọn địa chỉ giao: hiện giá trị nhập tay cũ cạnh địa chỉ đề xuất', /Giá trị nhập tay cũ/.test(main) && /Nhà máy dăm Quảng Nam/.test(main) && /KCN Điện Nam – Điện Ngọc, Điện Bàn/.test(main));
   ok('chưa xác nhận: dữ liệu lô chưa đổi', !(await dbOf(w)).rs.own1.forests.f1.info.muaHang);
   await w.click('[data-act=mhCancel]'); ok('hủy: vẫn giữ địa chỉ nhập tay cũ', !(await dbOf(w)).rs.own1.forests.f1.info.muaHang && /Nhà máy dăm Quảng Nam/.test(await w.innerText('#main')));

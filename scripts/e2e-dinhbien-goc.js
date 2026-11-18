@@ -22,7 +22,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('Nhân công: báo ngày sai, không dùng bản gốc để so định mức', !!(await w.$('#dbNgayLoi')) && !/1 đội \d+ người/.test(await w.innerText('#main')));
   await w.click('[data-ftab=kt]'); await w.waitForTimeout(300); ok('Kiểm tra: có mục chặn “ngày bắt đầu sai”', /ngày bắt đầu sai|31\/11\/2026/.test(await w.innerText('#main')));
   ok('giữ nguyên giá trị ngày cũ trong dữ liệu', (await lo('fb')).info.tuNgay === '31/11/2026');
-  await open('fa', 'finfo'); ok('30/11/2026 hợp lệ: không báo lỗi, dùng bản gốc', !(await w.$('#tuNgayLoi'))); await w.click('[data-ftab=nc]'); await w.evaluate(() => window.__mucLo('nc', 'dongia'));   /* 3.0: so định mức ở mục “Hình thức và đơn giá” */ await w.waitForTimeout(300); ok('Nhân công 30/11: không có thông báo ngày sai và có so định mức', !(await w.$('#dbNgayLoi')) && /1 đội \d+ người/.test(await w.innerText('#main')));
+  await open('fa', 'finfo'); ok('30/11/2026 hợp lệ: không báo lỗi, dùng bản gốc', !(await w.$('#tuNgayLoi'))); await w.click('[data-ftab=nc]'); await w.evaluate(() => window.__hak.mucLo('nc', 'dongia'));   /* 3.0: so định mức ở mục “Hình thức và đơn giá” */ await w.waitForTimeout(300); ok('Nhân công 30/11: không có thông báo ngày sai và có so định mức', !(await w.$('#dbNgayLoi')) && /1 đội \d+ người/.test(await w.innerText('#main')));
   await open('fc', 'finfo'); ok('ngày trống: không báo lỗi', !(await w.$('#tuNgayLoi')));
   await open('fd', 'finfo'); ok('29/02/2028 (năm nhuận): hợp lệ', !(await w.$('#tuNgayLoi')));
   await open('fe', 'finfo'); ok('29/02/2027 (năm thường): báo lỗi', !!(await w.$('#tuNgayLoi')));
