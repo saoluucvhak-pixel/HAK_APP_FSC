@@ -27,4 +27,5 @@ const KT_DOCPHIEUCAN = HAKDocPhieuCan.create({
   get trim() { return trim; },
   get volumeOf() { return volumeOf; }
 });
-const {PC_NGUONG_MAC_DINH, VN_D, bienKey, checkPC, dateKey, doiChieuPcVanChuyen, doiXeOfPc, doiXeTen, doiXeThieuKy, fmtT, groupsPC, hanLoiOf, hdTenKhop, keyName, khoaXe, moneyCell, moneyWords, nhoTheoPc, noneVal, normDX, normDX0, normNC, normPC, parseSheet, payVC, pcKhopXeVC, pcNgoaiPhamViVC, pcSapNho, pcSapTheoNgay, pcTheoDoiNho, pcThuocNhom, timeCell, totalKg, tripsOf, words3} = KT_DOCPHIEUCAN;
+const {PC_NGUONG_MAC_DINH, VN_D, bienKey, checkPC, dateKey, doiChieuPcVanChuyen, doiXeOfPc, doiXeTen, doiXeThieuKy, fmtT, groupsPC, hanLoiOf, hdTenKhop, keyName, khoaXe, moneyCell, moneyWords, nhoTheoPc, noneVal, normDX, normDX0, normNC, normPC, parseSheet, payVC, pcKhopXeVC, pcNgoaiPhamViVC,
+pcSapNho, pcSapTheoNgay, pcTheoDoiNho, pcThuocNhom, timeCell, totalKg, tripsOf, words3} = KT_DOCPHIEUCAN;

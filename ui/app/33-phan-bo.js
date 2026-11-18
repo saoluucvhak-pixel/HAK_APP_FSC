@@ -9,7 +9,8 @@ function panelPhanBo(rec) {
   const f = curForest(); if (!f || !rec.doi) return '';
   const khoa = loKhoa(f), cd = khoa ? HAKPhanBo.cheDo(f) : pbCheDoDangChon(f), kq = HAKPhanBo.tinh(f, cd), n = rec.doi.length, doi = pbNhap && pbNhap.fid === f.id && !khoa && pbNhap.cheDo !== HAKPhanBo.cheDo(f);
   const tenD = d => trim(d.ten) || (n > 1 ? 'Đội ' + (rec.doi.findIndex(x => x.id === d.id) + 1) : 'Đội khai thác');
-  const chon = n === 2 && !khoa ? '<div class="row" style="gap:14px;flex-wrap:wrap;margin:6px 0" id="pbCach">' + ['theoPhieu', 'chiaDeu'].map(k => '<label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="pbCheDo" value="' + k + '"' + (cd === k ? ' checked' : '') + '> ' + HAKPhanBo.CHE_DO[k] + '</label>').join('') + '</div>' : '';
+  const chon = n === 2 && !khoa ? '<div class="row" style="gap:14px;flex-wrap:wrap;margin:6px 0" id="pbCach">' + ['theoPhieu', 'chiaDeu'].map(k => '<label style="flex-direction:row;align-items:center;gap:6px"><input type="radio" name="pbCheDo" value="' + k + '"' + (cd === k ? ' checked' : '') +
+  '> ' + HAKPhanBo.CHE_DO[k] + '</label>').join('') + '</div>' : '';
   const bang = '<div class="wrap"><table id="pbTbl" style="min-width:420px"><thead><tr><th>Đội</th><th style="text-align:right">Khối lượng (tấn)</th><th style="text-align:right">Số phiếu</th></tr></thead><tbody>' +
     kq.doi.map(d => '<tr data-pbdoi="' + esc(d.id) + '"><td>' + esc(tenD(d)) + '</td><td style="text-align:right">' + fmtT(d.kg) + '</td><td style="text-align:right">' + (kq.cheDo === 'chiaDeu' ? '<small class="mut">chia đều</small>' : d.soPhieu) + '</td></tr>').join('') +
     '</tbody><tfoot><tr><td><b>Tổng phiếu cân của rừng</b></td><td style="text-align:right"><b id="pbTong">' + fmtT(kq.tongKg) + '</b></td><td style="text-align:right">' + kq.soPhieu + '</td></tr>' +
@@ -25,7 +26,10 @@ function pbPhieuHtml(rec, f) {
   const pc = rec.pc || []; if (!pc.length) return '<p class="mut">Rừng chưa có phiếu cân đã lưu.</p>';
   const tenD = d => trim(d.ten) || 'Đội ' + (rec.doi.indexOf(d) + 1);
   return '<details style="margin-top:8px" open id="pbPhieu"><summary>Chọn phiếu theo đội (' + pc.length + ' phiếu)</summary><div class="wrap" style="max-height:320px"><table id="pbPhieuTbl"><thead><tr><th>Số phiếu</th><th>Ngày</th><th>BKS</th><th style="text-align:right">KL (tấn)</th><th>Đội</th></tr></thead><tbody>' +
-    pc.map((p, i) => { const d = rec.doi.find(x => x.id === p.doiId); return '<tr><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bienSo) + '</td><td style="text-align:right">' + (typeof p.kl === 'number' ? fmtT(Math.round(p.kl * 1000)) : esc(p.kl)) + '</td><td><select data-pcdoi="' + i + '">' + (d ? '' : '<option value="" selected>(chưa phân bổ)</option>') + rec.doi.map(x => '<option value="' + esc(x.id) + '"' + (x === d ? ' selected' : '') + '>' + esc(tenD(x)) + '</option>').join('') + '</select></td></tr>'; }).join('') +
+    pc.map((p, i) => { const d = rec.doi.find(x => x.id === p.doiId);
+    return '<tr><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bienSo) + '</td><td style="text-align:right">' + (typeof p.kl === 'number' ? fmtT(Math.round(p.kl * 1000)) : esc(p.kl)) + '</td><td><select data-pcdoi="' + i + '">' + (d ? '' :
+    '<option value="" selected>(chưa phân bổ)</option>') + rec.doi.map(x => '<option value="' + esc(x.id) + '"' + (x === d ? ' selected' : '') + '>' + esc(tenD(x)) + '</option>').join('') + '</select></td></tr>';
+    }).join('') +
     '</tbody></table></div></details>';
 }
 document.addEventListener('change', e => {

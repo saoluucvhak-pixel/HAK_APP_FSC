@@ -28,8 +28,11 @@ function tgDuKienHtml(i, pcs, nd) {
   if (n == null) return 'Chưa tính được thời gian khai thác dự kiến: cần <b>diện tích</b> và <b>định mức thời gian khai thác (ngày/ha)</b>.';
   const kt = i.tuNgay && HAKDates.isValid(i.tuNgay) ? HAKDinhMuc.ngayKetThuc(i.tuNgay, n) : '';
   const han = trim(i.denNgay || '');
-  return 'Thời gian khai thác dự kiến: <b>' + n + ' ngày</b> (' + String(i.dienTich).replace('.', ',') + ' ha × ' + String(d.v).replace('.', ',') + ' ngày/ha' + (nd > 1 ? ' ÷ ' + nd + ' đội làm song song' : '') + ', không tính Chủ nhật' + (ns ? '; năng suất 1 ngày' + (nd > 1 ? ' của mỗi đội' : '') + ' ≈ ' + String(ns).replace('.', ',') + ' tấn' : '') + ').' +
-    (kt ? ' Bắt đầu ' + esc(i.tuNgay) + ' → <b>kết thúc dự kiến ' + esc(kt) + '</b>' + (han && han !== kt ? ' (ô “đến ngày” đang là ' + esc(han) + ')' : '') + '. <button type="button" class="linkbtn" data-act="fillDenDk">Điền ngày kết thúc dự kiến</button>' : ' Nhập <b>từ ngày</b> để tính ngày kết thúc dự kiến.') + (() => { const L = tgLechOf(i, pcs, nd); return L && L.canhBao ? '<br><b class="tgWarn" id="tgLech">Cảnh báo: ' + esc(tgLechText(i, L)) + '</b>' : L && L.loi ? '<br><b class="tgWarn" id="tgLech">Cảnh báo: ' + esc(L.loi) + '.</b>' : ''; })();
+  return 'Thời gian khai thác dự kiến: <b>' + n + ' ngày</b> (' + String(i.dienTich).replace('.', ',') + ' ha × ' + String(d.v).replace('.',
+  ',') + ' ngày/ha' + (nd > 1 ? ' ÷ ' + nd + ' đội làm song song' : '') + ', không tính Chủ nhật' + (ns ? '; năng suất 1 ngày' + (nd > 1 ? ' của mỗi đội' : '') + ' ≈ ' + String(ns).replace('.', ',') + ' tấn' : '') + ').' +
+    (kt ? ' Bắt đầu ' + esc(i.tuNgay) + ' → <b>kết thúc dự kiến ' + esc(kt) + '</b>' + (han && han !== kt ? ' (ô “đến ngày” đang là ' + esc(han) + ')' : '') + '. <button type="button" class="linkbtn" data-act="fillDenDk">Điền ngày kết thúc dự kiến</button>' :
+    ' Nhập <b>từ ngày</b> để tính ngày kết thúc dự kiến.') + (() => {
+    const L = tgLechOf(i, pcs, nd); return L && L.canhBao ? '<br><b class="tgWarn" id="tgLech">Cảnh báo: ' + esc(tgLechText(i, L)) + '</b>' : L && L.loi ? '<br><b class="tgWarn" id="tgLech">Cảnh báo: ' + esc(L.loi) + '.</b>' : ''; })();
 }
 const fillBtn = (act, label) => '<small class="mut"><button type="button" class="linkbtn" data-act="' + act + '">' + label + '</button></small>';
 /* ghi chú dưới ô cự ly: đang dùng số nào, từ đâu, và vì sao chưa có */
@@ -61,13 +64,15 @@ function panelForest(f, muc) {
     start('chung') + inp('maRung', 'Mã rừng', {req: true}) + inp('tenRung', 'Tên rừng / lô') + inp('diaDiem', 'Địa điểm khai thác (rừng)', {req: true, wide: true}) +
     inp('dienTich', 'Diện tích (ha)') + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + '</div>' +
     start('toado') + inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +
-    inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' + cuLyNote(i) + '</p></div>' +
+    inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' +
+    cuLyNote(i) + '</p></div>' +
     start('dinhmuc') + dmField(i) +
     dmTgField(i) + soDoiField(i, f.nc) + '<p class="mut" id="tgNote" style="grid-column:1/-1;margin:0">' + tgDuKienHtml(i, f.pc, nDoiOf(i, f.nc)) + '</p>' +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +
     (typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0
       ? '<label><span>Khối lượng thực tế của hồ sơ cũ (tấn) — chỉ hiển thị</span><div id="klCu"><b>' + fmtTan(i.klHoSoCu) + ' tấn</b> <span class="mut">— số nhập tay của bản cũ, đang được dùng làm khối lượng lô; tổng phiếu cân hiện là ' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn' : '—') + '.</span> <button type="button" class="linkbtn" data-act="boKlCu">Bỏ số hồ sơ cũ, lấy theo phiếu cân</button></div></label>'
-      : '<label><span>Khối lượng khai thác thực tế (tấn)</span><div id="klPC"><b>' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn</b> <span class="mut">— tổng ' + (f.pc || []).filter(p => p.kl > 0).length + ' phiếu cân (một nguồn duy nhất)</span>' : '—</b> <span class="mut">chưa có phiếu cân: hồ sơ dùng sản lượng dự kiến</span>') + '</div></label>') +
+      : '<label><span>Khối lượng khai thác thực tế (tấn)</span><div id="klPC"><b>' + (klPhieu(f.pc) > 0 ? fmtTan(klPhieu(f.pc)) + ' tấn</b> <span class="mut">— tổng ' + (f.pc || []).filter(p => p.kl > 0).length + ' phiếu cân (một nguồn duy nhất)</span>' :
+      '—</b> <span class="mut">chưa có phiếu cân: hồ sơ dùng sản lượng dự kiến</span>') + '</div></label>') +
     klDoiField(f) + '</div>' +
     /* Ô cũ “Đơn giá giao khoán Tổ trưởng”: chỉ còn hiện ở hồ sơ cũ đã có giá trị (để hợp đồng đã in không đổi). Lô mới nhập đơn giá Tổ trưởng ở bảng đơn giá theo vị trí (tab Nhân công);
      * đơn giá khoán của cả tổ luôn suy ra từ định biên. Xóa trống ô này thì ô biến mất và hợp đồng chuyển sang cách tính mới. */
@@ -118,7 +123,8 @@ function panelVc(rec) {
     '<label style="grid-column:1/-1"><span>Cách tính đơn giá vận chuyển</span><select name="vcMode">' + vcOptions(cur) + '</select></label>' +
     '<label data-vcgrp="coDinh" style="' + show('coDinh') + '"><span>Đơn giá cố định (đồng/tấn)</span><input name="vcCoDinh" value="' + esc(vc.coDinh ?? '') + '"></label>' +
     '<label data-vcgrp="tanKm" style="' + show('tanKm') + '"><span>Đơn giá tấn/km (đồng/tấn/km)</span><input name="vcKm" value="' + esc(vc.donGiaKm ?? '') + '"></label>' +
-    '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + (HAKCuLy.eff(i).nguon === 'tự tính' ? ', đường chim bay' : '') + ')' : 'chưa có') + '</b> · xem và sửa ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;,&quot;muc&quot;:&quot;toado&quot;}">tab Thông tin rừng → Tọa độ và cự ly → Cự ly vận chuyển (km)</button></div>' +
+    '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + (HAKCuLy.eff(i).nguon === 'tự tính' ? ', đường chim bay' :
+    '') + ')' : 'chưa có') + '</b> · xem và sửa ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;,&quot;muc&quot;:&quot;toado&quot;}">tab Thông tin rừng → Tọa độ và cự ly → Cự ly vận chuyển (km)</button></div>' +
     '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></div></form>' +

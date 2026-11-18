@@ -91,7 +91,8 @@ function persistLo(f) {
 function dbGhi() {
   if (!loDirty.size || !savedSnap) return db;
   const out = Object.assign({}, db, {rs: {}});
-  Object.entries(db.rs || {}).forEach(([oid, o]) => { if (!o || typeof o !== 'object') { out.rs[oid] = o; return; } const fs = {}; Object.entries(o.forests || {}).forEach(([fid, f]) => { const b = loDirty.has(f && f.id || fid) && savedSnap.forests.get(f && f.id || fid); fs[fid] = b ? JSON.parse(b.json) : f; }); out.rs[oid] = Object.assign({}, o, {forests: fs}); });
+  Object.entries(db.rs || {}).forEach(([oid, o]) => { if (!o || typeof o !== 'object') { out.rs[oid] = o; return; } const fs = {}; Object.entries(o.forests || {}).forEach(([fid, f]) => { const b = loDirty.has(f && f.id || fid) && savedSnap.forests.get(f && f.id || fid);
+  fs[fid] = b ? JSON.parse(b.json) : f; }); out.rs[oid] = Object.assign({}, o, {forests: fs}); });
   return out;
 }
 /* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu */
@@ -222,7 +223,8 @@ function ganDoi(doi, nc) {
 /* Ô số / ngày văn bản (data-exp): mỗi ô nằm ở MÀN CỦA ĐỐI TƯỢNG sở hữu nó — đội (tab Nhân công), đội xe / vận chuyển chung (tab Vận chuyển), lô (tab Xuất hồ sơ).
  * Ghi: ô của đội ghi vào đội đang chọn (ghiDoi), còn lại vào lô. */
 const EXP_VC = ['soVC', 'vcChiPhi', 'pcSo', 'pcNgay', 'pcNguoiLap', 'pcNguong'];
-const expTab = k => HAKModel.DOI_EXP.includes(k) ? {ftab: 'nc', muc: 'vanban'} : EXP_VC.includes(k) ? {ftab: 'finfo', muc: 'giaohang'} : {ftab: 'xuat', xtab: ['capNgay', 'capHan', 'capNguoi', 'dtNgay', 'dtDiaDiem', 'dtThoiLuong', 'dtNguoi', 'dtNoiDung', 'tbNgay', 'tbNguoi', 'tbSoBinh', 'thang'].includes(k) ? 'ld' : 'hd'};
+const expTab = k => HAKModel.DOI_EXP.includes(k) ? {ftab: 'nc', muc: 'vanban'} : EXP_VC.includes(k) ? {ftab: 'finfo', muc: 'giaohang'} : {ftab: 'xuat', xtab: ['capNgay', 'capHan', 'capNguoi', 'dtNgay', 'dtDiaDiem', 'dtThoiLuong', 'dtNguoi', 'dtNoiDung', 'tbNgay', 'tbNguoi', 'tbSoBinh',
+'thang'].includes(k) ? 'ld' : 'hd'};
 CONG_KT.expTab = expTab;   // kiểm thử đầu-cuối: ô này nằm ở màn nào
 function expInputs(list, ex) {
   return '<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">' +
@@ -276,7 +278,9 @@ function tgLechOf(i, pcs, nd) {
   if (!HAKDates.isValid(den)) { const ds = (pcs || []).map(p => HAKDates.parse(p.ngay)).filter(Boolean); if (!ds.length) return null; den = HAKDates.format(ds.reduce((a, b) => b.key > a.key ? b : a)); nguon = 'ngày cân cuối cùng'; }
   const r = HAKDinhMuc.lechThoiGian(i.tuNgay, den, n); return r ? Object.assign({den, nguon}, r) : null;
 }
-const tgLechText = (i, L) => 'Thời gian khai thác thực tế ' + L.thucTe + ' ngày (' + i.tuNgay + ' → ' + L.den + ' theo ' + L.nguon + ', không tính Chủ nhật) ' + (L.lech > 0 ? 'DÀI hơn' : 'NGẮN hơn') + ' dự kiến ' + L.duKien + ' ngày: ' + (L.lech > 0 ? '+' : '') + L.lech + ' ngày (' + (L.tyLe > 0 ? '+' : '') + String(L.tyLe).replace('.', ',') + '%). Ngưỡng cảnh báo: lệch quá ' + L.nguong + ' ngày (20% thời gian dự kiến, tối thiểu 3 ngày). Kiểm tra diện tích, định mức ngày/ha hoặc ngày kết thúc.';
+const tgLechText = (i,
+L) => 'Thời gian khai thác thực tế ' + L.thucTe + ' ngày (' + i.tuNgay + ' → ' + L.den + ' theo ' + L.nguon + ', không tính Chủ nhật) ' + (L.lech > 0 ? 'DÀI hơn' : 'NGẮN hơn') + ' dự kiến ' + L.duKien + ' ngày: ' + (L.lech > 0 ? '+' : '') + L.lech + ' ngày (' + (L.tyLe > 0 ? '+' : '') + String(L.tyLe).replace('.',
+',') + '%). Ngưỡng cảnh báo: lệch quá ' + L.nguong + ' ngày (20% thời gian dự kiến, tối thiểu 3 ngày). Kiểm tra diện tích, định mức ngày/ha hoặc ngày kết thúc.';
 const forestDays = (i, nd) => { const d = ngayHaEff(i); return d ? HAKDinhMuc.soNgay(haDoi(i, nd), d.v) : null; };
 const forestYield = i => HAKDinhMuc.sanLuongDuKien(db, i);
 const toDec = v => { const s = trim(v).replace(',', '.'); if (!s) return null; const n = Number(s); return isFinite(n) ? n : 'x'; };

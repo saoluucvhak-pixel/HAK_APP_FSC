@@ -33,7 +33,8 @@ function panelDsNC(rec) {
   const ben = d => { const n = benTen(d.benNhanKhoan); if (n) return esc(n) + ' <small class="mut">(bên nhận khoán)</small>'; const t = tt(d); return t ? esc(t) + ' <small class="mut">(Tổ trưởng)</small>' : '<span class="mut">—</span>'; };
   const pbk = HAKPhanBo.tinh(rec), kl = d => { const x = pbk.doi.find(y => y.id === d.id); return x && x.kg > 0 ? fmtT(x.kg) + ' tấn' : '—'; };   // 3.0: khối lượng theo phân bổ (cùng kết quả với biểu mẫu)
   const row = (d, i) => { const info = infoTeam(rec, d), so = soHdNc(rec, d);
-    return '<tr data-act="chonDoi" data-doi="' + esc(d.id) + '" tabindex="0" style="cursor:pointer"><td style="text-align:center">' + (i + 1) + '</td><td>' + (so ? '<b>' + esc(so) + '</b>' : '<span class="mut">chưa có số</span>') + '</td><td><b>' + esc(tenDoiNc(rec, d)) + '</b></td><td>' + (isDirect(info) ? 'Ký với cá nhân' : 'Giao khoán') + '</td><td>' + ben(d) + '</td>' +
+    return '<tr data-act="chonDoi" data-doi="' + esc(d.id) + '" tabindex="0" style="cursor:pointer"><td style="text-align:center">' + (i + 1) + '</td><td>' + (so ? '<b>' + esc(so) + '</b>' : '<span class="mut">chưa có số</span>') + '</td><td><b>' + esc(tenDoiNc(rec, d)) + '</b></td><td>' +
+    (isDirect(info) ? 'Ký với cá nhân' : 'Giao khoán') + '</td><td>' + ben(d) + '</td>' +
       '<td style="text-align:center">' + (rec.nc || []).filter(r => r.doiId === d.id).length + '</td><td style="text-align:right">' + kl(d) + '</td><td><button class="btn sm" data-act="chonDoi" data-doi="' + esc(d.id) + '">Mở</button></td></tr>'; };
   return '<div class="card" id="dsHdNc"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Hợp đồng nhân công của rừng: ' + ds.length + '</h3>' +
     '<span class="row" style="gap:6px"><input id="doiMoiTen" placeholder="Tên đội mới, ví dụ Đội ' + (ds.length + 1) + '" style="width:200px"><button class="btn ghost sm" data-act="themDoi">+ Thêm hợp đồng (đội)</button></span></div>' +
@@ -87,7 +88,8 @@ function veLaiGhi(noi) {
     ten: noi === 'setxe' ? 'Danh mục xe (xe đang nhập)' : noi === 'setdt' ? 'Danh mục đối tượng (đang sửa)' : NAV.view === 'owner' && NAV.curF ? 'hợp đồng đang mở' : 'màn trước'};
 }
 function veLaiThanh() {
-  return veLai ? '<div class="msg" id="veLaiBar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px"><span>Đang mở từ <b>' + esc(veLai.ten) + '</b>: bản đang nhập vẫn được giữ.</span><button class="btn sm" data-act="veLai" id="veLaiBtn">← Quay lại ' + esc(veLai.ten) + '</button></div>' : '';
+  return veLai ? '<div class="msg" id="veLaiBar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px"><span>Đang mở từ <b>' + esc(veLai.ten) + '</b>: bản đang nhập vẫn được giữ.</span><button class="btn sm" data-act="veLai" id="veLaiBtn">← Quay lại ' + esc(veLai.ten) +
+  '</button></div>' : '';
 }
 function veLaiDi() {
   const v = veLai; veLai = null; if (!v) return render();
@@ -129,7 +131,8 @@ function benNhanKhoanCanhBao(rec, t) {
   const c = t.benNhanKhoanBan, thieu = benNhanKhoanThieu(c);
   return (benNhanKhoanLech(t) ? '<div class="msg warn" id="benNKDoi" style="grid-column:1/-1">Danh mục đã sửa thông tin bên nhận khoán sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button type="button" class="btn ghost sm" data-act="benNKCapNhat">Cập nhật theo danh mục</button></div>' : '') +
     (c && thieu.length ? '<div class="msg err" id="benNKThieu" style="grid-column:1/-1">Bên nhận khoán còn thiếu ' + esc(thieu.join(', ')) + ': bổ sung ở Danh mục đối tượng rồi “Cập nhật theo danh mục” trước khi xuất bản chính thức.</div>' : '') +
-    (c ? '<div class="mut" id="benNKIn" style="grid-column:1/-1">Bản in: <b>' + esc(c.ten) + '</b>' + (c.loai === 'phapnhan' ? ' · MST ' + esc(c.mst || '…') + ' · đại diện ' + esc(c.daiDien || '…') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '') : (c.cccd ? ' · CCCD ' + esc(c.cccd) : '')) + '. Tổ trưởng vẫn đứng tên ở các mục của đội (danh sách, ủy quyền, chấm công).</div>' : '');
+    (c ? '<div class="mut" id="benNKIn" style="grid-column:1/-1">Bản in: <b>' + esc(c.ten) + '</b>' + (c.loai === 'phapnhan' ? ' · MST ' + esc(c.mst || '…') + ' · đại diện ' + esc(c.daiDien || '…') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '') : (c.cccd ? ' · CCCD ' + esc(c.cccd) : '')) +
+    '. Tổ trưởng vẫn đứng tên ở các mục của đội (danh sách, ủy quyền, chấm công).</div>' : '');
 }
 /* (bản cũ) bên nhận khoán là người chưa là Tổ trưởng của đội */
 function benNhanKhoanTT(rec, t) {
@@ -145,7 +148,8 @@ function benNhanKhoanTT(rec, t) {
 function benNhanKhoanChup(b) {
   const x = benTim(b); if (!x) return null;
   if (!x.ng) return {loai: 'phapnhan', ten: x.dt.ten || '', mst: x.dt.mst || '', diaChi: x.dt.diaChi || '', sdt: x.dt.sdt || '', daiDien: x.dt.daiDien || '', chucVu: x.dt.chucVuDaiDien || ''};
-  const p = x.ng; return {loai: 'canhan', ten: p.hoTen || '', danhXung: p.gioiTinh === 'Nữ' ? 'Bà' : p.gioiTinh === 'Nam' ? 'Ông' : '', ngaySinh: p.ngaySinh || '', cccd: p.cccd || '', ngayCap: p.ngayCap || '', noiCap: p.noiCap || '', diaChi: p.diaChi || x.dt.diaChi || '', sdt: p.sdt || '', chucVu: p.chucDanhKy || '', doiTuongTen: x.dt.ten || ''};
+  const p = x.ng; return {loai: 'canhan', ten: p.hoTen || '', danhXung: p.gioiTinh === 'Nữ' ? 'Bà' : p.gioiTinh === 'Nam' ? 'Ông' : '', ngaySinh: p.ngaySinh || '', cccd: p.cccd || '', ngayCap: p.ngayCap || '', noiCap: p.noiCap || '', diaChi: p.diaChi || x.dt.diaChi || '', sdt: p.sdt || '',
+  chucVu: p.chucDanhKy || '', doiTuongTen: x.dt.ten || ''};
 }
 /* thông tin còn thiếu để in bên nhận khoán (theo bản chụp): [tên trường] */
 function benNhanKhoanThieu(c) {

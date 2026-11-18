@@ -22,7 +22,8 @@ function panelNorm() {
 /* Định mức gỗ keo: 1 ha = ? tấn, có hiệu lực từ ngày. Rừng lấy làm mặc định theo ngày bắt đầu khai thác; rừng tự điền số khác thì dùng số riêng */
 function keoCard() {
   const items = HAKDinhMuc.keoItems(db);
-  const row = (x, n) => '<tr data-keo="' + n + '"><td><input name="k_tu" value="' + esc(x.tuNgay) + '" placeholder="dd/mm/yyyy" style="width:150px"></td><td><input name="k_tan" value="' + esc(x.tanHa == null ? '' : String(x.tanHa).replace('.', ',')) + '" placeholder="VD: 80" style="width:130px;text-align:right"></td><td>' + (x.tuNgay ? '<button class="btn ghost sm" type="button" data-act="keoDel">Xóa</button>' : '') + '</td></tr>';
+  const row = (x, n) => '<tr data-keo="' + n + '"><td><input name="k_tu" value="' + esc(x.tuNgay) + '" placeholder="dd/mm/yyyy" style="width:150px"></td><td><input name="k_tan" value="' + esc(x.tanHa == null ? '' : String(x.tanHa).replace('.', ',')) +
+  '" placeholder="VD: 80" style="width:130px;text-align:right"></td><td>' + (x.tuNgay ? '<button class="btn ghost sm" type="button" data-act="keoDel">Xóa</button>' : '') + '</td></tr>';
   return '<h2 style="margin-top:24px">Định mức gỗ keo: 1 ha = ? tấn</h2><div class="card"><form id="keoForm">' +
     '<p class="mut" style="margin-top:0">Mỗi định mức có <b>hiệu lực từ ngày</b>. Rừng lấy định mức này làm <b>mặc định</b> theo ngày bắt đầu khai thác của rừng (chưa có ngày thì dùng bản mới nhất). Rừng có định mức khác thì tự điền ở Thông tin rừng.</p>' +
     '<table class="normTbl" style="min-width:0;table-layout:auto;max-width:560px"><thead><tr><th>Hiệu lực từ ngày</th><th>1 ha = … tấn</th><th></th></tr></thead><tbody>' + items.map(row).join('') + row({tuNgay: '', tanHa: null}, 'new') + '</tbody></table>' +
@@ -34,10 +35,14 @@ function dbVerBar() {
   const vs = HAKDinhBien.versions(db), cur = vs.find(v => v.id === dbVer) || vs[vs.length - 1];
   const lots = []; Object.values(db.rs || {}).forEach(o => forestList(o).forEach(f => lots.push({maRung: f.info.maRung, tuNgay: (f.info || {}).tuNgay || ''})));
   const ahc = HAKDinhBien.anhHuongChiTiet(db, cur.id, lots), ah = ahc.lo;
-  return '<div class="row" id="dbVerBar" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin:6px 0"><label>Phiên bản <select id="dbVerSel">' + vs.map(v => '<option value="' + esc(v.id) + '"' + (v.id === cur.id ? ' selected' : '') + '>' + (v.tuNgay ? 'Hiệu lực từ ' + esc(v.tuNgay) : 'Bản gốc (từ trước)') + '</option>').join('') + '</select></label>' +
+  return '<div class="row" id="dbVerBar" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin:6px 0"><label>Phiên bản <select id="dbVerSel">' + vs.map(v => '<option value="' + esc(v.id) + '"' + (v.id === cur.id ? ' selected' : '') + '>' + (v.tuNgay ? 'Hiệu lực từ ' + esc(v.tuNgay) :
+  'Bản gốc (từ trước)') + '</option>').join('') + '</select></label>' +
     '<label>Thêm phiên bản từ ngày <input id="dbVerNew" placeholder="dd/mm/yyyy" style="width:120px"></label><button class="btn ghost sm" type="button" data-act="dbVerAdd">Sao chép phiên bản này thành phiên bản mới</button>' +
     (cur.id !== 'goc' ? '<button class="btn ghost sm" type="button" data-act="dbVerDel">Xóa phiên bản này</button>' : '') + '</div>' +
-    '<p class="mut" style="margin:0 0 6px">Lô dùng phiên bản có hiệu lực tại <b>ngày bắt đầu khai thác</b> của lô. Phiên bản đang xem áp dụng cho <b>' + ah.length + '</b> lô' + (ah.length ? ': ' + esc(ah.slice(0, 8).map(l => l.maRung || '(chưa mã)').join(', ')) + (ah.length > 8 ? ' …' : '') : '') + '. Thêm phiên bản mới không đổi các lô bắt đầu trước ngày hiệu lực.' + (ahc.ngayLoi.length ? ' <b class="err">Chưa xác định được phiên bản của ' + ahc.ngayLoi.length + ' lô vì ngày bắt đầu khai thác không có thật: ' + esc(ahc.ngayLoi.slice(0, 6).map(l => (l.maRung || '(chưa mã)') + ' (' + l.tuNgay + ')').join(', ')) + ' — sửa ngày ở Thông tin rừng.</b>' : '') + '</p>';
+    '<p class="mut" style="margin:0 0 6px">Lô dùng phiên bản có hiệu lực tại <b>ngày bắt đầu khai thác</b> của lô. Phiên bản đang xem áp dụng cho <b>' + ah.length + '</b> lô' + (ah.length ? ': ' + esc(ah.slice(0,
+    8).map(l => l.maRung || '(chưa mã)').join(', ')) + (ah.length > 8 ? ' …' : '') : '') + '. Thêm phiên bản mới không đổi các lô bắt đầu trước ngày hiệu lực.' + (ahc.ngayLoi.length ? ' <b class="err">Chưa xác định được phiên bản của ' + ahc.ngayLoi.length +
+    ' lô vì ngày bắt đầu khai thác không có thật: ' + esc(ahc.ngayLoi.slice(0,
+    6).map(l => (l.maRung || '(chưa mã)') + ' (' + l.tuNgay + ')').join(', ')) + ' — sửa ngày ở Thông tin rừng.</b>' : '') + '</p>';
 }
 function dbCard() {
   const vsAll = HAKDinhBien.versions(db), curV = vsAll.find(v => v.id === dbVer) || vsAll[vsAll.length - 1];
@@ -48,8 +53,12 @@ function dbCard() {
     '<td><textarea name="b_nv" rows="4" placeholder="Nhiệm vụ của vị trí" style="width:100%;min-width:320px">' + esc(r.nhiemVu || '') + '</textarea></td>' +
     '<td>' + (r.chucDanh && r.chucDanh !== HAKDinhBien.TO_TRUONG ? '<button class="btn ghost sm" type="button" data-act="dbDel">Xóa</button>' : '') + '</td></tr>';
   return '<h2 style="margin-top:24px">Định mức nhân công: 1 đội = ' + tong + ' người</h2><div class="card">' + dbVerBar() + '<form id="dbForm">' +
-    '<p class="mut" style="margin-top:0">Định biên một đội khai thác và <b>nhiệm vụ từng vị trí</b>. Người <b>kiêm nhiệm</b> là một trong số người của vị trí gốc (ví dụ Tổ trưởng kiêm bốc xếp thì tổ bốc xếp có ' + (g.rows.find(r => r.chucDanh === 'Công nhân bốc xếp') ? g.rows.find(r => r.chucDanh === 'Công nhân bốc xếp').soNguoi + 1 : 'thêm 1') + ' người gồm cả Tổ trưởng). Vị trí mới được tự thêm vào danh sách chức danh ở tab Nhân công; <b>định mức BHLĐ và đơn giá của vị trí mới cần khai</b> ở các mục tương ứng. Tab Nhân công so sánh số người thực tế với định mức này (thiếu, thừa chỉ cảnh báo).' + (g.saved ? '' : ' <b>Đang hiển thị định mức mặc định, bấm Lưu để dùng.</b>') + '</p>' +
-    '<div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Số người</th><th>Kiêm nhiệm</th><th>Nhiệm vụ</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' + g.rows.map(row).join('') + row({chucDanh: '', soNguoi: null, kiemNhiem: '', nhiemVu: ''}, 'new') + '</tbody></table></div>' +
+    '<p class="mut" style="margin-top:0">Định biên một đội khai thác và <b>nhiệm vụ từng vị trí</b>. Người <b>kiêm nhiệm</b> là một trong số người của vị trí gốc (ví dụ Tổ trưởng kiêm bốc xếp thì tổ bốc xếp có ' + (g.rows.find(r => r.chucDanh === 'Công nhân bốc xếp') ?
+    g.rows.find(r => r.chucDanh === 'Công nhân bốc xếp').soNguoi + 1 : 'thêm 1') +
+    ' người gồm cả Tổ trưởng). Vị trí mới được tự thêm vào danh sách chức danh ở tab Nhân công; <b>định mức BHLĐ và đơn giá của vị trí mới cần khai</b> ở các mục tương ứng. Tab Nhân công so sánh số người thực tế với định mức này (thiếu, thừa chỉ cảnh báo).' + (g.saved ? '' :
+    ' <b>Đang hiển thị định mức mặc định, bấm Lưu để dùng.</b>') + '</p>' +
+    '<div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Số người</th><th>Kiêm nhiệm</th><th>Nhiệm vụ</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' + g.rows.map(row).join('') + row({chucDanh: '', soNguoi: null,
+    kiemNhiem: '', nhiemVu: ''}, 'new') + '</tbody></table></div>' +
     '<datalist id="dbPos">' + HAKDinhMuc.allPositions(db).map(x => '<option value="' + esc(x) + '">').join('') + '</datalist>' +
     '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn" type="submit">Lưu định mức nhân công</button><button class="btn ghost" type="button" data-act="dbReset">Dùng định mức mặc định</button><span class="mut">Dòng cuối để thêm vị trí mới.</span></div></form></div>';
 }
@@ -64,7 +73,9 @@ function saveDb(form) {
 /* Định mức thời gian khai thác: 1 ha = ? ngày, hiệu lực từ ngày; kèm năng suất 1 ngày = ? tấn suy ra từ định mức gỗ keo */
 function tgCard() {
   const items = HAKDinhMuc.tgItems(db);
-  const row = (x, n) => '<tr data-tg="' + n + '"><td><input name="t_tu" value="' + esc(x.tuNgay) + '" placeholder="dd/mm/yyyy" style="width:150px"></td><td><input name="t_ngay" value="' + esc(x.ngayHa == null ? '' : String(x.ngayHa).replace('.', ',')) + '" placeholder="VD: 5" style="width:130px;text-align:right"></td><td class="mut">' + (typeof x.ngayHa === 'number' ? (() => { const k = HAKDinhMuc.keoPick(db, x.tuNgay), ns = k.found ? HAKDinhMuc.nangSuat(k.item.tanHa, x.ngayHa) : null; return ns ? '1 ngày ≈ ' + String(ns).replace('.', ',') + ' tấn' : ''; })() : '') + '</td><td>' + (x.tuNgay ? '<button class="btn ghost sm" type="button" data-act="keoDel">Xóa</button>' : '') + '</td></tr>';
+  const row = (x, n) => '<tr data-tg="' + n + '"><td><input name="t_tu" value="' + esc(x.tuNgay) + '" placeholder="dd/mm/yyyy" style="width:150px"></td><td><input name="t_ngay" value="' + esc(x.ngayHa == null ? '' : String(x.ngayHa).replace('.',
+  ',')) + '" placeholder="VD: 5" style="width:130px;text-align:right"></td><td class="mut">' + (typeof x.ngayHa === 'number' ? (() => { const k = HAKDinhMuc.keoPick(db, x.tuNgay), ns = k.found ? HAKDinhMuc.nangSuat(k.item.tanHa, x.ngayHa) : null; return ns ? '1 ngày ≈ ' + String(ns).replace('.',
+  ',') + ' tấn' : ''; })() : '') + '</td><td>' + (x.tuNgay ? '<button class="btn ghost sm" type="button" data-act="keoDel">Xóa</button>' : '') + '</td></tr>';
   return '<h2 style="margin-top:24px">Định mức thời gian khai thác: 1 ha = ? ngày</h2><div class="card"><form id="tgForm">' +
     '<p class="mut" style="margin-top:0">Căn cứ <b>1 ha = … ngày</b> để suy ra <b>thời gian khai thác dự kiến</b> của từng rừng (diện tích × ngày/ha, làm tròn lên) và <b>ngày kết thúc dự kiến</b> từ ngày bắt đầu (không tính Chủ nhật). Mỗi định mức có <b>hiệu lực từ ngày</b>, rừng lấy theo ngày bắt đầu khai thác (chưa có ngày thì dùng bản mới nhất). Cột cuối là <b>năng suất 1 ngày = ? tấn</b> = định mức gỗ keo (tấn/ha) ÷ ngày/ha. Rừng có định mức khác thì tự điền ở Thông tin rừng.</p>' +
     '<table class="normTbl" style="min-width:0;table-layout:auto;max-width:620px"><thead><tr><th>Hiệu lực từ ngày</th><th>1 ha = … ngày</th><th>Năng suất</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' + items.map(row).join('') + row({tuNgay: '', ngayHa: null}, 'new') + '</tbody></table>' +

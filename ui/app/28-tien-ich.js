@@ -64,7 +64,8 @@ function chiXemData(rec, f, files) {
     chot: f.chot ? {phienBan: f.chot.phienBan, hash: f.chot.hash, at: new Date(f.chot.at).toLocaleString('vi-VN')} : null,
     tong: {nc: (rec.nc || []).length, dx: (rec.dx || []).length, pc: (rec.pc || []).length, kl: fmtT(klPhieu(rec.pc || []))},
     doi: (rec.doi || []).map(d => { const ng = (rec.nc || []).filter(r => r.doiId === d.id), tt = ng.find(isTT); return {ten: tenD(d.id), toTruong: tt ? tt.ten : '', soNguoi: ng.length, kl: fmtT(klPhieu((rec.pc || []).filter(p => p.doiId === d.id)))}; }),
-    doiXe: rec.hdvc ? groupsDX(rec).filter(g => g.hd).map(g => { const xs = HAKModel.xeOf(F, g.hd), bs = new Set(xs.map(r => trim(r.bienSo))); return {ten: trim(g.hd.ten) || 'Đội xe ' + (HAKModel.hdOrder(F).indexOf(g.hd) + 1), nguoiKy: g.ten, soXe: xs.length, soHD: soCua(g.hd.id, 'soVC'), soXN: soCua(g.hd.id, 'pcSo'), kl: fmtT(klPhieu((rec.pc || []).filter(p => bs.has(trim(p.bienSo)))))}; }) : [],
+    doiXe: rec.hdvc ? groupsDX(rec).filter(g => g.hd).map(g => { const xs = HAKModel.xeOf(F, g.hd), bs = new Set(xs.map(r => trim(r.bienSo)));
+    return {ten: trim(g.hd.ten) || 'Đội xe ' + (HAKModel.hdOrder(F).indexOf(g.hd) + 1), nguoiKy: g.ten, soXe: xs.length, soHD: soCua(g.hd.id, 'soVC'), soXN: soCua(g.hd.id, 'pcSo'), kl: fmtT(klPhieu((rec.pc || []).filter(p => bs.has(trim(p.bienSo)))))}; }) : [],
     nc: (rec.nc || []).map((r, k) => [k + 1, r.ten, r.vaiTro, r.chucDanh, tenD(r.doiId)]),
     dx: (rec.dx || []).map((r, k) => [k + 1, r.bienSo, r.chuXe, r.taiXe, dxHd(r)]),
     pc: (rec.pc || []).map((p, k) => [k + 1, p.ngay, p.soPhieu, p.bienSo, typeof p.kl === 'number' ? fmtTan(p.kl) : (p.kl || ''), tenD(p.doiId)]),
@@ -95,7 +96,8 @@ function inTomTat() { const f = curForest(), rec = curRec(); if (!f || !rec) ret
 function inBaoCao() {
   const b = document.getElementById('rpBody'); if (!b) return; const c = b.cloneNode(true);
   c.querySelectorAll('.gh, .rpl, .row, button, input, select, label, .msg, #rpFilter, details.rpF').forEach(x => x.remove());
-  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo</title><style>body{font:13px/1.45 "Segoe UI",Arial,sans-serif;color:#111;margin:18px}h3{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:3px 5px;text-align:left}thead th{background:#eee}.kpi{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.kpi div{font-size:12px}.kpi b{display:block;font-size:15px}.mut{color:#555}tr{break-inside:avoid}</style></head><body>' + c.innerHTML + '</body></html>';
+  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo</title><style>body{font:13px/1.45 "Segoe UI",Arial,sans-serif;color:#111;margin:18px}h3{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:3px 5px;text-align:left}thead th{background:#eee}.kpi{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.kpi div{font-size:12px}.kpi b{display:block;font-size:15px}.mut{color:#555}tr{break-inside:avoid}</style></head><body>' +
+  c.innerHTML + '</body></html>';
   return inHtml(html, 'Bao_cao_' + rp.id);
 }
 function tienIchBox(rec) {
@@ -115,7 +117,8 @@ function huongDanBox() {
   if (hdAnRoi() || window.__hdAnTam || xong === ds.length) return '';
   const tiep = ds.find(x => !x.xong);
   return '<div class="card" id="huongDan" data-xong="' + xong + '" data-tiep="' + tiep.id + '"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Hướng dẫn bắt đầu <span class="mut" style="font-weight:400">· xong ' + xong + '/' + ds.length + ' bước</span></h3><button class="btn ghost sm" data-act="hdAn">Ẩn hướng dẫn</button></div>' +
-    '<ol style="line-height:1.9;margin:8px 0 0;padding-left:22px">' + ds.map(x => '<li data-buoc="' + x.id + '" data-xong="' + (x.xong ? 1 : 0) + '"' + (x.xong ? ' class="mut"' : '') + '>' + (x.xong ? '✓ ' : '') + '<b>' + esc(x.ten) + '</b>' + (x === tiep ? ' <span class="pill warn">làm tiếp</span>' : '') + '<br><span class="mut">' + esc(x.moTa) + '</span>' +
+    '<ol style="line-height:1.9;margin:8px 0 0;padding-left:22px">' + ds.map(x => '<li data-buoc="' + x.id + '" data-xong="' + (x.xong ? 1 : 0) + '"' + (x.xong ? ' class="mut"' : '') + '>' + (x.xong ? '✓ ' : '') + '<b>' + esc(x.ten) + '</b>' + (x === tiep ?
+    ' <span class="pill warn">làm tiếp</span>' : '') + '<br><span class="mut">' + esc(x.moTa) + '</span>' +
       (x === tiep ? ' <button class="btn sm" data-act="' + (x.id === 'chu' ? 'newRs' : 'hdDi') + '" data-buoc="' + x.id + '">' + (x.id === 'chu' ? '+ Chủ rừng mới' : 'Mở nơi làm bước này') + '</button>' : '') + '</li>').join('') + '</ol>' +
     '<p class="mut" style="margin:8px 0 0">Mở lại bất cứ lúc nào ở ⋯ Thêm → Hướng dẫn bắt đầu. Tài liệu đầy đủ: ⋯ Thêm → Hướng dẫn sử dụng.</p></div>';
 }

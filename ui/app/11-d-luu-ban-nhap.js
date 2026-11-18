@@ -8,18 +8,21 @@ async function stSave(opt) {
   if (stSaving) return {ok: false, error: 'đang lưu'};
   const o = db.rs[NAV.cur], f = o && o.forests && o.forests[NAV.curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
   const pend = HAKStage.pendingOf(st);   // cùng quy tắc với bước xem trước: dòng cần đối chiếu chưa xử lý thì chưa lưu
-  if (pend.length) { const msg = 'Chưa lưu: còn ' + pend.length + ' dòng CẦN ĐỐI CHIẾU (cùng số phiếu nhưng khác ngày, biển số, nơi cân hoặc khối lượng): ' + pend.slice(0, 10).map(q => q.key).join(', ') + (pend.length > 10 ? '…' : '') + '. Chọn giữ bản hiện có, cập nhật cùng chuyến, chuyến khác hoặc bỏ dòng nguồn. Dữ liệu đã lưu và bản nháp giữ nguyên.'; pushNote(msg, 'err'); NAV.ftab = 'dx'; render(); return {ok: false, error: 'cần đối chiếu', pend}; }
+  if (pend.length) { const msg = 'Chưa lưu: còn ' + pend.length + ' dòng CẦN ĐỐI CHIẾU (cùng số phiếu nhưng khác ngày, biển số, nơi cân hoặc khối lượng): ' + pend.slice(0,
+  10).map(q => q.key).join(', ') + (pend.length > 10 ? '…' : '') + '. Chọn giữ bản hiện có, cập nhật cùng chuyến, chuyến khác hoặc bỏ dòng nguồn. Dữ liệu đã lưu và bản nháp giữ nguyên.'; pushNote(msg, 'err'); NAV.ftab = 'dx'; render(); return {ok: false, error: 'cần đối chiếu', pend}; }
   const idc = HAKStage.idConflicts(st);   // _id nội bộ phải duy nhất trước khi ghi SQLite; xung đột thì chặn, giữ dữ liệu đã lưu và bản nháp
   if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: 'trùng _id', idc}; }
   const rec0 = jobView(o, f), g0 = ganDoi(rec0.doi, st.cur.nc), v0 = ganVC(rec0.hdvc, st.cur.dx), p0 = ganPC(g0.doi, st.cur.pc), rec = Object.assign(rec0, {nc: g0.nc, doi: g0.doi, dx: v0.dx, hdvc: v0.hdvc, pc: p0, info: Object.assign({}, rec0.info, {_klPC: klPhieu(p0)})}), errs = [];
   let errTab = null, cfgWarn = 0;
   const dkv = HAKStage.dirtyKinds(st);   // chỉ kiểm phần có thay đổi; phiếu cân luôn kiểm cùng xe (quan hệ biển số)
-  [['Nhân công', checkNC, 'nc', ['nc']], ['Vận chuyển (xe)', checkDX, 'dx', ['dx']], ['Phiếu cân', checkPC, 'dx', ['pc', 'dx']]].filter(x => x[3].some(k => dkv.includes(k))).forEach(([n, fn, tb]) => { const c = fn(rec); if (c.errs.length && !errTab) errTab = tb; c.errs.filter(e => !CONFIG_ERR.test(e)).forEach(e => errs.push(n + ' — ' + e)); if (c.errs.some(e => CONFIG_ERR.test(e))) cfgWarn++; });
+  [['Nhân công', checkNC, 'nc', ['nc']], ['Vận chuyển (xe)', checkDX, 'dx', ['dx']], ['Phiếu cân', checkPC, 'dx', ['pc', 'dx']]].filter(x => x[3].some(k => dkv.includes(k))).forEach(([n, fn, tb]) => { const c = fn(rec); if (c.errs.length && !errTab) errTab = tb;
+  c.errs.filter(e => !CONFIG_ERR.test(e)).forEach(e => errs.push(n + ' — ' + e)); if (c.errs.some(e => CONFIG_ERR.test(e))) cfgWarn++; });
   if (errs.length) { stErrList = errs; pushNote('Chưa lưu: còn ' + errs.length + ' lỗi trong bản nháp. Sửa hoặc bỏ các dòng lỗi rồi lưu lại.', 'err'); NAV.ftab = errTab || NAV.ftab; render(); return {ok: false, error: 'lỗi dữ liệu', errs}; }
   // phiếu có cùng số ở lô khác: chưa đủ căn cứ xác định cùng chuyến → phải đối chiếu, không tự gộp
   const mine = new Set(st.cur.pc.map(p => String(p.soPhieu).toUpperCase())), dups = [];
   Object.values(db.rs).forEach(ow => forestList(ow).forEach(ff => { if (ow.id === NAV.cur && ff.id === NAV.curF) return; (ff.pc || []).forEach(p => { if (mine.has(String(p.soPhieu).toUpperCase())) dups.push(p.soPhieu + ' (lô ' + (ff.info.maRung || '?') + ', ' + (ow.info.ten || '') + ')'); }); }));
-  if (dups.length && !opt?.confirmedDup && !confirm('Có ' + dups.length + ' số phiếu cũng đang có ở lô khác:\n' + dups.slice(0, 10).map(x => '• ' + x).join('\n') + (dups.length > 10 ? '\n• …' : '') + '\n\nHai nơi cân hoặc hai lô có thể dùng trùng số phiếu. Đối chiếu kỹ (ngày, biển số, khối lượng) rồi bấm OK để vẫn lưu vào lô này, hoặc Hủy để quay lại.')) return {ok: false, error: 'chờ đối chiếu'};
+  if (dups.length && !opt?.confirmedDup && !confirm('Có ' + dups.length + ' số phiếu cũng đang có ở lô khác:\n' + dups.slice(0,
+  10).map(x => '• ' + x).join('\n') + (dups.length > 10 ? '\n• …' : '') + '\n\nHai nơi cân hoặc hai lô có thể dùng trùng số phiếu. Đối chiếu kỹ (ngày, biển số, khối lượng) rồi bấm OK để vẫn lưu vào lô này, hoặc Hủy để quay lại.')) return {ok: false, error: 'chờ đối chiếu'};
   stSaving = true; const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
   try {
     const cm = HAKStage.commit(st, r => HAKPhieuCan.chuanHoaNgay2(r, null)), at = stamp(), dk = HAKStage.dirtyKinds(st);   // mọi phiếu có cột ngày cân 2 khi lưu vào hồ sơ rừng (nhập thật thì giữ, trống thì suy ra)
@@ -34,7 +37,8 @@ async function stSave(opt) {
     f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).slice(-50);   // ghi vào lô cùng lần lưu (không kèm ảnh chụp hoàn tác)
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
     const r = await persistNow(); if (!r || !r.ok) throw new Error((r && r.error) || 'không rõ');
-    const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote('Đã thêm ' + nDm + ' người / xe mới vào Danh mục.', 'ok'); pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
+    const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote('Đã thêm ' + nDm + ' người / xe mới vào Danh mục.', 'ok');
+    pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
     Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
@@ -42,7 +46,8 @@ async function stSave(opt) {
   } finally { stSaving = false; }
 }
 let stErrList = null;
-function stDiscard(silent) { const k = stKey(); if (!stages[k] && !loDirty.has(NAV.curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(NAV.curF); nhapTamGhi(); stErrList = null; if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.', 'warn'); render(); }
+function stDiscard(silent) { const k = stKey(); if (!stages[k] && !loDirty.has(NAV.curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(NAV.curF); nhapTamGhi(); stErrList = null;
+if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.', 'warn'); render(); }
 /* hỏi khi rời lô còn thay đổi chưa lưu: Lưu và tiếp tục / Bỏ thay đổi / Quay lại chỉnh sửa */
 let stBypass = false;
 function stGuard(proceed) {
@@ -74,17 +79,23 @@ function dinhBienPanel(rec) {
   // lô nhiều đội: bảng vị trí so với ĐỘI ĐANG CHỌN (không phải đội đầu); cảnh báo lệch hiện cho từng đội ở dưới
   const tc = bd.multi ? (curTeam() || {}) : null, dc = bd.multi ? (bd.doi.find(d => d.id === tc.id) || bd.doi[0]) : null;
   const sc = HAKDinhBien.soSanh(g.rows, dc ? [dc.tt, ...dc.members] : rec.nc || []), lt = HAKDinhBien.lechText(sc);
-  const stDoi = bd.multi ? bd.doi.map(d => { const x = HAKDinhBien.soSanh(g.rows, [d.tt, ...d.members]), t = HAKDinhBien.lechText(x); return t ? '<div class="msg warn dbLechDoi"><b>Đội “' + esc(d.ten) + '” — lệch định mức nhân công (1 đội ' + x.can + ' người, hiện có ' + x.co + '):</b> ' + esc(t) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok dbLechDoi">Đội “' + esc(d.ten) + '” đúng định mức nhân công: ' + x.co + ' người.</div>'; }).join('') : '';
-  const st = bd.multi ? stDoi : !(rec.nc || []).length ? '' : lt ? '<div class="msg warn" id="dbLech"><b>Lệch định mức nhân công (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '):</b> ' + esc(lt) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok" id="dbLech">Đúng định mức nhân công: ' + sc.co + ' người.</div>';
-  return '<details class="card" id="dbPanel"><summary><b>Định mức nhân công và nhiệm vụ từng vị trí</b> — 1 đội ' + sc.can + ' người' + (g.saved ? '' : ' (mặc định)') + (dc ? ' · bảng so với đội “' + esc(dc.ten) + '” (đội đang chọn)' : '') + '</summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Định mức</th><th>Hiện có' + (dc ? ' (' + esc(dc.ten) + ')' : '') + '</th><th>Nhiệm vụ</th></tr></thead><tbody>' +
-    sc.vt.map((v, i) => '<tr><td><b>' + esc(v.chucDanh) + '</b>' + (v.kiemNhiem ? '<br><small class="mut">kiêm ' + esc(v.kiemNhiem) + '</small>' : '') + '</td><td style="text-align:center">' + v.can + '</td><td style="text-align:center">' + (v.lech === 0 ? v.co : '<b style="color:var(--warn)">' + v.co + '</b>') + '</td><td>' + esc(g.rows[i].nhiemVu) + '</td></tr>').join('') + '</tbody></table></div></details>' + st;
+  const stDoi = bd.multi ? bd.doi.map(d => { const x = HAKDinhBien.soSanh(g.rows, [d.tt, ...d.members]), t = HAKDinhBien.lechText(x);
+  return t ? '<div class="msg warn dbLechDoi"><b>Đội “' + esc(d.ten) + '” — lệch định mức nhân công (1 đội ' + x.can + ' người, hiện có ' + x.co + '):</b> ' + esc(t) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok dbLechDoi">Đội “' + esc(d.ten) + '” đúng định mức nhân công: ' + x.co + ' người.</div>';
+  }).join('') : '';
+  const st = bd.multi ? stDoi : !(rec.nc || []).length ? '' : lt ? '<div class="msg warn" id="dbLech"><b>Lệch định mức nhân công (1 đội ' + sc.can + ' người, hiện có ' + sc.co + '):</b> ' + esc(lt) + '. Chỉ cảnh báo, không chặn.</div>' : '<div class="msg ok" id="dbLech">Đúng định mức nhân công: ' +
+  sc.co + ' người.</div>';
+  return '<details class="card" id="dbPanel"><summary><b>Định mức nhân công và nhiệm vụ từng vị trí</b> — 1 đội ' + sc.can + ' người' + (g.saved ? '' : ' (mặc định)') + (dc ? ' · bảng so với đội “' + esc(dc.ten) + '” (đội đang chọn)' : '') +
+  '</summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Định mức</th><th>Hiện có' + (dc ? ' (' + esc(dc.ten) + ')' : '') + '</th><th>Nhiệm vụ</th></tr></thead><tbody>' +
+    sc.vt.map((v, i) => '<tr><td><b>' + esc(v.chucDanh) + '</b>' + (v.kiemNhiem ? '<br><small class="mut">kiêm ' + esc(v.kiemNhiem) + '</small>' : '') + '</td><td style="text-align:center">' + v.can + '</td><td style="text-align:center">' + (v.lech === 0 ? v.co : '<b style="color:var(--warn)">' +
+    v.co + '</b>') + '</td><td>' + esc(g.rows[i].nhiemVu) + '</td></tr>').join('') + '</tbody></table></div></details>' + st;
 }
 /* Các đội của lô: mỗi Tổ trưởng một đội, mỗi đội một hợp đồng giao khoán, sản lượng chia theo số người */
 function doiPanel(rec) {
   const b = doiOf(rec), tt = (rec.nc || []).filter(isTT).length;
   if (!b.multi) return tt <= 1 && (rec.nc || []).length ? '<div class="mut" id="doiInfo" style="margin:6px 0">Mỗi hợp đồng nhân công quản lý một đội. Để thêm đội, quay lại danh sách hợp đồng nhân công.</div>' : '';
   const bq = basisOf(rec.info).qty, bs = bq === 'ha' ? 'ha' : 'tan', unit = bq === 'ha' ? 'ha' : 'tấn', fmtV = v => v == null ? '—' : formatNumber(v, 3);
-  return '<details class="card" id="doiPanel" open><summary><b>Nhiều đội: ' + b.doi.length + ' đội, ' + b.doi.length + ' hợp đồng giao khoán</b></summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Đội</th><th>Tổ trưởng</th><th>Số người</th><th>Phần sản lượng (' + unit + ')</th><th>Số hợp đồng giao khoán</th></tr></thead><tbody>' +
+  return '<details class="card" id="doiPanel" open><summary><b>Nhiều đội: ' + b.doi.length + ' đội, ' + b.doi.length +
+  ' hợp đồng giao khoán</b></summary><div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Đội</th><th>Tổ trưởng</th><th>Số người</th><th>Phần sản lượng (' + unit + ')</th><th>Số hợp đồng giao khoán</th></tr></thead><tbody>' +
     b.doi.map((d, di) => '<tr><td><b>' + esc(d.ten) + '</b></td><td>' + esc(d.tt.ten) + '</td><td style="text-align:center">' + d.n + '</td><td style="text-align:right">' + fmtV(bs === 'ha' ? d.dienTich : d.khoiLuong) + '</td><td>' + esc(soDoiSo(HAKHopDong.numbers(exOf(rec, 'day')).kt, di + 1).so) + '</td></tr>').join('') +
     '</tbody></table></div><p class="mut" style="margin:8px 0 0">Sản lượng của lô chia cho các đội theo số người. Mỗi đội có <b>số hợp đồng riêng</b> (số bạn nhập thêm .1, .2… theo thứ tự đội), hợp đồng giao khoán (BM-01), giấy ủy quyền (BM-20), bảng chấm công, danh sách đội, bảng thanh toán tiền công và biên bản nghiệm thu riêng, xuất vào thư mục con theo tên đội.</p></details>';
 }
@@ -114,7 +125,10 @@ function panelDoiKT(rec, phan) {   // phan: 'tt' = chọn đội và thông tin 
   const f = curForest(); if (!f || !rec.doi) return '';
   const t = curTeam(f), n = d => (rec.nc || []).filter(r => r.doiId === d.id).length, multi = rec.doi.length > 1, chua = (rec.nc || []).filter(r => !rec.doi.some(d => d.id === r.doiId)).length;
   const tt = d => { const x = (rec.nc || []).find(r => r.doiId === d.id && isTT(r)); return x ? x.ten : '—'; };
-  const row = (d, k) => '<tr class="' + (d.id === t.id ? 'sel' : '') + '" data-act="chonDoi" data-doi="' + esc(d.id) + '" style="cursor:pointer' + (d.id === t.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(d.ten || ('Đội ' + (k + 1))) + '</b>' + (d.id === t.id ? ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + esc(tt(d)) + '</td><td style="text-align:center">' + n(d) + '</td><td>' + esc(hinhThucNgan(infoTeam(rec, d))) + '</td><td style="text-align:right">' + (typeof d.dienTich === 'number' ? formatNumber(d.dienTich, 3) : multi ? '<span class="mut">theo số người</span>' : '<span class="mut">cả lô</span>') + '</td></tr>';
+  const row = (d,
+  k) => '<tr class="' + (d.id === t.id ? 'sel' : '') + '" data-act="chonDoi" data-doi="' + esc(d.id) + '" style="cursor:pointer' + (d.id === t.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(d.ten || ('Đội ' + (k + 1))) + '</b>' + (d.id === t.id ?
+  ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + esc(tt(d)) + '</td><td style="text-align:center">' + n(d) + '</td><td>' + esc(hinhThucNgan(infoTeam(rec,
+  d))) + '</td><td style="text-align:right">' + (typeof d.dienTich === 'number' ? formatNumber(d.dienTich, 3) : multi ? '<span class="mut">theo số người</span>' : '<span class="mut">cả lô</span>') + '</td></tr>';
   if (hdMo('nc')) return '<div class="card" id="doiKT"><h3 style="margin:0 0 6px">Thông tin hợp đồng</h3>' + (chua ? '<div class="msg warn" style="margin-top:6px">' + chua + ' người chưa thuộc đội nào: chọn đội ở cột Đội của bảng nhân công.</div>' : '') +   // 3.0 trang chi tiết: danh sách đội ở trang danh sách
     doiFormHtml(t, multi, rec) + '</div>';
   return '<div class="card" id="doiKT"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Nhân công khai thác: ' + rec.doi.length + ' đội</h3><span class="row"><input id="doiMoiTen" placeholder="Tên đội mới, ví dụ Đội ' + (rec.doi.length + 1) + '" style="width:200px"><button class="btn ghost sm" data-act="themDoi">+ Thêm đội khai thác</button></span></div>' +
@@ -147,9 +161,11 @@ function panelThanhVien(rec) {
   const c = checkNC(rec), head = panelImport('nc', rec) + stBar('nc', rec) + stErrBox();
   if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có nhân công. Bấm “+ Thêm nhân công” để chọn từ Danh mục đối tượng.</div>';
   const t = rec.doi && rec.doi.length > 1 && !NAV.ncTatCa ? curTeam() : null, only = t ? r => r.doiId === t.id || !rec.doi.some(d => d.id === r.doiId) : null;   // lô nhiều đội: chỉ người của đội đang chọn (và người chưa thuộc đội)
-  const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' : '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';
+  const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' :
+  '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';
   const hienDoi = rec.doi?.length > 1;
   return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', ...(hienDoi ? ['Đội'] : []), 'Đơn giá'],
-    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td>' + (hienDoi ? '<td>' + doiCell(rec, r) + '</td>' : '') + '<td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>', c, null, only);
+    r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td>' + (hienDoi ? '<td>' + doiCell(rec, r) + '</td>' : '') + '<td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>',
+    c, null, only);
 }
 

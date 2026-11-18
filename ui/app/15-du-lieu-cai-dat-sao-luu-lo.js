@@ -28,10 +28,12 @@ async function issueAct(kind) {
 /* ===== Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu (bản cài trên máy; xử lý ở src/main.js, src/settings.js) ===== */
 /* Cài đặt: Hệ thống (thư mục dữ liệu, sao lưu) · Google Sheets (địa chỉ bảng tính) · Công ty (công ty mua hàng) · Hiển thị số */
 /* 3.0: Cài đặt nằm trên thanh chính; Danh mục đối tượng, Danh mục xe, Vị trí, Giao diện, Hướng dẫn, Sao lưu và khôi phục, Cần đối chiếu đều ở đây (bỏ menu “⋯ Thêm”) */
-const SET_TABS = [['setdt', 'Danh mục đối tượng', 'openSetDt'], ['setxe', 'Danh mục xe', 'openSetXe'], ['setvt', 'Vị trí', 'openSetVt'], ['cty', 'Công ty mua hàng', 'openCty'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị số', 'openSetFmt'], ['setgd', 'Giao diện', 'openSetGd'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
+const SET_TABS = [['setdt', 'Danh mục đối tượng', 'openSetDt'], ['setxe', 'Danh mục xe', 'openSetXe'], ['setvt', 'Vị trí', 'openSetVt'], ['cty', 'Công ty mua hàng', 'openCty'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets',
+'openSetGs'], ['setfmt', 'Hiển thị số', 'openSetFmt'], ['setgd', 'Giao diện', 'openSetGd'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
 const SET_VIEWS = ['setdt', 'setxe', 'setvt', 'cty', 'settings', 'setbk', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
 function settingsFrame(active, inner) {
-  return '<h2>Cài đặt</h2>' + veLaiThanh() + '<div class="mucLayout"><nav class="mucNav" aria-label="Các mục cài đặt">' + SET_TABS.map(([v, l, a]) => '<button' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') + '</nav><section class="mucNoiDung">' + inner + '</section></div>';
+  return '<h2>Cài đặt</h2>' + veLaiThanh() + '<div class="mucLayout"><nav class="mucNav" aria-label="Các mục cài đặt">' + SET_TABS.map(([v, l, a]) => '<button' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') +
+  '</nav><section class="mucNoiDung">' + inner + '</section></div>';
 }
 const setgs = {st: null, msg: null};
 function panelSetGs() {
@@ -44,7 +46,8 @@ function panelSetGs() {
     '<p class="mut" style="margin-bottom:0">Việc đồng bộ dữ liệu làm ở màn Tra cứu Google Sheets.</p></div>';
 }
 function panelSetFmt() {
-  const row = (v, label, ex) => '<label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink)"><input type="radio" name="numStyle" value="' + v + '"' + ((db.dinhDangSo === 'en' ? 'en' : 'vi') === v ? ' checked' : '') + ' data-act="setNumStyle"> <span><b>' + label + '</b> · ví dụ ' + ex + '</span></label>';
+  const row = (v, label, ex) => '<label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink)"><input type="radio" name="numStyle" value="' + v + '"' + ((db.dinhDangSo === 'en' ? 'en' : 'vi') === v ? ' checked' : '') + ' data-act="setNumStyle"> <span><b>' + label + '</b> · ví dụ ' +
+  ex + '</span></label>';
   const sample = n => { const t = n.toLocaleString('vi-VN', {maximumFractionDigits: 3}); return t; };
   return '<div class="card"><h3 style="margin-top:0">Hiển thị số</h3>' +
     '<p class="mut" style="margin-top:0">Chọn cách hiển thị số trên màn hình (tiền, khối lượng, diện tích). Ngày luôn là <b>dd/mm/yyyy</b> (ví dụ 05/10/2026) cho nhập liệu, kiểm tra và biểu mẫu. Biểu mẫu Word và file in luôn dùng kiểu Việt Nam.</p>' +
@@ -63,17 +66,22 @@ function settingsPaint() {
     '<div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn" data-act="' + act + '"' + (s.lockedByEnv && act === 'setData' ? ' disabled' : '') + '>Chọn thư mục…</button>' +
     (custom ? '<button class="btn ghost" data-act="' + actDef + '">Về mặc định</button>' : '') + (extra || '') + '</div>' +
     '<div class="mut" style="margin-top:6px;font-size:12px">Mặc định: ' + esc(def) + '</div></div>';
-  const di = s.dbInfo || {}, nowCard = '<div class="card" style="margin:10px 0" id="dbNow"><h3 style="margin:0 0 4px">Cơ sở dữ liệu đang dùng</h3><div style="word-break:break-all"><code data-db-now>' + esc(s.dbFile) + '</code></div><div class="mut" style="margin-top:4px">' + (di.size != null ? 'Dung lượng ' + (di.size / 1048576 >= 1 ? (di.size / 1048576).toFixed(1) + ' MB' : Math.ceil(di.size / 1024) + ' KB') : '') + (di.mtime ? ' · sửa lần cuối ' + esc(new Date(di.mtime).toLocaleString('vi-VN')) : '') + (di.version ? ' · cấu trúc v' + di.version : '') + '</div></div>';
+  const di = s.dbInfo || {}, nowCard = '<div class="card" style="margin:10px 0" id="dbNow"><h3 style="margin:0 0 4px">Cơ sở dữ liệu đang dùng</h3><div style="word-break:break-all"><code data-db-now>' + esc(s.dbFile) + '</code></div><div class="mut" style="margin-top:4px">' + (di.size != null ?
+  'Dung lượng ' + (di.size / 1048576 >= 1 ? (di.size / 1048576).toFixed(1) + ' MB' : Math.ceil(di.size / 1024) + ' KB') : '') + (di.mtime ? ' · sửa lần cuối ' + esc(new Date(di.mtime).toLocaleString('vi-VN')) : '') + (di.version ? ' · cấu trúc v' + di.version : '') + '</div></div>';
   box.className = ''; box.innerHTML = nowCard +
     (s.missing.length ? '<div class="msg warn">Thư mục đã chọn trước đây không còn: ' + s.missing.map(esc).join('; ') + '. Ứng dụng đang dùng vị trí mặc định.</div>' : '') +
     (s.lockedByEnv ? '<div class="msg warn">Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB nên không đổi được ở đây.</div>' : '') +
-    row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).', s.dbFile, s.customData, s.defaultDataDir, 'setData', 'setDataDefault', '<button class="btn ghost" data-act="setOpenData">Mở thư mục chứa dữ liệu</button>') +
-    row('Thư mục sao lưu', 'Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu hằng ngày, bản sao lưu toàn bộ (⋯ Thêm → Sao lưu toàn bộ dữ liệu: lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc ổ USB để phòng hỏng máy.', s.backupDir, s.customBackup, s.defaultBackupDir, 'setBackup', 'setBackupDefault', '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button>') +
+    row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).',
+    s.dbFile, s.customData, s.defaultDataDir, 'setData', 'setDataDefault', '<button class="btn ghost" data-act="setOpenData">Mở thư mục chứa dữ liệu</button>') +
+    row('Thư mục sao lưu', 'Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu hằng ngày, bản sao lưu toàn bộ (⋯ Thêm → Sao lưu toàn bộ dữ liệu: lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc ổ USB để phòng hỏng máy.', s.backupDir,
+    s.customBackup, s.defaultBackupDir, 'setBackup', 'setBackupDefault', '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button>') +
     '<div class="card" style="margin:10px 0" id="dbBk2"><h3 style="margin:0 0 4px">Thư mục sao lưu thứ hai</h3><p class="mut" style="margin:0 0 8px">Mỗi bản tự sao lưu hằng ngày được chép thêm sang đây (ổ ngoài, USB, thư mục đồng bộ) để phòng hỏng cả máy. Ổ không cắm thì bỏ qua, bản chính vẫn còn.</p>' +
-    (s.auto && s.auto.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(s.auto.dir2) + '</code></div>' + ((s.auto.result && s.auto.result.copy2 && !s.auto.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' + esc(s.auto.result.copy2.error) + '</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
+    (s.auto && s.auto.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(s.auto.dir2) + '</code></div>' + ((s.auto.result && s.auto.result.copy2 && !s.auto.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' +
+    esc(s.auto.result.copy2.error) + '</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
     '<div class="row" style="margin-top:8px;gap:8px"><button class="btn" data-act="setBackup2">Chọn thư mục…</button>' + (s.auto && s.auto.dir2 ? '<button class="btn ghost" data-act="setBackup2Off">Tắt</button>' : '') + '</div></div>' +
     '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">Nhắc sao lưu</h3><p class="mut" style="margin:0 0 8px">Khi mở phần mềm, nhắc sao lưu toàn bộ dữ liệu nếu đã quá số ngày dưới đây kể từ lần sao lưu cuối (⋯ Thêm → Sao lưu toàn bộ dữ liệu).</p>' +
-    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Nhắc sau <select id="setRemind">' + [[0, 'Không nhắc'], [3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày']].map(o => '<option value="' + o[0] + '"' + (o[0] === s.remind.remindDays ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Nhắc sau <select id="setRemind">' + [[0, 'Không nhắc'], [3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày']].map(o => '<option value="' + o[0] + '"' + (o[0] === s.remind.remindDays ? ' selected' : '') + '>' +
+    o[1] + '</option>').join('') + '</select></label>' +
     '<span class="mut">Sao lưu toàn bộ lần cuối: ' + (s.remind.lastBackup ? esc(new Date(s.remind.lastBackup).toLocaleString('vi-VN')) : 'chưa có') + '</span></div></div>' + autoBackupCard(s.auto) +
     '<p class="mut" style="margin:10px 0 0">Xem, kiểm tra, khôi phục và dọn các bản sao lưu: tab <b>Sao lưu và khôi phục</b> ở trên. <button class="btn ghost sm" data-act="openSetBk" id="moKhoSaoLuu">Mở kho sao lưu</button></p>';
   const ak = document.getElementById('setAutoKeep');
@@ -87,7 +95,8 @@ function autoBackupCard(a) {
   const r = a.result, last = a.last, sz = b => b / 1048576 >= 1 ? (b / 1048576).toFixed(1) + ' MB' : Math.ceil(b / 1024) + ' KB';
   const st = !a.keep ? 'Đang tắt.' : r && !r.ok ? '<span class="warnTxt">Lần chạy gần nhất không được: ' + esc(r.error || '') + '</span>' : r && r.skipped && r.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : '';
   return '<div class="card" style="margin:10px 0" id="autoBk"><h3 style="margin:0 0 4px">Tự sao lưu hằng ngày</h3><p class="mut" style="margin:0 0 8px">Mỗi ngày, lần đầu mở phần mềm sẽ tự lưu một bản cơ sở dữ liệu (tu-dong-năm-tháng-ngày.sqlite) vào thư mục sao lưu ở trên và chỉ giữ số bản gần nhất chọn dưới đây. Khi đóng phần mềm (và mỗi 2 giờ nếu để máy mở), bản của hôm nay được làm mới nếu dữ liệu đã đổi, nên bản tự sao lưu chứa cả việc làm trong ngày. Bản này nằm cùng máy, không thay cho sao lưu toàn bộ ra ổ khác.</p>' +
-    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Giữ <select id="setAutoKeep">' + [[0, 'Tắt'], [3, '3 bản'], [7, '7 bản'], [14, '14 bản'], [30, '30 bản']].map(o => '<option value="' + o[0] + '"' + (o[0] === a.keep ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Giữ <select id="setAutoKeep">' + [[0, 'Tắt'], [3, '3 bản'], [7, '7 bản'], [14, '14 bản'], [30, '30 bản']].map(o => '<option value="' + o[0] + '"' + (o[0] === a.keep ? ' selected' : '') + '>' + o[1] +
+    '</option>').join('') + '</select></label>' +
     '<span class="mut" data-auto-last>' + (last ? 'Bản gần nhất: ' + esc(last.day.split('-').reverse().join('/')) + ' (' + sz(last.size) + ') · đang có ' + a.count + ' bản' : 'Chưa có bản tự sao lưu nào') + '</span>' + (st ? ' <span class="mut">' + st + '</span>' : '') + '</div></div>';
 }
 async function settingsLoad() {
@@ -143,7 +152,8 @@ function lotFigTable(P) {
   const I = P.incoming, E = P.existing, row = (l, f) => '<tr><td>' + l + '</td>' + (E ? '<td>' + f(E) + '</td>' : '') + '<td>' + f(I) + '</td></tr>';
   const chg = (a, b) => E && a !== b ? ' <span class="pill warn">thay đổi</span>' : '';
   return '<div class="wrap"><table><tr><th></th>' + (E ? '<th>Trước: đang có trên máy</th><th>Sau: bản trong file</th>' : '<th>Trong file</th>') + '</tr>' +
-    [['Nhân công', x => fmt(x.nc), 'nc'], ['Xe', x => fmt(x.dx), 'dx'], ['Phiếu cân', x => fmt(x.pc), 'pc'], ['Tổng khối lượng (tấn)', x => fmtTan(x.kl), 'kl'], ['Giấy tờ', x => fmt(x.giayTo), 'giayTo'], ['Cách tính cước', x => esc(x.cuoc), 'cuoc'], ['Địa chỉ giao hàng đã chốt', x => esc(x.diemDen || '(chưa có)'), 'diemDen']]
+    [['Nhân công', x => fmt(x.nc), 'nc'], ['Xe', x => fmt(x.dx), 'dx'], ['Phiếu cân', x => fmt(x.pc), 'pc'], ['Tổng khối lượng (tấn)', x => fmtTan(x.kl), 'kl'], ['Giấy tờ', x => fmt(x.giayTo), 'giayTo'], ['Cách tính cước', x => esc(x.cuoc), 'cuoc'], ['Địa chỉ giao hàng đã chốt',
+    x => esc(x.diemDen || '(chưa có)'), 'diemDen']]
       .map(([l, f, k]) => '<tr><td>' + l + '</td>' + (E ? '<td>' + f(E) + '</td>' : '') + '<td>' + f(I) + (E && E[k] !== I[k] ? ' <span class="pill warn">thay đổi</span>' : '') + '</td></tr>').join('') + '</table></div>';
 }
 async function lotRestoreOpen(filePath) {
@@ -157,9 +167,12 @@ async function lotRestoreOpen(filePath) {
     '<table><tr><th>Chủ rừng</th><td><b>' + esc(P.chu.ten) + '</b> · mã ' + esc(P.chu.ma) + '</td></tr><tr><th>Mã lô</th><td><b>' + esc(P.maLo) + '</b> ' + esc(P.tenLo) + '</td></tr>' +
     '<tr><th>Thời điểm sao lưu</th><td>' + esc(fmtDT(P.xuatLuc)) + '</td></tr></table>' + lotFigTable(P) +
     (P.ok ? '<div class="msg ' + (exists ? 'warn' : 'ok') + '">' + (P.chu.state === 'co' ? 'Chủ rừng <b>đã có</b> trên máy: lô sẽ được ' + (exists ? 'xử lý theo lựa chọn bên dưới' : 'thêm vào đúng chủ này') + '.' : 'Chủ rừng <b>chưa có</b> trên máy: sẽ tạo chủ mới từ thông tin trong file rồi thêm lô.') +
-      (exists ? ' Lô này <b>đã tồn tại</b> trên máy.' : ' Lô <b>chưa có</b> trên máy.') + '</div>' : '<div class="msg err" id="lotDung"><b>' + (P.conflicts.some(c => c.loai === 'toanVen') ? 'Dừng: hồ sơ đã chốt trong file không toàn vẹn — không khôi phục từ file này.</b> Chưa ghi gì; hồ sơ trên máy, các lô khác và file nguồn giữ nguyên. Bấm Hủy rồi chọn bản sao lưu khác để đối chiếu.' : 'Dừng: không xác định được lô đích, cần đối chiếu.</b> Chưa ghi gì.') + '<br>' + P.conflicts.map(c => '• ' + esc(c.moTa)).join('<br>') + '</div>') +
+      (exists ? ' Lô này <b>đã tồn tại</b> trên máy.' : ' Lô <b>chưa có</b> trên máy.') + '</div>' : '<div class="msg err" id="lotDung"><b>' + (P.conflicts.some(c => c.loai === 'toanVen') ?
+      'Dừng: hồ sơ đã chốt trong file không toàn vẹn — không khôi phục từ file này.</b> Chưa ghi gì; hồ sơ trên máy, các lô khác và file nguồn giữ nguyên. Bấm Hủy rồi chọn bản sao lưu khác để đối chiếu.' : 'Dừng: không xác định được lô đích, cần đối chiếu.</b> Chưa ghi gì.') + '<br>' +
+      P.conflicts.map(c => '• ' + esc(c.moTa)).join('<br>') + '</div>') +
     (P.giuTrongChu.length ? '<p class="mut">Các lô khác của chủ này trên máy giữ nguyên: ' + P.giuTrongChu.map(x => esc(x.ma)).join(', ') + '.</p>' : '') +
-    (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn"><b>Thiết lập dùng chung: máy đích giữ nguyên thiết lập của mình</b>, chỉ bổ sung mục máy chưa có.<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x.text) + '<br><small class="mut">Phần hồ sơ có thể khác: ' + esc(x.anhHuong) + '</small>').join('<br>') + '</div>' : '<p class="mut">Thiết lập dùng chung (định mức BHLĐ, ánh xạ biển số) của lô trùng với máy đích.</p>') +
+    (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn"><b>Thiết lập dùng chung: máy đích giữ nguyên thiết lập của mình</b>, chỉ bổ sung mục máy chưa có.<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x.text) +
+    '<br><small class="mut">Phần hồ sơ có thể khác: ' + esc(x.anhHuong) + '</small>').join('<br>') + '</div>' : '<p class="mut">Thiết lập dùng chung (định mức BHLĐ, ánh xạ biển số) của lô trùng với máy đích.</p>') +
     P.ghiChu.map(x => '<p class="mut">' + esc(x) + '</p>').join('') + (pk.lo && pk.lo.chot ? '<p class="mut" id="lotPhamVi">' + esc(lotPhamViText(pk.lo)) + '</p>' : '') +
     (P.ok && exists ? '<p><b>Lô đã có trên máy:</b></p><label><input type="radio" name="lotAct" value="giu" checked> Giữ bản hiện có (không đổi gì)</label><label><input type="radio" name="lotAct" value="thay"> Thay đúng lô này bằng bản trong file (các lô khác không bị đụng tới)</label>' : '') +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu trước khi ghi và ghi trong một giao dịch.</p>' +

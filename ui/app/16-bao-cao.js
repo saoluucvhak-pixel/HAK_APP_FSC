@@ -32,7 +32,8 @@ function rpRecords(ownerFilter = rp.owner) {
       out.push({oid: o.id, fid: f.id, chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
         dienTich: i.dienTich, dinhMuc: i.dinhMucTanHa, khoiLuongTT: i.klHoSoCu, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
         diemDen: destOf(jobView(o, f)),
-        pc: (f.pc || []).map(p => ({doiId: p.doiId, ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null, can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
+        pc: (f.pc || []).map(p => ({doiId: p.doiId, ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null,
+        can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
         trangThai: vd.trangThai, trangThaiTen: vd.trangThaiTen, noIn: vd.noIn, chuaKy: vd.chuaKy, ngayChot: f.chot ? f.chot.at : '', congTy: (i.muaHang && i.muaHang.ten) || '', soDoi: (f.doi || []).length, soDoiXe: (f.hdvc || []).length,
         nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu, doiList: rpDoiList(jr), hdList: rpHdList(jr),
         ncList: (f.nc || []).map(r => ({doi: tenDoiOf(jr, r.doiId), vaiTro: r.vaiTro, stt: r.stt, danhXung: r.danhXung, ten: r.ten, chucDanh: r.chucDanh, ngaySinh: r.ngaySinh, cccd: r.cccd, diaChi: r.diaChi, ngayCap: r.ngayCap, noiCap: r.noiCap, rate: rateOf(infoRow(jr, r), r)})), donVi: basisOf(jr.info).short,
@@ -43,7 +44,8 @@ function rpRecords(ownerFilter = rp.owner) {
 }
 /* ===== Bộ lọc thông minh (HAK Smart Filter) cho mẫu báo cáo: tìm nhanh, lô rừng, điều kiện riêng từng mẫu, chip điều kiện, bộ lọc đã lưu ===== */
 const RP_EXTRA = {
-  sohoso: {fields: [{key: 'trangThai', label: 'Trạng thái', opts: () => Object.values(HAKVongDoi.TEN)}, {key: 'nam', label: 'Năm khai thác', opts: () => rpUniq(rpRecords().map(r => (String(r.tuNgay || '').match(/\/(\d{4})$/) || [])[1]))}], flags: [['onlyNoIn', 'Chỉ lô còn mẫu chưa in hoặc chưa ký']], hint: 'mã lô, chủ rừng, địa điểm'},
+  sohoso: {fields: [{key: 'trangThai', label: 'Trạng thái', opts: () => Object.values(HAKVongDoi.TEN)}, {key: 'nam', label: 'Năm khai thác', opts: () => rpUniq(rpRecords().map(r => (String(r.tuNgay || '').match(/\/(\d{4})$/) || [])[1]))}], flags: [['onlyNoIn',
+  'Chỉ lô còn mẫu chưa in hoặc chưa ký']], hint: 'mã lô, chủ rừng, địa điểm'},
   laodong: {fields: [{key: 'chucDanh', label: 'Chức danh', opts: () => chucDanhAll()}, {key: 'vaiTro', label: 'Vai trò', opts: () => ['Tổ trưởng', 'Công nhân']}], flags: [['onlyMinors', 'Chỉ người dưới 18 tuổi'], ['onlyMissing', 'Chỉ hồ sơ cần bổ sung (thiếu ngày sinh, CCCD)']], hint: 'họ tên, CCCD, chức danh, địa chỉ, mã rừng, chủ rừng'},
   danhsachxe: {fields: [{key: 'nguoiKy', label: 'Người ký HĐ vận chuyển', opts: () => ['Chủ xe', 'Tài xế']}], flags: [['onlyNoPhone', 'Chỉ xe chưa có số điện thoại'], ['onlyTrips', 'Chỉ xe có chuyến trong kỳ'], ['onlyNoTrips', 'Chỉ xe chưa có chuyến trong kỳ']], hint: 'biển số, chủ xe, tài xế, SĐT, loại xe, mã rừng'},
   phieucan: {fields: [], flags: [], hint: 'số phiếu, biển số, khách hàng, nơi giao, mã rừng, chủ rừng'},
@@ -116,9 +118,11 @@ function rpFilterHtml() {
     '<label style="flex:1;min-width:220px">Tìm nhanh<br><input id="rpQ" style="width:100%" value="' + esc(rp.q) + '" placeholder="' + esc('Gõ rồi Enter: ' + x.hint) + '"></label>' +
     sel('rung', 'Lô rừng', cfg.fields.find(f => f.key === 'rung').options.map(o => o.value), rp.one.rung) +
     x.fields.map(f => sel(f.key, f.label, f.opts(), rp.one[f.key])).join('') + '</div>' +
-    (x.flags.length ? '<div class="row" style="margin-top:6px;flex-wrap:wrap;gap:14px">' + x.flags.map(([k, l]) => '<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="rpFlag_' + k + '"' + (rp.flag[k] ? ' checked' : '') + '> ' + esc(l) + '</label>').join('') + '</div>' : '') +
+    (x.flags.length ? '<div class="row" style="margin-top:6px;flex-wrap:wrap;gap:14px">' + x.flags.map(([k, l]) => '<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="rpFlag_' + k + '"' + (rp.flag[k] ? ' checked' : '') + '> ' + esc(l) +
+    '</label>').join('') + '</div>' : '') +
     '<div class="row" style="margin-top:8px;justify-content:space-between;flex-wrap:wrap;gap:8px"><div class="row" style="flex-wrap:wrap;gap:6px">' +
-    (conds.length ? conds.map((c, i) => '<span class="pill">' + esc(c.text) + ' <button class="chipx" data-rprm="' + i + '" aria-label="Bỏ điều kiện: ' + esc(c.text) + '">×</button></span>').join('') + '<button class="btn ghost sm" data-act="rpClearAll">Xóa hết</button>' : '<span class="mut">Chưa có điều kiện lọc: báo cáo gồm toàn bộ dữ liệu.</span>') + '</div>' +
+    (conds.length ? conds.map((c, i) => '<span class="pill">' + esc(c.text) + ' <button class="chipx" data-rprm="' + i + '" aria-label="Bỏ điều kiện: ' + esc(c.text) + '">×</button></span>').join('') + '<button class="btn ghost sm" data-act="rpClearAll">Xóa hết</button>' :
+    '<span class="mut">Chưa có điều kiện lọc: báo cáo gồm toàn bộ dữ liệu.</span>') + '</div>' +
     '<div class="row" style="gap:6px;flex-wrap:wrap"><select id="rpPreset" aria-label="Bộ lọc đã lưu"><option value="">Bộ lọc đã lưu…</option>' + names.map(n => '<option' + (n === rp.presetSel ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>' +
     '<input id="rpPresetName" size="14" placeholder="Tên bộ lọc mới"><button class="btn ghost sm" data-act="rpPresetSave">Lưu bộ lọc</button><button class="btn ghost sm" data-act="rpPresetDel">Xóa bộ lọc đã chọn</button></div></div></div>';
 }
@@ -169,14 +173,18 @@ function rpRender() {
   const m = rpModel(), F = HAKReports.fmtCell;
   const owners = Object.values(db.rs).sort((a, b) => (a.info.ten || '').localeCompare(b.info.ten || '', 'vi'));
   const prev = m.sections.map(s => '<h4 style="margin:12px 0 4px">' + esc(s.heading) + ' <span class="mut">(' + s.rows.length + ' dòng)</span></h4><div class="wrap" style="max-height:34vh"><table><tr>' + s.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr>' +
-    s.rows.slice(0, 200).map((r, ri) => { const lv = s.levels ? s.levels[ri] : null; return '<tr' + (lv != null ? ' data-rplv="' + lv + '" data-rpi="' + ri + '"' + (rpHidden(s, ri) ? ' hidden' : '') : '') + (lv === 0 ? ' style="font-weight:700"' : '') + '>' + r.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + (i === 0 && lv ? ';padding-left:' + (9 + lv * 16) + 'px' : '') + '">' + (i === 0 && lv != null && lv < 2 && s.levels[ri + 1] > lv ? '<button class="chipx" data-rpfold="' + ri + '" aria-label="Thu gọn hoặc mở rộng">' + (rp.folded[ri] ? '▸' : '▾') + '</button> ' : '') + esc(F(v, s.cols[i].f)) + '</td>').join('') + '</tr>'; }).join('') +
+    s.rows.slice(0, 200).map((r, ri) => { const lv = s.levels ? s.levels[ri] : null; return '<tr' + (lv != null ? ' data-rplv="' + lv + '" data-rpi="' + ri + '"' + (rpHidden(s, ri) ? ' hidden' : '') : '') + (lv === 0 ? ' style="font-weight:700"' : '') + '>' + r.map((v,
+    i) => '<td style="text-align:' + (s.cols[i].al || 'left') + (i === 0 && lv ? ';padding-left:' + (9 + lv * 16) + 'px' : '') + '">' + (i === 0 && lv != null && lv < 2 && s.levels[ri + 1] > lv ? '<button class="chipx" data-rpfold="' + ri + '" aria-label="Thu gọn hoặc mở rộng">' + (rp.folded[ri] ?
+    '▸' : '▾') + '</button> ' : '') + esc(F(v,
+    s.cols[i].f)) + '</td>').join('') + '</tr>'; }).join('') +
     (s.foot ? '<tr>' + s.foot.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '"><b>' + esc(F(v, s.cols[i].f)) + '</b></td>').join('') + '</tr>' : '') + '</table></div>' +
     (s.rows.length > 200 ? '<p class="mut">Xem trước 200 dòng đầu; file xuất có đủ ' + s.rows.length + ' dòng.</p>' : '')).join('');
   $('#rpBody').innerHTML = '<div class="gh"><h2>Báo cáo</h2><button class="btn ghost sm" data-act="rpClose">✕ Đóng</button></div>' +
     '<div class="rpl">' + HAKReports.REPORTS.map(r => '<button class="rpc ' + (rp.id === r.id ? 'on' : '') + '" data-rpsel="' + r.id + '"><b>' + esc(r.name) + '</b><small>' + esc(r.desc) + '</small></button>').join('') + '</div>' +
     '<div class="row" style="align-items:flex-end;flex-wrap:wrap"><label>Từ ngày<br><input type="date" id="rpFrom" value="' + esc(viToIso(rp.from)) + '"></label><label>Đến ngày<br><input type="date" id="rpTo" value="' + esc(viToIso(rp.to)) + '"></label>' +
     '<label>Chủ rừng<br><select id="rpOwner"><option value="">Tất cả chủ rừng</option>' + owners.map(o => '<option value="' + esc(o.id) + '"' + (rp.owner === o.id ? ' selected' : '') + '>' + esc(o.info.ten || '(chưa đặt tên)') + '</option>').join('') + '</select></label>' +
-    (rp.id === 'chacon' ? '<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="rpDetail"' + (rp.detail ? ' checked' : '') + '> Kèm từng phiếu cân</label>' : '') + '<button class="btn" data-act="rpWord">Xuất Word (.docx)</button><button class="btn ghost" data-act="rpExcel">Xuất Excel (.xlsx)</button>' + (HB ? '<button class="btn ghost" data-act="inBaoCao" id="inBaoCaoBtn">In báo cáo</button>' : '') + '</div>' +
+    (rp.id === 'chacon' ? '<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="rpDetail"' + (rp.detail ? ' checked' : '') + '> Kèm từng phiếu cân</label>' : '') +
+    '<button class="btn" data-act="rpWord">Xuất Word (.docx)</button><button class="btn ghost" data-act="rpExcel">Xuất Excel (.xlsx)</button>' + (HB ? '<button class="btn ghost" data-act="inBaoCao" id="inBaoCaoBtn">In báo cáo</button>' : '') + '</div>' +
     rpFilterHtml() +
     '<p class="mut">Khoảng ngày áp dụng cho ngày cân của phiếu cân. Báo cáo tiến độ luôn tính tại thời điểm hiện tại.</p>' +
     (rp.msg ? '<div class="msg ' + rp.msg.kind + '">' + esc(rp.msg.text) + '</div>' : '') +
@@ -206,9 +214,11 @@ document.addEventListener('click', async e => {
   rpReadParams();
   if (a === 'rpClearAll') { rp.q = ''; rp.from = ''; rp.to = ''; rp.owner = ''; rp.one = {}; rp.flag = {}; rp.detail = false; rp.presetSel = ''; return rpRender(); }
   if (a === 'rpPresetSave') { const nm = (document.getElementById('rpPresetName') || {}).value || ''; const cfg = rpCfg(); let r = rpPresets().save(cfg.screenId, nm, rpSf());
-    if (!r.ok && r.corrupt && confirm('Kho bộ lọc đã lưu trên máy bị lỗi hoặc thuộc phiên bản khác nên chưa ghi đè.\n\nSao lưu nguyên văn bản cũ (không mất dữ liệu) rồi tạo kho mới để lưu bộ lọc này?')) { const d = rpPresets().discardCorrupt(); r = d.ok ? rpPresets().save(cfg.screenId, nm, rpSf()) : d; }
+    if (!r.ok && r.corrupt && confirm('Kho bộ lọc đã lưu trên máy bị lỗi hoặc thuộc phiên bản khác nên chưa ghi đè.\n\nSao lưu nguyên văn bản cũ (không mất dữ liệu) rồi tạo kho mới để lưu bộ lọc này?')) { const d = rpPresets().discardCorrupt();
+    r = d.ok ? rpPresets().save(cfg.screenId, nm, rpSf()) : d; }
     if (r.ok) rp.presetSel = nm.trim(); rp.msg = r.ok ? {kind: 'ok', text: 'Đã lưu bộ lọc “' + nm.trim() + '”.'} : {kind: 'err', text: r.msg}; return rpRender(); }
-  if (a === 'rpPresetDel') { const nm = rp.presetSel || (document.getElementById('rpPreset') || {}).value || ''; const cfg = rpCfg(); if (nm && rpPresets().remove(cfg.screenId, nm)) { rp.presetSel = ''; rp.msg = {kind: 'ok', text: 'Đã xóa bộ lọc “' + nm + '”.'}; } else rp.msg = {kind: 'err', text: 'Chọn một bộ lọc đã lưu để xóa.'}; return rpRender(); }
+  if (a === 'rpPresetDel') { const nm = rp.presetSel || (document.getElementById('rpPreset') || {}).value || ''; const cfg = rpCfg(); if (nm && rpPresets().remove(cfg.screenId, nm)) { rp.presetSel = ''; rp.msg = {kind: 'ok', text: 'Đã xóa bộ lọc “' + nm + '”.'};
+  } else rp.msg = {kind: 'err', text: 'Chọn một bộ lọc đã lưu để xóa.'}; return rpRender(); }
   if (a === 'rpWord' || a === 'rpExcel') {
     const a1 = HAKReports.dateKey(rp.from), a2 = HAKReports.dateKey(rp.to);
     if (a1 && a2 && a1 > a2) { rp.msg = {kind: 'err', text: 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.'}; return rpRender(); }
@@ -217,7 +227,8 @@ document.addEventListener('click', async e => {
   }
 });
 document.addEventListener('change', e => { const t = e.target; if (!t || !t.closest || !t.closest('#rpBox')) return;
-  if (t.id === 'rpPreset') { rp.presetSel = t.value; if (!t.value) return rpRender(); const r = HAKCore.sf.applyPreset(rpCfg(), rpPresets().get(rpCfg().screenId, t.value)); if (!r.ok) { rp.msg = {kind: 'err', text: 'Không mở được bộ lọc đã lưu.'}; return rpRender(); } rpFromSf(r.state); rp.msg = r.dropped.length ? {kind: 'warn', text: 'Bộ lọc đã mở nhưng bỏ điều kiện không dùng được ở mẫu này: ' + r.dropped.join(', ')} : null; return rpRender(); }
+  if (t.id === 'rpPreset') { rp.presetSel = t.value; if (!t.value) return rpRender(); const r = HAKCore.sf.applyPreset(rpCfg(), rpPresets().get(rpCfg().screenId, t.value)); if (!r.ok) { rp.msg = {kind: 'err', text: 'Không mở được bộ lọc đã lưu.'}; return rpRender(); } rpFromSf(r.state);
+  rp.msg = r.dropped.length ? {kind: 'warn', text: 'Bộ lọc đã mở nhưng bỏ điều kiện không dùng được ở mẫu này: ' + r.dropped.join(', ')} : null; return rpRender(); }
   if (/^(rpFrom|rpTo|rpOwner|rpDetail|rpQ|rpOne_.+|rpFlag_.+)$/.test(t.id)) { rpReadParams(); rp.presetSel = ''; rpRender(); } });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'rpQ') { e.preventDefault(); rpReadParams(); rp.presetSel = ''; rpRender(); const q = document.getElementById('rpQ'); if (q) q.focus(); } });
 

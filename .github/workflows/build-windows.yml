@@ -37,6 +37,8 @@ jobs:
           git fetch -q --depth 1 origin "$HAKQ_SHA" && git checkout -q FETCH_HEAD && npm ci --silent
       - name: Quét mã (chặn khi có lỗi mức error theo .hakquality.json)
         run: node ../hakq/bin/hak-quality.js . --out reports
+      - name: Cảnh báo kích thước mã (file > 40 KB, dòng > 300 ký tự) — chỉ cảnh báo, không chặn
+        run: node scripts/kiem-kich-thuoc.js
       - name: Kiểm tra lỗ hổng thư viện (npm audit) — chặn khi thư viện chạy trong ứng dụng có lỗ hổng mức cao trở lên
         run: |
           mkdir -p reports

@@ -32,7 +32,8 @@ document.addEventListener('click', async e => {
   if (act === 'pcGanLoat') return pcGanLoat();
   if (act === 'xoaHd') return xoaHd();
   if (act === 'hdCapNhatDv') return hdCapNhatDv();
-  if (act === 'suaDv') { const d = HAKDanhMuc.timDoiTac(db.dmDoiTac || [], el.dataset.dv), fm = document.getElementById('dvForm'); if (d && fm) { fm.outerHTML = dvForm(d); const nf = document.getElementById('dvForm'); if (nf) { nf.scrollIntoView({block: 'nearest'}); const i0 = nf.querySelector('[name=ten]'); if (i0) i0.focus(); } } return; }
+  if (act === 'suaDv') { const d = HAKDanhMuc.timDoiTac(db.dmDoiTac || [], el.dataset.dv), fm = document.getElementById('dvForm'); if (d && fm) { fm.outerHTML = dvForm(d); const nf = document.getElementById('dvForm'); if (nf) { nf.scrollIntoView({block: 'nearest'});
+  const i0 = nf.querySelector('[name=ten]'); if (i0) i0.focus(); } } return; }
   if (act === 'themDoi') return themDoi();
   if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();
@@ -81,7 +82,8 @@ document.addEventListener('click', async e => {
     return render();
   }
   if (act === 'dbDel') { const tr = el.closest('tr'); tr.querySelectorAll('input,textarea').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
-  if (act === 'dbVerAdd') { const r = HAKDinhBien.addVersion(db, (document.getElementById('dbVerNew') || {}).value); if (!r.ok) return note('Chưa thêm phiên bản: ' + r.error, 'err'); dbVer = r.id; persist(); return note('Đã thêm phiên bản hiệu lực từ ' + r.id + ' (sao chép từ phiên bản đang hiệu lực tại ngày đó). Sửa số người, nhiệm vụ rồi Lưu.', 'ok'); }
+  if (act === 'dbVerAdd') { const r = HAKDinhBien.addVersion(db, (document.getElementById('dbVerNew') || {}).value); if (!r.ok) return note('Chưa thêm phiên bản: ' + r.error, 'err'); dbVer = r.id; persist();
+  return note('Đã thêm phiên bản hiệu lực từ ' + r.id + ' (sao chép từ phiên bản đang hiệu lực tại ngày đó). Sửa số người, nhiệm vụ rồi Lưu.', 'ok'); }
   if (act === 'dbVerDel') { if (!confirm('Xóa phiên bản này? Các lô bắt đầu từ ngày này sẽ dùng phiên bản trước đó.')) return; HAKDinhBien.delVersion(db, dbVer); dbVer = ''; persist(); return note('Đã xóa phiên bản.', 'ok'); }
   if (act === 'dbReset' && HAKDinhBien.versions(db).length > 1) return note('Đã có nhiều phiên bản theo ngày: xóa các phiên bản có ngày trước khi dùng định mức mặc định.', 'warn');
   if (act === 'dbReset') { delete db.dinhBien; persist(); note('Đã quay về định mức nhân công mặc định (chưa lưu thành định mức riêng; bấm Lưu để dùng).', 'warn'); return render(); }
@@ -170,7 +172,8 @@ document.addEventListener('click', async e => {
       if (mode === 'de') {   // nền in từ trước: bắt buộc đối chiếu trước khi in đè
         const f = curForest(), st = HAKInAn2.stateOf(f), pend = keys.filter(k => st.items[k] && st.items[k].legacy && !st.items[k].crossChecked);
         if (pend.length) {
-          if (confirm('Có ' + pend.length + ' tờ nền in từ trước, chưa biết bố cục.\n\nĐối chiếu tờ nền đã in với mẫu hiện tại: khổ giấy, hướng giấy, lề, chữ cố định (tên, địa chỉ, số hợp đồng), số dòng bảng. Nếu khớp, bấm OK để in đè; nếu không, bấm Hủy rồi in lại mẫu nền hoặc in đầy đủ trên giấy trắng.\n\nBạn đã đối chiếu và thấy khớp?')) { pend.forEach(k => HAKInAn2.crossChecked(st, k, new Date().toISOString())); persist(); render(); }
+          if (confirm('Có ' + pend.length + ' tờ nền in từ trước, chưa biết bố cục.\n\nĐối chiếu tờ nền đã in với mẫu hiện tại: khổ giấy, hướng giấy, lề, chữ cố định (tên, địa chỉ, số hợp đồng), số dòng bảng. Nếu khớp, bấm OK để in đè; nếu không, bấm Hủy rồi in lại mẫu nền hoặc in đầy đủ trên giấy trắng.\n\nBạn đã đối chiếu và thấy khớp?')) {
+          pend.forEach(k => HAKInAn2.crossChecked(st, k, new Date().toISOString())); persist(); render(); }
           else keys = keys.filter(k => !pend.includes(k));
         }
       }
@@ -283,7 +286,8 @@ function setSkin(k) {
   document.documentElement.dataset.skin = k;
   try { localStorage.setItem('hskt.skin', k); } catch (e) {}
   const box = document.getElementById('skinPick');
-  if (box) box.innerHTML = '<b>Bảng màu</b>' + SKINS.map(([id, label, c]) => '<button class="skinbtn' + (id === k ? ' on' : '') + '" data-skinpick="' + id + '" aria-pressed="' + (id === k) + '"><span class="sw">' + c.map(x => '<i style="background:' + x + '"></i>').join('') + '</span>' + esc(label) + '</button>').join('');
+  if (box) box.innerHTML = '<b>Bảng màu</b>' + SKINS.map(([id, label, c]) => '<button class="skinbtn' + (id === k ? ' on' : '') + '" data-skinpick="' + id + '" aria-pressed="' + (id === k) + '"><span class="sw">' + c.map(x => '<i style="background:' + x + '"></i>').join('') + '</span>' +
+  esc(label) + '</button>').join('');
 }
 let savedSkin = null;
 try { savedSkin = localStorage.getItem('hskt.skin'); } catch (e) {}
@@ -325,5 +329,6 @@ document.addEventListener('change', e => {
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
 if (pendingNotice) { NAV.view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
-if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind; if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
+if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind;
+if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
 render();

@@ -32,7 +32,9 @@ function loCrumb(job) {
 function panelKiemTra(job) {
   const c = exportCheck(job), nhom = list => [...new Set(list.map(x => x.nhom))];
   const block = (title, cls, list) => !list.length ? '' : '<div class="card"><h3 style="margin:0 0 8px">' + title + ' (' + list.length + ')</h3>' + nhom(list).map(n => '<div style="margin-bottom:10px"><b>' + esc(n) + '</b>' +
-    list.filter(x => x.nhom === n).map(x => '<div class="row" style="align-items:flex-start;gap:8px;margin-top:4px"><span class="pill ' + cls + '">' + (x.ref ? esc(x.ref) : '•') + '</span><span style="flex:1">' + (x.doiTuong && x.doiTuong.ten ? '<small class="mut">' + (x.doiTuong.loai === 'doiXe' ? 'Đội xe' : 'Đội') + ' “' + esc(x.doiTuong.ten) + '”</small> ' : '') + esc(x.text) + (x.muc === 'chan' && x.bieuMau.length && x.bieuMau.length < HAKKiemTra.TAT_CA.length ? ' <small class="mut" data-bm="' + esc(x.bieuMau.join(',')) + '">· chặn ' + x.bieuMau.map(b => 'BM-' + b).join(', ') + '</small>' : '') + '</span><button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(x.go)) + '">Mở để sửa</button></div>').join('') + '</div>').join('') + '</div>';
+    list.filter(x => x.nhom === n).map(x => '<div class="row" style="align-items:flex-start;gap:8px;margin-top:4px"><span class="pill ' + cls + '">' + (x.ref ? esc(x.ref) : '•') + '</span><span style="flex:1">' + (x.doiTuong && x.doiTuong.ten ? '<small class="mut">' + (x.doiTuong.loai === 'doiXe' ?
+    'Đội xe' : 'Đội') + ' “' + esc(x.doiTuong.ten) + '”</small> ' : '') + esc(x.text) + (x.muc === 'chan' && x.bieuMau.length && x.bieuMau.length < HAKKiemTra.TAT_CA.length ? ' <small class="mut" data-bm="' + esc(x.bieuMau.join(',')) + '">· chặn ' + x.bieuMau.map(b => 'BM-' + b).join(', ') +
+    '</small>' : '') + '</span><button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify(x.go)) + '">Mở để sửa</button></div>').join('') + '</div>').join('') + '</div>';
   const ok = !c.chan.length;
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Kiểm tra hồ sơ trước khi xuất</h3><span class="pill ' + (ok ? 'ok' : 'err') + '">' + (ok ? 'Không có mục chặn xuất' : c.chan.length + ' mục chặn xuất') + '</span></div>' +
     '<p class="mut" style="margin:6px 0 0">Dùng lại checklist FSC và quy tắc kiểm tra của phần mềm. <b>Chặn xuất</b>: làm nút xuất hồ sơ bị khóa hoặc hồ sơ sai. <b>Cần đối chiếu</b>: vẫn xuất được nhưng nên kiểm tra. Bấm “Mở để sửa” để đến đúng tab.</p>' +
@@ -50,7 +52,8 @@ function panelRung(own) {
       : '<p class="mut">Chưa có rừng. Bấm “+ Rừng mới”.</p>') + '</div>';
   if (!f) return list;
   const job = curRec();
-  const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'], ['xuat', 'Xuất hồ sơ']];
+  const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'],
+  ['xuat', 'Xuất hồ sơ']];
   return '<details class="rungTomTat"><summary>Danh sách rừng · Tiến độ ' + progressOf(job).pct + '%</summary>' +
     list + panelTienDo(job) + '</details>' +
     '<div class="row" style="justify-content:space-between;flex-wrap:wrap"><h2>' + esc(f.info.tenRung || f.info.maRung) + '</h2><span class="row" style="flex-wrap:wrap">' + add + '<button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
@@ -63,6 +66,8 @@ function panelRung(own) {
       ['giay', 'Giấy tờ pháp lý', () => panelGiay(f), (f.info.giayTo || []).length],
       ['giaohang', 'Công ty, địa chỉ giao và cước', () => panelMua(job) + panelVc(job)],
       ['vanban', 'Số văn bản chung', () => soVanBanBox(job)]
-    ]) : NAV.ftab === 'nc' ? panelNC(stJob(job)) : NAV.ftab === 'dx' ? panelVanChuyen(stJob(job)) : NAV.ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' + kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu.</b>' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' + chotBox(job) + soVanBanBox(job) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job));
+    ]) : NAV.ftab === 'nc' ? panelNC(stJob(job)) : NAV.ftab === 'dx' ? panelVanChuyen(stJob(job)) : NAV.ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' +
+    kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu.</b>' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' +
+    chotBox(job) + soVanBanBox(job) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job));
 }
 

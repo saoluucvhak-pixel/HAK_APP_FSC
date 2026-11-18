@@ -27,7 +27,8 @@ function panelChamCong(rec) {
 }
 function ccCommit(note_) { persistLo(); const n = document.getElementById('ccNote'); if (n) { n.className = 'msg ok'; n.textContent = note_ || 'Đã có số công chấm tay: BM-08 dùng tổng công của từng người.'; } }
 function ccRefreshTotals(f, k) {
-  const CC = HAKChamCong; document.querySelectorAll('#ccCard tr[data-ccp]').forEach(tr => { const pk = tr.dataset.ccp; const a = tr.querySelector('[data-ccm]'), b = tr.querySelector('[data-cca]'); if (a) a.textContent = fmtCong(CC.monthTotal(f.cc, k, pk)); if (b) b.innerHTML = '<b>' + fmtCong(CC.total(f.cc, pk)) + '</b>'; });
+  const CC = HAKChamCong; document.querySelectorAll('#ccCard tr[data-ccp]').forEach(tr => { const pk = tr.dataset.ccp; const a = tr.querySelector('[data-ccm]'), b = tr.querySelector('[data-cca]'); if (a) a.textContent = fmtCong(CC.monthTotal(f.cc, k, pk));
+  if (b) b.innerHTML = '<b>' + fmtCong(CC.total(f.cc, pk)) + '</b>'; });
 }
 function ccAct(act) {
   const f = curForest(), rec = curRec(); if (!f || !rec) return; f.cc = f.cc || {}; const CC = HAKChamCong, k = ccCur(rec); if (!k) return;

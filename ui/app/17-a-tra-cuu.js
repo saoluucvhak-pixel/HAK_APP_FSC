@@ -1,6 +1,7 @@
 /* ========== Tra cứu Google Sheets (chỉ bản desktop) ========== */
 const LK_TABS = [['', 'Tất cả'], ['HoSoKeo_QC', 'HoSoKeo (phiếu cân)'], ['HoSoRung_QC', 'HoSoRung (chủ rừng, hợp đồng)'], ['ToaDoRung_QC', 'ToaDoRung (tọa độ, giấy tờ)']];
-const lk = {view: 'search', tab: '', q: '', f: {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}, adv: false, layout: 'flat', gsel: '', presetSel: '', dt: 'rung', det: {}, conds: [], res: null, st: null, busy: '', msg: null, cand: null, fi: 0, mode: '', owner: '', sel: null};
+const lk = {view: 'search', tab: '', q: '', f: {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}, adv: false, layout: 'flat', gsel: '', presetSel: '', dt: 'rung', det: {}, conds: [], res: null, st: null, busy: '', msg: null, cand: null, fi: 0, mode: '',
+owner: '', sel: null};
 const foldVi = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
 /* Tên hiển thị của vai trò dữ liệu: bộ tên chuẩn HoSoKeo/HoSoRung/ToaDoRung (mã vai trò bên trong giữ hậu tố _QC để tương thích dữ liệu đã lưu) */
 const TL = t => ({HoSoKeo_QC: 'HoSoKeo', HoSoRung_QC: 'HoSoRung', ToaDoRung_QC: 'ToaDoRung'}[t] || t);
@@ -27,7 +28,8 @@ async function lkLoad(kind) {
   lk.busy = '';
   if (r.canceled) return lkRender();
   lk.st = r.status || await HB.lookup.status(); lk.det = {};
-  if (r.pending) { lk.pend = {pending: r.pending, conflicts: r.conflicts || [], sheets: r.sheets, choice: Object.fromEntries(Object.entries(r.pending).map(([k, v]) => [k, v.proposed]))}; lk.msg = {kind: 'warn', text: 'Có tab cần bạn xác nhận hoặc chọn (xem bên dưới). Chưa thay đổi bản tra cứu.'}; return lkRender(); }
+  if (r.pending) { lk.pend = {pending: r.pending, conflicts: r.conflicts || [], sheets: r.sheets, choice: Object.fromEntries(Object.entries(r.pending).map(([k, v]) => [k, v.proposed]))}; lk.msg = {kind: 'warn', text: 'Có tab cần bạn xác nhận hoặc chọn (xem bên dưới). Chưa thay đổi bản tra cứu.'};
+  return lkRender(); }
   lk.pend = null;
   if (r.ok) { lk.msg = {kind: 'ok', text: 'Đã cập nhật bản tra cứu: ' + Object.entries(r.counts).map(([k, v]) => TL(k) + ' ' + fmt(v) + ' dòng').join(', ') + '.'}; await lkSearch(); }
   else lk.msg = {kind: 'err', text: 'Chưa cập nhật bản tra cứu, vẫn dùng bản đã lưu. ' + (r.errors || []).join('; ')};
@@ -49,7 +51,8 @@ function lkPendHtml() {
     '<p class="mut" style="margin:4px 0">Bản tra cứu đang dùng chưa bị thay đổi. Chọn tab cho từng vai trò; phần mềm sẽ kiểm tra lại các cột bắt buộc rồi mới nạp và ghi nhớ lựa chọn cho bảng tính này. Tab trong file: ' + (P.sheets || []).map(x => '“' + esc(x) + '”').join(', ') + '.</p>' +
     Object.keys(P.pending).map(role => { const p = P.pending[role];
       return '<div style="margin:8px 0"><b>' + esc(TL(role)) + '</b> <span class="mut">(' + esc(LK_ROLE_DESC[role] || '') + ')</span><div class="mut">' + (p.kind === 'confirm' ? 'Đề xuất: ' : 'Chọn một: ') + esc(p.why || '') + '.</div>' +
-        p.candidates.map(c => '<label style="flex-direction:row;gap:8px;color:var(--ink)"><input type="radio" name="lkPend_' + esc(role) + '" data-act="lkPendPick" data-role="' + esc(role) + '" data-tab="' + esc(c) + '"' + (P.choice[role] === c ? ' checked' : '') + '> <span>Dùng tab “' + esc(c) + '” làm “' + esc(TL(role)) + '”</span></label>').join('') +
+        p.candidates.map(c => '<label style="flex-direction:row;gap:8px;color:var(--ink)"><input type="radio" name="lkPend_' + esc(role) + '" data-act="lkPendPick" data-role="' + esc(role) + '" data-tab="' + esc(c) + '"' + (P.choice[role] === c ? ' checked' : '') + '> <span>Dùng tab “' + esc(c) +
+        '” làm “' + esc(TL(role)) + '”</span></label>').join('') +
         (p.invalid || []).map(x => '<div class="mut">Tab “' + esc(x.tab) + '” cùng tên vai trò này nhưng thiếu cột: ' + x.missing.map(m => /^một trong/.test(m) ? esc(m) : '“' + esc(m) + '”').join(', ') + '.</div>').join('') + '</div>'; }).join('') +
     '<div class="row"><button class="btn sm" data-act="lkConfirmTabs">Xác nhận và nạp</button><button class="btn ghost sm" data-act="lkCancelTabs">Hủy, giữ bản cũ</button></div></div>';
 }

@@ -35,26 +35,33 @@ async function lkLoadDetail() {
 function lkTreeDetailHtml(g) {
   if (!g) return '<p class="mut" style="padding:14px">Chưa có dòng nào. Hãy đổi từ khóa hoặc bộ lọc.</p>';
   const d = lk.det[g.key], pickBtn = g.pick ? '<button class="btn" data-lkpick="' + esc(g.pick.tab) + '|' + g.pick.row + '">Chọn để ghi vào hồ sơ →</button>' : '';
-  if (!d || !d.ok) return '<div style="padding:14px"><h3 style="margin:0">' + esc(g.ten || '(không rõ chủ rừng)') + '</h3><p class="mut">' + (g.cccd && g.hd ? esc((d && d.error) || 'Đang tải chi tiết…') : 'Dòng này thiếu CCCD hoặc mã hợp đồng nên không ghép được các hồ sơ liên quan.') + '</p>' + (g.cccd && g.hd ? '' : pickBtn) + '</div>';
+  if (!d || !d.ok) return '<div style="padding:14px"><h3 style="margin:0">' + esc(g.ten || '(không rõ chủ rừng)') + '</h3><p class="mut">' + (g.cccd && g.hd ? esc((d && d.error) || 'Đang tải chi tiết…') : 'Dòng này thiếu CCCD hoặc mã hợp đồng nên không ghép được các hồ sơ liên quan.') + '</p>' +
+  (g.cccd && g.hd ? '' : pickBtn) + '</div>';
   const F = d.forests || [], P = F.flatMap(f => f.phieu.map(p => ({...p, rung: f.maRung}))), tan = Math.round(P.reduce((a, p) => a + (p.kl || 0), 0) * 1000) / 1000;
   const ha = F.reduce((a, f) => a + ((f.area && f.area[0] && f.area[0].value) || 0), 0), own = Object.fromEntries((d.owner.fields || []).map(x => [x.key, x.value]));
   const warns = [...(d.warns || []), ...F.flatMap(f => (f.warns || []).map(w => (f.maRung ? f.maRung + ': ' : '') + w))];
   const dt = lk.dt, tabs = [['rung', 'Rừng (' + F.length + ')'], ['phieu', 'Phiếu cân (' + P.length + ')'], ['khac', 'Hợp đồng khác (' + (d.others || []).length + ')'], ['cb', 'Cảnh báo (' + warns.length + ')']];
   let body = '';
-  if (dt === 'rung') body = '<div class="wrap"><table><tr><th>Mã rừng</th><th>Địa điểm</th><th style="text-align:right">Diện tích</th><th>Điểm GPS</th><th>Giấy tờ</th></tr>' + F.map(f => '<tr><td>' + esc(f.maRung || '(chưa có mã)') + '</td><td>' + esc(((f.fields || []).find(x => x.key === 'diaDiem') || {}).value || '') + '</td><td style="text-align:right">' +
-    (f.areaConflict ? '<span class="pill err" title="hai nguồn khác nhau">' + f.area.map(a => esc(a.label)).join(' / ') + '</span>' : esc(f.area[0] ? f.area[0].label : '')) + '</td><td>' + f.gps.filter(x => x.ok).length + '/' + f.gps.length + ' dùng được</td><td>' + f.docs.length + '</td></tr>').join('') + '</table></div>';
-  else if (dt === 'phieu') body = '<div class="wrap"><table><tr><th>Số phiếu</th><th>Ngày</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th><th>Kiểm tra</th></tr>' + P.map(p => '<tr><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bienRaw) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + numTxt(p.kl) + '</td><td>' +
+  if (dt === 'rung') body = '<div class="wrap"><table><tr><th>Mã rừng</th><th>Địa điểm</th><th style="text-align:right">Diện tích</th><th>Điểm GPS</th><th>Giấy tờ</th></tr>' + F.map(f => '<tr><td>' + esc(f.maRung || '(chưa có mã)') + '</td><td>' + esc(((f.fields ||
+  []).find(x => x.key === 'diaDiem') || {}).value || '') + '</td><td style="text-align:right">' +
+    (f.areaConflict ? '<span class="pill err" title="hai nguồn khác nhau">' + f.area.map(a => esc(a.label)).join(' / ') + '</span>' : esc(f.area[0] ? f.area[0].label : '')) + '</td><td>' + f.gps.filter(x => x.ok).length + '/' + f.gps.length + ' dùng được</td><td>' + f.docs.length +
+    '</td></tr>').join('') + '</table></div>';
+  else if (dt === 'phieu') body = '<div class="wrap"><table><tr><th>Số phiếu</th><th>Ngày</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th><th>Kiểm tra</th></tr>' + P.map(p => '<tr><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bienRaw) + '</td><td>' +
+  esc(p.rung) + '</td><td style="text-align:right">' + numTxt(p.kl) + '</td><td>' +
     (p.issue ? '<span class="pill err">' + esc(p.issue) + '</span>' : p.isPlate ? '' : '<span class="pill err">Biển số là tên xe</span>') + '</td></tr>').join('') + '<tr><td colspan="4"><b>Cộng</b></td><td style="text-align:right"><b>' + numTxt(tan) + '</b></td><td></td></tr></table></div>';
-  else if (dt === 'khac') body = (d.others || []).length ? '<div class="wrap"><table><tr><th>Hợp đồng</th><th>Địa chỉ rừng</th><th style="text-align:right">Ha</th><th>Tình trạng</th><th></th></tr>' + d.others.map(o => '<tr><td>' + esc(o.hd) + '</td><td>' + esc(o.diaChi) + '</td><td style="text-align:right">' + numTxt(o.hecta) + '</td><td>' + esc(o.tinhTrang) + '</td><td><button class="btn ghost sm" data-lkhd="' + esc(o.hd) + '">Xem</button></td></tr>').join('') + '</table></div>' : '<p class="mut">Chủ rừng này không có hợp đồng khác trong bản tra cứu.</p>';
+  else if (dt === 'khac') body = (d.others || []).length ? '<div class="wrap"><table><tr><th>Hợp đồng</th><th>Địa chỉ rừng</th><th style="text-align:right">Ha</th><th>Tình trạng</th><th></th></tr>' + d.others.map(o => '<tr><td>' + esc(o.hd) + '</td><td>' + esc(o.diaChi) +
+  '</td><td style="text-align:right">' + numTxt(o.hecta) + '</td><td>' + esc(o.tinhTrang) + '</td><td><button class="btn ghost sm" data-lkhd="' + esc(o.hd) + '">Xem</button></td></tr>').join('') + '</table></div>' : '<p class="mut">Chủ rừng này không có hợp đồng khác trong bản tra cứu.</p>';
   else body = warns.length ? '<ul class="issues">' + warns.map(w => '<li>' + esc(w) + '</li>').join('') + '</ul>' : '<p class="mut">Không có cảnh báo.</p>';
-  return '<div style="padding:12px 14px"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 style="margin:0">' + esc(own.ten || g.ten) + '</h3><div class="mut">CCCD ' + esc(own.cccd || g.cccd) + ' · Hợp đồng ' + esc(g.hd) + (g.tinhTrang ? ' · ' + esc(g.tinhTrang) : '') + '</div></div>' + pickBtn + '</div>' +
+  return '<div style="padding:12px 14px"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 style="margin:0">' + esc(own.ten || g.ten) + '</h3><div class="mut">CCCD ' + esc(own.cccd || g.cccd) + ' · Hợp đồng ' + esc(g.hd) + (g.tinhTrang ? ' · ' +
+  esc(g.tinhTrang) : '') + '</div></div>' + pickBtn + '</div>' +
     '<div class="kpi" style="margin:10px 0"><div><b>' + F.length + '</b>Rừng</div><div><b>' + P.length + '</b>Phiếu cân</div><div><b>' + numTxt(tan) + '</b>Tổng tấn</div><div><b>' + numTxt(Math.round(ha * 100) / 100) + '</b>Diện tích (ha)</div></div>' +
     '<div class="hak-detail-tabs">' + tabs.map(([k, l]) => '<button class="btn sm ' + (dt === k ? '' : 'ghost') + '" data-lkdt="' + k + '">' + l + '</button>').join('') + '</div><div style="margin-top:8px">' + body + '</div></div>';
 }
 function lkTreeHtml(r) {
   const G = r.groups || [], sel = G.find(g => g.key === lk.gsel);
   return '<p class="mut" style="margin:2px 0 6px">Cột bên trái đếm các dòng khớp từ khóa và bộ lọc; khung bên phải hiện toàn bộ hợp đồng đó (mọi rừng, mọi phiếu cân).</p><div class="hak-ui" style="background:none"><div class="hak-master-detail"><section class="hak-panel hak-table-region" style="max-height:52vh"><table><tr><th>Chủ rừng</th><th>CCCD</th><th>Hợp đồng</th><th>Tình trạng</th><th style="text-align:right">Rừng</th><th style="text-align:right">Phiếu</th><th style="text-align:right">Tấn</th><th>Kiểm tra</th></tr>' +
-    G.map(g => '<tr class="lkg' + (g.key === lk.gsel ? ' on' : '') + '" data-lkgrp="' + esc(g.key) + '" tabindex="0"><td>' + esc(g.ten) + '</td><td>' + esc(g.cccd) + '</td><td>' + esc(g.hd) + '</td><td>' + esc(g.tinhTrang) + '</td><td style="text-align:right">' + g.rungs.length + '</td><td style="text-align:right">' + g.phieu + '</td><td style="text-align:right">' + numTxt(g.tan) + '</td><td>' +
+    G.map(g => '<tr class="lkg' + (g.key === lk.gsel ? ' on' : '') + '" data-lkgrp="' + esc(g.key) + '" tabindex="0"><td>' + esc(g.ten) + '</td><td>' + esc(g.cccd) + '</td><td>' + esc(g.hd) + '</td><td>' + esc(g.tinhTrang) + '</td><td style="text-align:right">' + g.rungs.length +
+    '</td><td style="text-align:right">' + g.phieu + '</td><td style="text-align:right">' + numTxt(g.tan) + '</td><td>' +
       (g.flags ? '<span class="pill err">' + g.flags + ' dòng</span>' : '') + '</td></tr>').join('') + '</table></section><section class="hak-panel" id="lkDetail">' + lkTreeDetailHtml(sel) + '</section></div>';
 }
 const lkAdvCount = () => ['from', 'to', 'minTan', 'maxTan', 'status'].filter(k => lk.f[k]).length + (lk.f.onlyIssues ? 1 : 0);
@@ -81,18 +88,22 @@ function lkSearchHtml() {
     '<label>đến<br><input type="date" id="lkTo" value="' + esc(lk.f.to) + '"></label>' +
     '<label>Khối lượng từ (tấn)<br><input id="lkMin" size="6" inputmode="decimal" value="' + esc(lk.f.minTan) + '"></label>' +
     '<label>đến (tấn)<br><input id="lkMax" size="6" inputmode="decimal" value="' + esc(lk.f.maxTan) + '"></label>' +
-    '<label>Tình trạng hợp đồng<br><select id="lkStatus"><option value="">Tất cả</option>' + (lk.f.status && !statuses.some(([k]) => k === lk.f.status) ? '<option selected>' + esc(lk.f.status) + '</option>' : '') + statuses.map(([k, c]) => '<option value="' + esc(k) + '"' + (lk.f.status === k ? ' selected' : '') + '>' + esc(k) + ' (' + c + ')</option>').join('') + '</select></label>' +
+    '<label>Tình trạng hợp đồng<br><select id="lkStatus"><option value="">Tất cả</option>' + (lk.f.status && !statuses.some(([k]) => k === lk.f.status) ? '<option selected>' + esc(lk.f.status) + '</option>' : '') + statuses.map(([k, c]) => '<option value="' + esc(k) + '"' + (lk.f.status === k ?
+    ' selected' : '') + '>' + esc(k) + ' (' + c + ')</option>').join('') + '</select></label>' +
     '<label>Sắp xếp<br><select id="lkSort">' + LK_SORTS.map(([k, l]) => '<option value="' + k + '"' + (lk.f.sort === k ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
     '<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="lkIssues"' + (lk.f.onlyIssues ? ' checked' : '') + '> Chỉ dòng cần kiểm tra' + (fc.issues ? ' <span class="pill err">' + fmt(fc.issues) + '</span>' : '') + '</label>' +
     '<button class="btn sm" data-act="lkFind">Áp dụng</button><button class="btn ghost sm" data-act="lkClear">Xóa bộ lọc</button></div>' +
     '<p class="mut" style="margin:4px 0 0">Khoảng ngày và khối lượng chỉ áp dụng cho phiếu cân (HoSoKeo).</p></details>';
-  const relax = r.total === 0 && r.relax && r.relax.length ? '<div class="msg warn">Không có kết quả. Thử: ' + r.relax.map((x, i) => x.clearFilters ? '<button class="btn ghost sm" data-act="lkClear">bỏ bộ lọc (' + fmt(x.total) + ' dòng)</button>' : '<button class="btn ghost sm" data-lkrelax="' + i + '">bỏ “' + esc(x.drop) + '” (' + fmt(x.total) + ' dòng)</button>').join(' ') + '</div>' : '';
-  const sum = lk.layout === 'tree' ? fmt(r.groupTotal || 0) + ' hợp đồng / chủ rừng (từ ' + fmt(r.total) + ' dòng). Bấm một dòng để xem rừng và phiếu cân ở khung bên phải.' : r.total > r.rows.length ? 'Hiển thị ' + fmt(r.rows.length) + ' / ' + fmt(r.total) + ' dòng — gõ thêm từ khóa hoặc dùng bộ lọc để thu hẹp.' : fmt(r.total) + ' dòng.';
+  const relax = r.total === 0 && r.relax && r.relax.length ? '<div class="msg warn">Không có kết quả. Thử: ' + r.relax.map((x, i) => x.clearFilters ? '<button class="btn ghost sm" data-act="lkClear">bỏ bộ lọc (' + fmt(x.total) + ' dòng)</button>' : '<button class="btn ghost sm" data-lkrelax="' + i +
+  '">bỏ “' + esc(x.drop) + '” (' + fmt(x.total) + ' dòng)</button>').join(' ') + '</div>' : '';
+  const sum = lk.layout === 'tree' ? fmt(r.groupTotal || 0) + ' hợp đồng / chủ rừng (từ ' + fmt(r.total) + ' dòng). Bấm một dòng để xem rừng và phiếu cân ở khung bên phải.' : r.total > r.rows.length ? 'Hiển thị ' + fmt(r.rows.length) + ' / ' + fmt(r.total) +
+  ' dòng — gõ thêm từ khóa hoặc dùng bộ lọc để thu hẹp.' : fmt(r.total) + ' dòng.';
   const tot = st.phieu ? ' · <b>' + fmt(st.phieu) + '</b> phiếu cân, tổng <b>' + numTxt(st.tan) + '</b> tấn' : '';
   return tabs +
     '<div class="row"><input id="lkQ" style="flex:1" placeholder="Mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã/số hợp đồng, địa chỉ rừng, số phiếu cân, biển số" value="' + esc(lk.q) + '"><button class="btn" data-act="lkFind">Tìm</button></div>' +
     '<p class="mut" style="margin:4px 0">' + esc(LK_HINT) + '</p>' + lkBarHtml() + adv +
-    (statuses.length && lk.tab !== 'HoSoKeo_QC' && lk.tab !== 'ToaDoRung_QC' ? '<div class="row" style="margin:4px 0">' + statuses.map(([k, c]) => '<button class="btn ' + (lk.f.status === k ? '' : 'ghost') + ' sm" data-lkstatus="' + esc(k) + '">' + esc(k) + ' · ' + c + '</button>').join('') + '</div>' : '') +
+    (statuses.length && lk.tab !== 'HoSoKeo_QC' && lk.tab !== 'ToaDoRung_QC' ? '<div class="row" style="margin:4px 0">' + statuses.map(([k, c]) => '<button class="btn ' + (lk.f.status === k ? '' : 'ghost') + ' sm" data-lkstatus="' + esc(k) + '">' + esc(k) + ' · ' + c + '</button>').join('') +
+    '</div>' : '') +
     (r.warns || []).map(w => '<div class="msg warn">' + esc(w) + '</div>').join('') + relax + '<p class="mut">' + sum + tot + '</p>' +
     (lk.layout === 'tree' ? lkTreeHtml(r) : '<div class="wrap" style="max-height:48vh"><table><tr><th>Tab</th><th>Dòng</th><th>Chủ rừng</th><th>CCCD</th><th>Hợp đồng</th><th>Mã rừng</th><th>Địa chỉ rừng</th><th>Chi tiết</th><th>Kiểm tra</th><th></th></tr>' +
     r.rows.map(x => '<tr><td>' + esc(TL(x.tab)) + '</td><td>' + x.row + '</td><td>' + esc(x.ten) + '</td><td>' + esc(x.cccd) + '</td><td>' + esc(x.hd) + '</td><td>' + esc(x.maRung) + '</td><td>' + esc(x.diaChi) + '</td><td>' + cell(x) + '</td>' +
