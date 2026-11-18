@@ -122,8 +122,8 @@ function huongDanBox() {
 function hdDi(buoc) {
   const oid = Object.keys(db.rs || {})[0]; if (!oid) return;
   const fid = Object.keys((db.rs[oid].forests) || {})[0];
-  cur = oid; view = 'owner'; tab = 'rung'; curF = fid || null;
-  if (fid) ftab = {lo: 'finfo', nc: 'nc', dx: 'dx', pc: 'dx', xuat: 'kt'}[buoc] || 'finfo';
+  NAV.cur = oid; NAV.view = 'owner'; NAV.tab = 'rung'; NAV.curF = fid || null;
+  if (fid) NAV.ftab = {lo: 'finfo', nc: 'nc', dx: 'dx', pc: 'dx', xuat: 'kt'}[buoc] || 'finfo';
   if (fid && buoc === 'pc') { const f = db.rs[oid].forests[fid], h = HAKModel.hdOrder({dx: f.dx || [], hdvc: f.hdvc || []})[0]; if (h) hdMoDat('dx', h.id); }   // 3.0: phiếu cân nằm trong hợp đồng vận chuyển — mở hợp đồng đầu tiên
   render();
 }

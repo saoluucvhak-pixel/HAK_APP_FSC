@@ -4,9 +4,9 @@ let tkOn = false, tkQ = '', tkSel = 0;
 function tkTim() { return HAKTimKiem.tim(Object.assign({}, db, dmCu()), tkQ); }   // 3.0: danh mục đọc từ Danh mục đối tượng / xe
 function tkDiaTo(d) {
   tkDong();
-  if (d.to === 'dm') { cur = null; curF = null; if (d.tab === 'xe') { view = 'setxe'; cd.xe.q = d.q || ''; } else { view = 'setdt'; cd.q = d.q || ''; cd.nhom = 'tatca'; } return render(); }   // 3.0: Danh mục đối tượng / xe
-  if (d.to === 'chu') { cur = d.oid; curF = null; tab = 'info'; view = 'owner'; return render(); }
-  cur = d.oid; curF = d.fid; tab = 'rung'; ftab = d.ftab || 'finfo'; view = 'owner'; render();
+  if (d.to === 'dm') { NAV.cur = null; NAV.curF = null; if (d.tab === 'xe') { NAV.view = 'setxe'; cd.xe.q = d.q || ''; } else { NAV.view = 'setdt'; cd.q = d.q || ''; cd.nhom = 'tatca'; } return render(); }   // 3.0: Danh mục đối tượng / xe
+  if (d.to === 'chu') { NAV.cur = d.oid; NAV.curF = null; NAV.tab = 'info'; NAV.view = 'owner'; return render(); }
+  NAV.cur = d.oid; NAV.curF = d.fid; NAV.tab = 'rung'; NAV.ftab = d.ftab || 'finfo'; NAV.view = 'owner'; render();
 }
 function tkVe() {
   let box = document.getElementById('tkBox');

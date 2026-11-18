@@ -12,11 +12,11 @@ document.addEventListener('click', async e => {
   }
   const dsh = t.closest('[data-dash]'); if (dsh) { const [oid, fid] = dsh.dataset.dash.split('|'); openRs(oid); return openForest(fid); }
   const open = t.closest('[data-open]'); if (open) return openRs(open.dataset.open);
-  const of = t.closest('[data-forest]'); if (of) { curDoi = null; curHd = null; return openForest(of.dataset.forest); }
+  const of = t.closest('[data-forest]'); if (of) { NAV.curDoi = null; NAV.curHd = null; return openForest(of.dataset.forest); }
   const sf = t.closest('[data-sforest]'); if (sf) return openForest(sf.dataset.sforest);
-  const tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; return render(); }
-  const ftb = t.closest('[data-ftab]'); if (ftb) { ftab = ftb.dataset.ftab; return render(); }
-  const xtb = t.closest('[data-xtab]'); if (xtb) { xtab = xtb.dataset.xtab; return render(); }
+  const tb = t.closest('[data-tab]'); if (tb) { NAV.tab = tb.dataset.tab; return render(); }
+  const ftb = t.closest('[data-ftab]'); if (ftb) { NAV.ftab = ftb.dataset.ftab; return render(); }
+  const xtb = t.closest('[data-xtab]'); if (xtb) { NAV.xtab = xtb.dataset.xtab; return render(); }
   const el = t.closest('[data-act]'); if (!el) return;
   const act = el.dataset.act;
   if (act === 'newRs') return newRs(), render();
@@ -25,8 +25,8 @@ document.addEventListener('click', async e => {
   if (act === 'delForest') return delForest(), render();
   if (act === 'chonDoi') { hdMoDat('nc', el.dataset.doi); return render(); }   // 3.0: mở trang chi tiết hợp đồng nhân công của đội
   if (act === 'hdQuayLai') { hdMoDat(el.dataset.kind, null); return render(); }
-  if (act === 'ncTatCa') { ncTatCa = true; return render(); }
-  if (act === 'ncTheoDoi') { ncTatCa = false; return render(); }
+  if (act === 'ncTatCa') { NAV.ncTatCa = true; return render(); }
+  if (act === 'ncTheoDoi') { NAV.ncTatCa = false; return render(); }
   if (act === 'chonHd') { hdMoDat('dx', el.dataset.hd); return render(); }   // 3.0: mở trang chi tiết hợp đồng vận chuyển
   if (act === 'themHd') return themHd();
   if (act === 'pcGanLoat') return pcGanLoat();
@@ -36,7 +36,7 @@ document.addEventListener('click', async e => {
   if (act === 'themDoi') return themDoi();
   if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();
-  if (act === 'openSettings') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'settings'; setg.msg = null; return render(); }
+  if (act === 'openSettings') { const m = document.getElementById('moreMenu'); if (m) m.open = false; NAV.cur = null; NAV.curF = null; NAV.view = 'settings'; setg.msg = null; return render(); }
   if (act === 'dataRetry') return issueAct('retry');
   if (act === 'dataPick') return issueAct('pick');
   if (act === 'dataDefault') return issueAct('default');
@@ -56,20 +56,20 @@ document.addEventListener('click', async e => {
   if (act === 'inBaoCao') return inBaoCao();
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
-  if (act === 'hdHien') { hdDat(false); cur = null; curF = null; view = 'owner'; return render(); }   // 3.0: nút ở Cài đặt → Hướng dẫn; hướng dẫn hiện ở Tổng quan
+  if (act === 'hdHien') { hdDat(false); NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; return render(); }   // 3.0: nút ở Cài đặt → Hướng dẫn; hướng dẫn hiện ở Tổng quan
   if (act === 'hdDi') return hdDi(el.dataset.buoc);
   if (act === 'svbGiuSo') return svbGiuSo(el.dataset.hd);
-  if (act === 'vclMo') { const [oid, fid, ft] = (el.dataset.vcl || '').split('|'); if (db.rs[oid]) { cur = oid; curF = fid; tab = 'rung'; ftab = ft || 'xuat'; view = 'owner'; render(); } return; }
+  if (act === 'vclMo') { const [oid, fid, ft] = (el.dataset.vcl || '').split('|'); if (db.rs[oid]) { NAV.cur = oid; NAV.curF = fid; NAV.tab = 'rung'; NAV.ftab = ft || 'xuat'; NAV.view = 'owner'; render(); } return; }
   if (act === 'luongLay') return luongLayDonGia();
   if (act === 'loTuLoCu') return loTuLoCuTao();
   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
-  if (act === 'openDm' || act === 'openSetDt') { cur = null; curF = null; view = 'setdt'; cd.msg = null; return render(); }
-  if (act === 'openSetXe') { cur = null; curF = null; view = 'setxe'; cd.msg = null; return render(); }
-  if (act === 'openSetVt') { cur = null; curF = null; view = 'setvt'; cd.vtMsg = null; return render(); }
-  if (act === 'openSetGd') { cur = null; curF = null; view = 'setgd'; return render(); }
-  if (act === 'openSetHd') { cur = null; curF = null; view = 'sethd'; return render(); }
-  if (act === 'openSetCan') { cur = null; curF = null; view = 'setcan'; return render(); }
-  if (act === 'openNorm') { view = 'norm'; return render(); }
+  if (act === 'openDm' || act === 'openSetDt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setdt'; cd.msg = null; return render(); }
+  if (act === 'openSetXe') { NAV.cur = null; NAV.curF = null; NAV.view = 'setxe'; cd.msg = null; return render(); }
+  if (act === 'openSetVt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setvt'; cd.vtMsg = null; return render(); }
+  if (act === 'openSetGd') { NAV.cur = null; NAV.curF = null; NAV.view = 'setgd'; return render(); }
+  if (act === 'openSetHd') { NAV.cur = null; NAV.curF = null; NAV.view = 'sethd'; return render(); }
+  if (act === 'openSetCan') { NAV.cur = null; NAV.curF = null; NAV.view = 'setcan'; return render(); }
+  if (act === 'openNorm') { NAV.view = 'norm'; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
@@ -77,7 +77,7 @@ document.addEventListener('click', async e => {
   if (act === 'pcPrint') {
     if (!curRec() || stBlockNote()) return;
     pcInLoc = {hd: el.dataset.hd || ''};
-    ftab = 'inpc';
+    NAV.ftab = 'inpc';
     return render();
   }
   if (act === 'dbDel') { const tr = el.closest('tr'); tr.querySelectorAll('input,textarea').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
@@ -94,9 +94,9 @@ document.addEventListener('click', async e => {
     if (!HAKDates.isValid(v)) { note('Chưa sửa phiếu ' + (r.soPhieu || '(không số)') + ': ' + HAKDates.why(v) + '.', 'err'); return; }
     const p = HAKDates.parse(v); r.ngay = HAKDates.format(p); persistLo(); note('Đã sửa ngày cân của phiếu ' + (r.soPhieu || '(không số)') + ' thành ' + r.ngay + '.', 'ok'); return render();
   }
-  if (act === 'openCty') { cur = null; curF = null; view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
-  if (act === 'openSetGs') { cur = null; curF = null; view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
-  if (act === 'openSetBk') { const m = document.getElementById('moreMenu'); if (m) m.open = false; cur = null; curF = null; view = 'setbk'; ksl.msg = null; return render(); }
+  if (act === 'openCty') { NAV.cur = null; NAV.curF = null; NAV.view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
+  if (act === 'openSetGs') { NAV.cur = null; NAV.curF = null; NAV.view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
+  if (act === 'openSetBk') { const m = document.getElementById('moreMenu'); if (m) m.open = false; NAV.cur = null; NAV.curF = null; NAV.view = 'setbk'; ksl.msg = null; return render(); }
   if (act === 'kslTai') { ksl.msg = null; ksl.kiem = {}; return render(); }
   if (act === 'kslKiem') return kslKiem(el);
   if (act === 'kslAuto') return kslAuto();
@@ -104,7 +104,7 @@ document.addEventListener('click', async e => {
   if (act === 'kslKhoiPhuc') return kslKhoiPhuc(el);
   if (act === 'kslGo') return kslGo();
   if (act === 'kslHuy') { window.__ksl = null; return $('#impBox').classList.remove('on'); }
-  if (act === 'openSetFmt') { cur = null; curF = null; view = 'setfmt'; return render(); }
+  if (act === 'openSetFmt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setfmt'; return render(); }
   if (act === 'setGsSave') { const r = await HB.lookup.setSheet(($('#setGsLink') || {}).value.trim()); setgs.msg = r.ok ? {kind: 'ok', text: 'Đã lưu địa chỉ bảng tính.'} : {kind: 'err', text: r.error}; setgs.st = await HB.lookup.status(); return render(); }
   if (act === 'setNumStyle') { db.dinhDangSo = el.value === 'en' ? 'en' : 'vi'; persist(); return render(); }
   if (act === 'ctyAddAddr') { const c = ctyReadForm(); c.diaChiGiao.push({id: newId('a'), nhan: '', diaChi: ''}); cty.edit = c; render(); const rows = document.querySelectorAll('.ctyAddr [name=a_nhan]'); if (rows.length) rows[rows.length - 1].focus(); return; }
@@ -117,7 +117,7 @@ document.addEventListener('click', async e => {
     mh.msg = {kind: 'ok', text: 'Đã lưu công ty mua hàng và địa điểm vận chuyển đến cho rừng này: ' + snap.ten + ' – ' + snap.diaChi + '.'}; return render();
   }
   if (act === 'guide') return document.getElementById('guideBox').classList.add('on');
-  if (act === 'goHome') { cur = null; curF = null; view = 'owner'; return render(); }
+  if (act === 'goHome') { NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; return render(); }
   if (act === 'guideBg') return t === el && el.classList.remove('on');
   if (act === 'guideClose') return document.getElementById('guideBox').classList.remove('on');
   if (act === 'theme') {
@@ -127,12 +127,12 @@ document.addEventListener('click', async e => {
   if (act === 'backup') return backupAll();
   if (act === 'ktGo') {
     const go = JSON.parse(el.dataset.go || '{}');
-    if (go.view) { view = go.view; return render(); }
-    if (go.tab) { tab = go.tab; return render(); }
-    ftab = go.focus === 'mua' ? 'finfo' : go.ftab || 'finfo';
+    if (go.view) { NAV.view = go.view; return render(); }
+    if (go.tab) { NAV.tab = go.tab; return render(); }
+    NAV.ftab = go.focus === 'mua' ? 'finfo' : go.ftab || 'finfo';
     if (go.focus === 'mua') mucLoDaMo.set(mucLoKey('finfo'), 'giaohang');
-    if (ftab === 'finfo' && go.muc) mucLoDaMo.set(mucLoKey('finfo'), go.muc);
-    if (ftab === 'dx' && go.focus === 'pc') {
+    if (NAV.ftab === 'finfo' && go.muc) mucLoDaMo.set(mucLoKey('finfo'), go.muc);
+    if (NAV.ftab === 'dx' && go.focus === 'pc') {
       const hd = curForest()?.hdvc || [];
       hdMoDat('dx', hd.find(h => h.id === go.hdId)?.id || hdMo('dx') || hd[0]?.id || null);
       mucLoDaMo.set(mucLoKey('dx'), 'phieu');
@@ -324,6 +324,6 @@ document.addEventListener('change', e => {
   if (t.id === 'mhAddr') { mh.addrId = t.value === '@main' ? '' : t.value; return render(); }
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
-if (pendingNotice) { view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
+if (pendingNotice) { NAV.view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
 if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind; if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
 render();

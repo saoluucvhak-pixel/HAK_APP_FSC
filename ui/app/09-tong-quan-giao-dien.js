@@ -74,13 +74,13 @@ function panelHome() {
 let sideQ = '';
 function renderSide() {
   const qf = foldVi(sideQ);
-  const ids = Object.keys(db.rs).sort((a, b) => db.rs[a].info.ten.localeCompare(db.rs[b].info.ten, 'vi')).filter(id => { if (!qf) return true; const i = db.rs[id].info; return foldVi([i.ten, i.ma, i.cccd].join(' ')).includes(qf) || id === cur; });
+  const ids = Object.keys(db.rs).sort((a, b) => db.rs[a].info.ten.localeCompare(db.rs[b].info.ten, 'vi')).filter(id => { if (!qf) return true; const i = db.rs[id].info; return foldVi([i.ten, i.ma, i.cccd].join(' ')).includes(qf) || id === NAV.cur; });
   $('#sideList').innerHTML =
     '<button class="btn" style="width:100%;margin-bottom:10px" data-act="newRs">+ Chủ rừng mới</button>' +
     (ids.length ? ids.map(id => {
       const r = db.rs[id];
-      const kids = id === cur ? forestList(r).map(f => '<button class="item sub ' + (f.id === curF ? 'on' : '') + '" data-sforest="' + f.id + '"><b>' + esc(f.info.tenRung || f.info.maRung || '(rừng chưa đặt tên)') + '</b><small>' + esc(f.info.maRung || '') + '</small></button>').join('') : '';
-      return '<button class="item ' + (id === cur ? 'on' : '') + '" data-open="' + id + '"><b>' + (id === cur ? '▾ ' : '▸ ') + esc(r.info.ten || '(chưa đặt tên)') +
+      const kids = id === NAV.cur ? forestList(r).map(f => '<button class="item sub ' + (f.id === NAV.curF ? 'on' : '') + '" data-sforest="' + f.id + '"><b>' + esc(f.info.tenRung || f.info.maRung || '(rừng chưa đặt tên)') + '</b><small>' + esc(f.info.maRung || '') + '</small></button>').join('') : '';
+      return '<button class="item ' + (id === NAV.cur ? 'on' : '') + '" data-open="' + id + '"><b>' + (id === NAV.cur ? '▾ ' : '▸ ') + esc(r.info.ten || '(chưa đặt tên)') +
         '</b><small>Mã ' + esc(r.info.ma) + ' · ' + forestList(r).length + ' rừng</small></button>' + (kids ? '<div class="subs">' + kids + '</div>' : '');
     }).join('') : (sideQ ? '<p class="mut">Không có chủ rừng khớp “' + esc(sideQ) + '”.</p>' : '<p class="mut">Chưa có chủ rừng. Bấm “+ Chủ rừng mới”.</p>')) + '';
 }
@@ -94,27 +94,27 @@ function renderMsgs() {
 }
 
 function renderMain() {
-  if (view === 'dm') view = 'setdt';   // 3.0: Danh mục cũ thay bằng Cài đặt → Danh mục đối tượng
+  if (NAV.view === 'dm') NAV.view = 'setdt';   // 3.0: Danh mục cũ thay bằng Cài đặt → Danh mục đối tượng
   const P30 = {setdt: panelSetDt, setxe: panelSetXe, setvt: panelSetVt, setgd: panelSetGd, sethd: panelSetHd, setcan: panelSetCan};
-  if (P30[view]) { $('#main').innerHTML = renderMsgs() + settingsFrame(view, P30[view]()); return; }
-  if (view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
-  if (view === 'cty') { $('#main').innerHTML = renderMsgs() + settingsFrame('cty', panelCty()); return; }
-  if (view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
-  if (view === 'setbk') { $('#main').innerHTML = renderMsgs() + settingsFrame('setbk', panelKhoSaoLuu()); kslLoad(); return; }
-  if (view === 'setgs') { $('#main').innerHTML = renderMsgs() + settingsFrame('setgs', panelSetGs()); return; }
-  if (view === 'setfmt') { $('#main').innerHTML = renderMsgs() + settingsFrame('setfmt', panelSetFmt()); return; }
+  if (P30[NAV.view]) { $('#main').innerHTML = renderMsgs() + settingsFrame(NAV.view, P30[NAV.view]()); return; }
+  if (NAV.view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
+  if (NAV.view === 'cty') { $('#main').innerHTML = renderMsgs() + settingsFrame('cty', panelCty()); return; }
+  if (NAV.view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
+  if (NAV.view === 'setbk') { $('#main').innerHTML = renderMsgs() + settingsFrame('setbk', panelKhoSaoLuu()); kslLoad(); return; }
+  if (NAV.view === 'setgs') { $('#main').innerHTML = renderMsgs() + settingsFrame('setgs', panelSetGs()); return; }
+  if (NAV.view === 'setfmt') { $('#main').innerHTML = renderMsgs() + settingsFrame('setfmt', panelSetFmt()); return; }
   const own = curOwner();
   if (!own) {
     $('#main').innerHTML = renderMsgs() + panelHome();
     return;
   }
   const tabs = [['info', 'Thông tin chủ rừng'], ['rung', 'Rừng (' + forestList(own).length + ')']];
-  const trongRung = tab === 'rung' && !!curForest();
+  const trongRung = NAV.tab === 'rung' && !!curForest();
   $('#main').innerHTML = renderMsgs() +
     (trongRung ? '' : '<div class="row" style="justify-content:space-between"><div><h2>' + esc(own.info.ten || '(chưa đặt tên)') + '</h2><div class="mut">Mã ' + esc(own.info.ma) + '</div></div>' +
     '<button class="btn danger sm" data-act="delRs">Xóa chủ rừng</button></div>') +
-    '<div class="tabs">' + tabs.map(([k, l]) => '<button class="' + (tab === k ? 'on' : '') + '" data-tab="' + k + '">' + l + '</button>').join('') + '</div>' +
-    (tab === 'info' ? panelInfo(own) : panelRung(own));
+    '<div class="tabs">' + tabs.map(([k, l]) => '<button class="' + (NAV.tab === k ? 'on' : '') + '" data-tab="' + k + '">' + l + '</button>').join('') + '</div>' +
+    (NAV.tab === 'info' ? panelInfo(own) : panelRung(own));
 }
 
 function checklistRung(job) {

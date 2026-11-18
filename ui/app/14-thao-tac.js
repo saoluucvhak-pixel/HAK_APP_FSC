@@ -1,12 +1,12 @@
 /* ========== Thao tác ========== */
-function openRs(id) { cur = id; curF = null; tab = 'info'; view = 'owner'; render(); }
-function openForest(fid) { curF = fid; ftab = 'finfo'; tab = 'rung'; view = 'owner'; render(); }
+function openRs(id) { NAV.cur = id; NAV.curF = null; NAV.tab = 'info'; NAV.view = 'owner'; render(); }
+function openForest(fid) { NAV.curF = fid; NAV.ftab = 'finfo'; NAV.tab = 'rung'; NAV.view = 'owner'; render(); }
 
 function newRs() {
   const id = 'rs' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   db.rs[id] = {id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
   persist();
-  cur = id; curF = null; tab = 'info'; view = 'owner';
+  NAV.cur = id; NAV.curF = null; NAV.tab = 'info'; NAV.view = 'owner';
   note('Đã tạo chủ rừng mới. Nhập thông tin rồi bấm Lưu.');
 }
 
@@ -19,7 +19,7 @@ function newForest() {
   o.forests[fid] = {id: fid, info: {maRung: code, tenRung: 'Rừng ' + k, diaDiem: '', lat: null, lng: null, dienTich: null,
     dinhMucTanHa: null, cuLy: null, tuNgay: '', denNgay: '', giayTo: []},
     nc: [], dx: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
-  curF = fid; ftab = 'finfo'; tab = 'rung';
+  NAV.curF = fid; NAV.ftab = 'finfo'; NAV.tab = 'rung';
   persist();
   note('Đã tạo rừng mới. Nhập thông tin rừng rồi bấm Lưu.');
 }
@@ -115,7 +115,7 @@ function xoaDoi() {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
   const r = HAKModel.removeTeam(f, t.id); if (r.error) return note('Chưa xóa đội: ' + r.error, 'warn');
   if (!confirm('Xóa đội “' + (t.ten || '') + '” (không còn nhân công)?')) return;
-  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; curDoi = null; persistLo(); note('Đã xóa đội “' + (t.ten || '') + '”.'); render();
+  Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; NAV.curDoi = null; persistLo(); note('Đã xóa đội “' + (t.ten || '') + '”.'); render();
 }
 function saveDoi(form, nhap) {
   const f = curForest(), t = f && curTeam(f); if (!t) return;
@@ -145,7 +145,7 @@ function themHd() {
   note('Đã thêm “' + ten + '”. Chọn đội này ở cột “Đội xe” của các xe, hoặc thêm xe khi đội đang được chọn; rồi chọn người ký của đội.'); render();
 }
 function saveHd(form, nhap) {
-  const f = curForest(); if (!f || !curHd) return;
+  const f = curForest(); if (!f || !NAV.curHd) return;
   const fd = new FormData(form), g = k => trim(fd.get(k)), e = [];
   let cuoc = null;
   if (fd.get('rieng')) {
@@ -157,21 +157,21 @@ function saveHd(form, nhap) {
   }
   if (e.length) return formMsg(form, chuaLuu(nhap) + e.join('; '));
   clearFormMsg(form);
-  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? HAKDanhMuc.timDoiTac(dmDoiTacAll(), ky.slice(2)) : null, cur = (f.hdvc || []).find(h => h.id === curHd) || {};
+  const ky = String(fd.get('ky') || ''), dv = ky.startsWith('d:') ? HAKDanhMuc.timDoiTac(dmDoiTacAll(), ky.slice(2)) : null, cur = (f.hdvc || []).find(h => h.id === NAV.curHd) || {};
   const patch = {ten: g('ten'), cuoc};
   if (dv) { if (HAKDanhMuc.chuanDoiTacId(cur.donViId) !== dv.id) patch.donVi = dv; } else if (ky.startsWith('p:')) patch.key = ky.slice(2);   // người ký: người trong đội hoặc doanh nghiệp
-  const r = HAKModel.updateHd(f, curHd, patch); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
-  { const h = (r.f.hdvc || []).find(x => x.id === curHd);   // 3.0: liên kết bên ký tới Danh mục đối tượng (ID), bản chụp h.ben vẫn dùng để in
+  const r = HAKModel.updateHd(f, NAV.curHd, patch); if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
+  { const h = (r.f.hdvc || []).find(x => x.id === NAV.curHd);   // 3.0: liên kết bên ký tới Danh mục đối tượng (ID), bản chụp h.ben vẫn dùng để in
     if (h) { const d = dv && dv.doiTuongId ? {doiTuongId: dv.doiTuongId, nguoiId: dv.nguoiId || ''} : !dv && ky.startsWith('p:') ? (a => a ? {doiTuongId: a.dt.id, nguoiId: a.ng.id} : null)(HAKDoiTuong.timCccd(dmDT(), ky.slice(2))) : null; if (d) h.benKy = d; else if (dv || ky.startsWith('p:')) delete h.benKy; } }
   Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); if (nhap) { persistLo(); return; } render(); luuLo().then(x => { if (x && x.ok) note('Đã lưu đội xe và hợp đồng vận chuyển.'); });
 }
 function saveHdVb(form, nhap) {
   const f = curForest();
-  if (!f || !curHd) return;
+  if (!f || !NAV.curHd) return;
   const fd = new FormData(form);
   const exp = Object.fromEntries(['soVC', 'vcChiPhi', 'pcSo', 'pcNgay'].map(k => [k, trim(fd.get(k))]));
   if (exp.pcNgay && !parseVN(exp.pcNgay)) return formMsg(form, chuaLuu(nhap) + 'ngày lập xác nhận khối lượng phải đúng dd/mm/yyyy');
-  const r = HAKModel.updateHd(f, curHd, {exp});
+  const r = HAKModel.updateHd(f, NAV.curHd, {exp});
   if (r.error) return formMsg(form, chuaLuu(nhap) + r.error);
   clearFormMsg(form);
   f.hdvc = r.f.hdvc;
@@ -179,12 +179,12 @@ function saveHdVb(form, nhap) {
   return luuLo();
 }
 function xoaHd() {
-  const f = curForest(); if (!f || !curHd) return;
-  const r = HAKModel.removeHd(f, curHd); if (r.error) return note('Chưa xóa: ' + r.error, 'warn');
-  Object.assign(f, {hdvc: r.f.hdvc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
+  const f = curForest(); if (!f || !NAV.curHd) return;
+  const r = HAKModel.removeHd(f, NAV.curHd); if (r.error) return note('Chưa xóa: ' + r.error, 'warn');
+  Object.assign(f, {hdvc: r.f.hdvc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; NAV.curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
 }
 function hdCapNhatDv() {
-  const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === curHd), dv = h && HAKDanhMuc.timDoiTac(dmDoiTacAll(), h.donViId); if (!dv) return;
+  const f = curForest(), h = f && (f.hdvc || []).find(x => x.id === NAV.curHd), dv = h && HAKDanhMuc.timDoiTac(dmDoiTacAll(), h.donViId); if (!dv) return;
   const r = HAKModel.updateHd(f, h.id, {ben: dv}); Object.assign(f, {hdvc: r.f.hdvc}); persistLo(); note('Đã cập nhật thông tin đối tác theo danh mục.'); render();
 }
 /* gán đội cho các phiếu cân đang lọc (ngày, biển số, số phiếu, chỉ phiếu chưa gán) */
@@ -249,7 +249,7 @@ function delForest() {
   const o = curOwner(), f = curForest(); if (!f) return;
   if (!confirm('Xóa rừng "' + (f.info.tenRung || f.info.maRung) + '" và toàn bộ nhân công, vận chuyển, hồ sơ xuất của rừng này?')) return;
   delete o.forests[f.id];
-  loDirty.delete(curF); curF = null; persist();
+  loDirty.delete(NAV.curF); NAV.curF = null; persist();
   note('Đã xóa rừng.');
 }
 
@@ -272,7 +272,7 @@ function delRs() {
   const rec = curOwner(); if (!rec) return;
   if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" và toàn bộ nhân công, vận chuyển của hồ sơ này?')) return;
   delete db.rs[rec.id];
-  cur = null; curF = null; persist();
+  NAV.cur = null; NAV.curF = null; persist();
   note('Đã xóa hồ sơ chủ rừng.');
 }
 
@@ -309,7 +309,7 @@ function confirmImport(kind, f, rows, fileName) {
 }
 async function importFile(kind, file) {
   const f0 = curForest(); if (!f0) return; if (kiemKhoa(f0)) return;
-  const tgt = {o: cur, f: curF, ma: f0.info.maRung, epoch: dbEpoch};   // lô đích cố định ngay khi chọn file: không phụ thuộc lô đang mở khi đọc xong
+  const tgt = {o: NAV.cur, f: NAV.curF, ma: f0.info.maRung, epoch: dbEpoch};   // lô đích cố định ngay khi chọn file: không phụ thuộc lô đang mở khi đọc xong
   try {
     const spec = {nc: ['NHAN_CONG', H_NC, NC_REQ, normNC], dx: ['DOI_XE', H_DX, DX_REQ, normDX], pc: ['PHIEU_CAN', H_PC, PC_REQ, normPC, PC_ALIAS]}[kind];
     const r = await parseSheet(file, spec[0], spec[1], spec[2], spec[3], spec[4]);
@@ -319,11 +319,11 @@ async function importFile(kind, file) {
     r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; if (kind === 'pc') { const co = !!String(x.ngay2 || '').trim(); HAKPhieuCan.chuanHoaNgay2(x); if (!co && x.ngay2) x._ngay2Suy = true; } });   // file không có hoặc để trống ngày cân 2: suy ra (cờ tạm _ngay2Suy chỉ dùng khi gộp, không lưu)
     stErrList = null; const st = stGetFor(tgt.o, tgt.f, true), nkSnap = nhatKyNapChup(st, kind), rep = HAKStage.merge(st, kind, r.rows, {source: 'Excel: ' + file.name, suyNgay2: HAKPhieuCan.suyNgay2});
     nhatKyNapGhi(st, kind, file.name, rep, nkSnap);
-    if (kind === 'pc' && cur === tgt.o && curF === tgt.f) ganPhieuHopDong(st, rep.ids, f1);   // 3.0: phiếu mới vào hợp đồng vận chuyển đang mở, xe theo BKS khớp duy nhất
-    const here = cur === tgt.o && curF === tgt.f;
+    if (kind === 'pc' && NAV.cur === tgt.o && NAV.curF === tgt.f) ganPhieuHopDong(st, rep.ids, f1);   // 3.0: phiếu mới vào hợp đồng vận chuyển đang mở, xe theo BKS khớp duy nhất
+    const here = NAV.cur === tgt.o && NAV.curF === tgt.f;
     const msg = 'Đã đưa ' + r.rows.length + ' dòng ' + ST_LABEL[kind] + ' từ ' + file.name + ' vào BẢN NHÁP của lô ' + ma + ' (chưa lưu): thêm ' + rep.add + ', cập nhật ' + rep.upd + ', giữ nguyên ' + rep.same + (rep.kept ? ', giữ ' + rep.kept + ' bản ghi đã lưu không có trong file' : '') + (rep.pending ? ', CẦN ĐỐI CHIẾU ' + rep.pending + ' dòng trùng số phiếu nhưng khác dữ liệu (chưa áp dụng)' : '') + (rep.errors ? ', ' + rep.errors + ' ô sai định dạng (giữ giá trị cũ, xem chi tiết)' : '') + (other.length ? '. Cảnh báo: file có mã rừng khác lô này (' + other.join(', ') + ') nên các dòng đó báo lỗi' : '') + '. Xem trước, chỉnh sửa rồi bấm “Lưu dữ liệu vào lô”.';
     if (!here) { pushNote('Lô ' + ma + ' có dữ liệu chờ xem trước (' + ST_LABEL[kind] + ' từ ' + file.name + '). Bạn đang xem lô khác nên màn hình giữ nguyên; mở lại lô ' + ma + ' để xem trước và lưu.', 'warn'); return; }
-    ftab = ST_TAB[kind]; pushNote(msg, rep.pending || rep.errors ? 'warn' : 'ok');   // hiển thị ở lần vẽ lại sau khi hàm này xong (.then(render))
+    NAV.ftab = ST_TAB[kind]; pushNote(msg, rep.pending || rep.errors ? 'warn' : 'ok');   // hiển thị ở lần vẽ lại sau khi hàm này xong (.then(render))
   } catch (e) {
     pushNote('Không nạp được file: ' + e.message, 'err');
   }
@@ -416,7 +416,7 @@ async function importGo() {
   const r = await HB.importApply(window.__imp, strat, opts);
   $('#impBox').classList.remove('on'); window.__imp = null; window.__plan = null;
   if (!r.ok) return note('Không nhập được, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
-  dbThayToanBo(r.db); cur = null; curF = null;   // dữ liệu vừa được thay: bản nháp, dấu “chưa lưu” và bản đã lưu cũ không còn đích (ui/app/29)
+  dbThayToanBo(r.db); NAV.cur = null; NAV.curF = null;   // dữ liệu vừa được thay: bản nháp, dấu “chưa lưu” và bản đã lưu cũ không còn đích (ui/app/29)
   note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân. Bản sao lưu trước khi nhập: ' + r.backup);
 }
 

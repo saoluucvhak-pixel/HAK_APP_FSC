@@ -215,7 +215,7 @@ function lkCandHtml() {
 /* ----- Bước 3: xem trước ----- */
 function lkTarget() {
   if (lk.mode === 'fill') {   // lô đích là lô đã chọn lúc bấm “Điền vào rừng này”, không đổi theo lô đang mở
-    const t = lk.tgt || {o: cur, f: curF, epoch: dbEpoch}, o = db.rs[t.o], f = o && o.forests && o.forests[t.f], st = f ? stages[stKeyOf(t.o, t.f)] : null;
+    const t = lk.tgt || {o: NAV.cur, f: NAV.curF, epoch: dbEpoch}, o = db.rs[t.o], f = o && o.forests && o.forests[t.f], st = f ? stages[stKeyOf(t.o, t.f)] : null;
     if (!f || t.epoch !== dbEpoch) return {o: null, f: null, gone: true, oi: {}, fi: {}, pc: [], dx: [], giay: []};
     return {o, f, oi: o.info, fi: f.info, pc: st ? st.cur.pc : (f.pc || []), dx: st ? st.cur.dx : (f.dx || []), giay: f.info.giayTo || []};
   }
@@ -381,7 +381,7 @@ async function lkApply() {
       const isPlate = (p, i) => s.plateOnly && p.bienDoi;
       const plateRows = rows.filter((r, i) => isPlate(chosen[i], i)).map(r => ({soPhieu: r.soPhieu, bienSo: r.bienSo, _src: r._src})), restRows = rows.filter((r, i) => !isPlate(chosen[i], i));
       lkRep = HAKStage.merge(stages[k0], 'pc', restRows, {source: 'Google Sheets', plateSource: 'Google Sheets', suyNgay2: HAKPhieuCan.suyNgay2});
-      if (curF === f.id) ganPhieuHopDong(stages[k0], lkRep.ids, f);   // 3.0: phiếu mới vào hợp đồng vận chuyển đang mở
+      if (NAV.curF === f.id) ganPhieuHopDong(stages[k0], lkRep.ids, f);   // 3.0: phiếu mới vào hợp đồng vận chuyển đang mở
       if (plateRows.length) { const pr = HAKStage.merge(stages[k0], 'pc', plateRows, {source: 'Google Sheets (đổi biển số)', plateSource: 'Google Sheets', sameTrip: true}); lkRep.upd += pr.upd; lkRep.same += pr.same; lkRep.pending += pr.pending; }
     }
     if (false && s.kl) { f.info.khoiLuong = Math.round(chosen.reduce((a, p) => a + p.kl, 0) * 1000) / 1000; mark(f, 'khoiLuong', {tab: 'HoSoKeo_QC', row: 0, col: 'Tổng Khối lượng (Tấn) của ' + chosen.length + ' phiếu đã chọn'}); }
@@ -390,10 +390,10 @@ async function lkApply() {
     const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
     const r = await persistNow();
     if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } nhapTamGhi();
-    const veHd = curF === f.id && ftab === 'dx' && hdMo('dx');   // 3.0: tra cứu từ hợp đồng vận chuyển: lưu xong ở lại đúng hợp đồng
-    cur = o.id; curF = f.id; tab = 'rung'; ftab = veHd ? 'dx' : 'finfo'; view = 'owner';
+    const veHd = NAV.curF === f.id && NAV.ftab === 'dx' && hdMo('dx');   // 3.0: tra cứu từ hợp đồng vận chuyển: lưu xong ở lại đúng hợp đồng
+    NAV.cur = o.id; NAV.curF = f.id; NAV.tab = 'rung'; NAV.ftab = veHd ? 'dx' : 'finfo'; NAV.view = 'owner';
     lkClose(); lk.view = 'search';
-    if (chosen.length) ftab = 'dx';
+    if (chosen.length) NAV.ftab = 'dx';
     note('Đã ghi thông tin tra cứu vào ' + esc(o.info.ten) + ' · rừng ' + f.info.maRung + '.' + (chosen.length ? ' ' + chosen.length + ' phiếu cân đã đưa vào BẢN NHÁP (thêm ' + lkRep.add + ', cập nhật ' + lkRep.upd + ', giữ nguyên ' + lkRep.same + (lkRep.pending ? ', CẦN ĐỐI CHIẾU ' + lkRep.pending : '') + '): xem trước ở tab Vận chuyển rồi bấm “Lưu dữ liệu vào lô” (chưa lưu thì chưa dùng để tạo hồ sơ).' : ''), chosen.length ? 'warn' : undefined);
   } catch (e) {
     db = withDefaults(JSON.parse(snapshot));   // trả lại đúng trạng thái trước khi ghi
@@ -451,12 +451,12 @@ document.addEventListener('click', async e => {
   }
   if (a === 'lkSync') return lkLoad('sync');
   if (a === 'lkExcel') return lkLoad('excel');
-  if (a === 'lkToSettings') { lkClose(); cur = null; curF = null; view = 'setgs'; setgs.msg = null; setgs.st = await HB.lookup.status(); return render(); }
+  if (a === 'lkToSettings') { lkClose(); NAV.cur = null; NAV.curF = null; NAV.view = 'setgs'; setgs.msg = null; setgs.st = await HB.lookup.status(); return render(); }
   if (a === 'lkBack') { lk.view = 'search'; lk.msg = null; return lkRender(); }
   if (a === 'lkBackCand') { lk.view = 'cand'; lk.msg = null; return lkRender(); }
-  if (a === 'lkModeFill') { lk.mode = 'fill'; lk.tgt = {o: cur, f: curF, epoch: dbEpoch}; lk.alias = {}; lk.plateOv = {}; lkInitSel(); lk.view = 'preview'; lk.msg = null; return lkRender(); }
+  if (a === 'lkModeFill') { lk.mode = 'fill'; lk.tgt = {o: NAV.cur, f: NAV.curF, epoch: dbEpoch}; lk.alias = {}; lk.plateOv = {}; lkInitSel(); lk.view = 'preview'; lk.msg = null; return lkRender(); }
   if (a === 'lkModeNew') { lk.owner = $('#lkOwner').value; lk.mode = 'new'; lk.alias = {}; lk.plateOv = {}; lkInitSel(); lk.view = 'preview'; lk.msg = null; return lkRender(); }
-  if (a === 'lkOpenDup') { const d = findForestByMa(lk.cand.forests[lk.fi].maRung); cur = d.o.id; curF = d.f.id; tab = 'rung'; view = 'owner'; render(); lk.mode = 'fill'; lk.tgt = {o: cur, f: curF, epoch: dbEpoch}; lk.alias = {}; lk.plateOv = {}; lkInitSel(); lk.view = 'preview'; return lkRender(); }
+  if (a === 'lkOpenDup') { const d = findForestByMa(lk.cand.forests[lk.fi].maRung); NAV.cur = d.o.id; NAV.curF = d.f.id; NAV.tab = 'rung'; NAV.view = 'owner'; render(); lk.mode = 'fill'; lk.tgt = {o: NAV.cur, f: NAV.curF, epoch: dbEpoch}; lk.alias = {}; lk.plateOv = {}; lkInitSel(); lk.view = 'preview'; return lkRender(); }
   if (a === 'lkPcAll') { lkPhieuRows().forEach(p => { lk.sel.phieu[p.soPhieu] = p.st === 'new' || p.st === 'upd'; }); return lkRender(); }
   if (a === 'lkPcFilter') { lk.pcFilter = (($('#lkPcFilter') || {}).value || '').trim(); return lkRender(); }
   if (a === 'lkPcFilterClear') { lk.pcFilter = ''; return lkRender(); }

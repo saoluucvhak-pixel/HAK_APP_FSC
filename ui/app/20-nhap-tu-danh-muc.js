@@ -146,7 +146,7 @@ function loTuLoCuTao() {
   const [oid, fid] = sel.value.split('|'), src = db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; if (!src) return note('Không thấy lô nguồn.', 'err');
   const base = (o.info.ma || 'CR') + '-R'; let k = forestList(o).length + 1, code = base + k; while (HAKLoRung.lotsByMa(db, code).length) code = base + (++k);
   const id = newId('f'), r = HAKDanhMuc.loTuLoCu(src, {id, maRung: code, tenRung: 'Rừng ' + k, dmLaoDong: db.dmLaoDong, dmXe: db.dmXeVC});
-  o.forests[id] = r.f; curF = id; ftab = 'finfo'; tab = 'rung'; persist();
+  o.forests[id] = r.f; NAV.curF = id; NAV.ftab = 'finfo'; NAV.tab = 'rung'; persist();
   note('Đã tạo lô ' + code + ' từ lô ' + (src.info.maRung || '?') + ': ' + (r.f.nc || []).length + ' nhân công, ' + (r.f.dx || []).length + ' xe (làm mới từ Danh mục: ' + r.nguoi + ' người, ' + r.xe + ' xe). Nhập thông tin rừng, thời gian khai thác rồi Lưu; phiếu cân và số/ngày văn bản nhập mới.', 'ok'); render();
 }
 
