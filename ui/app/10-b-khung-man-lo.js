@@ -45,7 +45,7 @@ function panelKiemTra(job) {
 function panelRung(own, chuTab) {
   const fl = forestList(own), f = curForest();
   const add = '<button class="btn sm" data-act="newForest">+ Rừng mới</button>';
-  const list = '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Các rừng của chủ rừng</h3>' + add + '</div>' +
+  const list = '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Các rừng của chủ rừng</h3>' + (f ? '' : add) + '</div>' +
     '<p class="mut">Mỗi rừng có tổ khai thác, vận chuyển, hợp đồng và hồ sơ xuất riêng.</p>' + loTuLoCuBox(own) +
     (fl.length ? fl.map(f => '<button class="item ' + (f.id === NAV.curF ? 'on' : '') + '" data-forest="' + f.id + '"><span class="pill ' + (progressOf(jobView(own, f)).pct === 100 ? 'ok' : '') + '">' + progressOf(jobView(own, f)).pct + '%</span><b>' + esc(f.info.tenRung || f.info.maRung) +
       '</b><small>Mã ' + esc(f.info.maRung) + ' · ' + esc(f.info.diaDiem || 'chưa có địa điểm') + ' · ' + f.nc.length + ' người · ' + f.dx.length + ' xe</small></button>').join('')
@@ -54,10 +54,10 @@ function panelRung(own, chuTab) {
   const job = curRec();
   const kt = exportCheck(job), ft = [['finfo', 'Thông tin rừng'], ['nc', 'Nhân công (' + f.nc.length + ')'], ['dx', 'Vận chuyển (' + f.dx.length + ')'], ['kt', 'Kiểm tra trước khi xuất (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')'],
   ['xuat', 'Xuất hồ sơ']];
-  /* phiếu #10 (gọn phần đầu lô): MỘT hàng — tên lô (h2) + đường dẫn, chip “Danh sách rừng · tiến độ” (khối gập, mở thì xuống hàng dưới), nút của lô; hàng sau là tab lô */
+  /* phiếu #10 (gọn phần đầu lô): MỘT hàng — tên lô (h2) + đường dẫn, chip “Danh sách rừng · tiến độ” (khối gập, mở thì xuống hàng dưới), nút + Rừng mới, Sao lưu lô rừng; hàng sau là tab lô. Nút Xóa rừng (ít dùng, nguy hiểm) chuyển xuống cuối khung Thông tin rừng */
   return '<div class="loDau">' + (chuTab ? '<div class="tabs loDauTab">' + chuTab + '</div>' : '') + '<h2 class="sro">' + esc(f.info.tenRung || f.info.maRung) + '</h2>' + loCrumb(job) +   // tên lô đọc được bằng trình đọc màn hình; trên màn hình đã có ở đường dẫn (Lô <b>mã</b>)
     '<details class="rungTomTat"><summary>Danh sách rừng · Tiến độ ' + progressOf(job).pct + '%</summary>' + list + panelTienDo(job) + '</details>' +
-    '<span class="loDauNut"><button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button><button class="btn danger sm" data-act="delForest">Xóa rừng</button></span></div>' +
+    '<span class="loDauNut">' + add + '<button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button></span></div>' +
     loBar() + '<div class="tabs rungTabs">' + ft.map(([k, l]) => '<button class="' + (NAV.ftab === k ? 'on' : '') + '" data-ftab="' + k + '">' + l + '</button>').join('') + '</div>' +
     loKhoaBanner(f) +
     (NAV.ftab === 'inpc' ? panelInPhieuCan() : NAV.ftab === 'finfo' ? khungMucLo('finfo', [

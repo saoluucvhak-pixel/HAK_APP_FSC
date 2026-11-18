@@ -76,7 +76,7 @@ function panelForest(f, muc) {
     klDoiField(f) + '</div>' +
     /* Ô cũ “Đơn giá giao khoán Tổ trưởng”: chỉ còn hiện ở hồ sơ cũ đã có giá trị (để hợp đồng đã in không đổi). Lô mới nhập đơn giá Tổ trưởng ở bảng đơn giá theo vị trí (tab Nhân công);
      * đơn giá khoán của cả tổ luôn suy ra từ định biên. Xóa trống ô này thì ô biến mất và hợp đồng chuyển sang cách tính mới. */
-    '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></form></div>';
+    '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button>' + (HB ? '<button class="btn ghost" type="button" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '<button class="btn danger sm" type="button" data-act="delForest" style="margin-left:auto" title="Xóa hẳn rừng này cùng nhân công, xe, phiếu cân của rừng">Xóa rừng</button></div></form></div>';
 }
 
 const luongOptions = (direct, cur) => {
