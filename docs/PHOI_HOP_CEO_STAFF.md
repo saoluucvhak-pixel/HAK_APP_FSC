@@ -1,5 +1,7 @@
 # Quy trình phối hợp CEO_FSC và STAFF_FSC
 
+> **Phiên bản 2 (18/11/2026, 18:30 giờ Việt Nam):** mục 11 ở cuối tài liệu thay thế mục 1, mục 3 và mục 10.3 khi có mâu thuẫn. Vai trò: CEO viết phiếu và nghiệm thu; STAFF thực hiện; KCS kiểm việc của STAFF rồi gộp PR; CEO nghiệm thu trên `main` và phát hành.
+
 Áp dụng cho ứng dụng HAKQN (repo `saoluucvhak-pixel/HAK_APP_FSC`). Người dùng (gọi là CHỦ) ra quyết định và đánh thức các agent. Hai agent trao đổi qua Issue và Pull Request trên GitHub (mục 2).
 
 ## 1. Vai trò
@@ -187,3 +189,37 @@ Giới hạn cứng: không phát hành, không gắn thẻ, không gộp PR do 
 Trước mỗi lần làm: liệt kê Issue nhãn `phieu` và PR đang mở, kiểm nhận việc để không làm trùng (mục 10.1).
 Khi sẵn sàng, bình luận `KCS_FSC sẵn sàng` trên Issue #43 và bắt đầu kiểm tra.
 ```
+
+## 11. Quy trình v2 (có hiệu lực từ 18/11/2026, 18:30 giờ Việt Nam)
+
+### 11.1 Vai trò
+| Vai trò | Việc chính | Không làm |
+| --- | --- | --- |
+| **CEO_FSC** | Viết phiếu (prompt) giao việc; kiểm mã, quy trình nhập liệu, xử lý số liệu, bố cục và thiết kế màn, bộ lọc thông minh, báo cáo; nghiệm thu trên `main` sau khi gộp; phát hành và bàn giao khi đủ cổng (11.4); giữ bảng điều phối | Không viết tính năng lớn thay STAFF (chỉ sửa nhỏ để gỡ vướng, ghi rõ) |
+| **STAFF_FSC** | Thực hiện đúng phiếu: viết mã, kiểm thử, mở PR, sửa theo đề nghị bổ sung của KCS | Không gộp PR, không phát hành, không đổi phạm vi phiếu |
+| **KCS_FSC** | Kiểm việc của STAFF đã đầy đủ chưa; thiếu thì đề nghị STAFF bổ sung; đủ thì chạy CI, gộp PR vào `main`, bàn giao thông tin cho CEO | Không phát hành; không gộp PR do chính KCS viết; không tự đổi phạm vi phiếu |
+
+### 11.2 Luồng một phiếu
+1. CEO tạo Issue phiếu (nhãn `phieu`, `staff`).
+2. STAFF làm, mở PR `Closes #<Issue>` có khối `[BÁO CÁO HOÀN THÀNH #NN]`.
+3. **KCS kiểm** theo hai lớp: (a) từng mục "Việc phải làm" và "Tiêu chí đạt" của phiếu đã có bằng chứng chưa; (b) 8 điều kiện mục 4 (CI Windows 3/3, kiểm thử đơn vị, so bản in 206 tài liệu, kiểm thử mới đỏ trước xanh sau, `renderer/index.html` dựng lại, không bình luận treo, không xung đột, phạm vi đúng).
+4. **Thiếu:** KCS bình luận `[KCS: CHƯA ĐẦY ĐỦ #NN]` liệt kê từng mục còn thiếu kèm cách kiểm lại, gắn nhãn `can-bo-sung`; STAFF bổ sung trong cùng PR rồi bình luận `[ĐÃ BỔ SUNG #NN]`. Tối đa 3 vòng, quá thì KCS báo CEO.
+5. **Đủ:** KCS bình luận `[KCS: ĐẠT #NN]`, bảo đảm CI xanh đúng head, **gộp squash** với `expectedHeadSha`, gắn nhãn `da-gop`, rồi bình luận `[BÀN GIAO CEO #NN]` (commit trên `main`, kết quả CI, kết quả so bản in, điểm cần CEO chú ý).
+6. **CEO nghiệm thu trên `main`:** chạy kiểm thử đơn vị, so bản in, rà bố cục/nhập liệu nếu phiếu đụng đến; khi xong một đợt thì chạy workflow `Build Windows installer` bằng `workflow_dispatch` không có `release_tag` trên `main` để có CI Windows đầy đủ trên đúng commit. Kết quả `[KẾT QUẢ NGHIỆM THU #NN]` ĐẠT hoặc KHÔNG ĐẠT (không đạt: CEO mở phiếu sửa tiếp).
+7. PR do CEO viết (tài liệu, phiếu): KCS gộp khi CI xanh; nếu KCS không hoạt động quá 1 giờ thì CEO tự gộp theo ủy quyền của CHỦ.
+
+### 11.3 Dự phòng
+- **STAFF không hoạt động quá 1 giờ** trên phiếu đang giao: KCS bình luận nhắc và báo CEO; CEO báo CHỦ. KCS chỉ làm thay (mục 10.2) khi CHỦ hoặc CEO yêu cầu rõ, và PR đó do CEO gộp.
+- Mọi giờ ghi trong Issue, PR và bảng điều phối là **giờ Việt Nam**.
+
+### 11.4 Cổng phát hành (CEO kiểm, CHỦ đã ủy quyền phát hành khi đủ cổng)
+1. Mọi phiếu của đợt có nhãn `da-gop` và CEO nghiệm thu ĐẠT.
+2. CI Windows xanh 3/3 trên commit `main` sẽ gắn thẻ (gồm smoke bộ cài và cài đè từ v2.3.0).
+3. `scripts/so-ban-in.js`: 206 tài liệu giống từng byte so với bản phát hành trước, hoặc khác biệt có giải thích được CHỦ duyệt.
+4. `package.json`, `CHANGELOG.md` và `docs/GHI_CHU_PHAT_HANH_<phiên bản>.md` đã cập nhật (qua PR riêng).
+5. CHỦ xác nhận hai mục kiểm tay trên Windows thật: tra cứu HoSoKeo qua Google Sheets thật, giao diện ở mức phóng 150%.
+6. CEO chạy workflow với `release_tag`, tải bộ cài, đối chiếu SHA256 với `BUILD_INFO.txt`, rồi bàn giao cho CHỦ bằng Phiếu phát hành.
+
+### 11.5 Lời nhắc khởi động v2
+**KCS_FSC:** "Bạn là KCS_FSC. Đọc docs/PHOI_HOP_CEO_STAFF.md mục 11. Việc của bạn: kiểm PR của STAFF đã đầy đủ chưa theo phiếu và 8 điều kiện; thiếu thì bình luận `[KCS: CHƯA ĐẦY ĐỦ #NN]` và nhãn `can-bo-sung`; đủ thì gộp squash đúng head, bàn giao CEO. Không phát hành, không gộp PR do chính bạn viết."
+**STAFF_FSC:** "Bạn là STAFF_FSC. Làm theo phiếu trên Issue nhãn `phieu` theo đúng thứ tự, mở PR, sửa ngay theo `[KCS: CHƯA ĐẦY ĐỦ #NN]`, không gộp PR, không phát hành."
