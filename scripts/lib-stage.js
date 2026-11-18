@@ -47,7 +47,7 @@ exports.addXe = async (w, bienSo, chuXe) => {
  * rồi trở lại tab (và nhóm trong tab Xuất) đang xem để kịch bản tiếp tục như trước. */
 exports.setExp = async (w, k, v) => {
   const back = await w.evaluate(() => ({ftab: (document.querySelector('[data-ftab].on') || {}).dataset?.ftab, xtab: (document.querySelector('[data-xtab].on') || {}).dataset?.xtab}));
-  const go = await w.evaluate(k => window.__expTab(k), k);
+  const go = await w.evaluate(k => window.__hak.expTab(k), k);
   if (back.ftab !== go.ftab) await w.click('[data-ftab=' + go.ftab + ']');
   if (go.ftab === 'nc') {
     const rows = w.locator('#dsHdNcTbl tr[data-act=chonDoi]');

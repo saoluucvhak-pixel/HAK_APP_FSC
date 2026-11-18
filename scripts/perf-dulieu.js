@@ -38,26 +38,26 @@ function duLieu() {
   if (process.argv.includes('--profile')) {   // hồ sơ CPU khi vẽ tab Thông tin rừng: hàm nào tốn thời gian nhất (tự thân)
     const cdp = await w.context().newCDPSession(w); await cdp.send('Profiler.enable'); await cdp.send('Profiler.start');
     const pt = (arg('--profile-tab') || 'finfo').split(':');   // --profile-tab xuat:all: tab cần đo
-    for (let i = 0; i < 3; i++) await w.evaluate(([t, x]) => window.__perf.ve('own1', 'f11', t, x), [pt[0], pt[1]]);
+    for (let i = 0; i < 3; i++) await w.evaluate(([t, x]) => window.__hak.perf.ve('own1', 'f11', t, x), [pt[0], pt[1]]);
     const {profile} = await cdp.send('Profiler.stop'), self = {}, dt = profile.timeDeltas, by = new Map(profile.nodes.map(n => [n.id, n]));
     profile.samples.forEach((id, i) => { const n = by.get(id), k = (n.callFrame.functionName || '(ẩn danh)') + ' @' + (n.callFrame.url.split('/').pop() || '') + ':' + n.callFrame.lineNumber; self[k] = (self[k] || 0) + (dt[i] || 0); });
     console.log(Object.entries(self).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([k, v]) => Math.round(v / 1000) + ' ms  ' + k).join('\n'));
     await app.close(); return;
   }
-  const ve = async (t, x) => { const a = []; for (let i = 0; i < 3; i++) a.push(await w.evaluate(([t, x]) => window.__perf.ve('own1', 'f11', t, x), [t, x])); return Math.min(...a); };
+  const ve = async (t, x) => { const a = []; for (let i = 0; i < 3; i++) a.push(await w.evaluate(([t, x]) => window.__hak.perf.ve('own1', 'f11', t, x), [t, x])); return Math.min(...a); };
   kq.veMs = {thongTinRung: await ve('finfo'), nhanCong: await ve('nc'), vanChuyen: await ve('dx'), kiemTra: await ve('kt'), xuatHoSo: await ve('xuat', 'all')};
-  kq.dungLuong = await w.evaluate(() => window.__perf.dungLuong());
+  kq.dungLuong = await w.evaluate(() => window.__hak.perf.dungLuong());
   // một lần lưu khi sửa một ô (số HĐ của đội) rồi Lưu dữ liệu vào lô
-  await w.evaluate(() => window.__perf.ve('own1', 'f11', 'nc'));
+  await w.evaluate(() => window.__hak.perf.ve('own1', 'f11', 'nc'));
   if (await w.locator('#dsHdNcTbl tr[data-act=chonDoi]').count()) await w.locator('#dsHdNcTbl tr[data-act=chonDoi]').first().click();
   await w.click('.mucNav [data-muc-lo=vanban]');
   const a = Date.now(); await w.fill('#doiKTVb input[data-exp=soKT]', '099'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change');
-  const r = await w.evaluate(async () => { const a = performance.now(); const r = await window.__stSaveCurrent(); return {ok: r && r.ok, ms: Math.round(performance.now() - a), cach: window.__saveStats.last}; }); kq.luuMotO = Object.assign(r, {tongMs: Date.now() - a});
+  const r = await w.evaluate(async () => { const a = performance.now(); const r = await window.__stSaveCurrent(); return {ok: r && r.ok, ms: Math.round(performance.now() - a), cach: window.__hak.saveStats.last}; }); kq.luuMotO = Object.assign(r, {tongMs: Date.now() - a});
   // lần lưu thứ hai (đã có ảnh chụp của lần trước: lưu theo phần thay đổi — trường hợp thường gặp)
-  await w.evaluate(() => window.__perf.ve('own1', 'f11', 'nc')); await w.fill('#doiKTVb input[data-exp=soKT]', '098'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change');
-  kq.luuLanHai = await w.evaluate(async () => { const a = performance.now(); const r = await window.__stSaveCurrent(); return {ok: r && r.ok, ms: Math.round(performance.now() - a), cach: window.__saveStats.last, sideBytes: window.__saveStats.sideBytes}; });
+  await w.evaluate(() => window.__hak.perf.ve('own1', 'f11', 'nc')); await w.fill('#doiKTVb input[data-exp=soKT]', '098'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change');
+  kq.luuLanHai = await w.evaluate(async () => { const a = performance.now(); const r = await window.__stSaveCurrent(); return {ok: r && r.ok, ms: Math.round(performance.now() - a), cach: window.__hak.saveStats.last, sideBytes: window.__hak.saveStats.sideBytes}; });
   // sửa MỘT dòng danh mục lao động (4.500 dòng) rồi lưu: B6 chỉ gửi và ghi dòng đó
-  kq.luuDanhMuc = await w.evaluate(() => window.__perf.luuMotDongDanhMuc());
+  kq.luuDanhMuc = await w.evaluate(() => window.__hak.perf.luuMotDongDanhMuc());
   await app.close();
   console.log(JSON.stringify(kq, null, 1));
   const out = arg('--out'); if (out) { fs.mkdirSync(path.dirname(out), {recursive: true}); fs.writeFileSync(out, JSON.stringify(kq, null, 1)); }

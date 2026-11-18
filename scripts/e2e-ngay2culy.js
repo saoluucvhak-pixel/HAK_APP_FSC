@@ -25,7 +25,7 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   await w.evaluate(d => window.hak.save(d), SEED); await w.reload(); await w.waitForSelector('#side');
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const saveStageNow = async () => { await w.evaluate(async () => (window.__stDirty && window.__stDirty().length) ? await window.__stSaveCurrent() : null); await w.waitForTimeout(500); };
-  const open = async tab => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + tab + ']'); if (tab === 'dx') await w.evaluate(() => window.__mucLo('dx', 'phieu')); /* 3.0: bảng phiếu cân ở mục Phiếu cân */ await w.waitForTimeout(300); };
+  const open = async tab => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + tab + ']'); if (tab === 'dx') await w.evaluate(() => window.__hak.mucLo('dx', 'phieu')); /* 3.0: bảng phiếu cân ở mục Phiếu cân */ await w.waitForTimeout(300); };
   const row = so => w.evaluate(s => { const r = [...document.querySelectorAll('#main tr')].find(x => new RegExp('(^|\\s)' + s + '(\\s|$)').test(x.innerText) && x.querySelector('[data-act=stEdit]')); return r ? r.innerText.replace(/\s+/g, ' ') : ''; }, so);
 
   // ===== 1. ngày cân 2 =====
@@ -72,7 +72,7 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   // rừng: chưa chọn nơi giao → chưa có cự ly
   await open('finfo'); let note = await w.innerText('#cuLyNote');
   ok('rừng chưa chọn nơi giao: ghi chú cự ly nêu thiếu tọa độ nơi giao; cước tấn/km chưa tính được', /Chưa có cự ly/.test(note) && /tọa độ nơi giao/.test(note), note);
-  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__mucLo('finfo', 'giaohang')); await w.click('[data-act=mhOpen]'); await w.selectOption('#mhAddr', a1.id); await w.click('[data-act=mhConfirm]'); await w.waitForTimeout(400);
+  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__hak.mucLo('finfo', 'giaohang')); await w.click('[data-act=mhOpen]'); await w.selectOption('#mhAddr', a1.id); await w.click('[data-act=mhConfirm]'); await w.waitForTimeout(400);
   const km = Math.round(((a, b, c, e) => { const R = 6371.0088, r = x => x * Math.PI / 180, dl = r(c - a), dg = r(e - b), h = Math.sin(dl / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dg / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); })(15.5, 108.0, 15.5, 108.4) * 10) / 10, kmTxt = String(km).replace('.', ',');
   const vcText = await w.innerText('#main');
   ok('chọn nơi giao Kỳ Hà: cự ly tự tính ' + kmTxt + ' km (tay tính haversine); tab Vận chuyển ghi “tự tính, đường chim bay”', new RegExp('Cự ly vận chuyển: ' + kmTxt + ' km \\(tự tính, đường chim bay\\)').test(vcText), vcText.slice(vcText.indexOf('Cự ly'), vcText.indexOf('Cự ly') + 160));
@@ -80,13 +80,13 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   ok('Thông tin rừng: ghi chú “Đang dùng cự ly tự tính ' + kmTxt + ' km”, nhắc đường chim bay và cách nhập số thực tế; ô cự ly trống có gợi ý', new RegExp('tự tính ' + kmTxt + ' km').test(note) && /đường chim bay/.test(note) && (await w.getAttribute('#forestForm [name=cuLy]', 'placeholder')).includes('tự tính ' + kmTxt) && (await w.inputValue('#forestForm [name=cuLy]')) === '', note);
   // cước tấn/km dùng cự ly tự tính: thành tiền theo bảng tay
   const cuoc = Math.round(1000 * km);
-  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__mucLo('finfo', 'giaohang')); /* 3.0: cước ở Thông tin rừng → Công ty, địa chỉ giao và cước */ const dxText = await w.innerText('#main');
+  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__hak.mucLo('finfo', 'giaohang')); /* 3.0: cước ở Thông tin rừng → Công ty, địa chỉ giao và cước */ const dxText = await w.innerText('#main');
   ok('cước tấn/km: 1.000 đồng/tấn/km × ' + kmTxt + ' km = ' + cuoc.toLocaleString('vi-VN') + ' đồng/tấn (cự ly tự tính được dùng để tính)', dxText.replace(/\./g, '').includes(String(cuoc)) || dxText.includes(cuoc.toLocaleString('vi-VN')), dxText.slice(dxText.indexOf('tấn/km') - 100, dxText.indexOf('tấn/km') + 200));
   // nhập tay ưu tiên
   await open('finfo'); await w.fill('#forestForm [name=cuLy]', '60'); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400); await open('finfo');
   note = await w.innerText('#cuLyNote');
   ok('nhập tay 60 km: ưu tiên số nhập tay, vẫn nêu số tự tính để so sánh, lưu vào hồ sơ', /nhập tay 60 km/.test(note) && new RegExp('Tự tính từ tọa độ: ' + kmTxt + ' km').test(note) && (await db()).rs.own1.forests.fa.info.cuLy === 60, note);
-  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__mucLo('finfo', 'giaohang')); /* 3.0: cước ở Thông tin rừng → Công ty, địa chỉ giao và cước */ ok('tab Vận chuyển: cự ly 60 km (nhập tay), cước = 1.000 × 60 = 60.000', /Cự ly vận chuyển: 60 km \(nhập tay\)/.test(await w.innerText('#main')) && /60\.000 đồng\/tấn/.test(await w.innerText('#main')));
+  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__hak.mucLo('finfo', 'giaohang')); /* 3.0: cước ở Thông tin rừng → Công ty, địa chỉ giao và cước */ ok('tab Vận chuyển: cự ly 60 km (nhập tay), cước = 1.000 × 60 = 60.000', /Cự ly vận chuyển: 60 km \(nhập tay\)/.test(await w.innerText('#main')) && /60\.000 đồng\/tấn/.test(await w.innerText('#main')));
   // xóa số nhập tay: trở về tự tính
   await open('finfo'); await w.fill('#forestForm [name=cuLy]', ''); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400); await open('finfo');
   ok('xóa ô cự ly: quay về tự tính ' + kmTxt + ' km, hồ sơ lưu cự ly trống', new RegExp('tự tính ' + kmTxt + ' km').test(await w.innerText('#cuLyNote')) && (await db()).rs.own1.forests.fa.info.cuLy == null);

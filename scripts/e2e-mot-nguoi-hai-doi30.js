@@ -57,7 +57,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   const cong = d => F0.nc.filter(r => r.doiId === F0.doi.find(x => x.ten === d).id).reduce((s, r) => s + CC.total(F0.cc, r.id), 0);
   ok('tổng ngày công từng đội theo dữ liệu: Đội 1 = 22, Đội 2 = 19,5 (không cộng trùng người ở hai đội)', cong('Đội 1') === 22 && cong('Đội 2') === 19.5, cong('Đội 1') + ' | ' + cong('Đội 2'));
   await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]');
-  const loi = await w.evaluate(() => window.__doiKT && window.__doiKT());
+  const loi = await w.evaluate(() => window.__hak.doiKT && window.__hak.doiKT());
   ok('kiểm tra dữ liệu: không báo trùng CCCD giữa hai đội; quân số mỗi đội 2 người', !!loi && !(loi.loi || []).some(e => /trùng/i.test(e)) && loi.doi.every(d => d[1] === 2), JSON.stringify(loi && [loi.loi, loi.doi]));
   const clear = () => { for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f)); };
   const waitFiles = async (n, ext) => { let l = []; for (let i = 0; i < 120; i++) { l = fs.readdirSync(out).filter(x => x.endsWith(ext)); if (l.length >= n) break; await w.waitForTimeout(200); } await w.waitForTimeout(400); return l; };

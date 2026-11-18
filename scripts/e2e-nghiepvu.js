@@ -121,7 +121,7 @@ const docText = buf => JSZip.loadAsync(buf).then(z => z.file('word/document.xml'
   const docs = z ? await Promise.all(Object.keys(z.files).filter(n => /\.docx$/.test(n)).map(async n => docText(await z.file(n).async('nodebuffer')))) : (f ? [await docText(fs.readFileSync(f))] : []);
   if (process.env.DBG) docs.forEach(x => console.log('DOC', (x.match(/.{0,60}tấn.{0,40}/g) || []).slice(0, 6).join(' | ')));
   ok("BM-14 từng đội dùng khối lượng nhập riêng ở cả mục 2.1 và 2.2: đội 1 ghi 20 tấn, đội 2 ghi 10 tấn (không phải 15/15 theo số người)", docs.length === 2 && docs.some(x => /TRẦN ĐỘI MỘT/.test(x) && /20,000/.test(x) && !/15,000/.test(x)) && docs.some(x => /TRẦN ĐỘI HAI/.test(x) && /10,000/.test(x) && !/15,000/.test(x)), docs.length + ' tài liệu');
-  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__mucLo('finfo', 'dinhmuc')); await w.waitForTimeout(300); { const t = await w.innerText('#forestForm');
+  await w.click('[data-ftab=finfo]'); await w.evaluate(() => window.__hak.mucLo('finfo', 'dinhmuc')); await w.waitForTimeout(300); { const t = await w.innerText('#forestForm');
     ok('khối lượng từng đội của hồ sơ cũ chỉ hiển thị (không còn ô nhập): Đội 1 = 20 tấn, Đội 2 = 10 tấn, có nút bỏ số hồ sơ cũ', /Khối lượng thực tế từng đội của hồ sơ cũ/.test(t) && !(await w.$('[data-kldoi]')) && /20 tấn/.test(t) && /10 tấn/.test(t) && !!(await w.$('[data-act=boKlCu]')), t.slice(0, 400)); }
   await w.click('[data-act=boKlCu]'); await w.waitForTimeout(400); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(600);
   { const F = await w.evaluate(() => window.hak.loadSync().db.rs.own1.forests.fa);

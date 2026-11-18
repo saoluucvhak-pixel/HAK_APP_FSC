@@ -16,7 +16,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   const big = sample(50, 4, 100);                                         // 20.000 phiếu cân
   ok('nạp dữ liệu giả lập 50 chủ × 4 lô × 100 phiếu', (await w.evaluate(d => window.hak.save(d), big)).ok);
   await w.reload(); await w.waitForSelector('#side');
-  const stats = () => w.evaluate(() => ({...window.__saveStats}));
+  const stats = () => w.evaluate(() => ({...window.__hak.saveStats}));
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const waitSaved = async n => { for (let i = 0; i < 100; i++) { const s = await stats(); if (s.delta + s.full >= n) return s; await w.waitForTimeout(100); } return stats(); };
   const addOwner = async (ma, ten) => {

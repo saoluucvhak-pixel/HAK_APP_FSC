@@ -39,7 +39,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('[name=numStyle][value=en]'); await w.waitForTimeout(400);
   ok('chọn kiểu quốc tế: lưu vào cơ sở dữ liệu', (await w.evaluate(() => window.hak.loadSync().db.dinhDangSo)) === 'en');
   await w.click('[data-open=own1]').catch(() => {}); await w.evaluate(() => document.querySelector('[data-act=goHome]').click()); await w.waitForTimeout(300);
-  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]'); await w.evaluate(() => window.__mucLo('dx', 'phieu')); await w.waitForTimeout(300);   // 3.0: phiếu cân ở mục “Phiếu cân”
+  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]'); await w.evaluate(() => window.__hak.mucLo('dx', 'phieu')); await w.waitForTimeout(300);   // 3.0: phiếu cân ở mục “Phiếu cân”
   const dxText = await w.innerText('#main');
   ok('kiểu quốc tế: số trên màn hình hiện dạng 1,234.5 (có khối lượng phiếu cân)', /\d,\d{3}|\d\.\d/.test(dxText) && /9\.25|12\.5/.test(dxText), dxText.slice(0, 300));
   await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=ld]');

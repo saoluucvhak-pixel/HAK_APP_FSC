@@ -110,8 +110,8 @@ function exportCheckTinh(job) {
 const mucLoDaMo = new Map();
 const mucLoKey = k => JSON.stringify([NAV.cur, NAV.curF, k, k === 'nc' || k === 'dx' ? hdMo(k) : null]);
 const mucLoDangMo = (k, macDinh = 'chung') => mucLoDaMo.get(mucLoKey(k)) || macDinh;
-window.__mucLo = (k, id) => { mucLoDaMo.set(mucLoKey(k), id); render(); };
-window.__hdMo = (k, id) => { hdMoDat(k, id || null); render(); };   // kiểm thử đầu-cuối: mở / đóng trang chi tiết hợp đồng trong cùng lô (bản nháp của lô vẫn giữ)   // kiểm thử đầu-cuối: mở một mục nhập (không qua hộp hỏi lưu bản nháp — bản nháp của lô vẫn giữ)
+CONG_KT.mucLo = (k, id) => { mucLoDaMo.set(mucLoKey(k), id); render(); };
+CONG_KT.hdMo = (k, id) => { hdMoDat(k, id || null); render(); };   // kiểm thử đầu-cuối: mở / đóng trang chi tiết hợp đồng trong cùng lô (bản nháp của lô vẫn giữ)   // kiểm thử đầu-cuối: mở một mục nhập (không qua hộp hỏi lưu bản nháp — bản nháp của lô vẫn giữ)
 function khungMucLo(k, cacMuc, macDinh = 'chung') {
   const active = mucLoDangMo(k, macDinh);
   const muc = cacMuc.find(x => x[0] === active) || cacMuc[0];
@@ -469,4 +469,4 @@ function panelImport(kind, rec, heading = '') {
 }
 
 /* kiểm thử B7: kết quả kiểm tra của lô đang mở (bản nháp nếu có) và phiên bản dữ liệu hiện tại */
-window.__ktTest = {kt: () => { const r = curRec(); return r ? exportCheck(stJob(r)) : null; }, ver: () => dataVer};
+CONG_KT.ktTest = {kt: () => { const r = curRec(); return r ? exportCheck(stJob(r)) : null; }, ver: () => dataVer};

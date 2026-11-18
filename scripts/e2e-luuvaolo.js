@@ -79,7 +79,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   ok('hoàn tác xóa: PA3 trở lại', !(await w.$('tr.stGone')));
 
   // ===== 5. sửa biển số xe đã liên kết: liệt kê phiếu, tổng không đổi =====
-  await w.evaluate(() => window.__mucLo('dx', 'xe'));   // 3.0: bảng xe ở mục “Xe và tài xế”
+  await w.evaluate(() => window.__hak.mucLo('dx', 'xe'));   // 3.0: bảng xe ở mục “Xe và tài xế”
   const iXe = await w.$$eval('tr', rs => rs.filter(r => /92C-12345/.test(r.innerText) && r.querySelector('[data-act=stEdit][data-kind=dx]')).map(r => r.querySelector('[data-act=stEdit]').dataset.i)[0]);
   await w.click('[data-act=stEdit][data-kind=dx][data-i="' + iXe + '"]'); await w.waitForSelector('#stForm'); const dl0 = dialogs.length;
   await w.fill('#stForm input[name=bienSo]', '92C-54321'); await w.click('#stForm [type=submit]'); await w.waitForTimeout(400);

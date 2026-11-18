@@ -594,7 +594,8 @@ async function smoke() {
       reports: typeof HAKReports === 'object' && HAKReports.REPORTS.length, ownerShown: document.getElementById('side').innerText.includes('CHỦ RỪNG THỬ NGHIỆM'),
       filter: await window.hak.lookup.search('', '', {onlyIssues: true, from: '2026-01-01', sort: 'tan'}).then(x => x.ok && !!x.facets).catch(() => false)}))()`);
     r.checks.appVerShown = r.dom.appVer === ' · Phiên bản ' + app.getVersion();   // phiên bản hiện ở đầu trang đúng bằng phiên bản bản cài
-    if (app.isPackaged) r.checks.testEnvOff = TEST_ONLY_ENV.every(k => !(k in process.env));   // bản cài: biến môi trường kiểm thử đã bị xóa
+    if (app.isPackaged) r.checks.testEnvOff = TEST_ONLY_ENV.every(k => !(k in process.env));
+    if (app.isPackaged) r.checks.noTestHooks = await win.webContents.executeJavaScript("typeof window.__hak === 'undefined' && !window.hak.testHooks");   // bản cài: không có cổng kiểm thử window.__hak   // bản cài: biến môi trường kiểm thử đã bị xóa
     r.checks.reportMenu = r.dom.reportMenu && r.dom.reports >= 5; r.checks.smartFilter = r.dom.sideFilter && r.dom.filter === true; r.checks.lookupMenu = r.dom.lookupMenu === true;
     if (phase === 'upgrade') r.checks.ownerInUi = await win.webContents.executeJavaScript("document.getElementById('side').innerText.includes('CHỦ RỪNG CŨ')"); // giao diện hiện lại chủ rừng cũ
     if (phase === 'verify' || phase === 'verify230') r.checks.ownerInUi = r.dom.ownerShown;
@@ -674,7 +675,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1366, height: 820, minWidth: 1024, minHeight: 640, title: TITLE, backgroundColor: '#f4f6f8',
     webPreferences: {preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true,
-      additionalArguments: !app.isPackaged && process.env.HAKQN_TEST_LEGACY_IMPORT === '1' ? ['--hakqn-test-legacy-import'] : []}
+      additionalArguments: app.isPackaged ? [] : ['--hakqn-test-hooks', ...(process.env.HAKQN_TEST_LEGACY_IMPORT === '1' ? ['--hakqn-test-legacy-import'] : [])]}
   });
   win.webContents.on('will-navigate', e => e.preventDefault());
   win.webContents.on('will-frame-navigate', e => {

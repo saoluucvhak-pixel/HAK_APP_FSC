@@ -21,7 +21,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const lo = async () => (await loadDb()).rs.own1.forests.fa;
   const open = async ftab => { if (!(await w.$('[data-ftab=nc]'))) { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); } await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(400); };
   const truoc = JSON.stringify(await lo());
-  const dirty = async () => !!(await w.$('#loDirtyBar')) || (await w.evaluate(() => window.__khoaTest.chuaLuu() + (window.__stDirty ? window.__stDirty().length : 0))) > 0;
+  const dirty = async () => !!(await w.$('#loDirtyBar')) || (await w.evaluate(() => window.__hak.khoaTest.chuaLuu() + (window.__stDirty ? window.__stDirty().length : 0))) > 0;
   // 1. tab Xuất hồ sơ: ô nhập bị vô hiệu, vẫn tải được
   await open('xuat'); await w.waitForSelector('#chotBox');
   const nhap = await w.$$eval('#main [data-exp]', e => e.map(x => x.disabled));
@@ -30,15 +30,15 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 2. giả lập sửa ô (gỡ disabled rồi bắn sự kiện change): không ghi
   await w.evaluate(() => { const i = document.querySelector('#main [data-exp]'); i.disabled = false; i.value = 'SỬA TRÁI PHÉP'; i.dispatchEvent(new Event('change', {bubbles: true})); });
   await w.waitForTimeout(500);
-  ok('sự kiện sửa ô của lô khóa bị chặn: dữ liệu lô không đổi, không treo “Chưa lưu”', JSON.stringify((await w.evaluate(() => window.__khoaTest.lo().exp))) === JSON.stringify((JSON.parse(truoc)).exp) && !(await dirty()));
+  ok('sự kiện sửa ô của lô khóa bị chặn: dữ liệu lô không đổi, không treo “Chưa lưu”', JSON.stringify((await w.evaluate(() => window.__hak.khoaTest.lo().exp))) === JSON.stringify((JSON.parse(truoc)).exp) && !(await dirty()));
   ok('có thông báo lô chỉ đọc', /chỉ đọc/.test(await w.innerText('#main')));
   // 3. đường ghi trực tiếp vào lô (persistLo / persist): giao diện trả về bản đã lưu
-  await w.evaluate(() => { const f = window.__khoaTest.lo(); f.exp.soKT = '99'; f.info.diaDiem = 'TRÁI PHÉP'; window.__khoaTest.persistLo(f); });
+  await w.evaluate(() => { const f = window.__hak.khoaTest.lo(); f.exp.soKT = '99'; f.info.diaDiem = 'TRÁI PHÉP'; window.__hak.khoaTest.persistLo(f); });
   await w.waitForTimeout(400);
-  ok('persistLo trên lô khóa: trả về bản đã lưu, không còn “Chưa lưu”', (await w.evaluate(() => window.__khoaTest.lo().info.diaDiem)) !== 'TRÁI PHÉP' && JSON.stringify(await w.evaluate(() => window.__khoaTest.lo())) === JSON.stringify(await lo()) && !(await dirty()));
-  await w.evaluate(() => { const f = window.__khoaTest.lo(); f.info.diaDiem = 'TRÁI PHÉP 2'; window.__khoaTest.persist(); });
+  ok('persistLo trên lô khóa: trả về bản đã lưu, không còn “Chưa lưu”', (await w.evaluate(() => window.__hak.khoaTest.lo().info.diaDiem)) !== 'TRÁI PHÉP' && JSON.stringify(await w.evaluate(() => window.__hak.khoaTest.lo())) === JSON.stringify(await lo()) && !(await dirty()));
+  await w.evaluate(() => { const f = window.__hak.khoaTest.lo(); f.info.diaDiem = 'TRÁI PHÉP 2'; window.__hak.khoaTest.persist(); });
   await w.waitForTimeout(900);
-  ok('persist() thẳng: tầng lưu của giao diện từ chối, bộ nhớ về bản đã lưu, SQLite không đổi', (await w.evaluate(() => window.__khoaTest.lo().info.diaDiem)) !== 'TRÁI PHÉP 2' && JSON.stringify(await lo()) === truoc);
+  ok('persist() thẳng: tầng lưu của giao diện từ chối, bộ nhớ về bản đã lưu, SQLite không đổi', (await w.evaluate(() => window.__hak.khoaTest.lo().info.diaDiem)) !== 'TRÁI PHÉP 2' && JSON.stringify(await lo()) === truoc);
   // 4. tiến trình chính: từ chối LOCKED (save trọn bộ)
   const D = await loadDb(); D.rs.own1.forests.fa.exp.soKT = '77';
   const r1 = await w.evaluate(d => window.hak.save(d), D);

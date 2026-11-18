@@ -1,4 +1,6 @@
 /* ========== Lưu trữ ========== */
+/* Sổ đăng ký các móc CHỈ để kiểm thử (đọc, điều hướng): module nào có móc thì ghi vào CONG_KT; module 35 mở ra thành window.__hak khi chạy từ mã nguồn. */
+const CONG_KT = {};
 let storeOk = true;
 let migrated = false;
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -100,7 +102,7 @@ function loVeBanDaLuu(fid) {
   Object.values(db.rs || {}).forEach(o => { const k = Object.keys(o.forests || {}).find(x => (o.forests[x].id || x) === fid); if (k) { const f = o.forests[k], v = JSON.parse(b.json); Object.keys(f).forEach(x => { delete f[x]; }); Object.assign(f, v); } });
   return true;
 }
-window.__saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
+CONG_KT.saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
 /* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
 function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); if (HAKLienKet.canChuan(o.forests[k])) HAKLienKet.chuanLo(o.forests[k]); }));
   if (Array.isArray(db.dmViTri)) { const vt = HAKViTri.dung(db); if (vt.length !== db.dmViTri.length) db.dmViTri = vt; } }   // 3.0: tên vị trí mới (định biên, định mức, đơn giá, dòng nhân công) vào Danh mục vị trí với mã ổn định   // 3.0: ID dòng, chấm công theo ID thành viên — giống hệt tầng lưu (src/store.js) để ảnh chụp khớp SQLite   // tại chỗ: nơi đang giữ tham chiếu lô vẫn đúng
@@ -131,18 +133,18 @@ async function saveOnce() {
       const d = HAKDelta.diff(saveCache.snap, snap);
       d.rev = saveCache.rev; d.counts = snap.counts;
       if (saveCache.snap.side && snap.side) d.sideD = HAKDelta.diffSide(saveCache.snap.side, snap.side); else d.side = HAKDelta.side(W);   // B6: chỉ các dòng danh mục / khóa meta đã đổi
-      window.__saveStats.sideBytes = d.sideD ? JSON.stringify(d.sideD).length : -1;   // đo hiệu năng: cỡ phần ngoài hồ sơ đã gửi (-1: gửi đủ)
+      CONG_KT.saveStats.sideBytes = d.sideD ? JSON.stringify(d.sideD).length : -1;   // đo hiệu năng: cỡ phần ngoài hồ sơ đã gửi (-1: gửi đủ)
       r = await HB.saveDelta(d);
-      if (r && !r.ok && (r.code === 'STALE' || r.code === 'MISMATCH')) { window.__saveStats.fallback++; r = null; }
-      else if (r && r.ok) window.__saveStats.delta++;
+      if (r && !r.ok && (r.code === 'STALE' || r.code === 'MISMATCH')) { CONG_KT.saveStats.fallback++; r = null; }
+      else if (r && r.ok) CONG_KT.saveStats.delta++;
     }
   }
   if (!r) {
     const W = dbGhi(); snap = HAKDelta.snapshot(W);   // chụp lại ngay trước khi gửi: db có thể đã đổi trong lúc chờ
     r = await HB.save(W);
-    if (r && r.ok) window.__saveStats.full++;
+    if (r && r.ok) CONG_KT.saveStats.full++;
   }
-  window.__saveStats.last = r && r.ok ? r.mode || 'full' : 'error';
+  CONG_KT.saveStats.last = r && r.ok ? r.mode || 'full' : 'error';
   saveCache = r && r.ok && r.rev && !snap.dup ? {rev: r.rev, snap} : null;
   if (r && r.ok && !snap.dup) savedSnap = snap;
   return r;
@@ -221,7 +223,7 @@ function ganDoi(doi, nc) {
  * Ghi: ô của đội ghi vào đội đang chọn (ghiDoi), còn lại vào lô. */
 const EXP_VC = ['soVC', 'vcChiPhi', 'pcSo', 'pcNgay', 'pcNguoiLap', 'pcNguong'];
 const expTab = k => HAKModel.DOI_EXP.includes(k) ? {ftab: 'nc', muc: 'vanban'} : EXP_VC.includes(k) ? {ftab: 'finfo', muc: 'giaohang'} : {ftab: 'xuat', xtab: ['capNgay', 'capHan', 'capNguoi', 'dtNgay', 'dtDiaDiem', 'dtThoiLuong', 'dtNguoi', 'dtNoiDung', 'tbNgay', 'tbNguoi', 'tbSoBinh', 'thang'].includes(k) ? 'ld' : 'hd'};
-window.__expTab = expTab;   // kiểm thử đầu-cuối: ô này nằm ở màn nào
+CONG_KT.expTab = expTab;   // kiểm thử đầu-cuối: ô này nằm ở màn nào
 function expInputs(list, ex) {
   return '<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">' +
     list.map(x => '<label>' + x[1] + '<input data-exp="' + x[0] + '" value="' + esc(ex[x[0]] || '') + '" placeholder="' + esc(x[2] || '') + '"></label>').join('') + '</div>';

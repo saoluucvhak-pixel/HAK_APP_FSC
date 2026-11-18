@@ -36,7 +36,7 @@ function svbDien() {
   persistLo(f); note('Đã điền ' + n + ' ô số theo quy tắc vào bản nháp. Kiểm tra rồi bấm “Lưu dữ liệu vào lô”.', 'ok'); render();
 }
 /* Đo hiệu năng (scripts/perf-dulieu.js): thời gian vẽ một màn của một lô và kích thước phần “ngoài hồ sơ” (side) gửi kèm mỗi lần lưu theo phần thay đổi. Chỉ đọc. */
-window.__perf = {
+CONG_KT.perf = {
   luuMotDongDanhMuc: async () => { db.dmLaoDong[5] = Object.assign({}, db.dmLaoDong[5], {diaChi: 'ĐỊA CHỈ ĐO ' + Date.now()}); doiDuLieu(); const a = performance.now(); const r = await storeSave(); return {ok: !!(r && r.ok), ms: Math.round(performance.now() - a), cach: window.__saveStats.last, sideBytes: window.__saveStats.sideBytes}; },
   ve: (oid, fid, t, x) => { NAV.cur = oid; NAV.curF = fid; NAV.view = 'owner'; NAV.tab = 'rung'; NAV.ftab = t; if (x) NAV.xtab = x; const a = performance.now(); render(); return Math.round(performance.now() - a); },
   dungLuong: () => { const W = dbGhi(), s = JSON.stringify(HAKDelta.side(W)); let lo = 0, lonNhat = 0; Object.values(W.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => { const n = JSON.stringify(f).length; lo += n; if (n > lonNhat) lonNhat = n; })); return {side: s.length, tongLo: lo, loLonNhat: lonNhat}; }
