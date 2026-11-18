@@ -13,6 +13,7 @@
   const D = () => (typeof HAKDates !== 'undefined' ? HAKDates : (typeof require === 'function' ? require('./dates.js') : root.HAKDates));
   const s = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
   const so = v => String(v == null ? '' : v).replace(/\D/g, '');
+  const NL = () => (typeof require === 'function' ? require('./nhaplieu.js') : root.HAKNhapLieu);   // quy tắc CCCD duy nhất (src/nhaplieu.js, phiếu #14): 9 hoặc 12 chữ số
   const fold = v => s(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
   const clone = x => JSON.parse(JSON.stringify(x));
   const LOAI = {phapnhan: 'Pháp nhân', thenhan: 'Thể nhân'};
@@ -223,24 +224,24 @@
 
   /* ---------- chuyển từ danh mục cũ (bản 2.x) ---------- */
   /* Dựng danh mục đối tượng từ dmLaoDong (người lao động, nhiều dòng theo ngày), dmXeVC (tài xế, chủ xe) và dmDoiTac (doanh nghiệp, cá nhân ký) — “Người chung” theo CCCD.
-   * Mỗi CCCD (12 số) = một thể nhân một người, gộp vai trò; thông tin lấy dòng mới nhất, chỗ trống bù từ nguồn khác. Doanh nghiệp = pháp nhân có quyền ký Vận chuyển.
+   * Mỗi CCCD (9 hoặc 12 số, phiếu #14) = một thể nhân một người, gộp vai trò; thông tin lấy dòng mới nhất, chỗ trống bù từ nguồn khác. Doanh nghiệp = pháp nhân có quyền ký Vận chuyển.
    * Người không có CCCD hợp lệ (tài xế / chủ xe chỉ có tên) KHÔNG tự tạo: ghi Cần đối chiếu. hienCo: danh mục mới đã có (chạy lại không thêm trùng).
    * Trả {dm, canDoiChieu: [{loai, ref, lyDo, goc}], so: {nguoi, phapNhan}}. vt: danh mục vị trí để nối viTriId. */
   function tuDanhMucCu(db, vt, hienCo) {
     const dm = clone(hienCo || []), can = [], dates = D(), nk = v => { const p = dates.parse(s(v)); return p ? p.key : 0; };
-    const by = new Map(), put = (cccd, ngay, vai, o) => { const k = so(cccd); if (k.length !== 12) return false; const e = by.get(k) || {cccd: k, vai: {}, ky: {}, ds: []}; Object.assign(e.vai, vai || {}); e.ds.push(Object.assign({t: nk(ngay)}, o)); by.set(k, e); return true; };
-    (db.dmLaoDong || []).forEach(r => { if (!r) return; const vi = vt && r.viTri ? (vt.find(x => fold(x.ten) === fold(r.viTri)) || {}).id : ''; if (!put(r.cccd, r.ngayCapNhat, {nhanCong: true}, {hoTen: s(r.ten), gioiTinh: s(r.gioiTinh), ngaySinh: s(r.ngaySinh), diaChi: s(r.diaChi), ngayCap: s(r.ngayCap), noiCap: s(r.noiCap), sdt: s(r.sdt), viTriId: vi || '', _tt: fold(r.chucVu) === 'to truong'}) && s(r.ten)) can.push({loai: 'nguoi', ref: s(r.ten), lyDo: 'Lao động “' + s(r.ten) + '” không có CCCD 12 số: chưa tạo hồ sơ đối tượng', goc: r}); });
+    const by = new Map(), put = (cccd, ngay, vai, o) => { const k = so(cccd); if (!NL().cccdHopLe(k)) return false; const e = by.get(k) || {cccd: k, vai: {}, ky: {}, ds: []}; Object.assign(e.vai, vai || {}); e.ds.push(Object.assign({t: nk(ngay)}, o)); by.set(k, e); return true; };
+    (db.dmLaoDong || []).forEach(r => { if (!r) return; const vi = vt && r.viTri ? (vt.find(x => fold(x.ten) === fold(r.viTri)) || {}).id : ''; if (!put(r.cccd, r.ngayCapNhat, {nhanCong: true}, {hoTen: s(r.ten), gioiTinh: s(r.gioiTinh), ngaySinh: s(r.ngaySinh), diaChi: s(r.diaChi), ngayCap: s(r.ngayCap), noiCap: s(r.noiCap), sdt: s(r.sdt), viTriId: vi || '', _tt: fold(r.chucVu) === 'to truong'}) && s(r.ten)) can.push({loai: 'nguoi', ref: s(r.ten), lyDo: 'Lao động “' + s(r.ten) + '” không có CCCD 9 hoặc 12 số: chưa tạo hồ sơ đối tượng', goc: r}); });
     (db.dmXeVC || []).forEach(r => {
       if (!r) return;
-      if (s(r.taiXe) && !put(r.cccdTx, r.ngayCapNhat, {taiXe: true}, {hoTen: s(r.taiXe), diaChi: s(r.diaChiTx), ngayCap: s(r.ngayCapTx), noiCap: s(r.noiCapTx), gplx: s(r.gplx), hanGplx: s(r.hanGplx)})) can.push({loai: 'nguoi', ref: s(r.taiXe), lyDo: 'Tài xế “' + s(r.taiXe) + '” (xe ' + s(r.bienSo) + ') không có CCCD 12 số: chưa tạo hồ sơ', goc: {bienSo: r.bienSo, taiXe: r.taiXe}});
-      if (s(r.chuXe) && !put(r.cccd, r.ngayCapNhat, {chuXe: true}, {hoTen: s(r.chuXe), ngaySinh: s(r.ngaySinh), diaChi: s(r.diaChi), ngayCap: s(r.ngayCap), noiCap: s(r.noiCap), sdt: s(r.sdt)})) can.push({loai: 'nguoi', ref: s(r.chuXe), lyDo: 'Chủ xe “' + s(r.chuXe) + '” (xe ' + s(r.bienSo) + ') không có CCCD 12 số: chưa tạo hồ sơ', goc: {bienSo: r.bienSo, chuXe: r.chuXe}});
+      if (s(r.taiXe) && !put(r.cccdTx, r.ngayCapNhat, {taiXe: true}, {hoTen: s(r.taiXe), diaChi: s(r.diaChiTx), ngayCap: s(r.ngayCapTx), noiCap: s(r.noiCapTx), gplx: s(r.gplx), hanGplx: s(r.hanGplx)})) can.push({loai: 'nguoi', ref: s(r.taiXe), lyDo: 'Tài xế “' + s(r.taiXe) + '” (xe ' + s(r.bienSo) + ') không có CCCD 9 hoặc 12 số: chưa tạo hồ sơ', goc: {bienSo: r.bienSo, taiXe: r.taiXe}});
+      if (s(r.chuXe) && !put(r.cccd, r.ngayCapNhat, {chuXe: true}, {hoTen: s(r.chuXe), ngaySinh: s(r.ngaySinh), diaChi: s(r.diaChi), ngayCap: s(r.ngayCap), noiCap: s(r.noiCap), sdt: s(r.sdt)})) can.push({loai: 'nguoi', ref: s(r.chuXe), lyDo: 'Chủ xe “' + s(r.chuXe) + '” (xe ' + s(r.bienSo) + ') không có CCCD 9 hoặc 12 số: chưa tạo hồ sơ', goc: {bienSo: r.bienSo, chuXe: r.chuXe}});
     });
     const dn = [];
     (db.dmDoiTac || []).forEach(r => {
       if (!r) return;
       if (r.loai === 'doanhnghiep') { dn.push(r); return; }
       const vai = /tai xe/.test(fold(r.vaiTro)) ? {taiXe: true} : {chuXe: true};
-      if (!put(r.cccd, '', vai, {hoTen: s(r.ten), ngaySinh: s(r.ngaySinh), diaChi: s(r.diaChi), ngayCap: s(r.ngayCap), noiCap: s(r.noiCap), sdt: s(r.sdt), _ky: true})) can.push({loai: 'nguoi', ref: s(r.ten), lyDo: 'Đối tác cá nhân “' + s(r.ten) + '” không có CCCD 12 số: chưa tạo hồ sơ', goc: r});
+      if (!put(r.cccd, '', vai, {hoTen: s(r.ten), ngaySinh: s(r.ngaySinh), diaChi: s(r.diaChi), ngayCap: s(r.ngayCap), noiCap: s(r.noiCap), sdt: s(r.sdt), _ky: true})) can.push({loai: 'nguoi', ref: s(r.ten), lyDo: 'Đối tác cá nhân “' + s(r.ten) + '” không có CCCD 9 hoặc 12 số: chưa tạo hồ sơ', goc: r});
     });
     let nNguoi = 0, nPN = 0;
     [...by.values()].forEach(e => {

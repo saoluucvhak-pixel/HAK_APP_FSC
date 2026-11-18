@@ -10,7 +10,8 @@
   const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   const bienKey = v => BKS().khoa(v);
   const fold = v => String(v == null ? '' : v).trim().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ');
-  const cccd = v => { const d = String(v == null ? '' : v).replace(/\D/g, ''); return d && d.length < 12 ? d.padStart(12, '0') : d; };
+  const NL = () => (typeof require === 'function' ? require('./nhaplieu.js') : root.HAKNhapLieu);   // quy tắc CCCD duy nhất (src/nhaplieu.js): chỉ lấy chữ số, không thêm số 0 (CMND 9 số và CCCD 12 số không bao giờ cùng khóa)
+  const cccd = v => NL().cccdSo(v);
   const KEY = {
     nc: r => cccd(r.cccd) || fold(r.ten),
     dx: r => bienKey(r.bienSo),

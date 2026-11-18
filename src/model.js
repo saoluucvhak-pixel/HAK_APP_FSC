@@ -10,6 +10,7 @@
  * Bất biến: lô cũ (1.4.x) sau khi chuẩn hóa rồi dựng lại dạng cũ (legacyForest) giống hệt ban đầu, và hồ sơ xuất ra không đổi.
  * ensureForest chạy lại không đổi gì. */
 (function (root) {
+  const NL = () => (typeof require === 'function' ? require('./nhaplieu.js') : root.HAKNhapLieu);   // quy tắc CCCD duy nhất (src/nhaplieu.js, phiếu #14): 9 hoặc 12 chữ số
   'use strict';
   const clone = x => x === undefined ? undefined : JSON.parse(JSON.stringify(x));
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
@@ -295,14 +296,14 @@
     return out;
   }
 
-  /* DANH MỤC NGƯỜI LAO ĐỘNG dùng chung (như danh mục xe): người đã nhập ở mọi lô, gộp theo CCCD 12 số; thông tin khác nhau giữa các lô thì lô có ngày bắt đầu khai thác MỚI NHẤT thắng (bằng nhau: lô duyệt sau).
+  /* DANH MỤC NGƯỜI LAO ĐỘNG dùng chung (như danh mục xe): người đã nhập ở mọi lô, gộp theo CCCD 9 hoặc 12 số; thông tin khác nhau giữa các lô thì lô có ngày bắt đầu khai thác MỚI NHẤT thắng (bằng nhau: lô duyệt sau).
    * Mỗi lô vẫn chụp lại thông tin người trong lô: danh mục chỉ để điền sẵn khi thêm người, không bao giờ sửa ngược lô khác. rs = db.rs (chủ rừng → forests). Bỏ người thiếu họ tên hoặc CCCD không đủ 12 số. */
   const cccdSo = v => String(v == null ? '' : v).replace(/\D/g, '');
   const ngayKey = v => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trim(v)); return m ? (+m[3]) * 10000 + (+m[2]) * 100 + (+m[1]) : 0; };
   function nguoiDanhMuc(rs) {
     const by = new Map();
     Object.values(rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => (f.nc || []).forEach(r => {
-      const k = cccdSo(r && r.cccd); if (!r || k.length !== 12 || !trim(r.ten)) return;
+      const k = cccdSo(r && r.cccd); if (!r || !NL().cccdHopLe(k) || !trim(r.ten)) return;
       const t = ngayKey(f.info && f.info.tuNgay), cur = by.get(k); if (!cur || t >= cur.t) by.set(k, {t, r});
     })));
     return [...by.values()].map(x => x.r).sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));

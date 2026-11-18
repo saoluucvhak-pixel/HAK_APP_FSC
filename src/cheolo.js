@@ -6,6 +6,7 @@
  *  - tổng phiếu cân lệch sản lượng dự kiến (diện tích × định mức) quá ngưỡng %: cảnh báo (mặc định 10%, đặt db.nguongLechSanLuong để đổi). */
 (function (root) {
   const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
+  const NL = () => (typeof require === 'function' ? require('./nhaplieu.js') : root.HAKNhapLieu);   // quy tắc CCCD duy nhất (src/nhaplieu.js, phiếu #14): 9 hoặc 12 chữ số
   const NGUONG_MAC_DINH = 10;
   const s = v => String(v == null ? '' : v).trim();
   const digits = v => s(v).replace(/\D/g, '');
@@ -56,7 +57,7 @@
     // 3. người ở hai lô có thời gian khai thác giao nhau
     const kt = l => { const a = dmy((l.f.info || {}).tuNgay), b = dmy((l.f.info || {}).denNgay); return a ? [a.getTime(), b ? b.getTime() : Infinity] : null; }, mk = kt(me);
     if (mk) {
-      const mine = new Map(); (f.nc || []).forEach(r => { const c = digits(r.cccd); if (c.length === 12) mine.set(c, r); });
+      const mine = new Map(); (f.nc || []).forEach(r => { const c = digits(r.cccd); if (NL().cccdHopLe(c)) mine.set(c, r); });
       const seen = new Set();
       others.forEach(l => { const k = kt(l); if (!k || !(mk[0] <= k[1] && k[0] <= mk[1])) return; (l.f.nc || []).forEach(r => { const c = digits(r.cccd); if (mine.has(c) && !seen.has(c + '|' + l.ma)) { seen.add(c + '|' + l.ma); add('doi', 'Chéo lô: người ở hai lô', s(mine.get(c).ten) + ' (CCCD ' + c + ') cũng là nhân công của lô ' + l.ma + ' có thời gian khai thác giao với lô này. Kiểm tra có đúng một người làm ở hai lô cùng lúc không.', s(mine.get(c).ten), {ftab: 'nc'}); } }); });
     }

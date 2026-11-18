@@ -69,4 +69,4 @@ function lkStatusHtml() {
 }
 
 const LK_SORTS = [['relevance', 'Độ khớp'], ['ngay', 'Ngày cân mới nhất'], ['tan', 'Khối lượng lớn nhất'], ['ten', 'Tên chủ rừng A→Z']];
-const LK_HINT = 'Cú pháp: nhiều từ = phải có đủ · "cụm từ" · -từ loại trừ · cccd: hd: rung: phieu: bien: ten: dc: · số 12 chữ số tự nhận là CCCD, biển số tự nhận là biển số.';
+const LK_HINT = 'Cú pháp: nhiều từ = phải có đủ · "cụm từ" · -từ loại trừ · cccd: hd: rung: phieu: bien: ten: dc: · số 9 hoặc 12 chữ số tự nhận là CCCD, biển số tự nhận là biển số.';

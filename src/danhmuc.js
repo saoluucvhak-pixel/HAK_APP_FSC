@@ -12,7 +12,8 @@
   const D = typeof HAKDates !== 'undefined' ? HAKDates : (typeof require === 'function' ? require('./dates.js') : root.HAKDates);
   const trim = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   const CHUC_VU = ['Tổ trưởng', 'Công nhân'];
-  const cccdSo = v => String(v == null ? '' : v).replace(/\D/g, '');
+  const NL = () => (typeof require === 'function' ? require('./nhaplieu.js') : root.HAKNhapLieu);   // quy tắc CCCD duy nhất (src/nhaplieu.js, phiếu #14): 9 hoặc 12 chữ số, không tự thêm số 0
+  const cccdSo = v => NL().cccdSo(v), cccdHopLe = v => NL().cccdHopLe(v);
   const bienKey = v => BKS().khoa(v);
   const ngayKey = v => { const p = D.parse(trim(v)); return p ? p.key : 0; };
   const clone = x => JSON.parse(JSON.stringify(x));
@@ -27,7 +28,7 @@
     (list || []).forEach((r, i) => { if (!r || keyFn(r) !== k) return; const t = ngayKey(r.ngayCapNhat); if (!best || t >= best.t) { best = {t, r}; bi = i; } });
     return best ? {row: best.r, index: bi} : null;
   }
-  const layLaoDong = (list, cccd) => { const k = cccdSo(cccd); return k.length === 12 ? moiNhat(list, r => cccdSo(r.cccd), k) : null; };
+  const layLaoDong = (list, cccd) => { const k = cccdSo(cccd); return cccdHopLe(k) ? moiNhat(list, r => cccdSo(r.cccd), k) : null; };
   const layXe = (list, bienSo) => { const k = bienKey(bienSo); return k ? moiNhat(list, r => bienKey(r.bienSo), k) : null; };
   /* mọi dòng của một khóa, mới nhất trước (xem lịch sử) */
   const lichSu = (list, keyFn, k) => (list || []).map((r, i) => ({r, i})).filter(x => x.r && keyFn(x.r) === k).sort((a, b) => ngayKey(b.r.ngayCapNhat) - ngayKey(a.r.ngayCapNhat) || b.i - a.i).map(x => x.r);
@@ -38,14 +39,14 @@
     const keys = [...new Set((list || []).filter(Boolean).map(keyFn).filter(Boolean))];
     return keys.map(k => moiNhat(list, keyFn, k).row).sort(sortFn);
   }
-  const laoDongHieuLuc = list => hieuLuc(list, r => { const k = cccdSo(r.cccd); return k.length === 12 ? k : ''; }, (a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
+  const laoDongHieuLuc = list => hieuLuc(list, r => { const k = cccdSo(r.cccd); return cccdHopLe(k) ? k : ''; }, (a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
   const xeHieuLuc = list => hieuLuc(list, r => bienKey(r.bienSo), (a, b) => String(a.bienSo).localeCompare(String(b.bienSo), 'vi'));
 
   /* kiểm tra một dòng trước khi thêm; vi: danh sách tên vị trí hợp lệ (danh mục vị trí). Trả {ok, errs, row (đã chuẩn hóa)} */
   function kiemLaoDong(r, vi) {
     const o = {}; LAO_DONG.forEach(k => { o[k] = trim(r && r[k]); }); o.cccd = cccdSo(o.cccd); const errs = [];
     if (!o.ten) errs.push('thiếu họ tên');
-    if (o.cccd.length !== 12) errs.push('CCCD phải đủ 12 chữ số (mã công nhân)');
+    if (!cccdHopLe(o.cccd)) errs.push('CCCD phải có 9 hoặc 12 chữ số (mã công nhân)');
     if (!o.ngayCapNhat || !ngayKey(o.ngayCapNhat)) errs.push('ngày cập nhật phải đúng dd/mm/yyyy');
     ['ngaySinh', 'ngayCap'].forEach(k => { if (o[k] && !ngayKey(o[k])) errs.push(k === 'ngaySinh' ? 'ngày sinh không có thật' : 'ngày cấp CCCD không có thật'); });
     if (o.gioiTinh && !['Nam', 'Nữ'].includes(o.gioiTinh)) errs.push('giới tính là Nam hoặc Nữ');
@@ -57,8 +58,8 @@
     const o = {}; XE.forEach(k => { o[k] = trim(r && r[k]); }); o.bienSo = o.bienSo.toUpperCase(); o.cccdTx = cccdSo(o.cccdTx); const errs = [];
     if (!bienKey(o.bienSo)) errs.push('thiếu biển số');
     if (!o.ngayCapNhat || !ngayKey(o.ngayCapNhat)) errs.push('ngày cập nhật phải đúng dd/mm/yyyy');
-    if (o.taiXe && o.cccdTx.length !== 12) errs.push('tài xế phải có CCCD 12 chữ số');
-    o.cccd = cccdSo(o.cccd); if (o.cccd && o.cccd.length !== 12) errs.push('CCCD chủ xe phải đủ 12 chữ số');
+    if (o.taiXe && !cccdHopLe(o.cccdTx)) errs.push('tài xế phải có CCCD 9 hoặc 12 chữ số');
+    o.cccd = cccdSo(o.cccd); if (o.cccd && !cccdHopLe(o.cccd)) errs.push('CCCD chủ xe phải có 9 hoặc 12 chữ số');
     if (o.nguoiKy && !['Chủ xe', 'Tài xế'].includes(o.nguoiKy)) errs.push('người ký hợp đồng vận chuyển là Chủ xe hoặc Tài xế');
     ['ngaySinh', 'ngayCap', 'cavet'].forEach(k => { if (o[k] && !ngayKey(o[k])) errs.push(({ngaySinh: 'ngày sinh chủ xe', ngayCap: 'ngày cấp CCCD chủ xe', cavet: 'ngày cấp cà vẹt'})[k] + ' không có thật'); });
     ['ngayCapTx', 'hanGplx', 'hanDangKiem', 'hanBaoHiem'].forEach(k => { if (o[k] && !ngayKey(o[k])) errs.push(({ngayCapTx: 'ngày cấp CCCD tài xế', hanGplx: 'ngày hết hạn giấy phép', hanDangKiem: 'ngày hết hạn đăng kiểm', hanBaoHiem: 'ngày hết hạn bảo hiểm'})[k] + ' không có thật'); });
@@ -105,7 +106,7 @@
     lots.forEach(f => {
       const ngay = trim(f.info && f.info.tuNgay) && ngayKey(f.info.tuNgay) ? trim(f.info.tuNgay) : '';   // lô chưa có ngày bắt đầu: dòng chưa rõ ngày (coi là cũ nhất, luôn thua dòng có ngày)
       (f.nc || []).forEach(r => {
-        if (!r || cccdSo(r.cccd).length !== 12 || !trim(r.ten)) return;
+        if (!r || !cccdHopLe(r.cccd) || !trim(r.ten)) return;
         const row = {ngayCapNhat: ngay, cccd: cccdSo(r.cccd), ten: trim(r.ten), gioiTinh: trim(r.gioiTinh), ngaySinh: trim(r.ngaySinh), diaChi: trim(r.diaChi), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), sdt: trim(r.sdt), chucVu: CHUC_VU.includes(trim(r.vaiTro)) ? trim(r.vaiTro) : '', viTri: trim(r.chucDanh)};
         ld = themLaoDong(ld, row).list;
       });
@@ -139,7 +140,7 @@
     const list = (hienCo || []).slice(), co = new Set(list.map(x => x.id)), cc = new Set(list.map(x => cccdSo(x.cccd)).filter(Boolean));
     Object.values(dmDonVi || {}).forEach(d => { if (!d || !trim(d.ten)) return; const id = 'dn:' + d.id; if (co.has(id)) return; co.add(id); list.push({id, loai: 'doanhnghiep', ten: trim(d.ten), mst: trim(d.mst), daiDien: trim(d.daiDien), chucVu: trim(d.chucVu), diaChi: trim(d.diaChi), sdt: trim(d.sdt)}); });
     Object.values(rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => (f.hdvc || []).forEach(h => {
-      if (!h || h.donViId) return; const k = cccdSo(h.key); if (k.length !== 12 || cc.has(k)) return;
+      if (!h || h.donViId) return; const k = cccdSo(h.key); if (!cccdHopLe(k) || cc.has(k)) return;
       const xs = (f.dx || []).filter(r => r && r.hdvcId === h.id); let p = null;
       xs.forEach(r => { if (p) return; if (cccdSo(r.cccd) === k && trim(r.chuXe)) p = {ten: trim(r.chuXe), ngaySinh: trim(r.ngaySinh), diaChi: trim(r.diaChi), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), sdt: trim(r.sdt), vaiTro: 'Chủ xe'}; else if (cccdSo(r.cccdTx) === k && trim(r.taiXe)) p = {ten: trim(r.taiXe), ngaySinh: trim(r.ngaySinhTx), diaChi: trim(r.diaChiTx), ngayCap: trim(r.ngayCapTx), noiCap: trim(r.noiCapTx), sdt: '', vaiTro: 'Tài xế'}; });
       if (!p) return; cc.add(k); list.push(Object.assign({id: 'ct:' + k, loai: 'nguoiKyVC', cccd: k}, p));
@@ -177,7 +178,7 @@
    * (danh mục lao động và xe có ngày cập nhật; đối tác không có ngày thì coi là cũ nhất), chỗ trống bù từ các nguồn còn lại. vaiTro: các danh mục người đó có mặt. */
   function nguoiChung(db) {
     const by = new Map(), put = (cccd, vai, ngay, o) => {
-      const k = cccdSo(cccd); if (k.length !== 12) return; const e = by.get(k) || {cccd: k, vaiTro: [], ds: []};
+      const k = cccdSo(cccd); if (!cccdHopLe(k)) return; const e = by.get(k) || {cccd: k, vaiTro: [], ds: []};
       if (!e.vaiTro.includes(vai)) e.vaiTro.push(vai); e.ds.push(Object.assign({k: ngayKey(ngay)}, o)); by.set(k, e);
     };
     (db.dmLaoDong || []).forEach(r => put(r.cccd, 'Lao động', r.ngayCapNhat, {ten: trim(r.ten), gioiTinh: trim(r.gioiTinh), ngaySinh: trim(r.ngaySinh), diaChi: trim(r.diaChi), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), sdt: trim(r.sdt)}));
@@ -194,7 +195,7 @@
    * Trả {ok, error} hoặc {ok, db: {dmLaoDong, dmXeVC, dmDoiTac}, so: {laoDong, xe, doiTac}} — không sửa `db` truyền vào. */
   function gopNguoi(db, tu, den) {
     const a = cccdSo(tu), b = cccdSo(den);
-    if (a.length !== 12 || b.length !== 12) return {ok: false, error: 'Cả hai số CCCD phải đủ 12 chữ số'};
+    if (!cccdHopLe(a) || !cccdHopLe(b)) return {ok: false, error: 'Cả hai số CCCD phải có 9 hoặc 12 chữ số'};
     if (a === b) return {ok: false, error: 'Hai số CCCD giống nhau'};
     if (!timNguoi(db, a)) return {ok: false, error: 'Không có người mang CCCD ' + a + ' trong danh mục'};
     const so = {laoDong: 0, xe: 0, doiTac: 0}, cp = x => JSON.parse(JSON.stringify(x || []));

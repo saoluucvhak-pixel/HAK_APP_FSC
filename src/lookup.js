@@ -3,6 +3,7 @@
  * kiểm tra tên tab + tiêu đề cột, lưu vào SQLite, tìm kiếm có dấu/không dấu và dựng "kết quả" để điền vào hồ sơ rừng. */
 const XLSX = require('xlsx');
 const D = require('./dates');   // quy tắc ngày lịch dùng chung (31/02/2026 không có thật)
+const NL = require('./nhaplieu');   // quy tắc CCCD duy nhất (phiếu #14): 9 hoặc 12 chữ số, không tự thêm số 0
 
 const TABS = {
   HoSoKeo_QC: {
@@ -34,7 +35,7 @@ const pad2 = n => String(n).padStart(2, '0');
 const baseCccd = v => clean(v).replace(/_\d+$/, '');
 const stripSuffix = v => clean(v).replace(/_\d+$/, '');
 
-/* Đọc 1 ô: ngày -> dd/mm/yyyy; cột văn bản -> chuỗi (giữ số 0 đầu; CCCD dạng số thì bù đủ 12 chữ số) */
+/* Đọc 1 ô: ngày -> dd/mm/yyyy; cột văn bản -> chuỗi (giữ số 0 đầu; CCCD dạng số mất số 0 đầu thì bù theo NL.cccdTuSo: 8 số → 9, 10–11 số → 12) */
 /* giờ cân: ô giờ (phần ngày của Excel 0..1) → HH:MM:SS; chuỗi giữ nguyên */
 /* Giờ cân: chỉ lấy PHẦN GIỜ. Ô giờ của Google Sheets/Excel có thể là số giờ (0..1), ngày-giờ (46300,35 định dạng dd/mm/yyyy hh:mm:ss) hoặc chữ “05/10/2026 08:25:30”; không bao giờ hiện ngày vào cột giờ. Ô chỉ có ngày thì không có giờ. */
 const hms = sec => { const t = Math.round(sec) % 86400; return pad2(Math.floor(t / 3600)) + ':' + pad2(Math.floor(t % 3600 / 60)) + ':' + pad2(t % 60); };
@@ -52,7 +53,7 @@ function cellValue(cell, isText, isCccd, isTime) {
     return time || (pad2(p.d) + '/' + pad2(p.m) + '/' + p.y);
   }
   if (cell.t === 'n') {
-    if (isCccd && Number.isInteger(cell.v) && String(cell.v).length <= 12) return String(cell.v).padStart(12, '0');
+    if (isCccd && Number.isInteger(cell.v) && String(cell.v).length <= 12) return NL.cccdTuSo(cell.v);
     if (isText) return Number.isInteger(cell.v) ? String(cell.v) : String(cell.v);
     return cell.v;
   }
@@ -236,7 +237,7 @@ function parseQuery(q) {
   let text = fold(q);
   if ((text.match(/"/g) || []).length % 2) { const i = text.lastIndexOf('"'); text = text.slice(0, i) + text.slice(i + 1); } // dấu ngoặc kép lẻ: bỏ dấu cuối
   text = text.replace(/(^|\s)([a-z]+):\s+(?=\S)/g, '$1$2:');                                                         // "hd: 101" = "hd:101"
-  text = text.replace(/(^|\s)(\d{3,4})[ .-](\d{3,4})[ .-](\d{3,4})(?=\s|$)/g, (all, sp, a, b, c) => (a + b + c).length === 12 ? sp + a + b + c : all); // CCCD gõ có dấu cách/chấm
+  text = text.replace(/(^|\s)(\d{3,4})[ .-](\d{3,4})[ .-](\d{3,4})(?=\s|$)/g, (all, sp, a, b, c) => [9, 12].includes((a + b + c).length) ? sp + a + b + c : all); // CCCD (9 hoặc 12 số) gõ có dấu cách/chấm
   while ((m = re.exec(text))) {
     const neg = !!m[2], field = m[3] && FIELD_ALIAS[m[3]], val = (m[4] || m[5] || '').trim();
     let value = val, fname = field;
@@ -244,7 +245,7 @@ function parseQuery(q) {
     if (!value || /^-+$/.test(value)) continue;
     if (neg) { out.not.push(value); continue; }
     if (fname) { out.fields.push({f: fname, v: value, raw: m[3] + ':' + (m[4] ? '"' + value + '"' : value)}); continue; }
-    if (/^\d{12}$/.test(value)) out.fields.push({f: 'cccd', v: value, raw: value, auto: true});
+    if (/^(\d{9}|\d{12})$/.test(value)) out.fields.push({f: 'cccd', v: value, raw: value, auto: true});   // CMND 9 số hoặc CCCD 12 số
     else if (/^\d{10,11}$/.test(value)) out.fields.push({f: 'cccd', v: value.padStart(12, '0'), raw: value, auto: true}); // CCCD bị mất số 0 đầu
     else if (isPlate(value)) out.fields.push({f: 'bien', v: value, raw: value, auto: true});
     else out.terms.push({v: value, raw: m[4] ? '"' + value + '"' : value});
@@ -282,7 +283,7 @@ function describe(tab, o) {
     if (!base.cccd) flags.push('Thiếu CCCD');
   } else if (tab === 'HoSoRung_QC') {
     base.tinhTrang = clean(o['Tình trạng Hợp đồng']);
-    if (!/^\d{12}$/.test(base.cccd)) flags.push('CCCD không đủ 12 số');
+    if (!NL.cccdHopLe(base.cccd)) flags.push('CCCD không đúng 9 hoặc 12 số');
     if (typeof o['HECTA'] !== 'number') flags.push('Thiếu diện tích');
   } else {
     const la = parseCoord(o['Latitude_Vĩ độ'], 'lat'), lo = parseCoord(o['Longtitude_Kinh độ'], 'lng');
@@ -476,7 +477,7 @@ class Lookup {
 
   /* Tìm kiếm thông minh.
    * q: từ khóa (không phân biệt dấu). Cú pháp: nhiều từ = phải có đủ; "cụm từ"; -từ loại trừ; trường:giá trị
-   *    (cccd: hd: rung: phieu: bien: ten: dc: tinhtrang:); số 12 chữ số tự nhận là CCCD, biển số tự nhận là biển số.
+   *    (cccd: hd: rung: phieu: bien: ten: dc: tinhtrang:); số 9 hoặc 12 chữ số tự nhận là CCCD, biển số tự nhận là biển số.
    * opts: {limit, from, to (ngày cân), minTan, maxTan, status (tình trạng hợp đồng), onlyIssues, sort: relevance|ngay|tan|ten}
    * Trả về {rows, total, facets:{tab,status,issues}, stats:{phieu,tan}, relax:[...]}. */
   search(q, tab, opts) {
@@ -608,7 +609,7 @@ function ownerOf(cccd, R, T, K) {
   const nameSrc = R ? src('HoSoRung_QC', R._row, 'Họ và tên chủ rừng') : T ? src('ToaDoRung_QC', T._row, 'HoVaTenChuRung') : src('HoSoKeo_QC', K._row, 'Họ và tên chủ rừng');
   if (name) f.push(field('ten', 'Họ và tên', name, nameSrc));
   const rawId = R ? baseCccd(R['Mã KH_CCCD']) : T ? baseCccd(T['SoCCCD']) : cccd;
-  if (/^\d{12}$/.test(rawId)) f.push(field('cccd', 'CCCD', rawId, R ? src('HoSoRung_QC', R._row, 'Mã KH_CCCD') : src('ToaDoRung_QC', T._row, 'SoCCCD')));
+  if (/^(\d{9}|\d{12})$/.test(rawId)) f.push(field('cccd', 'CCCD', rawId, R ? src('HoSoRung_QC', R._row, 'Mã KH_CCCD') : src('ToaDoRung_QC', T._row, 'SoCCCD')));
   if (R) {
     if (R['Ngày cấp']) f.push(field('ngayCap', 'Ngày cấp CCCD', R['Ngày cấp'], src('HoSoRung_QC', R._row, 'Ngày cấp')));
     if (clean(R['Mã hợp đồng'])) f.push(field('soHopDong', 'Số hợp đồng', clean(R['Mã hợp đồng']), src('HoSoRung_QC', R._row, 'Mã hợp đồng')));
@@ -699,4 +700,4 @@ function mapDoc(l) {
   return {loai: 'Khác', ten: clean(l) || 'Khác'};
 }
 
-module.exports = {moneyOf, parseQuery, Lookup, MIGRATION, TABS, TAB_NAMES, buildTemplate, STD, STD_NAMES, roleLabel, resolveTabs, allCols, nameKind, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};
+module.exports = {describe, cellValue, moneyOf, parseQuery, Lookup, MIGRATION, TABS, TAB_NAMES, buildTemplate, STD, STD_NAMES, roleLabel, resolveTabs, allCols, nameKind, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};
