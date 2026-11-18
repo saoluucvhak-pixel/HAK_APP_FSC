@@ -43,6 +43,7 @@ function exportCheckTinh(job) {
   const pcRow = n => (job.pc || []).find(r => String(r._row) === String(n));
   // thông tin chủ rừng, rừng, đơn giá
   infoErrors(i, job.id).forEach(e => add('chan', 'Thông tin chủ rừng', e, '', {tab: 'info'}));
+  infoWarns(i, job.id).forEach(e => add('doi', 'Thông tin chủ rừng', e, '', {tab: 'info'}));   // phiếu #05: CCCD trùng chủ rừng khác — đối chiếu, không chặn
   forestErrors(i, job.fid).forEach(e => add('chan', 'Thông tin rừng', e, '', {ftab: 'finfo'}));
   giaErrorsRec(job).forEach(e => { const m = /^Đội “([^”]*)”: /.exec(e); add('chan', 'Hình thức, đơn giá', e, '', {ftab: 'nc'}, m ? {loai: 'doi', ten: m[1]} : null); });   // từng đội theo hình thức của đội
   // mã lô trùng ở dữ liệu cũ: liệt kê đủ các lô khớp để đối chiếu, không tự sửa

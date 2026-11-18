@@ -275,7 +275,8 @@ function saveInfo(form) {
   if (errs.length) { formMsg(form, 'Chưa lưu: ' + errs.join('; ')); return; }
   rec.info = Object.assign({}, rec.info, info);   // giữ các trường cũ không còn hiển thị (ví dụ ngày sinh đã lưu)
   persist();
-  note('Đã lưu thông tin chủ rừng.');
+  const canh = infoWarns(info, rec.id);   // phiếu #05: cảnh báo, không chặn
+  note('Đã lưu thông tin chủ rừng.' + (canh.length ? ' Lưu ý: ' + canh.join('; ') + '.' : ''), canh.length ? 'warn' : 'ok');
 }
 
 function delRs() {

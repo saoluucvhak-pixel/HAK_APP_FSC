@@ -37,7 +37,7 @@ async function stSave(opt) {
     f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).slice(-50);   // ghi vào lô cùng lần lưu (không kèm ảnh chụp hoàn tác)
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
     const r = await persistNow(); if (!r || !r.ok) throw new Error((r && r.error) || 'không rõ');
-    const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote('Đã thêm ' + nDm + ' người / xe mới vào Danh mục.', 'ok');
+    const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote(nDm[0], nDm[1]);
     pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);

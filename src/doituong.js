@@ -92,23 +92,65 @@
     x.nguoi.forEach((p, i) => {
       const lb = 'Người ' + (i + 1) + (p.hoTen ? ' (' + p.hoTen + ')' : '');
       if (!p.hoTen) e.push(lb + ': thiếu họ tên');
-      if (p.cccd && !/^(\d{9}|\d{12})$/.test(p.cccd)) e.push(lb + ': CCCD phải có 12 chữ số (CMND cũ 9 chữ số)');
+      if (p.cccd && !/^(\d{9}|\d{12})$/.test(p.cccd)) e.push(lb + ': CCCD phải gồm 9 hoặc 12 chữ số');
       if (p.cccd) { if (cccdLo.has(p.cccd)) e.push(lb + ': trùng CCCD với người khác trong cùng hồ sơ'); cccdLo.set(p.cccd, 1); const o = timCccd(khac, p.cccd); if (o) e.push(lb + ': CCCD ' + p.cccd + ' đã có ở hồ sơ “' + o.dt.ten + '” (một người một hồ sơ: thêm vai trò ở hồ sơ đó)'); }
       [['ngayCap', 'ngày cấp'], ['hanCccd', 'hạn CCCD'], ['ngaySinh', 'ngày sinh'], ['hanGplx', 'hạn GPLX']].forEach(([k, t]) => { if (!ngayOk(p[k])) e.push(lb + ': ' + t + ' “' + p[k] + '” không phải ngày có thật (dd/mm/yyyy)'); });
       if (p.vaiTro.taiXe && !p.gplx) e.push(lb + ': tài xế phải có số giấy phép lái xe');
     });
     return e;
   }
-  /* lưu (thêm mới khi chưa có id) — trả {ok, errs, dm: danh mục mới, dt} */
+  /* CẢNH BÁO (không chặn lưu) — phiếu #05:
+   *  - ND-06: thể nhân chưa có CCCD / pháp nhân chưa có MST mà trùng tên (không phân biệt hoa thường, dấu) với hồ sơ cùng loại khác;
+   *  - ND-09: người có vai trò Nhân công / Tài xế thiếu ngày sinh, ngày cấp, nơi cấp, địa chỉ thường trú (lô sẽ đòi khi chọn vào đội / xe). Trả [chuỗi]. */
+  function canhBao(dm, dt) {
+    const w = [], x = chuan(dt), khac = (dm || []).filter(o => o && o.id !== x.id && o.loai === x.loai && fold(o.ten) && fold(o.ten) === fold(x.ten));
+    const coKhoa = x.loai === 'phapnhan' ? !!so(x.mst) : x.nguoi.some(p => p.cccd);
+    if (!coKhoa && khac.length) w.push((x.loai === 'phapnhan' ? 'Pháp nhân chưa có mã số thuế' : 'Thể nhân chưa có CCCD') + ' và trùng tên với ' + khac.map(o => '“' + o.ten + '” (mã ' + (o.ma || '?') + ')').join(', ') +
+      ': kiểm tra có phải cùng một đối tượng không; nếu đúng, sửa hồ sơ cũ thay vì thêm mới');
+    x.nguoi.forEach((p, i) => {
+      if (!(p.vaiTro && (p.vaiTro.nhanCong || p.vaiTro.taiXe))) return;
+      const thieu = [['ngaySinh', 'ngày sinh'], ['ngayCap', 'ngày cấp'], ['noiCap', 'nơi cấp'], ['diaChi', 'địa chỉ thường trú']].filter(([k]) => !s(p[k])).map(([, t]) => t);
+      if (thieu.length) w.push('Người ' + (i + 1) + (p.hoTen ? ' (' + p.hoTen + ')' : '') + ': thiếu ' + thieu.join(', ') + ' — lô sẽ đòi khi chọn vào ' + (p.vaiTro.nhanCong ? 'đội khai thác' : 'xe vận chuyển'));
+    });
+    return w;
+  }
+  /* lưu (thêm mới khi chưa có id) — trả {ok, errs, canhBao, dm: danh mục mới, dt} */
   function luu(dm, dt, homNay) {
     const list = clone(dm || []), x = chuan(dt);
-    const errs = kiem(list, x); if (errs.length) return {ok: false, errs, dm: dm, dt: x};
+    const errs = kiem(list, x); if (errs.length) return {ok: false, errs, canhBao: [], dm: dm, dt: x};
+    const cb = canhBao(list, x);
     if (!x.id) x.id = idDoiTuong(list);
     if (!x.ma) x.ma = maMoi(list);
     const moi = []; x.nguoi.forEach(p => { if (!p.id) { p.id = idNguoi(list.filter(o => o.id !== x.id).concat([x]), moi); moi.push(p.id); } });
     x.ngayCapNhat = s(homNay) || x.ngayCapNhat;
     const i = list.findIndex(o => o.id === x.id); if (i < 0) list.push(x); else list[i] = x;
-    return {ok: true, errs: [], dm: list, dt: x};
+    return {ok: true, errs: [], canhBao: cb, dm: list, dt: x};
+  }
+  /* ---------- người / xe MỚI nhập trong lô → Danh mục (phiếu #05, ND-05) ----------
+   * Lưu lô KHÔNG ghi danh mục cũ (dmLaoDong, dmXeVC). Giao diện hỏi rồi mới thêm vào Danh mục đối tượng / Danh mục xe.
+   * moiTuLo: dòng nhân công chưa nối danh mục (không nguoiId), có họ tên và CCCD 9/12 số chưa có ở danh mục; dòng xe chưa nối (không xeId), BKS chưa có ở Danh mục xe. */
+  const XEDM = () => (typeof require === 'function' ? require('./xedm.js') : root.HAKXeDM);
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);
+  function moiTuLo(dmDT, dmXe, nc, dx) {
+    const nguoi = [], xe = [], daC = new Set(), daB = new Set();
+    (nc || []).forEach(r => { if (!r || s(r.nguoiId)) return; const c = so(r.cccd); if (!/^(\d{9}|\d{12})$/.test(c) || !s(r.ten) || daC.has(c) || timCccd(dmDT, c)) return; daC.add(c); nguoi.push(r); });
+    (dx || []).forEach(r => { if (!r || s(r.xeId)) return; const k = BKS().khoa(r.bienSo); if (!k || daB.has(k) || XEDM().timBks(dmXe, r.bienSo)) return; daB.add(k); xe.push(r); });
+    return {nguoi, xe};
+  }
+  /* thêm các dòng moi (kết quả moiTuLo) vào danh mục. Trả {dmDoiTuong, dmXe, nguoi: [{r, id}], xe: [{r, id}], loi: [chuỗi]} — KHÔNG sửa đầu vào */
+  function themTuLo(dmDT, dmXe, moi, homNay) {
+    let dt = clone(dmDT || []), dx = clone(dmXe || []); const nguoi = [], xe = [], loi = [];
+    ((moi && moi.nguoi) || []).forEach(r => {
+      const g = s(r.danhXung) === 'Bà' ? 'Nữ' : s(r.danhXung) === 'Ông' ? 'Nam' : '';
+      const k = luu(dt, {loai: 'thenhan', ten: s(r.ten), diaChi: s(r.diaChi), sdt: s(r.sdt), nguoi: [{hoTen: s(r.ten), cccd: so(r.cccd), ngaySinh: s(r.ngaySinh), ngayCap: s(r.ngayCap), noiCap: s(r.noiCap), diaChi: s(r.diaChi), sdt: s(r.sdt), gioiTinh: g, vaiTro: {nhanCong: true}}]}, homNay);
+      if (k.ok) { dt = k.dm; nguoi.push({r, id: k.dt.nguoi[0].id}); } else loi.push(s(r.ten) + ': ' + k.errs.join('; '));
+    });
+    ((moi && moi.xe) || []).forEach(r => {
+      const a = so(r.cccd) ? timCccd(dt, r.cccd) : null, chu = a && a.ng.vaiTro && a.ng.vaiTro.chuXe ? a.ng.id : '';   // chủ xe chỉ nối khi đã có hồ sơ người mang vai trò Chủ xe
+      const k = XEDM().luu(dx, {bks: s(r.bienSo), ngayCapNhat: s(homNay), hanKiemDinh: s(r.kdDen), hanBaoHiem: s(r.hanBH), loaiXe: s(r.loaiXe), chuXeId: chu}, dt);
+      if (k.ok) { dx = k.dm; xe.push({r, id: k.xe.id}); } else loi.push('Xe ' + s(r.bienSo) + ': ' + k.errs.join('; '));
+    });
+    return {dmDoiTuong: dt, dmXe: dx, nguoi, xe, loi};
   }
   /* ngừng / dùng lại (không xóa: hồ sơ cũ vẫn tra được) */
   function ngung(dm, id, co) { const list = clone(dm || []), dt = tim(list, id); if (!dt) return {ok: false, error: 'Không có đối tượng này'}; dt.ngung = co !== false; return {ok: true, dm: list}; }
@@ -206,7 +248,7 @@
   /* id pháp nhân đã chuyển từ đối tác doanh nghiệp cũ ('dn:<mã>') — để nối hợp đồng vận chuyển cũ (hdvc.donViId) */
   const timTuDoiTacCu = (dm, idCu) => (dm || []).find(o => o.nguonCu === idCu) || null;
 
-  const api = {LOAI, VAI_TRO, KY, COT, kyText, vaiText, chuan, chuanNguoi, idDoiTuong, idNguoi, maMoi, tim, timNguoi, timCccd, nhanNguoi, nguoiTheoVaiTro, benKy, loc, kiem, luu, ngung,
+  const api = {LOAI, VAI_TRO, KY, COT, kyText, vaiText, chuan, chuanNguoi, idDoiTuong, idNguoi, maMoi, tim, timNguoi, timCccd, nhanNguoi, nguoiTheoVaiTro, benKy, loc, kiem, canhBao, luu, moiTuLo, themTuLo, ngung,
     docExcel, apDungExcel, tuDanhMucCu, timTuDoiTacCu, tatCaNguoi, fold};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDoiTuong = api;
 })(typeof self !== 'undefined' ? self : this);
