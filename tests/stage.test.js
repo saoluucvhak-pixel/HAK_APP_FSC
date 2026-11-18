@@ -176,7 +176,7 @@ test('xử lý dòng cần đối chiếu: giữ / bỏ / cập nhật cùng chu
   const mkp = () => { const st = mk(); S.merge(st, 'pc', [{soPhieu: 'P1', ngay: '09/10/2026', bienSo: '92C-2', kl: 4, noiGiao: 'Kho B'}], {source: 'Excel: b.xlsx'}); return st; };
   let st = mkp(), id = st.cur.pc[0]._id; assert.ok(S.resolve(st, S.pendingOf(st)[0].pid, 'keep').ok); assert.strictEqual(S.pendingOf(st).length, 0); assert.strictEqual(st.cur.pc[0].kl, 1);
   st = mkp(); S.resolve(st, S.pendingOf(st)[0].pid, 'update'); assert.strictEqual(st.cur.pc[0]._id, id); assert.deepStrictEqual([st.cur.pc[0].kl, st.cur.pc[0].noiGiao, st.cur.pc[0].bienSo], [4, 'Kho B', '92C-2']); assert.strictEqual(st.cur.pc.length, 1);
-  st = mkp(); const q = S.pendingOf(st)[0].pid; assert.ok(!S.resolve(st, q, 'other', {soPhieu: 'p1'}).ok); assert.ok(!S.resolve(st, q, 'other', {}).ok);
+  st = mkp(); const q = S.pendingOf(st)[0].pid; // phiếu #04 (quyết định CHỦ 18/11/2026): khóa phiếu = số phiếu + ngày; dòng nguồn khác NGÀY với phiếu đã có thì cùng số phiếu vẫn là chuyến khác hợp lệ
   assert.ok(S.resolve(st, q, 'other', {soPhieu: 'P1-B'}).ok); assert.deepStrictEqual(st.cur.pc.map(r => r.soPhieu), ['P1', 'P1-B']); assert.strictEqual(new Set(ids(st)).size, 2);
 });
 test('nhiều bản ghi cùng khớp số phiếu: hiển thị các ứng viên, phải chọn bản cần cập nhật', () => {

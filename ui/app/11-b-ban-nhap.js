@@ -77,8 +77,8 @@ function stPendBox(kind) {
     const pick = cands.length > 1 ? '<select data-pendsel="' + q.pid + '">' + cands.map((c, i) => '<option value="' + esc(c._id) + '">Bản hiện có ' + (i + 1) + '</option>').join('') + '</select> ' : '';
     return '<div class="stPendRow" data-pid="' + q.pid + '"><div class="tw">' + tbl + '</div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">' + pick +
       '<button class="btn sm" data-act="stPend" data-do="keep" data-pid="' + q.pid + '">Giữ bản hiện có</button><button class="btn sm" data-act="stPend" data-do="update" data-pid="' + q.pid +
-      '">Cập nhật phiếu (đã xác nhận cùng chuyến)</button><span class="row" style="gap:4px;display:inline-flex"><input type="text" data-pendso="' + q.pid + '" placeholder="Số phiếu mới" style="width:130px"><button class="btn ghost sm" data-act="stPend" data-do="other" data-pid="' + q.pid +
-      '" title="Hai chuyến khác nhau phải có số phiếu riêng">Là chuyến khác</button></span><button class="btn ghost sm" data-act="stPend" data-do="drop" data-pid="' + q.pid + '">Bỏ dòng nguồn</button></div></div>';
+      '">Cập nhật phiếu (đã xác nhận cùng chuyến)</button><span class="row" style="gap:4px;display:inline-flex"><input type="text" data-pendso="' + q.pid + '" placeholder="Số phiếu (trống = giữ số này)" style="width:190px"><button class="btn ghost sm" data-act="stPend" data-do="other" data-pid="' + q.pid +
+      '" title="Cùng số phiếu nhưng khác ngày cân là hợp lệ: để trống ô số phiếu để giữ số này. Cùng số và cùng ngày thì phải nhập số phiếu riêng">Là chuyến khác</button></span><button class="btn ghost sm" data-act="stPend" data-do="drop" data-pid="' + q.pid + '">Bỏ dòng nguồn</button></div></div>';
   }).join('') + '</div>';
 }
 function stPendAct(el) {
