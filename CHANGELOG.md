@@ -16,6 +16,9 @@ Cấu trúc SQLite v15 (chuyển một chiều, tự sao lưu file trước khi 
 - Cài đặt nằm trên thanh chính; Hướng dẫn, Giao diện, Sao lưu và khôi phục chuyển vào Cài đặt (bỏ menu “⋯ Thêm”, thanh chính một dòng ở 1024 px / 150 %).
 - Tab Nhân công / Vận chuyển mở **danh sách hợp đồng**; chọn (chuột hoặc Enter) → trang chi tiết có tên rừng, số hợp đồng, “Quay lại danh sách”; lưu xong ở lại đúng hợp đồng.
 - Rời màn còn thay đổi: Lưu / Bỏ thay đổi / Tiếp tục chỉnh sửa. Mở danh mục từ hợp đồng rồi “Quay lại” đúng chỗ, giữ bản đang nhập.
+- Màn hợp đồng gọn hơn (phiếu #06): đầu hợp đồng một dòng, một thanh công cụ (Thêm / Chọn file / Dán / Tải mẫu / Tra cứu HoSoKeo / In), tiêu đề cột một dòng, cột Thao tác không đè cột số, hai nút Sửa / Xóa đã lưu nằm ngang; ở 1366×768 phóng 150 % thấy được ít nhất 3 dòng phiếu cân khi mở.
+- Khung cảnh báo không chặn của các bảng nhân công, xe, phiếu cân gập thành một dòng có số lượng và nút “Xem” (không mất cảnh báo nào); khung lỗi chặn luôn mở.
+- Cài đặt không còn cột chủ rừng bên trái; bảng danh mục rỗng không có thanh cuộn ngang. Tab Xuất hồ sơ: khung Vòng đời và Sổ văn bản gập mặc định (Vòng đời tự mở khi lô đã chốt, dừng hoặc lưu trữ). Nút đang bị khóa (như Chốt hồ sơ) có viền nét đứt, chữ đạt tương phản AA. Chữ hướng dẫn cũ (“⋯ Thêm”, “Tab Phiếu cân”) đã sửa trong ứng dụng và `docs/HUONG_DAN.md`.
 
 ### Danh mục
 - **Danh mục đối tượng:** pháp nhân (đại diện, chức danh) / thể nhân (bảng Đối tác: họ tên, CCCD, ngày cấp, nơi cấp, hạn CCCD, thường trú, giới tính, SĐT, GPLX và hạn, vị trí mặc định, chức danh ký); vai trò Nhân công / Tài xế / Chủ xe; quyền ký Vận chuyển / Nhân công riêng; lọc theo vai trò, tìm, ngừng sử dụng; Excel xem trước (mới / trùng / thay đổi / lỗi); CCCD trùng, MST, GPLX được kiểm; số lưu dạng văn bản.

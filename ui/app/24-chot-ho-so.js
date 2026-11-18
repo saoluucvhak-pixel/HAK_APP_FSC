@@ -42,6 +42,9 @@ function lichSuGoiHtml(f) {
     thieu.map(x => '<li data-pb="' + x.phienBan + '" data-ok="-1" class="mut">Phiên bản ' + x.phienBan + ' · dấu vân tay <code>' + esc(x.hash || '') + '</code> (theo nhật ký) · không có bản chụp trên máy này</li>').join('') + '</ul>' +
     '<small class="mut">Gói sao lưu riêng lô chỉ mang bản chốt hiện hành. Muốn phục hồi cả các bản chụp cũ: dùng Sao lưu toàn bộ (file .sqlite).</small></div>';
 }
+/* gập / mở của hai khung ở tab Xuất hồ sơ (null: theo mặc định) */
+const xuatMo = {chot: null, sovb: null};
+document.addEventListener('toggle', e => { const t = e.target; if (t && t.id === 'chotBox') xuatMo.chot = t.open; else if (t && t.id === 'soVanBan' && NAV.ftab !== 'finfo') xuatMo.sovb = t.open; }, true);
 function chotBox(rec) {
   const f = curForest(); if (!f) return '';
   const q = qtEval(rec, f), tt = HAKVongDoi.trangThai(f, q.sum), bd = doiOf(rec), kt = exportCheck(rec);
@@ -52,14 +55,16 @@ function chotBox(rec) {
   else if (f.chot) act = '<button class="btn" data-act="chotMoKhoa">Mở khóa (nhập lý do)</button> ' + (f.luuTru ? '<button class="btn ghost" data-act="chotBoLuuTru">Bỏ lưu trữ</button>' : '<button class="btn ghost" data-act="chotLuuTru">Lưu trữ</button>');
   else act = '<button class="btn" data-act="chotLo"' + (thieu.length || !sach ? ' disabled' : '') + '>Chốt hồ sơ</button> <button class="btn ghost" data-act="chotDung">Dừng lô</button>';
   const tvC = f.chot ? toanVenLo(f) : null;
-  return '<div class="card" id="chotBox" data-tt="' + tt + '" data-toanven="' + (tvC ? esc(tvC.ma) : '') + '" style="margin-bottom:10px"><h3 style="margin-top:0">Vòng đời lô: <span class="pill ' + (HAKVongDoi.CHI_DOC.has(tt) ? 'warn' : 'ok') + '" id="chotTT">' + esc(HAKVongDoi.TEN[tt]) + '</span></h3>' +
+  /* phiếu #06b (D-07): khung Vòng đời gập mặc định (một dòng: trạng thái); tự mở khi lô đã chốt / dừng / lưu trữ; lựa chọn của người dùng được giữ qua các lần vẽ lại */
+  const mo = xuatMo.chot != null ? xuatMo.chot : !!(f.chot || f.dung || f.luuTru);
+  return '<details class="card" id="chotBox" data-tt="' + tt + '" data-toanven="' + (tvC ? esc(tvC.ma) : '') + '" style="margin-bottom:10px"' + (mo ? ' open' : '') + '><summary><b>Vòng đời lô</b>: <span class="pill ' + (HAKVongDoi.CHI_DOC.has(tt) ? 'warn' : 'ok') + '" id="chotTT">' + esc(HAKVongDoi.TEN[tt]) + '</span></summary>' +
     (!f.chot && !f.dung ? (thieu.length ? '<p class="mut" style="margin:0 0 6px">Để chốt hồ sơ còn thiếu:</p><ul id="chotThieu" style="margin:0 0 8px">' + thieu.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' :
     '<p class="mut" style="margin:0 0 8px">Đủ điều kiện chốt: không còn mục chặn, mọi mẫu đã in và ký, mọi phiếu cân đã gán đội.</p>') + (sach ? '' : '<p class="msg warn">Còn thay đổi chưa lưu: bấm “Lưu dữ liệu vào lô” trước khi chốt.</p>') : '') +
     (true ? '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px"><label style="flex:1;min-width:260px">Lý do (bắt buộc khi mở khóa, dừng lô, mở lại lô)<input id="chotLyDo" style="width:100%" placeholder="Ví dụ: sửa số phiếu cân bị nhập nhầm"></label>' + (f.chot ||
     f.dung ? '' : '<label>Ngày dừng <input id="chotNgay" value="' + esc(todayStr()) + '" style="width:120px"></label>') + '</div>' : '') +
     '<div class="row" style="gap:8px;flex-wrap:wrap">' + act + '</div>' +
     (nk.length ? '<details style="margin-top:8px"><summary class="mut">Nhật ký vòng đời (' + (f.nhatKy || []).length + ')</summary><ul style="margin:6px 0">' + nk.map(x => '<li>' + esc(new Date(x.at).toLocaleString('vi-VN')) + ' · <b>' + esc(HANH[x.hanh] || x.hanh) + '</b>' + (x.phienBan ?
-    ' (phiên bản ' + x.phienBan + ')' : '') + (x.lyDo ? ' · ' + esc(x.lyDo) : '') + (x.nguoi ? ' · ' + esc(x.nguoi) : '') + '</li>').join('') + '</ul></details>' : '') + lichSuGoiHtml(f) + '</div>';
+    ' (phiên bản ' + x.phienBan + ')' : '') + (x.lyDo ? ' · ' + esc(x.lyDo) : '') + (x.nguoi ? ' · ' + esc(x.nguoi) : '') + '</li>').join('') + '</ul></details>' : '') + lichSuGoiHtml(f) + '</details>';
 }
 /* lý do nhập ở ô trong khung Vòng đời lô (Electron không có hộp nhập prompt) */
 const lyDoNhap = () => ((document.getElementById('chotLyDo') || {}).value || '').trim();

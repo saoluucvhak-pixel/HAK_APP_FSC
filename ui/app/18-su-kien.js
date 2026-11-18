@@ -74,6 +74,7 @@ document.addEventListener('click', async e => {
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
+  if (act === 'issWarn') { issWarnMo = !issWarnMo; return render(); }
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
   if (act === 'pcPrint') {
     if (!curRec() || stBlockNote()) return;
@@ -330,5 +331,5 @@ document.addEventListener('change', e => {
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
 if (pendingNotice) { NAV.view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
 if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind;
-if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: ⋯ Thêm → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
+if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
 render();

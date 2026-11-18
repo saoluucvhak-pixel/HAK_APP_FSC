@@ -46,7 +46,7 @@ const LY_DO = 'Phiếu PA1 nhập nhầm khối lượng, sửa 12,5 thành 13,7
   const dd = path.join(dir, 'dich-dulieu'); fs.mkdirSync(dd); fs.copyFileSync(b.sqlFile, path.join(dd, 'hakqn.sqlite'));
   ({app, w} = await launch('dich', {HAKQN_PICK_DIR: dd, HAKQN_PICK_CHOICE: 'use'}));
   ok('máy đích ban đầu trống, không có mạng', Object.keys((await loadDb(w)).rs || {}).length === 0 && !(await w.evaluate(() => fetch('https://docs.google.com/').then(() => true, () => false))));
-  const sd = await w.evaluate(() => window.hak.settings.setData()); await w.waitForTimeout(1500); await w.waitForSelector('#side');
+  const sd = await w.evaluate(() => window.hak.settings.setData()); await w.waitForTimeout(1500); await w.waitForSelector('#side', {state: 'attached'});   // phiếu #06b (D-05): ở màn Cài đặt cột chủ rừng được ẩn
   ok('chọn thư mục chứa bản sao lưu làm thư mục dữ liệu (dùng dữ liệu có sẵn): thành công', sd && sd.ok, JSON.stringify(sd).slice(0, 300));
   await app.close(); ({app, w} = await launch('dich'));
   let T = (await loadDb(w)).rs.own1.forests.fa;

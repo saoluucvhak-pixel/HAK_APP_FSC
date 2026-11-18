@@ -6,12 +6,14 @@ const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os');
 const root = path.join(__dirname, '..');
 const base = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-dl-'));
+const sideSan = (w, timeout = 30000) => w.waitForFunction(() => { const e = document.getElementById('sideList'); return !!e && e.textContent.trim().length > 0; }, null, {timeout});   // phiếu #06b (D-05): màn Cài đặt ẩn cột chủ rừng nên không chờ “hiện”; chờ danh sách chủ rừng đã vẽ xong (app đã mở dữ liệu)
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const mk = n => { const d = path.join(base, n); fs.mkdirSync(d, {recursive: true}); return d; };
 const launch = (ud, env = {}) => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_USERDATA: ud, ...env}});
 const readCfg = ud => { try { return JSON.parse(fs.readFileSync(path.join(ud, 'settings.json'), 'utf8')); } catch (e) { return {}; } };
 const OWNER = {cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'};
 async function addOwner(w, ma, ten) {
+  if (!(await w.$eval('#side', e => getComputedStyle(e).display !== 'none'))) await w.click('#navHome');   // phiếu #06b (D-05): Cài đặt ẩn cột chủ rừng; về Tổng quan như người dùng
   await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', ma); await w.fill('#infoForm [name="ten"]', ten);
   for (const [k, v] of Object.entries(OWNER)) await w.fill(`#infoForm [name="${k}"]`, v);
   await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
@@ -25,11 +27,11 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
   /* ===== 1. Ổ dữ liệu biến mất rồi xuất hiện lại ===== */
   const udA = mk('udA'), driveA = mk('ODIA');
   let {app, w} = await open(udA, {HAKQN_PICK_DIR: driveA});
-  await w.waitForSelector('#side'); await addOwner(w, 'MAC-DINH', 'CHỦ BẢN MẶC ĐỊNH CŨ');          // dữ liệu ở vị trí mặc định (sẽ thành "bản cũ")
+  await sideSan(w); await addOwner(w, 'MAC-DINH', 'CHỦ BẢN MẶC ĐỊNH CŨ');          // dữ liệu ở vị trí mặc định (sẽ thành "bản cũ")
   await app.close();
-  ({app, w} = await open(udA, {HAKQN_PICK_DIR: driveA})); await w.waitForSelector('#side');
+  ({app, w} = await open(udA, {HAKQN_PICK_DIR: driveA})); await sideSan(w);
   await settingsView(w); await w.click('[data-act=setData]'); await wait(w, /Đã chuyển dữ liệu/);
-  await w.waitForSelector('#side'); await addOwner(w, 'TREN-O', 'CHỦ CHỈ CÓ TRÊN Ổ'); await app.close();   // từ đây dữ liệu trên ổ khác với bản mặc định cũ
+  await sideSan(w); await addOwner(w, 'TREN-O', 'CHỦ CHỈ CÓ TRÊN Ổ'); await app.close();   // từ đây dữ liệu trên ổ khác với bản mặc định cũ
   ok('đã chuyển dữ liệu sang ổ ngoài; cấu hình lưu đường dẫn ổ', readCfg(udA).dataDir === driveA && fs.existsSync(path.join(driveA, 'hakqn.sqlite')));
   const defFile = path.join(udA, 'hakqn.sqlite'), defStat = () => { const s = fs.statSync(defFile); return s.size + ':' + s.mtimeMs; };
   const defBefore = defStat();
@@ -41,7 +43,7 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
   await w.click('#dataRetryBtn'); await w.waitForSelector('#issueMsg');
   ok('thử lại khi ổ vẫn chưa có: vẫn báo lỗi, không đổi gì', /chưa mở|Không tìm thấy|không còn/i.test(await w.innerText('#dataIssue')) && readCfg(udA).dataDir === driveA && defStat() === defBefore);
   fs.renameSync(driveA + '.rut', driveA);                                                       // ổ xuất hiện lại
-  await w.click('#dataRetryBtn').catch(() => {}); await w.waitForSelector('#sideList', {timeout: 25000});
+  await w.click('#dataRetryBtn').catch(() => {}); await sideSan(w, 25000);
   ok('ổ có lại: thử lại mở được, thấy dữ liệu trên ổ (có chủ rừng chỉ có trên ổ)', /CHỦ CHỈ CÓ TRÊN Ổ/.test(await side(w)));
   await app.close();
 
@@ -58,26 +60,26 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
   fs.renameSync(path.join(driveA, 'hakqn.sqlite.cat'), path.join(driveA, 'hakqn.sqlite'));
   fs.renameSync(driveA, driveA + '.rut2');
   ({app, w} = await open(udA, {HAKQN_PICK_DIR: driveA + '.rut2'})); await w.waitForSelector('#dataIssue');
-  await w.click('#dataPickBtn'); await w.waitForSelector('#sideList', {timeout: 25000});
+  await w.click('#dataPickBtn'); await sideSan(w, 25000);
   ok('chọn cơ sở dữ liệu khác (thư mục hợp lệ): mở được và nhớ đường dẫn mới', /CHỦ CHỈ CÓ TRÊN Ổ/.test(await side(w)) && readCfg(udA).dataDir === driveA + '.rut2');
   await app.close();
   fs.renameSync(driveA + '.rut2', driveA); const cfgKeep = readCfg(udA); cfgKeep.dataDir = driveA + '.khongco'; fs.writeFileSync(path.join(udA, 'settings.json'), JSON.stringify(cfgKeep));
   ({app, w} = await open(udA, {HAKQN_CONFIRM_DEFAULT: '1'})); await w.waitForSelector('#dataIssue', {timeout: 20000});
-  await w.click('#dataDefaultBtn'); await w.waitForSelector('#sideList', {timeout: 25000});
+  await w.click('#dataDefaultBtn'); await sideSan(w, 25000);
   ok('xác nhận dùng vị trí mặc định: mở bản mặc định (không có chủ rừng chỉ có trên ổ) và lưu cấu hình trống', /BẢN MẶC ĐỊNH CŨ/.test(await side(w)) && !/CHỦ CHỈ CÓ TRÊN Ổ/.test(await side(w)) && (readCfg(udA).dataDir || '') === '');
   await app.close();
 
   /* ===== 3. Đổi thư mục: đích có dữ liệu khác; lỗi giả lập ở từng bước; ghi đè thành công ===== */
   const udX = mk('udX'), dd = mk('DICH');
-  ({app, w} = await open(udX, {HAKQN_PICK_DIR: dd})); await w.waitForSelector('#side'); await addOwner(w, 'DICH-1', 'CHỦ CỦA ĐÍCH');
+  ({app, w} = await open(udX, {HAKQN_PICK_DIR: dd})); await sideSan(w); await addOwner(w, 'DICH-1', 'CHỦ CỦA ĐÍCH');
   await settingsView(w); await w.click('[data-act=setData]'); await wait(w, /Đã chuyển dữ liệu/); await app.close();
   const destSize = fs.statSync(path.join(dd, 'hakqn.sqlite')).size;
   const udY = mk('udY'), bk = mk('saoluuY');
-  ({app, w} = await open(udY, {HAKQN_PICK_DIR: bk})); await w.waitForSelector('#side'); await addOwner(w, 'NGUON-1', 'CHỦ CỦA NGUỒN');
+  ({app, w} = await open(udY, {HAKQN_PICK_DIR: bk})); await sideSan(w); await addOwner(w, 'NGUON-1', 'CHỦ CỦA NGUỒN');
   await settingsView(w); await w.click('[data-act=setBackup]'); await w.waitForSelector('#setMsg'); await app.close();
   for (const stepName of ['after-tmp', 'after-replace', 'after-open', 'commit']) {
     ({app, w} = await open(udY, {HAKQN_PICK_DIR: dd, HAKQN_PICK_CHOICE: 'overwrite', HAKQN_TEST_FAIL_STEP: stepName}));
-    await w.waitForSelector('#side'); await settingsView(w);
+    await sideSan(w); await settingsView(w);
     await w.click('[data-act=setData]'); await w.waitForSelector('#setMsg'); await wait(w, /Không đổi được thư mục dữ liệu/);
     const tt = await w.innerText('#main');
     ok('lỗi giả lập ở bước ' + stepName + ': báo lỗi, đã hoàn tác, vẫn dùng vị trí cũ', /Đã hoàn tác/.test(tt) && tt.includes(path.join(udY, 'hakqn.sqlite')), tt.slice(0, 300));
@@ -90,17 +92,17 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
   ok('bản dự phòng nhất quán của đích đã được tạo ở thư mục sao lưu (và không bị mất khi các bước sau lỗi)', bkFiles.length >= 1, fs.readdirSync(bk).join(','));
   // đích vẫn mở được và vẫn là dữ liệu của đích
   const udZ = mk('udZ'); fs.writeFileSync(path.join(udZ, 'settings.json'), JSON.stringify({dataDir: dd, backupDir: '', lastBackup: '', remindDays: 7}));
-  ({app, w} = await open(udZ)); await w.waitForSelector('#side');
+  ({app, w} = await open(udZ)); await sideSan(w);
   ok('sau các ca lỗi, đích vẫn mở được và còn dữ liệu của đích', /CHỦ CỦA ĐÍCH/.test(await side(w)) && !/CHỦ CỦA NGUỒN/.test(await side(w))); await app.close();
-  ({app, w} = await open(udY, {HAKQN_PICK_DIR: dd, HAKQN_PICK_CHOICE: 'overwrite'})); await w.waitForSelector('#side'); await settingsView(w);
-  await w.click('[data-act=setData]'); await wait(w, /Đã chuyển dữ liệu/); await w.waitForSelector('#side');
+  ({app, w} = await open(udY, {HAKQN_PICK_DIR: dd, HAKQN_PICK_CHOICE: 'overwrite'})); await sideSan(w); await settingsView(w);
+  await w.click('[data-act=setData]'); await wait(w, /Đã chuyển dữ liệu/); await sideSan(w);
   const okMsg = await w.innerText('#main');
   ok('ghi đè thành công: nêu vị trí mới, bản cũ và bản dự phòng; thấy dữ liệu nguồn ở đích', /Bản dự phòng của dữ liệu đã có ở đích/.test(okMsg) && /CHỦ CỦA NGUỒN/.test(await side(w)) && readCfg(udY).dataDir === dd);
   await app.close();
 
   /* ===== 4. Thao tác lưu phát sinh trong lúc đổi thư mục không bị mất ===== */
   const udW = mk('udW'), dd2 = mk('DICH2');
-  ({app, w} = await open(udW, {HAKQN_PICK_DIR: dd2, HAKQN_RELOC_DELAY_MS: '2500'})); await w.waitForSelector('#side'); await addOwner(w, 'TRUOC', 'CHỦ TRƯỚC KHI ĐỔI');
+  ({app, w} = await open(udW, {HAKQN_PICK_DIR: dd2, HAKQN_RELOC_DELAY_MS: '2500'})); await sideSan(w); await addOwner(w, 'TRUOC', 'CHỦ TRƯỚC KHI ĐỔI');
   const res = await w.evaluate(async () => {
     const cur = window.hak.loadSync().db;
     const p1 = window.hak.settings.setData(false);
@@ -109,17 +111,17 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
     const p2 = window.hak.save(cur);
     return [await p1.then(r => r.ok, () => 'x'), await p2.then(r => r.ok, () => 'x')];
   }).catch(() => ['reload', 'reload']);
-  await w.waitForTimeout(2500); await w.waitForSelector('#sideList', {timeout: 25000});
+  await w.waitForTimeout(2500); await sideSan(w, 25000);
   const s4 = await side(w);
   ok('đổi thư mục xong; lưu phát sinh giữa chừng được giữ và nằm ở cơ sở dữ liệu mới', readCfg(udW).dataDir === dd2 && /CHỦ LƯU TRONG LÚC ĐỔI/.test(s4) && /CHỦ TRƯỚC KHI ĐỔI/.test(s4), JSON.stringify(res) + ' ' + s4.slice(0, 200));
   await app.close();
   const udW2 = mk('udW2'); fs.writeFileSync(path.join(udW2, 'settings.json'), JSON.stringify({dataDir: dd2, backupDir: '', lastBackup: '', remindDays: 7}));
-  ({app, w} = await open(udW2)); await w.waitForSelector('#side');
+  ({app, w} = await open(udW2)); await sideSan(w);
   ok('mở lại trực tiếp từ thư mục mới: có cả hai chủ rừng (đã ghi vào đĩa)', /CHỦ LƯU TRONG LÚC ĐỔI/.test(await side(w)) && /CHỦ TRƯỚC KHI ĐỔI/.test(await side(w))); await app.close();
 
   /* ===== 5. Sao lưu toàn bộ: bấm hai lần, lỗi một file, hết dung lượng ===== */
   const udB = mk('udB'), bkB = mk('saoluuB');
-  ({app, w} = await open(udB, {HAKQN_PICK_DIR: bkB})); await w.waitForSelector('#side'); await addOwner(w, 'SL', 'CHỦ SAO LƯU');
+  ({app, w} = await open(udB, {HAKQN_PICK_DIR: bkB})); await sideSan(w); await addOwner(w, 'SL', 'CHỦ SAO LƯU');
   await settingsView(w); await w.click('[data-act=setBackup]'); await w.waitForSelector('#setMsg');
   const both = await w.evaluate(() => Promise.all([window.hak.backupTo(), window.hak.backupTo()]));
   ok('bấm hai lần cùng lúc: một lần chạy, lần kia bị từ chối “đang sao lưu”', both.filter(r => r.ok).length === 1 && both.some(r => !r.ok && /Đang sao lưu/.test(r.error)), JSON.stringify(both).slice(0, 300));
@@ -131,7 +133,7 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
   const counts = () => fs.readdirSync(bkB).filter(n => /\.(json|sqlite)$/.test(n) && !/^tu-dong-/.test(n)).length;   // bản tự sao lưu hằng ngày (src/autobackup.js) không phải file của Sao lưu toàn bộ
   for (const [mode, expectFiles, re] of [['sqlite', 1, /SQLite/], ['json', 1, /JSON/], ['enospc', 1, /hết dung lượng/], ['space', 0, /không đủ chỗ trống/]]) {
     const before = counts();
-    ({app, w} = await open(udB, {HAKQN_TEST_BACKUP_FAIL: mode})); await w.waitForSelector('#side');
+    ({app, w} = await open(udB, {HAKQN_TEST_BACKUP_FAIL: mode})); await sideSan(w);
     const r = await w.evaluate(() => window.hak.backupTo());
     const added = counts() - before, tmps = fs.readdirSync(bkB).filter(n => /\.tmp-/.test(n));
     ok('sao lưu lỗi (' + mode + '): báo rõ, ok=false, không để file tạm', r.ok === false && re.test(r.error || r.message || '') && tmps.length === 0, JSON.stringify(r).slice(0, 300));

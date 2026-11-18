@@ -17,6 +17,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const B = lot('fb', 'R-B', {exp: {soKT: '015'}, kl: null, pc: []}); B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = B.dx.map(r => ({...r, maRung: 'R-B'}));
   const D = seed([A, B]); await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.waitForSelector('#soVanBan');
+  await w.click('#soVanBan > summary');   // phiếu #06b (D-07): khung Sổ văn bản gập mặc định ở tab Xuất hồ sơ
   const t = await w.innerText('#soVanBan');
   ok('Sổ văn bản liệt kê đội 1, đội 2 và đội xe với số theo quy tắc (01/2026/HĐGK-RA, 02/2026/GUQ-RA)', /01\/2026\/HĐGK-RA/.test(t) && /02\/2026\/GUQ-RA/.test(t) && /HĐVC-RA/.test(t), t.slice(0, 500));
   await w.click('[data-act=svbDien]'); await w.waitForTimeout(500); await w.click('button[data-act=stSave]'); await w.waitForTimeout(600);

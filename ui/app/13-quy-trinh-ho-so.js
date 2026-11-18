@@ -220,13 +220,14 @@ function panelXuat(rec) {
   '<p class="mut" style="margin:0 0 6px">Các mẫu dưới đây vẫn tải được để soạn trước nhưng mang nhãn <b>BẢN NHÁP</b> (tên file, đầu tài liệu, tên gói). Bổ sung dữ liệu rồi tải lại để có bản chính thức.</p>' + dl.map(x => '<div style="margin:4px 0"><b>' + esc(x.label) + '</b>: ' +
   x.issues.map(i => esc(i.text) + ' <span class="mut">→ ' + esc(i.where) + '</span>').join('; ') + '</div>').join('') : '<div class="msg ok" style="margin:0">Mọi biểu mẫu có điều kiện riêng (BM-01, 04, 08, 09, 10, 11, 14, 20) đã đủ để in bản chính thức.</div>') + '</div>';
   return (stBlockText() ? '<div class="msg err" id="stGate"><b>Chưa tạo, xuất, in được hồ sơ.</b> ' + esc(stBlockText()) + ' <button class="btn sm" data-act="stGo">Quay lại mục đang chỉnh sửa</button></div>' : '') + (why.length ? '<div class="msg err">Chưa xuất được:<br>' + esc(why.join(' · ')) +
-  '</div>' : '<div class="msg ok">Hồ sơ đủ dữ liệu để xuất.</div>') + qtPanel(rec) +
+  '</div>' : '<div class="msg ok">Hồ sơ đủ dữ liệu để xuất.</div>') +
+    /* phiếu #06b (D-07): nút tải biểu mẫu theo đợt lên đầu; khung “Quy trình hồ sơ theo đợt” (dài) đứng sau */
     '<div class="card"><h3 style="margin-top:0">Tải hồ sơ theo đợt</h3><p class="mut" style="margin:0 0 8px">Chưa xong khai thác thì in <b>đợt 1</b> trước; khi rừng xong, cập nhật phiếu cân và khối lượng thực tế rồi in <b>đợt 2</b> (mỗi biểu mẫu là một file Word riêng nên thay hoặc chèn vào bộ hồ sơ đã in rất dễ). Đợt 2 muốn in nền rồi in đè thì dùng mục “In hồ sơ đợt 2” ngay bên dưới.</p>' +
       '<div class="docrow"><div><b>Đợt 1 – hồ sơ làm ngay (.zip)</b><div class="mut">Tất cả trừ tiền công BM-08, xác nhận khối lượng BM-09, thanh toán vận chuyển BM-10 và nghiệm thu, thanh lý BM-14.</div></div>' + btn('Tải đợt 1', 'dau', null, g.ok('dau')) + '</div>' +
       '<div class="docrow"><div><b>Đợt 2 – sau khi xong rừng (.zip)</b><div class="mut">Chỉ BM-08 bảng thanh toán tiền công, BM-09, BM-10 (cần phiếu cân hợp lệ) và BM-14 nghiệm thu, thanh lý.' + (g.canPC ? '' : ' <b>Hiện chưa đủ phiếu cân hợp lệ nên BM-09 và BM-10 chưa có trong đợt này.</b>') +
       '</div></div>' + btn('Tải đợt 2',
       'cuoi', null, g.ok('cuoi')) + '</div></div>' +
-    panelDoiChieuPcVC(rec, groups) + d2Panel(rec) + pcPrintCard(rec) +
+    qtPanel(rec) + panelDoiChieuPcVC(rec, groups) + d2Panel(rec) + pcPrintCard(rec) +
     '<div class="card row" style="justify-content:space-between"><div><b>Toàn bộ hồ sơ (.zip)</b><div class="mut">Gồm ' + (g.direct ? '' : 'HĐ giao khoán, ') +
     'BHLĐ, các HĐLĐ, HĐVC, các mẫu FSC và các mẫu in bổ sung. <b>Hồ sơ đã đủ dữ liệu thì in một lần bằng nút này</b>; mục nào chưa đủ (phiếu cân, khối lượng thực tế, ngày lập, địa chỉ giao…) sẽ được nêu ngay sau khi tải.</div></div>' + btn('Tải toàn bộ hồ sơ',
     'all', null, g.ok('all')) + '</div>' +
@@ -240,6 +241,7 @@ function renderCtx() {
   const o = curOwner(), f = curForest();
   const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && NAV.view !== 'norm' && NAV.view !== 'dm' && !SET_VIEWS.includes(NAV.view));
   const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', SET_VIEWS.includes(NAV.view));
+  { const ly = document.querySelector('.layout'); if (ly) ly.classList.toggle('khongSide', SET_VIEWS.includes(NAV.view)); }   // phiếu #06b (D-05): Cài đặt không hiện cột chủ rừng (Lọc chủ rừng, + Chủ rừng mới, danh sách chủ rừng)
   const nd = document.getElementById('navDm'); if (nd) nd.classList.toggle('on', NAV.view === 'dm');
   const nn = document.getElementById('navNorm'); if (nn) nn.classList.toggle('on', NAV.view === 'norm');
   $('#ctxOwner').innerHTML = 'Chủ rừng: <b>' + esc(o ? (o.info.ten || '(chưa đặt tên)') : 'chưa mở') + '</b>';
