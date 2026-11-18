@@ -5,7 +5,7 @@ function panelVanChuyen(rec) {
   const xe = rec.dx.filter(r => !h || r.hdvcId === h.id);
   const pc = (rec.pc || []).filter(r => !h || r.hdvcId === h.id);
   return (h ? hdDau('dx', rec, tenDoiVc(rec, h), soHdVc(rec, h)) : panelDsVC(rec)) + khungMucLo('dx', [
-    ...(h ? [['chung', 'Thông tin hợp đồng, bên ký và cước', () => panelHdvc(rec)]] : []),
+    ...(h ? [['chung', 'Hợp đồng, bên ký, cước', () => panelHdvc(rec)]] : []),   // phiếu #06 (D-08): nhãn ngắn, không xuống dòng ở 150%
     ['xe', 'Xe và tài xế', () => panelDX(rec, h), xe.length],
     ['phieu', 'Phiếu cân', () => panelPhieuCan(rec), pc.length + ' · ' + fmtTan(klPhieu(pc)) + ' tấn'],
     ['vanban', 'Số và ngày văn bản', () => panelHdvcVB(rec)]
@@ -47,7 +47,7 @@ function panelPhieuCan(rec) {
   ' phiếu chưa thuộc hợp đồng nào (BKS không khớp duy nhất một xe): mở hợp đồng để chọn.</div>' : '') + '</div>';
   }
   const hdOnly = hMo && !pcTatCa ? r => r.hdvcId === hMo.id || !r.hdvcId : null;
-  const head = panelImport('pc', rec, hMo ? pcDauHd(rec, hMo) : '') + pcGanBaoHtml() + stBar('pc', rec);
+  const head = panelImport('pc', rec, hMo ? pcDauHd(rec, hMo) : '', hMo ? pcCongCuHd(hMo) : '') + pcGanBaoHtml() + stBar('pc', rec);
   if (!pc.length && !stCur()) return head + '<div class="empty">Chưa có phiếu cân. Bấm “+ Thêm phiếu cân”, hoặc “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
   const R = '<span style="display:block;text-align:right">', num = (v, f) => typeof v === 'number' ? fmt(v) : '';
   const nhieu = rec.doi && rec.doi.length > 1, tenD = d => d.ten || ('Đội ' + (rec.doi.indexOf(d) + 1));
@@ -63,7 +63,8 @@ function panelPhieuCan(rec) {
     '<label>Gán vào <select id="pgDoi">' + rec.doi.map(x => '<option value="' + esc(x.id) + '">' + esc(tenD(x)) + '</option>').join('') + '</select></label><button class="btn sm" data-act="pcGanLoat">Gán các phiếu đang lọc</button></div>' +
     '<div class="mut" style="margin-top:4px">' + rec.doi.map(x => esc(tenD(x)) + ': ' + pc.filter(p => p.doiId === x.id).length + ' phiếu, ' + fmtTan(klPhieu(pc.filter(p => p.doiId === x.id))) + ' tấn').join(' · ') + ' · chưa gán: ' + pc.filter(p => !rec.doi.some(x => x.id === p.doiId)).length +
     ' phiếu</div></div>' : '';
-  const t = stTable('pc', rec, [...(nhieu ? ['Đội'] : []), ...(hMo ? ['Xe · hợp đồng'] : []), 'Cân lần 1 (ngày, giờ)', 'Cân lần 2 (ngày, giờ)', 'Biển kiểm soát', 'Số phiếu cân', R + 'Cân lần 1 (kg)</span>', R + 'Cân lần 2 (kg)</span>', R + 'Khối lượng (kg)</span>', R + 'Khối lượng (tấn)</span>',
+  const t = stTable('pc', rec, [...(nhieu ? ['Đội'] : []), ...(hMo ? ['Xe · hợp đồng'] : []), /* phiếu #06 (D-01): tiêu đề một dòng, tên đầy đủ ở title */ ...[['Cân lần 1', 'Cân lần 1: ngày, giờ'], ['Cân lần 2', 'Cân lần 2: ngày, giờ'], ['BKS', 'Biển kiểm soát'], ['Số phiếu', 'Số phiếu cân']].map(([t, d]) => '<span title="' + d + '">' + t + '</span>'),
+  ...[['Cân 1 (kg)', 'Cân lần 1 (kg)'], ['Cân 2 (kg)', 'Cân lần 2 (kg)'], ['KL (kg)', 'Khối lượng (kg)'], ['KL (tấn)', 'Khối lượng (tấn)']].map(([t, d]) => R.replace('>', ' title="' + d + '">') + t + '</span>'),
   'Khách hàng', R + 'Đơn giá</span>', R + 'Thành tiền</span>', 'Nơi giao'],
     r => dCell(r) + (hMo ? pcCotHd(rec, r, hMo) : '') + '<td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay) : esc(r.ngay) + '<br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + ' (bấm Sửa)</small>') + '<br><span class="mut">' + esc(r.gioCan1 || '') + '</span></td><td>' + ngay2Cell(r) +
     '<br><span class="mut">' + esc(r.gioCan2 || '') + '</span></td><td>' + esc(r.bienSo) + xCell(r) +

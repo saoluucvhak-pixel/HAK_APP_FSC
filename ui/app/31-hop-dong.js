@@ -18,12 +18,11 @@ var soHdVc = (rec, h) => trim(((h && h.exp) || {}).soVC || (rec.exp || {}).soVC 
 var tenDoiNc = (rec, d) => trim(d.ten) || (rec.doi.length > 1 ? 'Đội ' + (rec.doi.indexOf(d) + 1) : 'Đội khai thác');
 var tenDoiVc = (rec, h) => { const l = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc}); return trim(h.ten) || (h.donViId ? (h.ben || {}).ten || '' : '') || 'Đội xe ' + (l.indexOf(h) + 1); };
 
-/* đầu trang chi tiết: rừng, số hợp đồng, quay lại danh sách */
+/* đầu trang chi tiết: MỘT dòng — quay lại danh sách, loại hợp đồng, đội, số. Rừng / lô không lặp ở đây: đã có ở thanh ngữ cảnh và đường dẫn (phiếu #06, D-03) */
 function hdDau(k, rec, ten, so) {
-  return '<div class="card hdDau" id="hdDau" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 14px">' +
+  return '<div class="hdDau" id="hdDau">' +
     '<button class="btn ghost sm" data-act="hdQuayLai" data-kind="' + k + '" id="hdQuayLai">← Quay lại danh sách</button>' +
-    '<div style="flex:1;min-width:220px"><div class="mut" style="font-size:12px">Rừng <b id="hdDauRung">' + esc(tenRungHd(rec)) + '</b></div>' +
-    '<div style="font-size:16px"><b>' + (k === 'nc' ? 'Hợp đồng nhân công' : 'Hợp đồng vận chuyển') + '</b> · <span id="hdDauTen">' + esc(ten) + '</span> · <span id="hdDauSo">' + (so ? 'số ' + esc(so) : '<span class="mut">chưa có số</span>') + '</span></div></div></div>';
+    '<div class="hdDauTen"><b>' + (k === 'nc' ? 'Hợp đồng nhân công' : 'Hợp đồng vận chuyển') + '</b> · <span id="hdDauTen">' + esc(ten) + '</span> · <span id="hdDauSo">' + (so ? 'số ' + esc(so) : '<span class="mut">chưa có số</span>') + '</span></div></div>';
 }
 
 /* ---------- danh sách hợp đồng nhân công (mỗi đội một hợp đồng) ---------- */

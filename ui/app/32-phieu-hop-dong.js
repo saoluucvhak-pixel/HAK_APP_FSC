@@ -84,14 +84,13 @@ function pgSauThemXe(st, row) {
 function pgDoiHd(id, hId) { const st = stCur(), f = curForest(), p = st && st.cur.pc.find(x => x._id === id); if (!p || !f) return; const c = chonXePhieu(f, st.cur.dx, hId, p.bienSo); p.hdvcId = hId; delete p.xeTay; if (c.xe && c.xe.id) p.xeRowId = c.xe.id; else delete p.xeRowId; doiDuLieu();
 note('Đã đổi hợp đồng đích của phiếu ' + (p.soPhieu || '') + ' sang ' + nhanHdId(f, hId) + (c.xe ? ' (xe ' + c.xe.bienSo + ')' : '') + '.', 'ok'); render(); }
 /* đầu phần Phiếu cân của trang chi tiết hợp đồng */
-function pcDauHd(rec, hMo) {
+function pcDauHd(rec, hMo) {   // phiếu #06: một dòng tiêu đề (số phiếu, phạm vi đang xem); nút Tra cứu / In nằm trong thanh công cụ (pcCongCuHd)
   const pc = rec.pc || [], cua = pc.filter(p => p.hdvcId === hMo.id).length, chua = pc.filter(p => !p.hdvcId).length;
-  return '<div id="pcHd"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Phiếu cân của hợp đồng: ' + cua + (chua ? ' <small class="mut">· ' + chua + ' phiếu của rừng chưa thuộc hợp đồng nào</small>' : '') + '</h3>' +
-    '<span class="row" style="gap:6px;flex-wrap:wrap">' + (HB ? '<button class="btn ghost sm" data-act="lkOpen" id="pcTraCuu">Tra cứu HoSoKeo</button>' : '') +
-    '<button class="btn ghost sm" data-act="pcPrint" data-hd="' + esc(hMo.id) + '">In phiếu cân</button></span></div>' +
-    '<div class="row importActions">' + (pcTatCa ? '<span class="mut">Đang xem mọi phiếu cân của rừng.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ phiếu của hợp đồng này</button>' :
-    '<span class="mut">Gồm phiếu của hợp đồng này và phiếu chưa gán.</span> <button class="btn ghost sm" data-act="pcTatCa">Xem mọi phiếu của rừng</button>') + '</div></div>';
+  return '<div id="pcHd" class="row pcHdDau"><h3 style="margin:0">Phiếu cân của hợp đồng: ' + cua + (chua ? ' <small class="mut">· ' + chua + ' phiếu của rừng chưa thuộc hợp đồng nào</small>' : '') + '</h3>' +
+    (pcTatCa ? '<span class="mut">Đang xem mọi phiếu cân của rừng.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ phiếu của hợp đồng này</button>' :
+    '<span class="mut">Gồm phiếu của hợp đồng này và phiếu chưa gán.</span> <button class="btn ghost sm" data-act="pcTatCa">Xem mọi phiếu của rừng</button>') + '</div>';
 }
+const pcCongCuHd = hMo => (HB ? '<button class="btn ghost sm" data-act="lkOpen" id="pcTraCuu">Tra cứu HoSoKeo</button>' : '') + '<button class="btn ghost sm" data-act="pcPrint" data-hd="' + esc(hMo.id) + '">In phiếu cân</button>';
 /* hai cột của trang chi tiết: Xe của hợp đồng (ID dòng xe; giữ BKS gốc của phiếu) và Hợp đồng (chuyển phiếu) */
 function pcCotHd(rec, r, hMo) {
   const f = curForest(), ix = (rec.pc || []).indexOf(r), sua = !stCur() && ix >= 0 && f && !loKhoa(f), hId = r.hdvcId || '';
@@ -109,7 +108,8 @@ function pcCotHd(rec, r, hMo) {
   ' selected' : '') + '>' + esc(tenDoiVc(rec,
   h)) + '</option>').join('') + '</select>'
     : hId ? esc(tenDoiVc(rec, list.find(h => h.id === hId) || {ten: hId})) : '<span class="pill warn">chưa thuộc</span>';
-  return '<td>' + xeHtml + '<div style="margin-top:4px" title="Hợp đồng vận chuyển của phiếu"><small class="mut">Hợp đồng:</small> ' + hdHtml + '</div></td>';   // một cột: bảng không rộng thêm (nút Sửa, Xóa vẫn trong tầm nhìn)
+  /* một cột, MỘT dòng (phiếu #06, D-01): xe rồi hợp đồng cạnh nhau — dòng bảng thấp, thấy được nhiều phiếu hơn */
+  return '<td class="pcXeHd"><span class="pcXe">' + xeHtml + '</span> <span class="pcHdCua" title="Hợp đồng vận chuyển của phiếu"><small class="mut">HĐ</small> ' + hdHtml + '</span></td>';
 }
 function pcDoiXe(ix, id) {
   const f = curForest(), p = f && (f.pc || [])[ix]; if (!p) return;

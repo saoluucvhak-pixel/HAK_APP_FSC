@@ -135,23 +135,19 @@ function panelInfo(rec) {
     (rec.info && errs.length && rec.id ? '<div class="msg warn">Còn thiếu: ' + esc(errs.join('; ')) + '</div>' : '');
 }
 
-function panelImport(kind, rec, heading = '') {
-  if (kind !== 'pc' && !window.hak?.testLegacyImport) {
-    const nc = kind === 'nc', label = nc ? 'Danh mục đối tượng' : 'Danh mục xe';
-    return '<div class="row" style="margin:8px 0"><button class="btn ghost sm" data-act="' +
-      (nc ? 'openSetDt' : 'openSetXe') + '" data-quaylai="' + kind + '">Nhập Excel tại ' + label + '</button></div>';
-  }
+function panelImport(kind, rec, heading = '', congCu = '') {
+  if (kind !== 'pc' && !window.hak?.testLegacyImport) return '';   // phiếu #06: nút “Nhập Excel tại Danh mục …” nằm trong thanh công cụ của bảng (stBar), cạnh nút Thêm
   const M = {nc: {name: 'NHAN_CONG', at: 'ncAt', file: 'ncFile', arr: 'nc', title: 'Nạp file nhân công'},
     dx: {name: 'DOI_XE', at: 'dxAt', file: 'dxFile', arr: 'dx', title: 'Nạp file vận chuyển'},
     pc: {name: 'PHIEU_CAN', at: 'pcAt', file: 'pcFile', arr: 'pc', title: 'Nạp file phiếu cân (mỗi chuyến một dòng)'}}[kind];
   const name = M.name, at = rec[M.at], file = rec[M.file], count = (rec[M.arr] || []).length;
-  return '<div class="card">' + heading + '<div class="row importActions">' +
-    '<div><h3 style="margin:0">' + M.title + '</h3>' +
-    '<div class="mut">Sheet ' + name + '. ' + (count ? 'Đã nạp ' + count + ' dòng' + (file ? ' từ ' + esc(file) : '') + (at ? ' lúc ' + esc(at) : '') : 'Chưa có dữ liệu.') + '</div></div>' +
-    '<div class="row importActions"><button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">Tải file mẫu</button>' +
-    '<label class="btn sm" style="cursor:pointer">Chọn file Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label><button class="btn ghost sm" data-act="danMo" data-kind="' + kind + '" title="Chép vùng ô trong Excel (gồm dòng tiêu đề) rồi dán vào phần mềm">Dán từ Excel</button>' +
+  /* phiếu #06 (D-01): MỘT thanh công cụ — Thêm / Chọn file Excel / Dán / Tải file mẫu (+ công cụ của hợp đồng), tình trạng nạp ghi gọn ở cuối thanh */
+  const tinhTrang = 'Sheet ' + name + ' · ' + (count ? 'đã nạp ' + count + ' dòng' + (file ? ' từ ' + esc(file) : '') + (at ? ' lúc ' + esc(at) : '') : 'chưa có dữ liệu');
+  const tt = '<span class="mut napTinhTrang">' + tinhTrang + '</span>', dau = heading ? heading.replace(/<\/div>$/, tt + '</div>') : '<div class="row pcHdDau"><h3 style="margin:0">' + M.title + '</h3>' + tt + '</div>';   // tình trạng nạp ở cuối dòng tiêu đề
+  return '<div class="card napCard">' + dau + '<div class="row importActions napThanh">' +
     (kind === 'pc' ? '<button class="btn sm" data-act="stAdd" data-kind="pc">+ Thêm phiếu cân</button>' : '') +
-    '</div></div>' + (count && (kind !== 'pc' || !hdMo('dx')) ? '<p><button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu của lô</button></p>' : '') + '</div>';
+    '<label class="btn sm" style="cursor:pointer">Chọn file Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label><button class="btn ghost sm" data-act="danMo" data-kind="' + kind + '" title="Chép vùng ô trong Excel (gồm dòng tiêu đề) rồi dán vào phần mềm">Dán từ Excel</button>' +
+    '<button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">Tải file mẫu</button>' + congCu + '</div>' + (count && (kind !== 'pc' || !hdMo('dx')) ? '<p><button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu của lô</button></p>' : '') + '</div>';
 }
 
 /* kiểm thử B7: kết quả kiểm tra của lô đang mở (bản nháp nếu có) và phiên bản dữ liệu hiện tại */

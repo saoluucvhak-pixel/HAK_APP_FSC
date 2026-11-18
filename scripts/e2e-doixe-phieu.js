@@ -23,7 +23,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const open = async (id, ftab) => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + id + ']'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(300); };
   // 1. lô hai đội xe: bảng phiếu cân có cột Đội xe với người ký của đội xe
   await open('fa', 'dx'); await w.click('[data-act=pcTatCa]'); await w.waitForTimeout(200);   // 3.0: trang chi tiết hợp đồng chỉ có phiếu của hợp đồng — xem mọi phiếu của rừng
-  const PCT = '#main table:has(th:text("Số phiếu cân"))'; const th = await w.$$eval(PCT + ' thead th', l => l.map(x => x.textContent.trim()));
+  const PCT = '#stTbl_pc'; const th = await w.$$eval(PCT + ' thead th', l => l.map(x => x.textContent.trim()));   // phiếu #06: tiêu đề cột ngắn (“Số phiếu”), chọn bảng theo id
   ok('bảng phiếu cân hiện đội xe dưới biển số của từng phiếu (lô có hai đội xe), không thêm cột mới làm tràn bảng', /Đội xe: /.test(await w.innerText(PCT)) && !th.includes('Đội xe'), th.join('|'));
   const rows = await w.$$eval(PCT + ' tbody tr', trs => trs.map(tr => tr.innerText.replace(/\s+/g, ' ')));
   const r1 = rows.find(r => /PA1/.test(r)) || '', r2 = rows.find(r => /PA2/.test(r)) || '';

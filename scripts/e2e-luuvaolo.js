@@ -28,7 +28,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
 
   // ===== 1. thêm tay một nhân công vào lô A =====
   await openLot('fa', 'nc'); const a0 = await forest('fa'), b0 = await forest('fb'), boNgayChup = x => JSON.stringify(require('../tests/_bo30').bo30(x), (k, v) => k === '_dmNgay' ? undefined : v), snapB = boNgayChup(b0);   // 3.0: bỏ ID dòng / liên kết gán khi lưu   // A4: ngày chụp danh mục gán khi nạp (dữ liệu thử ghi thẳng, chưa qua SQLite v11) được ghi ở lần lưu đầu
-  ok('trên tab Nhân công có nút Thêm nhân công, hiện chủ rừng và mã lô đang thao tác', !!(await w.$('[data-act=stAdd][data-kind=nc]')) && /Chủ rừng: NGUYỄN VĂN MỘT/.test(await body()) && /Lô: R-A/.test(await body()));
+  ok('trên tab Nhân công có nút Thêm nhân công, hiện chủ rừng và mã lô đang thao tác', !!(await w.$('[data-act=stAdd][data-kind=nc]')) && /Chủ rừng:? “?NGUYỄN VĂN MỘT/.test(await body()) && /Lô:? R-A/.test(await body()));   // phiếu #06: chủ rừng và lô ở thanh ngữ cảnh / đường dẫn (bỏ khối lặp)
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
   await fillForm({vaiTro: 'Công nhân', danhXung: 'Ông', ten: 'NGUYỄN THÊM', ngaySinh: '01/01/1990', cccd: '049090000010', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: 'Công nhân khai thác'});
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
@@ -124,7 +124,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   await w.click('[data-sforest=fb]'); await w.waitForSelector('#stGSave');
   ok('chuyển sang lô B khi lô A còn bản nháp: hiện 3 lựa chọn Lưu và tiếp tục / Bỏ thay đổi / Quay lại chỉnh sửa', !!(await w.$('#stGSave')) && !!(await w.$('#stGDrop')) && !!(await w.$('#stGBack')));
   await w.click('#stGBack'); await w.waitForTimeout(200);
-  ok('Quay lại chỉnh sửa: vẫn ở lô A, bản nháp còn', /Lô: R-A/.test(await body()) && !!(await w.$('#stDirty')));
+  ok('Quay lại chỉnh sửa: vẫn ở lô A, bản nháp còn', /Lô:? R-A/.test(await body())   /* phiếu #06: lô ở đường dẫn */ && !!(await w.$('#stDirty')));
   await w.click('[data-sforest=fb]'); await w.waitForSelector('#stGDrop'); await w.click('#stGDrop'); await w.waitForTimeout(400);
   ok('Bỏ thay đổi: sang lô B, dữ liệu A không có TRẦN TẠM; quay lại A không còn bản nháp', /R-B/.test(await w.innerText('#ctxForest')) && !(await forest('fa')).nc.some(r => r.ten === 'TRẦN TẠM'));
   await w.click('[data-sforest=fa]'); await w.waitForTimeout(300); await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
