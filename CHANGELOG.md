@@ -7,6 +7,7 @@
 - Thông tin rừng và chi tiết hợp đồng có danh sách mục bên trái. Thông tin giao hàng và cước chung thuộc cấp rừng. Cài đặt dùng danh sách dọc.
 - Thêm màn xem trước phiếu cân trong ứng dụng, lấy phiếu đã lưu và lọc theo hợp đồng, biển kiểm soát, khoảng ngày. File công cụ in gốc được giữ nguyên.
 - Khi khôi phục dữ liệu cũ, nhân công và xe chưa nối được với danh mục xuất hiện trong Cần đối chiếu.
+- Phiếu cân dùng một khóa duy nhất (số phiếu bỏ khoảng trắng và viết hoa, cộng ngày cân) khi nạp Excel, dán, thêm tay và nạp từ HoSoKeo. “PA 1” và “PA1” cùng ngày là một phiếu và bị chặn, thông báo nêu dòng và hợp đồng đã có phiếu. Cùng số phiếu nhưng khác ngày là hợp lệ, chỉ cảnh báo; ở bước Cần đối chiếu, “Là chuyến khác” giữ được số phiếu khi ngày khác.
 
 Cấu trúc SQLite v15 (chuyển một chiều, tự sao lưu file trước khi chuyển). Biểu mẫu in ra không đổi so với 2.3.0 (so bản in: 206/206 tài liệu giống từng byte).
 

@@ -101,7 +101,7 @@ const sameN = (got, want, kind) => { const w = kind === 'db' ? MM.ensureDb(want)
 
   // ===== 4. Kiểm tra hồ sơ trước khi xuất =====
   const CHK = clone(SEED);
-  CHK.rs.o1.forests.fa.pc = [P(1, '31/02/2026', '92C-12345', 'PX-SAI', 5, 'R-A'), P(2, '29/02/2028', '92C-12345', 'PX-NHUAN', 3, 'R-A'), P(3, '07/10/2026', '92C-12345', 'PX-TRUNG', 4, 'R-A'), P(4, '08/10/2026', '92C-12345', 'PX-TRUNG', 2, 'R-A'),
+  CHK.rs.o1.forests.fa.pc = [P(1, '31/02/2026', '92C-12345', 'PX-SAI', 5, 'R-A'), P(2, '29/02/2028', '92C-12345', 'PX-NHUAN', 3, 'R-A'), P(3, '07/10/2026', '92C-12345', 'PX-TRUNG', 4, 'R-A'), P(4, '07/10/2026', '92C-12345', 'PX-TRUNG', 2, 'R-A'),
     P(5, '09/10/2026', '11A-00001', 'PX-BIEN', 1, 'R-A'), P(6, '10/10/2026', '92C-12345', 'PX-NOIGIAO', 6, 'R-A', 'Nhà máy ở Huế')];
   CHK.rs.o1.forests.fb.info.vanChuyen = {mode: 'tanDoan', donGiaKm: 1000, coDinh: 52000, bac: [{den: 50, gia: 40000}]}; delete CHK.rs.o1.forests.fb.info.muaHang;
   CHK.rs.o2.forests.fc.info.vanChuyen = {mode: 'tanKm', donGiaKm: 1000, coDinh: null, bac: []}; CHK.congTy.c1.diaChi = 'ĐỊA CHỈ MỚI TRONG HỒ SƠ CÔNG TY';
