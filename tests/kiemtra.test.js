@@ -38,7 +38,7 @@ test('tóm tắt, biểu mẫu bị chặn, lý do cho cổng xuất, lọc theo
 
 test('mã nhóm cố định: mọi nhóm do gate, exportCheck, nhaplieu, cheolo, giayto, sovb sinh ra đều được khai trong K.NHOM kèm biểu mẫu (rỗng nếu chỉ để đối chiếu)', () => {
   const fs = require('fs'), path = require('path'), root = path.join(__dirname, '..');
-  const files = ['src/nhaplieu.js', 'src/cheolo.js', 'src/giayto.js', 'src/sovb.js', 'src/vieccanlam.js', 'ui/app/04-kiem-tra-du-lieu-nhieu-doi.js', 'ui/app/10-kiem-tra-truoc-khi-xuat.js'];
+  const files = ['src/nhaplieu.js', 'src/cheolo.js', 'src/giayto.js', 'src/sovb.js', 'src/vieccanlam.js', 'ui/app/04-kiem-tra-du-lieu-nhieu-doi.js', ...require('./_ui').tepUi('10').map(f => 'ui/app/' + f)];
   const found = new Set();
   files.forEach(f => {
     const t = fs.readFileSync(path.join(root, f), 'utf8');

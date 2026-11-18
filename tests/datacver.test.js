@@ -37,7 +37,8 @@ test('mọi hàm giao diện sửa dữ liệu lô / db đều tăng phiên bả
 
 test('các đường đổi dữ liệu chung đều tăng phiên bản: persist, persistLo, persistNow, bỏ thay đổi, bản nháp (HAKStage bọc, stages là Proxy)', () => {
   const doc = n => fs.readFileSync(path.join(DIR, n), 'utf8');
-  const m02 = doc('02-luu-tru-trang-thai.js'), m11 = doc('11-cham-cong-ban-nhap.js'), m17 = doc('17-tra-cuu-google-sheets.js'), m10 = doc('10-kiem-tra-truoc-khi-xuat.js');
+  const {docUi} = require('./_ui');
+  const m02 = doc('02-luu-tru-trang-thai.js'), m11 = doc('11-cham-cong-ban-nhap.js'), m17 = doc('17-tra-cuu-google-sheets.js'), m10 = docUi('10');
   assert.match(m02, /function persist\(\) \{\n  doiDuLieu\(\);/);
   assert.match(m02, /function persistLo\(f\) \{\n  doiDuLieu\(\);/);
   assert.match(m02, /function loVeBanDaLuu\(fid\) \{\n  doiDuLieu\(\);/);
