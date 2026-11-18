@@ -46,8 +46,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
   await w.evaluate(() => { const f = document.getElementById('stForm'); const set = (k, v) => { f.elements[k].value = v; }; set('ten', 'PHẠM NGƯỜI MỚI'); set('cccd', '049085007003'); set('ngaySinh', '05/05/1991'); set('ngayCap', '06/06/2021'); set('noiCap', 'CA QN'); set('diaChi', 'Duy Xuyên'); set('vaiTro', 'Công nhân'); set('chucDanh', 'Công nhân khai thác'); });
   await w.click('#stForm button[type=submit]'); await w.waitForTimeout(400); await w.click('button[data-act=stSave]'); await w.waitForTimeout(600);
-  let D2 = await dbAll(), m = (D2.dmLaoDong || []).filter(r => r.cccd === '049085007003');
-  ok('người mới nhập ở lô tự vào Danh mục lao động (1 dòng), không phải nhập hai nơi', m.length === 1 && m[0].ten === 'PHẠM NGƯỜI MỚI' && m[0].diaChi === 'Duy Xuyên', JSON.stringify(m));
+  /* phiếu #05 (ND-05, A-06): lưu lô KHÔNG ghi danh mục cũ dmLaoDong; hỏi (hộp xác nhận, ở đây đồng ý) rồi thêm vào Danh mục đối tượng — xem e2e-dm-tu-lo */
+  let D2 = await dbAll(), m = (D2.dmDoiTuong || []).filter(o => (o.nguoi || []).some(p => p.cccd === '049085007003'));
+  ok('người mới nhập ở lô vào Danh mục đối tượng (1 hồ sơ, sau khi đồng ý), không phải nhập hai nơi; không ghi danh mục cũ', m.length === 1 && m[0].nguoi[0].hoTen === 'PHẠM NGƯỜI MỚI' && m[0].nguoi[0].diaChi === 'Duy Xuyên' && !(D2.dmLaoDong || []).some(r => r.cccd === '049085007003'), JSON.stringify(m));
   ok('người đã có trong danh mục không bị thêm dòng trùng', (D2.dmLaoDong || []).filter(r => r.cccd === '049085007002').length === 2);
   // 4. xe
   await w.click('[data-ftab=dx]'); await w.waitForTimeout(300); await w.click('[data-act=stAdd][data-kind=dx]'); await w.waitForSelector('#stForm');

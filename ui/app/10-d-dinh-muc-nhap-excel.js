@@ -132,7 +132,8 @@ function panelInfo(rec) {
     '<p class="mut" style="margin-top:0">Hồ sơ mở theo chủ rừng. Thông tin này in vào bên A của mọi hợp đồng.</p>' +
     '<form id="infoForm" class="grid">' + INFO_FIELDS.map(field).join('') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin</button></div></form></div>' +
-    (rec.info && errs.length && rec.id ? '<div class="msg warn">Còn thiếu: ' + esc(errs.join('; ')) + '</div>' : '');
+    (rec.info && errs.length && rec.id ? '<div class="msg warn">Còn thiếu: ' + esc(errs.join('; ')) + '</div>' : '') +
+    (rec.id ? infoWarns(rec.info, rec.id).map(w => '<div class="msg warn" data-info-canh>' + esc(w) + '</div>').join('') : '');   // phiếu #05: cảnh báo, không chặn
 }
 
 function panelImport(kind, rec, heading = '', congCu = '') {

@@ -42,6 +42,6 @@ const KT_NHIEUDOI = HAKKiemTraNhieuDoi.create({
   get vcCtx() { return vcCtx; },
   get vcInfo() { return vcInfo; }
 });
-const {BASIS, KIND_BM, allDirect, anyGK, basisAllowed, basisOf, checkDX, checkNC, doiKl, doiLabel, doiOf, doiTuongMinh, driverSigns, exDoi, fmtCong, fmtTan, forecastVol, forestErrors, gate, gateKind, giaErrors, giaErrorsRec, hdldList, infoErrors, infoRow, infoTeam, isDirect, khoanSuyRa, klLo,
+const {infoWarns, BASIS, KIND_BM, allDirect, anyGK, basisAllowed, basisOf, checkDX, checkNC, doiKl, doiLabel, doiOf, doiTuongMinh, driverSigns, exDoi, fmtCong, fmtTan, forecastVol, forestErrors, gate, gateKind, giaErrors, giaErrorsRec, hdldList, infoErrors, infoRow, infoTeam, isDirect, khoanSuyRa, klLo,
 klTheoPhieu, kyOfXe, ncList, nhapLieuAll, normErrors, normOf, normRefCapPhat, normRefHDLD, parseVN, payRows, payrollPlan, rateOf, recDoiChon, recOfRow, roleRates, rungText, soDoiSo, subRec, teamInfos, teamOfRow, transportPrice, ucList, vcLoi, volumeOf, workDays} = KT_NHIEUDOI;
 let gateRaw = KT_NHIEUDOI.gateRaw;   /* khai báo let: module 10 bọc lại bằng bộ nhớ tạm (gán lại gateRaw) */

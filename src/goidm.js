@@ -5,6 +5,7 @@
  *   Có trên máy: dùng mục của máy (không ghi đè), lô trỏ sang ID của máy; thông tin khác nhau được liệt kê.
  *   Chưa có: thêm vào danh mục máy (ID mới nếu ID trong gói đã dùng cho mục khác).
  *   Người cùng CCCD mà khác họ tên: không tự nối — lô giữ bản chụp, mục được ghi vào “Cần đối chiếu”.
+ *   Thể nhân không có CCCD: nối theo họ tên + ngày sinh khi khớp duy nhất; cùng họ tên mà không khớp duy nhất → “Cần đối chiếu”, không thêm (phiếu #05).
  * Lô đã chốt / dừng: không sửa dữ liệu lô (bản in giữ nguyên); chỉ bổ sung danh mục còn thiếu. */
 (function (root) {
   'use strict';
@@ -14,6 +15,7 @@
   const bk = v => (typeof require === 'function' ? require('./bks.js') : root.HAKBks).khoa(v);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   const clone = x => JSON.parse(JSON.stringify(x));
   const khoa = f => !!(f && (f.chot || f.dung));
+  const ngayK = v => { const t = s(v).split(/[\/.\-]/).map(x => parseInt(x, 10)); return t.length === 3 && t.every(n => n > 0) ? t.join('/') : ''; };   // 05/01/1980 và 5/1/1980 là một ngày
 
   /* các ID danh mục lô đang trỏ tới */
   function idCuaLo(f) {
@@ -53,7 +55,22 @@
     (g.doiTuong || []).forEach(o => {
       let m = null;
       if (o.loai === 'phapnhan') m = DT.find(x => x.loai === 'phapnhan' && ((so(o.mst) && so(x.mst) === so(o.mst)) || (!so(o.mst) && fold(x.ten) === fold(o.ten))));
-      else { for (const p of o.nguoi || []) { const a = so(p.cccd) && nguoiCccd(so(p.cccd)); if (a && fold(a.p.hoTen) === fold(p.hoTen)) { m = a.o; break; } } }
+      else {
+        for (const p of o.nguoi || []) { const a = so(p.cccd) && nguoiCccd(so(p.cccd)); if (a && fold(a.p.hoTen) === fold(p.hoTen)) { m = a.o; break; } }
+        /* phiếu #05 (ND-06, B-10): thể nhân KHÔNG có CCCD nào — nối theo họ tên + ngày sinh khi khớp DUY NHẤT; trùng họ tên mà không khớp duy nhất thì “Cần đối chiếu”,
+         * không tạo hồ sơ mới (khôi phục cùng gói hai lần không nhân đôi) */
+        if (!m && !(o.nguoi || []).some(p => so(p.cccd))) {
+          const ng = o.nguoi || [], cungTen = DT.filter(x => x.loai !== 'phapnhan' && (x.nguoi || []).some(q => ng.some(p => fold(p.hoTen) && fold(q.hoTen) === fold(p.hoTen))));
+          const khop = cungTen.filter(x => (x.nguoi || []).some(q => ng.some(p => fold(q.hoTen) === fold(p.hoTen) && ngayK(p.ngaySinh) && ngayK(q.ngaySinh) === ngayK(p.ngaySinh))));
+          const cungId = cungTen.filter(x => x.id === o.id);   // hồ sơ do chính gói này thêm ở lần khôi phục trước (cùng ID, cùng họ tên)
+          if (khop.length === 1) m = khop[0]; else if (!khop.length && cungId.length === 1) m = cungId[0];
+          else if (cungTen.length) {
+            can.push({loai: 'doituong', ref: o.id, lyDo: 'Đối tượng “' + s(o.ten) + '” trong gói chưa có CCCD; trên máy có ' + cungTen.length + ' hồ sơ cùng họ tên (' + cungTen.map(x => s(x.ma) || x.id).join(', ') + ')' +
+              (khop.length > 1 ? ', ' + khop.length + ' hồ sơ trùng cả ngày sinh' : ', không khớp ngày sinh') + ': chưa nối, chưa thêm — đối chiếu ở Danh mục đối tượng'});
+            return;
+          }
+        }
+      }
       if (m) {
         doi.dt[o.id] = m.id;
         if (o.loai === 'phapnhan' && ['ten', 'diaChi', 'daiDien', 'chucVuDaiDien'].some(k => s(m[k]) !== s(o[k]))) khac.push('Đối tượng “' + s(o.ten) + '”: thông tin trong gói khác máy — DÙNG BẢN CỦA MÁY');

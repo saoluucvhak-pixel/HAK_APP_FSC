@@ -95,8 +95,8 @@ const normNK = v => {
   if (/^chu\s*xe/.test(t)) return 'Chủ xe';
   return trim(v);
 };
-const cccdMsg = (who, v) => 'CCCD ' + who + ' phải đủ 12 chữ số (đang là "' + v + '", ' + String(v || '').length + ' ký tự)';
-const isCccd = s => /^\d{12}$/.test(s || '');
+const cccdMsg = (who, v) => 'CCCD ' + who + ' phải gồm 9 hoặc 12 chữ số (đang là "' + v + '", ' + String(v || '').length + ' ký tự)';
+const isCccd = s => /^(\d{9}|\d{12})$/.test(s || '');   // phiếu #05 (quyết định CHỦ): CCCD 12 số hoặc CMND 9 số, ở mọi nơi
 const isTT = r => /^tổ trưởng/i.test(r.vaiTro || '');
 const slug = s => trim(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'x';
 const upper = s => trim(s).toUpperCase();
