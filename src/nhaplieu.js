@@ -66,6 +66,13 @@
   }
   /* số CCCD gõ có khoảng trắng, chấm, gạch: bỏ ký tự thừa khi còn lại ít nhất 9 chữ số; ngoài ra giữ nguyên */
   function chuanHoaCccd(v) { const t = s(v), n = t.replace(/\D/g, ''); return n.length >= 9 && /^[\d\s.\-]+$/.test(t) ? n : t; }
-  const api = {kiemTra, chuanHoaNgay, chuanHoaCccd, NGAY_EXP, NGAY_INFO};
+  /* QUY TẮC CCCD DUY NHẤT (quyết định CHỦ 18/11, phiếu #14): hợp lệ khi có 9 (CMND) hoặc 12 (CCCD) chữ số, Ở MỌI NƠI. Mọi nơi dùng hàm này, không viết bản riêng.
+   *  - cccdSo: chỉ lấy chữ số, KHÔNG tự thêm số 0 (CMND 9 số “049067005” và CCCD 12 số “000049067005” là HAI số khác nhau).
+   *  - cccdHopLe: đúng 9 hoặc 12 chữ số.
+   *  - cccdTuSo: ô SỐ của Excel/Google Sheets mất số 0 đầu: 8 số → 9 số (thêm một số 0); 10–11 số → 12 số (thêm số 0 đến đủ 12); mọi trường hợp khác giữ nguyên để báo lỗi. */
+  const cccdSo = v => String(v == null ? '' : v).replace(/\D/g, '');
+  const cccdHopLe = v => { const n = cccdSo(v).length; return n === 9 || n === 12; };
+  function cccdTuSo(n) { const d = String(Math.round(+n)); return d.length === 8 ? '0' + d : d.length === 10 || d.length === 11 ? d.padStart(12, '0') : d; }
+  const api = {kiemTra, chuanHoaNgay, chuanHoaCccd, cccdSo, cccdHopLe, cccdTuSo, NGAY_EXP, NGAY_INFO};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNhapLieu = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -89,7 +89,7 @@ function rpData() {
     if (id === 'laodong') {
       const ref = dateKey(r.tuNgay) ? r.tuNgay : todayStr();
       x = {...r, ncList: (r.ncList || []).filter(n => (lot || hit(n.ten, n.cccd, n.chucDanh, n.vaiTro, n.diaChi, n.danhXung)) && (!o.chucDanh || n.chucDanh === o.chucDanh) && (!o.vaiTro || (o.vaiTro === 'Tổ trưởng' ? /^tổ trưởng/i.test(n.vaiTro || '') : !/^tổ trưởng/i.test(n.vaiTro || '')))
-        && (!fl.onlyMinors || (ageAt(n.ngaySinh, ref) != null && ageAt(n.ngaySinh, ref) < 18)) && (!fl.onlyMissing || !HAKDates.isValid(n.ngaySinh) || !/^\d{12}$/.test(String(n.cccd || ''))))};
+        && (!fl.onlyMinors || (ageAt(n.ngaySinh, ref) != null && ageAt(n.ngaySinh, ref) < 18)) && (!fl.onlyMissing || !HAKDates.isValid(n.ngaySinh) || !/^(\d{9}|\d{12})$/.test(String(n.cccd || ''))))};
       if (active && !x.ncList.length) return;
     } else if (id === 'danhsachxe') {
       const trips = k => (r.pc || []).filter(p => plate(p.bienSo) === k && HAKDates.isValid(p.ngay) && HAKDates.inRange(p.ngay, rp.from, rp.to)).length;

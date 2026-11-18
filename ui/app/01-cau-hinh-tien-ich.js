@@ -87,7 +87,7 @@ const normDate = v => {
   }
   return trim(v);
 };
-const normCccd = v => (typeof v === 'number' ? String(Math.round(v)).padStart(12, '0') : trim(v).replace(/[\s.\-'’`]/g, ''));
+const normCccd = v => (typeof v === 'number' ? HAKNhapLieu.cccdTuSo(v) : trim(v).replace(/[\s.\-'’`]/g, ''));   // phiếu #14: ô số mất số 0 đầu → quy tắc chung (8 số → 9, 10–11 số → 12), không bù thành 12 số
 const normNK = v => {
   const t = trim(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase();
   if (!t) return '';

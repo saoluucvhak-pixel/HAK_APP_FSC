@@ -20,11 +20,11 @@ test('xe: biển số so khớp bỏ dấu chấm, gạch, khoảng trắng, kh�
   assert.strictEqual(M.layXe(X, '92C12345').row.taiXe, 'MỚI'); assert.strictEqual(M.xeHieuLuc(X).length, 2);
   assert.deepStrictEqual(M.lichSuXe(X, '92C-123.45').map(r => r.taiXe), ['MỚI', 'CŨ']); assert.strictEqual(M.layXe(X, ''), null);
 });
-test('kiểm lao động: bắt buộc tên, CCCD 12 số, ngày cập nhật; chức vụ trong danh mục; vị trí trong danh mục vị trí', () => {
+test('kiểm lao động: bắt buộc tên, CCCD 9 hoặc 12 số (quyết định CHỦ 18/11, phiếu #14), ngày cập nhật; chức vụ trong danh mục; vị trí trong danh mục vị trí', () => {
   const VI = ['Công nhân cưa', 'Công nhân bóc vỏ'];
   assert.ok(M.kiemLaoDong(ld('049085000001', '01/01/2026'), VI).ok);
   const e = M.kiemLaoDong(ld('123', '31/02/2026', {ten: '', chucVu: 'Giám đốc', viTri: 'Lái máy', gioiTinh: 'X', ngaySinh: '31/02/1990'}), VI).errs.join('|');
-  ['thiếu họ tên', 'CCCD phải đủ 12', 'ngày cập nhật phải đúng', 'chức vụ phải chọn', 'vị trí “Lái máy” không có', 'giới tính là Nam hoặc Nữ', 'ngày sinh không có thật'].forEach(t => assert.ok(e.includes(t), t + ' | ' + e));
+  ['thiếu họ tên', 'CCCD phải có 9 hoặc 12', 'ngày cập nhật phải đúng', 'chức vụ phải chọn', 'vị trí “Lái máy” không có', 'giới tính là Nam hoặc Nữ', 'ngày sinh không có thật'].forEach(t => assert.ok(e.includes(t), t + ' | ' + e));
   assert.strictEqual(M.kiemLaoDong(ld('049 085 000 001', '01/01/2026'), VI).row.cccd, '049085000001', 'CCCD chuẩn hóa chỉ còn chữ số');
   assert.ok(M.kiemLaoDong(ld('049085000001', '01/01/2026', {viTri: 'Công nhân CƯA'}), VI).ok, 'vị trí so khớp không phân biệt hoa thường');
 });
