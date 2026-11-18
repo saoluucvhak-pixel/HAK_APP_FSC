@@ -260,3 +260,10 @@ Xong bước đầu, bình luận [NHỊP — STAFF_FSC] trên Issue #56 rồi l
 - Xác nhận hai mục kiểm tay trên Windows thật trước khi phát hành (mục 11.4).
 - Quyết định nghiệp vụ mới do agent nêu bằng `[CÂU HỎI]` và CEO chuyển lên CHỦ.
 - Dán lại đoạn 12.3 khi phiên của agent hết hạn hoặc bị dừng.
+
+## 13. Bàn giao từ 01:00 ngày 19/11/2026: STAFF làm cả việc của STAFF và KCS (theo chỉ đạo của CHỦ)
+
+- **KCS_FSC** bàn giao bằng một bình luận `[BÀN GIAO KCS → STAFF]` trên Issue #56 (PR đang mở, nhánh dở dang, việc chưa xong, ngoại lệ đang áp dụng). Sau đó KCS chỉ **kiểm lại độc lập sau gộp** (`[KCS: KIỂM LẠI SAU GỘP #NN]`) khi CEO hoặc STAFF yêu cầu, và giữ nhịp tim.
+- **STAFF_FSC** làm cả hai vai: làm phiếu theo thứ tự, mở PR, tự kiểm theo checklist mục 11.2 và đăng `[STAFF THAY KCS: ĐẠT #NN]` kèm bằng chứng, cập nhật nhánh khi `main` đổi, và **gộp PR của chính mình** khi đủ 8 điều kiện và CEO chưa trả lời quá 30 phút (ưu tiên để CEO gộp sau khi CEO kiểm độc lập). Gộp squash với `expectedHeadSha`, nhãn `da-gop`, rồi `[BÀN GIAO CEO #NN]`.
+- **CEO_FSC** là lớp kiểm độc lập duy nhất: nghiệm thu trên `main` sau mỗi PR; cuối đợt chạy CI Windows đầy đủ, lập Phiếu phát hành, phát hành khi đủ cổng mục 11.4. Không ai ngoài CEO phát hành.
+- Ngoại lệ này áp dụng đến khi CHỦ báo khác.
