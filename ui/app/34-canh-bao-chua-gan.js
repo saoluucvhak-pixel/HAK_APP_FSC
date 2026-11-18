@@ -9,7 +9,7 @@ const chuaGanMaMau = ma => /^(08|14)(?:\b|:|_)/.test(String(ma || ''));   // mã
 let chuaGanDaHoi = false;   // một lần bấm nút xuất = một lần hỏi (chuỗi xuất nhiều gói không hỏi lại)
 /* cảnh báo của lô đang mở (null: không có hoặc lô chỉ đọc) */
 function chuaGanCuaLo(rec) {
-  try { const f = curForest(); return rec && rec.doi && f && !loKhoa(f) ? HAKPhanBo.chuaGanXuat(doiOf(rec)) : null; } catch (e) { return null; }
+  try { const f = curForest(); return rec && rec.doi && f && !loKhoa(f) ? (b => HAKPhanBo.chuaGanXuat(b) || HAKPhanBo.chuaPhieuXuat(b))(doiOf(rec)) : null; } catch (e) { return null; }   // phiếu #03: còn phiếu chưa gán; phiếu #09: có đội chưa có phiếu nào
 }
 /* chạy một thao tác xuất; cờ “đã hỏi” chỉ sống trong thao tác đó */
 async function chuaGanTrong(fn) { chuaGanDaHoi = false; try { return await fn(); } finally { chuaGanDaHoi = false; } }
@@ -28,13 +28,18 @@ function chuaGanHoi(c) {
     const dong = (ok, diGan) => { if (xong) return; xong = true; document.removeEventListener('keydown', phim, true); $('#stBox').classList.remove('on'); $('#stBox').removeAttribute('role'); if (diGan) chuaGanVeGan(); res(ok); };
     const phim = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); dong(false, false); } };
     const t = kg => fmtT(kg) + ' tấn';
-    const hang = c.phieu.slice(0, 200).map(p => '<tr><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bienSo) + '</td><td style="text-align:right">' + t(p.kg) + '</td></tr>').join('');
-    $('#stBody').innerHTML = '<div class="gh"><h2 id="chuaGanTieuDe">Còn phiếu cân chưa gán đội</h2></div>' +
+    const dongDoi = !!c.doi;   // phiếu #09: đội chưa có phiếu cân nào (phiếu đã gán hết cho đội khác)
+    const chia = c.chia.length ? ': ' + c.chia.map(x => esc(x.ten || 'Đội') + ' ' + fmtT(Math.round(x.tan * 1000)) + ' tấn').join(', ') : '';
+    const hang = dongDoi ? c.chia.map(x => '<tr><td>' + esc(x.ten || 'Đội') + (c.doi.includes(x.ten || 'Đội') ? ' <span class="pill err">chưa có phiếu</span>' : '') + '</td><td style="text-align:right">' + t(Math.round(x.tan * 1000)) + '</td></tr>').join('') :
+      c.phieu.slice(0, 200).map(p => '<tr><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bienSo) + '</td><td style="text-align:right">' + t(p.kg) + '</td></tr>').join('');
+    $('#stBody').innerHTML = '<div class="gh"><h2 id="chuaGanTieuDe">' + (dongDoi ? 'Còn đội chưa có phiếu cân nào' : 'Còn phiếu cân chưa gán đội') + '</h2></div>' +
+      (dongDoi ? '<div class="msg warn" id="chuaGanNoiDung"><b>Đội ' + c.doi.map(x => '“' + esc(x) + '”').join(', ') + ' chưa có phiếu cân nào.</b> Phiếu cân đã gán hết cho đội khác, nên khối lượng của đội này ở BM-08 và BM-14 không lấy được từ phiếu cân.<br>' +
+        '<b>Nếu tiếp tục, khối lượng chia theo số người của đội</b>' + chia + '. Số này khác với màn Phân bổ.</div>' :
       '<div class="msg warn" id="chuaGanNoiDung"><b>' + c.soPhieu + ' phiếu cân, tổng ' + t(c.kg) + ', chưa gán đội.</b> Khối lượng từng đội ở BM-08 và BM-14 lấy theo phiếu cân đã gán; phiếu chưa gán không được tính cho đội nào.<br>' +
-      '<b>Nếu tiếp tục, khối lượng chia theo số người của đội</b>' + (c.chia.length ? ': ' + c.chia.map(x => esc(x.ten || 'Đội') + ' ' + fmtT(Math.round(x.tan * 1000)) + ' tấn').join(', ') : '') + '. Số này khác với màn Phân bổ (đang ghi “chưa phân bổ”).</div>' +
-      '<div class="wrap" style="max-height:240px;overflow:auto;margin:8px 0"><table id="chuaGanBang"><thead><tr><th>Số phiếu</th><th>Ngày cân</th><th>Biển số</th><th style="text-align:right">Khối lượng</th></tr></thead><tbody>' + hang + '</tbody></table></div>' +
-      (c.phieu.length > 200 ? '<p class="mut">Còn ' + (c.phieu.length - 200) + ' phiếu nữa không hiện ở đây.</p>' : '') +
-      '<p class="mut" style="margin:0 0 8px">Lựa chọn này chỉ áp dụng cho lần xuất này; lần sau phần mềm sẽ hỏi lại nếu còn phiếu chưa gán.</p>' +
+      '<b>Nếu tiếp tục, khối lượng chia theo số người của đội</b>' + chia + '. Số này khác với màn Phân bổ (đang ghi “chưa phân bổ”).</div>') +
+      '<div class="wrap" style="max-height:240px;overflow:auto;margin:8px 0"><table id="chuaGanBang"><thead><tr>' + (dongDoi ? '<th>Đội</th><th style="text-align:right">Khối lượng sẽ in</th>' : '<th>Số phiếu</th><th>Ngày cân</th><th>Biển số</th><th style="text-align:right">Khối lượng</th>') + '</tr></thead><tbody>' + hang + '</tbody></table></div>' +
+      (!dongDoi && c.phieu.length > 200 ? '<p class="mut">Còn ' + (c.phieu.length - 200) + ' phiếu nữa không hiện ở đây.</p>' : '') +
+      '<p class="mut" style="margin:0 0 8px">Lựa chọn này chỉ áp dụng cho lần xuất này; lần sau phần mềm sẽ hỏi lại nếu ' + (dongDoi ? 'vẫn còn đội chưa có phiếu' : 'còn phiếu chưa gán') + '.</p>' +
       '<div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" id="chuaGanVe">Quay lại gán phiếu</button><button class="btn ghost" id="chuaGanXuat">Vẫn xuất, chia theo số người</button></div>';
     const box = $('#stBox'); box.classList.add('on'); box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-labelledby', 'chuaGanTieuDe');
     $('#chuaGanVe').onclick = () => dong(false, true);

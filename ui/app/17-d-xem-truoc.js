@@ -11,7 +11,7 @@ function lkTarget() {
 const same = (a, b) => (a == null || a === '' ? '' : String(a)).trim() === (b == null || b === '' ? '' : String(b)).trim();
 const isEmpty = v => v == null || v === '';
 function lkInitSel() {
-  const c = lk.cand, F = c.forests[lk.fi], T = lkTarget(), s = {owner: {}, forest: {}, area: null, gps: null, docs: {}, phieu: {}, kl: false, ref: true, plateOnly: true};
+  const c = lk.cand, F = c.forests[lk.fi], T = lkTarget(), s = {owner: {}, forest: {}, area: null, gps: null, docs: {}, phieu: {}, ref: true, plateOnly: true};
   const def = (cur, val) => isEmpty(cur) ? 'new' : same(cur, val) ? 'same' : null;
   c.owner.fields.forEach(x => { s.owner[x.key] = def(T.oi[x.key], x.value); });
   F.fields.forEach(x => { s.forest[x.key] = def(T.fi[x.key], x.value); });
@@ -133,7 +133,7 @@ function lkPreviewHtml() {
       ({new: 'thêm', upd: 'cập nhật', same: 'bỏ qua', issue: 'cần kiểm tra', alias: 'cần ghép biển'}[p.st]) + (p.note ? ' — ' + esc(p.note) : '') + (p.warn ? '<br><span style="color:var(--warn)">' + esc(p.warn) + '</span>' : '') + '</td><td class="mut">HoSoKeo_QC · dòng ' + p.row +
       '</td></tr>').join('') + '</table></div>' +
     '<p class="mut">Đơn giá và Thanh toán chỉ để tham chiếu, chưa dùng cho tiền công, cước vận chuyển hay giá khoán.</p>' +
-    '<label style="flex-direction:row;color:var(--ink)"><input type="checkbox" data-lkkl' + (s.kl ? ' checked' : '') + '> Điền tổng ' + formatNumber(tan, 3) + ' tấn của các phiếu đã chọn vào “Khối lượng khai thác thực tế” (hiện có: ' + esc(T.fi.khoiLuong ?? 'trống') + ')</label>' +
+    /* phiếu #09: bỏ ô “Điền tổng … tấn vào Khối lượng khai thác thực tế”: khối lượng thực tế của lô LẤY TỰ ĐỘNG từ tổng phiếu cân (HAKDinhMuc.tongPhieuTan), không có ô nhập để điền */
     (c.owner.ref.length + F.ref.length ? '<h3>Thông tin tham chiếu (chưa có ô tương ứng trong hồ sơ)</h3><div class="wrap"><table><tr><th>Trường</th><th>Giá trị</th><th>Nguồn</th></tr>' + c.owner.ref.concat(F.ref).map(x => '<tr><td>' + esc(x.label) + '</td><td>' + numTxt(x.value) +
     '</td><td class="mut">' + srcTxt(x.src) + '</td></tr>').join('') + '</table></div>' +
       '<label style="flex-direction:row;color:var(--ink)"><input type="checkbox" data-lkref' + (s.ref ? ' checked' : '') + '> Lưu phần tham chiếu này vào hồ sơ rừng để đối chiếu</label>' : '') +

@@ -118,6 +118,17 @@ const INFO_FIELDS = [
   ['sdt', 'Số điện thoại', 'text', false],
   ['diaChi', 'Địa chỉ thường trú', 'wide', true]
 ];
+/* phiếu #09 (ND-08): ô chọn chủ rừng từ Danh mục đối tượng (điền sẵn; hồ sơ giữ bản chụp, sửa danh mục sau không đổi hồ sơ này). Không có ô tên: không đi vào dữ liệu lưu. */
+function infoChonDm(info) {
+  const L = HAKDoiTuong.nguoiChonChuRung(db.dmDoiTuong || []); if (!L.length) return '<input type="hidden" name="nguoiDmId" value="' + esc((info || {}).nguoiDmId || '') + '">';
+  return '<input type="hidden" name="nguoiDmId" value="' + esc((info || {}).nguoiDmId || '') + '"><label style="grid-column:1/-1"><span>Chọn từ Danh mục đối tượng (điền sẵn họ tên, danh xưng, CCCD, ngày cấp, nơi cấp, địa chỉ)</span><select id="infoDm"><option value="">— nhập tay —</option>' +
+    L.map(x => '<option value="' + esc(x.id) + '"' + ((info || {}).nguoiDmId === x.id ? ' selected' : '') + '>' + esc(x.nhan) + '</option>').join('') + '</select><small class="mut">Hồ sơ chủ rừng giữ bản chụp: sửa danh mục sau không làm đổi hồ sơ đã lưu. Vẫn nhập tay được.</small></label>';
+}
+/* cảnh báo (không chặn): CCCD nhập tay trùng một người trong Danh mục đối tượng */
+function infoDmCanh(info) {
+  const m = info && info.cccd ? HAKDoiTuong.trungDanhMuc(db.dmDoiTuong || [], info.cccd, info.nguoiDmId) : null;
+  return m ? 'CCCD ' + info.cccd + ' trùng người “' + HAKDoiTuong.nhanNguoi(m.dt, m.ng) + '” trong Danh mục đối tượng: chọn người đó ở ô “Chọn từ Danh mục đối tượng” để điền sẵn, hoặc bỏ qua nếu là hai người khác nhau' : '';
+}
 function panelInfo(rec) {
   const errs = rec.id ? infoErrors(rec.info, rec.id) : [];
   const field = ([k, label, type, req]) => {
@@ -130,9 +141,10 @@ function panelInfo(rec) {
   };
   return '<div class="card"><h3 style="margin-top:0">Thông tin chủ rừng</h3>' +
     '<p class="mut" style="margin-top:0">Hồ sơ mở theo chủ rừng. Thông tin này in vào bên A của mọi hợp đồng.</p>' +
-    '<form id="infoForm" class="grid">' + INFO_FIELDS.map(field).join('') +
+    '<form id="infoForm" class="grid">' + infoChonDm(rec.info) + INFO_FIELDS.map(field).join('') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin</button></div></form></div>' +
     (rec.info && errs.length && rec.id ? '<div class="msg warn">Còn thiếu: ' + esc(errs.join('; ')) + '</div>' : '') +
+    (rec.id && infoDmCanh(rec.info) ? '<div class="msg warn" data-info-canh>' + esc(infoDmCanh(rec.info)) + '</div>' : '') +
     (rec.id ? infoWarns(rec.info, rec.id).map(w => '<div class="msg warn" data-info-canh>' + esc(w) + '</div>').join('') : '');   // phiếu #05: cảnh báo, không chặn
 }
 
