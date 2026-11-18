@@ -209,6 +209,18 @@
     return {ok: !loi.length, dm: list, them, sua, loi};
   }
 
+  /* ---------- chủ rừng chọn từ Danh mục đối tượng (phiếu #09, ND-08) ----------
+   * Chủ rừng là một người (thể nhân) của danh mục: chọn thì điền sẵn họ tên, danh xưng, CCCD, ngày cấp, nơi cấp, địa chỉ (thường trú của người, không có thì của hồ sơ).
+   * Hồ sơ chủ rừng giữ BẢN CHỤP các trường đó (info.*) và id người đã chọn (info.nguoiDmId): sửa danh mục sau không làm đổi hồ sơ đã lưu. Vẫn nhập tay được. */
+  function chupChuRung(dm, ngId) {
+    const m = timNguoi(dm, ngId); if (!m) return null; const dt = m.dt, ng = m.ng;
+    return {nguoiDmId: ng.id, danhXung: ng.gioiTinh === 'Nữ' ? 'Bà' : ng.gioiTinh === 'Nam' ? 'Ông' : '', ten: s(ng.hoTen), cccd: s(ng.cccd), ngayCap: s(ng.ngayCap), noiCap: s(ng.noiCap), diaChi: s(ng.diaChi) || s(dt.diaChi), sdt: s(ng.sdt) || s(dt.sdt)};
+  }
+  /* người của danh mục để chọn làm chủ rừng (bỏ người / hồ sơ ngừng): [{id, nhan}] sắp theo tên */
+  const nguoiChonChuRung = dm => tatCaNguoi(dm).filter(x => !x.dt.ngung && !x.ng.ngung).map(x => ({id: x.ng.id, nhan: nhanNguoi(x.dt, x.ng) + (s(x.ng.cccd) ? ' · CCCD ' + s(x.ng.cccd) : '')})).sort((a, b) => a.nhan.localeCompare(b.nhan, 'vi'));
+  /* CCCD nhập tay trùng một người của danh mục (không phải người đã chọn ở ô chọn): trả {dt, ng} để cảnh báo (không chặn); null nếu không trùng */
+  const trungDanhMuc = (dm, cccd, nguoiDmId) => { const m = timCccd(dm, cccd); return m && m.ng.id !== s(nguoiDmId) ? m : null; };
+
   /* ---------- chuyển từ danh mục cũ (bản 2.x) ---------- */
   /* Dựng danh mục đối tượng từ dmLaoDong (người lao động, nhiều dòng theo ngày), dmXeVC (tài xế, chủ xe) và dmDoiTac (doanh nghiệp, cá nhân ký) — “Người chung” theo CCCD.
    * Mỗi CCCD (12 số) = một thể nhân một người, gộp vai trò; thông tin lấy dòng mới nhất, chỗ trống bù từ nguồn khác. Doanh nghiệp = pháp nhân có quyền ký Vận chuyển.
@@ -248,7 +260,7 @@
   /* id pháp nhân đã chuyển từ đối tác doanh nghiệp cũ ('dn:<mã>') — để nối hợp đồng vận chuyển cũ (hdvc.donViId) */
   const timTuDoiTacCu = (dm, idCu) => (dm || []).find(o => o.nguonCu === idCu) || null;
 
-  const api = {LOAI, VAI_TRO, KY, COT, kyText, vaiText, chuan, chuanNguoi, idDoiTuong, idNguoi, maMoi, tim, timNguoi, timCccd, nhanNguoi, nguoiTheoVaiTro, benKy, loc, kiem, canhBao, luu, moiTuLo, themTuLo, ngung,
+  const api = {chupChuRung, nguoiChonChuRung, trungDanhMuc, LOAI, VAI_TRO, KY, COT, kyText, vaiText, chuan, chuanNguoi, idDoiTuong, idNguoi, maMoi, tim, timNguoi, timCccd, nhanNguoi, nguoiTheoVaiTro, benKy, loc, kiem, canhBao, luu, moiTuLo, themTuLo, ngung,
     docExcel, apDungExcel, tuDanhMucCu, timTuDoiTacCu, tatCaNguoi, fold};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDoiTuong = api;
 })(typeof self !== 'undefined' ? self : this);

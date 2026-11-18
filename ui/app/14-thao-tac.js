@@ -269,13 +269,13 @@ function saveInfo(form) {
   const info = {
     ma: trim(fd.get('ma')), danhXung: trim(fd.get('danhXung')), ten: trim(fd.get('ten')),
     soHopDong: trim(fd.get('soHopDong')), ngayKyHopDong: trim(fd.get('ngayKyHopDong')), cccd: normCccd(fd.get('cccd')), ngayCap: trim(fd.get('ngayCap')),
-    noiCap: trim(fd.get('noiCap')), diaChi: trim(fd.get('diaChi')), sdt: trim(fd.get('sdt'))
+    noiCap: trim(fd.get('noiCap')), diaChi: trim(fd.get('diaChi')), sdt: trim(fd.get('sdt')), nguoiDmId: trim(fd.get('nguoiDmId'))   // phiếu #09: id người đã chọn từ Danh mục đối tượng (trống: nhập tay)
   };
   const errs = infoErrors(info, rec.id);
   if (errs.length) { formMsg(form, 'Chưa lưu: ' + errs.join('; ')); return; }
   rec.info = Object.assign({}, rec.info, info);   // giữ các trường cũ không còn hiển thị (ví dụ ngày sinh đã lưu)
   persist();
-  const canh = infoWarns(info, rec.id);   // phiếu #05: cảnh báo, không chặn
+  const canh = infoWarns(info, rec.id).concat(infoDmCanh(info) ? [infoDmCanh(info)] : []);   // phiếu #05, #09: cảnh báo, không chặn
   note('Đã lưu thông tin chủ rừng.' + (canh.length ? ' Lưu ý: ' + canh.join('; ') + '.' : ''), canh.length ? 'warn' : 'ok');
 }
 

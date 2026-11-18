@@ -223,7 +223,7 @@
       if (!gan.length) return pcs.length ? {chuaGan: pcs.length, ds} : null;
       const vals = b.doi.map(d => ctx.klPhieu(pcs.filter(p => p.doiId === d.id))), thieu = pcs.length - gan.length, rong = b.doi.filter((d, i) => !vals[i]);
       const loi = thieu ? 'còn ' + thieu + '/' + pcs.length + ' phiếu cân chưa gán đội: gán ở bảng phiếu cân (tab Vận chuyển)' : rong.length ? 'đội ' + rong.map(d => '“' + (d.ten || '') + '”').join(', ') + ' chưa có phiếu cân nào' : '';
-      return {vals, nguon: 'phieucan', loi, ds};
+      return {vals, nguon: 'phieucan', loi, ds, rong: !thieu ? rong.map(d => d.ten || '') : []};   // rong (phiếu #09): đội CHƯA CÓ phiếu cân nào khi phiếu đã gán hết cho đội khác
     }
     const doiKl = (rec, b, ha) => {
       const kp = b.multi ? klTheoPhieu(rec, b) : null;
@@ -234,6 +234,8 @@
       else if (kp && kp.chuaGan && kq.nguon !== 'nhap' && !pb) kq = Object.assign({}, kq, {chuaGan: kp.chuaGan});   // khối lượng từng đội: nhập riêng (đủ, khớp tổng) hoặc chia theo số người
       /* phiếu #03: còn phiếu chưa gán đội mà khối lượng đội đang CHIA THEO SỐ NGƯỜI (không dùng phiếu cân) → danh sách phiếu đó (rỗng nếu không rơi vào trường hợp này). Chỉ ghi nhận, KHÔNG đổi số. */
       b.phieuChuaGan = kp && kq.nguon === 'songuoi' ? (kp.ds || []) : [];
+      /* phiếu #09: phiếu gán hết nhưng có đội chưa có phiếu nào → khối lượng đội đang CHIA THEO SỐ NGƯỜI (không dùng phiếu cân): tên các đội đó, để cảnh báo trước khi xuất. Chỉ ghi nhận, KHÔNG đổi số. */
+      b.doiChuaPhieu = kp && kq.nguon === 'songuoi' && !(b.phieuChuaGan || []).length ? (kp.rong || []) : [];
       b.klNguon = kq.nguon; b.klLoi = kq.loi; b.pcChuaGan = kq.chuaGan || 0; b.doi.forEach((d, i) => { d.dienTich = ha[i]; d.khoiLuong = kq.vals[i]; }); return b; };
     /* hồ sơ của ĐỘI ĐANG CHỌN (màn Nhân công khai thác): nhân công và hình thức của đội; lô một đội: cả lô */
     const recDoiChon = rec => {
