@@ -1,15 +1,17 @@
 /* TRANG TỔNG HỢP THEO ĐỐI TƯỢNG (bản 2.2, mục 5.2): người, xe, đối tác, chủ rừng. Hàm thuần, chỉ đọc dữ liệu (xuyên lô).
  * Mỗi hàm trả {tieuDe, muc: [{ten, cot: [...], dong: [[...]]}], ghiChu: [...]} để giao diện dựng bảng; không có nơi nhập mới. */
 (function (root) {
+  const DMU = () => (typeof require === 'function' ? require('./dinhmuc.js') : root.HAKDinhMuc);   // một cách tính khối lượng phiếu cân (src/dinhmuc.js)
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   const s = v => String(v == null ? '' : v).trim();
   const digits = v => s(v).replace(/\D/g, '');
-  const plate = v => s(v).toUpperCase().replace(/[\s.\-]/g, '');
+  const plate = v => BKS().khoa(v);
   const tan = v => Math.round(v * 1000) / 1000;
   const DM = (typeof require !== 'undefined') ? require('./danhmuc') : root.HAKDanhMuc;
   const lots = db => { const out = []; Object.values((db && db.rs) || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => out.push({o, f, oid: o.id, ma: s((f.info || {}).maRung) || f.id}))); return out; };
   const doiTen = (f, id) => { const d = (f.doi || []).find(x => x.id === id); return d ? (s(d.ten) || 'Đội') : ''; };
   const hdTen = (f, id) => { const h = (f.hdvc || []).find(x => x.id === id); return h ? (s(h.ten) || 'Đội xe') : ''; };
-  const sumKl = pcs => tan(pcs.reduce((n, p) => n + (typeof p.kl === 'number' ? p.kl : 0), 0));
+  const sumKl = pcs => DMU().tongPhieuTan(pcs);   // làm tròn từng phiếu đến kg rồi cộng (một định nghĩa: src/dinhmuc.js)
 
   function nguoi(db, cccd) {
     const k = digits(cccd), p = DM.timNguoi(db, k); if (!p) return null;

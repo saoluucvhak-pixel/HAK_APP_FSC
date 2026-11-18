@@ -5,10 +5,11 @@
  *  - một người (CCCD) thuộc nhân công của hai lô có thời gian khai thác giao nhau: cảnh báo (đã xác nhận 15/11/2026: không chặn);
  *  - tổng phiếu cân lệch sản lượng dự kiến (diện tích × định mức) quá ngưỡng %: cảnh báo (mặc định 10%, đặt db.nguongLechSanLuong để đổi). */
 (function (root) {
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   const NGUONG_MAC_DINH = 10;
   const s = v => String(v == null ? '' : v).trim();
   const digits = v => s(v).replace(/\D/g, '');
-  const plate = v => s(v).toUpperCase().replace(/[\s.\-]/g, '');
+  const plate = v => BKS().khoa(v);
   /* ngày lịch dùng CHUNG (src/dates.js): “1/11/2026” và “01/11/2026” là cùng một ngày; ngày thiếu hoặc không có thật cho null/0 và KHÔNG làm căn cứ kết luận hai phiếu là cùng chuyến */
   const Dt = () => (typeof require !== 'undefined' ? require('./dates') : root.HAKDates);
   const DM = () => (typeof require !== 'undefined' ? require('./dinhmuc') : root.HAKDinhMuc);   // sản lượng dự kiến, tổng phiếu: cùng định nghĩa với giao diện

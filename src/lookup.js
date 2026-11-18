@@ -214,7 +214,7 @@ function checkRange(n, kind, converted, raw) {
 }
 
 /* ===== Biển số ===== */
-const plateKey = v => clean(v).toUpperCase().replace(/[\s.\-]/g, '');
+const plateKey = v => require('./bks.js').khoa(clean(v));   // một quy tắc chuẩn hóa BKS (src/bks.js)
 const isPlate = v => /^\d{2}[A-Z]{1,2}\d?\d{3,5}$/.test(plateKey(v));
 
 /* ===== Lưu trữ trong SQLite ===== */
@@ -670,7 +670,7 @@ function forestOf(code, T, R, keo, nRung, hd) {
     const tan = typeof r['Khối lượng (Tấn)'] === 'number' ? r['Khối lượng (Tấn)'] : null;
     const kg = typeof r['KL hàng (KG)'] === 'number' ? r['KL hàng (KG)'] : null;
     let kl = null, issue = '';
-    if (tan > 0) kl = tan; else if (kg > 0) kl = Math.round(kg) / 1000;
+    if (tan > 0) kl = Math.round(tan * 1000) / 1000; else if (kg > 0) kl = Math.round(kg) / 1000;   // phiếu ghi vào hồ sơ: khối lượng chính xác đến kg như nạp Excel (một cách cộng: src/dinhmuc.js)
     if (tan > 0 && kg > 0 && Math.abs(kg / 1000 - tan) > 0.0005) issue = 'Phiếu cân ' + (clean(r['SỐ PHIẾU CÂN']) || '?') + ': khối lượng lệch, cột Tấn = ' + tan + ' và cột KG = ' + kg + ' (' + kg / 1000 + ' tấn); đang dùng cột Tấn';
     if (!(kl > 0)) issue = issue || 'Phiếu cân ' + (clean(r['SỐ PHIẾU CÂN']) || '?') + ': dòng không có khối lượng hợp lệ (cả hai cột trống hoặc không phải số dương)';
     const ngay = D.isValid(r['Ngày nhập']) ? r['Ngày nhập'] : '';

@@ -5,7 +5,7 @@
 (function (root) {
   const s = v => String(v == null ? '' : v).trim();
   const fold = v => s(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
-  const plate = v => fold(v).replace(/[\s.\-]/g, '');
+  const plate = v => fold(v).replace(/[\s.\-]/g, '');   // RIÊNG tìm kiếm: chữ thường, bỏ dấu (so khớp gõ gần đúng); so khớp dữ liệu dùng HAKBks.khoa (src/bks.js)
   const digits = v => s(v).replace(/\D/g, '');
   const NHOM = ['Lô', 'Chủ rừng', 'Người', 'Xe', 'Đối tác', 'Phiếu cân', 'Văn bản'];
   /* điểm khớp của một trường: 3 = bằng, 2 = đầu / đuôi (số), 1 = chứa, 0 = không */

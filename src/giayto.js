@@ -4,9 +4,10 @@
  * Phiếu có ngày cân SAU ngày hết hạn là phiếu chạy khi giấy tờ đã hết hạn. Ngày hết hạn là ngày CÒN hiệu lực cuối cùng: cân đúng ngày hết hạn thì hợp lệ.
  * Không so với ngày hôm nay (đó là cảnh báo “sắp hết hạn” ở màn xe). Hạn hoặc ngày cân trống, sai định dạng thì bỏ qua ở đây (đã có lỗi ngày ở nơi nhập). */
 (function (root) {
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   const D = typeof HAKDates !== 'undefined' ? HAKDates : (typeof require === 'function' ? require('./dates.js') : root.HAKDates);
   const trim = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
-  const bienKey = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
+  const bienKey = v => BKS().khoa(v);
   const GIAY_TO = [['kdDen', 'kiểm định', false], ['hanBH', 'bảo hiểm', false], ['hanGplx', 'GPLX', true]];   // [trường, tên giấy tờ, chỉ xét khi xe có tài xế]
   /* xe: danh sách xe; pcs: phiếu cân. Trả [{bienSo, soPhieu, ngay, row, giayTo, han}] theo thứ tự phiếu, mỗi (phiếu, giấy tờ) một dòng */
   function quaHan(xe, pcs) {

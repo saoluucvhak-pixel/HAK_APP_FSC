@@ -3,6 +3,7 @@
  * Tách từ ui/app/03-doc-excel-phieu-can.js: mã giữ nguyên; mọi tên dùng từ phần còn lại của giao diện (cơ sở dữ liệu đang mở, tiện ích, các module khác)
  * đi qua đối tượng ctx do giao diện cấp (getter, đọc giá trị hiện tại lúc gọi). Kiểm thử đơn vị truyền ctx giả. */
 (function (root) {
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   function create(ctx) {
     /* ========== Đọc Excel ========== */
     function parseSheet(file, sheetName, map, req, norm, alias) {
@@ -89,10 +90,10 @@
     };
 
     /* ========== Phiếu cân: khối lượng và tiền vận chuyển ========== */
-    const bienKey = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
+    const bienKey = v => BKS().khoa(v);
     /* Quy tắc ngày lịch dùng chung (src/dates.js): 31/02/2026 và 29/02/2026 không có thật, 29/02/2028 có thật; ngày không có thật → 0 */
     const dateKey = v => ctx.HAKDates.key(v);
-    const totalKg = rows => rows.reduce((a, r) => a + (typeof r.kl === 'number' ? Math.round(r.kl * 1000) : 0), 0);
+    const totalKg = rows => (typeof require === 'function' ? require('./dinhmuc.js') : root.HAKDinhMuc).tongPhieuKg(rows);   // một cách tính (src/dinhmuc.js)
     const fmtT = kg => { const [i, d] = (kg / 1000).toFixed(3).split('.'); return ctx.numSwap(ctx.fmtRaw(i) + ',' + d); };
     const VN_D = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
     function words3(n, full) {

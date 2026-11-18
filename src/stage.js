@@ -7,7 +7,8 @@
  *  - commit(...): danh sách mới + nhật ký đổi biển để ghi vào lô trong một giao dịch.
  * Hàm thuần, không đụng giao diện hay cơ sở dữ liệu. */
 (function (root) {
-  const bienKey = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
+  const bienKey = v => BKS().khoa(v);
   const fold = v => String(v == null ? '' : v).trim().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ');
   const cccd = v => { const d = String(v == null ? '' : v).replace(/\D/g, ''); return d && d.length < 12 ? d.padStart(12, '0') : d; };
   const KEY = {

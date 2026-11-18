@@ -99,7 +99,11 @@
     const k = keoPick(db || {}, i.tuNgay || ''); return k.found ? {v: k.item.tanHa, src: 'mặc định', tu: k.item.tuNgay} : null;
   }
   const sanLuongDuKien = (db, info) => { const d = dinhMucLo(db, info), i = info || {}; return (typeof i.dienTich === 'number' && d) ? i.dienTich * d.v : null; };
-  const tongPhieuTan = pc => Math.round((pc || []).reduce((a, p) => a + (p && typeof p.kl === 'number' && p.kl > 0 ? Math.round(p.kl * 1000) : 0), 0)) / 1000;
+  /* MỘT cách tính khối lượng phiếu cân cho mọi màn, báo cáo, phân bổ, biểu mẫu: làm tròn TỪNG phiếu đến kg (số nguyên) rồi cộng.
+   * kgPhieu: kg của một phiếu (kl là tấn, nhận số hoặc chuỗi số có dấu phẩy; không hợp lệ hoặc ≤ 0 tính 0). tongPhieuKg / tongPhieuTan: tổng của danh sách phiếu. */
+  const kgPhieu = p => { const k = p && p.kl, v = typeof k === 'number' ? k : parseFloat(String(k == null ? '' : k).replace(',', '.')); return isFinite(v) && v > 0 ? Math.round(v * 1000) : 0; };
+  const tongPhieuKg = pc => (pc || []).reduce((a, p) => a + kgPhieu(p), 0);
+  const tongPhieuTan = pc => tongPhieuKg(pc) / 1000;
   function keoCheck(tuNgay, tanHa) {
     const p = D.parse(trim(tuNgay)); if (!p) return {error: 'Ngày hiệu lực phải đúng dd/mm/yyyy và có thật trên lịch'};
     const n = typeof tanHa === 'number' ? tanHa : Number(String(tanHa).replace(',', '.'));
@@ -182,6 +186,6 @@
     const lech = tt - duKien, nguong = Math.max(NGUONG_NGAY, Math.ceil(duKien * NGUONG_TYLE));
     return {thucTe: tt, duKien, lech, tyLe: Math.round(lech / duKien * 1000) / 10, nguong, canhBao: Math.abs(lech) > nguong};
   }
-  const api = {dinhMucLo, sanLuongDuKien, tongPhieuTan, demNgay, lechThoiGian, NGUONG_NGAY, NGUONG_TYLE, keoItems, keoPick, keoAdd, keoSetAll, tgItems, tgPick, tgAdd, tgSetAll, soNgay, ngayKetThuc, nangSuat, BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
+  const api = {dinhMucLo, sanLuongDuKien, kgPhieu, tongPhieuKg, tongPhieuTan, demNgay, lechThoiGian, NGUONG_NGAY, NGUONG_TYLE, keoItems, keoPick, keoAdd, keoSetAll, tgItems, tgPick, tgAdd, tgSetAll, soNgay, ngayKetThuc, nangSuat, BASE, allPositions, versions, byId, pick, normFor, addVersion, setDate, setNorm, removeVersion, addPosition, removePosition};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDinhMuc = api;
 })(typeof self !== 'undefined' ? self : this);

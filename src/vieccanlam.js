@@ -4,10 +4,11 @@
  * Quy tắc: lô còn mẫu nợ in hoặc chưa ký (nhắc); phiếu cân chưa gán đội khi lô có nhiều đội (chặn đợt 2); giấy tờ xe còn hạn dưới N ngày hoặc đã hết hạn (cảnh báo);
  * đang khai thác mà quá N ngày không có phiếu mới (nhắc); phiếu cuối đã quá N ngày mà lô chưa chốt (nhắc); lô quá ngày kết thúc dự kiến chưa chốt (nhắc). Lô đã dừng, đã chốt, lưu trữ không tính. */
 (function (root) {
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   const s = v => String(v == null ? '' : v).trim();
   const dmy = v => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s(v)); if (!m) return null; const d = new Date(+m[3], +m[2] - 1, +m[1]); return d.getFullYear() === +m[3] && d.getMonth() === +m[2] - 1 && d.getDate() === +m[1] ? d : null; };
   const ngay = (a, b) => Math.round((a - b) / 86400000);
-  const plate = v => s(v).toUpperCase().replace(/[\s.\-]/g, '');
+  const plate = v => BKS().khoa(v);
   const NGUONG = {hanGiayTo: 30, khongPhieuMoi: 5, chuaChot: 30};
   const THU_TU = {chan: 0, canh: 1, nhac: 2};
   function viecCanLam(db, o) {

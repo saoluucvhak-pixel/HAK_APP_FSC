@@ -12,6 +12,7 @@
  *   lo:{...đủ dữ liệu một lô, kèm info.muaHang (công ty và địa chỉ giao đã chốt)}, dungChung:{dinhMuc, bienAlias (chỉ phần lô cần), danhMuc (3.0: đối tượng, xe, vị trí lô trỏ tới)}, kiemTra:{nc,dx,pc,tongTan}, maKiemTra}
  * Không chứa: lô của chủ khác hoặc lô khác, bản tra cứu Google Sheets, thông tin đăng nhập, danh mục công ty. */
 (function (root) {
+  const DMU = () => (typeof require === 'function' ? require('./dinhmuc.js') : root.HAKDinhMuc);   // một cách tính khối lượng phiếu cân (src/dinhmuc.js)
   /* hồ sơ đã chốt trong file sao lưu: kiểm gói đóng băng và dữ liệu trước khi cho khôi phục (src/vongdoi.js kiemToanVen) */
   const VD = () => (typeof require === 'function' ? require('./vongdoi') : root.HAKVongDoi);
   const GD = () => (typeof require === 'function' ? require('./goidm') : root.HAKGoiDM);   // 3.0: danh mục đối tượng / xe / vị trí đi kèm gói lô
@@ -138,7 +139,7 @@
     const maLoi = nhanBan.filter(f => f.maLoi);
     return {ok: !conflicts.length && !maLoi.length, conflicts, owners, nhanBan: nhanBan.length, maLoi: maLoi.map(f => ({id: f.id, ma: f.ma, moTa: f.maLoi}))};
   }
-  function sumKl(pc) { return Math.round((pc || []).reduce((s, p) => s + (typeof p.kl === 'number' && isFinite(p.kl) ? p.kl : 0), 0) * 1000) / 1000; }
+  function sumKl(pc) { return DMU().tongPhieuTan(pc); }   // làm tròn từng phiếu đến kg rồi cộng (một định nghĩa: src/dinhmuc.js)
 
   /* Gộp theo chiến lược skip | overwrite | both (không dùng cho 'replace'). Mâu thuẫn → ném lỗi, không đổi gì. */
   function mergeImport(cur, incoming, strategy, newId, opts) {

@@ -11,7 +11,7 @@
   const s = v => String(v == null ? '' : v).trim();
   const so = v => s(v).replace(/\D/g, '');
   const fold = v => s(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, ' ');
-  const bk = v => s(v).toUpperCase().replace(/[\s.\-]/g, '');
+  const bk = v => (typeof require === 'function' ? require('./bks.js') : root.HAKBks).khoa(v);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   const clone = x => JSON.parse(JSON.stringify(x));
   const khoa = f => !!(f && (f.chot || f.dung));
 

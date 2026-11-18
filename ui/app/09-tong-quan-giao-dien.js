@@ -7,7 +7,7 @@ function homeData() {
   Object.values(db.rs).forEach(o => forestList(o).forEach(f => {
     const rec = jobView(o, f), i = rec.info, ref = {oid: o.id, fid: f.id, name: (i.tenRung || i.maRung || '(rừng chưa đặt tên)') + ' · ' + (o.info.ten || '')};
     const y = forestYield(i); if (y) T.du += y; T.nc += (rec.nc || []).length; T.dx += (rec.dx || []).length;
-    const pcT = Math.round((rec.pc || []).reduce((a, p) => a + (+p.kl > 0 ? Math.round(p.kl * 1000) : 0), 0)) / 1000;   // tổng phiếu cân (làm tròn từng phiếu theo kg như biểu mẫu)
+    const pcT = HAKDinhMuc.tongPhieuTan(rec.pc);   // tổng phiếu cân (một định nghĩa: làm tròn từng phiếu theo kg như biểu mẫu)
     if (typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0) { T.tt += i.klHoSoCu;
     if (pcT > 0 && Math.abs(i.klHoSoCu - pcT) / pcT > 0.01) A.lechKl.push({oid: o.id, fid: f.id, name: (i.tenRung || i.maRung || '(rừng chưa đặt tên)') + ' · nhập tay ' + fmtTan(i.klHoSoCu) + ' tấn, phiếu cân ' + fmtTan(pcT) + ' tấn'}); }
     { const L = tgLechOf(i, rec.pc, nDoiOf(i, rec.nc)); if (L && L.canhBao) A.lechTg.push({oid: o.id, fid: f.id, name: (i.tenRung || i.maRung || '(rừng chưa đặt tên)') + ' · thực tế ' + L.thucTe + ' ngày, dự kiến ' + L.duKien + ' ngày (' + (L.lech > 0 ? '+' : '') + L.lech + ')'}); }
@@ -53,7 +53,7 @@ function panelHome() {
       (huongDanBox() || '<div class="card"><p class="mut" style="margin:0 0 10px">Chưa có chủ rừng nào. Mở ⋯ Thêm → Hướng dẫn bắt đầu để xem các bước.</p></div>') +
       '<div class="card"><div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></div>';
   }
-  const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { a.t += +p.kl > 0 ? Math.round(p.kl * 1000) / 1000 : 0; a.n++; }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
+  const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { a.t += HAKDinhMuc.kgPhieu(p) / 1000; a.n++; }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
   const avg = recs.length ? Math.round(tot.pct / recs.length * 10) / 10 : 0;
   const ringCls = p => p >= 80 ? 'hi' : p >= 50 ? 'mid' : 'lo';
   const todo = recs.filter(r => r.pct < 100).sort((a, b) => a.pct - b.pct).slice(0, 8);
