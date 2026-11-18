@@ -154,12 +154,12 @@ function panelImport(kind, rec, heading = '', congCu = '') {
     dx: {name: 'DOI_XE', at: 'dxAt', file: 'dxFile', arr: 'dx', title: 'Nạp file vận chuyển'},
     pc: {name: 'PHIEU_CAN', at: 'pcAt', file: 'pcFile', arr: 'pc', title: 'Nạp file phiếu cân (mỗi chuyến một dòng)'}}[kind];
   const name = M.name, at = rec[M.at], file = rec[M.file], count = (rec[M.arr] || []).length;
-  /* phiếu #06 (D-01): MỘT thanh công cụ — Thêm / Chọn file Excel / Dán / Tải file mẫu (+ công cụ của hợp đồng), tình trạng nạp ghi gọn ở cuối thanh */
+  /* phiếu #06 (D-01): MỘT thanh công cụ — Thêm / Nhập Excel / Dán / Tải file mẫu (+ công cụ của hợp đồng), tình trạng nạp ghi gọn ở cuối thanh */
   const tinhTrang = 'Sheet ' + name + ' · ' + (count ? 'đã nạp ' + count + ' dòng' + (file ? ' từ ' + esc(file) : '') + (at ? ' lúc ' + esc(at) : '') : 'chưa có dữ liệu');
   const tt = '<span class="mut napTinhTrang">' + tinhTrang + '</span>', dau = heading ? heading.replace(/<\/div>$/, tt + '</div>') : '<div class="row pcHdDau"><h3 style="margin:0">' + M.title + '</h3>' + tt + '</div>';   // tình trạng nạp ở cuối dòng tiêu đề
   return '<div class="card napCard">' + dau + '<div class="row importActions napThanh">' +
     (kind === 'pc' ? '<button class="btn sm" data-act="stAdd" data-kind="pc">+ Thêm phiếu cân</button>' : '') +
-    '<label class="btn sm" style="cursor:pointer">Chọn file Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label><button class="btn ghost sm" data-act="danMo" data-kind="' + kind + '" title="Chép vùng ô trong Excel (gồm dòng tiêu đề) rồi dán vào phần mềm">Dán từ Excel</button>' +
+    '<label class="btn sm" style="cursor:pointer" title="Chọn file Excel (.xlsx, .xls) để nạp">Nhập Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label><button class="btn ghost sm" data-act="danMo" data-kind="' + kind + '" title="Chép vùng ô trong Excel (gồm dòng tiêu đề) rồi dán vào phần mềm">Dán từ Excel</button>' +
     '<button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">Tải file mẫu</button>' + congCu + '</div>' + (count && (kind !== 'pc' || !hdMo('dx')) ? '<p><button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu của lô</button></p>' : '') + '</div>';
 }
 

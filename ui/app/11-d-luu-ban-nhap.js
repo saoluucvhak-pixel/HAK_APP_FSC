@@ -52,7 +52,7 @@ if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.', 'warn'); render(); }
 let stBypass = false;
 function stGuard(proceed) {
   $('#stBody').innerHTML = '<div class="gh"><h2>Còn thay đổi chưa lưu</h2></div><p>' + esc(stBlockText().replace(/ Bấm .*$/, '')) + ' Chọn cách xử lý trước khi chuyển đi:</p><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" id="stGSave">Lưu và tiếp tục</button><button class="btn ghost" id="stGDrop">Bỏ thay đổi</button><button class="btn ghost" id="stGBack">Quay lại chỉnh sửa</button></div>';
-  $('#stBox').classList.add('on');
+  $('#stBox').classList.add('on'); $('#stGSave').focus();   // phiếu #10: tiêu điểm vào hộp; Esc = Quay lại chỉnh sửa (17-e)
   $('#stGBack').onclick = () => $('#stBox').classList.remove('on');
   $('#stGDrop').onclick = () => { $('#stBox').classList.remove('on'); stDiscard(true); proceed(); };
   $('#stGSave').onclick = async () => { const r = await stSave(); $('#stBox').classList.remove('on'); if (r && r.ok) proceed(); };
