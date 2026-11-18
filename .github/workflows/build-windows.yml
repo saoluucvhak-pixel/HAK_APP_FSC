@@ -71,10 +71,14 @@ jobs:
           soffice --version
       - run: npm ci
       - run: npm run build:html
-      - name: Kiểm tra quyền tệp khi di chuyển dữ liệu trên Linux
+      - name: Kiểm thử đơn vị trên Linux bằng tài khoản không phải root (ca NO_PERMISSION của tests/datamove.test.js phải chạy và đạt)
+        # Windows bỏ qua ca này (chmod không chặn được) và máy chạy bằng root cũng bỏ qua; runner Ubuntu dùng tài khoản thường nên chạy được.
         run: |
+          set -o pipefail
+          if [ "$(id -u)" = "0" ]; then echo "::error::Bước này phải chạy bằng tài khoản không phải root"; exit 1; fi
           node -e "require('electron')"
-          ELECTRON_RUN_AS_NODE=1 "$(node -p "require('electron')")" --test tests/datamove.test.js
+          npm test 2>&1 | tee "$RUNNER_TEMP/unit-linux.log"
+          grep -q "✔ không có quyền truy cập thư mục dữ liệu: báo NO_PERMISSION" "$RUNNER_TEMP/unit-linux.log" || { echo "::error::Ca NO_PERMISSION không chạy (bị bỏ qua) hoặc không đạt"; exit 1; }
       - name: Chuẩn bị mã nguồn và Electron của v1.4.33
         run: |
           old="$RUNNER_TEMP/hakqn-v1.4.33"
