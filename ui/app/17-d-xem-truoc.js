@@ -55,15 +55,16 @@ function lkBulkTargets() {
 }
 function lkPhieuRows() {
   const F = lk.cand.forests[lk.fi], T = lkTarget(), byNo = {}, keys = new Set(T.dx.map(x => bienKey(x.bienSo)));
-  T.pc.forEach(p => { byNo[String(p.soPhieu).toUpperCase()] = p; });
+  T.pc.forEach(p => { byNo[HAKBks.soPhieu(p.soPhieu)] = p; });   // cùng cách chuẩn hóa số phiếu như HAKBks.khoaPhieu (“PA 1” = “PA1”)
   return F.phieu.map(p => {
     const ov = ((lk.plateOv || {})[p.soPhieu.toUpperCase()] || '').trim().toUpperCase(), bienGoc = p.isPlate ? p.bienRaw.toUpperCase() : lkAliasOf(p.bienRaw);
     const bien = ov || bienGoc;   // xe đã đổi: sửa biển số ngay trong bảng này rồi mới đưa qua rừng
-    const ex = byNo[p.soPhieu.toUpperCase()];
+    const ex = byNo[HAKBks.soPhieu(p.soPhieu)];
     let st = 'new', note = '';
     if (p.issue) { st = 'issue'; note = p.issue; }
     else if (!bien) { st = 'alias'; note = 'Cần ghép tên xe “' + p.bienRaw + '” với biển số'; }
     else if (ex && ex.ngay === p.ngay && bienKey(ex.bienSo) === bienKey(bien) && Math.abs((ex.kl || 0) - p.kl) < 1e-9) { st = 'same'; note = 'Đã có trong hồ sơ — bỏ qua'; }
+    else if (ex && HAKBks.khoaPhieu(ex) !== HAKBks.khoaPhieu(p)) { st = 'upd'; note = 'Cùng số phiếu với phiếu đã có ngày ' + (ex.ngay || '?') + ' nhưng khác ngày cân (' + p.ngay + '): hợp lệ nếu là chuyến khác — sau khi đưa vào lô, bước “Cần đối chiếu” cho chọn “Là chuyến khác”'; }
     else if (ex) { st = 'upd'; note = 'Đã có số phiếu này nhưng khác dữ liệu — chọn để cập nhật'; }
     const warn = [!p.assignable ? 'hợp đồng có nhiều rừng' : '', bien && !keys.has(bienKey(bien)) ? 'biển chưa có trong danh sách xe của rừng' : '', (p.giaLoi || []).length ? 'giá không đọc được, giữ giá trị đã lưu: ' + p.giaLoi.join('; ') : ''].filter(Boolean).join('; ');
     const thieuThem = !!(ex && !p.issue && ((!ex.gioCan1 && p.gioCan1) || (!ex.gioCan2 && p.gioCan2) || (ex.can1 == null && p.can1 != null) || (ex.can2 == null && p.can2 != null) || (ex.klKg == null && p.klKg != null) || (!ex.khachHang && p.khachHang) || (ex.donGia == null && p.donGia != null) ||

@@ -118,7 +118,7 @@
     function checkPC(rec) {
       const errs = [], warns = [], state = {}, pc = rec.pc || [];
       const mark = (r, k, m) => { (k === 'err' ? errs : warns).push('Dòng ' + r._row + ': ' + m); if (k === 'err' || !state[r._row]) state[r._row] = k; };
-      const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seen = {}, thieuKy = rec.hdvc ? doiXeThieuKy(rec) : new Set();
+      const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seenP = new Map(), seenSo = new Map(), thieuKy = rec.hdvc ? doiXeThieuKy(rec) : new Set();
       /* phiếu GIỐNG HỆT phiếu ở lô khác (cùng số phiếu, ngày lịch, biển số): chặn BM-08, 09, 10, 14 ở mọi đường xuất; không tự xóa hay chuyển phiếu (src/cheolo.js) */
       try { ctx.HAKCheoLo.phieuTrung(ctx.db, rec.id, rec.fid, pc, ctx.cheoCtx()).forEach(x => mark(x.p, 'err', 'Phiếu ' + (x.p.soPhieu || '') + ' (' + x.p.ngay + ', ' + x.p.bienSo + ') giống hệt phiếu đã có ở lô ' + x.ma + ' (cùng số phiếu, ngày cân, biển số): một phiếu cân chỉ thuộc một lô')); } catch (e) { /* không kiểm được chéo lô: bỏ qua */ }
       pc.forEach(r => {
@@ -134,7 +134,13 @@
         if (ctx.trim(r.ngay2) && !ctx.HAKDates.isValid(r.ngay2)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ngày cân 2 ' + ctx.HAKDates.why(r.ngay2));
         else ctx.HAKPhieuCan.ngay2Warn(r).forEach(m => mark(r, 'warn', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + m));
         if (!r.soPhieu) mark(r, 'err', 'Thiếu số phiếu cân');
-        else { const k = r.soPhieu.toUpperCase(); if (seen[k]) mark(r, 'err', 'Số phiếu cân ' + r.soPhieu + ' trùng với dòng ' + seen[k]); else seen[k] = r._row; }
+        else {   // một khóa phiếu cân (HAKBks.khoaPhieu = số phiếu chuẩn hóa + ngày): trùng hẳn thì chặn, cùng số khác ngày thì chỉ cảnh báo
+          const kp = BKS().khoaPhieu(r), so = BKS().soPhieu(r.soPhieu), tenHd = x => { const f = ctx.curForest(); return x.hdvcId && f ? ' ở ' + ctx.nhanHdId(f, x.hdvcId) : ''; };
+          if (kp && seenP.has(kp)) { const t = BKS().phieuDaCo([seenP.get(kp)], r)[0] || seenP.get(kp); mark(r, 'err', 'Số phiếu cân ' + r.soPhieu + ' trùng với dòng ' + t._row + tenHd(t) + ' (cùng số phiếu và cùng ngày cân ' + r.ngay + '): một phiếu cân chỉ nhập một lần; xóa dòng trùng hoặc sửa số phiếu / ngày nếu là chuyến khác'); }
+          else {
+            if (kp) { const t = seenSo.get(so); if (t) mark(r, 'warn', 'Phiếu ' + r.soPhieu + ' ngày ' + r.ngay + ': cùng số phiếu với dòng ' + t._row + tenHd(t) + ' (ngày ' + t.ngay + '). Cùng số phiếu khác ngày là hợp lệ; kiểm tra đúng là hai chuyến khác nhau'); if (!t) seenSo.set(so, r); seenP.set(kp, r); }
+          }
+        }
         if (r.kl == null) mark(r, 'err', 'Thiếu khối lượng'); else if (r.kl === 'x' || !(r.kl > 0)) mark(r, 'err', 'Khối lượng không hợp lệ');
         (r.giaLoi || []).forEach(m => mark(r, 'err', m + ' (sửa hoặc để trống ô này rồi nạp lại; giá trị đã lưu không bị đổi)'));
         [['can1', 'Cân lần 1'], ['can2', 'Cân lần 2'], ['klKg', 'Khối lượng (kg)']].forEach(([k, label]) => { if (r[k] === 'x' || (typeof r[k] === 'number' && r[k] < 0)) mark(r, 'err', label + ' phải là số không âm'); });
