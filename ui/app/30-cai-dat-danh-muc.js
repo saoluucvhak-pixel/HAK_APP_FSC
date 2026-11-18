@@ -98,7 +98,7 @@ const f = document.querySelector('#dtForm [name=ten]'); if (f) f.focus(); }
 async function dtLuu() {
   const x = dtDocForm(), r = HAKDoiTuong.luu(dmDT(), x, todayStr());
   if (!r.ok) { cd.sua = x; cd.loi = r.errs; render(); return false; }
-  db.dmDoiTuong = r.dm; cd.sua = null; cd.loi = []; cd.msg = ['Đã lưu “' + r.dt.ten + '” (mã ' + r.dt.ma + ').', 'ok']; persist(); render(); return true;
+  db.dmDoiTuong = r.dm; cd.sua = null; cd.loi = []; cd.msg = ['Đã lưu “' + r.dt.ten + '” (mã ' + r.dt.ma + ').' + (r.canhBao.length ? ' Lưu ý: ' + r.canhBao.join('; ') + '.' : ''), r.canhBao.length ? 'warn' : 'ok']; persist(); render(); return true;   // phiếu #05: cảnh báo, không chặn lưu
 }
 function ngMo(i) {
   const p = i == null ? {hoTen: '', vaiTro: {}, kyHD: {}} : (cd.sua.nguoi || [])[i]; cd.ngSua = i == null ? -1 : i;

@@ -6,15 +6,23 @@
   const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   function create(ctx) {
     /* ========== Kiểm tra dữ liệu ========== */
+    const maChuKey = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().toUpperCase();
+    /* CẢNH BÁO (không chặn lưu) cho thông tin chủ rừng — phiếu #05: CCCD trùng chủ rừng khác */
+    function infoWarns(info, selfId) {
+      const w = [], c = String((info && info.cccd) == null ? '' : info.cccd).replace(/\D/g, '');
+      if (c) { const ds = Object.entries(ctx.db.rs || {}).filter(([id, r]) => id !== selfId && r && r.info && String(r.info.cccd == null ? '' : r.info.cccd).replace(/\D/g, '') === c);
+        if (ds.length) w.push('CCCD ' + c + ' trùng chủ rừng ' + ds.map(([, r]) => (r.info.ma || '(chưa có mã)') + ' – ' + (r.info.ten || '')).join(', ') + ': kiểm tra có phải cùng một người không'); }
+      return w;
+    }
     function infoErrors(info, selfId) {
       const e = [];
       if (!info.ma) e.push('Thiếu Mã chủ rừng');
-      else if (Object.entries(ctx.db.rs).some(([id, r]) => id !== selfId && r.info.ma === info.ma)) e.push('Mã chủ rừng đã tồn tại');
+      else if (Object.entries(ctx.db.rs).some(([id, r]) => id !== selfId && maChuKey(r.info.ma) === maChuKey(info.ma))) e.push('Mã chủ rừng đã tồn tại');   // phiếu #05: không phân biệt hoa thường, bỏ khoảng thừa (như mã lô)
       if (!info.ten) e.push('Thiếu Họ và tên chủ rừng');
       if (!['Ông', 'Bà'].includes(info.danhXung)) e.push('Chọn danh xưng Ông/Bà');
       if (ctx.trim(info.sdt) && !/^[0-9 .()+\-]{8,20}$/.test(ctx.trim(info.sdt))) e.push('Số điện thoại “' + info.sdt + '” không đúng dạng (8–20 ký tự gồm số, dấu cách, + - . ( ))');
       if (ctx.trim(info.ngayKyHopDong) && !ctx.HAKDates.isValid(info.ngayKyHopDong)) e.push('Ngày ký hợp đồng “' + info.ngayKyHopDong + '”: ' + ctx.HAKDates.why(info.ngayKyHopDong));
-      if (!ctx.isCccd(info.cccd)) e.push('CCCD phải đủ 12 chữ số');
+      if (!ctx.isCccd(info.cccd)) e.push('CCCD phải gồm 9 hoặc 12 chữ số');
       if (!info.ngayCap) e.push('Thiếu Ngày cấp CCCD');
       if (!info.noiCap) e.push('Thiếu Nơi cấp CCCD');
       if (!info.diaChi) e.push('Thiếu Địa chỉ thường trú');
@@ -67,7 +75,7 @@
         else if (!parseVN(r.ngayCap)) bad('Ngày cấp CCCD "' + r.ngayCap + '" không có thật hoặc sai dd/mm/yyyy');
         if (!r.noiCap) bad('thiếu Nơi cấp CCCD');
         if (!r.diaChi) bad('thiếu Địa chỉ thường trú');
-        if (!ctx.isCccd(r.cccd)) bad('CCCD phải đủ 12 chữ số');
+        if (!ctx.isCccd(r.cccd)) bad('CCCD phải gồm 9 hoặc 12 chữ số');
         else if (seen[r.cccd + '|' + (r.doiId || '')]) bad('CCCD trùng dòng ' + seen[r.cccd + '|' + (r.doiId || '')] + ' trong cùng đội');   // 3.0: một người có thể ở hai đội (hai hợp đồng); không trùng trong một đội
         else seen[r.cccd + '|' + (r.doiId || '')] = r._row;
         if (!ctx.chucDanhAll().includes(r.chucDanh)) bad('Chức danh không hợp lệ: "' + r.chucDanh + '"');
@@ -377,7 +385,7 @@
       const c = g.cauTruc, cau = {gk: c.gk, uq: c.uq, hdld: c.hdld, hdvc: c.vanChuyen, xnvc: c.phieuCan, ttvc: c.phieuCan, tdcr: true, ckng: true}[kind];
       return (cau === undefined ? c.nhanCong : cau) && KIND_BM[kind].every(code => g.bm(code));
     }
-    return {BASIS, KIND_BM, allDirect, anyGK, basisAllowed, basisOf, checkDX, checkNC, doiKl, doiLabel, doiOf, doiTuongMinh, driverSigns, exDoi, fmtCong, fmtTan, forecastVol, forestErrors, gate, gateKind, gateRaw, giaErrors, giaErrorsRec, hdldList, infoErrors, infoRow, infoTeam, isDirect, khoanSuyRa, klLo, klTheoPhieu, kyOfXe, ncList, nhapLieuAll, normErrors, normOf, normRefCapPhat, normRefHDLD, parseVN, payRows, payrollPlan, rateOf, recDoiChon, recOfRow, roleRates, rungText, soDoiSo, subRec, teamInfos, teamOfRow, transportPrice, ucList, vcLoi, volumeOf, workDays};
+    return {infoWarns, BASIS, KIND_BM, allDirect, anyGK, basisAllowed, basisOf, checkDX, checkNC, doiKl, doiLabel, doiOf, doiTuongMinh, driverSigns, exDoi, fmtCong, fmtTan, forecastVol, forestErrors, gate, gateKind, gateRaw, giaErrors, giaErrorsRec, hdldList, infoErrors, infoRow, infoTeam, isDirect, khoanSuyRa, klLo, klTheoPhieu, kyOfXe, ncList, nhapLieuAll, normErrors, normOf, normRefCapPhat, normRefHDLD, parseVN, payRows, payrollPlan, rateOf, recDoiChon, recOfRow, roleRates, rungText, soDoiSo, subRec, teamInfos, teamOfRow, transportPrice, ucList, vcLoi, volumeOf, workDays};
   }
   const api = {create, TEN_NGOAI: ["BHLD_ITEMS","HAKChamCong","HAKCheoLo","HAKCuLy","HAKDates","HAKDinhMuc","HAKDoi","HAKHopDong","HAKKhoan","HAKLoRung","HAKModel","HAKNhapLieu","HAKPhanBo","ageAt","bmConDuoc","cccdMsg","checkPC","cheoCtx","chucDanhAll","curTeam","dateKey","db","exportCheck","fmt","forestYield","groupsDX","hdTenKhop","isCccd","isTT","keyName","kindOk","klPhieu","minorsOf","numSwap","signerKey","todayStr","trim","vcCtx","vcInfo"]};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKKiemTraNhieuDoi = api;

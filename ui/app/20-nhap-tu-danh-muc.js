@@ -39,27 +39,22 @@ function dmDienXe(d) {
   ['bienSo', 'chuXe', 'taiXe', 'cccdTx', 'diaChiTx', 'ngayCapTx', 'noiCapTx', 'gplx', 'hanGplx', 'kdDen', 'hanBH'].concat(HAKDanhMuc.CHU_XE).forEach(k => { if (r[k] != null && r[k] !== '') stm.vals[k] = stStr(r[k]); });
   stm.vals._dmNgay = trim(d.ngayCapNhat);
 }
-/* người / xe mới của lô (chưa có trong danh mục) → ghi vào danh mục; trả số dòng thêm */
+/* phiếu #05 (ND-05, A-06): người / xe MỚI của lô vừa lưu (chưa nối, chưa có trong Danh mục đối tượng / Danh mục xe) → HỎI rồi mới thêm vào danh mục 3.0.
+ * Không ghi danh mục cũ dmLaoDong / dmXeVC (bản lưu trữ, màn Danh mục không hiện). Đồng ý: dòng lô nối ID người / xe vừa thêm. Trả [lời báo, loại] hoặc null. */
 function dmGhiTuLo(st) {
-  let n = 0; const daGhi = {nc: [], dx: []}, hom = todayStr(), baseIds = k => new Set(st.base[k].map(b => b._id));
-  const bn = baseIds('nc'), bx = baseIds('dx'); let ld = db.dmLaoDong || [], xe = db.dmXeVC || [];
-  st.cur.nc.forEach(r => {
-    if (bn.has(r._id)) return; const k = HAKDanhMuc.cccdSo(r.cccd); if (k.length !== 12 || !trim(r.ten) || HAKDanhMuc.layLaoDong(ld, k)) return;
-    const t = HAKDanhMuc.themLaoDong(ld, {
-    ngayCapNhat: hom, cccd: k, ten: r.ten, gioiTinh: r.danhXung === 'Bà' ? 'Nữ' : r.danhXung === 'Ông' ? 'Nam' : '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '', chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}); ld = t.list;
-    n++; daGhi.nc.push(r._id);
-  });
-  st.cur.dx.forEach(r => {
-    if (bx.has(r._id)) return; if (!HAKDanhMuc.bienKey(r.bienSo) || HAKDanhMuc.layXe(xe, r.bienSo)) return;
-    const t = HAKDanhMuc.themXe(xe, {ngayCapNhat: hom, bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '', hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '',
-    hanBaoHiem: r.hanBH || '', loaiXe: trim(r.loaiXe), cccd: HAKDanhMuc.cccdSo(r.cccd), ngaySinh: trim(r.ngaySinh), ngayCap: trim(r.ngayCap), noiCap: trim(r.noiCap), diaChi: trim(r.diaChi), sdt: trim(r.sdt), cavet: trim(r.cavet), nguoiKy: trim(r.nguoiKy)}); xe = t.list; n++; daGhi.dx.push(r._id);
-  });
-  if (n) {
-    db.dmLaoDong = ld; db.dmXeVC = xe;
-    const f = curForest(); if (f) ['nc', 'dx'].forEach(k => (f[k] || []).forEach(r => { if (daGhi[k].includes(r._id)) r._dmNgay = hom; }));   // dòng lô vừa ghi vào danh mục = bản chụp của ngày hôm nay
-    persist();
-  }
-  return n;
+  const bn = new Set(st.base.nc.map(b => b._id)), bx = new Set(st.base.dx.map(b => b._id));
+  const moi = HAKDoiTuong.moiTuLo(db.dmDoiTuong || [], db.dmXe || [], st.cur.nc.filter(r => !bn.has(r._id)), st.cur.dx.filter(r => !bx.has(r._id)));
+  const n = moi.nguoi.length, m = moi.xe.length; if (!n && !m) return null;
+  const ds = moi.nguoi.map(r => '• ' + trim(r.ten) + ' (CCCD ' + trim(r.cccd) + ')').concat(moi.xe.map(r => '• Xe ' + trim(r.bienSo)));
+  const cau = (n ? n + ' người chưa có trong Danh mục đối tượng' : '') + (n && m ? ' và ' : '') + (m ? m + ' xe chưa có trong Danh mục xe' : '');
+  if (!confirm('Lô vừa lưu có ' + cau + ':\n' + ds.slice(0, 12).join('\n') + (ds.length > 12 ? '\n• … và ' + (ds.length - 12) + ' dòng khác' : '') +
+    '\n\nThêm vào Danh mục đối tượng / Danh mục xe để dùng lại ở lô khác?\n(Hủy: chỉ lưu trong lô, không thêm vào danh mục.)')) return ['Chưa thêm ' + cau + ' vào danh mục (chỉ lưu trong lô).', 'warn'];
+  const hom = todayStr(), k = HAKDoiTuong.themTuLo(db.dmDoiTuong || [], db.dmXe || [], moi, hom), f = curForest();
+  db.dmDoiTuong = k.dmDoiTuong; db.dmXe = k.dmXe;
+  if (f) { k.nguoi.forEach(({r, id}) => { const x = (f.nc || []).find(y => y._id === r._id); if (x) { x.nguoiId = id; x._dmNgay = hom; } });
+    k.xe.forEach(({r, id}) => { const x = (f.dx || []).find(y => y._id === r._id); if (x) { x.xeId = id; x._dmNgay = hom; } }); }
+  persist();
+  return ['Đã thêm ' + k.nguoi.length + ' người vào Danh mục đối tượng, ' + k.xe.length + ' xe vào Danh mục xe.' + (k.loi.length ? ' Chưa thêm được: ' + k.loi.join('; ') + '.' : ''), k.loi.length ? 'warn' : 'ok'];
 }
 /* dòng của lô khác bản chụp so với dòng mới nhất của danh mục: [{row, d, khac}] */
 function dmLechLo(kind, rows) {

@@ -32,7 +32,7 @@ test('infoErrors: chủ rừng đủ thông tin không có lỗi; thiếu mã, d
   const ok = {ma: 'CR-1', ten: 'NGUYỄN VĂN AN', danhXung: 'Ông', cccd: '049000000001', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'};
   assert.deepStrictEqual(api.infoErrors(ok, null), []);
   const bad = api.infoErrors({ten: 'A', danhXung: 'x', cccd: '123'}, null);
-  ['Thiếu Mã chủ rừng', 'Chọn danh xưng Ông/Bà', 'CCCD phải đủ 12 chữ số', 'Thiếu Ngày cấp CCCD', 'Thiếu Nơi cấp CCCD', 'Thiếu Địa chỉ thường trú'].forEach(m => assert.ok(bad.includes(m), m));
+  ['Thiếu Mã chủ rừng', 'Chọn danh xưng Ông/Bà', 'CCCD phải gồm 9 hoặc 12 chữ số', 'Thiếu Ngày cấp CCCD', 'Thiếu Nơi cấp CCCD', 'Thiếu Địa chỉ thường trú'].forEach(m => assert.ok(bad.includes(m), m));
 });
 
 test('infoErrors: mã chủ rừng trùng chủ khác báo lỗi, chính chủ đó thì không', () => {

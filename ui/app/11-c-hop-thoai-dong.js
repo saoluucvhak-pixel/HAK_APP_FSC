@@ -1,6 +1,6 @@
 /* ----- hộp thoại thêm / sửa một dòng ----- */
 const ST_FIELDS = {
-  nc: [['vaiTro', 'Vai trò', ['Tổ trưởng', 'Công nhân']], ['stt', 'STT'], ['danhXung', 'Danh xưng', ['Ông', 'Bà']], ['ten', 'Họ và tên'], ['ngaySinh', 'Ngày sinh (dd/mm/yyyy)'], ['cccd', 'CCCD (12 số)'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Địa chỉ thường trú'],
+  nc: [['vaiTro', 'Vai trò', ['Tổ trưởng', 'Công nhân']], ['stt', 'STT'], ['danhXung', 'Danh xưng', ['Ông', 'Bà']], ['ten', 'Họ và tên'], ['ngaySinh', 'Ngày sinh (dd/mm/yyyy)'], ['cccd', 'CCCD (12 số; CMND 9 số)'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Địa chỉ thường trú'],
   ['chucDanh', 'Chức danh', () => chucDanhAll()], ['doi', 'Đội (trống: vào đội đang chọn ở bảng Nhân công khai thác; ghi đúng tên đội để vào đội đó)']],
   dx: [['stt', 'STT'], ['bienSo', 'Biển kiểm soát'], ['loaiXe', 'Loại xe'], ['chuXe', 'Chủ xe'], ['ngaySinh', 'Ngày sinh chủ xe'], ['cccd', 'CCCD chủ xe'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Thường trú chủ xe'], ['cavet', 'Ngày cấp cà vẹt'], ['sdt', 'Số điện thoại'],
   ['nguoiKy', 'Người ký HĐ vận chuyển', ['Chủ xe', 'Tài xế']],
