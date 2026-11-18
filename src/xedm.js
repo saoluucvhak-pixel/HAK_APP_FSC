@@ -7,6 +7,7 @@
   'use strict';
   const D = () => (typeof HAKDates !== 'undefined' ? HAKDates : (typeof require === 'function' ? require('./dates.js') : root.HAKDates));
   const B = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);
+  const NL = () => (typeof require === 'function' ? require('./nhaplieu.js') : root.HAKNhapLieu);   // quy tắc CCCD duy nhất (src/nhaplieu.js, phiếu #14): 9 hoặc 12 chữ số
   const DT = () => (typeof require === 'function' ? require('./doituong.js') : root.HAKDoiTuong);
   const s = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
   const so = v => String(v == null ? '' : v).replace(/\D/g, '');
@@ -88,8 +89,8 @@
     by.forEach(r => {
       if (timBks(dm, r.bienSo)) return;
       let chu = ''; const k = so(r.cccd);
-      if (k.length === 12) { const a = DT().timCccd(dmDT, k); if (a) chu = a.ng.id; }
-      if (!chu && s(r.chuXe)) can.push({loai: 'xe', ref: s(r.bienSo), lyDo: 'Xe ' + s(r.bienSo) + ': chủ xe “' + s(r.chuXe) + '” chưa xác định được hồ sơ (thiếu CCCD 12 số): chọn chủ xe ở Danh mục xe', goc: {bienSo: r.bienSo, chuXe: r.chuXe}});
+      if (NL().cccdHopLe(k)) { const a = DT().timCccd(dmDT, k); if (a) chu = a.ng.id; }
+      if (!chu && s(r.chuXe)) can.push({loai: 'xe', ref: s(r.bienSo), lyDo: 'Xe ' + s(r.bienSo) + ': chủ xe “' + s(r.chuXe) + '” chưa xác định được hồ sơ (thiếu CCCD 9 hoặc 12 số): chọn chủ xe ở Danh mục xe', goc: {bienSo: r.bienSo, chuXe: r.chuXe}});
       dm.push(chuan({id: idMoi(dm), bks: s(r.bienSo), ngayCapNhat: s(r.ngayCapNhat), hanKiemDinh: s(r.hanDangKiem), hanBaoHiem: s(r.hanBaoHiem), loaiXe: s(r.loaiXe), chuXeId: chu}));
     });
     return {dm, canDoiChieu: can};
