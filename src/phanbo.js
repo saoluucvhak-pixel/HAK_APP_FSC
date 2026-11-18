@@ -8,7 +8,7 @@
  * tinh(f, cheDo?): {cheDo, tongKg, doi: [{id, ten, kg, soPhieu}], chuaGanKg, chuaGanPhieu, tong, ...tấn} — không sửa f. */
 (function (root) {
   'use strict';
-  const kgCua = p => { const v = typeof p.kl === 'number' ? p.kl : parseFloat(String(p.kl == null ? '' : p.kl).replace(',', '.')); return isFinite(v) && v > 0 ? Math.round(v * 1000) : 0; };
+  const kgCua = p => (typeof require === 'function' ? require('./dinhmuc.js') : root.HAKDinhMuc).kgPhieu(p);   // kg của một phiếu (một định nghĩa: src/dinhmuc.js)
   const CHE_DO = {theoPhieu: 'Chọn phiếu theo đội', chiaDeu: 'Chia đều tổng khối lượng', motDoi: 'Một đội nhận toàn bộ'};
   function cheDoHopLe(f, cd) {
     const n = ((f && f.doi) || []).length;

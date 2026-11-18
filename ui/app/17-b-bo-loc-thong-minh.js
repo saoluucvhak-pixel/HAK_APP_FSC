@@ -37,7 +37,7 @@ function lkTreeDetailHtml(g) {
   const d = lk.det[g.key], pickBtn = g.pick ? '<button class="btn" data-lkpick="' + esc(g.pick.tab) + '|' + g.pick.row + '">Chọn để ghi vào hồ sơ →</button>' : '';
   if (!d || !d.ok) return '<div style="padding:14px"><h3 style="margin:0">' + esc(g.ten || '(không rõ chủ rừng)') + '</h3><p class="mut">' + (g.cccd && g.hd ? esc((d && d.error) || 'Đang tải chi tiết…') : 'Dòng này thiếu CCCD hoặc mã hợp đồng nên không ghép được các hồ sơ liên quan.') + '</p>' +
   (g.cccd && g.hd ? '' : pickBtn) + '</div>';
-  const F = d.forests || [], P = F.flatMap(f => f.phieu.map(p => ({...p, rung: f.maRung}))), tan = Math.round(P.reduce((a, p) => a + (p.kl || 0), 0) * 1000) / 1000;
+  const F = d.forests || [], P = F.flatMap(f => f.phieu.map(p => ({...p, rung: f.maRung}))), tan = HAKDinhMuc.tongPhieuTan(P);
   const ha = F.reduce((a, f) => a + ((f.area && f.area[0] && f.area[0].value) || 0), 0), own = Object.fromEntries((d.owner.fields || []).map(x => [x.key, x.value]));
   const warns = [...(d.warns || []), ...F.flatMap(f => (f.warns || []).map(w => (f.maRung ? f.maRung + ': ' : '') + w))];
   const dt = lk.dt, tabs = [['rung', 'Rừng (' + F.length + ')'], ['phieu', 'Phiếu cân (' + P.length + ')'], ['khac', 'Hợp đồng khác (' + (d.others || []).length + ')'], ['cb', 'Cảnh báo (' + warns.length + ')']];

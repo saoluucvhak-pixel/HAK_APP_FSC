@@ -8,11 +8,12 @@
  *  - Chức vụ: Tổ trưởng, Công nhân (CHUC_VU). Vị trí là danh mục vị trí (Định mức nhân công) nên chỉ KIỂM tên vị trí ở đây, không giữ danh sách riêng.
  *  - Ngày dạng dd/mm/yyyy (src/dates.js). Dòng thiếu ngày cập nhật coi là cũ nhất (ngày 0): dữ liệu chuyển từ bản cũ vẫn dùng được. */
 (function (root) {
+  const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   const D = typeof HAKDates !== 'undefined' ? HAKDates : (typeof require === 'function' ? require('./dates.js') : root.HAKDates);
   const trim = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   const CHUC_VU = ['Tổ trưởng', 'Công nhân'];
   const cccdSo = v => String(v == null ? '' : v).replace(/\D/g, '');
-  const bienKey = v => String(v == null ? '' : v).toUpperCase().replace(/[\s.\-]/g, '');
+  const bienKey = v => BKS().khoa(v);
   const ngayKey = v => { const p = D.parse(trim(v)); return p ? p.key : 0; };
   const clone = x => JSON.parse(JSON.stringify(x));
   const LAO_DONG = ['ngayCapNhat', 'cccd', 'ten', 'gioiTinh', 'ngaySinh', 'diaChi', 'ngayCap', 'noiCap', 'sdt', 'chucVu', 'viTri'];

@@ -279,7 +279,7 @@ const HAKReports = (function () {
   }
 
   /* ---- 8. Danh sách xe vận chuyển theo lô rừng (kèm số chuyến, khối lượng theo phiếu cân) ---- */
-  const plateKey = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
+  const plateKey = v => (typeof HAKBks !== 'undefined' ? HAKBks : require('../src/bks.js')).khoa(v);   // một quy tắc chuẩn hóa BKS (src/bks.js)
   function danhSachXe(recs, o) {
     const sorted = recs.slice().sort((a, b) => byName(a.maRung, b.maRung));
     const det = [], sum = [], unknown = [];

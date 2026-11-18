@@ -81,7 +81,7 @@ function kyBaoCao(rec, r) {
 function rpData() {
   const words = foldVi(rp.q).split(/\s+/).filter(Boolean), hit = (...p) => { const t = foldVi(p.join(' ')); return words.every(w => t.includes(w)); };
   const o = rp.one, fl = rp.flag, id = rp.id, active = !!(words.length || o.chucDanh || o.vaiTro || o.nguoiKy || fl.onlyMinors || fl.onlyMissing || fl.onlyNoPhone || fl.onlyTrips || fl.onlyNoTrips);
-  const plate = v => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
+  const plate = v => HAKBks.khoa(v);
   let recs = rpRecords(); if (o.rung) recs = recs.filter(r => r.maRung === o.rung);
   const out = [];
   recs.forEach(r => {

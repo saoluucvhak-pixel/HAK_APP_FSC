@@ -44,7 +44,6 @@ async function lkApply() {
       if (NAV.curF === f.id) ganPhieuHopDong(stages[k0], lkRep.ids, f);   // 3.0: phiếu mới vào hợp đồng vận chuyển đang mở
       if (plateRows.length) { const pr = HAKStage.merge(stages[k0], 'pc', plateRows, {source: 'Google Sheets (đổi biển số)', plateSource: 'Google Sheets', sameTrip: true}); lkRep.upd += pr.upd; lkRep.same += pr.same; lkRep.pending += pr.pending; }
     }
-    if (false && s.kl) { f.info.khoiLuong = Math.round(chosen.reduce((a, p) => a + p.kl, 0) * 1000) / 1000; mark(f, 'khoiLuong', {tab: 'HoSoKeo_QC', row: 0, col: 'Tổng Khối lượng (Tấn) của ' + chosen.length + ' phiếu đã chọn'}); }
     if (lk.alias) { db.bienAlias = Object.assign(db.bienAlias || {}, lk.alias); }
     if (s.ref && (c.owner.ref.length || F.ref.length)) f.ref = {at, set, hd: c.hd, cccd: c.cccd, fields: c.owner.ref.concat(F.ref)};
     const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)

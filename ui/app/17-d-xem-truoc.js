@@ -93,7 +93,7 @@ function lkPreviewHtml() {
   };
   const rows = (grp, list, curObj) => list.map(x => '<tr><td>' + esc(x.label) + '</td><td>' + esc(curObj[x.key] ?? '') + '</td><td><b>' + numTxt(x.value) + '</b></td><td class="mut">' + srcTxt(x.src) + '</td>' + choice(grp, x, curObj[x.key]) + '</tr>').join('');
   const head = '<tr><th>Trường</th><th>Giá trị hiện có</th><th>Giá trị đề xuất</th><th>Nguồn (tab · dòng · cột)</th><th colspan="2">Chọn</th></tr>';
-  const P = lkPhieuRows(), Pf = lkPcFiltered(P), chosen = lkChosenPhieu(), tan = Math.round(chosen.reduce((a, p) => a + p.kl, 0) * 1000) / 1000;
+  const P = lkPhieuRows(), Pf = lkPcFiltered(P), chosen = lkChosenPhieu(), tan = HAKDinhMuc.tongPhieuTan(chosen);
   const names = [...new Set(P.filter(p => !p.isPlate && p.bienRaw).map(p => p.bienRaw))];
   const plates = [...new Set(T.dx.map(x => x.bienSo).filter(Boolean))];
   return '<button class="btn ghost sm" data-act="lkBackCand">← Chọn lại kết quả</button>' +
