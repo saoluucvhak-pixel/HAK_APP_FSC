@@ -57,7 +57,8 @@ jobs:
     # Các bộ e2e dựng .docx ra PDF bằng LibreOffice để đếm trang, so ảnh, đọc dòng chữ ký. Runner Windows không có LibreOffice nên
     # các phần đó bị bỏ qua ở job build. Job này chạy đủ và chặn cả phần bỏ qua trong kiểm thử nâng cấp từ mã nguồn v1.4.33.
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # 50 phút: kho apt Ubuntu có lúc tải rất chậm (19/11/2026: ~70 KB/s, cài 114 MB quá 20–25 phút nên job bị hủy trước khi chạy kiểm thử nào)
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
         with:
@@ -66,8 +67,8 @@ jobs:
         with: { node-version: 22, cache: npm }
       - name: Cài LibreOffice, poppler, Python Pillow/numpy (so ảnh PDF), font Liberation (thay Times New Roman) và thư viện chạy Electron
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends libreoffice-writer-nogui poppler-utils python3-pil python3-numpy fonts-liberation fonts-liberation2 fonts-dejavu-core xvfb xauth libnss3 libgbm1 libasound2t64 libgtk-3-0t64 libxss1
+          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 update -q
+          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 install -y -q --no-install-recommends libreoffice-writer-nogui poppler-utils python3-pil python3-numpy fonts-liberation fonts-liberation2 fonts-dejavu-core xvfb xauth libnss3 libgbm1 libasound2t64 libgtk-3-0t64 libxss1
           soffice --version
       - run: npm ci
       - run: npm run build:html
