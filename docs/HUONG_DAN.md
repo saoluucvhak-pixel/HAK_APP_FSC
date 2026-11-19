@@ -299,7 +299,7 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 - **Giữ cả hai**: lô trùng được thêm thành lô **mới** và bạn **xác nhận mã mới** cho từng lô (gợi ý sẵn, ví dụ `R1-2`; mã bị từ chối nếu trùng lô đã có, lô khác trong file hoặc mã cũ).
 - **Thay toàn bộ dữ liệu**: xóa dữ liệu hiện có và thay bằng file; hộp xác nhận nêu rõ số chủ và lô sẽ mất.
 
-Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác nhau** thì phần mềm **dừng**, không ghi gì và liệt kê hồ sơ cần đối chiếu.
+Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác nhau** thì phần mềm **dừng**, không ghi gì và liệt kê hồ sơ cần đối chiếu. Chủ rừng có **cùng ID nội bộ nhưng CCCD khác hẳn** (cả hai bên đều có CCCD) cũng bị coi là hai người khác nhau: phần mềm dừng để đối chiếu, áp dụng cho cả khôi phục toàn bộ (giữ, ghi đè, giữ cả hai) và khôi phục lô rừng; lời báo chỉ hiện 4 số cuối CCCD. Chỉ khác cách viết (dấu cách, dấu chấm) hoặc một bên trống CCCD thì vẫn gộp như cũ.
 
 **Dán từ Excel** (nhân công, xe, phiếu cân): ở khung nạp file bấm **Dán từ Excel**, chép vùng ô trong Excel gồm cả **dòng tiêu đề** (tên cột như file mẫu), dán vào hộp rồi bấm **Nạp dữ liệu đã dán**. Phần mềm kiểm tra và so với dữ liệu đang có như khi nạp file; sau đó bấm **Lưu dữ liệu vào lô**.
 
