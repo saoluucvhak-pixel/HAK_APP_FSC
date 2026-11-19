@@ -1,8 +1,8 @@
 # Nhật ký thay đổi
 
-## 3.0.0 — Danh mục đối tượng và xe, hợp đồng theo danh sách, phiếu cân trong hợp đồng, phân bổ khối lượng
+## 3.1.0 — Danh mục đối tượng và xe, hợp đồng theo danh sách, phiếu cân trong hợp đồng, phân bổ khối lượng, quy trình nhập chặt hơn
 
-### Nâng cấp đang kiểm thử
+### Điểm mới
 
 - Thông tin rừng và chi tiết hợp đồng có danh sách mục bên trái. Thông tin giao hàng và cước chung thuộc cấp rừng. Cài đặt dùng danh sách dọc.
 - Thêm màn xem trước phiếu cân trong ứng dụng, lấy phiếu đã lưu và lọc theo hợp đồng, biển kiểm soát, khoảng ngày. File công cụ in gốc được giữ nguyên.
@@ -14,6 +14,12 @@
 - Xuất BM-08, BM-14 khi có đội chưa có phiếu cân nào (phiếu đã gán hết cho đội khác): hộp cảnh báo như phiếu chưa gán đội, nêu tên đội; vẫn xuất được, số in không đổi.
 - Khung xem trước HoSoKeo bỏ ô “Điền tổng … tấn vào Khối lượng khai thác thực tế”: khối lượng thực tế của lô lấy tự động từ tổng phiếu cân, ô này không có nơi để điền.
 - **Cảnh báo khi xuất BM-08 / BM-14 còn phiếu cân chưa gán đội (phiếu #03, ND-01, C-02).** Ở chế độ phân bổ “theo phiếu”, phiếu chưa gán đội không được tính cho đội nào, nhưng BM-08 và BM-14 vẫn chia khối lượng theo số người của đội, trong khi màn Phân bổ chỉ ghi “chưa phân bổ” (hai nơi hai kết quả, không ai báo). Theo quyết định của CHỦ (18/11/2026) **không chặn xuất**: các nút xuất BM-08, BM-14, gói “Đợt 2”, “Toàn bộ hồ sơ”, đường in đợt 2 và gói Chỉ xem hiện hộp cảnh báo nêu số phiếu, tổng tấn, tên từng phiếu và phần mỗi đội sẽ in. “Quay lại gán phiếu” không xuất và mở bảng gán phiếu theo đội; “Vẫn xuất, chia theo số người” xuất đúng như trước (số in không đổi: 206/206 tài liệu và 38/38 tài liệu BM-08, BM-14 của ca C-02 giống từng byte). Lựa chọn chỉ áp dụng cho lần xuất đó, một gói chứa cả BM-08 và BM-14 chỉ hỏi một lần. Lô đã chốt hoặc đã dừng (chỉ đọc) không hỏi. Màn Phân bổ và danh sách hợp đồng nêu “x t (n phiếu) chưa gán đội; khi in … chia theo số người” thay cho “0 t” / “—” im lặng. Mục “Phiếu cân chưa gán đội” ở Kiểm tra trước khi xuất giữ mức đối chiếu. Lõi: `HAKPhanBo.chuaGanXuat` (`src/phanbo.js`), `b.phieuChuaGan` ở `doiOf`; kiểm thử: `tests/phieu-chua-gan.test.js`, `scripts/e2e-phieu-chua-gan.js`. Công cụ `scripts/so-ban-in.js` chọn “Vẫn xuất” khi hộp hiện để vẫn so được bản in với bản cũ.
+
+- Số liệu khối lượng thống nhất (phiếu #02): tổng phiếu cân tính một cách duy nhất (làm tròn từng phiếu đến kg rồi cộng) ở Tổng quan, tổng hợp, phân bổ, đọc phiếu cân và bộ lọc HoSoKeo; khối lượng phiếu ghi từ HoSoKeo làm tròn đến kg (dữ liệu cũ không bị đổi). Mọi so sánh biển số xe dùng một quy tắc chuẩn hóa; báo trùng biển số theo biển đã chuẩn hóa.
+- Danh mục là nguồn người và xe (phiếu #05): lưu lô không còn ghi vào danh mục lao động / xe cũ; người hoặc xe mới của lô được hỏi rồi thêm vào Danh mục đối tượng / Danh mục xe và dòng lô nối theo ID. Chủ rừng, thành viên, người ký nhập CCCD 9 hoặc 12 số; mã chủ rừng so không phân biệt hoa thường; cảnh báo (không chặn) khi CCCD chủ rừng trùng chủ rừng khác, khi thể nhân / pháp nhân trùng tên mà chưa có CCCD / MST, và khi Nhân công, Tài xế thiếu ngày sinh, ngày cấp, nơi cấp, địa chỉ. Khôi phục gói lô nối thể nhân không CCCD theo họ tên và ngày sinh; không xác định duy nhất thì đưa vào Cần đối chiếu, không nhân đôi.
+- Đầu lô gọn (phiếu #10): tab chủ rừng, đường dẫn, “Danh sách rừng · Tiến độ”, Sao lưu và + Rừng mới nằm trong một khối đầu lô hai hàng; nút Xóa rừng chuyển xuống cuối khung Thông tin rừng. Ở khung hẹp (đến 1100 px) cột mục lên thành thanh ngang, bảng phiếu cân được cả bề rộng.
+- Phím Tab và Esc trong hộp thoại (phiếu #10): Tab / Shift+Tab giữ trong hộp trên cùng; Esc ở hộp “Lưu / Bỏ / Quay lại” là Quay lại; tiêu điểm đầu vào nút Lưu. Nhãn “Chọn file Excel” đổi thành “Nhập Excel” như Danh mục.
+- Tương phản màu (phiếu #10): màu lỗi ở bảng màu có skin đạt 4,5:1 (nền sáng); nhãn trung tính ở chế độ tối không đè màu nhãn đạt / cảnh báo / lỗi.
 
 Cấu trúc SQLite v15 (chuyển một chiều, tự sao lưu file trước khi chuyển). Biểu mẫu in ra không đổi so với 2.3.0 (so bản in: 206/206 tài liệu giống từng byte).
 

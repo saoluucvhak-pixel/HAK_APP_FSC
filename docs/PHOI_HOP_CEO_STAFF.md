@@ -267,3 +267,45 @@ Xong bước đầu, bình luận [NHỊP — STAFF_FSC] trên Issue #56 rồi l
 - **STAFF_FSC** làm cả hai vai: làm phiếu theo thứ tự, mở PR, tự kiểm theo checklist mục 11.2 và đăng `[STAFF THAY KCS: ĐẠT #NN]` kèm bằng chứng, cập nhật nhánh khi `main` đổi, và **gộp PR của chính mình** khi đủ 8 điều kiện và CEO chưa trả lời quá 30 phút (ưu tiên để CEO gộp sau khi CEO kiểm độc lập). Gộp squash với `expectedHeadSha`, nhãn `da-gop`, rồi `[BÀN GIAO CEO #NN]`.
 - **CEO_FSC** là lớp kiểm độc lập duy nhất: nghiệm thu trên `main` sau mỗi PR; cuối đợt chạy CI Windows đầy đủ, lập Phiếu phát hành, phát hành khi đủ cổng mục 11.4. Không ai ngoài CEO phát hành.
 - Ngoại lệ này áp dụng đến khi CHỦ báo khác.
+
+## 14. Giao thức lệnh CEO ↔ KCS / STAFF (có hiệu lực từ 00:2x ngày 19/11/2026, theo chỉ đạo của CHỦ)
+
+Các agent chỉ trao đổi qua GitHub. Mọi chỉ đạo của CEO đi bằng **lệnh có mã**, và mỗi lệnh phải được xác nhận.
+
+### 14.1. CEO ra lệnh
+- Mẫu tiêu đề: `[LỆNH CEO → <KCS|STAFF> L-<ddmm>-<NN>]`, ví dụ `L-1911-01`.
+- Nội dung: việc cần làm (đánh số, kiểm chứng được), hạn chót theo giờ Việt Nam, Issue/PR liên quan.
+- Nơi đăng: lệnh chung đăng trên **Issue #56**; lệnh riêng một phiếu đăng trên **Issue phiếu hoặc PR đó**, kèm một dòng nhắc ở #56.
+
+### 14.2. Agent trả lời lệnh (bắt buộc)
+| Bước | Mẫu bình luận | Khi nào |
+| --- | --- | --- |
+| Nhận | `[ĐÃ NHẬN L-ddmm-NN] — <AGENT>` + dự kiến xong lúc mấy giờ | Ngay lần thức kế tiếp (≤ 30 phút) |
+| Xong | `[XONG L-ddmm-NN] — <AGENT>` + bằng chứng (nhánh/head, PR, số liệu kiểm thật) | Khi làm xong |
+| Không làm được | `[VƯỚNG L-ddmm-NN] — <AGENT>` + lý do + đề xuất | Ngay khi biết |
+
+Trả lời đăng **ngay dưới lệnh** (cùng Issue/PR). Không sửa nội dung lệnh của CEO.
+
+### 14.3. Agent yêu cầu CEO
+- `[YÊU CẦU CEO: KIỂM VÀ GỘP #NN]`: đăng trên PR, sau `[KCS TỰ KIỂM: ĐẠT #NN]`. CEO trả lời trong **60 phút**: gộp, hoặc `[CEO: CHƯA ĐẦY ĐỦ #NN]`.
+- `[CÂU HỎI CEO #NN]`: việc kỹ thuật cần CEO quyết. Việc nghiệp vụ thì dùng `[CÂU HỎI CHO CHỦ]`; CEO chuyển cho CHỦ và đăng `[QUYẾT ĐỊNH CỦA CHỦ]` khi có trả lời.
+- `[CẢNH BÁO CHO CHỦ]`: lỗi nghiêm trọng. Dừng gộp, kèm bằng chứng.
+
+### 14.4. Thứ bậc chỉ đạo
+1. Chỉ đạo trực tiếp của CHỦ, được CEO ghi lại bằng `[QUYẾT ĐỊNH CỦA CHỦ]` hoặc `[CEO: … theo chỉ đạo của CHỦ]`.
+2. Lệnh `[LỆNH CEO → …]`.
+3. Phiếu (Issue nhãn `phieu`) và tài liệu quy trình này.
+
+Bình luận khác chỉ là thông tin. Hai chỉ đạo mâu thuẫn thì làm theo cái **mới hơn** ở bậc cao hơn, và đăng `[VƯỚNG …]` để CEO xác nhận.
+
+### 14.5. Nhịp và báo động
+- Lịch thức: CEO phút :08 và :38; STAFF :23 và :53; KCS ghi lịch của mình trong nhịp tim.
+- Mỗi agent giữ **một** bình luận `[NHỊP — <AGENT>]` trên #56 và sửa nó mỗi lần thức.
+- Lệnh quá **2 lần thức** (khoảng 60 phút) chưa có `[ĐÃ NHẬN …]` thì CEO báo CHỦ đánh thức agent đó.
+- Nhịp tim cũ quá 60 phút trong giờ làm việc cũng được coi là agent đang ngủ.
+
+### 14.6. Phân công hiện hành (quyết định 8–12 của CHỦ)
+- **STAFF_FSC đã dừng hẳn** (quyết định 12, 19/11/2026); **KCS_FSC là nhân viên duy nhất**: viết mã, kiểm thử, mở PR (`Closes #NN`, `[BÁO CÁO HOÀN THÀNH #NN]`), tự kiểm 8 điều kiện (mục 11.2) rồi đăng `[KCS TỰ KIỂM: ĐẠT #NN]` và `[YÊU CẦU CEO: KIỂM VÀ GỘP #NN]`. Nhận phiếu bằng `[NHẬN VIỆC #NN]` và nhãn `kcs-nhan` trước khi làm; mỗi commit đẩy lên GitHub ngay (L-1911-07).
+- **CEO_FSC** kiểm độc lập và gộp PR; nghiệm thu trên `main`; viết phiếu; phát hành khi đủ cổng mục 11.4. KCS chỉ tự gộp (squash đúng head, `expectedHeadSha`) khi CEO im quá **60 phút** sau `[YÊU CẦU CEO: KIỂM VÀ GỘP #NN]` và đủ 8 điều kiện kèm CI Windows 3/3 xanh.
+- **Không ai ngoài CEO phát hành.** KCS không chạy workflow với `release_tag`, không đẩy thẻ `v*`, không tạo Release.
+- **Phạm vi v3.1.0:** #10, #14, #15, #16 cộng các phiếu đã gộp trước đó (#01–#07, #06a, #06b, #09). **#08** chuyển sang bản sau.
