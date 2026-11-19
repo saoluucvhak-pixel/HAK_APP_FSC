@@ -18,6 +18,9 @@ const DM = require('./datamove');
 
 const LOAI = [
   {ma: 'tudong', ten: 'Tự động hằng ngày', re: /^tu-dong-\d{4}-\d{2}-\d{2}\.sqlite$/},
+  {ma: 'tudong2gio', ten: 'Tự động mỗi 2 giờ', re: /^tu-dong-\d{4}-\d{2}-\d{2}-\d{2}00\.sqlite$/},   // phiếu #13a
+  {ma: 'tudongtuan', ten: 'Tự động hằng tuần', re: /^tu-dong-tuan-\d{4}-W\d{2}\.sqlite$/},
+  {ma: 'nhapngoai', ten: 'Nhập từ ngoài (USB, máy khác)', re: /^nhap-ngoai-[\w-]+\.sqlite$/},
   {ma: 'toanbo', ten: 'Sao lưu toàn bộ', re: /^HoSoKhaiThac_SaoLuu_[\w-]+\.(sqlite|json)$/},
   {ma: 'nangcap', ten: 'Trước khi nâng cấp', re: /^truoc-nang-cap-[\w-]+\.sqlite$/},
   {ma: 'khoiphuclo', ten: 'Trước khi khôi phục lô', re: /^truoc-khoi-phuc-lo-[\w-]+\.sqlite$/},

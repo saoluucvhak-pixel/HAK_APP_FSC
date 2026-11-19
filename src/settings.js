@@ -6,18 +6,26 @@ const fs = require('fs'), path = require('path');
 const DB_NAME = 'hakqn.sqlite';
 
 const file = userDir => path.join(userDir, 'settings.json');
+const CHU_KY = ['tat', '2gio', 'ngay', 'tuan'];   // phiếu #13a: chu kỳ tự sao lưu SQLite
+const str = v => typeof v === 'string' ? v : '';
+/* phiếu #13a: thư mục sao lưu SQLite (backupDirSql) và JSON (backupDirJson) riêng; chu kỳ tự sao lưu (autoChuKy).
+ * Chuyển cài đặt cũ: backupDir cũ thành giá trị ban đầu cho CẢ HAI thư mục; autoKeep = 0 → 'tat', còn lại → 'ngay'. backupDir giữ làm tên cũ của thư mục SQLite. */
 function load(userDir) {
-  try {
-    const j = JSON.parse(fs.readFileSync(file(userDir), 'utf8'));
-    return {dataDir: typeof j.dataDir === 'string' ? j.dataDir : '', backupDir: typeof j.backupDir === 'string' ? j.backupDir : '', backupDir2: typeof j.backupDir2 === 'string' ? j.backupDir2 : '',
-      lastBackup: typeof j.lastBackup === 'string' ? j.lastBackup : '', remindDays: Number.isInteger(j.remindDays) && j.remindDays >= 0 && j.remindDays <= 365 ? j.remindDays : 7,
-      autoKeep: Number.isInteger(j.autoKeep) && j.autoKeep >= 0 && j.autoKeep <= 60 ? j.autoKeep : 7};   // số bản tự sao lưu hằng ngày được giữ; 0 = tắt
-  } catch (e) { return {dataDir: '', backupDir: '', backupDir2: '', lastBackup: '', remindDays: 7, autoKeep: 7}; }
+  let j = {};
+  try { j = JSON.parse(fs.readFileSync(file(userDir), 'utf8')) || {}; } catch (e) { j = {}; }
+  const autoKeep = Number.isInteger(j.autoKeep) && j.autoKeep >= 0 && j.autoKeep <= 60 ? j.autoKeep : 7;   // số bản tự sao lưu được giữ; 0 = tắt (cài đặt cũ)
+  const backupDirSql = str(j.backupDirSql) || str(j.backupDir), backupDirJson = 'backupDirJson' in j ? str(j.backupDirJson) : str(j.backupDir);
+  const autoChuKy = CHU_KY.includes(j.autoChuKy) ? j.autoChuKy : (autoKeep === 0 ? 'tat' : 'ngay');
+  return {dataDir: str(j.dataDir), backupDir: backupDirSql, backupDirSql, backupDirJson, backupDir2: str(j.backupDir2),
+    lastBackup: str(j.lastBackup), remindDays: Number.isInteger(j.remindDays) && j.remindDays >= 0 && j.remindDays <= 365 ? j.remindDays : 7,
+    autoKeep: autoChuKy === 'tat' ? 0 : (autoKeep || 7), autoChuKy};
 }
 function save(userDir, s) {
   fs.mkdirSync(userDir, {recursive: true});
-  const tmp = file(userDir) + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify({dataDir: s.dataDir || '', backupDir: s.backupDir || '', backupDir2: s.backupDir2 || '', lastBackup: s.lastBackup || '', remindDays: s.remindDays == null ? 7 : s.remindDays, autoKeep: s.autoKeep == null ? 7 : s.autoKeep}, null, 2));
+  const tmp = file(userDir) + '.tmp', sql = s.backupDirSql != null ? s.backupDirSql : (s.backupDir || '');
+  const chuKy = s.autoKeep === 0 ? 'tat' : CHU_KY.includes(s.autoChuKy) ? s.autoChuKy : 'ngay', keep = s.autoKeep == null ? 7 : s.autoKeep;   // giữ 0 bản = Tắt (cài đặt cũ "Giữ: Tắt")
+  fs.writeFileSync(tmp, JSON.stringify({dataDir: s.dataDir || '', backupDir: sql || '', backupDirSql: sql || '', backupDirJson: s.backupDirJson != null ? s.backupDirJson : sql || '', backupDir2: s.backupDir2 || '',
+    lastBackup: s.lastBackup || '', remindDays: s.remindDays == null ? 7 : s.remindDays, autoKeep: chuKy === 'tat' ? 0 : (keep || 7), autoChuKy: chuKy}, null, 2));
   fs.renameSync(tmp, file(userDir));   // ghi trọn vẹn rồi mới thay, tránh file cài đặt dở dang
 }
 /* Đã đến lúc nhắc sao lưu toàn bộ chưa. remindDays 0 = tắt. Chưa từng sao lưu: tính từ lần đầu cài (firstSeen) để không nhắc ngay ngày đầu. Trả {due, days} (days = số ngày từ lần sao lưu cuối, null nếu chưa từng). */
@@ -94,9 +102,10 @@ function resolve(userDir, env = {}) {
   const dbFile = env.HAKQN_DB || path.join(dataDir, DB_NAME);
   const dataOut = env.HAKQN_DB ? path.dirname(env.HAKQN_DB) : dataDir;
   const defBackup = path.join(dataOut, 'backups');
-  const backupDir = s.backupDir && fs.existsSync(s.backupDir) ? s.backupDir : defBackup;
-  return {dbFile, dataDir: dataOut, defaultDataDir: defData, backupDir, defaultBackupDir: defBackup,
-    customData: !env.HAKQN_DB && dataDir !== defData, customBackup: backupDir !== defBackup, lockedByEnv: !!env.HAKQN_DB,
-    missing: [s.backupDir && !fs.existsSync(s.backupDir) ? s.backupDir : ''].filter(Boolean)};
+  const backupDir = s.backupDirSql && fs.existsSync(s.backupDirSql) ? s.backupDirSql : defBackup;   // thư mục sao lưu SQLite (tên cũ backupDir)
+  const backupDirJson = s.backupDirJson && fs.existsSync(s.backupDirJson) ? s.backupDirJson : defBackup;
+  return {dbFile, dataDir: dataOut, defaultDataDir: defData, backupDir, backupDirSql: backupDir, backupDirJson, defaultBackupDir: defBackup,
+    customData: !env.HAKQN_DB && dataDir !== defData, customBackup: backupDir !== defBackup, customBackupJson: backupDirJson !== defBackup, lockedByEnv: !!env.HAKQN_DB,
+    missing: [s.backupDirSql && !fs.existsSync(s.backupDirSql) ? s.backupDirSql : '', s.backupDirJson && s.backupDirJson !== s.backupDirSql && !fs.existsSync(s.backupDirJson) ? s.backupDirJson : ''].filter(Boolean)};
 }
-module.exports = {DB_NAME, load, save, backupDue, checkFolder, checkSpace, checkFree, describeError, checkConfigured, resolve, file};
+module.exports = {DB_NAME, CHU_KY, load, save, backupDue, checkFolder, checkSpace, checkFree, describeError, checkConfigured, resolve, file};

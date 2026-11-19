@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld('hak', {
     setBackup: reset => ipcRenderer.invoke('settings:setBackup', !!reset),
     setRemind: d => ipcRenderer.invoke('settings:setRemind', d),
     setAutoKeep: n => ipcRenderer.invoke('settings:setAutoKeep', n),
+    setAutoChuKy: c => ipcRenderer.invoke('settings:setAutoChuKy', c),   // phiếu #13a
+    setBackupJson: reset => ipcRenderer.invoke('settings:setBackupJson', !!reset),
+    openBackupJson: () => ipcRenderer.invoke('settings:openBackupJson'),
     openBackup: () => ipcRenderer.invoke('settings:openBackup')
   },
   data: {
@@ -32,6 +35,7 @@ contextBridge.exposeInMainWorld('hak', {
     pickOther: () => ipcRenderer.invoke('data:pickOther'),
     useDefault: () => ipcRenderer.invoke('data:useDefault')
   },
+  restorePick: () => ipcRenderer.invoke('restore:pick'),   // phiếu #13a: khôi phục toàn bộ từ .json / .sqlite ở bất kỳ đâu
   saoLuu: {
     list: () => ipcRenderer.invoke('bk:list'),
     verify: f => ipcRenderer.invoke('bk:verify', f),

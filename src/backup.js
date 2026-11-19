@@ -46,13 +46,18 @@ async function backupAll(o) {
   const io = o.io || fs, hooks = o.hooks || {}, now = (o.now || (() => new Date()))();
   const res = {ok: false, json: {ok: false, file: '', error: ''}, sqlite: {ok: false, file: '', error: ''}, message: ''};
   const fail = (m) => { res.message = m; return res; };
-  let outDir;
-  try { outDir = Settings.checkFolder(o.outDir); } catch (e) { return fail('Thư mục sao lưu không dùng được: ' + e.message); }
-  const text = JSON.stringify(o.data, null, 2);
-  try { Settings.checkFree(outDir, Buffer.byteLength(text) + (o.dbBytes || 0), hooks.freeBytes, 'Ổ chứa bản sao lưu'); }
-  catch (e) { return fail(e.message + ' Chưa ghi file nào; mốc sao lưu gần nhất được giữ nguyên.'); }
-  const base = uniqueBase(outDir, 'HoSoKhaiThac_SaoLuu_' + stampOf(now), ['.json', '.sqlite'], io);
-  const jsonFile = path.join(outDir, base + '.json'), sqlFile = path.join(outDir, base + '.sqlite');
+  /* phiếu #13a: .sqlite ghi vào o.outDir (thư mục sao lưu SQLite), .json vào o.outDirJson (thư mục sao lưu JSON; trống = cùng thư mục) */
+  let outDir, outDirJson;
+  try { outDir = Settings.checkFolder(o.outDir); } catch (e) { return fail('Thư mục sao lưu SQLite không dùng được: ' + e.message); }
+  try { outDirJson = o.outDirJson ? Settings.checkFolder(o.outDirJson) : outDir; } catch (e) { return fail('Thư mục sao lưu JSON không dùng được: ' + e.message); }
+  const text = JSON.stringify(o.data, null, 2), cung = path.resolve(outDir) === path.resolve(outDirJson);
+  try {
+    if (cung) Settings.checkFree(outDir, Buffer.byteLength(text) + (o.dbBytes || 0), hooks.freeBytes, 'Ổ chứa bản sao lưu');
+    else { Settings.checkFree(outDir, o.dbBytes || 0, hooks.freeBytes, 'Ổ chứa bản sao lưu SQLite'); Settings.checkFree(outDirJson, Buffer.byteLength(text), hooks.freeBytes, 'Ổ chứa bản sao lưu JSON'); }
+  } catch (e) { return fail(e.message + ' Chưa ghi file nào; mốc sao lưu gần nhất được giữ nguyên.'); }
+  let base = 'HoSoKhaiThac_SaoLuu_' + stampOf(now);
+  for (let n = 0; n < 1000; n++) { const b = base + (n ? '_' + (n + 1) : ''); if (!io.existsSync(path.join(outDir, b + '.sqlite')) && !io.existsSync(path.join(outDirJson, b + '.json'))) { base = b; break; } if (n === 999) throw new Error('Không tạo được tên file sao lưu duy nhất'); }
+  const jsonFile = path.join(outDirJson, base + '.json'), sqlFile = path.join(outDir, base + '.sqlite');
   // 1. JSON
   try {
     if (hooks.beforeJson) hooks.beforeJson();

@@ -117,15 +117,15 @@ let autoBkRev = null;   // phiên bản dữ liệu (store.rev) mà bản tự s
  * (trước đây bản của hôm nay chỉ tạo lúc mở lần đầu nên là dữ liệu của hôm trước). Các lần chạy xếp hàng, không chạy chồng. */
 function runAutoBackup(lamMoi) {
   let st; try { st = Settings.load(app.getPath('userData')); } catch (e) { return Promise.resolve(); }
-  if (!st.autoKeep) { autoBk = {ok: true, skipped: true, reason: 'off'}; return Promise.resolve(); }
+  if (!st.autoKeep || st.autoChuKy === 'tat') { autoBk = {ok: true, skipped: true, reason: 'off'}; return Promise.resolve(); }
   const s = store, dir = loc.backupDir;
   autoBkP = (autoBkP || Promise.resolve()).then(() => {
     if (!s || store !== s) return;   // cơ sở dữ liệu đã đổi (đổi thư mục dữ liệu) trong lúc chờ
     const rev = s.rev, refresh = !!lamMoi && rev !== autoBkRev;
-    return AutoBackup.daily(s, {keep: st.autoKeep, dir, refresh}).then(r => {
+    return AutoBackup.tuDong(s, {keep: st.autoKeep, dir, refresh, chuKy: st.autoChuKy}).then(r => {   // phiếu #13a: chu kỳ ngày / tuần / 2 giờ
       autoBk = {...r, at: new Date().toISOString()};
       if (r.ok && (!r.skipped || autoBkRev === null)) autoBkRev = rev;   // lần đầu trong phiên: bản của hôm nay (nếu có) do lần đóng trước làm mới, coi như đã chứa dữ liệu lúc mở
-      if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep, {overwrite: !!r.refreshed}); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
+      if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep, {overwrite: !!r.refreshed, chuKy: st.autoChuKy}); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
       if (!r.ok) log('ERROR', 'Tự sao lưu hằng ngày không được: ' + r.error);
       else if (!r.skipped) log('INFO', 'Tự sao lưu hằng ngày: ' + path.basename(r.file) + (r.refreshed ? ' (làm mới)' : '') + (r.removed.length ? ' (xóa ' + r.removed.length + ' bản cũ)' : ''));
     });
@@ -173,20 +173,16 @@ function registerIpc() {
     if (backingUp) return {ok: false, error: 'Đang sao lưu, vui lòng đợi xong rồi bấm lại.'};
     backingUp = true;
     try {
-      let outDir;
-      if (loc.customBackup) outDir = loc.backupDir;   // đã chọn thư mục sao lưu ở Cài đặt hệ thống: lưu thẳng vào đó
-      else {
-        const r = await dialog.showOpenDialog(win, {title: 'Chọn thư mục lưu bản sao lưu', defaultPath: loc.backupDir, properties: ['openDirectory', 'createDirectory']});
-        if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
-        outDir = r.filePaths[0];
-      }
+      /* phiếu #13a: .sqlite vào thư mục sao lưu SQLite, .json vào thư mục sao lưu JSON (Cài đặt → Sao lưu và khôi phục), không hỏi hộp thoại */
+      const outDir = loc.backupDirSql, outDirJson = loc.backupDirJson;
+      for (const d of [outDir, outDirJson]) fs.mkdirSync(d, {recursive: true});
       const t = process.env.HAKQN_TEST_BACKUP_FAIL;   // chỉ dùng khi kiểm thử: json | sqlite | enospc | space
       const hooks = {};
       if (t === 'json' || t === 'enospc') hooks.beforeJson = () => { throw Object.assign(new Error('giả lập'), {code: t === 'enospc' ? 'ENOSPC' : 'EIO'}); };
       if (t === 'sqlite') hooks.beforeSqlite = () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); };
       if (t === 'space') hooks.freeBytes = 1024;
       const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();   // phiếu #11: bản .json mang đủ lịch sử bản chụp chốt (mọi phiên bản), như bản .sqlite
-      const res = await Backup.backupAll({db: store.db, data, outDir, dbBytes: sizeWithWal(store.file), hooks});
+      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, dbBytes: sizeWithWal(store.file), hooks});
       if (res.ok) { try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); } }   // chỉ khi cả hai file đã ghi và qua kiểm tra
       else log('ERROR', 'Sao lưu không đầy đủ: ' + res.message);
       return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite};
@@ -203,7 +199,7 @@ function registerIpc() {
       const sealed = LoRung.seal(p0, sha), name = LoRung.fileName(sealed);
       let file = process.env.HAKQN_LOT_DIR ? path.join(process.env.HAKQN_LOT_DIR, name) : null;
       if (!file) {
-        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackup ? loc.backupDir : app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});
+        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackupJson ? loc.backupDirJson : app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});
         if (r.canceled || !r.filePath) return {ok: true, canceled: true};
         file = r.filePath;
       }
@@ -292,8 +288,8 @@ function registerIpc() {
   /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
   const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
   const dbInfo = () => { try { const st = fs.statSync(loc.dbFile); return {size: st.size, mtime: st.mtime.toISOString(), version: store ? store.db.pragma('user_version', {simple: true}) : null, open: !!store}; } catch (e) { return {size: 0, mtime: null, version: null, open: !!store}; } };
-  const autoView = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } const ls = AutoBackup.list(loc.backupDir); return {keep: st.autoKeep, dir2: st.backupDir2 || '', count: ls.length, last: ls[0] ? {name: ls[0].name, day: ls[0].day, size: ls[0].size} : null, result: autoBk}; };
-  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), auto: autoView(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
+  const autoView = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } const ls = AutoBackup.list(loc.backupDir, st.autoChuKy); return {chuKy: st.autoChuKy, keep: st.autoKeep, dir2: st.backupDir2 || '', count: ls.length, last: ls[0] ? {name: ls[0].name, day: ls[0].day, size: ls[0].size} : null, result: autoBk}; };
+  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), auto: autoView(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, backupDirJson: loc.backupDirJson, customBackupJson: loc.customBackupJson, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
   const pickFolder = async title => {
     if (process.env.HAKQN_PICK_DIR) return process.env.HAKQN_PICK_DIR;
     const r = await dialog.showOpenDialog(win, {title, properties: ['openDirectory', 'createDirectory']});
@@ -302,6 +298,17 @@ function registerIpc() {
   ipcMain.handle('settings:get', () => wrap(() => ({settings: setView()}), true)());
   ipcMain.handle('settings:setRemind', (e, days) => wrap(() => { const ud = app.getPath('userData'); const d = Math.max(0, Math.min(365, parseInt(days, 10) || 0)); Settings.save(ud, {...Settings.load(ud), remindDays: d}); return {settings: setView()}; })());
   ipcMain.handle('settings:setAutoKeep', (e, n) => wrap(() => { const ud = app.getPath('userData'); const k = Math.max(0, Math.min(60, parseInt(n, 10) || 0)); Settings.save(ud, {...Settings.load(ud), autoKeep: k}); if (k) runAutoBackup(); return {settings: setView()}; })());
+  /* phiếu #13a: chu kỳ tự sao lưu SQLite và thư mục sao lưu JSON */
+  ipcMain.handle('settings:setAutoChuKy', (e, c) => wrap(() => { if (!Settings.CHU_KY.includes(c)) throw new Error('Chu kỳ không hợp lệ: ' + c); const ud = app.getPath('userData'), cur = Settings.load(ud);
+    Settings.save(ud, {...cur, autoChuKy: c, autoKeep: c === 'tat' ? 0 : (cur.autoKeep || 7)}); if (c !== 'tat') runAutoBackup(); return {settings: setView()}; })());
+  ipcMain.handle('settings:setBackupJson', async (e, reset) => {
+    try {
+      let dir = ''; if (!reset) { dir = await pickFolder('Chọn thư mục lưu bản sao lưu JSON'); if (!dir) return {ok: true, canceled: true}; dir = Settings.checkFolder(dir); }
+      const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), backupDirJson: dir}); loc = Settings.resolve(ud, process.env); if (store) store.backupDir = loc.backupDir;
+      log('INFO', 'Đổi thư mục sao lưu JSON: ' + (reset ? 'mặc định' : 'thư mục riêng')); return {ok: true, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  ipcMain.handle('settings:openBackupJson', () => { try { fs.mkdirSync(loc.backupDirJson, {recursive: true}); shell.openPath(loc.backupDirJson); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
   ipcMain.handle('settings:openBackup', () => { try { fs.mkdirSync(loc.backupDir, {recursive: true}); shell.openPath(loc.backupDir); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
   ipcMain.handle('settings:setBackup2', async (e, reset) => {
     try {
@@ -315,7 +322,8 @@ function registerIpc() {
       let dir = '';
       if (!store) throw new Error(NO_STORE());   // chưa mở được dữ liệu: không ghi cấu hình rồi mới báo lỗi
       if (!reset) { dir = await pickFolder('Chọn thư mục lưu bản sao lưu'); if (!dir) return {ok: true, canceled: true}; dir = Settings.checkFolder(dir); }
-      const cur = Settings.load(app.getPath('userData')); Settings.save(app.getPath('userData'), {...cur, backupDir: dir});
+      const cur = Settings.load(app.getPath('userData')), jsonChung = !cur.backupDirJson || cur.backupDirJson === cur.backupDirSql;
+      Settings.save(app.getPath('userData'), {...cur, backupDir: dir, backupDirSql: dir, ...(jsonChung ? {backupDirJson: dir} : {})});   // thư mục sao lưu SQLite; JSON đi theo khi chưa chọn thư mục JSON riêng (thư mục chung như trước)
       loc = Settings.resolve(app.getPath('userData'), process.env); if (store) store.backupDir = loc.backupDir;
       log('INFO', 'Đổi thư mục sao lưu: ' + (reset ? 'mặc định' : 'thư mục riêng'));
       return {ok: true, settings: setView()};
@@ -414,11 +422,31 @@ function registerIpc() {
   });
   /* ===== KHO SAO LƯU (src/khosaoluu.js): liệt kê, kiểm tra, khôi phục từ bản .sqlite, xóa bản cũ, tự sao lưu ngay. Đường dẫn do giao diện gửi lên chỉ được dùng khi
    * file đó ĐANG CÓ trong danh sách của thư mục sao lưu (timTrongKho); không thao tác trên đường dẫn tùy ý. ===== */
-  const bkDirs = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } return [loc.backupDir, st.backupDir2 || ''].filter(Boolean); };
+  const bkDirs = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } return [loc.backupDir, loc.backupDirJson, st.backupDir2 || ''].filter(Boolean); };   // phiếu #13a: cả thư mục sao lưu JSON
   const bkFile = f => KhoSaoLuu.timTrongKho(bkDirs(), f);
   ipcMain.handle('bk:list', () => wrap(() => ({...KhoSaoLuu.lietKe(bkDirs()), dirs: bkDirs(), auto: autoBk, chuaVaoBanTuDong: autoBackupStale()}), true)());
   ipcMain.handle('bk:verify', (e, f) => wrap(() => ({kiem: KhoSaoLuu.kiemTra(bkFile(f).file, SCHEMA_VERSION)}), true)());
   ipcMain.handle('bk:preview', afterReloc((e, f) => wrap(() => ({xem: KhoSaoLuu.xemTruoc(store, bkFile(f).file, SCHEMA_VERSION)}))()));
+  /* phiếu #13a: "Khôi phục toàn bộ…" nhận .json và .sqlite chọn ở BẤT KỲ ĐÂU. Hộp thoại mở ở tiến trình chính (giao diện không gửi đường dẫn tùy ý);
+   * kiểm thử dùng HAKQN_RESTORE_FILE. .json: trả nội dung cho màn xem trước khôi phục hiện có. .sqlite: kiểm tra, CHÉP vào thư mục sao lưu SQLite thành
+   * nhap-ngoai-<thời điểm>.sqlite (file gốc không bị sửa) rồi trả tên để giao diện dùng đúng luồng xem trước / khôi phục của kho (bk:preview, bk:restore). */
+  ipcMain.handle('restore:pick', afterReloc(async () => {
+    try {
+      let p = process.env.HAKQN_RESTORE_FILE || '';
+      if (!p) { const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu để khôi phục toàn bộ', filters: [{name: 'Sao lưu HAKQN (.json, .sqlite)', extensions: ['json', 'sqlite']}], properties: ['openFile']}); if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true}; p = r.filePaths[0]; }
+      if (/\.json$/i.test(p)) { const st = fs.statSync(p); if (st.size > 512 * 1024 * 1024) throw new Error('File quá lớn.'); return {ok: true, dinhDang: 'json', name: path.basename(p), text: fs.readFileSync(p, 'utf8')}; }
+      if (!/\.sqlite$/i.test(p)) throw new Error('Chỉ khôi phục được file .json hoặc .sqlite.');
+      const kt = KhoSaoLuu.kiemTra(p, SCHEMA_VERSION); if (!kt.ok) throw new Error('Bản sao lưu không dùng được: ' + kt.error);
+      if (store && path.resolve(p) === path.resolve(store.file)) throw new Error('Đây chính là cơ sở dữ liệu đang dùng, không phải bản sao lưu.');
+      const dir = loc.backupDirSql; fs.mkdirSync(dir, {recursive: true});
+      const d = new Date(), pad = n => String(n).padStart(2, '0'), stamp = d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+      let dest = path.join(dir, 'nhap-ngoai-' + stamp + '.sqlite'); for (let n = 2; fs.existsSync(dest); n++) dest = path.join(dir, 'nhap-ngoai-' + stamp + '_' + n + '.sqlite');
+      const tmp = dest + '.tmp-' + process.pid; fs.copyFileSync(p, tmp);
+      const k2 = KhoSaoLuu.kiemTra(tmp, SCHEMA_VERSION); if (!k2.ok) { try { fs.unlinkSync(tmp); } catch (er) { /* bỏ qua */ } throw new Error('Bản chép vào kho không qua kiểm tra: ' + k2.error); }
+      fs.renameSync(tmp, dest); log('INFO', 'Chép bản sao lưu ngoài vào kho: ' + path.basename(dest));
+      return {ok: true, dinhDang: 'sqlite', name: path.basename(dest), file: dest, nguon: path.basename(p)};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  }));
   ipcMain.handle('bk:restore', afterReloc((e, f) => wrap(() => {
     const it = bkFile(f); if (it.dinhDang !== 'sqlite') throw new Error('Bản .json khôi phục qua màn xem trước của “Khôi phục toàn bộ dữ liệu”.');
     const r = KhoSaoLuu.khoiPhuc(store, it.file, SCHEMA_VERSION); log('INFO', 'Khôi phục toàn bộ từ bản sao lưu ' + it.name); checkModel('khoiphuc');

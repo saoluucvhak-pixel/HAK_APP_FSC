@@ -1,0 +1,60 @@
+'use strict';
+/* Phiếu #13a: "Khôi phục toàn bộ…" nhận file .sqlite ở BẤT KỲ ĐÂU (USB, máy khác) và file .json (Electron thật, SQLite thật, dữ liệu giả lập).
+ * .sqlite ngoài kho: kiểm tra, CHÉP vào thư mục sao lưu SQLite thành nhap-ngoai-*.sqlite (file gốc không bị sửa), hiện trong kho, khôi phục qua đúng luồng kho;
+ * file hỏng / sai loại: báo lỗi, không chép, dữ liệu không đổi. .json: trả nội dung cho màn xem trước khôi phục. Chu kỳ tự sao lưu đổi được và được nhớ.
+ * Chạy: xvfb-run -a node scripts/e2e-khoi-phuc-ngoai.js */
+const {_electron: electron} = require('playwright-core');
+const path = require('path'), fs = require('fs'), os = require('os'), crypto = require('crypto');
+const root = path.join(__dirname, '..');
+const {Store} = require('../src/store');
+const base = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-kpn-')), ud = path.join(base, 'ud'), usb = path.join(base, 'usb');
+fs.mkdirSync(usb, {recursive: true});
+let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
+const sha = f => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+const launch = file => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_USERDATA: ud, HAKQN_CLOSE: 'discard', HAKQN_RESTORE_FILE: file || ''}});
+(async () => {
+  // "máy khác": một cơ sở dữ liệu có 1 chủ rừng, 2 lô, đặt trên USB
+  const ngoai = path.join(usb, 'may-khac.sqlite');
+  const s = new Store(ngoai); s.save({v: 2, rs: {own9: {id: 'own9', info: {ma: 'CR-9', ten: 'CHỦ MÁY KHÁC', cccd: '049000000099'}, forests: {
+    f1: {id: 'f1', info: {maRung: 'R-91', tenRung: 'Rừng 91'}, nc: [], dx: [], pc: [], exp: {}}, f2: {id: 'f2', info: {maRung: 'R-92', tenRung: 'Rừng 92'}, nc: [], dx: [], pc: [], exp: {}}}}}}); s.close();
+  for (const x of ['-wal', '-shm']) { try { fs.unlinkSync(ngoai + x); } catch (e) { /* không có */ } }
+  const truoc = sha(ngoai);
+  const errs = [];
+  let app = await launch(ngoai), w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  const r = await w.evaluate(() => window.hak.restorePick());
+  ok('chọn file .sqlite ngoài kho: được chép vào kho', r.ok && r.dinhDang === 'sqlite' && /^nhap-ngoai-\d{8}-\d{6}\.sqlite$/.test(r.name), JSON.stringify(r));
+  ok('file gốc trên USB không bị sửa', sha(ngoai) === truoc);
+  const ds = await w.evaluate(() => window.hak.saoLuu.list());
+  const it = ds.items && ds.items.find(x => x.name === r.name);
+  ok('bản vừa chép hiện trong kho, loại "Nhập từ ngoài"', !!it && it.loai === 'nhapngoai', JSON.stringify(ds.items && ds.items.map(x => x.name)));
+  const pv = await w.evaluate(f => window.hak.saoLuu.preview(f), it && it.file);
+  ok('xem trước: 1 chủ rừng, 2 lô trong bản sao lưu', pv.ok && pv.xem.trongBan.owners === 1 && pv.xem.trongBan.forests === 2, JSON.stringify(pv).slice(0, 200));
+  const kp = await w.evaluate(f => window.hak.saoLuu.restore(f), it && it.file);
+  ok('khôi phục qua luồng kho: dữ liệu trên máy là dữ liệu máy khác', kp.ok && Object.keys(kp.db.rs).length === 1 && kp.db.rs.own9 && Object.keys(kp.db.rs.own9.forests).length === 2, JSON.stringify(kp).slice(0, 200));
+  await app.close();
+  // file hỏng
+  const hong = path.join(usb, 'hong.sqlite'); fs.writeFileSync(hong, 'không phải sqlite');
+  app = await launch(hong); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  const nTruoc = (await w.evaluate(() => window.hak.saoLuu.list())).items.filter(x => x.loai === 'nhapngoai').length;
+  const rh = await w.evaluate(() => window.hak.restorePick());
+  const nSau = (await w.evaluate(() => window.hak.saoLuu.list())).items.filter(x => x.loai === 'nhapngoai').length;
+  ok('file hỏng: báo lỗi, không chép thêm vào kho', !rh.ok && /không dùng được|SQLite/i.test(rh.error) && nSau === nTruoc, JSON.stringify(rh));
+  await app.close();
+  // file .json
+  const js = path.join(usb, 'sao-luu.json'); fs.writeFileSync(js, JSON.stringify({v: 2, rs: {}}));
+  app = await launch(js); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  const rj = await w.evaluate(() => window.hak.restorePick());
+  ok('file .json: trả nội dung cho màn xem trước khôi phục', rj.ok && rj.dinhDang === 'json' && JSON.parse(rj.text).v === 2, JSON.stringify(rj).slice(0, 120));
+  // chu kỳ tự sao lưu
+  const c1 = await w.evaluate(() => window.hak.settings.setAutoChuKy('tuan'));
+  ok('đổi chu kỳ tự sao lưu sang hằng tuần', c1.ok && c1.settings.auto.chuKy === 'tuan', JSON.stringify(c1).slice(0, 160));
+  const c2 = await w.evaluate(() => window.hak.settings.setAutoChuKy('xyz'));
+  ok('chu kỳ không hợp lệ bị từ chối', !c2.ok);
+  await app.close();
+  app = await launch(''); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  const st = await w.evaluate(() => window.hak.settings.get());
+  ok('chu kỳ hằng tuần được nhớ qua lần mở lại', st.ok && st.settings.auto.chuKy === 'tuan');
+  ok('không có lỗi JavaScript', errs.length === 0, errs.join(' | '));
+  await app.close();
+  console.log(fail ? fail + ' MỤC LỖI' : 'ĐẠT HẾT'); process.exit(fail ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });
