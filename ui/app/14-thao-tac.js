@@ -434,7 +434,8 @@ async function importGo() {
   $('#impBox').classList.remove('on'); window.__imp = null; window.__plan = null;
   if (!r.ok) return note('Không nhập được, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
   dbThayToanBo(r.db); NAV.cur = null; NAV.curF = null;   // dữ liệu vừa được thay: bản nháp, dấu “chưa lưu” và bản đã lưu cũ không còn đích (ui/app/29)
-  note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân. Bản sao lưu trước khi nhập: ' + r.backup);
+  note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân' + (r.goiCu ? ', ' + r.goiCu + ' bản chụp chốt cũ' : '') + '. Bản sao lưu trước khi nhập: ' + r.backup);
+  if (r.goiBoQua) pushNote('Có ' + r.goiBoQua + ' bản chụp chốt trong file bị hỏng hoặc sai dấu vân tay nên không chép (hồ sơ và các bản chụp còn lại đã nhập đủ).', 'warn');   // phiếu #11
 }
 
 

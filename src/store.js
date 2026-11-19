@@ -515,18 +515,36 @@ class Store {
    * Hồ sơ mâu thuẫn (ID, mã lô, chủ rừng chỉ về các bản ghi khác nhau) → dừng, không ghi. Luôn sao lưu file SQLite trước; ghi trong một giao dịch nên lỗi thì dữ liệu cũ còn nguyên. */
   applyImport(incoming, strategy, opts) {
     if (!incoming || typeof incoming.rs !== 'object') throw new Error('File không đúng định dạng sao lưu.');
+    /* phiếu #11: bản .json sao lưu toàn bộ mang LỊCH SỬ BẢN CHỤP (incoming.goiLichSu, mọi dòng chot_goi). Tách khỏi dữ liệu hồ sơ (không ghi vào meta),
+     * mỗi bản chụp phải đúng dấu vân tay (hash = bam(data), JSON đọc được) mới được chép; bản hỏng bị bỏ qua và báo số lượng. */
+    let lsFile = null, lsBoQua = 0;
+    if (Array.isArray(incoming.goiLichSu)) {
+      const V = require('./vongdoi');
+      lsFile = incoming.goiLichSu.filter(g => {
+        const tot = g && typeof g === 'object' && g.forest_id != null && Number.isInteger(g.phien_ban) && typeof g.data === 'string' && typeof g.hash === 'string' &&
+          V.bam(g.data) === g.hash && (() => { try { const x = JSON.parse(g.data); return !!x && typeof x === 'object' && !Array.isArray(x); } catch (e) { return false; } })();
+        if (!tot) lsBoQua++;
+        return tot;
+      });
+      incoming = Object.assign({}, incoming); delete incoming.goiLichSu;
+    }
     // hồ sơ đã chốt trong file phải toàn vẹn (gói, dấu vân tay, dữ liệu) với MỌI cách xử lý, kể cả thay toàn bộ: lỗi thì dừng trước khi sao lưu hay ghi
     const hong = []; Object.values(incoming.rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => { const e = LoRung.loiToanVen(f); if (e) hong.push(e); }));
     if (hong.length) throw Object.assign(new Error(hong.slice(0, 3).map(e => e.moTa).join(' | ') + (hong.length > 3 ? ' (và ' + (hong.length - 3) + ' lô khác)' : '') + ' Dữ liệu trên máy chưa bị thay đổi.'), {code: 'GOI_HONG', lots: hong.map(e => e.toanVen)});
     const cur = this.load();
-    let next;
+    let next, nhan = null;   // nhan: ID lô trong file → ID lô đích, chỉ các lô THỰC SỰ lấy từ file (để chép lịch sử bản chụp đúng lô)
     if (strategy === 'replace') {
       next = structuredClone(incoming);
       if (!('congTy' in next)) next.congTy = cur.congTy || {}; // bản sao lưu cũ chưa có danh mục công ty
       if (!LK.daChuyen(next)) LK.chuyenDoi(next);
     } else {
       if (!['skip', 'overwrite', 'both'].includes(strategy)) throw new Error('Cách xử lý không hợp lệ: ' + strategy);
-      next = LoRung.mergeImport(cur, incoming, strategy, null, opts || {}).next;     // ném lỗi nếu có hồ sơ mâu thuẫn, trước khi sao lưu hay ghi
+      const mg = LoRung.mergeImport(cur, incoming, strategy, null, opts || {});     // ném lỗi nếu có hồ sơ mâu thuẫn, trước khi sao lưu hay ghi
+      next = mg.next; nhan = new Map();
+      mg.plan.owners.forEach(en => en.forests.forEach(f => {
+        if (!en.existingId || f.state === 'moi') nhan.set(String(f.id), String(f.id));                  // chủ mới hoặc lô mới: giữ ID
+        else if (strategy === 'overwrite' && f.state === 'trung') nhan.set(String(f.id), String(f.existing));   // ghi đè: lô trên máy nhận nội dung (và lịch sử) của lô trong file
+      }));                                                                                            // giữ bản hiện có / giữ cả hai (lô nhân bản đổi mã): không chép lịch sử
       // Danh mục công ty mua hàng: gộp theo id (skip: giữ bản trên máy; overwrite/both: bản trong file thay bản trùng id; công ty mới luôn được thêm)
       next.congTy = {...(cur.congTy || {})};
       Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || strategy === 'overwrite') next.congTy[id] = c; });
@@ -543,9 +561,14 @@ class Store {
       }
     }
     const backup = this.snapshotFile('truoc-khoi-phuc', {keep: 20});   // giữ 20 bản gần nhất (như truoc-xoa): mỗi bản là cả cơ sở dữ liệu, không để thư mục sao lưu lớn mãi
-    const kq = this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace', goiLichSu: opts && opts.goiLichSu});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
-    return {backup, counts: Store.counts(this.load()), goiCu: kq.goiCu || 0};
+    let goiLichSu = opts && opts.goiLichSu;
+    if (!goiLichSu && lsFile) goiLichSu = lsFile.filter(g => !nhan || nhan.has(String(g.forest_id))).map(g => Object.assign({}, g, {forest_id: nhan ? nhan.get(String(g.forest_id)) : String(g.forest_id)}));
+    const kq = this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace', goiLichSu});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
+    return {backup, counts: Store.counts(this.load()), goiCu: kq.goiCu || 0, goiBoQua: lsBoQua};
   }
+
+  /* phiếu #11: MỌI bản chụp chốt (mọi lô, mọi phiên bản) để ghi vào bản .json sao lưu toàn bộ, cùng dạng KhoSaoLuu.docBanSqlite trả cho bản .sqlite */
+  goiTatCa() { return this._coBangGoi() ? this.db.prepare('SELECT forest_id, phien_ban, hash, at, data FROM chot_goi ORDER BY forest_id, phien_ban').all() : []; }
 
   /* Khôi phục MỘT lô rừng từ gói đã kiểm tra (LoRung.parsePackage). Xem trước dùng planLot, ghi dùng applyLot: cùng quy tắc. */
   previewLot(pkg) { return LoRung.planLot(this.load(), pkg); }
