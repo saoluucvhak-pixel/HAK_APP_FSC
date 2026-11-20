@@ -70,7 +70,7 @@ const formatVND = v => formatNumber(v, 0);
 let numStyle = 'vi';
 const numSwap = t => (numStyle === 'en' ? String(t).replace(/[.,]/g, c => (c === '.' ? ',' : '.')) : t);
 const viNum = fn => { const o = numStyle; numStyle = 'vi'; try { return fn(); } finally { numStyle = o; } };
-const fmtRaw = n => (n == null || n === '' ? '' : typeof n === 'number' && Number.isInteger(n) ? formatVND(n) : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+const fmtRaw = n => (n == null || n === '' ? '' : typeof n === 'number' ? (Number.isInteger(n) ? formatVND(n) : formatNumber(n, 10)) : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));   // lô 2 (T-04): số không nguyên theo kiểu Việt Nam (1.234,5), giữ đủ chữ số lẻ
 const fmt = n => numSwap(fmtRaw(n));
 const toNum = v => {
   if (typeof v === 'number') return isFinite(v) ? Math.round(v) : null;

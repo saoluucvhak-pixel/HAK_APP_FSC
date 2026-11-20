@@ -290,6 +290,35 @@
     if (o.maMoi && typeof o.maMoi === 'object' && !Array.isArray(o.maMoi)) out.maMoi = Object.fromEntries(Object.entries(o.maMoi).filter(([, v]) => typeof v === 'string'));
     return out;
   }
-  const api = {optsKhoiPhuc, KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
+  /* KIỂM CẤU TRÚC bản sao lưu toàn bộ .json TRƯỚC khi xem trước, sao lưu hay ghi (lô 2, T-11). Một quy tắc cho giao diện (restoreAll, Kho .json) và Store.previewImport/applyImport.
+   * - "v" lớn hơn định dạng phần mềm đọc được (2) → từ chối, nêu phiên bản mới hơn (không coi là dữ liệu v1 rồi làm mất rừng);
+   * - dữ liệu v1 (nhân công/xe nằm dưới chủ rừng) chỉ khi KHÔNG chủ rừng nào có "forests": file thiếu "v" mà đã có rừng là dữ liệu v2;
+   * - chủ rừng là đối tượng có "info" là đối tượng; "forests" là đối tượng; mỗi lô là đối tượng có "info"; nc/dx/pc (nếu có) là danh sách đối tượng.
+   * Trả {ok, v1, error}; error bằng tiếng Việt, nêu chủ rừng/lô bị lỗi. */
+  function kiemSaoLuu(o) {
+    const sai = m => ({ok: false, v1: false, error: 'File không đúng cấu trúc bản sao lưu toàn bộ: ' + m + '. Dữ liệu trên máy chưa bị thay đổi.'});
+    const laDT = x => !!x && typeof x === 'object' && !Array.isArray(x);
+    if (!laDT(o)) return {ok: false, v1: false, error: 'File không đúng định dạng sao lưu toàn bộ của HAKQN.'};
+    if (o.loai === KIND) return {ok: false, v1: false, error: 'Đây là gói sao lưu MỘT lô rừng, không phải bản sao lưu toàn bộ. Dùng “Khôi phục lô rừng”.'};
+    if ('v' in o && !(Number.isInteger(o.v) && o.v >= 1)) return sai('phiên bản định dạng “' + String(o.v).slice(0, 20) + '” không hợp lệ');
+    if (o.v > 2) return {ok: false, v1: false, error: 'Bản sao lưu thuộc phiên bản mới hơn của phần mềm (định dạng v' + o.v + '; phần mềm này đọc đến v2). Hãy cập nhật phần mềm rồi khôi phục lại. Dữ liệu trên máy chưa bị thay đổi.'};
+    if (!laDT(o.rs)) return {ok: false, v1: false, error: 'File không đúng định dạng sao lưu toàn bộ (thiếu danh sách chủ rừng).'};
+    if ('congTy' in o && o.congTy != null && !laDT(o.congTy)) return sai('danh mục công ty mua hàng không phải danh sách');
+    const owners = Object.entries(o.rs), v1 = o.v !== 2 && owners.length > 0 && !owners.some(([, r]) => laDT(r) && 'forests' in r);
+    const dsDT = (x, ten, noi) => { if (x == null) return ''; if (!Array.isArray(x)) return ten + ' của ' + noi + ' không phải danh sách'; const i = x.findIndex(v => !laDT(v)); return i < 0 ? '' : ten + ' của ' + noi + ' có dòng ' + (i + 1) + ' không đúng dạng'; };
+    for (const [id, r] of owners) {
+      const tenCR = 'chủ rừng “' + (laDT(r) && laDT(r.info) && (r.info.ten || r.info.ma) || id) + '”';
+      if (!laDT(r) || !laDT(r.info)) return sai(tenCR + ' thiếu thông tin chủ rừng');
+      if (v1) { const e = dsDT(r.nc, 'nhân công', tenCR) || dsDT(r.dx, 'xe', tenCR); if (e) return sai(e); continue; }
+      if (r.forests != null && !laDT(r.forests)) return sai('danh sách lô của ' + tenCR + ' không đúng dạng');
+      for (const [fid, f] of Object.entries(r.forests || {})) {
+        const tenLo = 'lô “' + (laDT(f) && laDT(f.info) && (f.info.maRung || f.info.tenRung) || fid) + '” (' + tenCR + ')';
+        if (!laDT(f) || !laDT(f.info)) return sai(tenLo + ' thiếu thông tin lô');
+        const e = dsDT(f.nc, 'nhân công', tenLo) || dsDT(f.dx, 'xe', tenLo) || dsDT(f.pc, 'phiếu cân', tenLo); if (e) return sai(e);
+      }
+    }
+    return {ok: true, v1, error: ''};
+  }
+  const api = {kiemSaoLuu, optsKhoiPhuc, KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKLoRung = api;
 })(typeof self !== 'undefined' ? self : this);

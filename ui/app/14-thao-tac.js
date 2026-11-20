@@ -412,14 +412,14 @@ async function importWithPreview(inc) {
     '<label><input type="radio" name="impStrat" value="skip"' + (blocked ? ' disabled' : ' checked') + '> Giữ bản trên máy, chỉ thêm lô/chủ mới</label>' +
     '<label><input type="radio" name="impStrat" value="overwrite"' + (blocked ? ' disabled' : '') + '> Ghi đè các lô TRÙNG bằng dữ liệu trong file (lô khác của chủ được giữ)</label>' +
     '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> Giữ cả hai (lô trùng trong file được thêm thành lô MỚI với <b>mã lô mới do bạn xác nhận</b>)</label>' + impMaHtml(p.plan) +
-    '<hr><label><input type="radio" name="impStrat" value="replace"' + (hong ? ' disabled' : blocked ? ' checked' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
+    '<hr><label><input type="radio" name="impStrat" value="replace"' + (hong ? ' disabled' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi và ghi trong một giao dịch: lỗi giữa chừng thì không đổi gì. Bản tra cứu Google Sheets không bị đổi.</p>' +
     '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button>' + (hong ? '' : '<button class="btn" data-act="impGo">Thực hiện</button>') + '</div>';
   window.__imp = inc; window.__plan = p.plan; $('#impBox').classList.add('on');
 }
 async function importGo() {
   const strat = (document.querySelector('input[name=impStrat]:checked') || {}).value;
-  if (!strat) return;
+  if (!strat) return note('Chọn một cách xử lý trước khi bấm Thực hiện (khi file có hồ sơ mâu thuẫn, phần mềm không chọn sẵn “Thay toàn bộ dữ liệu”).', 'warn');
   const E = window.__plan ? window.__plan.owners : [];
   if (strat === 'replace' && !confirm('THAY TOÀN BỘ dữ liệu hồ sơ trên máy bằng file này?\n\nTất cả chủ rừng và lô hiện có trên máy sẽ bị thay bằng nội dung file (' + E.length + ' chủ rừng, ' + E.reduce((n, o) => n + o.forests.length, 0) + ' lô trong file). Lô nào có trên máy mà không có trong file sẽ MẤT khỏi ứng dụng (vẫn còn trong bản sao lưu tự động trước khi ghi).\n\nTiếp tục?')) return;
   let opts;

@@ -63,9 +63,10 @@ function kiemTra(file, supportedVersion) {
   if (/\.json$/i.test(file)) {
     try {
       const st = fs.statSync(file), o = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (!o || typeof o !== 'object' || !o.rs || typeof o.rs !== 'object') return {ok: false, dinhDang: 'json', counts: {}, size: st.size, mtime: st.mtime.toISOString(), error: 'File không đúng định dạng sao lưu toàn bộ (thiếu danh sách chủ rừng).'};
+      const k = require('./lorung').kiemSaoLuu(o);   // lô 2 (T-11): cùng quy tắc kiểm cấu trúc/phiên bản với bước khôi phục
+      if (!k.ok) return {ok: false, dinhDang: 'json', counts: {}, size: st.size, mtime: st.mtime.toISOString(), error: k.error};
       return {ok: true, dinhDang: 'json', counts: demHoSo(o), size: st.size, mtime: st.mtime.toISOString(), error: ''};
-    } catch (e) { return {ok: false, dinhDang: 'json', counts: {}, size: 0, mtime: null, error: e instanceof SyntaxError ? 'File JSON bị hỏng hoặc bị cắt dở (' + e.message + ').' : 'Không đọc được file: ' + e.message}; }
+    } catch (e) { return {ok: false, dinhDang: 'json', counts: {}, size: 0, mtime: null, error: e instanceof SyntaxError ? 'File JSON bị hỏng hoặc bị cắt dở, không đọc được nội dung.' : 'Không đọc được file' + (e.code === 'ENOENT' ? ': file không còn ở thư mục sao lưu.' : e.code === 'EACCES' || e.code === 'EPERM' ? ': không có quyền đọc.' : ' (' + (e.code || 'lỗi đọc') + ').')}; }
   }
   const i = DM.inspect(file, supportedVersion, {cleanSidecars: true});
   return {ok: i.ok, dinhDang: 'sqlite', version: i.version, counts: {owners: i.counts.owners || 0, forests: i.counts.forests || 0, companies: i.counts.companies || 0, chotGoi: i.counts.chot_goi || 0}, size: i.size, mtime: i.mtime, error: i.ok ? '' : i.error};

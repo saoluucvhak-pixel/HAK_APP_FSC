@@ -192,12 +192,14 @@ async function lotGo() {
 }
 async function restoreAll(file) {
   try {
-    const o = JSON.parse(await file.text());
+    let o; try { o = JSON.parse(await file.text()); } catch (e) { if (e instanceof SyntaxError) throw new Error('File JSON bị hỏng hoặc bị cắt dở, không đọc được nội dung.'); throw e; }
     if (o && o.loai === HAKLoRung.KIND) throw new Error('Đây là gói sao lưu MỘT lô rừng. Dùng “Khôi phục lô rừng…” trong menu Thêm.');
-    if (!o || typeof o !== 'object' || !o.rs) throw new Error('File không đúng định dạng sao lưu.');
-    if (HB) return importWithPreview(withDefaults(o.v === 2 ? o : migrateV1(o)));
+    const k = HAKLoRung.kiemSaoLuu(o);   // lô 2 (T-11): kiểm cấu trúc và phiên bản TRƯỚC mọi bước; file thiếu "v" mà đã có rừng là v2, không chuyển như v1
+    if (!k.ok) throw new Error(k.error);
+    const o2 = k.v1 ? migrateV1(o) : Object.assign({}, o, {v: 2});
+    if (HB) return importWithPreview(withDefaults(o2));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
-    db = withDefaults(o.v === 2 ? o : migrateV1(o)); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
+    db = withDefaults(o2); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
     note('Đã khôi phục ' + Object.keys(db.rs).length + ' hồ sơ chủ rừng.');
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
 }
