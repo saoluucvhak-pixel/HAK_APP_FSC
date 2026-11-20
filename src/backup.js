@@ -56,7 +56,8 @@ async function backupAll(o) {
   // 1. JSON
   try {
     if (hooks.beforeJson) hooks.beforeJson();
-    writeFileVerified(jsonFile, text, io, t => { const j = JSON.parse(t); if (!j || typeof j !== 'object' || !j.rs) throw new Error('JSON sao lưu thiếu dữ liệu hồ sơ'); });
+    writeFileVerified(jsonFile, text, io, t => { const j = JSON.parse(t); if (!j || typeof j !== 'object' || !j.rs) throw new Error('JSON sao lưu thiếu dữ liệu hồ sơ');
+      if (Array.isArray(o.data.goiLichSu) && (!Array.isArray(j.goiLichSu) || j.goiLichSu.length !== o.data.goiLichSu.length)) throw new Error('JSON sao lưu thiếu bản chụp chốt'); });   // phiếu #11
     res.json = {ok: true, file: jsonFile, error: ''};
   } catch (e) { res.json = {ok: false, file: jsonFile, error: e.described ? e.message : Settings.describeError(e, jsonFile)}; }
   // 2. SQLite
