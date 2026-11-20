@@ -498,10 +498,19 @@ class Store {
     return c;
   }
 
+  /* Lô 2 (T-11): kiểm cấu trúc/phiên bản bản sao lưu toàn bộ (LoRung.kiemSaoLuu) và chuẩn "v"; lỗi → ném lỗi tiếng Việt, chưa đụng dữ liệu.
+   * Dữ liệu v1 (chưa có rừng) không nhập trực tiếp ở đây: giao diện chuyển sang v2 trước (migrateV1). File thiếu "v" mà đã có rừng được coi là v2. */
+  static kiemNhap(incoming) {
+    const k = LoRung.kiemSaoLuu(incoming);
+    if (!k.ok) throw Object.assign(new Error(k.error), {code: 'CAU_TRUC'});
+    if (k.v1) throw Object.assign(new Error('File là bản sao lưu định dạng cũ (v1): hãy khôi phục qua nút “Khôi phục toàn bộ dữ liệu” để phần mềm chuyển định dạng trước. Dữ liệu trên máy chưa bị thay đổi.'), {code: 'CAU_TRUC'});
+    return incoming.v === 2 ? incoming : Object.assign({}, incoming, {v: 2});
+  }
+
   /* Xem trước nhập bản sao lưu toàn bộ: số liệu + từng chủ/lô sẽ được THÊM, THAY hay GIỮ. Dùng cùng planImport với bước ghi (src/lorung.js). */
   previewImport(incoming, opts) {
+    incoming = Store.kiemNhap(incoming);
     const cur = this.load();
-    if (!incoming || typeof incoming.rs !== 'object') throw new Error('File không đúng định dạng sao lưu.');
     const plan = LoRung.planImport(cur, incoming, opts);
     const dup = [];
     plan.owners.forEach(o => {
@@ -514,7 +523,7 @@ class Store {
   /* Nhập bản sao lưu toàn bộ. strategy: 'replace' thay toàn bộ dữ liệu | 'skip' giữ bản hiện có, chỉ thêm mới | 'overwrite' thay ĐÚNG các lô trùng, giữ lô khác của chủ | 'both' giữ cả hai.
    * Hồ sơ mâu thuẫn (ID, mã lô, chủ rừng chỉ về các bản ghi khác nhau) → dừng, không ghi. Luôn sao lưu file SQLite trước; ghi trong một giao dịch nên lỗi thì dữ liệu cũ còn nguyên. */
   applyImport(incoming, strategy, opts) {
-    if (!incoming || typeof incoming.rs !== 'object') throw new Error('File không đúng định dạng sao lưu.');
+    incoming = Store.kiemNhap(incoming);   // lô 2 (T-11): cấu trúc và phiên bản kiểm TRƯỚC khi sao lưu hay ghi
     /* phiếu #11: bản .json sao lưu toàn bộ mang LỊCH SỬ BẢN CHỤP (incoming.goiLichSu, mọi dòng chot_goi). Tách khỏi dữ liệu hồ sơ (không ghi vào meta),
      * mỗi bản chụp phải đúng dấu vân tay (hash = bam(data), JSON đọc được) mới được chép; bản hỏng bị bỏ qua và báo số lượng. */
     let lsFile = null, lsBoQua = 0;

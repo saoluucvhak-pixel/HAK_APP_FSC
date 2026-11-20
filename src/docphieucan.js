@@ -106,6 +106,7 @@
       return t.trim();
     }
     function moneyWords(n) {
+      n = Math.round(n);   // lô 2 (T-04): số tiền đọc bằng chữ theo đồng (làm tròn), không còn “undefined” khi có phần lẻ
       if (!(n > 0)) return 'Không đồng.';
       const U = ['', ' nghìn', ' triệu', ' tỷ', ' nghìn tỷ', ' triệu tỷ'], parts = [];
       for (let x = n; x > 0; x = Math.floor(x / 1000)) parts.push(x % 1000);
