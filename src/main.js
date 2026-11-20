@@ -185,7 +185,8 @@ function registerIpc() {
       if (t === 'json' || t === 'enospc') hooks.beforeJson = () => { throw Object.assign(new Error('giả lập'), {code: t === 'enospc' ? 'ENOSPC' : 'EIO'}); };
       if (t === 'sqlite') hooks.beforeSqlite = () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); };
       if (t === 'space') hooks.freeBytes = 1024;
-      const res = await Backup.backupAll({db: store.db, data: store.load({kemGoi: true}), outDir, dbBytes: sizeWithWal(store.file), hooks});
+      const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();   // phiếu #11: bản .json mang đủ lịch sử bản chụp chốt (mọi phiên bản), như bản .sqlite
+      const res = await Backup.backupAll({db: store.db, data, outDir, dbBytes: sizeWithWal(store.file), hooks});
       if (res.ok) { try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); } }   // chỉ khi cả hai file đã ghi và qua kiểm tra
       else log('ERROR', 'Sao lưu không đầy đủ: ' + res.message);
       return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite};

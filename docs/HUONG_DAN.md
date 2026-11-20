@@ -301,6 +301,13 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 
 Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác nhau** thì phần mềm **dừng**, không ghi gì và liệt kê hồ sơ cần đối chiếu.
 
+**Bản chụp các lần chốt** (từ 3.2): cả file `.json` và file `.sqlite` của **Sao lưu toàn bộ** đều mang **mọi bản chụp** của lô đã chốt, kể cả các lần chốt trước (chốt → mở khóa → sửa → chốt lại). Khôi phục bằng **Thay toàn bộ** chép đủ các bản chụp; **Giữ bản trên máy** và **Ghi đè lô trùng** chỉ chép bản chụp của các lô thực sự lấy từ file. Bản chụp hỏng hoặc sai dấu vân tay bị bỏ qua và được báo số lượng. File `.json` do bản cũ tạo (chưa mang bản chụp cũ) vẫn khôi phục được như trước.
+
+**Chuyển dữ liệu sang máy khác:**
+1. Trên máy cũ: **Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ**, chép file `.json` (hoặc `.sqlite`) ra USB. Chỉ cần chuyển vài lô thì dùng **Sao lưu lô rừng** cho từng lô.
+2. Trên máy mới: cài phần mềm, rồi **Khôi phục toàn bộ dữ liệu (.json)** → chọn file → xem trước → chọn cách xử lý. Với file `.sqlite`: chép file vào thư mục sao lưu của máy mới (**Cài đặt → Hệ thống → Mở thư mục sao lưu**) rồi khôi phục từ **Kho sao lưu**; hoặc đổi tên thành `hakqn.sqlite`, đặt vào một thư mục và chọn **Cài đặt → Thư mục dữ liệu → Dùng dữ liệu có sẵn**.
+3. **Không đi theo bản sao lưu:** bản tra cứu Google Sheets (đồng bộ lại ở máy mới bằng **Tra cứu Google Sheets → Đồng bộ**), thông tin đăng nhập Google, các thiết lập thư mục của máy cũ.
+
 **Dán từ Excel** (nhân công, xe, phiếu cân): ở khung nạp file bấm **Dán từ Excel**, chép vùng ô trong Excel gồm cả **dòng tiêu đề** (tên cột như file mẫu), dán vào hộp rồi bấm **Nạp dữ liệu đã dán**. Phần mềm kiểm tra và so với dữ liệu đang có như khi nạp file; sau đó bấm **Lưu dữ liệu vào lô**.
 
 **Mục lục, gói Chỉ xem, in:** gói hồ sơ tải về có tờ `00_Muc_luc.docx`. Tab Xuất hồ sơ → khung **Chia sẻ và in**: **Tải gói Chỉ xem (.zip)** (mở `XEM_HO_SO.html` bằng trình duyệt; người nhận không sửa và không nhập lại được), **In tóm tắt hồ sơ**, **Phụ lục in lại, ký lại**. Màn Báo cáo có nút **In báo cáo**. Biểu mẫu Word vẫn in bằng Word.
