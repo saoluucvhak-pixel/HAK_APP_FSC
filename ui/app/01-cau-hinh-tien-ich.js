@@ -63,7 +63,8 @@ function formatNumber(v, maxD = 2, minD = 0) {
   if (v === null || v === undefined || v === '') return '';
   if (typeof v !== 'number' || !isFinite(v) || Math.abs(v) >= 9007199254740992) return String(v);
   const k = minD + ':' + maxD;
-  return (_nf[k] || (_nf[k] = new Intl.NumberFormat('vi-VN', {useGrouping: true, minimumFractionDigits: minD, maximumFractionDigits: maxD}))).format(v);
+  const r = Math.abs(v) < 0.5 * Math.pow(10, -maxD) ? 0 : v;
+  return (_nf[k] || (_nf[k] = new Intl.NumberFormat('vi-VN', {useGrouping: true, minimumFractionDigits: minD, maximumFractionDigits: maxD}))).format(r);
 }
 const formatVND = v => formatNumber(v, 0);
 /* Kiểu hiển thị số theo Cài đặt → Hiển thị số: 'vi' = 1.234.567,5 (mặc định) | 'en' = 1,234,567.5. Chỉ áp dụng trên màn hình; biểu mẫu Word luôn dùng kiểu Việt Nam (viNum). Ngày luôn là dd/mm/yyyy. */
@@ -72,13 +73,7 @@ const numSwap = t => (numStyle === 'en' ? String(t).replace(/[.,]/g, c => (c ===
 const viNum = fn => { const o = numStyle; numStyle = 'vi'; try { return fn(); } finally { numStyle = o; } };
 const fmtRaw = n => (n == null || n === '' ? '' : typeof n === 'number' ? (Number.isInteger(n) ? formatVND(n) : formatNumber(n, 10)) : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));   // lô 2 (T-04): số không nguyên theo kiểu Việt Nam (1.234,5), giữ đủ chữ số lẻ
 const fmt = n => numSwap(fmtRaw(n));
-const toNum = v => {
-  if (typeof v === 'number') return isFinite(v) ? Math.round(v) : null;
-  const s = trim(v).replace(/[.,\s]/g, '');
-  if (!s) return null;
-  const n = parseInt(s, 10);
-  return isNaN(n) ? null : n;
-};
+const toNum = v => { const r = HAKSo.parseDonGia(v); return r.blank ? null : r.ok ? Math.round(r.value) : 'x'; };
 const pad2 = n => String(n).padStart(2, '0');
 const normDate = v => {
   if (typeof v === 'number') {
@@ -96,7 +91,7 @@ const normNK = v => {
   return trim(v);
 };
 const cccdMsg = (who, v) => 'CCCD ' + who + ' phải gồm 9 hoặc 12 chữ số (đang là "' + v + '", ' + String(v || '').length + ' ký tự)';
-const isCccd = s => /^(\d{9}|\d{12})$/.test(s || '');   // phiếu #05 (quyết định CHỦ): CCCD 12 số hoặc CMND 9 số, ở mọi nơi
+const isCccd = s => HAKNhapLieu.cccdHopLe(s);   // phiếu #05 & lô 11c: quy tắc CCCD duy nhất (src/nhaplieu.js): 9 hoặc 12 chữ số
 const isTT = r => /^tổ trưởng/i.test(r.vaiTro || '');
 const slug = s => trim(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'x';
 const upper = s => trim(s).toUpperCase();

@@ -54,7 +54,7 @@
     }
 
     function checkNC(rec) {
-      const errs = [], warns = [], state = {}, seen = {};
+      const errs = [], warns = [], state = {}, seen = {}, byCccd = {};
       let tt = 0;
       rec.nc.forEach(r => {
         const at = 'Dòng ' + r._row + ': ';
@@ -76,8 +76,11 @@
         if (!r.noiCap) bad('thiếu Nơi cấp CCCD');
         if (!r.diaChi) bad('thiếu Địa chỉ thường trú');
         if (!ctx.isCccd(r.cccd)) bad('CCCD phải gồm 9 hoặc 12 chữ số');
-        else if (seen[r.cccd + '|' + (r.doiId || '')]) bad('CCCD trùng dòng ' + seen[r.cccd + '|' + (r.doiId || '')] + ' trong cùng đội');   // 3.0: một người có thể ở hai đội (hai hợp đồng); không trùng trong một đội
-        else seen[r.cccd + '|' + (r.doiId || '')] = r._row;
+        else {
+          if (seen[r.cccd + '|' + (r.doiId || '')]) bad('CCCD trùng dòng ' + seen[r.cccd + '|' + (r.doiId || '')] + ' trong cùng đội');   // 3.0: một người có thể ở hai đội (hai hợp đồng); không trùng trong một đội
+          else seen[r.cccd + '|' + (r.doiId || '')] = r._row;
+          if (ctx.trim(r.ten)) (byCccd[r.cccd] = byCccd[r.cccd] || []).push({row: r._row, nm: ctx.trim(r.ten)});
+        }
         if (!ctx.chucDanhAll().includes(r.chucDanh)) bad('Chức danh không hợp lệ: "' + r.chucDanh + '"');
         if (role === 'TT' && r.chucDanh !== 'Tổ trưởng') bad('Tổ trưởng phải có chức danh "Tổ trưởng"');
         if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi chức danh "Tổ trưởng"');
@@ -87,8 +90,26 @@
           if (!(rate > 0)) bad('chưa có đơn giá ' + basisOf(ir).short + ' cho "' + r.chucDanh + '" trong mục Cơ sở tính đơn giá (tab Nhân công)');
         }
       });
+      Object.entries(byCccd).forEach(([c, l]) => {
+        const names = [...new Set(l.map(x => ctx.keyName(x.nm)))];
+        if (names.length > 1) {
+          const msg = 'CCCD ' + c + ' của ' + l.map(x => '“' + x.nm + '” (dòng ' + x.row + ')').join(' và ') + ' trùng nhau nhưng khác họ tên: sửa CCCD hoặc họ tên cho đúng người';
+          errs.push(msg); l.forEach(x => { state[x.row] = 'err'; });
+        }
+      });
       if (tt < 1) errs.push('Cần ít nhất 1 tổ trưởng (hiện có ' + tt + ')');
-      else if (rec.doi) ctx.HAKModel.teamErrors({doi: rec.doi, nc: rec.nc}).forEach(e => { if (e.row != null) { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; } else errs.push(e.text); });   // cấu trúc đội (bảng con của lô): mỗi người thuộc một đội, mỗi đội một Tổ trưởng
+      else if (rec.doi) {
+        ctx.HAKModel.teamErrors({doi: rec.doi, nc: rec.nc}).forEach(e => { if (e.row != null) { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; } else errs.push(e.text); });   // cấu trúc đội (bảng con của lô): mỗi người thuộc một đội, mỗi đội một Tổ trưởng
+        if (rec.doi.length > 1) {
+          const byFold = new Map();
+          rec.doi.forEach(d => {
+            const t = ctx.trim(d && d.ten); if (!t) return;
+            const fk = t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase(), tk = t.normalize('NFC').toLowerCase();
+            if (byFold.has(fk) && byFold.get(fk).tk !== tk) warns.push('Tên đội “' + t + '” chỉ khác dấu so với “' + byFold.get(fk).ten + '”: kiểm tra tránh nhầm lẫn');
+            else byFold.set(fk, {ten: t, tk});
+          });
+        }
+      }
       else if (tt > 1 && !isDirect(rec.info)) ctx.HAKDoi.build(rec.nc, ctx.isTT).errs.forEach(e => { errs.push('Dòng ' + e.row + ': ' + e.text); state[e.row] = 'err'; });   // nhiều tổ trưởng = nhiều đội, mỗi người phải thuộc đúng một đội
       return {errs, warns, state};
     }
@@ -110,7 +131,11 @@
         const at = 'Dòng ' + r._row + ': ';
         const bad = m => { errs.push(at + m); state[r._row] = 'err'; };
         if (r.maRung && r.maRung !== rec.info.maRung) bad('Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
-        if (ctx.trim(r.doiXe) && rec.hdvc && !rec.hdvc.some(h => ctx.hdTenKhop({dx: rec.dx, hdvc: rec.hdvc}, h, r.doiXe))) bad('Đội xe “' + ctx.trim(r.doiXe) + '” không có trong lô: thêm đội xe ở tab Vận chuyển trước, hoặc để trống ô Đội xe');
+        if (ctx.trim(r.doiXe) && rec.hdvc) {
+          const khopHd = rec.hdvc.filter(h => ctx.hdTenKhop({dx: rec.dx, hdvc: rec.hdvc}, h, r.doiXe));
+          if (!khopHd.length) bad('Đội xe “' + ctx.trim(r.doiXe) + '” không có trong lô: thêm đội xe ở tab Vận chuyển trước, hoặc để trống ô Đội xe');
+          else if (khopHd.length > 1 && (!r.hdvcId || !rec.hdvc.some(h => h.id === r.hdvcId))) bad('Đội xe “' + ctx.trim(r.doiXe) + '” khớp ' + khopHd.length + ' hợp đồng vận chuyển trong lô: chưa tự gán xe, hãy chọn rõ hợp đồng cho xe này');
+        }
         if (!r.chuXe) bad('thiếu Chủ xe');
         if (!r.bienSo) bad('thiếu Biển kiểm soát');
         else if (plates[BKS().khoa(r.bienSo)]) bad('Biển kiểm soát trùng dòng ' + plates[BKS().khoa(r.bienSo)] + ' (so theo biển số đã chuẩn hóa: bỏ khoảng trắng, dấu chấm, gạch)');

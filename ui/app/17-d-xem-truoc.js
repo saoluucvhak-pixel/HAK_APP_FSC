@@ -49,37 +49,43 @@ function lkFilterHtml(P, Pf) {
     '" placeholder="vd: 92C-12345, 92C-67890" aria-label="Lọc phiếu cân"> <button class="btn sm" data-act="lkPcFilter">Lọc</button> <button class="btn ghost sm" data-act="lkPcFilterTick">Tích các phiếu đang lọc</button> <button class="btn ghost sm" data-act="lkPcFilterUntick">Bỏ tích các phiếu đang lọc</button> <button class="btn ghost sm" data-act="lkPcFilterClear">Xóa lọc</button> <span class="mut">Đang hiện ' +
     Pf.length + '/' + P.length + ' phiếu</span></div></div>';
 }
+const lkPhieuKey = p => HAKBks.khoaPhieu(p) || (HAKBks.soPhieu(p && p.soPhieu) + '|' + String((p && p.ngay) || '') + '|' + String((p && p.row) || ''));
 function lkBulkTargets() {
-  const src = ($('#lkBulkSrc') || {}).value || '*', filt = new Set(lkPcFiltered(lkPhieuRows()).map(p => p.soPhieu));
-  return lkPhieuRows().filter(p => p.st !== 'issue' && (src === '*' ? lk.sel.phieu[p.soPhieu] : src === '#F' ? filt.has(p.soPhieu) : (p.bien || ('(tên xe) ' + p.bienRaw)) === src));
+  const src = ($('#lkBulkSrc') || {}).value || '*', filt = new Set(lkPcFiltered(lkPhieuRows()).map(p => p._lkKey));
+  return lkPhieuRows().filter(p => p.st !== 'issue' && (src === '*' ? (lk.sel.phieu[p._lkKey] ?? lk.sel.phieu[p.soPhieu]) : src === '#F' ? filt.has(p._lkKey) : (p.bien || ('(tên xe) ' + p.bienRaw)) === src));
 }
 function lkPhieuRows() {
-  const F = lk.cand.forests[lk.fi], T = lkTarget(), byNo = {}, keys = new Set(T.dx.map(x => bienKey(x.bienSo)));
-  T.pc.forEach(p => { byNo[HAKBks.soPhieu(p.soPhieu)] = p; });   // cùng cách chuẩn hóa số phiếu như HAKBks.khoaPhieu (“PA 1” = “PA1”)
+  const F = lk.cand.forests[lk.fi], T = lkTarget(), byKp = {}, byNo = {}, keys = new Set(T.dx.map(x => bienKey(x.bienSo)));
+  T.pc.forEach(p => { const kp = HAKBks.khoaPhieu(p); if (kp) byKp[kp] = p; byNo[HAKBks.soPhieu(p.soPhieu)] = p; });   // cùng cách chuẩn hóa số phiếu như HAKBks.khoaPhieu (“PA 1” = “PA1”)
   return F.phieu.map(p => {
-    const ov = ((lk.plateOv || {})[p.soPhieu.toUpperCase()] || '').trim().toUpperCase(), bienGoc = p.isPlate ? p.bienRaw.toUpperCase() : lkAliasOf(p.bienRaw);
+    const _lkKey = lkPhieuKey(p);
+    const ov = (((lk.plateOv || {})[_lkKey] ?? (lk.plateOv || {})[p.soPhieu.toUpperCase()]) || '').trim().toUpperCase(), bienGoc = p.isPlate ? p.bienRaw.toUpperCase() : lkAliasOf(p.bienRaw);
     const bien = ov || bienGoc;   // xe đã đổi: sửa biển số ngay trong bảng này rồi mới đưa qua rừng
-    const ex = byNo[HAKBks.soPhieu(p.soPhieu)];
+    const kp = HAKBks.khoaPhieu(p), exKp = kp ? byKp[kp] : null, exNo = byNo[HAKBks.soPhieu(p.soPhieu)], ex = exKp || exNo;
     let st = 'new', note = '';
     if (p.issue) { st = 'issue'; note = p.issue; }
     else if (!bien) { st = 'alias'; note = 'Cần ghép tên xe “' + p.bienRaw + '” với biển số'; }
-    else if (ex && ex.ngay === p.ngay && bienKey(ex.bienSo) === bienKey(bien) && Math.abs((ex.kl || 0) - p.kl) < 1e-9) { st = 'same'; note = 'Đã có trong hồ sơ — bỏ qua'; }
-    else if (ex && HAKBks.khoaPhieu(ex) !== HAKBks.khoaPhieu(p)) { st = 'upd'; note = 'Cùng số phiếu với phiếu đã có ngày ' + (ex.ngay || '?') + ' nhưng khác ngày cân (' + p.ngay + '): hợp lệ nếu là chuyến khác — sau khi đưa vào lô, bước “Cần đối chiếu” cho chọn “Là chuyến khác”'; }
-    else if (ex) { st = 'upd'; note = 'Đã có số phiếu này nhưng khác dữ liệu — chọn để cập nhật'; }
+    else if (exKp && exKp.ngay === p.ngay && bienKey(exKp.bienSo) === bienKey(bien) && Math.abs((exKp.kl || 0) - p.kl) < 1e-9) { st = 'same'; note = 'Đã có trong hồ sơ — bỏ qua'; }
+    else if (!exKp && exNo && HAKBks.khoaPhieu(exNo) !== kp) { st = 'new'; note = 'Cùng số phiếu với phiếu đã có ngày ' + (exNo.ngay || '?') + ' nhưng khác ngày cân (' + p.ngay + '): hợp lệ nếu là chuyến khác — sau khi đưa vào lô, bước “Cần đối chiếu” cho chọn “Là chuyến khác”'; }
+    else if (exKp) { st = 'upd'; note = 'Đã có số phiếu này nhưng khác dữ liệu — chọn để cập nhật'; }
     const warn = [!p.assignable ? 'hợp đồng có nhiều rừng' : '', bien && !keys.has(bienKey(bien)) ? 'biển chưa có trong danh sách xe của rừng' : '', (p.giaLoi || []).length ? 'giá không đọc được, giữ giá trị đã lưu: ' + p.giaLoi.join('; ') : ''].filter(Boolean).join('; ');
-    const thieuThem = !!(ex && !p.issue && ((!ex.gioCan1 && p.gioCan1) || (!ex.gioCan2 && p.gioCan2) || (ex.can1 == null && p.can1 != null) || (ex.can2 == null && p.can2 != null) || (ex.klKg == null && p.klKg != null) || (!ex.khachHang && p.khachHang) || (ex.donGia == null && p.donGia != null) ||
-    (ex.thanhTien == null && p.thanhTien != null)));
+    const thieuThem = !!(exKp && !p.issue && ((!exKp.gioCan1 && p.gioCan1) || (!exKp.gioCan2 && p.gioCan2) || (exKp.can1 == null && p.can1 != null) || (exKp.can2 == null && p.can2 != null) || (exKp.klKg == null && p.klKg != null) || (!exKp.khachHang && p.khachHang) || (exKp.donGia == null && p.donGia != null) ||
+    (exKp.thanhTien == null && p.thanhTien != null)));
     if (st === 'same' && thieuThem) { st = 'upd'; note = 'Bổ sung giờ cân, cân lần 1, cân lần 2, khối lượng kg, khách hàng, đơn giá, thành tiền từ bảng tính'; }
-    const bienDoi = !!(ex && bien && !p.issue && bienKey(ex.bienSo) !== bienKey(bien));
-    if (bienDoi && st === 'upd') note = 'Biển số khác: ' + (ex.bienSo || '(chưa có)') + ' → ' + bien + (ex.ngay === p.ngay && Math.abs((ex.kl || 0) - p.kl) < 1e-9 ? ' (chỉ khác biển số)' : '');
-    return {...p, bien, bienGoc, bienSua: !!ov && ov !== bienGoc, st, note, warn, ex: !!ex, exBien: ex ? ex.bienSo : '', bienDoi};
+    const bienDoi = !!(exKp && bien && !p.issue && bienKey(exKp.bienSo) !== bienKey(bien));
+    if (bienDoi && st === 'upd') note = 'Biển số khác: ' + (exKp.bienSo || '(chưa có)') + ' → ' + bien + (exKp.ngay === p.ngay && Math.abs((exKp.kl || 0) - p.kl) < 1e-9 ? ' (chỉ khác biển số)' : '');
+    return {...p, _lkKey, bien, bienGoc, bienSua: !!ov && ov !== bienGoc, st, note, warn, ex: !!exKp, exBien: exKp ? exKp.bienSo : '', bienDoi};
   });
 }
 function lkPhieuDefaults() {
   lk.sel.phieu = {};
-  lkPhieuRows().forEach(p => { lk.sel.phieu[p.soPhieu] = (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn)) || (p.st === 'upd' && p.bienDoi); });   // phiếu đã có mà bảng tính có biển khác: tích sẵn để đổi biển
+  lkPhieuRows().forEach(p => {
+    const on = (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn)) || (p.st === 'upd' && p.bienDoi);
+    lk.sel.phieu[p._lkKey] = on;
+    if (!(p.soPhieu in lk.sel.phieu)) lk.sel.phieu[p.soPhieu] = on;
+  });   // phiếu đã có mà bảng tính có biển khác: tích sẵn để đổi biển
 }
-function lkChosenPhieu() { return lkPhieuRows().filter(p => lk.sel.phieu[p.soPhieu] && (p.st === 'new' || p.st === 'upd')); }
+function lkChosenPhieu() { return lkPhieuRows().filter(p => (lk.sel.phieu[p._lkKey] ?? lk.sel.phieu[p.soPhieu]) && (p.st === 'new' || p.st === 'upd')); }
 
 function lkPreviewHtml() {
   const c = lk.cand, F = c.forests[lk.fi], T = lkTarget(), s = lk.sel;
@@ -125,8 +131,8 @@ function lkPreviewHtml() {
     '<div class="row" style="margin:6px 0"><button class="btn ghost sm" data-act="lkPcAll">Chọn mọi phiếu ghi được</button><button class="btn ghost sm" data-act="lkPcNone">Bỏ chọn tất cả</button></div>' +
     '<datalist id="lkPlates2">' + plates.map(x => '<option value="' + esc(x) + '">').join('') + '</datalist>' + 
     '<div class="wrap" style="max-height:40vh"><table><tr><th></th><th>Số phiếu</th><th>Ngày cân</th><th>Giờ cân 1</th><th>Giờ cân 2</th><th>Biển số</th><th style="text-align:right">Cân lần 1 (kg)</th><th style="text-align:right">Cân lần 2 (kg)</th><th style="text-align:right">Khối lượng (kg)</th><th style="text-align:right">Khối lượng (tấn)</th><th>Khách hàng</th><th style="text-align:right">Đơn giá (tham chiếu)</th><th style="text-align:right">Thanh toán (tham chiếu)</th><th>Trạng thái</th><th>Nguồn</th></tr>' +
-    Pf.map(p => '<tr class="' + (p.st === 'issue' || p.st === 'alias' ? 'rerr' : p.warn ? 'rwarn' : '') + '"><td><input type="checkbox" data-lkpc="' + esc(p.soPhieu) + '"' + (s.phieu[p.soPhieu] && (p.st === 'new' || p.st === 'upd') ? ' checked' : '') + (p.st === 'new' || p.st === 'upd' ? '' :
-    ' disabled') + '></td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.gioCan1 || '') + '</td><td>' + esc(p.gioCan2 || '') + '</td><td>' + (p.st === 'issue' ? esc(p.bien || p.bienRaw) : '<input class="lkOv" list="lkPlates2" size="11" data-lkov="' + esc(p.soPhieu) +
+    Pf.map(p => '<tr class="' + (p.st === 'issue' || p.st === 'alias' ? 'rerr' : p.warn ? 'rwarn' : '') + '"><td><input type="checkbox" data-lkpc="' + esc(p._lkKey) + '"' + ((s.phieu[p._lkKey] ?? s.phieu[p.soPhieu]) && (p.st === 'new' || p.st === 'upd') ? ' checked' : '') + (p.st === 'new' || p.st === 'upd' ? '' :
+    ' disabled') + '></td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.gioCan1 || '') + '</td><td>' + esc(p.gioCan2 || '') + '</td><td>' + (p.st === 'issue' ? esc(p.bien || p.bienRaw) : '<input class="lkOv" list="lkPlates2" size="11" data-lkov="' + esc(p._lkKey) +
     '" value="' + esc(p.bien || '') + '" placeholder="' + esc(p.bienRaw) + '" title="Đổi biển số xe của phiếu này trước khi đưa qua rừng" aria-label="Biển số phiếu ' + esc(p.soPhieu) + '">') + (p.bienSua ? ' <span class="pill">đã đổi từ ' + esc(p.bienGoc || p.bienRaw) + '</span>' : (p.bien &&
     !p.isPlate ? ' <span class="mut">(từ “' + esc(p.bienRaw) + '”)</span>' : '')) + '</td><td style="text-align:right">' + numTxt(p.can1) + '</td><td style="text-align:right">' + numTxt(p.can2) + '</td><td style="text-align:right">' + numTxt(p.klKg) + '</td><td style="text-align:right">' +
     numTxt(p.kl) + '</td><td>' + esc(p.khachHang || '') + '</td><td style="text-align:right">' + numTxt(p.donGia) + '</td><td style="text-align:right">' + numTxt(p.thanhToan) + '</td><td>' +
@@ -137,7 +143,7 @@ function lkPreviewHtml() {
     (c.owner.ref.length + F.ref.length ? '<h3>Thông tin tham chiếu (chưa có ô tương ứng trong hồ sơ)</h3><div class="wrap"><table><tr><th>Trường</th><th>Giá trị</th><th>Nguồn</th></tr>' + c.owner.ref.concat(F.ref).map(x => '<tr><td>' + esc(x.label) + '</td><td>' + numTxt(x.value) +
     '</td><td class="mut">' + srcTxt(x.src) + '</td></tr>').join('') + '</table></div>' +
       '<label style="flex-direction:row;color:var(--ink)"><input type="checkbox" data-lkref' + (s.ref ? ' checked' : '') + '> Lưu phần tham chiếu này vào hồ sơ rừng để đối chiếu</label>' : '') +
-    '<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" data-act="lkBackCand">Quay lại</button><button class="btn" data-act="lkApply">Lưu vào hồ sơ</button></div>';
+    '<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" data-act="lkBackCand">Quay lại</button><button class="btn" data-act="lkApply">Ghi vào lô (phiếu cân vào bản nháp)</button></div>';
 }
 
 function lkRender() {

@@ -76,7 +76,7 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
   const destSize = fs.statSync(path.join(dd, 'hakqn.sqlite')).size;
   const udY = mk('udY'), bk = mk('saoluuY');
   ({app, w} = await open(udY, {HAKQN_PICK_DIR: bk})); await sideSan(w); await addOwner(w, 'NGUON-1', 'CHỦ CỦA NGUỒN');
-  await settingsView(w); await w.click('[data-act=setBackup]'); await w.waitForSelector('#setMsg'); await app.close();
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.waitForSelector('#autoBk'); await w.click('[data-act=setBackup]'); await w.waitForSelector('#setMsg'); await app.close();
   for (const stepName of ['after-tmp', 'after-replace', 'after-open', 'commit']) {
     ({app, w} = await open(udY, {HAKQN_PICK_DIR: dd, HAKQN_PICK_CHOICE: 'overwrite', HAKQN_TEST_FAIL_STEP: stepName}));
     await sideSan(w); await settingsView(w);
@@ -122,7 +122,7 @@ const wait = (w, re, ms = 25000) => w.waitForFunction(r => new RegExp(r).test((d
   /* ===== 5. Sao lưu toàn bộ: bấm hai lần, lỗi một file, hết dung lượng ===== */
   const udB = mk('udB'), bkB = mk('saoluuB');
   ({app, w} = await open(udB, {HAKQN_PICK_DIR: bkB})); await sideSan(w); await addOwner(w, 'SL', 'CHỦ SAO LƯU');
-  await settingsView(w); await w.click('[data-act=setBackup]'); await w.waitForSelector('#setMsg');
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.waitForSelector('#autoBk'); await w.click('[data-act=setBackup]'); await w.waitForSelector('#setMsg');
   const both = await w.evaluate(() => Promise.all([window.hak.backupTo(), window.hak.backupTo()]));
   ok('bấm hai lần cùng lúc: một lần chạy, lần kia bị từ chối “đang sao lưu”', both.filter(r => r.ok).length === 1 && both.some(r => !r.ok && /Đang sao lưu/.test(r.error)), JSON.stringify(both).slice(0, 300));
   const r2 = await w.evaluate(() => window.hak.backupTo()), r3 = await w.evaluate(() => window.hak.backupTo());

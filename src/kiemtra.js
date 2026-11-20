@@ -29,7 +29,7 @@
     'dinh-muc-nhan-cong': {ten: 'Định mức nhân công', bieuMau: ['06']}, 'dinh-muc-ngay-sai': {ten: 'Định mức nhân công: ngày bắt đầu sai', bieuMau: ['06']}, 'uy-quyen-sau-hd': {ten: 'Ủy quyền sau hợp đồng', bieuMau: ['20', '01']},
     'so-vb-trung': {ten: 'Số văn bản trùng', bieuMau: []},
     'so-vb-doi-xe-trung': {ten: 'Số văn bản đội xe trùng', bieuMau: VAN_CHUYEN}, 'so-vb-doi-xe-chung': {ten: 'Số văn bản đội xe dùng chung', bieuMau: []},
-    'cheo-pc-trung': {ten: 'Chéo lô: phiếu cân trùng', bieuMau: PC4, pc: true}, 'cheo-xe-gio': {ten: 'Chéo lô: xe trùng giờ cân', bieuMau: []}, 'cheo-nguoi-hai-lo': {ten: 'Chéo lô: người ở hai lô', bieuMau: []},
+    'cheo-pc-trung': {ten: 'Chéo lô: phiếu cân trùng', bieuMau: PC4, pc: true}, 'cheo-pc-cung-so': {ten: 'Chéo lô: phiếu cân cùng số và ngày ở lô khác', bieuMau: []}, 'cheo-xe-gio': {ten: 'Chéo lô: xe trùng giờ cân', bieuMau: []}, 'cheo-nguoi-hai-lo': {ten: 'Chéo lô: người ở hai lô', bieuMau: []},
     'cheo-lech-san-luong': {ten: 'Chéo lô: lệch sản lượng dự kiến', bieuMau: []},
     'nl-ngay-sai': {ten: 'Ngày nhập sai', bieuMau: TAT_CA}, 'nl-khoang-dao': {ten: 'Khoảng ngày bị đảo', bieuMau: TAT_CA}, 'nl-mot-ngay-hai-noi': {ten: 'Một ngày nhập ở hai nơi', bieuMau: TAT_CA},
     'nl-nam-so': {ten: 'Năm trong số khác năm của ngày', bieuMau: TAT_CA}, 'nl-thu-tu-ngay': {ten: 'Thứ tự ngày', bieuMau: TAT_CA}, 'nl-pc-ngoai-tg': {ten: 'Phiếu cân ngoài thời gian', bieuMau: PC4, pc: true},

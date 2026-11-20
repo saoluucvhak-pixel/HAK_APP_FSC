@@ -345,8 +345,8 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 
 ## Cài đặt: Hệ thống, Google Sheets, Công ty, Hiển thị số
 Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
-- **Hệ thống**: thư mục dữ liệu, thư mục sao lưu, nhắc sao lưu.
-- **Sao lưu và khôi phục**: kho sao lưu (mục 10).
+- **Hệ thống**: thư mục dữ liệu.
+- **Sao lưu và khôi phục**: bốn thao tác (Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô), thư mục và tự sao lưu SQLite (gộp thư mục thứ hai, chu kỳ, số bản giữ, nút Sao lưu ngay), thư mục sao lưu JSON, nhắc sao lưu và kho sao lưu (mục 10).
 - **Google Sheets**: **địa chỉ bảng tính** dùng cho màn Tra cứu (chỉ đọc). Màn Tra cứu không còn ô nhập địa chỉ; chỉ ghi địa chỉ đang dùng và nút “Đổi trong Cài đặt”.
 - **Công ty**: thông tin **Công ty mua hàng** (một hồ sơ cho cả phần mềm, các địa chỉ giao hàng). Nút Công ty mua hàng không còn ở menu ngang.
 - **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
@@ -358,7 +358,7 @@ Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
 - **Cảnh báo lệch thời gian khai thác**: so ngày kết thúc **thực tế** (ô **đến ngày**; chưa có thì lấy **ngày cân cuối cùng** của phiếu cân) với dự kiến, tính số ngày khai thác không kể Chủ nhật. Lệch quá **20% thời gian dự kiến (tối thiểu 3 ngày)**, dài hơn hay ngắn hơn, thì hiện cảnh báo đỏ ngay dưới ô ở Thông tin rừng, thêm mục **Thời gian khai thác** ở **Kiểm tra trước khi xuất** (cần đối chiếu, không chặn xuất hồ sơ) và mục cảnh báo ở **Tổng quan**. Khi cảnh báo, kiểm tra lại diện tích, định mức ngày/ha, số đội hoặc ngày kết thúc. Lô nhiều đội: nếu chỉ có một đội đang làm thì thời gian thực tế sẽ dài hơn dự kiến và bị cảnh báo; đó là đúng, hãy bổ sung đội hoặc bỏ qua cảnh báo.
 - **Mặc định cho rừng**: rừng lấy định mức có hiệu lực theo **ngày bắt đầu khai thác** của rừng (chưa có ngày thì dùng bản mới nhất). Ô “Định mức (tấn/ha)” ở Thông tin rừng để trống là dùng mặc định (gợi ý ngay trong ô); **tự điền số** thì rừng dùng số riêng; nút **Dùng mặc định** xóa số riêng. Sản lượng dự kiến tự tính theo định mức đang dùng.
 - **Từ ngày / đến ngày**: nút **Lấy ngày cân nhỏ nhất** và **Lấy ngày cân lớn nhất** (từ phiếu cân của rừng) điền vào ô; vẫn tự điền hoặc sửa được.
-- **Khối lượng thực tế**: nút **Lấy tổng từ phiếu cân** điền tổng khối lượng phiếu cân; vẫn tự điền số. Các nút chỉ điền vào ô, bấm **Lưu thông tin rừng** để ghi nhận.
+- **Khối lượng thực tế**: tự động lấy tổng khối lượng phiếu cân của lô. Các nút điền nhanh chỉ điền vào ô, bấm **Lưu dữ liệu vào lô (hoặc Enter)** để ghi nhận.
 
 ## Cập nhật biển số xe từ bảng tính tra cứu, và báo cáo theo lô
 - **Cập nhật biển số xe**: khi mở bảng tra cứu và chọn **Điền vào rừng đang mở**, nếu phiếu cân đã có trong hồ sơ nhưng bảng tính có **biển số khác**, màn hình xem trước hiện khung **“Biển số xe khác với hồ sơ”** (số phiếu, biển cũ → biển mới) và phiếu đó được **tích sẵn** trong bảng; giữ ô **Chỉ đổi biển số** rồi bấm **Lưu vào hồ sơ**. Cách này chỉ đổi biển số, **giữ nguyên** ngày cân, khối lượng, nơi giao. Cách khác: chọn phiếu (trạng thái “cập nhật”) rồi **Lưu vào hồ sơ** để cập nhật cả phiếu; biển số đổi cũng được ghi lại.

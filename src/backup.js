@@ -72,12 +72,24 @@ async function backupAll(o) {
     const fp = DM.fingerprint(o.db);
     await o.db.backup(sqlTmp);
     if (hooks.afterSqliteCopy) hooks.afterSqliteCopy(sqlTmp);
+    const fpAfter = DM.fingerprint(o.db);
     const bi = DM.inspect(sqlTmp, undefined, {cleanSidecars: true});
     if (!bi.ok) throw new Error('file SQLite sao lưu không qua kiểm tra (' + bi.error + ')');
-    if (JSON.stringify(bi.counts) !== JSON.stringify(fp.counts) || bi.version !== fp.version) throw new Error('file SQLite sao lưu không khớp số bản ghi của dữ liệu gốc');
+    const khopTruoc = JSON.stringify(bi.counts) === JSON.stringify(fp.counts) && bi.version === fp.version;
+    const khopSau = JSON.stringify(bi.counts) === JSON.stringify(fpAfter.counts) && bi.version === fpAfter.version;
+    if (!khopTruoc && !khopSau) throw new Error('file SQLite sao lưu không khớp số bản ghi của dữ liệu gốc');
     if (io.existsSync(sqlFile)) throw new Error('file đã tồn tại (không ghi đè)');
     io.renameSync(sqlTmp, sqlFile);
     res.sqlite = {ok: true, file: sqlFile, error: ''};
+    /* lô 6 (T-08): nếu có thao tác lưu chen vào giữa lúc db.backup đang chạy, đồng bộ lại file .json từ chính bản .sqlite vừa sao lưu để hai file cùng một mốc */
+    if (!khopTruoc && khopSau && res.json.ok) {
+      try {
+        const KSL = require('./khosaoluu'), snap = KSL.docBanSqlite(sqlFile);
+        const snapData = Object.assign({}, snap.data, snap.goi && snap.goi.length ? {goiLichSu: snap.goi} : {});
+        try { io.unlinkSync(jsonFile); } catch (_) {}
+        writeFileVerified(jsonFile, JSON.stringify(snapData, null, 2), io);
+      } catch (_) { /* giữ nguyên bản JSON đã ghi */ }
+    }
   } catch (e) {
     for (const x of ['', '-wal', '-shm', '-journal']) { try { io.unlinkSync(sqlTmp + x); } catch (er) { /* không có */ } }
     res.sqlite = {ok: false, file: sqlFile, error: Settings.describeError(e, sqlFile)};

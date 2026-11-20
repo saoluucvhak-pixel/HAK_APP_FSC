@@ -12,10 +12,11 @@ const HAKReports = (function () {
   const num = v => typeof v === 'number' && isFinite(v) ? v : 0;
   const round = (v, d) => { const k = Math.pow(10, d); return Math.round(v * k + (v < 0 ? -1e-9 : 1e-9)) / k; };
   const group = s => String(s).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  function fmtNum(v, d) { // 1.234,567 (kiểu Việt Nam)
+  function fmtNum(v, d) { // 1.234,567 (kiểu Việt Nam); chuẩn hóa -0 (lô 11d, T-04)
     if (typeof v !== 'number' || !isFinite(v)) return '';
     const [i, f] = Math.abs(v).toFixed(d).split('.');
-    return (v < 0 ? '-' : '') + group(i) + (f ? ',' + f : '');
+    const isZero = Number(i) === 0 && (!f || Number(f) === 0);
+    return (v < 0 && !isZero ? '-' : '') + group(i) + (f ? ',' + f : '');
   }
   function fmtCell(v, f) {
     if (v == null || v === '') return '';
@@ -37,19 +38,21 @@ const HAKReports = (function () {
   }
   const badNote = bad => bad.length ? bad.length + ' phiếu cân có ngày không hợp lệ bị loại khỏi tổng (' + bad.slice(0, 6).map(b => b.soPhieu + ': ' + b.ly).join('; ') + (bad.length > 6 ? '; …' : '') + '). Dữ liệu phiếu được giữ nguyên; sửa ngày ở tab Vận chuyển để tính lại.' : '';
   const rangeNote = o => D.range(o.from, o.to).problem;
-  const kt = p => Math.round(num(p.kl) * 1000) / 1000;   // khối lượng một phiếu làm tròn đến kg (cùng quy tắc với biểu mẫu), để mọi tổng khớp nhau
+  const kt = p => { const v = num(p && p.kl); return v > 0 ? Math.round(v * 1000) / 1000 : 0; };   // khối lượng một phiếu làm tròn đến kg (chặn kl ≤ 0), để mọi tổng khớp nhau
   const sumKl = list => round(list.reduce((s, p) => s + kt(p), 0), 3);
   const yieldOf = r => (typeof r.dienTich === 'number' && typeof r.dinhMuc === 'number') ? round(r.dienTich * r.dinhMuc, 3) : null;
   const byName = (a, b) => String(a).localeCompare(String(b), 'vi');
   const nameOf = r => r.tenRung || r.maRung || '(chưa đặt tên)';
 
   /* Phiếu trùng số (giữa các rừng hoặc trong một rừng): KHÔNG tự loại khỏi tổng, chỉ đánh dấu và báo rõ cách tính. */
+  const soKey = v => String(v || '').trim().toUpperCase().replace(/\s+/g, '');
   function dupInfo(recs, o) {
     const seen = {}, dupKeys = {};
-    recs.forEach(r => pcOf(r, o).forEach(p => { const k = String(p.soPhieu || '').trim().toUpperCase(); if (!k) return; seen[k] = (seen[k] || 0) + 1; if (seen[k] > 1) dupKeys[k] = true; }));
+    const keyOf = p => o && o.byDate ? (soKey(p && p.soPhieu) && D.key(p && p.ngay) ? soKey(p.soPhieu) + '|' + D.key(p.ngay) : '') : soKey(p && p.soPhieu);
+    recs.forEach(r => pcOf(r, o).forEach(p => { const k = keyOf(p); if (!k) return; seen[k] = (seen[k] || 0) + 1; if (seen[k] > 1) dupKeys[k] = soKey(p.soPhieu); }));
     let extra = 0, tons = 0; const first = {};
-    recs.forEach(r => pcOf(r, o).forEach(p => { const k = String(p.soPhieu || '').trim().toUpperCase(); if (!dupKeys[k]) return; if (first[k]) { extra++; tons += kt(p); } else first[k] = true; }));
-    return {keys: Object.keys(dupKeys), extra, tons: round(tons, 3)};
+    recs.forEach(r => pcOf(r, o).forEach(p => { const k = keyOf(p); if (!dupKeys[k]) return; if (first[k]) { extra++; tons += kt(p); } else first[k] = true; }));
+    return {keys: [...new Set(Object.values(dupKeys))], extra, tons: round(tons, 3)};
   }
   const dupNote = d => 'Cách tính: phiếu trùng số vẫn được cộng vào tổng (hệ thống không tự xóa phiếu). Có ' + d.extra + ' phiếu trùng, tương ứng ' + fmtNum(d.tons, 3) + ' tấn; nếu xác minh là nhập trùng thì tổng thực tế giảm tương ứng.';
 
@@ -318,8 +321,11 @@ const HAKReports = (function () {
     sorted.forEach(r => {
       const L = r.doiList || [], pcs = pcOf(r, o), ids = new Set(L.map(d => d.id));
       L.forEach(d => {
-        const mine = pcs.filter(p => p.doiId === d.id), tan = sumKl(mine), dg = typeof d.tienTrenTan === 'number' ? Math.round(d.tienTrenTan) : '';
-        det.push([det.length + 1, r.maRung, r.chuRung, d.ten, d.tt || '', d.nguoi, mine.length, tan, dg, dg === '' ? '' : Math.round(tan * d.tienTrenTan), d.cachTinh || '']);
+        const mine = pcs.filter(p => p.doiId === d.id);
+        const tan = (!o.from && !o.to && typeof d.khoiLuong === 'number') ? round(d.khoiLuong, 3) : sumKl(mine);
+        const dg = typeof d.tienTrenTan === 'number' ? Math.round(d.tienTrenTan) : '';
+        const tien = (!o.from && !o.to && typeof d.thanhTien === 'number' && dg !== '') ? Math.round(d.thanhTien) : (dg === '' ? '' : Math.round(tan * d.tienTrenTan));
+        det.push([det.length + 1, r.maRung, r.chuRung, d.ten, d.tt || '', d.nguoi, mine.length, tan, dg, tien, d.cachTinh || '']);
       });
       const lac = pcs.filter(p => !ids.has(p.doiId)); if (lac.length) chuaGan.push([chuaGan.length + 1, r.maRung, r.chuRung, lac.length, sumKl(lac)]);
     });
@@ -332,7 +338,7 @@ const HAKReports = (function () {
     return {id: 'sanluongdoi', title: 'BÁO CÁO SẢN LƯỢNG THEO ĐỘI KHAI THÁC', orient: 'landscape', period: periodText(o.from, o.to),
       kpis: [{label: 'Số đội khai thác', value: det.length, f: 'n0'}, {label: 'Số phiếu cân đã gán đội', value: tPc, f: 'n0'}, {label: 'Khối lượng (tấn)', value: tTan, f: 'n3'}, {label: 'Thành tiền công (đồng)', value: tTien, f: 'n0'}],
       sections: [
-        {heading: 'I. Sản lượng theo đội', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 9}, {h: 'Chủ rừng', w: 16}, {h: 'Đội', w: 12}, {h: 'Tổ trưởng', w: 14}, {h: 'Số người', w: 7, f: 'n0'}, {h: 'Số phiếu', w: 8, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 10, f: 'n3'}, {h: 'Đơn giá (đ/tấn)', w: 10, f: 'n0'}, {h: 'Thành tiền (đồng)', w: 12, f: 'n0'}, {h: 'Cách tính của đội', w: 10}],
+        {heading: 'I. Sản lượng theo đội', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 12}, {h: 'Chủ rừng', w: 16}, {h: 'Đội', w: 12}, {h: 'Tổ trưởng', w: 14}, {h: 'Số người', w: 7, f: 'n0'}, {h: 'Số phiếu', w: 8, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 10, f: 'n3'}, {h: 'Đơn giá (đ/tấn)', w: 10, f: 'n0'}, {h: 'Thành tiền (đồng)', w: 12, f: 'n0'}, {h: 'Cách tính của đội', w: 10}],
           rows: det, foot: ['', 'TỔNG CỘNG', '', '', '', '', tPc, tTan, '', tTien, '']},
         ...(chuaGan.length ? [{heading: 'II. Phiếu cân chưa gán đội', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 14}, {h: 'Chủ rừng', w: 26}, {h: 'Số phiếu', w: 10, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 14, f: 'n3'}], rows: chuaGan}] : [])],
       notes};
@@ -483,7 +489,7 @@ const HAKReports = (function () {
     m.sections.forEach(s => {
       a.push([s.heading]); const head = a.length; a.push(s.cols.map(c => c.h));
       s.rows.forEach((r, i) => a.push(r.map((v, k) => s.cols[k] && s.cols[k].f === 'date' ? toDate(v) : safeText(v))));
-      tables.push({head, first: head + 1, last: head + s.rows.length, cols: s.cols.length, levels: s.levels || null});
+      tables.push({head, first: head + 1, last: head + s.rows.length, foot: s.foot ? head + s.rows.length + 1 : null, cols: s.cols.length, colDefs: s.cols, levels: s.levels || null});
       if (s.foot) a.push(s.foot.map(safeText));
       a.push([]);
     });
@@ -493,6 +499,56 @@ const HAKReports = (function () {
     return a;
   }
 
-  return {REPORTS, sanLuongDoi, vanChuyenDoiXe, chaCon, safeText, finalize, dateKey, fmtNum, fmtCell, toAoa, sanLuong, soPhieuCan, tienDo, dieuHanh, inRange, periodText};
+  const NUM_FMT = {n0: '#,##0', n1: '#,##0.0', n2: '#,##0.00', n3: '#,##0.000', pct: '0.0"%"'};
+  /* Dựng trang tính Excel có định dạng số (z), độ rộng cột theo tỉ lệ col.w (cột STT hẹp hơn cột chữ) và bộ lọc tự động (lô 13, B-09) */
+  function toSheet(m, meta, XLSX) {
+    const aoa = toAoa(m, meta), ws = XLSX.utils.aoa_to_sheet(aoa, {cellDates: true});
+    const widest = Math.max(1, ...m.sections.map(s => s.cols.length));
+    const s0 = m.sections[0] || {cols: []};
+    ws['!cols'] = Array.from({length: widest}, (_, i) => {
+      const c = s0.cols[i];
+      if (!c) return {wch: 18};
+      if (i === 0 && (c.h === 'STT' || (c.w && c.w <= 6))) return {wch: Math.max(6, Math.round((c.w || 5) * 1.3))};
+      return {wch: Math.max(12, Math.min(48, Math.round((c.w || 12) * 1.4)))};
+    });
+    ws['!merges'] = [0, 1, 2, 3, 4].map(r => ({s: {r, c: 0}, e: {r, c: Math.max(widest - 1, 1)}}));
+    Object.keys(ws).forEach(k => { if (k[0] !== '!' && ws[k].t === 'd') ws[k].z = 'dd/mm/yyyy'; });
+    if (m.kpis && m.kpis.length) {
+      m.kpis.forEach((k, i) => {
+        const cell = ws[XLSX.utils.encode_cell({r: 7 + i, c: 1})];
+        if (cell && cell.t === 'n' && NUM_FMT[k.f]) cell.z = NUM_FMT[k.f];
+      });
+    }
+    (aoa.tables || []).forEach(tb => {
+      const endR = tb.foot != null ? tb.foot : tb.last;
+      for (let r = tb.first; r <= endR; r++) {
+        (tb.colDefs || []).forEach((col, c) => {
+          const cell = ws[XLSX.utils.encode_cell({r, c})];
+          if (cell && cell.t === 'n' && col && NUM_FMT[col.f]) cell.z = NUM_FMT[col.f];
+        });
+      }
+    });
+    const t0 = aoa.tables && aoa.tables[0];
+    if (t0 && t0.last >= t0.first) ws['!autofilter'] = {ref: XLSX.utils.encode_range({s: {r: t0.head, c: 0}, e: {r: t0.last, c: t0.cols - 1}})};
+    if (t0 && t0.levels) { ws['!rows'] = []; t0.levels.forEach((lv, i) => { ws['!rows'][t0.first + i] = {level: lv}; }); }
+    return ws;
+  }
+
+  /* Dựng HTML in báo cáo đầy đủ mọi dòng (không cắt 200 dòng xem trước, có thead lặp mỗi trang; lô 16, B-10) */
+  function toPrintHtml(m, meta) {
+    meta = meta || {};
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const secs = (m.sections || []).map(s => '<h4 style="margin:12px 0 4px">' + esc(s.heading) + ' <span class="mut">(' + s.rows.length + ' dòng)</span></h4>' +
+      '<table><thead><tr>' + s.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr></thead><tbody>' +
+      s.rows.map((r, ri) => '<tr' + (s.levels && s.levels[ri] === 0 ? ' style="font-weight:700"' : '') + '>' + r.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '">' + esc(fmtCell(v, s.cols[i].f)) + '</td>').join('') + '</tr>').join('') +
+      (s.foot ? '<tr>' + s.foot.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '"><b>' + esc(fmtCell(v, s.cols[i].f)) + '</b></td>').join('') + '</tr>' : '') +
+      '</tbody></table>').join('');
+    return '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo</title><style>body{font:13px/1.45 "Segoe UI",Arial,sans-serif;color:#111;margin:18px}h3{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:3px 5px;text-align:left}thead{display:table-header-group}thead th{background:#eee}.kpi{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.kpi div{font-size:12px}.kpi b{display:block;font-size:15px}.mut{color:#555}tr{break-inside:avoid}</style></head><body>' +
+      '<h3>' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + (meta.scope ? ' · ' + meta.scope : '')) + (m.unit ? '<br>' + esc(m.unit) : '') + '</p>' +
+      '<div class="kpi">' + (m.kpis || []).map(k => '<div><b>' + esc(fmtCell(k.value, k.f)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' +
+      secs + ((m.notes || []).length ? '<p class="mut">' + m.notes.map(esc).join('<br>') + '</p>' : '') + '</body></html>';
+  }
+
+  return {REPORTS, sanLuongDoi, vanChuyenDoiXe, chaCon, safeText, finalize, dateKey, fmtNum, fmtCell, toAoa, toSheet, toPrintHtml, sanLuong, soPhieuCan, tienDo, dieuHanh, inRange, periodText};
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = HAKReports;

@@ -149,3 +149,39 @@ test('hai báo cáo cước cùng cộng số đã làm tròn từng xe như BM-
   assert.strictEqual(detail.kpis.find(k => k.label === 'Cước (đồng)').value, 4);
   assert.strictEqual(summary.sections[0].rows[0][18], 4);
 });
+
+test('lô 5a (T-13, T-14): sản lượng theo đội dùng khối lượng phân bổ của đội (khoiLuong, thanhTien) như BM-08; kt chặn kl ≤ 0', () => {
+  const rec = {maRung: 'R1', chuRung: 'NGUYỄN VĂN AN', pc: [
+    {doiId: 'd1', ngay: '05/10/2026', bienSo: '92C-1', soPhieu: 'A1', kl: 15},
+    {doiId: 'd1', ngay: '06/10/2026', bienSo: '92C-1', soPhieu: 'A2', kl: 15},
+    {doiId: 'd1', ngay: '07/10/2026', bienSo: '92C-1', soPhieu: 'A3', kl: -5}],
+    doiList: [
+      {id: 'd1', ten: 'Đội 1', tt: 'TRẦN MỘT', nguoi: 3, khoiLuong: 15, thanhTien: 5650000, tienTrenTan: 5650000 / 15, cachTinh: 'đồng/tấn'},
+      {id: 'd2', ten: 'Đội 2', tt: 'NGUYỄN HAI', nguoi: 3, khoiLuong: 15, thanhTien: 6300000, tienTrenTan: 6300000 / 15, cachTinh: 'đồng/tấn'}]};
+  const m = R.REPORTS.find(x => x.id === 'sanluongdoi').build([rec], {from: '', to: '', today: '15/11/2026'});
+  const r = m.sections[0].rows;
+  assert.strictEqual(r[0][7], 15, 'Đội 1 nhận 15 tấn theo phân bổ');
+  assert.strictEqual(r[1][7], 15, 'Đội 2 nhận 15 tấn theo phân bổ (không phải 0)');
+  assert.strictEqual(r[0][9], 5650000);
+  assert.strictEqual(r[1][9], 6300000);
+  assert.strictEqual(R.sanLuong([rec], {}).sections[0].rows[0][7], 30, 'phiếu kl = -5 bị chặn, tổng chỉ còn 30');
+});
+
+test('lô 13 & lô 16 (B-09, B-10, B-11, B-12): toSheet định dạng số (#,##0 và #,##0.000), cột STT hẹp hơn cột chữ; toPrintHtml in đủ 500 dòng không cắt 200', () => {
+  const XLSX = require('xlsx');
+  const rec = {maRung: 'R1', chuRung: 'NGUYỄN VĂN AN', pc: [{doiId: 'd1', ngay: '05/10/2026', bienSo: '92C-1', soPhieu: 'A1', kl: 2931.6}],
+    doiList: [{id: 'd1', ten: 'Đội 1', tt: 'TRẦN MỘT', nguoi: 3, khoiLuong: 2931.6, thanhTien: 30133334, tienTrenTan: 30133334 / 2931.6, cachTinh: 'đồng/tấn'}]};
+  const m = R.REPORTS.find(x => x.id === 'sanluongdoi').build([rec], {from: '', to: '', today: '15/11/2026'});
+  const ws = R.toSheet(m, {org: 'HAK GROUP', today: '15/11/2026'}, XLSX);
+  assert.ok(ws['!cols'][0].wch < ws['!cols'][2].wch, 'cột STT hẹp hơn cột Chủ rừng');
+  const zSet = new Set(Object.keys(ws).filter(k => k[0] !== '!' && ws[k].z).map(k => ws[k].z));
+  assert.ok(zSet.has('#,##0') && zSet.has('#,##0.000'), 'ô tiền có #,##0 và ô tấn có #,##0.000');
+  // B-10: báo cáo 500 dòng → toPrintHtml có đủ 500 dòng <tr> dữ liệu, có thead lặp, không còn câu "Xem trước 200 dòng đầu"
+  const big = {maRung: 'R1', chuRung: 'AN', pc: Array.from({length: 500}, (_, i) => ({ngay: '05/10/2026', bienSo: '92C-1', soPhieu: 'P' + (i + 1), kl: 1}))};
+  const mBig = R.soPhieuCan([big], {});
+  const html = R.toPrintHtml(mBig, {});
+  assert.ok(html.includes('<thead>') && !html.includes('Xem trước 200 dòng đầu'));
+  assert.ok(html.includes('P500'), 'bản in có đủ tới dòng thứ 500');
+});
+
+

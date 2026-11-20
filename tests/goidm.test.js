@@ -65,3 +65,43 @@ test('gói lô: sao lưu mang danh mục, xem trước liệt kê mục thêm / 
   const cu = JSON.parse(JSON.stringify(pkg)); delete cu.dungChung.danhMuc;   // gói bản cũ
   const r2 = LR.applyLot({rs: {}}, cu, 'giu'); assert.ok(r2.doi && !r2.next.dmDoiTuong);
 });
+
+test('Lô 3c (T-07): gói có người trùng CCCD khác tên không tạo đối tượng 0 người và xóa nguoiId treo; lô đã chốt giữ nguyên byte và không trỏ nhầm khi ID gốc bị chiếm', () => {
+  const DT = require('../src/doituong');
+  const g = {
+    viTri: [],
+    xe: [],
+    doiTuong: [{id: 'dt1', ma: 'DT0001', ten: 'TRẦN SƠN', loai: 'thenhan', nguoi: [{id: 'ng1', hoTen: 'TRẦN SƠN', cccd: '049085000001'}]}]
+  };
+  const mayC = {
+    dmViTri: [],
+    dmXe: [],
+    dmDoiTuong: [{id: 'dt1', ma: 'DT0001', ten: 'NGUYỄN KHÁC', loai: 'thenhan', nguoi: [{id: 'ng1', hoTen: 'NGUYỄN KHÁC', cccd: '049085000001'}]}]
+  };
+  const n = GD.noi(mayC, g);
+  assert.equal(n.dm.dmDoiTuong.length, 1, 'không tạo đối tượng thứ hai rỗng 0 người');
+  assert.ok(n.dm.dmDoiTuong.every(o => DT.kiem(n.dm.dmDoiTuong, o).length === 0), 'mọi đối tượng trong danh mục đều hợp lệ qua DT.kiem');
+
+  // Lô chưa khóa: nguoiId không nối được phải được xóa để không trỏ nhầm sang ng1 của máy đích
+  const f = loA();
+  const unmapped = {ng: new Set(['ng1'])};
+  GD.doiIdLo(f, n.doi, unmapped);
+  assert.equal(f.nc[0].nguoiId, '', 'xóa nguoiId treo thay vì giữ ng1 trỏ nhầm sang NGUYỄN KHÁC');
+
+  // Lô đã chốt mà ID gốc ng1 bị người khác (CCCD khác) chiếm trên máy đích: băm lô chốt giữ nguyên, người bị trùng ID vào Cần đối chiếu chứ không cấp ng2
+  const fChot = loA();
+  V.chot(fChot, 'KT', '2026-11-01T00:00:00Z', []);
+  const bytesBefore = JSON.stringify(fChot);
+  const mayD = {
+    rs: {},
+    dmViTri: [{id: 'vt1', ten: 'Tổ trưởng'}],
+    dmXe: [{id: 'xe1', bks: '92C-12345'}],
+    dmDoiTuong: [{id: 'dt1', ma: 'DT0001', ten: 'NGƯỜI CHIẾM ID', loai: 'thenhan', nguoi: [{id: 'ng1', hoTen: 'NGƯỜI CHIẾM ID', cccd: '049099999999'}]}]
+  };
+  const dbNguon = Object.assign(dmMayA(), {rs: {o1: {id: 'o1', info: {ten: 'CHỦ A', cccd: '049000000001', ma: 'CR-1'}, forests: {f1: fChot}}}});
+  const pkgChot = LR.exportLot(dbNguon, 'o1', 'f1', {now: '2026-11-16T00:00:00.000Z'});
+  const rChot = LR.applyLot(mayD, pkgChot, 'giu');
+  const fAfter = rChot.next.rs[rChot.ownerId].forests[rChot.forestId];
+  assert.equal(JSON.stringify(fAfter), bytesBefore, 'lô đã chốt giữ nguyên từng byte');
+  assert.ok(rChot.next.canDoiChieu && rChot.next.canDoiChieu.some(c => c.ref === 'ng1' && /lô chốt/i.test(c.lyDo)), 'ghi nhận Cần đối chiếu khi ID gốc trong lô chốt bị người khác chiếm');
+});

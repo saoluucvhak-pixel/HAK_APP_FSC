@@ -6,7 +6,7 @@ const fs = require('fs'), path = require('path');
 const K = require('../src/docphieucan');
 const Money = require('../src/money');
 const trim = s => String(s == null ? '' : s).trim();
-const toDec = v => v == null || trim(v) === '' ? null : (typeof v === 'number' ? v : (isFinite(Number(trim(v).replace(',', '.'))) ? Number(trim(v).replace(',', '.')) : 'x'));
+const {toDec} = require('../src/so');
 const mk = () => K.create({
   trim, pad2: n => (n < 10 ? '0' : '') + n, numSwap: s => s, fmtRaw: n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
   toDec, normDate: s => trim(s), HAKMoney: Money

@@ -47,6 +47,16 @@ function prune(dir, keep, chuKy) {
   list(dir, chuKy).slice(keep).forEach(b => { try { fs.unlinkSync(b.file); removed.push(b.name); } catch (e) { /* để lần sau */ } });
   return removed;
 }
+/* lô 6 (T-10): dọn các file tạm *.tmp-<pid> mồ côi cũ hơn 1 ngày trong thư mục sao lưu */
+function cleanStaleTmp(dir, nowMs) {
+  let names = []; try { names = fs.readdirSync(dir); } catch (e) { return 0; }
+  let n = 0; const cut = (nowMs || Date.now()) - 86400000;
+  names.filter(x => /\.tmp-\d+(-wal|-shm|-journal)?$/.test(x)).forEach(x => {
+    const p = path.join(dir, x);
+    try { if (fs.statSync(p).mtimeMs < cut) { fs.unlinkSync(p); n++; } } catch (e) { /* bỏ qua */ }
+  });
+  return n;
+}
 
 /* store: Store (src/store.js). opts: {dir (thư mục sao lưu, mặc định store.backupDir), keep (số bản giữ, 1..60), now: () => Date}
  * Trả {ok, skipped?, reason?, file?, removed[], error?} — không ném lỗi (khởi động ứng dụng không được hỏng vì sao lưu). */
@@ -54,7 +64,8 @@ async function daily(store, opts = {}) { return tuDong(store, Object.assign({}, 
 /* opts.chuKy: 'ngay' | 'tuan' | '2gio' (phiếu #13a). Cùng quy tắc như hằng ngày: đã có bản của khoảng hiện tại thì bỏ qua, trừ khi refresh (dữ liệu đã đổi). */
 async function tuDong(store, opts = {}) {
   const keep = Math.max(1, Math.min(60, parseInt(opts.keep, 10) || 7)), chuKy = CHU_KY[opts.chuKy] ? opts.chuKy : 'ngay', k = ky(chuKy);
-  const dir = opts.dir || store.backupDir, day = k.khoa((opts.now || (() => new Date()))());
+  const dir = opts.dir || store.backupDir, nowDate = (opts.now || (() => new Date()))(), day = k.khoa(nowDate);
+  cleanStaleTmp(dir, nowDate.getTime());
   const out = path.join(dir, k.ten(day)), tmp = out + '.tmp-' + process.pid;
   try {
     if (!store || !store.db || store.file === ':memory:') return {ok: true, skipped: true, reason: 'memory', removed: []};
@@ -88,4 +99,4 @@ function copyTo(file, dir2, keep, opts = {}) {
   } catch (e) { return {ok: false, error: e.message, removed: []}; }
 }
 
-module.exports = {daily, tuDong, list, prune, copyTo, dayOf, tuanISO, CHU_KY, PREFIX};
+module.exports = {daily, tuDong, list, prune, cleanStaleTmp, copyTo, dayOf, tuanISO, CHU_KY, PREFIX};

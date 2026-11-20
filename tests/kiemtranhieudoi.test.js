@@ -78,3 +78,57 @@ test('định dạng số công và tấn theo kiểu Việt Nam', () => {
   const api = mk();
   assert.strictEqual(api.fmtCong(12.5), '12,5'); assert.strictEqual(api.fmtTan(2.84), '2,84'); assert.strictEqual(api.fmtTan(1000), '1.000');
 });
+
+test('Lô 8 (T-17): docExcel cột Người ký nhận đúng từ khóa ("Không có"/"Công ty" -> false, "Có"/"x"/"1"/"yes" -> true), báo trùng CCCD trong cùng tệp, chuẩn hóa MST, cảnh báo SĐT; checkNC báo trùng CCCD khác tên ở hai đội', () => {
+  const DT = require('../src/doituong');
+  const Model = require('../src/model');
+  // 1. laNguoiKy / yesKy
+  assert.strictEqual(DT.laNguoiKy('Không có'), false);
+  assert.strictEqual(DT.laNguoiKy('Công ty'), false);
+  for (const w of ['Có', 'co', 'x', 'X', '1', 'yes']) assert.strictEqual(DT.laNguoiKy(w), true, w);
+
+  const r1 = DT.docExcel([{'Họ tên': 'Nguyễn Văn A', 'CCCD': '049085000001', 'Ký hợp đồng': 'Vận chuyển', 'Người ký': 'Không có'}], [], []);
+  assert.strictEqual(r1.doiTuong[0].dt.nguoi[0].kyHD.vanChuyen, false);
+  const r2 = DT.docExcel([{'Họ tên': 'Nguyễn Văn A', 'CCCD': '049085000001', 'Ký hợp đồng': 'Vận chuyển', 'Người ký': 'Có'}], [], []);
+  assert.strictEqual(r2.doiTuong[0].dt.nguoi[0].kyHD.vanChuyen, true);
+
+  // 2. Hai dòng cùng CCCD trong một tệp Excel -> báo lỗi ngay ở xem trước
+  const rDup = DT.docExcel([
+    {'Mã đối tượng': 'DT01', 'Họ tên': 'Nguyễn Văn A', 'CCCD': '049085000001'},
+    {'Mã đối tượng': 'DT02', 'Họ tên': 'Trần Văn B', 'CCCD': '049085000001'}
+  ], [], []);
+  assert.strictEqual(rDup.doiTuong[1].trangThai, 'loi');
+  assert.ok(rDup.doiTuong[1].loi.some(m => /trùng với dòng/.test(m)));
+
+  // 3. Chuẩn hóa MST bỏ khoảng trắng & cảnh báo SĐT sai định dạng
+  const saved = DT.luu([], {loai: 'phapnhan', ten: 'Công ty X', mst: '012 345 6789', sdt: 'abc!!'}, '20/11/2026');
+  assert.strictEqual(saved.ok, true);
+  assert.strictEqual(saved.dt.mst, '0123456789');
+  assert.ok(saved.canhBao.some(m => /Số điện thoại/.test(m)));
+
+  // 4. checkNC báo lỗi khi cùng CCCD nhưng khác họ tên ở hai đội
+  const api = K.create({
+    db: {rs: {}},
+    trim,
+    HAKDates: Dates,
+    HAKModel: Model,
+    isCccd: s => /^(\d{9}|\d{12})$/.test(trim(s)),
+    dateKey: () => 20261001,
+    todayStr: () => '01/10/2026',
+    ageAt: () => 30,
+    chucDanhAll: () => ['Tổ trưởng', 'Công nhân khai thác'],
+    keyName: s => trim(s).toLowerCase(),
+    numSwap: s => s
+  });
+  const rec = {
+    info: {maRung: 'R-1', tuNgay: '01/10/2026', hinhThucLuong: 'sanluong', donGiaTan: {'Tổ trưởng': 400000, 'Công nhân khai thác': 300000}},
+    doi: [{id: 'doi1', ten: 'Đội 1', hinhThuc: {}}, {id: 'doi2', ten: 'Đội 2', hinhThuc: {}}],
+    nc: [
+      {_row: 2, vaiTro: 'Tổ trưởng', danhXung: 'Ông', ten: 'Nguyễn Văn A', ngaySinh: '01/01/1985', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'QN', cccd: '049085000001', chucDanh: 'Tổ trưởng', doiId: 'doi1'},
+      {_row: 3, vaiTro: 'Tổ trưởng', danhXung: 'Ông', ten: 'Trần Văn B', ngaySinh: '01/01/1985', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'QN', cccd: '049085000002', chucDanh: 'Tổ trưởng', doiId: 'doi2'},
+      {_row: 4, vaiTro: 'Công nhân', danhXung: 'Ông', ten: 'Lê Văn Khác Tên', ngaySinh: '01/01/1985', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'QN', cccd: '049085000001', chucDanh: 'Công nhân khai thác', doiId: 'doi2'}
+    ]
+  };
+  const chk = api.checkNC(rec);
+  assert.ok(chk.errs.some(m => /049085000001.*trùng nhau nhưng khác họ tên/.test(m)), chk.errs.join(' | '));
+});

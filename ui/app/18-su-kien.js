@@ -1,7 +1,6 @@
 /* ========== Sự kiện ========== */
 document.addEventListener('click', async e => {
   const t = e.target;
-  const mm = document.getElementById('moreMenu'); if (mm && mm.open && (!t.closest('#moreMenu') || t.closest('.pop button.mi'))) mm.open = false;
   const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick); return; }
   const muc = t.closest('[data-muc-lo]');
   if (muc) {
@@ -37,14 +36,17 @@ document.addEventListener('click', async e => {
   if (act === 'themDoi') return themDoi();
   if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();
-  if (act === 'openSettings') { const m = document.getElementById('moreMenu'); if (m) m.open = false; NAV.cur = null; NAV.curF = null; NAV.view = 'settings'; setg.msg = null; return render(); }
+  if (act === 'openSettings') { NAV.cur = null; NAV.curF = null; NAV.view = 'settings'; setg.msg = null; return render(); }
   if (act === 'dataRetry') return issueAct('retry');
   if (act === 'dataPick') return issueAct('pick');
   if (act === 'dataDefault') return issueAct('default');
   if (act === 'setData' || act === 'setDataDefault') return settingsData(act === 'setDataDefault');
   if (act === 'setBackup2' || act === 'setBackup2Off') return settingsBackup2(act === 'setBackup2Off');
   if (act === 'setBackup' || act === 'setBackupDefault') return settingsBackup(act === 'setBackupDefault');
+  if (act === 'setBackupJson' || act === 'setBackupJsonDefault') return settingsBackupJson(act === 'setBackupJsonDefault');
   if (act === 'setOpenBackup') return HB.settings.openBackup();
+  if (act === 'setOpenBackupJson') return HB.settings.openBackupJson();
+  if (act === 'restorePick') return kslRestorePick();
   if (act === 'setOpenData') return HB.openDataFolder();
   if (act === 'napHoanTac') return nhatKyNapHoanTac(el.dataset.kind);
   if (act === 'tkOpen') return tkMo();
@@ -99,7 +101,7 @@ document.addEventListener('click', async e => {
   }
   if (act === 'openCty') { NAV.cur = null; NAV.curF = null; NAV.view = 'cty'; cty.edit = null; cty.msg = null; return render(); }
   if (act === 'openSetGs') { NAV.cur = null; NAV.curF = null; NAV.view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
-  if (act === 'openSetBk') { const m = document.getElementById('moreMenu'); if (m) m.open = false; NAV.cur = null; NAV.curF = null; NAV.view = 'setbk'; ksl.msg = null; return render(); }
+  if (act === 'openSetBk') { NAV.cur = null; NAV.curF = null; NAV.view = 'setbk'; ksl.msg = null; return render(); }
   if (act === 'kslTai') { ksl.msg = null; ksl.kiem = {}; return render(); }
   if (act === 'kslKiem') return kslKiem(el);
   if (act === 'kslAuto') return kslAuto();
@@ -116,8 +118,12 @@ document.addEventListener('click', async e => {
   if (act === 'mhCancel') { mh.open = false; return render(); }
   if (act === 'mhConfirm') {
     const f = curForest(), snap = mhSnapshotNow(); if (!f || !snap) return;
-    f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false; luuLo();   // nút Xác nhận của khung = lưu cả lô
-    mh.msg = {kind: 'ok', text: 'Đã lưu công ty mua hàng và địa điểm vận chuyển đến cho rừng này: ' + snap.ten + ' – ' + snap.diaChi + '.'}; return render();
+    f.info = Object.assign({}, f.info, {muaHang: snap}); mh.open = false;
+    const r = await luuLo();   // nút Xác nhận của khung = lưu cả lô; chỉ báo đã lưu khi luuLo() thành công (lô 9a, T-19)
+    mh.msg = r && r.ok
+      ? {kind: 'ok', text: 'Đã lưu công ty mua hàng và địa điểm vận chuyển đến cho rừng này: ' + snap.ten + ' – ' + snap.diaChi + '.'}
+      : {kind: 'err', text: 'Đã chọn nhưng CHƯA lưu công ty mua hàng: ' + ((r && r.error) || 'lỗi lưu dữ liệu')};
+    return render();
   }
   if (act === 'guide') return document.getElementById('guideBox').classList.add('on');
   if (act === 'goHome') { NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; return render(); }
@@ -149,7 +155,7 @@ document.addEventListener('click', async e => {
     return;
   }
   if (act === 'lotBackup') return lotBackup();
-  if (act === 'lotRestore') { const m = document.getElementById('moreMenu'); if (m) m.open = false; return lotRestoreOpen(); }
+  if (act === 'lotRestore') return lotRestoreOpen();
   if (act === 'lotCancel') { window.__lot = null; return $('#impBox').classList.remove('on'); }
   if (act === 'lotGo') return lotGo();
   if (act === 'impCancel') { window.__imp = null; return $('#impBox').classList.remove('on'); }

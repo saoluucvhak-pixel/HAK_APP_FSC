@@ -92,3 +92,29 @@ test('ghi file sao lưu lô: qua tên tạm, đọc lại kiểm tra; tên tự 
   assert.throws(() => B.saveLotFile({file: path.join(out, 'y.json'), text: '{}', io: ioWith({renameSync: () => { throw Object.assign(new Error('x'), {code: 'ENOSPC'}); }})}), /hết dung lượng/);
   assert.ok(!files(out).some(n => /y\.json/.test(n)));
 });
+
+test('Lô 6 (T-08): dữ liệu thay đổi giữa chừng khi đang sao lưu — JSON và SQLite vẫn đồng bộ, không báo lỗi lệch đếm', async () => {
+  const s = store(), out = tmp();
+  try {
+    const dataBefore = s.load();
+    const r = await B.backupAll({
+      db: s.db,
+      data: dataBefore,
+      outDir: out,
+      now: () => NOW,
+      hooks: {
+        afterSqliteCopy: () => {
+          const next = s.load();
+          next.rs.o2 = {id: 'o2', info: {ma: 'B', ten: 'Y', cccd: '049000000002'}, forests: {}};
+          s.save(next);
+        }
+      }
+    });
+    assert.strictEqual(r.ok, true, r.message);
+    assert.strictEqual(r.sqlite.ok, true);
+    assert.strictEqual(r.json.ok, true);
+    const sqlCounts = DM.inspect(r.sqlite.file).counts;
+    const jsonData = JSON.parse(fs.readFileSync(r.json.file, 'utf8'));
+    assert.strictEqual(Object.keys(jsonData.rs || {}).length, sqlCounts.owners);
+  } finally { s.close(); }
+});

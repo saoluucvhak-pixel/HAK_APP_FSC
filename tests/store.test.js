@@ -362,3 +362,28 @@ test('v12 (A3): SQLite đổi khóa trạng thái in đợt 2 của BM-09/10 san
   assert.deepStrictEqual(Object.keys(F.g.inDot2.items), ['09:049000000001'], 'lô đã chốt giữ nguyên');
   s.close();
 });
+
+test('Lô 6 (T-10): nâng cấp lỗi lặp lại không nhân bản truoc-nang-cap; applyImport skip không đổi không tạo truoc-khoi-phuc; xóa hết chủ rừng dọn sạch chot_goi mồ côi', () => {
+  const d = tmp(), f = path.join(d, 'l6.sqlite'), bk = path.join(d, 'backups');
+  let s = new Store(f); s.save(sample()); s.close();
+  const badMig = () => { throw new Error('migration lỗi giả lập'); };
+  for (let i = 0; i < 3; i++) {
+    assert.throws(() => new Store(f, {migrations: [...MIGRATIONS, badMig]}), /migration lỗi giả lập/);
+  }
+  const nangCapFiles = fs.readdirSync(bk).filter(n => n.startsWith('truoc-nang-cap-'));
+  assert.strictEqual(nangCapFiles.length, 1, '3 lần nâng cấp lỗi cùng nội dung chỉ tạo 1 bản truoc-nang-cap');
+
+  s = new Store(f);
+  const beforeBk = fs.readdirSync(bk).filter(n => n.startsWith('truoc-khoi-phuc-')).length;
+  const rSkip = s.applyImport(s.load(), 'skip');
+  const afterBk = fs.readdirSync(bk).filter(n => n.startsWith('truoc-khoi-phuc-')).length;
+  assert.strictEqual(rSkip.backup, null);
+  assert.strictEqual(afterBk, beforeBk, 'applyImport skip không thay đổi dữ liệu thì không tạo file truoc-khoi-phuc');
+
+  // chot_goi mồ côi được dọn khi xóa chủ rừng / lô
+  s.db.prepare('INSERT OR REPLACE INTO chot_goi(forest_id,phien_ban,hash,at,data) VALUES(?,?,?,?,?)').run('f1', 1, 'h', '2026-11-01', '{}');
+  s.db.prepare('INSERT OR REPLACE INTO chot_goi(forest_id,phien_ban,hash,at,data) VALUES(?,?,?,?,?)').run('f_mo_coi', 1, 'h', '2026-11-01', '{}');
+  s.save({v: 2, rs: {}}, {allowBulkDelete: true});
+  assert.strictEqual(s.db.prepare('SELECT COUNT(*) c FROM chot_goi').get().c, 0, 'xóa hết chủ rừng phải dọn sạch chot_goi mồ côi');
+  s.close();
+});

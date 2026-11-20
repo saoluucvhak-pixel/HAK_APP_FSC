@@ -4,7 +4,7 @@
 const test = require('node:test'), assert = require('node:assert');
 const K = require('../src/docphieucan'), Money = require('../src/money'), Dates = require('../src/dates'), PC = require('../src/phieucan'), S = require('../src/stage'), BKS = require('../src/bks');
 const trim = s => String(s == null ? '' : s).trim();
-const toDec = v => v == null || trim(v) === '' ? null : (typeof v === 'number' ? v : (isFinite(Number(trim(v).replace(',', '.'))) ? Number(trim(v).replace(',', '.')) : 'x'));
+const {toDec} = require('../src/so');
 const api = K.create({trim, pad2: n => (n < 10 ? '0' : '') + n, numSwap: s => s, fmtRaw: n => String(n), fmt: n => String(n), toDec, normDate: s => trim(s), HAKMoney: Money, HAKDates: Dates, HAKPhieuCan: PC,
   volumeOf: () => null, curForest: () => ({}), nhanHdId: (f, id) => 'Hợp đồng ' + id, phieuSaiHd: () => null, cheoCtx: () => ({}), db: {rs: {}}});
 const P = (so, ngay, extra) => Object.assign({soPhieu: so, ngay, bienSo: '92C-12345', kl: 10, xeRowId: 'x1', hdvcId: 'h1'}, extra);
@@ -51,4 +51,11 @@ test('chuyến khác ở bước Cần đối chiếu: cùng số phiếu nhưng
   const t = S.create({nc: [], dx: [], pc: [{soPhieu: 'PA1', ngay: '05/10/2026', bienSo: '92C-1', kl: 5}]});
   S.merge(t, 'pc', [{soPhieu: 'PA1', ngay: '05/10/2026', bienSo: '92C-9', kl: 5}], {source: 'Excel'});
   const q = S.pendingOf(t)[0].pid; assert.ok(!S.resolve(t, q, 'other', {}).ok); assert.ok(!S.resolve(t, q, 'other', {soPhieu: 'pa 1'}).ok); assert.ok(S.resolve(t, q, 'other', {soPhieu: 'PA1-B'}).ok);
+});
+test('Lô 7b (T-15): HAKBks.khoa chuẩn hóa gạch dài (–, —), gạch dưới (_), dấu chấm giữa (·), dấu gạch chéo (/), chữ rộng và đuôi "(xe cũ)"', () => {
+  assert.strictEqual(BKS.khoa('92C–12345'), BKS.khoa('92C-12345'));
+  assert.strictEqual(BKS.khoa('92C—123.45'), BKS.khoa('92C-12345'));
+  assert.strictEqual(BKS.khoa('92C_123·45'), BKS.khoa('92C-12345'));
+  assert.strictEqual(BKS.khoa('92C/12345 (xe cũ)'), BKS.khoa('92C-12345'));
+  assert.strictEqual(BKS.khoa('９２Ｃ－１２３４５'), BKS.khoa('92C-12345'));
 });

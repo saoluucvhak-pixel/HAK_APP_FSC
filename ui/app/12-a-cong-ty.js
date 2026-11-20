@@ -9,7 +9,7 @@ const addrRowHtml = a => '<div class="ctyAddr row" style="margin-top:6px" data-a
 a.lng)) + '" style="flex:1 1 170px"><button type="button" class="btn danger sm" data-act="ctyDelAddr">Xóa</button></div>';
 function ctyForestsUsing() { const c = theCompany(); return c ? Object.values(db.rs).reduce((n, o) => n + forestList(o).filter(f => f.info.muaHang && f.info.muaHang.congTyId === c.id).length, 0) : 0; }
 function panelCty() {
-  const c = cty.edit || theCompany() || MH.newCompany(), m = cty.msg; cty.msg = null; cty.edit = c;
+  const c = cty.edit || theCompany() || MH.newCompany(), m = cty.msg; cty.msg = null; cty.edit = c; cty.goc = JSON.stringify(MH.clean(c, newId));
   const f = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span><input name="' + k + '" value="' + esc(c[k] ?? '') + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '></label>';
   return '<div class="hero"><div><h2>Công ty mua hàng</h2><p class="mut">Khai một lần cho cả phần mềm. Mỗi rừng chỉ chọn <b>địa chỉ giao hàng</b> của công ty này ở <b>tab Vận chuyển</b>; địa chỉ đó là địa điểm vận chuyển đến trong BM-04, BM-09, BM-10 và Sổ phiếu cân.' +
     (theCompany() ? ' ' + ctyForestsUsing() + ' rừng đã chọn địa chỉ giao.' : '') + '</p></div></div>' + (m ? '<div class="msg ' + m.kind + '">' + esc(m.text) + '</div>' : '') +
@@ -42,11 +42,11 @@ function ctyShowMsg() {
 function ctySave() {
   const c = ctyReadForm(); c.id = c.id || (theCompany() || {}).id || newId('c');
   const v = MH.validate(c, {}, c.id), ge = ctyGeoErrors(c); delete c.toaDoSai;
-  if (v.errors.length || ge.length) { cty.tried = true; ctyShowMsg(); return; }
+  if (v.errors.length || ge.length) { cty.tried = true; ctyShowMsg(); return false; }
   db.congTy = {[c.id]: c}; persist();                       // một hồ sơ duy nhất
-  cty.edit = null;
+  cty.edit = null; cty.goc = '';
   cty.msg = {kind: v.warnings.length ? 'warn' : 'ok', text: 'Đã lưu thông tin công ty “' + c.ten + '”.' + (v.warnings.length ? ' Lưu ý: ' + v.warnings.join('; ') : '') + (ctyForestsUsing() ?
   ' Các rừng đã chọn địa chỉ GIỮ địa chỉ đã lưu cho đến khi bạn xác nhận cập nhật ở tab Vận chuyển của từng rừng.' : '')};
-  render();
+  render(); return true;
 }
 

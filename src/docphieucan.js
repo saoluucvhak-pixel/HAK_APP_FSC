@@ -4,6 +4,7 @@
  * đi qua đối tượng ctx do giao diện cấp (getter, đọc giá trị hiện tại lúc gọi). Kiểm thử đơn vị truyền ctx giả. */
 (function (root) {
   const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);   // một quy tắc chuẩn hóa BKS (src/bks.js)
+  const SO = () => (typeof require === 'function' ? require('./so.js') : root.HAKSo);     // bộ đọc khối lượng dùng chung (src/so.js, lô 1)
   function create(ctx) {
     /* ========== Đọc Excel ========== */
     function parseSheet(file, sheetName, map, req, norm, alias) {
@@ -75,9 +76,10 @@
     /* Số tiền trong ô: bộ đọc chặt chẽ chung (src/money.js). Trống → null; số dương hợp lệ → số; còn lại → null kèm lý do ở giaLoi (không tự đoán) */
     const moneyCell = v => ctx.HAKMoney.positive(v);
     const normPC = o => {
-      const c1 = ctx.toDec(o.can1), c2 = ctx.toDec(o.can2); let klKg = ctx.toDec(o.klKg);
+      const S = SO(), c1 = S ? S.toDec(o.can1, {don: 'kg'}) : ctx.toDec(o.can1), c2 = S ? S.toDec(o.can2, {don: 'kg'}) : ctx.toDec(o.can2);
+      let klKg = S ? S.toDec(o.klKg, {don: 'kg'}) : ctx.toDec(o.klKg);
       if (klKg == null && typeof c1 === 'number' && typeof c2 === 'number' && c1 > c2) klKg = c1 - c2;   // KL để trống: KL = Cân 1 − Cân 2 (như file mẫu in phiếu cân)
-      let kl = typeof o.kl === 'number' ? (isFinite(o.kl) ? o.kl : 'x') : ctx.toDec(o.kl);
+      let kl = typeof o.kl === 'number' ? (isFinite(o.kl) ? o.kl : 'x') : (S ? S.toDec(o.kl, {don: 'tan'}) : ctx.toDec(o.kl));
       if (kl == null && typeof klKg === 'number' && klKg > 0) kl = Math.round(klKg) / 1000;   // chỉ điền kg: tấn = kg ÷ 1000
       if (typeof kl === 'number' && isFinite(kl) && kl > 0) kl = Math.round(kl * 1000) / 1000;   // khối lượng lưu chính xác đến kg: mọi nơi cộng ra cùng một số
       const lbl = 'Phiếu ' + (ctx.trim(o.soPhieu) || '(không số)'), giaLoi = [['donGia', 'cột ĐG_AD / Đơn giá'], ['donGiaTC', 'cột Đơn giá_TC'], ['thanhTien', 'cột Thành tiền']].map(([k, n]) => ctx.HAKMoney.problem(lbl + ', ' + n, o[k])).filter(Boolean);
@@ -120,8 +122,11 @@
       const errs = [], warns = [], state = {}, pc = rec.pc || [];
       const mark = (r, k, m) => { (k === 'err' ? errs : warns).push('Dòng ' + r._row + ': ' + m); if (k === 'err' || !state[r._row]) state[r._row] = k; };
       const keys = new Set(rec.dx.map(x => bienKey(x.bienSo))), seenP = new Map(), seenSo = new Map(), thieuKy = rec.hdvc ? doiXeThieuKy(rec) : new Set();
-      /* phiếu GIỐNG HỆT phiếu ở lô khác (cùng số phiếu, ngày lịch, biển số): chặn BM-08, 09, 10, 14 ở mọi đường xuất; không tự xóa hay chuyển phiếu (src/cheolo.js) */
-      try { ctx.HAKCheoLo.phieuTrung(ctx.db, rec.id, rec.fid, pc, ctx.cheoCtx()).forEach(x => mark(x.p, 'err', 'Phiếu ' + (x.p.soPhieu || '') + ' (' + x.p.ngay + ', ' + x.p.bienSo + ') giống hệt phiếu đã có ở lô ' + x.ma + ' (cùng số phiếu, ngày cân, biển số): một phiếu cân chỉ thuộc một lô')); } catch (e) { /* không kiểm được chéo lô: bỏ qua */ }
+      /* phiếu GIỐNG HỆT phiếu ở lô khác (cùng số phiếu, ngày lịch, biển số): chặn BM-08, 09, 10, 14 ở mọi đường xuất; cùng số + ngày khác BKS chỉ là cảnh báo mềm (src/cheolo.js, lô 7b) */
+      try { ctx.HAKCheoLo.phieuTrung(ctx.db, rec.id, rec.fid, pc, ctx.cheoCtx()).forEach(x => {
+        if (x.khacBks) mark(x.p, 'warn', 'Phiếu ' + (x.p.soPhieu || '') + ' (' + x.p.ngay + ', BKS ' + (x.p.bienSo || 'trống') + ') có cùng số phiếu và ngày cân với phiếu ở lô ' + x.ma + ' (BKS ' + (x.bienKhac || 'trống') + '): kiểm tra có phải cùng một phiếu không');
+        else mark(x.p, 'err', 'Phiếu ' + (x.p.soPhieu || '') + ' (' + x.p.ngay + ', ' + x.p.bienSo + ') giống hệt phiếu đã có ở lô ' + x.ma + ' (cùng số phiếu, ngày cân, biển số): một phiếu cân chỉ thuộc một lô');
+      }); } catch (e) { /* không kiểm được chéo lô: bỏ qua */ }
       pc.forEach(r => {
         if (ctx.trim(r.doi) && rec.doi && rec.doi.length > 1 && !rec.doi.some(d => d.id === r.doiId) && !rec.doi.some(d => keyName(d.ten) === keyName(r.doi))) mark(r, 'err', 'Đội “' + ctx.trim(r.doi) + '” không có trong lô (tên đội ở tab Nhân công): sửa tên đội hoặc để trống ô Đội');
         { const d = thieuKy.size ? doiXeOfPc(rec, r) : null; if (d && d.hd && thieuKy.has(d.hd.id)) mark(r, 'err', 'Biển ' + r.bienSo + ' thuộc đội xe chưa có người ký (chủ xe hoặc tài xế): vào tab Vận chuyển chọn người ký cho đội xe này'); }
@@ -142,7 +147,11 @@
             if (kp) { const t = seenSo.get(so); if (t) mark(r, 'warn', 'Phiếu ' + r.soPhieu + ' ngày ' + r.ngay + ': cùng số phiếu với dòng ' + t._row + tenHd(t) + ' (ngày ' + t.ngay + '). Cùng số phiếu khác ngày là hợp lệ; kiểm tra đúng là hai chuyến khác nhau'); if (!t) seenSo.set(so, r); seenP.set(kp, r); }
           }
         }
-        if (r.kl == null) mark(r, 'err', 'Thiếu khối lượng'); else if (r.kl === 'x' || !(r.kl > 0)) mark(r, 'err', 'Khối lượng không hợp lệ');
+        const canDao = typeof r.can1 === 'number' && typeof r.can2 === 'number' && r.can1 > 0 && r.can2 > 0 && r.can1 <= r.can2;
+        if (canDao) mark(r, 'err', 'Cân lần 1 phải lớn hơn cân lần 2 (hiệu là khối lượng hàng)');
+        if (r.kl == null) { if (!canDao) mark(r, 'err', 'Thiếu khối lượng'); }
+        else if (r.kl === 'x' || !(r.kl > 0)) mark(r, 'err', 'Khối lượng không hợp lệ');
+        else if (typeof r.kl === 'number' && r.kl > ((SO() && SO().MAX_TAN_CHUYEN) || 60)) mark(r, 'warn', 'Khối lượng ' + ctx.fmt(r.kl) + ' tấn/chuyến vượt ngưỡng 60 tấn: kiểm tra lại đơn vị (tấn hay kg)');
         (r.giaLoi || []).forEach(m => mark(r, 'err', m + ' (sửa hoặc để trống ô này rồi nạp lại; giá trị đã lưu không bị đổi)'));
         [['can1', 'Cân lần 1'], ['can2', 'Cân lần 2'], ['klKg', 'Khối lượng (kg)']].forEach(([k, label]) => { if (r[k] === 'x' || (typeof r[k] === 'number' && r[k] < 0)) mark(r, 'err', label + ' phải là số không âm'); });
         if (typeof r.klKg === 'number' && typeof r.kl === 'number' && r.klKg > 0 && Math.abs(r.klKg / 1000 - r.kl) > 0.0005) mark(r, 'warn', 'Khối lượng kg (' + ctx.fmt(r.klKg) + ') và tấn (' + fmtT(Math.round(r.kl * 1000)) + ') không khớp nhau');
@@ -176,8 +185,8 @@
           if (!ctx.HAKDates.isValid(p.ngay)) lyDo.set(p, 'Ngày cân không hợp lệ');
           else if (!Number.isFinite(p.kl) || Math.round(p.kl * 1000) <= 0) lyDo.set(p, 'Khối lượng không hợp lệ');
         });
-        ctx.HAKCheoLo.phieuTrung(ctx.db, rec.id, rec.fid, pc, ctx.cheoCtx()).forEach(({p, ma}) => {
-          if (!lyDo.has(p)) lyDo.set(p, 'Phiếu trùng với lô ' + ma);
+        ctx.HAKCheoLo.phieuTrung(ctx.db, rec.id, rec.fid, pc, ctx.cheoCtx()).forEach(({p, ma, khacBks}) => {
+          if (!khacBks && !lyDo.has(p)) lyDo.set(p, 'Phiếu trùng với lô ' + ma);
         });
         return lyDo;
       });

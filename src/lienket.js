@@ -27,20 +27,22 @@
     f.canDoiChieu = Array.isArray(f.canDoiChieu) ? f.canDoiChieu : [];
     if (!f.canDoiChieu.some(x => x.loai === c.loai && x.ref === c.ref)) f.canDoiChieu.push(c);
   }
-  /* gán ID còn thiếu cho các dòng của một bảng; tiền tố cố định, số tăng dần không dùng lại số đã có */
-  function ganIdBang(rows, pre) {
+  /* gán ID còn thiếu cho các dòng của một bảng; tiền tố cố định, số tăng dần không dùng lại số đã có hoặc đang tham chiếu ở extraUsed (lô 4, T-12) */
+  function ganIdBang(rows, pre, extraUsed) {
     let n = 0; const used = new Set((rows || []).map(r => r && r.id).filter(Boolean));
+    (extraUsed || []).forEach(id => { if (id) used.add(id); });
     (rows || []).forEach(r => { if (!r || typeof r !== 'object' || s(r.id)) return; let k = used.size + 1; while (used.has(pre + k)) k++; r.id = pre + k; used.add(r.id); n++; });
     return n;
   }
-  /* đổi khóa chấm công sang ID dòng thành viên (sửa f); trả số khóa đã đổi */
+  /* đổi khóa chấm công sang ID dòng thành viên và dọn khóa tv<N> mồ côi của người đã xóa (sửa f; trả số khóa đã đổi/dọn) */
   function doiKhoaChamCong(f) {
     const cc = f.cc; if (!cc || typeof cc !== 'object') return 0;
     const nc = (f.nc || []).filter(r => r && s(r.id)), ids = new Set(nc.map(r => r.id)); let n = 0;
     Object.keys(cc).forEach(thang => {
       const m = cc[thang]; if (!m || typeof m !== 'object') return;
       Object.keys(m).forEach(k => {
-        if (ids.has(k)) return;   // đã theo ID
+        if (ids.has(k)) return;   // đã theo ID của dòng còn trong lô
+        if (/^tv\d+$/.test(k)) { delete m[k]; n++; return; }   // lô 4 (T-12): dòng nhân công đã xóa → dọn khóa chấm công theo ID đó
         const khop = nc.filter(r => pk(r) === k);
         if (khop.length === 1) { const id = khop[0].id; if (!m[id]) { m[id] = m[k]; delete m[k]; n++; } return; }
         if (khop.length > 1) {
@@ -50,6 +52,7 @@
         }
         themCan(f, {loai: 'chamcong', ref: k, lyDo: 'Chấm công tháng ' + thang + ' theo “' + k + '” không khớp người nào trong lô: chọn đúng người hoặc xóa', goc: null});
       });
+      if (!Object.keys(m).length) delete cc[thang];
     });
     return n;
   }
@@ -60,7 +63,7 @@
     const dx = (f.dx || []).filter(r => r && s(r.id)), byId = new Map(dx.map(r => [r.id, r])), hd = new Set((f.hdvc || []).map(h => h && h.id)); let n = 0;
     (f.pc || []).forEach(p => {
       if (!p || typeof p !== 'object') return;
-      if (p.xeRowId && !byId.has(p.xeRowId)) { delete p.xeRowId; n++; }
+      if (p.xeRowId && !byId.has(p.xeRowId)) { delete p.xeRowId; delete p.xeTay; n++; }
       if (p.xeRowId && !p.xeTay) { const r = byId.get(p.xeRowId); if (B().khoa(r.bienSo) !== B().khoa(p.bienSo)) { delete p.xeRowId; if (p.hdvcId === r.hdvcId) delete p.hdvcId; n++; } }   // xe tự gắn theo BKS: BKS của phiếu đổi (nạp lại, sửa) → gắn lại theo BKS mới; xe người dùng chọn tay (xeTay) giữ nguyên
       if (p.xeRowId) { const h = byId.get(p.xeRowId).hdvcId; if (h && p.hdvcId !== h) { p.hdvcId = h; n++; } return; }
       if (p.hdvcId && !hd.has(p.hdvcId)) { delete p.hdvcId; n++; }
@@ -72,11 +75,13 @@
   }
   function chuanLo(f, o) {
     if (!f || typeof f !== 'object' || (khoa(f) && !(o && o.batKe))) return 0;
-    const n = ganIdBang(f.nc, 'tv') + ganIdBang(f.dx, 'xr') + ganIdBang(f.pc, 'pc') + doiKhoaChamCong(f);
+    const ccIds = Object.values(f.cc || {}).flatMap(m => Object.keys(m || {}).filter(k => /^tv\d+$/.test(k))).concat((o && o.daXoaNc) || []);
+    const xeIds = (f.pc || []).map(p => p && p.xeRowId).filter(k => /^xr\d+$/.test(k)).concat((o && o.daXoaDx) || []);
+    const n = ganIdBang(f.nc, 'tv', ccIds) + ganIdBang(f.dx, 'xr', xeIds) + ganIdBang(f.pc, 'pc') + doiKhoaChamCong(f);
     return n + dongBoPhieu(f);
   }
   const canChuan = f => !!f && typeof f === 'object' && !khoa(f) && (['nc', 'dx', 'pc'].some(k => (f[k] || []).some(r => r && typeof r === 'object' && !s(r.id))) || dongBoPhieu(JSON.parse(JSON.stringify({dx: f.dx, hdvc: f.hdvc, pc: f.pc}))) > 0 ||
-    Object.values(f.cc || {}).some(m => { const ids = new Set((f.nc || []).map(r => r && r.id)); return Object.keys(m || {}).some(k => !ids.has(k) && (f.nc || []).some(r => r && pk(r) === k)); }));
+    Object.values(f.cc || {}).some(m => { const ids = new Set((f.nc || []).map(r => r && r.id)); return Object.keys(m || {}).some(k => !ids.has(k) && (/^tv\d+$/.test(k) || (f.nc || []).some(r => r && pk(r) === k))); }));
 
   /* nối liên kết danh mục cho MỘT lô (sửa f; bỏ qua lô khóa). db: {dmDoiTuong, dmXe, dmViTri}. Trả số liên kết đã ghi. */
   function noiDanhMuc(f, db) {

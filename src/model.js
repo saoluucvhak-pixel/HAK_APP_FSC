@@ -16,6 +16,7 @@
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
   const trim = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   const fold = s => trim(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+  const tenKey = s => trim(s).normalize('NFC').toLowerCase();   // lô 7b (T-16): so tên đội / đội xe bằng NFC + gộp khoảng trắng + không phân biệt hoa thường nhưng GIỮ DẤU ("Đội Hà" ≠ "Đội Hạ")
   const isTT = r => /^tổ trưởng/i.test((r && r.vaiTro) || '');
 
   /* trường của ĐỘI (trước nằm ở thông tin rừng / thông số xuất của lô) */
@@ -209,7 +210,7 @@
       const m = membersOf(f, d), tts = m.filter(isTT), direct = (d.hinhThuc || {}).moHinhKy === 'tructiep';
       const lb = 'Đội ' + (d.ten ? '“' + d.ten + '”' : (k + 1));
       if (multi && !trim(d.ten)) errs.push({row: tts[0] && tts[0]._row, text: lb + (tts[0] ? ' (Tổ trưởng “' + tts[0].ten + '”) chưa ghi tên đội' : ' chưa có tên') + ': lô có nhiều đội thì mỗi đội một tên'});
-      const nk = fold(d.ten); if (multi && nk) { if (names.has(nk)) errs.push({text: 'Tên đội “' + d.ten + '” trùng với đội khác'}); else names.set(nk, true); }
+      const nk = tenKey(d.ten); if (multi && nk) { if (names.has(nk)) errs.push({text: 'Tên đội “' + d.ten + '” trùng với đội khác'}); else names.set(nk, true); }
       if (m.length && !tts.length) errs.push({text: lb + ' chưa có Tổ trưởng'});
       if (!direct && tts.length > 1) errs.push({text: lb + ' có ' + tts.length + ' Tổ trưởng: mỗi đội giao khoán chỉ một Tổ trưởng (tách thành đội riêng)'});
     });
@@ -236,10 +237,27 @@
     ghiSttDaCap(out, 'doi', d.stt);   // đội bị xóa vẫn giữ STT đã cấp: đội mới không nhận lại số này
     out.doi = out.doi.filter(x => x.id !== id); return {ok: true, f: out};
   }
+  /* kiểm tra tên đội khai thác / đội xe (lô 7b, T-16): chặn rỗng khi lô có nhiều đội (hoặc đội xe), chặn trùng theo tenKey (NFC, giữ dấu). Trả chuỗi lỗi hoặc '' */
+  function tenDoiLoi(f, ten, selfId, loai) {
+    const t = trim(ten), k = tenKey(t), isHd = loai === 'hdvc', ds = ((f && (isHd ? f.hdvc : f.doi)) || []).filter(x => x && x.id !== selfId);
+    const label = isHd ? 'đội xe' : 'đội';
+    if (!t) {
+      if (isHd || ds.length >= 1) return 'Tên ' + label + ' không được để trống';
+      return '';
+    }
+    const hit = ds.find(x => tenKey(x.ten) === k);
+    if (hit) return 'Đã có ' + label + ' tên “' + trim(hit.ten) + '” trong lô';
+    return '';
+  }
+  function tenHdLoi(f, ten, selfId) { return tenDoiLoi(f, ten, selfId, 'hdvc'); }
   /* cập nhật thông tin đội (tên, hình thức, diện tích, số văn bản) */
   function updateTeam(f, id, patch) {
     const out = ensureForest(f), d = out.doi.find(x => x.id === id); if (!d) return {ok: false, error: 'Không có đội này'};
-    if (has(patch, 'ten')) { const cu = d.ten; d.ten = trim(patch.ten); if (d.ten && d.ten !== cu) membersOf(out, d).forEach(r => { r.doi = d.ten; }); }   // đổi tên đội: cột Đội của người trong đội đổi theo
+    if (has(patch, 'ten')) {
+      const loi = tenDoiLoi(out, patch.ten, id, 'doi');
+      if (loi) return {ok: false, error: loi};
+      const cu = d.ten; d.ten = trim(patch.ten); if (d.ten && d.ten !== cu) membersOf(out, d).forEach(r => { r.doi = d.ten; });
+    }   // đổi tên đội: cột Đội của người trong đội đổi theo
     if (patch.hinhThuc) d.hinhThuc = Object.assign({}, d.hinhThuc, clone(patch.hinhThuc));
     if (has(patch, 'dienTich')) d.dienTich = typeof patch.dienTich === 'number' && patch.dienTich >= 0 ? patch.dienTich : null;
     if (has(patch, 'benNhanKhoan')) { if (patch.benNhanKhoan && patch.benNhanKhoan.doiTuongId) d.benNhanKhoan = {doiTuongId: String(patch.benNhanKhoan.doiTuongId), nguoiId: String(patch.benNhanKhoan.nguoiId || '')}; else delete d.benNhanKhoan; }
@@ -267,7 +285,12 @@
   /* cập nhật đội xe: tên, người ký ({key} = người trong đội | {donVi} = đơn vị danh mục), cước, số văn bản */
   function updateHd(f, id, patch) {
     const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có đội xe này'};
-    if (has(patch, 'ten')) h.ten = trim(patch.ten);
+    if (has(patch, 'ten')) {
+      const t = trim(patch.ten);
+      if (!t && (trim(h.ten) || !h.donViId)) return {ok: false, error: 'Tên đội xe không được để trống'};
+      if (t) { const loi = tenDoiLoi(out, t, id, 'hdvc'); if (loi) return {ok: false, error: loi}; }
+      h.ten = t;
+    }
     if (has(patch, 'cuoc')) h.cuoc = patch.cuoc ? clone(patch.cuoc) : null;
     if (patch.exp) { h.exp = Object.assign({}, h.exp); Object.entries(patch.exp).forEach(([k, v]) => { if (trim(v)) h.exp[k] = trim(v); else delete h.exp[k]; }); }
     if (patch.donVi) { h.donViId = patch.donVi.id; h.ben = clone(patch.donVi); h.key = ''; }
@@ -324,6 +347,6 @@
     f.hdvc.forEach(h => { const cu = khoaInCuVC(f, h); if (!cu) return; ['09', '10'].forEach(code => { const a = code + ':' + cu, b = code + ':' + khoaInVC(h); if (has(it, a) && !has(it, b)) { it[b] = it[a]; delete it[a]; n++; } }); });
     return n;
   }
-  const api = {khoaInVC, khoaInCuVC, doiKhoaInVC, hdTenKhop, xoaTruongCu, coTruongCu, nguoiDanhMuc, cccdSo, assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
+  const api = {tenKey, tenDoiLoi, tenHdLoi, khoaInVC, khoaInCuVC, doiKhoaInVC, hdTenKhop, xoaTruongCu, coTruongCu, nguoiDanhMuc, cccdSo, assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKModel = api;
 })(typeof window !== 'undefined' ? window : globalThis);

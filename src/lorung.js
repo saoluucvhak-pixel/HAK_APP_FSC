@@ -29,25 +29,31 @@
   const forestLabel = f => ((f.info && f.info.maRung) || '(chưa có mã lô)') + (f.info && f.info.tenRung ? ' – ' + f.info.tenRung : '');
 
   /* ---------- nhận diện ---------- */
+  const cccdSo = v => String(v == null ? '' : v).replace(/\D/g, '');
+  const maChuKey = v => t(v).replace(/\s+/g, ' ').toUpperCase();
   function matchOwner(cur, id, info) {
     info = info || {};
     const rs = (cur && cur.rs) || {}, found = {};
     if (id && rs[id]) found.id = id;
-    const cccd = t(info.cccd), ma = t(info.ma);
+    const cccd = cccdSo(info.cccd), ma = maChuKey(info.ma);
     Object.entries(rs).forEach(([k, o]) => {
       const oi = (o && o.info) || {};
-      if (cccd && t(oi.cccd) === cccd && !found.cccd) found.cccd = k;
-      if (ma && t(oi.ma) === ma && !found.ma) found.ma = k;
+      if (cccd && cccdSo(oi.cccd) === cccd && !found.cccd) found.cccd = k;
+      if (ma && maChuKey(oi.ma) === ma && !found.ma) found.ma = k;
     });
     const ids = [...new Set(Object.values(found))];
     if (ids.length > 1) return {hit: null, conflict: 'Chủ rừng “' + (info.ten || info.ma || id) + '” khớp nhiều hồ sơ khác nhau trên máy: ' +
       Object.entries(found).map(([k, v]) => ({id: 'theo ID', cccd: 'theo CCCD', ma: 'theo mã chủ rừng'}[k]) + ' → ' + ownerName(rs[v])).join('; ')};
-    /* phiếu #12 (quyết định 6 của CHỦ): CÙNG ID nội bộ nhưng CCCD hai bên đều có và KHÁC hẳn (sau chuẩn hóa chỉ lấy chữ số) = hai người khác nhau → dừng để đối chiếu,
-     * không coi là một (trước đây "Ghi đè" thay lô của người này bằng lô của người kia). Một bên trống CCCD, hoặc chỉ khác cách viết: như cũ. */
-    if (found.id) {
-      const so = v => String(v == null ? '' : v).replace(/\D/g, ''), a = so(info.cccd), b = so(((rs[found.id] || {}).info || {}).cccd), duoi = x => '…' + x.slice(-4);
-      if (a && b && a !== b) return {hit: null, conflict: 'Chủ rừng “' + (info.ten || info.ma || id) + '” (CCCD ' + duoi(a) + ') có cùng ID nội bộ với “' + ownerName(rs[found.id]) + '” (CCCD ' + duoi(b) +
-        ') trên máy: hai hồ sơ khác người, cần đối chiếu trước khi khôi phục'};
+    /* phiếu #12 (quyết định 6 của CHỦ) & lô 3a (T-06): CÙNG ID nội bộ hoặc CÙNG mã chủ rừng nhưng CCCD hai bên đều có và KHÁC hẳn (sau chuẩn hóa chỉ lấy chữ số) = hai người khác nhau → dừng để đối chiếu,
+     * không coi là một (trước đây "Ghi đè" hoặc "Giữ bản trên máy" gộp lô của người này vào chủ rừng của người kia). Một bên trống CCCD, hoặc chỉ khác cách viết: như cũ. */
+    const hitId = found.id || found.ma;
+    if (hitId) {
+      const a = cccd, b = cccdSo(((rs[hitId] || {}).info || {}).cccd), duoi = x => '…' + x.slice(-4);
+      if (a && b && a !== b) {
+        const theo = found.id ? 'cùng ID nội bộ' : 'cùng mã chủ rừng “' + t(info.ma) + '”';
+        return {hit: null, conflict: 'Chủ rừng “' + (info.ten || info.ma || id) + '” (CCCD ' + duoi(a) + ') có ' + theo + ' với “' + ownerName(rs[hitId]) + '” (CCCD ' + duoi(b) +
+          ') trên máy: hai hồ sơ khác người, cần đối chiếu trước khi khôi phục'};
+      }
     }
     return {hit: ids[0] || null, conflict: ''};
   }
@@ -192,14 +198,15 @@
   const body = pkg => JSON.stringify({loai: pkg.loai, dinhDang: pkg.dinhDang, xuatLuc: pkg.xuatLuc, maLo: pkg.maLo, chuRung: pkg.chuRung, lo: pkg.lo, dungChung: pkg.dungChung, kiemTra: pkg.kiemTra});
   /* hash: (chuỗi) → chuỗi hex (SHA-256 do tiến trình chính cung cấp) */
   const seal = (pkg, hash) => Object.assign({}, pkg, {maKiemTra: hash(body(pkg))});
-  const fileName = (pkg, day) => 'HAKQN_LoRung_' + (t(pkg.maLo).replace(/[\\/:*?"<>|\s]+/g, '_') || 'KhongMa') + '_' + (day || new Date().toISOString().slice(0, 10)) + '.json';
+  const Dt = () => (typeof require === 'function' ? require('./dates.js') : root.HAKDates);
+  const fileName = (pkg, day) => 'HAKQN_LoRung_' + (t(pkg.maLo).replace(/[\\/:*?"<>|\s]+/g, '_') || 'KhongMa') + '_' + (day || Dt().fileDay()) + '.json';
 
   /* Đọc và kiểm tra gói. Trả {ok, pkg} hoặc {ok:false, error}. Không ghi gì. */
   function parsePackage(input, hash) {
     let o = input;
     if (typeof input === 'string') { try { o = JSON.parse(input); } catch (e) { return {ok: false, error: 'File không phải JSON hợp lệ (có thể bị hỏng hoặc cắt dở).'}; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) return {ok: false, error: 'File không đúng định dạng gói sao lưu lô rừng.'};
-    if (o.loai !== KIND) return {ok: false, error: o.rs && typeof o.rs === 'object' ? 'Đây là bản sao lưu TOÀN BỘ dữ liệu, không phải gói lô rừng. Dùng “Khôi phục (.json)” trong menu Dữ liệu.' : 'File không phải gói sao lưu lô rừng của HAKQN.'};
+    if (o.loai !== KIND) return {ok: false, error: o.rs && typeof o.rs === 'object' ? 'Đây là bản sao lưu TOÀN BỘ dữ liệu, không phải gói lô rừng. Dùng “Khôi phục toàn bộ dữ liệu (.json)” ở Cài đặt → Sao lưu và khôi phục.' : 'File không phải gói sao lưu lô rừng của HAKQN.'};
     if (typeof o.dinhDang !== 'number' || o.dinhDang !== FORMAT) return {ok: false, error: o.dinhDang > FORMAT ? 'Gói lô rừng do phiên bản phần mềm mới hơn tạo (định dạng ' + o.dinhDang + '). Hãy cập nhật HAKQN rồi thử lại.' : 'Sai phiên bản định dạng gói lô rừng (' + o.dinhDang + ').'};
     if (!o.lo || typeof o.lo !== 'object' || Array.isArray(o.lo) || o.lo.forests || !o.lo.info) return {ok: false, error: 'Gói không chứa đúng một lô rừng.'};
     if (!o.chuRung || typeof o.chuRung !== 'object' || !o.chuRung.info) return {ok: false, error: 'Gói thiếu thông tin nhận diện chủ rừng, không xác định được chủ để khôi phục.'};
@@ -242,7 +249,7 @@
       if (!(k in al)) them.push({loai: 'bienAlias', khoa: k, goi: v, may: null, text: 'Ánh xạ biển số “' + k + '” → ' + v + ': máy đích chưa có, sẽ thêm từ gói', anhHuong: 'Ghép biển số khi nhận phiếu cân từ tra cứu'});
       else if (al[k] !== v) khac.push({loai: 'bienAlias', khoa: k, goi: v, may: al[k], text: 'Ánh xạ biển số “' + k + '” khác máy đích: DÙNG BẢN CỦA MÁY ĐÍCH (→ ' + al[k] + '), gói ghi → ' + v, anhHuong: 'Ghép biển số khi nhận phiếu cân từ tra cứu có thể ra biển khác bản gốc; phiếu cân đã lưu trong lô không đổi'});
     });
-    if (sh.danhMuc) { const n = GD().noi(cur, sh.danhMuc);   // 3.0: danh mục đi kèm — nối theo CCCD / MST / BKS / tên vị trí với danh mục của máy
+    if (sh.danhMuc) { const n = GD().noi(cur, sh.danhMuc, {loKhoa: !!(f && (f.chot || f.dung))});   // 3.0 & lô 3c: danh mục đi kèm — nối theo CCCD / MST / BKS / tên vị trí với danh mục của máy
       n.them.forEach(x => them.push({loai: 'danhMuc', khoa: x, goi: null, may: null, text: x + ': máy đích chưa có, sẽ thêm từ gói', anhHuong: 'Danh mục dùng chung; lô trỏ tới mục này'}));
       n.khac.forEach(x => khac.push({loai: 'danhMuc', khoa: x, goi: null, may: null, text: x, anhHuong: 'Hồ sơ đã in giữ bản chụp; hợp đồng mới lấy thông tin của máy'}));
       n.can.forEach(c => khac.push({loai: 'danhMuc', khoa: c.ref, goi: c.goc, may: null, text: c.lyDo + ' (ghi vào Cần đối chiếu)', anhHuong: 'Lô giữ bản chụp thông tin người'}));
@@ -274,8 +281,16 @@
     // Thiết lập dùng chung: giữ của máy đích, chỉ BỔ SUNG mục máy chưa có. Không tạo khóa rỗng (khóa dinhMuc có mặt sẽ chặn định mức mặc định của máy).
     Object.entries(sh.dinhMuc || {}).forEach(([k, v]) => { if (!next.dinhMuc || !(k in next.dinhMuc)) { next.dinhMuc = next.dinhMuc || {}; next.dinhMuc[k] = clone(v); } });
     Object.entries(sh.bienAlias || {}).forEach(([k, v]) => { if (!next.bienAlias || !(k in next.bienAlias)) { next.bienAlias = next.bienAlias || {}; next.bienAlias[k] = v; } });
-    if (sh.danhMuc) {   // 3.0: bổ sung danh mục còn thiếu, lô trỏ sang ID của máy (lô đã chốt giữ nguyên dữ liệu); người trùng CCCD khác tên → Cần đối chiếu
-      const n = GD().noi(next, sh.danhMuc); Object.assign(next, n.dm); GD().doiIdLo(owner.forests[fid], n.doi);
+    if (sh.danhMuc) {   // 3.0 & lô 3c: bổ sung danh mục còn thiếu, lô trỏ sang ID của máy (lô đã chốt giữ nguyên dữ liệu); người trùng CCCD khác tên → Cần đối chiếu
+      const loTarget = owner.forests[fid], loKhoa = !!(loTarget && (loTarget.chot || loTarget.dung));
+      const n = GD().noi(next, sh.danhMuc, {loKhoa}); Object.assign(next, n.dm);
+      const unmapped = {
+        dt: new Set((sh.danhMuc.doiTuong || []).map(x => x.id).filter(id => !n.doi.dt[id])),
+        ng: new Set((sh.danhMuc.doiTuong || []).flatMap(o => (o.nguoi || []).map(p => p.id)).filter(id => !n.doi.ng[id])),
+        xe: new Set((sh.danhMuc.xe || []).map(x => x.id).filter(id => !n.doi.xe[id])),
+        vt: new Set((sh.danhMuc.viTri || []).map(x => x.id).filter(id => !n.doi.vt[id]))
+      };
+      GD().doiIdLo(loTarget, n.doi, unmapped);
       if (n.can.length) next.canDoiChieu = (next.canDoiChieu || []).concat(n.can.map(c => Object.assign({noi: 'Khôi phục lô ' + t(pkg.lo.info.maRung)}, c)));
     }
     return {next, plan, doi: true, ownerId: oid, forestId: fid};
@@ -319,6 +334,6 @@
     }
     return {ok: true, v1, error: ''};
   }
-  const api = {kiemSaoLuu, optsKhoiPhuc, KIND, FORMAT, maKey, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
+  const api = {kiemSaoLuu, optsKhoiPhuc, KIND, FORMAT, maKey, maChuKey, cccdSo, lotsByMa, maTrung, goiYMa, duplicateGroups, renameLot, matchOwner, matchForest, planImport, mergeImport, exportLot, seal, body, fileName, parsePackage, planLot, applyLot, sumKl, loiToanVen};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKLoRung = api;
 })(typeof self !== 'undefined' ? self : this);

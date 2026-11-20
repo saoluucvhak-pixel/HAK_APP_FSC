@@ -60,3 +60,20 @@ test('thư mục sao lưu thứ hai: chép bản tự động sang, chỉ giữ 
   assert.strictEqual(bad.ok, false); assert.ok(bad.error);
   assert.deepStrictEqual(AB.copyTo('', b2, 2), {ok: true, skipped: true}); s.close();
 });
+
+test('Lô 6 (T-10): cleanStaleTmp xóa file .tmp-<pid> quá 1 ngày, giữ file mới và file chính', () => {
+  const d = tmp();
+  const oldTmp = path.join(d, 'tu-dong-2026-11-10.sqlite.tmp-1234');
+  const newTmp = path.join(d, 'tu-dong-2026-11-14.sqlite.tmp-5678');
+  const keepFile = path.join(d, 'tu-dong-2026-11-14.sqlite');
+  fs.writeFileSync(oldTmp, 'x');
+  fs.writeFileSync(newTmp, 'x');
+  fs.writeFileSync(keepFile, 'x');
+  const twoDaysAgo = new Date(Date.now() - 2 * 86400000);
+  fs.utimesSync(oldTmp, twoDaysAgo, twoDaysAgo);
+  const removed = AB.cleanStaleTmp(d);
+  assert.strictEqual(removed, 1);
+  assert.ok(!fs.existsSync(oldTmp));
+  assert.ok(fs.existsSync(newTmp));
+  assert.ok(fs.existsSync(keepFile));
+});

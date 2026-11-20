@@ -82,7 +82,8 @@ function stFinishRow() {
    row._row = old ? old._row : st.cur[kind].reduce((m, r) => Math.max(m, +r._row || 0), 1) + 1; if (old) row._id = old._id;
   if (kind === 'nc' && rec.doi) { const m = trim(row.doi) && rec.doi.find(d => HAKDoi.fold(d.ten) === HAKDoi.fold(row.doi)), t = curTeam(); row.doiId = m ? m.id : old && old.doiId !== undefined ? old.doiId : (t ? t.id : ''); }   // đội của người: cột Đội khớp tên đội → đội đó; sửa người cũ → giữ đội; người mới → đội đang chọn
   const list = st.cur[kind].slice(); if (idx >= 0) list[idx] = row; else list.push(row);
-  const chk = ST_CHECK[kind](kind === 'nc' ? Object.assign({}, stJob(rec), ganDoi(rec.doi, list)) : Object.assign({}, stJob(rec), {[kind]: list})), mine = chk.errs.filter(m => m.startsWith('Dòng ' + row._row + ':'));
+  const reMine = new RegExp('(?:^Dòng\\s+' + row._row + ':|\\bdòng\\s+' + row._row + '\\b)', 'i');
+  const chk = ST_CHECK[kind](kind === 'nc' ? Object.assign({}, stJob(rec), ganDoi(rec.doi, list)) : Object.assign({}, stJob(rec), {[kind]: list})), mine = chk.errs.filter(m => reMine.test(m));
   if (mine.length) { stm.errs = mine; return stRender(); }
   if (kind === 'dx' && old && HAKStage.bienKey(old.bienSo) !== HAKStage.bienKey(row.bienSo)) {
     const lk = HAKStage.linkedPc(st, old.bienSo);

@@ -166,6 +166,27 @@ function docSheetObj(file) {
 
 /* ---------- DANH MỤC XE ---------- */
 banNhapUI.push({ten: 'Xe đang sửa', dirty: () => !!cd.xe.sua && JSON.stringify(xeDocForm()) !== cd.xe.goc, luu: () => xeLuu(), bo: () => { cd.xe.sua = null; cd.xe.loi = []; }});
+banNhapUI.push({
+  ten: 'Thông tin công ty mua hàng',
+  dirty: () => NAV.view === 'cty' && !!document.getElementById('ctyForm') && !!cty.goc && JSON.stringify(ctyReadForm()) !== cty.goc,
+  luu: () => ctySave(),
+  bo: () => { cty.edit = null; cty.goc = ''; }
+});
+banNhapUI.push({
+  ten: 'Tên vị trí đang sửa',
+  dirty: () => NAV.view === 'setvt' && [...document.querySelectorAll('#vtBang [data-vtten]')].some(inp => { const v = dmVT().find(x => x.id === inp.dataset.vtten); return v && trim(inp.value) && trim(inp.value) !== trim(v.ten); }),
+  luu: () => {
+    for (const inp of document.querySelectorAll('#vtBang [data-vtten]')) {
+      const v = dmVT().find(x => x.id === inp.dataset.vtten);
+      if (v && trim(inp.value) && trim(inp.value) !== trim(v.ten)) {
+        const r = HAKViTri.doiTen(db, v.id, inp.value);
+        if (!r.ok) { cd.vtMsg = [r.error, 'err']; render(); return false; }
+      }
+    }
+    persist(); return true;
+  },
+  bo: () => { document.querySelectorAll('#vtBang [data-vtten]').forEach(inp => { const v = dmVT().find(x => x.id === inp.dataset.vtten); if (v) inp.value = v.ten; }); }
+});
 function xeDocForm() { const fm = document.getElementById('xeForm'); if (!fm || !cd.xe.sua) return cd.xe.sua; const x = Object.assign({}, cd.xe.sua); ['bks', 'ngayCapNhat', 'hanKiemDinh', 'hanBaoHiem', 'loaiXe', 'chuXeId'].forEach(k => { if (fm.elements[k]) x[k] = trim(fm.elements[k].value); });
 return x; }
 const chonChuXeHtml = (v, name) => '<select name="' + (name || 'chuXeId') + '"><option value="">— chưa chọn —</option>' + HAKXeDM.chonChuXe(dmDT()).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
@@ -251,12 +272,13 @@ function panelSetHd() {
   return '<div class="card"><h3 style="margin-top:0">Hướng dẫn</h3><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="guide" id="hdSuDung">Hướng dẫn sử dụng</button><button class="btn ghost" data-act="hdHien" id="hdHienBtn">Hướng dẫn bắt đầu</button></div>' +
     '<p class="mut">Phím tắt: Ctrl+K tìm kiếm; Ctrl+S lưu dữ liệu vào lô đang mở.</p></div>';
 }
-/* ---------- CẦN ĐỐI CHIẾU (dữ liệu chuyển đổi chưa tự liên kết được) ---------- */
+/* ---------- CẦN ĐỐI CHIẾU (dữ liệu chuyển đổi hoặc gộp chưa tự liên kết được) ---------- */
+const CAN_LOAI = {nhancong: 'Nhân công', phieu: 'Phiếu cân', nguoi: 'Người (danh mục)', doituong: 'Đối tượng (danh mục)', hdvc: 'Hợp đồng vận chuyển', xe: 'Xe vận chuyển'};
 function panelSetCan() {
   const ds = (db.canDoiChieu || []).map(c => Object.assign({noi: 'Danh mục'}, c));
   Object.entries(db.rs || {}).forEach(([oid, o]) => Object.values(o.forests || {}).forEach(f => (f.canDoiChieu || []).forEach(c => ds.push(Object.assign({noi: 'Rừng ' + ((f.info || {}).maRung || f.id), oid, fid: f.id}, c)))));
-  return '<div class="card"><h3 style="margin-top:0">Cần đối chiếu</h3><p class="mut" style="margin-top:0">Các dòng phần mềm <b>không tự liên kết</b> khi chuyển sang bản 3.0 (không xác định được duy nhất). Dữ liệu gốc giữ nguyên; xử lý ở Danh mục hoặc trong hợp đồng của rừng rồi bấm Đã xử lý.</p>' +
-    (ds.length ? '<div class="wrap" style="max-height:min(60vh,520px)"><table id="canBang"><thead><tr><th>Nơi</th><th>Loại</th><th>Lý do</th><th></th></tr></thead><tbody>' + ds.map((c, i) => '<tr><td>' + esc(c.noi) + '</td><td>' + esc(c.loai) + '</td><td>' + esc(c.lyDo) + '</td><td style="white-space:nowrap">' +
+  return '<div class="card"><h3 style="margin-top:0">Cần đối chiếu</h3><p class="mut" style="margin-top:0">Các dòng phần mềm <b>không tự liên kết</b> khi chuyển dữ liệu hoặc gộp hồ sơ từ máy khác (không xác định được duy nhất). Dữ liệu gốc giữ nguyên; xử lý ở Danh mục hoặc trong hợp đồng của rừng rồi bấm Đã xử lý.</p>' +
+    (ds.length ? '<div class="wrap" style="max-height:min(60vh,520px)"><table id="canBang"><thead><tr><th>Nơi</th><th>Loại</th><th>Lý do</th><th></th></tr></thead><tbody>' + ds.map((c, i) => '<tr><td>' + esc(c.noi) + '</td><td>' + esc(CAN_LOAI[c.loai] || c.loai) + '</td><td>' + esc(c.lyDo) + '</td><td style="white-space:nowrap">' +
       (c.fid ? '<button class="btn ghost sm" data-canmo="' + esc(c.oid + '|' + c.fid + '|' + (c.loai === 'xe' || c.loai === 'phieu' || c.loai === 'hdvc' ? 'dx' : 'nc')) + '">Mở rừng</button> ' : '') + '<button class="btn ghost sm" data-canxong="' + esc((c.fid || '') + '|' + c.loai + '|' + c.ref) +
       '">Đã xử lý</button></td></tr>').join('') + '</tbody></table></div>' : '<p id="canTrong">Không còn dòng nào cần đối chiếu.</p>') + '</div>';
 }
@@ -271,7 +293,7 @@ document.addEventListener('click', e => {
   if (a === 'dtExcelLuu') return dtExcelLuu(); if (a === 'xeExcelLuu') return xeExcelLuu();
   if (a === 'ngThem') { cd.sua = dtDocForm(); return ngMo(null); }
   if (a === 'xeThem') return xeMo(null); if (a === 'xeHuy') { cd.xe.sua = null; cd.xe.loi = []; return render(); } if (a === 'xeMau') return xeMau();
-  if (a === 'vtThem') { const v = trim(($('#vtMoi') || {}).value || ''); if (!v) return; if (HAKViTri.tim(dmVT(), v)) { cd.vtMsg = ['Đã có vị trí “' + v + '”.', 'warn']; return render(); } if (!Array.isArray(db.dmViTri)) db.dmViTri = []; HAKViTri.them(db.dmViTri, v);
+  if (a === 'vtThem') { const v = trim(($('#vtMoi') || {}).value || ''); if (!v) { cd.vtMsg = ['Nhập tên vị trí.', 'warn']; return render(); } if (HAKViTri.tim(dmVT(), v)) { cd.vtMsg = ['Đã có vị trí “' + v + '”.', 'warn']; return render(); } if (!Array.isArray(db.dmViTri)) db.dmViTri = []; HAKViTri.them(db.dmViTri, v);
   cd.vtMsg = ['Đã thêm vị trí “' + v + '”.', 'ok']; persist(); return render(); }
   if (el.dataset.dtsua) return dtMo(el.dataset.dtsua);
   if (el.dataset.dtngung) { const o = HAKDoiTuong.tim(dmDT(), el.dataset.dtngung); const r = HAKDoiTuong.ngung(dmDT(), o.id, !o.ngung); if (r.ok) { db.dmDoiTuong = r.dm; persist(); cd.msg = [(o.ngung ? 'Dùng lại ' : 'Ngừng sử dụng ') + o.ten + '.', 'ok']; } return render(); }
@@ -284,7 +306,7 @@ document.addEventListener('click', e => {
   'ok'] : [r.error, 'err']; if (r.ok) persist(); return render(); }
   if (el.dataset.canmo) { const [oid, fid, ft] = el.dataset.canmo.split('|'); NAV.cur = oid; NAV.curF = fid; NAV.view = 'owner'; NAV.tab = 'rung'; NAV.ftab = ft; return render(); }
   if (el.dataset.canxong) { const [fid, loai, ref] = el.dataset.canxong.split('|'), bo = l => (l || []).filter(c => !(c.loai === loai && c.ref === ref));
-    if (fid) { Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => { if (f.id === fid) { if (loKhoa(f)) return; f.canDoiChieu = bo(f.canDoiChieu); persistLo(f); } })); } else { db.canDoiChieu = bo(db.canDoiChieu); persist(); } return render(); }
+    if (fid) { Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => { if (f.id === fid) { if (loKhoa(f)) { note('Chưa đánh dấu Đã xử lý: lô ' + ((f.info || {}).maRung || f.id) + ' đã ' + (f.dung ? 'dừng' : 'chốt') + ' (chỉ đọc).', 'err'); return; } f.canDoiChieu = bo(f.canDoiChieu); persistLo(f); } })); } else { db.canDoiChieu = bo(db.canDoiChieu); persist(); } return render(); }
 });
 document.addEventListener('submit', e => {
   const id = e.target && e.target.id; if (!['dtForm', 'ngForm', 'xeForm'].includes(id)) return; e.preventDefault();

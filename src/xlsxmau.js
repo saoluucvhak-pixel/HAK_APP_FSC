@@ -123,7 +123,7 @@
     }
   };
 
-  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const esc = s => String(s == null ? '' : s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const colL = i => { let s = ''; for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s; return s; };
   // Chỉ số kiểu ô (styles.xml bên dưới)
   const S = {def: 0, title: 1, sub: 2, sec: 3, head: 4, body: 5, mid: 6, reqMark: 7, dHeadReq: 8, dHeadOpt: 9, text: 10, note: 11, ex: 12, legReq: 13, legOpt: 14, step: 15};

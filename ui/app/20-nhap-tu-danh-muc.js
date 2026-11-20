@@ -100,20 +100,30 @@ function luongLayDonGia() {
 const NHAP_TAM_KEY = 'hakqn.nhapTam.v1';
 function nhapTamDoc() { try { const s = localStorage.getItem(NHAP_TAM_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function nhapTamXoa() { try { localStorage.removeItem(NHAP_TAM_KEY); } catch (e) { /* không có localStorage: bỏ qua */ } }
-let nhapTamTat = false;   // đang đóng có chủ ý: không ghi lại bản tạm nữa (bộ hẹn giờ 1 giây không được ghi lại sau khi đã xóa)
+let nhapTamTat = false, nhapTamLoiDaBao = false, nhapTamLastJson = '';   // đang đóng có chủ ý: không ghi lại bản tạm nữa
+function nhapTamStageGon(st) {
+  if (!st || typeof st !== 'object') return st;
+  const nk = Array.isArray(st.nhatKy) ? st.nhatKy.map(({truoc: _t, ...rest}) => rest) : undefined;
+  return Object.assign({}, st, nk ? {nhatKy: nk} : {});
+}
 function nhapTamGhi() {
   if (nhapTamTat) return;
   try {
-    const ks = stDirtyList(); if (!ks.length) { if (!nhapTamCho) nhapTamXoa(); return; }
+    const ks = stDirtyList(); if (!ks.length) { if (!nhapTamCho && nhapTamLastJson) { nhapTamLastJson = ''; nhapTamXoa(); } return; }
     const lots = {}, sts = {};
     ks.forEach(k => {
       const [oid, fid] = k.split('|'), f = db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; if (!f) return;
       if (loDirty.has(fid)) lots[k] = f;
-      if (stages[k] && HAKStage.dirty(stages[k])) sts[k] = stages[k];
+      if (stages[k] && HAKStage.dirty(stages[k])) sts[k] = nhapTamStageGon(stages[k]);
     });
-    if (!Object.keys(lots).length && !Object.keys(sts).length) return nhapTamXoa();
+    if (!Object.keys(lots).length && !Object.keys(sts).length) { if (nhapTamLastJson) { nhapTamLastJson = ''; nhapTamXoa(); } return; }
+    const body = JSON.stringify({lots, stages: sts});
+    if (body === nhapTamLastJson) return;   // Lô 9b (T-21): không stringify/ghi lại khi bản nháp không đổi
+    nhapTamLastJson = body;
     localStorage.setItem(NHAP_TAM_KEY, JSON.stringify({at: new Date().toISOString(), lots, stages: sts}));
-  } catch (e) { /* đầy bộ nhớ hoặc không có localStorage: bỏ qua, không làm phiền người dùng */ }
+  } catch (e) {
+    if (!nhapTamLoiDaBao && typeof note === 'function') { nhapTamLoiDaBao = true; note('Không tự lưu tạm được bản nháp trên trình duyệt (đầy bộ nhớ tạm): hãy bấm “Lưu dữ liệu vào lô” để ghi trực tiếp vào cơ sở dữ liệu.', 'warn'); }
+  }
 }
 let nhapTamCho = false;   // đang chờ người dùng trả lời khôi phục: chưa xóa bản tạm
 function nhapTamKhoiPhuc() {

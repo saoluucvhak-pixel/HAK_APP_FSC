@@ -18,4 +18,7 @@ test('tổng hợp xe: số chuyến và khối lượng theo biển số chuẩ
 test('tổng hợp đối tác và chủ rừng', () => {
   const d = T.doiTac(db, 'dn:dv1'); assert.deepEqual(d.muc[1].dong[0], ['QS-07', 'CHỦ A', 'Đội xe 1', 1, 1, 12.5]);
   const c = T.chuRung(db, 'o1'); assert.equal(c.muc[0].dong.length, 2); assert.equal(c.muc[0].dong[0][3], 20); assert.equal(c.muc[0].dong[0][4], 17.5); assert.equal(c.muc[0].dong[1][6], 'Đã chốt');
+  // lô 5a (T-13): lô chưa điền dinhMucTanHa riêng vẫn lấy định mức gỗ keo mặc định qua HAKDinhMuc.sanLuongDuKien
+  const db2 = JSON.parse(JSON.stringify(db)); delete db2.rs.o1.forests.f1.info.dinhMucTanHa; db2.dinhMucKeo = [{tuNgay: '01/01/2026', tanHa: 80}];
+  assert.equal(T.chuRung(db2, 'o1').muc[0].dong[0][3], 160);
 });

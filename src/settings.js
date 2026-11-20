@@ -78,9 +78,18 @@ function describeError(e, p) {
  * Trả {state: 'ok'} hoặc {state: 'unavailable', path, dir, code, reason}. Chưa cấu hình (dùng mặc định) hoặc đang bị khóa bởi biến môi trường thì luôn ok
  * (cài mới chưa có file là bình thường). */
 function checkConfigured(userDir, env = {}) {
+  const f = file(userDir);
+  if (fs.existsSync(f)) {
+    try { JSON.parse(fs.readFileSync(f, 'utf8')); }
+    catch (e) {
+      const badFile = f + '.bad';
+      try { if (!fs.existsSync(badFile)) fs.copyFileSync(f, badFile); } catch (_) {}
+      return {state: 'unavailable', path: f, dir: userDir, code: 'SETTINGS_CORRUPT', reason: 'File cấu hình settings.json bị hỏng hoặc bị cắt dở (đã giữ bản sao settings.json.bad để kiểm tra).'};
+    }
+  }
   const s = load(userDir);
   if (env.HAKQN_DB || !s.dataDir) return {state: 'ok'};
-  const dir = s.dataDir, file = path.join(dir, DB_NAME), bad = (code, reason) => ({state: 'unavailable', path: file, dir, code, reason});
+  const dir = s.dataDir, dbFile = path.join(dir, DB_NAME), bad = (code, reason) => ({state: 'unavailable', path: dbFile, dir, code, reason});
   let st;
   try { st = fs.statSync(dir); } catch (e) { return bad(e.code === 'ENOENT' || e.code === 'ENOTDIR' ? 'DIR_MISSING' : e.code === 'EACCES' || e.code === 'EPERM' ? 'NO_PERMISSION' : 'IO', describeError(e, dir)); }
   if (!st.isDirectory()) return bad('DIR_MISSING', '“' + dir + '” không còn là thư mục');
@@ -88,9 +97,9 @@ function checkConfigured(userDir, env = {}) {
   const probe = path.join(dir, '.hakqn-ghi-thu-' + process.pid);
   try { fs.writeFileSync(probe, 'x'); fs.unlinkSync(probe); } catch (e) { return bad(e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS' ? 'NO_PERMISSION' : 'IO', describeError(e, dir)); }
   let fst;
-  try { fst = fs.statSync(file); } catch (e) { return bad(e.code === 'ENOENT' ? 'FILE_MISSING' : e.code === 'EACCES' || e.code === 'EPERM' ? 'NO_PERMISSION' : 'IO', e.code === 'ENOENT' ? 'Thư mục còn nhưng không thấy file ' + DB_NAME + ' (file đã bị chuyển/xóa, hoặc đây là ổ khác trùng tên thư mục)' : describeError(e, file)); }
-  if (!fst.isFile()) return bad('FILE_MISSING', '“' + file + '” không phải file');
-  try { const fd = fs.openSync(file, 'r+'); fs.closeSync(fd); } catch (e) { return bad(e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS' ? 'NO_PERMISSION' : 'IO', describeError(e, file)); }   // mở thử đọc-ghi file dữ liệu (không ghi gì)
+  try { fst = fs.statSync(dbFile); } catch (e) { return bad(e.code === 'ENOENT' ? 'FILE_MISSING' : e.code === 'EACCES' || e.code === 'EPERM' ? 'NO_PERMISSION' : 'IO', e.code === 'ENOENT' ? 'Thư mục còn nhưng không thấy file ' + DB_NAME + ' (file đã bị chuyển/xóa, hoặc đây là ổ khác trùng tên thư mục)' : describeError(e, dbFile)); }
+  if (!fst.isFile()) return bad('FILE_MISSING', '“' + dbFile + '” không phải file');
+  try { const fd = fs.openSync(dbFile, 'r+'); fs.closeSync(fd); } catch (e) { return bad(e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'EROFS' ? 'NO_PERMISSION' : 'IO', describeError(e, dbFile)); }   // mở thử đọc-ghi file dữ liệu (không ghi gì)
   return {state: 'ok'};
 }
 /* Vị trí đang dùng. env.HAKQN_DB (kiểm thử/triển khai đặc biệt) được ưu tiên và khóa thư mục dữ liệu.

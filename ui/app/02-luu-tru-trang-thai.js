@@ -232,11 +232,11 @@ function expInputs(list, ex) {
 }
 /* tham số xuất của lô kèm ngày ký mặc định (ngày ký HĐ mua bán gỗ ở Thông tin chủ rừng) — MỘT chỗ cho mọi nơi dùng */
 const expLo = (rec, exo) => { const ex = Object.assign({}, exo || rec.exp || {}); if (!ex.ngayKy && rec.info.ngayKyHopDong) ex.ngayKy = rec.info.ngayKyHopDong; return ex; };
-/* xe chưa thuộc hợp đồng vận chuyển (vừa nạp, thêm trong bản nháp): gán như khi lưu (src/model.js: theo người ký; xe trong hợp đồng với đơn vị giữ nguyên) */
+/* xe chưa thuộc hợp đồng vận chuyển (vừa nạp, thêm trong bản nháp): gán như khi lưu (src/model.js: theo người ký; xe trong hợp đồng với đơn vị giữ nguyên; khớp nhiều hợp đồng thì không tự gán — lô 7b, T-16) */
 function ganVC(hdvc, dx) {
   if (!hdvc) return {hdvc, dx};
-  const F0 = {dx, hdvc};   // xe có cột Đội xe khớp tên một đội xe của lô: vào đội xe đó (ưu tiên hơn đội xe đang chọn)
-  if ((dx || []).some(r => r && r.hdvcId === undefined && trim(r.doiXe))) dx = dx.map(r => { if (!r || r.hdvcId !== undefined || !trim(r.doiXe)) return r; const m = hdvc.find(h => hdTenKhop(F0, h, r.doiXe)); return m ? Object.assign({}, r, {hdvcId: m.id}) : r; });
+  const F0 = {dx, hdvc};   // xe có cột Đội xe khớp ĐÚNG MỘT đội xe của lô: vào đội xe đó (ưu tiên hơn đội xe đang chọn); khớp nhiều đội xe thì không tự gán
+  if ((dx || []).some(r => r && r.hdvcId === undefined && trim(r.doiXe))) dx = dx.map(r => { if (!r || r.hdvcId !== undefined || !trim(r.doiXe)) return r; const m = hdvc.filter(h => hdTenKhop(F0, h, r.doiXe)); return m.length === 1 ? Object.assign({}, r, {hdvcId: m[0].id}) : m.length > 1 ? Object.assign({}, r, {hdvcId: ''}) : r; });
   const t = NAV.curHd && hdvc.find(h => h.id === NAV.curHd);   // xe mới (chưa có đội xe) vào ĐỘI XE ĐANG CHỌN; chưa chọn đội: theo người ký (mỗi người ký một đội như trước)
   if (t && (dx || []).some(r => r && r.hdvcId === undefined)) dx = dx.map(r => r && r.hdvcId === undefined ? Object.assign({}, r, {hdvcId: t.id}) : r);
   const F = {doi: [{id: '_'}], nc: [], hdvc, dx};
@@ -283,6 +283,6 @@ L) => 'Thời gian khai thác thực tế ' + L.thucTe + ' ngày (' + i.tuNgay +
 ',') + '%). Ngưỡng cảnh báo: lệch quá ' + L.nguong + ' ngày (20% thời gian dự kiến, tối thiểu 3 ngày). Kiểm tra diện tích, định mức ngày/ha hoặc ngày kết thúc.';
 const forestDays = (i, nd) => { const d = ngayHaEff(i); return d ? HAKDinhMuc.soNgay(haDoi(i, nd), d.v) : null; };
 const forestYield = i => HAKDinhMuc.sanLuongDuKien(db, i);
-const toDec = v => { const s = trim(v).replace(',', '.'); if (!s) return null; const n = Number(s); return isFinite(n) ? n : 'x'; };
+const toDec = (v, o) => HAKSo.toDec(v, o);
 const GIAY_LOAI = ['Giấy chứng nhận QSDĐ', 'Giấy xác nhận', 'Khác'];
 

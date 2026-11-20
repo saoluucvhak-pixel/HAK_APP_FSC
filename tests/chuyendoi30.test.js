@@ -83,3 +83,29 @@ test('mở khóa lô chốt từ bản cũ (chưa có ID) rồi lưu: không b�
   d = s.load(); V.moKhoa(d.rs.o.forests.f1, 'sửa', 'KT', 't3'); s.save(d);
   d = s.load(); assert.equal(d.rs.o.forests.f1.nc[0].id, 'tv1'); d.rs.o.forests.f1.pc[0].kl = 11; s.save(d); assert.equal(s.load().rs.o.forests.f1.pc[0].kl, 11);
 });
+
+test('lô 4 (T-12): xóa nhân công cuối rồi thêm người mới — người mới không thừa hưởng chấm công cũ, khóa cc mồ côi được dọn, lô chốt không đổi', () => {
+  const f = lo({nc: [nv('A', '049000000001', 'Tổ trưởng', 'A'), nv('B', '049000000002'), nv('C', '049000000003')], cc: {'2026-11': {'049000000003': {1: 1, 2: 1, 3: 1}}}});
+  LK.chuanLo(f);
+  assert.deepEqual(f.nc.map(r => r.id), ['tv1', 'tv2', 'tv3']);
+  assert.equal(CC.total(f.cc, 'tv3'), 3);
+  // xóa C (tv3) và thêm người mới D trong cùng lần lưu
+  f.nc.pop(); f.nc.push(nv('D', '049000000004'));
+  LK.chuanLo(f);
+  assert.notEqual(f.nc[2].id, 'tv3', 'ID mới không dùng lại tv3 đang có trong cc');
+  assert.equal(CC.total(f.cc, f.nc[2].id), 0, 'người mới không thừa hưởng công của người đã xóa');
+  assert.equal(f.cc['2026-11'], undefined, 'khóa chấm công mồ côi của tv3 đã được dọn');
+  // xóa xe cuối rồi thêm xe mới (BKS khác): phiếu chọn xe tay cũ không trỏ vào xe mới
+  f.pc[0].xeRowId = 'xr1'; f.pc[0].xeTay = true;
+  f.dx.pop(); f.dx.push({bienSo: '92C-999.99', chuXe: 'X', cccd: '049000000088', taiXe: 'Y', cccdTx: '049000000089', nguoiKy: 'Chủ xe', hdvcId: f.hdvc[0].id});
+  LK.chuanLo(f);
+  assert.notEqual(f.dx[0].id, 'xr1');
+  assert.equal(f.pc[0].xeRowId, undefined, 'phiếu chọn xe tay cũ không trỏ sang xe mới');
+  assert.equal(f.pc[0].xeTay, undefined);
+  // lô đã chốt: băm và dữ liệu giữ nguyên từng byte
+  const fChot = lo(); V.chot(fChot, 'KT', 't', []);
+  const truoc = JSON.stringify(fChot), hashTruoc = fChot.chot.hash;
+  LK.chuanLo(fChot);
+  assert.equal(JSON.stringify(fChot), truoc); assert.equal(fChot.chot.hash, hashTruoc);
+});
+

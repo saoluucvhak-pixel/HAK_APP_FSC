@@ -1,6 +1,6 @@
 /* ========== Ghi file Word (.docx) ========== */
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-const xe = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const xe = s => HAKDates.cleanXml(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const P = (text, o = {}) => ({t: 'p', text: text ?? '', col: o.col || '', al: o.al || 'both', b: !!o.b, i: !!o.i, sz: o.sz || 26,
   after: o.after ?? 100, before: o.before ?? 0, ind: o.ind || 0, indR: o.indR || 0, hang: o.hang || 0, keep: !!o.keep, bdb: !!o.bdb, full: !!o.full});
 const T = (widths, rows, o = {}) => ({t: 'tbl', widths, rows, borders: o.borders !== false, head: !!o.head, headRows: o.headRows, sz: o.sz, rowH: o.rowH, al: o.al, alignCols: o.alignCols, keep: !!o.keep, pad: o.pad, full: !!o.full});

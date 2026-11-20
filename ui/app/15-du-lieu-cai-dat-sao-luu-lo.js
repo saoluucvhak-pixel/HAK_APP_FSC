@@ -73,21 +73,7 @@ function settingsPaint() {
     (s.lockedByEnv ? '<div class="msg warn">Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB nên không đổi được ở đây.</div>' : '') +
     row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).',
     s.dbFile, s.customData, s.defaultDataDir, 'setData', 'setDataDefault', '<button class="btn ghost" data-act="setOpenData">Mở thư mục chứa dữ liệu</button>') +
-    row('Thư mục sao lưu', 'Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu hằng ngày, bản sao lưu toàn bộ (Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ: lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc ổ USB để phòng hỏng máy.', s.backupDir,
-    s.customBackup, s.defaultBackupDir, 'setBackup', 'setBackupDefault', '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button>') +
-    '<div class="card" style="margin:10px 0" id="dbBk2"><h3 style="margin:0 0 4px">Thư mục sao lưu thứ hai</h3><p class="mut" style="margin:0 0 8px">Mỗi bản tự sao lưu hằng ngày được chép thêm sang đây (ổ ngoài, USB, thư mục đồng bộ) để phòng hỏng cả máy. Ổ không cắm thì bỏ qua, bản chính vẫn còn.</p>' +
-    (s.auto && s.auto.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(s.auto.dir2) + '</code></div>' + ((s.auto.result && s.auto.result.copy2 && !s.auto.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' +
-    esc(s.auto.result.copy2.error) + '</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
-    '<div class="row" style="margin-top:8px;gap:8px"><button class="btn" data-act="setBackup2">Chọn thư mục…</button>' + (s.auto && s.auto.dir2 ? '<button class="btn ghost" data-act="setBackup2Off">Tắt</button>' : '') + '</div></div>' +
-    '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">Nhắc sao lưu</h3><p class="mut" style="margin:0 0 8px">Khi mở phần mềm, nhắc sao lưu toàn bộ dữ liệu nếu đã quá số ngày dưới đây kể từ lần sao lưu cuối (Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ).</p>' +
-    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Nhắc sau <select id="setRemind">' + [[0, 'Không nhắc'], [3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày']].map(o => '<option value="' + o[0] + '"' + (o[0] === s.remind.remindDays ? ' selected' : '') + '>' +
-    o[1] + '</option>').join('') + '</select></label>' +
-    '<span class="mut">Sao lưu toàn bộ lần cuối: ' + (s.remind.lastBackup ? esc(new Date(s.remind.lastBackup).toLocaleString('vi-VN')) : 'chưa có') + '</span></div></div>' + autoBackupCard(s.auto) +
-    '<p class="mut" style="margin:10px 0 0">Xem, kiểm tra, khôi phục và dọn các bản sao lưu: tab <b>Sao lưu và khôi phục</b> ở trên. <button class="btn ghost sm" data-act="openSetBk" id="moKhoSaoLuu">Mở kho sao lưu</button></p>';
-  const ak = document.getElementById('setAutoKeep');
-  if (ak) ak.addEventListener('change', async () => { const r = await HB.settings.setAutoKeep(ak.value); if (r.ok) { setg.s = r.settings; setg.msg = [+ak.value ? 'Đã lưu: giữ ' + ak.value + ' bản tự sao lưu hằng ngày gần nhất.' : 'Đã tắt tự sao lưu hằng ngày.', 'ok']; render(); } });
-  const sel = document.getElementById('setRemind');
-  if (sel) sel.addEventListener('change', async () => { const r = await HB.settings.setRemind(sel.value); if (r.ok) { setg.s = r.settings; setg.msg = ['Đã lưu mức nhắc sao lưu.', 'ok']; render(); } });
+    '<p class="mut" style="margin:10px 0 0">Thư mục sao lưu SQLite, thư mục sao lưu JSON, tự sao lưu định kỳ, nhắc sao lưu và kho các bản sao lưu nằm ở tab <b>Sao lưu và khôi phục</b>. <button class="btn ghost sm" data-act="openSetBk" id="moKhoSaoLuu">Mở Sao lưu và khôi phục</button></p>';
 }
 /* Tự sao lưu hằng ngày (src/autobackup.js): mỗi ngày một bản trong thư mục sao lưu, xoay vòng giữ N bản gần nhất */
 function autoBackupCard(a) {
@@ -118,13 +104,19 @@ async function settingsData(reset) {
 }
 async function settingsBackup2(reset) {
   const r = await HB.settings.setBackup2(reset); if (r.canceled) return;
-  setg.msg = r.ok ? [reset ? 'Đã tắt thư mục sao lưu thứ hai.' : 'Đã chọn thư mục sao lưu thứ hai: mỗi bản tự sao lưu hằng ngày được chép thêm sang đó.', 'ok'] : ['Không đổi được thư mục sao lưu thứ hai: ' + r.error, 'err'];
+  setg.msg = ksl.msg = r.ok ? [reset ? 'Đã tắt thư mục sao lưu thứ hai.' : 'Đã chọn thư mục sao lưu thứ hai: mỗi bản tự sao lưu hằng ngày được chép thêm sang đó.', 'ok'] : ['Không đổi được thư mục sao lưu thứ hai: ' + r.error, 'err'];
   setg.s = r.ok ? r.settings : setg.s; render();
 }
 async function settingsBackup(reset) {
   const r = await HB.settings.setBackup(reset);
   if (r.canceled) return;
-  setg.msg = r.ok ? ['Đã ' + (reset ? 'về thư mục sao lưu mặc định' : 'đổi thư mục sao lưu') + ': ' + r.settings.backupDir, 'ok'] : ['Không đổi được thư mục sao lưu: ' + r.error, 'err'];
+  setg.msg = ksl.msg = r.ok ? ['Đã ' + (reset ? 'về thư mục sao lưu mặc định' : 'đổi thư mục sao lưu') + ': ' + r.settings.backupDir, 'ok'] : ['Không đổi được thư mục sao lưu: ' + r.error, 'err'];
+  setg.s = r.ok ? r.settings : setg.s; render();
+}
+async function settingsBackupJson(reset) {
+  const r = await HB.settings.setBackupJson(reset);
+  if (r.canceled) return;
+  setg.msg = ksl.msg = r.ok ? ['Đã ' + (reset ? 'về thư mục sao lưu JSON mặc định' : 'đổi thư mục sao lưu JSON') + ': ' + r.settings.backupDirJson, 'ok'] : ['Không đổi được thư mục sao lưu JSON: ' + r.error, 'err'];
   setg.s = r.ok ? r.settings : setg.s; render();
 }
 
@@ -174,7 +166,7 @@ async function lotRestoreOpen(filePath) {
     (P.dungChung.khac.length || P.dungChung.them.length ? '<div class="msg warn"><b>Thiết lập dùng chung: máy đích giữ nguyên thiết lập của mình</b>, chỉ bổ sung mục máy chưa có.<br>' + P.dungChung.khac.concat(P.dungChung.them).map(x => '• ' + esc(x.text) +
     '<br><small class="mut">Phần hồ sơ có thể khác: ' + esc(x.anhHuong) + '</small>').join('<br>') + '</div>' : '<p class="mut">Thiết lập dùng chung (định mức BHLĐ, ánh xạ biển số) của lô trùng với máy đích.</p>') +
     P.ghiChu.map(x => '<p class="mut">' + esc(x) + '</p>').join('') + (pk.lo && pk.lo.chot ? '<p class="mut" id="lotPhamVi">' + esc(lotPhamViText(pk.lo)) + '</p>' : '') +
-    (P.ok && exists ? '<p><b>Lô đã có trên máy:</b></p><label><input type="radio" name="lotAct" value="giu" checked> Giữ bản hiện có (không đổi gì)</label><label><input type="radio" name="lotAct" value="thay"> Thay đúng lô này bằng bản trong file (các lô khác không bị đụng tới)</label>' : '') +
+    (P.ok && exists ? '<p><b>Lô đã có trên máy:</b></p><label><input type="radio" name="lotAct" value="giu" checked> <span>Giữ bản hiện có (không đổi gì)</span></label><label><input type="radio" name="lotAct" value="thay"> <span>Thay đúng lô này bằng bản trong file (các lô khác không bị đụng tới)</span></label>' : '') +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu trước khi ghi và ghi trong một giao dịch.</p>' +
     '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="lotCancel">Hủy</button>' + (P.ok ? '<button class="btn" data-act="lotGo">' + (exists ? 'Thực hiện' : 'Khôi phục lô') + '</button>' : '') + '</div>';
   $('#impBox').classList.add('on');
@@ -193,7 +185,7 @@ async function lotGo() {
 async function restoreAll(file) {
   try {
     let o; try { o = JSON.parse(await file.text()); } catch (e) { if (e instanceof SyntaxError) throw new Error('File JSON bị hỏng hoặc bị cắt dở, không đọc được nội dung.'); throw e; }
-    if (o && o.loai === HAKLoRung.KIND) throw new Error('Đây là gói sao lưu MỘT lô rừng. Dùng “Khôi phục lô rừng…” trong menu Thêm.');
+    if (o && o.loai === HAKLoRung.KIND) throw new Error('Đây là gói sao lưu MỘT lô rừng. Dùng “Khôi phục lô rừng…” ở Cài đặt → Sao lưu và khôi phục.');
     const k = HAKLoRung.kiemSaoLuu(o);   // lô 2 (T-11): kiểm cấu trúc và phiên bản TRƯỚC mọi bước; file thiếu "v" mà đã có rừng là v2, không chuyển như v1
     if (!k.ok) throw new Error(k.error);
     const o2 = k.v1 ? migrateV1(o) : Object.assign({}, o, {v: 2});

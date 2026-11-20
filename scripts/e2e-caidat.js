@@ -14,6 +14,8 @@ const launch = env => electron.launch({executablePath: require('electron'), args
   await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', 'CR-CD'); await w.fill('#infoForm [name="ten"]', 'NGUYỄN CÀI ĐẶT'); for (const [k, v] of Object.entries({cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v); await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
   await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]');
   let t = await w.innerText('#main');
+  await w.click('#setTab_setbk'); await w.waitForSelector('#autoBk [data-set-path]');
+  t += ' ' + await w.innerText('#main');
   ok('mặc định: hiện đường dẫn dữ liệu và sao lưu, nhãn “mặc định”', /hakqn\.sqlite/.test(t) && (t.match(/mặc định/g) || []).length >= 2, t.slice(0, 300));
   await w.click('[data-act=setBackup]'); await w.waitForSelector('#setMsg');
   ok('đổi thư mục sao lưu: báo thành công, nhãn “thư mục riêng”', /đổi thư mục sao lưu/.test(await w.innerText('#setMsg')) && /thư mục riêng/.test(await w.innerText('#main')));

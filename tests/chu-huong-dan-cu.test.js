@@ -5,7 +5,7 @@
 const test = require('node:test'), assert = require('node:assert');
 const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
-const CU = [/⋯\s*Thêm/, /Tab Phiếu cân/];
+const CU = [/⋯\s*Thêm/, /Tab Phiếu cân/, /Lưu thông tin rừng/, /Lấy tổng từ phiếu cân/, /menu Thêm/, /menu Dữ liệu/];
 
 /* bỏ chú thích của mã JavaScript, giữ nguyên chuỗi và số dòng (chú thích thay bằng khoảng trắng / xuống dòng) */
 function boChuThichJs(src) {
@@ -42,3 +42,18 @@ test('src/*.js (chuỗi hiển thị trong ứng dụng, ví dụ gợi ý và h
   for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.js'))) loi = loi.concat(gap('src/' + f, boChuThichJs(fs.readFileSync(path.join(dir, f), 'utf8'))));
   assert.deepStrictEqual(loi, [], loi.join('\n'));
 });
+test('lô 7a (T-22, T-24): không còn màu nền cứng #fff3cd ngoài trang in; nhãn radio khôi phục bọc trong <span>; cột Loại Cần đối chiếu dùng nhãn tiếng Việt', () => {
+  const dir = path.join(root, 'ui', 'app'); const bgLoi = [];
+  for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.js') && x !== '28-tien-ich.js')) {
+    const s = boChuThichJs(fs.readFileSync(path.join(dir, f), 'utf8'));
+    if (/background:#/i.test(s)) bgLoi.push(f);
+  }
+  assert.deepStrictEqual(bgLoi, [], 'còn background:# cứng trong: ' + bgLoi.join(', '));
+  const f14 = fs.readFileSync(path.join(dir, '14-thao-tac.js'), 'utf8');
+  const radios = f14.match(/<label><input type="radio" name="impStrat"[\s\S]*?<\/label>/g) || [];
+  assert.strictEqual(radios.length, 4);
+  for (const r of radios) assert.ok(/<input [^>]+>\s*<span>[\s\S]+<\/span><\/label>$/.test(r), 'nhãn radio thiếu <span>: ' + r);
+  const f30 = fs.readFileSync(path.join(dir, '30-cai-dat-danh-muc.js'), 'utf8');
+  assert.ok(f30.includes('CAN_LOAI') && f30.includes('CAN_LOAI[c.loai]'), 'Cần đối chiếu phải hiện nhãn tiếng Việt cho cột Loại');
+});
+

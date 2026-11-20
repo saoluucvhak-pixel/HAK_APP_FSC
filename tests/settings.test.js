@@ -54,3 +54,12 @@ test('lưu cài đặt giữ nguyên các trường khác và mặc định nh�
   S.save(u, {...S.load(u), lastBackup: '2026-11-01T00:00:00.000Z', remindDays: 14}); S.save(u, {...S.load(u), dataDir: ''});
   assert.deepEqual([S.load(u).lastBackup, S.load(u).remindDays], ['2026-11-01T00:00:00.000Z', 14]);
 });
+test('Lô 6 (T-09): settings.json bị hỏng JSON — checkConfigured báo SETTINGS_CORRUPT và lưu bản .bad, không âm thầm mở DB trống', () => {
+  const u = tmp();
+  fs.writeFileSync(S.file(u), '{hỏng json');
+  const chk = S.checkConfigured(u);
+  assert.equal(chk.state, 'unavailable');
+  assert.equal(chk.code, 'SETTINGS_CORRUPT');
+  assert.ok(fs.existsSync(S.file(u) + '.bad'));
+  assert.equal(fs.readFileSync(S.file(u) + '.bad', 'utf8'), '{hỏng json');
+});

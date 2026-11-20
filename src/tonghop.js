@@ -45,7 +45,7 @@
   }
   function chuRung(db, oid) {
     const o = ((db && db.rs) || {})[oid]; if (!o) return null; const i = o.info || {};
-    const dong = Object.values(o.forests || {}).map(f => { const fi = f.info || {}, dk = typeof fi.dienTich === 'number' && typeof fi.dinhMucTanHa === 'number' ? tan(fi.dienTich * fi.dinhMucTanHa) : ''; const tt = sumKl(f.pc || []); return [s(fi.maRung), s(fi.diaDiem), typeof fi.dienTich === 'number' ? fi.dienTich : '', dk, tt, (f.pc || []).length, f.dung ? 'Đã dừng' : f.chot ? (f.luuTru ? 'Lưu trữ' : 'Đã chốt') : '']; });
+    const dong = Object.values(o.forests || {}).map(f => { const fi = f.info || {}, sl = DMU().sanLuongDuKien(db, fi), dk = typeof sl === 'number' ? tan(sl) : ''; const tt = sumKl(f.pc || []); return [s(fi.maRung), s(fi.diaDiem), typeof fi.dienTich === 'number' ? fi.dienTich : '', dk, tt, (f.pc || []).length, f.dung ? 'Đã dừng' : f.chot ? (f.luuTru ? 'Lưu trữ' : 'Đã chốt') : '']; });
     return {tieuDe: s(i.ten) + (i.cccd ? ' · CCCD ' + i.cccd : ''), loai: 'chu', muc: [{ten: 'Các lô của chủ rừng', cot: ['Lô', 'Địa điểm', 'Diện tích (ha)', 'Dự kiến (tấn)', 'Thực tế (tấn)', 'Số phiếu', 'Chốt'], dong}], ghiChu: []};
   }
   const api = {nguoi, xe, doiTac, chuRung};

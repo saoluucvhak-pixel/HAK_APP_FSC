@@ -14,7 +14,7 @@ function tkVe() {
   const r = tkQ.trim().length >= 2 ? tkTim() : [], co = r.filter(x => x.ds.length), flat = []; co.forEach(g => g.ds.forEach(x => flat.push(x)));
   if (tkSel >= flat.length) tkSel = Math.max(0, flat.length - 1);
   let i = -1;
-  const html = '<div id="tkPanel" role="dialog" aria-label="Tìm kiếm toàn cục" style="position:fixed;left:50%;top:10vh;transform:translateX(-50%);width:min(720px,94vw);max-height:78vh;overflow:auto;background:var(--card,#fff);color:var(--ink,#111);border:1px solid var(--line,#ccc);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.3);padding:12px;z-index:1000">' +
+  const html = '<div id="tkPanel" role="dialog" aria-modal="true" aria-label="Tìm kiếm toàn cục" style="position:fixed;left:50%;top:10vh;transform:translateX(-50%);width:min(720px,94vw);max-height:78vh;overflow:auto;background:var(--card,#fff);color:var(--ink,#111);border:1px solid var(--line,#ccc);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.3);padding:12px;z-index:1000">' +
     '<input id="tkInput" type="search" autocomplete="off" placeholder="Tìm người, CCCD, biển số, số phiếu, mã lô, chủ rừng, số hợp đồng, đối tác, MST…" value="' + esc(tkQ) + '" style="width:100%;font-size:16px;padding:10px;box-sizing:border-box">' +
     (tkQ.trim().length < 2 ? '<p class="mut" style="margin:10px 2px 2px">Gõ ít nhất 2 ký tự. Không cần gõ dấu; biển số gõ liền hoặc có chấm đều được; CCCD và số phiếu tìm được theo đoạn cuối. Esc để đóng.</p>' :
       co.length ? co.map(g => '<h4 style="margin:12px 0 4px">' + esc(g.nhom) + ' <span class="mut">(' + g.tong + ')</span></h4>' + g.ds.map(x => { i++;

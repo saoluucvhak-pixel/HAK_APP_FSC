@@ -49,3 +49,21 @@ test('A2: lệch sản lượng dự kiến dùng CÙNG định nghĩa với gia
   db.dinhMucKeo = [{tuNgay: '01/12/2026', tanHa: 10}];   // định mức chỉ hiệu lực sau ngày bắt đầu: không có định mức cho lô
   assert.equal(nhom(C.kiemTra(db, 'o1', 'a'), 'Chéo lô: lệch sản lượng dự kiến').length, 0);
 });
+
+test('Lô 7b (T-15): cùng số phiếu và ngày cân ở hai lô nhưng khác BKS — phieuTrung trả khacBks=true và kiemTra báo cảnh báo mềm (kind="doi"), không chặn', () => {
+  const db = mk(
+    lo('a', 'A', {pc: [pc('1001', '05/10/2026', '92C-111.11', '08:00', '09:00')]}),
+    lo('b', 'B', {pc: [pc('1001', '5/10/2026', '92C-222.22', '10:00', '11:00')]})
+  );
+  const dup = C.phieuTrung(db, 'o1', 'b');
+  assert.equal(dup.length, 1);
+  assert.equal(dup[0].khacBks, true);
+  assert.equal(dup[0].ma, 'A');
+  const items = C.kiemTra(db, 'o1', 'b');
+  assert.equal(nhom(items, 'Chéo lô: phiếu cân trùng').length, 0);
+  const soft = nhom(items, 'Chéo lô: phiếu cân cùng số và ngày ở lô khác');
+  assert.equal(soft.length, 1);
+  assert.equal(soft[0].kind, 'doi');
+  assert.match(soft[0].text, /92C-222\.22/);
+  assert.match(soft[0].text, /92C-111\.11/);
+});

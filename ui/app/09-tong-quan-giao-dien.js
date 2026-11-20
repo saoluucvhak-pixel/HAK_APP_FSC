@@ -6,7 +6,9 @@ function homeData() {
   const today = parseVN(todayStr()), A = {noPc: [], lechTg: [], noCoord: [], noDest: [], xeHan: [], minors: [], badDate: [], lechKl: []}, months = {}, T = {du: 0, nc: 0, dx: 0, tt: 0};
   Object.values(db.rs).forEach(o => forestList(o).forEach(f => {
     const rec = jobView(o, f), i = rec.info, ref = {oid: o.id, fid: f.id, name: (i.tenRung || i.maRung || '(rừng chưa đặt tên)') + ' · ' + (o.info.ten || '')};
-    const y = forestYield(i); if (y) T.du += y; T.nc += (rec.nc || []).length; T.dx += (rec.dx || []).length;
+    const y = forestYield(i); if (y) T.du += y;
+    T.nc += new Set((rec.nc || []).map((r, idx) => r && (r.nguoiId || trim(r.cccd) || trim(r.ten) || idx))).size;
+    T.dx += new Set((rec.dx || []).map((r, idx) => r && (r.xeId || HAKBks.khoa(r.bienSo) || idx))).size;
     const pcT = HAKDinhMuc.tongPhieuTan(rec.pc);   // tổng phiếu cân (một định nghĩa: làm tròn từng phiếu theo kg như biểu mẫu)
     if (typeof i.klHoSoCu === 'number' && i.klHoSoCu > 0) { T.tt += i.klHoSoCu;
     if (pcT > 0 && Math.abs(i.klHoSoCu - pcT) / pcT > 0.01) A.lechKl.push({oid: o.id, fid: f.id, name: (i.tenRung || i.maRung || '(rừng chưa đặt tên)') + ' · nhập tay ' + fmtTan(i.klHoSoCu) + ' tấn, phiếu cân ' + fmtTan(pcT) + ' tấn'}); }
@@ -18,7 +20,7 @@ function homeData() {
     const refDay = parseVN(i.tuNgay) ? i.tuNgay : todayStr();
     if ((rec.nc || []).some(n => { const a = ageAt(n.ngaySinh, refDay); return a != null && a < 18; })) A.minors.push(ref);
     if ((rec.pc || []).some(p => !HAKDates.isValid(p.ngay))) A.badDate.push(ref);
-    (rec.pc || []).forEach(p => { const d = HAKDates.parse(p.ngay); if (d && +p.kl > 0) { const k = d.y + '-' + pad2(d.m); months[k] = (months[k] || 0) + +p.kl; } });
+    (rec.pc || []).forEach(p => { const d = HAKDates.parse(p.ngay), kg = HAKDinhMuc.kgPhieu(p); if (d && kg > 0) { const k = d.y + '-' + pad2(d.m); months[k] = (Math.round((months[k] || 0) * 1000) + kg) / 1000; } });
   }));
   return {A, months, T};
 }
@@ -53,7 +55,7 @@ function panelHome() {
       (huongDanBox() || '<div class="card"><p class="mut" style="margin:0 0 10px">Chưa có chủ rừng nào. Mở Cài đặt → Hướng dẫn để xem các bước.</p></div>') +
       '<div class="card"><div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></div>';
   }
-  const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { a.t += HAKDinhMuc.kgPhieu(p) / 1000; a.n++; }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
+  const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { const kg = HAKDinhMuc.kgPhieu(p); if (HAKDates.isValid(p.ngay) && kg > 0) { a.t = (Math.round(a.t * 1000) + kg) / 1000; a.n++; } }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
   const avg = recs.length ? Math.round(tot.pct / recs.length * 10) / 10 : 0;
   const ringCls = p => p >= 80 ? 'hi' : p >= 50 ? 'mid' : 'lo';
   const todo = recs.filter(r => r.pct < 100).sort((a, b) => a.pct - b.pct).slice(0, 8);

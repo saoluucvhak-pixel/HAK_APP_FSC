@@ -70,3 +70,14 @@ test('kho sao lưu nhận bản 2 giờ, hằng tuần, nhập từ ngoài; hai 
   const r = K.lietKe([d, d]);
   assert.deepEqual(r.items.map(x => x.loai).sort(), ['nhapngoai', 'toanbo', 'tudong2gio', 'tudongtuan']);
 });
+
+test('phiếu #13b: tab Sao lưu và khôi phục có đủ 4 thao tác, khung SQLite (gộp thư mục thứ 2 + chu kỳ + số bản giữ), khung JSON và nhắc sao lưu; tab Hệ thống chỉ còn thư mục dữ liệu', () => {
+  const f15 = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app', '15-du-lieu-cai-dat-sao-luu-lo.js'), 'utf8');
+  const f29 = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app', '29-kho-sao-luu.js'), 'utf8');
+  const sysPaint = f15.slice(f15.indexOf('function settingsPaint()'), f15.indexOf('function autoBackupCard('));
+  assert.ok(sysPaint.includes('Thư mục dữ liệu') && !sysPaint.includes('id="dbBk2"') && !sysPaint.includes('id="setRemind"'), 'tab Hệ thống chỉ giữ Thư mục dữ liệu');
+  for (const id of ['kslJson', 'restorePickBtn', 'kslLotSaveBtn', 'lotRestoreBtn', 'autoBk', 'setAutoChuKy', 'setAutoKeep', 'dbBk2', 'jsonBk', 'remindBk', 'setRemind']) {
+    assert.ok(f29.includes(id), 'tab Sao lưu và khôi phục thiếu ' + id);
+  }
+});
+

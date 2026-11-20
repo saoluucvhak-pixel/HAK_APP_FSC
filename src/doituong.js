@@ -32,7 +32,8 @@
     o.cccd = so(o.cccd) || o.cccd; o.vaiTro = vaiCo(p && p.vaiTro); o.kyHD = coCo(p && p.kyHD); o.ngung = !!(p && p.ngung); return o;
   }
   function chuan(dt) {
-    const o = {id: s(dt && dt.id), ma: s(dt && dt.ma), ten: s(dt && dt.ten), loai: dt && dt.loai === 'phapnhan' ? 'phapnhan' : 'thenhan', mst: s(dt && dt.mst), diaChi: s(dt && dt.diaChi), sdt: s(dt && dt.sdt),
+    const mstRaw = s(dt && dt.mst).replace(/\s/g, ''), mst = /^\d{13}$/.test(mstRaw) ? mstRaw.slice(0, 10) + '-' + mstRaw.slice(10) : mstRaw;
+    const o = {id: s(dt && dt.id), ma: s(dt && dt.ma), ten: s(dt && dt.ten), loai: dt && dt.loai === 'phapnhan' ? 'phapnhan' : 'thenhan', mst, diaChi: s(dt && dt.diaChi), sdt: s(dt && dt.sdt),
       kyHD: coCo(dt && dt.kyHD), daiDien: s(dt && dt.daiDien), chucVuDaiDien: s(dt && dt.chucVuDaiDien), ngung: !!(dt && dt.ngung), ngayCapNhat: s(dt && dt.ngayCapNhat), nguonCu: s(dt && dt.nguonCu),
       nguoi: ((dt && dt.nguoi) || []).map(chuanNguoi)};
     if (o.loai === 'phapnhan') o.nguoi = o.nguoi.filter(p => s(p.hoTen));   // pháp nhân: không dùng bảng con người (đại diện khai ở đối tượng); giữ người đã có (tài xế của công ty)
@@ -93,7 +94,7 @@
     x.nguoi.forEach((p, i) => {
       const lb = 'Người ' + (i + 1) + (p.hoTen ? ' (' + p.hoTen + ')' : '');
       if (!p.hoTen) e.push(lb + ': thiếu họ tên');
-      if (p.cccd && !/^(\d{9}|\d{12})$/.test(p.cccd)) e.push(lb + ': CCCD phải gồm 9 hoặc 12 chữ số');
+      if (p.cccd && !NL().cccdHopLe(p.cccd)) e.push(lb + ': CCCD phải gồm 9 hoặc 12 chữ số');
       if (p.cccd) { if (cccdLo.has(p.cccd)) e.push(lb + ': trùng CCCD với người khác trong cùng hồ sơ'); cccdLo.set(p.cccd, 1); const o = timCccd(khac, p.cccd); if (o) e.push(lb + ': CCCD ' + p.cccd + ' đã có ở hồ sơ “' + o.dt.ten + '” (một người một hồ sơ: thêm vai trò ở hồ sơ đó)'); }
       [['ngayCap', 'ngày cấp'], ['hanCccd', 'hạn CCCD'], ['ngaySinh', 'ngày sinh'], ['hanGplx', 'hạn GPLX']].forEach(([k, t]) => { if (!ngayOk(p[k])) e.push(lb + ': ' + t + ' “' + p[k] + '” không phải ngày có thật (dd/mm/yyyy)'); });
       if (p.vaiTro.taiXe && !p.gplx) e.push(lb + ': tài xế phải có số giấy phép lái xe');
@@ -108,7 +109,10 @@
     const coKhoa = x.loai === 'phapnhan' ? !!so(x.mst) : x.nguoi.some(p => p.cccd);
     if (!coKhoa && khac.length) w.push((x.loai === 'phapnhan' ? 'Pháp nhân chưa có mã số thuế' : 'Thể nhân chưa có CCCD') + ' và trùng tên với ' + khac.map(o => '“' + o.ten + '” (mã ' + (o.ma || '?') + ')').join(', ') +
       ': kiểm tra có phải cùng một đối tượng không; nếu đúng, sửa hồ sơ cũ thay vì thêm mới');
+    const sdtHopLe = v => !s(v) || /^[0-9 .()+\-]{8,20}$/.test(s(v));
+    if (!sdtHopLe(x.sdt)) w.push('Số điện thoại đối tượng “' + x.sdt + '” chưa đúng định dạng (8–20 ký tự số)');
     x.nguoi.forEach((p, i) => {
+      if (!sdtHopLe(p.sdt)) w.push('Người ' + (i + 1) + (p.hoTen ? ' (' + p.hoTen + ')' : '') + ': số điện thoại “' + p.sdt + '” chưa đúng định dạng');
       if (!(p.vaiTro && (p.vaiTro.nhanCong || p.vaiTro.taiXe))) return;
       const thieu = [['ngaySinh', 'ngày sinh'], ['ngayCap', 'ngày cấp'], ['noiCap', 'nơi cấp'], ['diaChi', 'địa chỉ thường trú']].filter(([k]) => !s(p[k])).map(([, t]) => t);
       if (thieu.length) w.push('Người ' + (i + 1) + (p.hoTen ? ' (' + p.hoTen + ')' : '') + ': thiếu ' + thieu.join(', ') + ' — lô sẽ đòi khi chọn vào ' + (p.vaiTro.nhanCong ? 'đội khai thác' : 'xe vận chuyển'));
@@ -134,7 +138,7 @@
   const BKS = () => (typeof require === 'function' ? require('./bks.js') : root.HAKBks);
   function moiTuLo(dmDT, dmXe, nc, dx) {
     const nguoi = [], xe = [], daC = new Set(), daB = new Set();
-    (nc || []).forEach(r => { if (!r || s(r.nguoiId)) return; const c = so(r.cccd); if (!/^(\d{9}|\d{12})$/.test(c) || !s(r.ten) || daC.has(c) || timCccd(dmDT, c)) return; daC.add(c); nguoi.push(r); });
+    (nc || []).forEach(r => { if (!r || s(r.nguoiId)) return; const c = so(r.cccd); if (!NL().cccdHopLe(r.cccd) || !s(r.ten) || daC.has(c) || timCccd(dmDT, c)) return; daC.add(c); nguoi.push(r); });
     (dx || []).forEach(r => { if (!r || s(r.xeId)) return; const k = BKS().khoa(r.bienSo); if (!k || daB.has(k) || XEDM().timBks(dmXe, r.bienSo)) return; daB.add(k); xe.push(r); });
     return {nguoi, xe};
   }
@@ -163,9 +167,19 @@
     'Người đại diện': 'daiDien', 'Chức vụ người đại diện': 'chucVuDaiDien', 'Họ tên': 'hoTen', 'CCCD': 'cccd', 'Ngày cấp': 'ngayCap', 'Nơi cấp': 'noiCap', 'Hạn CCCD': 'hanCccd',
     'Thường trú': 'diaChiNg', 'Giới tính': 'gioiTinh', 'Ngày sinh': 'ngaySinh', 'SĐT người': 'sdtNg', 'Số GPLX': 'gplx', 'Hạn GPLX': 'hanGplx', 'Vị trí mặc định': 'viTri',
     'Chức danh khi ký': 'chucDanhKy', 'Vai trò': 'vaiTro', 'Người ký': 'nguoiKy'};
-  const yesKy = v => { const t = fold(v); return {vanChuyen: /van chuyen|ca hai|ca 2/.test(t), nhanCong: /nhan cong|ca hai|ca 2/.test(t)}; };
+  const yesKy = v => {
+    const t = fold(v);
+    if (/^(khong|khong co|no|0|false|-+)$/.test(t)) return {vanChuyen: false, nhanCong: false};
+    const both = /ca hai|ca 2/.test(t) || /^(co|x|1|yes|true|ok)$/.test(t);
+    return {vanChuyen: both || /van chuyen/.test(t), nhanCong: both || /nhan cong/.test(t)};
+  };
+  const laNguoiKy = v => {
+    const t = fold(v);
+    if (!t || /^(khong|khong co|no|0|false|-+)$/.test(t)) return false;
+    return /^(co|x|1|yes|true|ok|nguoi ky|ky)$/.test(t) || /van chuyen|nhan cong|ca hai|ca 2/.test(t);
+  };
   const yesVai = v => { const t = fold(v); return {nhanCong: /nhan cong|lao dong/.test(t), taiXe: /tai xe/.test(t), chuXe: /chu xe/.test(t)}; };
-  /* rows: [{tiêu đề: giá trị}]; vt: danh mục vị trí (tên → id). Trả {doiTuong: [{dt, dong: [số dòng], trangThai: 'moi'|'trung'|'doi'|'loi', loi: [], cu}], loi: []} */
+  /* rows: [{tiêu đề: giá trị}]; vt: danh mục vị trí (tên → id). Trả {doiTuong: [{dt, dong: [số dòng], trangThai: 'moi'|'trung'|'doi'|'loi', loi: [], canhBao: [], cu}], loi: []} */
   function docExcel(rows, dm, vt) {
     const nhom = new Map(), loiChung = [];
     (rows || []).forEach((r0, i) => {
@@ -178,11 +192,12 @@
       g.dong.push(dong);
       if (r.hoTen) {
         const v = vt && r.viTri ? (vt.find(x => fold(x.ten) === fold(r.viTri)) || null) : null;
+        const nk = s(r.nguoiKy) ? (laNguoiKy(r.nguoiKy) ? (/van chuyen|nhan cong|ca hai|ca 2/.test(fold(r.nguoiKy)) ? yesKy(r.nguoiKy) : (g.dt.kyHD.vanChuyen || g.dt.kyHD.nhanCong ? g.dt.kyHD : {vanChuyen: true, nhanCong: true})) : {vanChuyen: false, nhanCong: false}) : {vanChuyen: false, nhanCong: false};
         g.dt.nguoi.push({hoTen: r.hoTen, cccd: r.cccd, ngayCap: r.ngayCap, noiCap: r.noiCap, hanCccd: r.hanCccd, diaChi: r.diaChiNg, gioiTinh: r.gioiTinh, ngaySinh: r.ngaySinh, sdt: r.sdtNg,
-          gplx: r.gplx, hanGplx: r.hanGplx, viTriId: v ? v.id : '', chucDanhKy: r.chucDanhKy, vaiTro: yesVai(r.vaiTro), kyHD: /co|x|1|yes/.test(fold(r.nguoiKy)) ? g.dt.kyHD : {}, _viTriTen: v ? '' : r.viTri});
+          gplx: r.gplx, hanGplx: r.hanGplx, viTriId: v ? v.id : '', chucDanhKy: r.chucDanhKy, vaiTro: yesVai(r.vaiTro), kyHD: nk, _viTriTen: v ? '' : r.viTri});
       }
     });
-    const out = [];
+    const out = [], seenCccdFile = new Map(), seenTenFile = new Map();
     nhom.forEach(g => {
       const loi = [], dt = g.dt;
       dt.nguoi.forEach(p => { if (p._viTriTen) loi.push('Vị trí “' + p._viTriTen + '” chưa có trong danh mục vị trí (Định mức nhân công)'); delete p._viTriTen; });
@@ -192,10 +207,24 @@
       if (cu) { dt.id = cu.id; dt.ma = dt.ma || cu.ma; dt.nguoi.forEach(p => { const o = p.cccd && (cu.nguoi || []).find(x => so(x.cccd) === so(p.cccd)); if (o) p.id = o.id; }); }
       // CCCD đã có mà họ tên khác: không tự ghi đè (có thể gõ nhầm số), báo để đối chiếu
       dt.nguoi.forEach(p => { const o = p.cccd && timCccd(dm, p.cccd); if (o && fold(o.ng.hoTen) !== fold(p.hoTen)) loi.push('CCCD ' + so(p.cccd) + ' đã có ở hồ sơ “' + o.dt.ten + '” với họ tên “' + o.ng.hoTen + '”, khác “' + p.hoTen + '” trong file: đối chiếu trước khi nhập'); });
+      // Lô 8 (T-17): kiểm trùng CCCD và cùng tên có/không CCCD ngay giữa các dòng trong cùng file Excel
+      dt.nguoi.forEach(p => {
+        const c = so(p.cccd), fn = fold(p.hoTen);
+        if (c) {
+          if (seenCccdFile.has(c)) loi.push('CCCD ' + c + ' trùng với dòng ' + seenCccdFile.get(c).dong.join(', ') + ' (' + seenCccdFile.get(c).ten + ') trong cùng file Excel');
+          else seenCccdFile.set(c, {dong: g.dong, ten: p.hoTen || dt.ten});
+        }
+        if (fn) {
+          const prev = seenTenFile.get(fn);
+          if (prev && (!!prev.cccd !== !!c)) loi.push('Người “' + p.hoTen + '” trùng họ tên với dòng ' + prev.dong.join(', ') + ' trong file nhưng một dòng có CCCD, một dòng không có CCCD: kiểm tra gộp thành một dòng');
+          else if (!prev) seenTenFile.set(fn, {dong: g.dong, cccd: c});
+        }
+      });
       const ds = (dm || []).filter(o => !cu || o.id !== cu.id);
       kiem(ds, dt).forEach(x => loi.push(x));
+      const cb = canhBao(ds, dt);
       const x = chuan(dt), tt = loi.length ? 'loi' : !cu ? 'moi' : JSON.stringify(chuan(Object.assign({}, cu, {ngayCapNhat: ''}))) === JSON.stringify(Object.assign(x, {ngayCapNhat: ''})) ? 'trung' : 'doi';
-      out.push({dt: x, dong: g.dong, trangThai: tt, loi, cu: cu ? chuan(cu) : null});
+      out.push({dt: x, dong: g.dong, trangThai: tt, loi, canhBao: cb, cu: cu ? chuan(cu) : null});
     });
     return {doiTuong: out, loi: loiChung};
   }
@@ -262,6 +291,6 @@
   const timTuDoiTacCu = (dm, idCu) => (dm || []).find(o => o.nguonCu === idCu) || null;
 
   const api = {chupChuRung, nguoiChonChuRung, trungDanhMuc, LOAI, VAI_TRO, KY, COT, kyText, vaiText, chuan, chuanNguoi, idDoiTuong, idNguoi, maMoi, tim, timNguoi, timCccd, nhanNguoi, nguoiTheoVaiTro, benKy, loc, kiem, canhBao, luu, moiTuLo, themTuLo, ngung,
-    docExcel, apDungExcel, tuDanhMucCu, timTuDoiTacCu, tatCaNguoi, fold};
+    docExcel, apDungExcel, yesKy, laNguoiKy, yesVai, tuDanhMucCu, timTuDoiTacCu, tatCaNguoi, fold};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDoiTuong = api;
 })(typeof self !== 'undefined' ? self : this);

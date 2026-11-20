@@ -4,7 +4,8 @@
  * người Nhân công/Tài xế thiếu giấy tờ. Khôi phục gói lô không nhân đôi thể nhân không CCCD. */
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('fs'), path = require('path');
-const K = require('../src/kiemtranhieudoi'), Dates = require('../src/dates'), DT = require('../src/doituong'), G = require('../src/goidm'), L = require('../src/lorung');
+const K = require('../src/kiemtranhieudoi'), Dates = require('../src/dates'), DT = require('../src/doituong'), G = require('../src/goidm'), L = require('../src/lorung'), HAKNhapLieu = require('../src/nhaplieu');
+global.HAKNhapLieu = HAKNhapLieu;
 const src01 = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app', '01-cau-hinh-tien-ich.js'), 'utf8');
 const isCccd = new Function('return ' + /const isCccd = (s => [^;]+);/.exec(src01)[1])();   // đúng hàm giao diện dùng cho chủ rừng và thành viên
 const ctx = db => ({db, trim: s => String(s == null ? '' : s).trim(), HAKDates: Dates, isCccd, numSwap: s => s, HAKLoRung: L});

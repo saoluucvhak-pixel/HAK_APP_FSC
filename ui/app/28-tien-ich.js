@@ -33,10 +33,10 @@ async function danNap() {
 const bmTen = ma => { const b = window.HAKBieuMau && HAKBieuMau.byMa(ma); return b ? b.ten : ((DOC_CODES[ma] || '').replace(/^BM-\d\d · /, '')); };
 const bmSoBan = ma => { const b = window.HAKBieuMau && HAKBieuMau.byMa(ma); return b ? b.soBan : 1; };
 async function mucLucDocx(rec, files, tenGoi) {
-  const ml = HAKTienIch.mucLuc(files, bmTen, bmSoBan);
+  const ml = HAKTienIch.mucLuc(files, bmTen, bmSoBan, rec);
   const rows = [['STT', 'Mẫu', 'Tên biểu mẫu', 'Lập cho', 'Số bản', 'Tên file trong gói']].concat(ml.map(x => [String(x.stt), 'BM-' + x.ma, x.ten, x.doiTuong || 'Cả lô', String(x.soBan), x.file]));
   return makeDocx([P('MỤC LỤC HỒ SƠ', {al: 'center', b: true, sz: 30, after: 60}), P('Rừng ' + (rec.info.maRung || '') + ' · Chủ rừng ' + upper(rec.info.ten || ''), {al: 'center', after: 60}),
-    P(tenGoi + ' · ' + ml.length + ' biểu mẫu · lập ngày ' + todayStr(), {al: 'center', i: true, after: 200}), T([700, 900, 3400, 1700, 800, 3700], rows, {head: true, sz: 22})],
+    P(tenGoi + ' · ' + ml.length + ' biểu mẫu · lập ngày ' + todayStr(), {al: 'center', i: true, after: 200}), T([700, 900, 3400, 1700, 800, 7637], rows, {head: true, sz: 22})],
   {landscape: true, footer: 'Mục lục hồ sơ · Rừng ' + (rec.info.maRung || '')});
 }
 
@@ -53,22 +53,23 @@ async function phuLucKyLai() {
 
 /* ---------- 4. Gói “Chỉ xem” và 5. In trong app ---------- */
 function chiXemData(rec, f, files) {
-  const o = curOwner() || {info: {}}, i = rec.info || {}, F = {dx: rec.dx, hdvc: rec.hdvc}, fmtT = v => fmtTan(Math.round((v || 0) * 1000) / 1000);
+  const o = curOwner() || {info: {}}, i = rec.info || {}, F = {dx: rec.dx, hdvc: rec.hdvc}, fmtT = v => HAKTienIch.fmtVi(Math.round((v || 0) * 1000) / 1000, 3);
   const tenD = id => { const d = (rec.doi || []).find(x => x.id === id); return d ? (trim(d.ten) || 'Đội ' + ((rec.doi || []).indexOf(d) + 1)) : ''; };
   const sdx = HAKSoVB.soDoiXe(f), soCua = (id, t) => (sdx.find(x => x.id === id && x.truong === t) || {}).in || '';
   const dxHd = r => { const h = rec.hdvc ? HAKModel.hdOrder(F).find(x => HAKModel.xeOf(F, x).includes(r)) : null; return h ? (trim(h.ten) || 'Đội xe ' + (HAKModel.hdOrder(F).indexOf(h) + 1)) : ''; };
   const HANH = {chot: 'Chốt', mokhoa: 'Mở khóa', luutru: 'Lưu trữ', boluutru: 'Bỏ lưu trữ', dung: 'Dừng lô', molai: 'Mở lại lô'};
+  const tt = HAKTienIch.tongTomTat(rec), B = doiOf(rec), doiKl = new Map((B.doi || []).map(d => [d.id, d.khoiLuong]));
   return {phanMem: 'HAKQN Desktop', phienBan: (dbInfo && dbInfo.version) || '', taoLuc: new Date().toLocaleString('vi-VN'),
     chu: {ten: o.info.ten, ma: o.info.ma, cccd: o.info.cccd, diaChi: o.info.diaChi},
-    lo: {ma: i.maRung, ten: i.tenRung, diaDiem: i.diaDiem, dienTich: i.dienTich, tuNgay: i.tuNgay, denNgay: i.denNgay, trangThai: HAKVongDoi.TEN[loTrangThai(rec, f)] || ''},
+    lo: {ma: i.maRung, ten: i.tenRung, diaDiem: i.diaDiem, dienTich: typeof i.dienTich === 'number' ? HAKTienIch.fmtVi(i.dienTich) : i.dienTich, tuNgay: i.tuNgay, denNgay: i.denNgay, trangThai: HAKVongDoi.TEN[loTrangThai(rec, f)] || ''},
     chot: f.chot ? {phienBan: f.chot.phienBan, hash: f.chot.hash, at: new Date(f.chot.at).toLocaleString('vi-VN')} : null,
-    tong: {nc: (rec.nc || []).length, dx: (rec.dx || []).length, pc: (rec.pc || []).length, kl: fmtT(klPhieu(rec.pc || []))},
-    doi: (rec.doi || []).map(d => { const ng = (rec.nc || []).filter(r => r.doiId === d.id), tt = ng.find(isTT); return {ten: tenD(d.id), toTruong: tt ? tt.ten : '', soNguoi: ng.length, kl: fmtT(klPhieu((rec.pc || []).filter(p => p.doiId === d.id)))}; }),
+    tong: {nc: (rec.nc || []).length, dx: (rec.dx || []).length, pc: tt.soPhieu, pcBiLoai: tt.pcBiLoai, kl: fmtT(tt.tongKl)},
+    doi: (rec.doi || []).map(d => { const ng = (rec.nc || []).filter(r => r.doiId === d.id), ttN = ng.find(isTT), klD = doiKl.has(d.id) ? doiKl.get(d.id) : klPhieu(tt.pcHopLe.filter(p => p.doiId === d.id)); return {ten: tenD(d.id), toTruong: ttN ? ttN.ten : '', soNguoi: ng.length, kl: fmtT(klD)}; }),
     doiXe: rec.hdvc ? groupsDX(rec).filter(g => g.hd).map(g => { const xs = HAKModel.xeOf(F, g.hd), bs = new Set(xs.map(r => trim(r.bienSo)));
-    return {ten: trim(g.hd.ten) || 'Đội xe ' + (HAKModel.hdOrder(F).indexOf(g.hd) + 1), nguoiKy: g.ten, soXe: xs.length, soHD: soCua(g.hd.id, 'soVC'), soXN: soCua(g.hd.id, 'pcSo'), kl: fmtT(klPhieu((rec.pc || []).filter(p => bs.has(trim(p.bienSo)))))}; }) : [],
+    return {ten: trim(g.hd.ten) || 'Đội xe ' + (HAKModel.hdOrder(F).indexOf(g.hd) + 1), nguoiKy: g.ten, soXe: xs.length, soHD: soCua(g.hd.id, 'soVC'), soXN: soCua(g.hd.id, 'pcSo'), kl: fmtT(tt.klTheoBien(bs))}; }) : [],
     nc: (rec.nc || []).map((r, k) => [k + 1, r.ten, r.vaiTro, r.chucDanh, tenD(r.doiId)]),
     dx: (rec.dx || []).map((r, k) => [k + 1, r.bienSo, r.chuXe, r.taiXe, dxHd(r)]),
-    pc: (rec.pc || []).map((p, k) => [k + 1, p.ngay, p.soPhieu, p.bienSo, typeof p.kl === 'number' ? fmtTan(p.kl) : (p.kl || ''), tenD(p.doiId)]),
+    pc: (rec.pc || []).map((p, k) => [k + 1, p.ngay, p.soPhieu, p.bienSo, typeof p.kl === 'number' ? HAKTienIch.fmtVi(p.kl, 3) : (p.kl || ''), tenD(p.doiId)]),
     nhatKy: (f.nhatKy || []).map(x => ({at: new Date(x.at).toLocaleString('vi-VN'), hanh: (HANH[x.hanh] || x.hanh) + (x.phienBan ? ' (phiên bản ' + x.phienBan + ')' : ''), lyDo: x.lyDo || ''})),
     files: files || []};
 }
@@ -95,11 +96,8 @@ async function inHtml(html, ten) {
 }
 function inTomTat() { const f = curForest(), rec = curRec(); if (!f || !rec) return; if (stBlockNote()) return; return inHtml(HAKTienIch.chiXemHtml(chiXemData(rec, f, [])), 'Tom_tat_ho_so_' + slug(rec.info.maRung || '')); }
 function inBaoCao() {
-  const b = document.getElementById('rpBody'); if (!b) return; const c = b.cloneNode(true);
-  c.querySelectorAll('.gh, .rpl, .row, button, input, select, label, .msg, #rpFilter, details.rpF').forEach(x => x.remove());
-  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo</title><style>body{font:13px/1.45 "Segoe UI",Arial,sans-serif;color:#111;margin:18px}h3{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:3px 5px;text-align:left}thead th{background:#eee}.kpi{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.kpi div{font-size:12px}.kpi b{display:block;font-size:15px}.mut{color:#555}tr{break-inside:avoid}</style></head><body>' +
-  c.innerHTML + '</body></html>';
-  return inHtml(html, 'Bao_cao_' + rp.id);
+  if (!document.getElementById('rpBody')) return;
+  return inHtml(HAKReports.toPrintHtml(rpModel(), {scope: rpScope()}), 'Bao_cao_' + rp.id);
 }
 function tienIchBox(rec) {
   const f = curForest(); if (!f) return '';

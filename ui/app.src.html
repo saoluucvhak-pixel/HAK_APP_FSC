@@ -30,11 +30,7 @@ header.top h1 small{display:block;font-size:11.5px;font-weight:400;opacity:.72;m
 .nav .nb,.hbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;background:transparent;color:var(--barInk);border-radius:99px;padding:6px 14px;font:inherit;font-size:13.5px;cursor:pointer;text-decoration:none;white-space:nowrap}
 .nav .nb:hover,.hbtn:hover{background:rgba(255,255,255,.12)}
 .nav .nb.on{background:rgba(255,255,255,.18);font-weight:600}
-.menu{position:relative}.menu>summary{list-style:none}.menu>summary::-webkit-details-marker{display:none}
-.menu .pop{position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 12px 32px rgba(0,0,0,.28);padding:6px;z-index:40}
-.menu .pop .mi{display:flex;width:100%;align-items:center;gap:8px;text-align:left;border:0;background:none;color:var(--ink);padding:9px 12px;border-radius:var(--rs);font:inherit;cursor:pointer}
-.menu .pop .mi:hover{background:var(--accSoft)}.mi-sec{padding:4px 8px 6px;font-size:12px;color:var(--mut-aa)}.mi-sec b{display:block;margin:2px 4px 4px;color:var(--ink)}.skinbtn{display:flex;align-items:center;gap:8px;width:100%;border:1px solid transparent;background:none;color:var(--ink);padding:6px 8px;border-radius:var(--rs);font:inherit;cursor:pointer;text-align:left}.skinbtn:hover{background:var(--accSoft)}.skinbtn.on{border-color:var(--brand);background:var(--accSoft);font-weight:600}.sw{display:inline-flex;width:34px;height:16px;border-radius:5px;overflow:hidden;border:1px solid var(--ctl);flex:0 0 auto}.sw i{flex:1}
-.menu.trai .pop{right:auto;left:0}.menu .pop{max-width:calc(100vw - 16px);max-height:calc(100vh - 120px);overflow:auto}.menu .pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
+.mi-sec{padding:4px 8px 6px;font-size:12px;color:var(--mut-aa)}.mi-sec b{display:block;margin:2px 4px 4px;color:var(--ink)}.skinbtn{display:flex;align-items:center;gap:8px;width:100%;border:1px solid transparent;background:none;color:var(--ink);padding:6px 8px;border-radius:var(--rs);font:inherit;cursor:pointer;text-align:left}.skinbtn:hover{background:var(--accSoft)}.skinbtn.on{border-color:var(--brand);background:var(--accSoft);font-weight:600}.sw{display:inline-flex;width:34px;height:16px;border-radius:5px;overflow:hidden;border:1px solid var(--ctl);flex:0 0 auto}.sw i{flex:1}
 /* Thanh ngữ cảnh */
 #ctxBar{position:sticky;top:50px;z-index:29;display:flex;gap:6px 18px;flex-wrap:wrap;align-items:center;padding:7px 18px;background:var(--card);border-bottom:1px solid var(--line);font-size:13px;color:var(--mut-aa)}
 #ctxBar b{color:var(--ink);font-weight:600}#ctxBar .sp{flex:1}#kslBang .pill,#kslBang th{white-space:nowrap}#bkChip{border:0;font:inherit;font-size:12px;font-weight:550;cursor:pointer}#bkChip:hover{filter:brightness(.96)}#bkChip:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
@@ -118,7 +114,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 .ccTbl{border-collapse:collapse;font-size:12px}.ccTbl th,.ccTbl td{padding:2px 3px;text-align:center;border:1px solid var(--line)}.ccTbl .ccName{text-align:left;white-space:nowrap;padding:2px 8px}.ccIn{width:34px;padding:2px;text-align:center;border:0;background:transparent;font:inherit}.ccIn:focus{outline:2px solid var(--accent,#2f6f4f)}.ccBad{background:#fde8e8}.ccSun{background:rgba(127,127,127,.14)}.ccTot{font-weight:600;min-width:46px}
 .wrap{overflow:auto;max-height:440px;border:1px solid var(--line);border-radius:var(--r)}
 /* Thông báo, nhãn */
-.msg{padding:10px 14px;border-radius:var(--rs);margin:10px 0;white-space:pre-line;border-left:4px solid currentColor}
+.msg{padding:10px 14px;border-radius:var(--rs);margin:10px 0;white-space:pre-line;overflow-wrap:anywhere;border-left:4px solid currentColor}
 .msg.err{background:var(--errBg);color:var(--err)}.msg.warn{background:var(--warnBg);color:var(--warn)}.msg.ok{background:var(--okBg);color:var(--ok)}
 .issues{margin:6px 0 0 18px;padding:0;font-size:13px}
 .msg.issWarn{padding:5px 14px;margin:6px 0}.issWarnDong{gap:10px;justify-content:space-between;flex-wrap:nowrap}
@@ -160,7 +156,7 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 #guideBox p,#guideBox li{font-size:13.5px;line-height:1.6}#guideBox ul,#guideBox ol{padding-left:20px;margin:4px 0}
 #guideBox table{border-collapse:collapse;width:100%;font-size:12.5px;margin:6px 0}#guideBox th,#guideBox td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}#guideBox th{background:var(--th);position:static}
 #lkBox label,#rpBox label{font-size:12.5px}
-#impBox label{flex-direction:row;align-items:flex-start;gap:8px;color:var(--ink);margin:6px 0}
+#impBox label{flex-direction:row;align-items:flex-start;gap:8px;color:var(--ink);margin:6px 0}#impBox th{position:static}
 #rpBox .rpl{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:10px 0}
 #rpBox .rpc{text-align:left;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--card);color:var(--ink);cursor:pointer;font:inherit;transition:border-color .12s,background .12s}
 #rpBox .rpc:hover{border-color:var(--acc)}
@@ -222,12 +218,12 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
   <main id="main"></main>
 </div>
 
-<div id="lkBox"><div class="gd" id="lkBody"></div></div>
-<div id="rpBox"><div class="gd" id="rpBody"></div></div>
-<div id="impBox"><div class="gd" id="impBody"></div></div>
+<div id="lkBox" role="dialog" aria-modal="true"><div class="gd" id="lkBody"></div></div>
+<div id="rpBox" role="dialog" aria-modal="true"><div class="gd" id="rpBody"></div></div>
+<div id="impBox" role="dialog" aria-modal="true"><div class="gd" id="impBody"></div></div>
 <div id="dlgBox" role="dialog" aria-modal="true"><div class="gd" id="dlgBody"></div></div>
-<div id="stBox"><div class="gd" id="stBody"></div></div>
-<div id="guideBox" data-act="guideBg"><div class="gd">
+<div id="stBox" role="dialog" aria-modal="true"><div class="gd" id="stBody"></div></div>
+<div id="guideBox" role="dialog" aria-modal="true" data-act="guideBg"><div class="gd">
 <div class="gh"><h2>Hướng dẫn sử dụng</h2><button class="btn ghost sm" data-act="guideClose">✕ Đóng</button></div>
 <p>HAKQN Desktop lập hồ sơ khai thác và vận chuyển gỗ keo theo chuẩn FSC. Dữ liệu lưu ngay trên máy (SQLite); nhập liệu, kiểm tra, xuất hồ sơ, sao lưu và khôi phục <b>không cần mạng</b>. Chỉ đồng bộ Google Sheets mới cần mạng. Bản đầy đủ có hình thức trình bày chi tiết hơn: tệp <code>docs/HUONG_DAN.md</code>.</p>
 <h3>0. Màn hình Tổng quan</h3>
@@ -387,6 +383,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@INAN2@@*/</script>
 <script>/*@@KHOAN@@*/</script>
 <script>/*@@MONEY@@*/</script>
+<script>/*@@SO@@*/</script>
 <script>/*@@STAGE@@*/</script>
 <script>/*@@DELTA@@*/</script>
 <script>/*@@CHAMCONG@@*/</script>

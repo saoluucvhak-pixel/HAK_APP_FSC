@@ -1,16 +1,17 @@
 /* ========== Báo cáo (Word + Excel) ========== */
 const rp = {id: 'dieuhanh', from: '', to: '', owner: '', detail: false, msg: null, folded: {}, q: '', one: {}, flag: {}, presetSel: '', conds: []};
-const isoToVi = v => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
-const viToIso = v => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v || ''); return m ? m[3] + '-' + m[2] + '-' + m[1] : ''; };
+const isoToVi = v => HAKDates.fromIso(v);
+const viToIso = v => HAKDates.toIso(v);
 /* theo đội khai thác (cấu trúc 2.0): tên đội, Tổ trưởng, số người, đơn giá bình quân đ/tấn = tổng tiền công của đội ÷ khối lượng phiếu cân của đội */
 const tenDoiOf = (jr, id) => { const d = (jr.doi || []).find(x => x.id === id); return d ? (trim(d.ten) || 'Đội ' + (jr.doi.indexOf(d) + 1)) : ''; };
 function rpDoiList(jr) {
   try {
     const B = doiOf(jr), ex = exOf(jr, 'day');
     return B.doi.map((d, i) => {
-      const sr = subRec(jr, B, d), tan = klPhieu((jr.pc || []).filter(p => p.doiId === d.id)); let tien = null; try { tien = payRows(sr, ex).sum; } catch (e) { /* chưa đủ dữ liệu tính tiền */ }
+      const sr = subRec(jr, B, d), tan = typeof d.khoiLuong === 'number' ? d.khoiLuong : klPhieu((jr.pc || []).filter(p => p.doiId === d.id));
+      let tien = null; try { tien = payRows(sr, ex).sum; } catch (e) { /* chưa đủ dữ liệu tính tiền */ }
       const bs = basisOf(sr.info);
-      return {id: d.id, ten: trim(d.ten) || 'Đội ' + (i + 1), tt: (d.tt || {}).ten || '', nguoi: d.n, tienTrenTan: bs.qty === 'tấn' && tan > 0 && tien ? tien / tan : null, cachTinh: bs.unit};
+      return {id: d.id, ten: trim(d.ten) || 'Đội ' + (i + 1), tt: (d.tt || {}).ten || '', nguoi: d.n, khoiLuong: d.khoiLuong, thanhTien: tien, tienTrenTan: bs.qty === 'tấn' && tan > 0 && tien ? tien / tan : null, cachTinh: bs.unit};
     });
   } catch (e) { return []; }
 }
@@ -29,8 +30,9 @@ function rpRecords(ownerFilter = rp.owner) {
       const i = f.info || {}, jr = jobView(o, f);   // đơn giá, cách tính theo đội của từng người (cấu trúc 2.0)
       let vd = {trangThai: '', trangThaiTen: '', noIn: 0, chuaKy: 0};   // vòng đời lô (src/vongdoi.js): trạng thái, số mẫu còn nợ in, số mẫu đã in chưa ký
       try { const q = qtEval(jr, f), tt = HAKVongDoi.trangThai(f, q.sum), a = q.sum.dot1, b = q.sum.dot2; vd = {trangThai: tt, trangThaiTen: HAKVongDoi.TEN[tt], noIn: a.chuaIn + a.doi + b.chuaIn + b.doi, chuaKy: (a.daIn - a.daKy) + (b.daIn - b.daKy)}; } catch (e) { /* không tính được: để trống */ }
+      const dmLo = HAKDinhMuc.dinhMucLo(db, i);
       out.push({oid: o.id, fid: f.id, chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
-        dienTich: i.dienTich, dinhMuc: i.dinhMucTanHa, khoiLuongTT: i.klHoSoCu, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
+        dienTich: i.dienTich, dinhMuc: dmLo ? dmLo.v : i.dinhMucTanHa, khoiLuongTT: i.klHoSoCu, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
         diemDen: destOf(jobView(o, f)),
         pc: (f.pc || []).map(p => ({doiId: p.doiId, ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null,
         can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
@@ -134,8 +136,9 @@ function rpDocx(m) {
   if (m.kpis.length) {
     const per = land ? 5 : 3, cells = m.kpis.map(k => ['**' + F(k.value, k.f) + '**', k.label]);
     for (let i = 0; i < cells.length; i += per) {
-      const row = cells.slice(i, i + per); while (row.length < per) row.push(['', '']);
-      B.push(T(Array(per).fill(Math.floor(W / per)), [row.map(c => ({v: [c[0], c[1]]}))], {sz: land ? 20 : 20, al: 'center', pad: 80}), P('', {after: 60}));
+      const row = cells.slice(i, i + per), nC = row.length, wC = Array(nC).fill(Math.floor(W / nC));
+      wC[nC - 1] += W - wC.reduce((a, b) => a + b, 0);
+      B.push(T(wC, [row.map(c => ({v: [c[0], c[1]]}))], {sz: land ? 20 : 20, al: 'center', pad: 80}), P('', {after: 60}));
     }
   }
   m.sections.forEach(s => {
@@ -153,15 +156,7 @@ function rpDocx(m) {
 async function rpExport(kind) {
   const m = rpModel(), name = 'BaoCao_' + m.id + '_' + todayStr().replace(/\//g, '-');
   if (kind === 'docx') { download(await rpDocx(m), name + '.docx'); return; }
-  const aoa = HAKReports.toAoa(m, {org: 'HAK GROUP', today: todayStr(), stamp: stampStr(), scope: rpScope()});
-  const ws = XLSX.utils.aoa_to_sheet(aoa, {cellDates: true}), wb = XLSX.utils.book_new();
-  const widest = Math.max(...m.sections.map(s => s.cols.length));
-  ws['!cols'] = Array.from({length: widest}, (_, i) => ({wch: i === 0 ? 34 : 18}));
-  ws['!merges'] = [0, 1, 2, 3, 4].map(r => ({s: {r, c: 0}, e: {r, c: Math.max(widest - 1, 1)}}));
-  Object.keys(ws).forEach(k => { if (k[0] !== '!' && ws[k].t === 'd') ws[k].z = 'dd/mm/yyyy'; });   // ô ngày thật, hiển thị dd/mm/yyyy
-  const t0 = aoa.tables && aoa.tables[0];
-  if (t0 && t0.last >= t0.first) ws['!autofilter'] = {ref: XLSX.utils.encode_range({s: {r: t0.head, c: 0}, e: {r: t0.last, c: t0.cols - 1}})};   // bộ lọc tự động ở bảng chính
-  if (t0 && t0.levels) { ws['!rows'] = []; t0.levels.forEach((lv, i) => { ws['!rows'][t0.first + i] = {level: lv}; }); }                       // nhóm dòng cha–con
+  const ws = HAKReports.toSheet(m, {org: 'HAK GROUP', today: todayStr(), stamp: stampStr(), scope: rpScope()}, XLSX), wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Bao cao'); XLSX.writeFile(wb, name + '.xlsx', {cellDates: true});
 }
 function rpHidden(sec, ri) {   // dòng con ẩn khi cha (cấp thấp hơn, gần nhất phía trên) đang thu gọn
@@ -187,6 +182,7 @@ function rpRender() {
     '<button class="btn" data-act="rpWord">Xuất Word (.docx)</button><button class="btn ghost" data-act="rpExcel">Xuất Excel (.xlsx)</button>' + (HB ? '<button class="btn ghost" data-act="inBaoCao" id="inBaoCaoBtn">In báo cáo</button>' : '') + '</div>' +
     rpFilterHtml() +
     '<p class="mut">Khoảng ngày áp dụng cho ngày cân của phiếu cân. Báo cáo tiến độ luôn tính tại thời điểm hiện tại.</p>' +
+    ((() => { const a1 = HAKReports.dateKey(rp.from), a2 = HAKReports.dateKey(rp.to); return a1 && a2 && a1 > a2 ? '<div class="msg err" id="rpKhoangDao">Ngày bắt đầu (' + esc(rp.from) + ') sau ngày kết thúc (' + esc(rp.to) + '): không có dòng nào thỏa khoảng ngày này.</div>' : ''; })()) +
     (rp.msg ? '<div class="msg ' + rp.msg.kind + '">' + esc(rp.msg.text) + '</div>' : '') +
     '<h3 style="margin:10px 0 0">' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + ' · ' + rpScope()) + '<br>' + esc(m.unit || '') + '</p>' +
     '<div class="kpi">' + m.kpis.map(k => '<div><b>' + esc(F(k.value, k.f)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' + prev +

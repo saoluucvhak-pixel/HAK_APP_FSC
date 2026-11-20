@@ -59,7 +59,7 @@ async function lkApply() {
   } catch (e) {
     db = withDefaults(JSON.parse(snapshot));   // trả lại đúng trạng thái trước khi ghi
     if (HB) { const back = HB.loadSync(); if (back && back.ok) db = withDefaults(back.db); }
-    lkNewStages.forEach(k => { if (lk.mode === 'new' || !db.rs[k.split('|')[0]]) delete stages[k]; });   // lô vừa tạo bị hoàn lại thì bản nháp của nó không còn đích
+    lkNewStages.forEach(k => { delete stages[k]; });   // hoàn lại bản nháp phiếu cân mới tạo khi lưu thất bại (lô 9a, T-20)
     lk.msg = {kind: 'err', text: 'Không lưu, hồ sơ giữ nguyên: ' + e.message}; lkRender();
   }
 }
@@ -124,18 +124,18 @@ document.addEventListener('click', async e => {
   if (a === 'lkModeNew') { lk.owner = $('#lkOwner').value; lk.mode = 'new'; lk.alias = {}; lk.plateOv = {}; lkInitSel(); lk.view = 'preview'; lk.msg = null; return lkRender(); }
   if (a === 'lkOpenDup') { const d = findForestByMa(lk.cand.forests[lk.fi].maRung); NAV.cur = d.o.id; NAV.curF = d.f.id; NAV.tab = 'rung'; NAV.view = 'owner'; render(); lk.mode = 'fill'; lk.tgt = {o: NAV.cur, f: NAV.curF, epoch: dbEpoch}; lk.alias = {}; lk.plateOv = {}; lkInitSel();
   lk.view = 'preview'; return lkRender(); }
-  if (a === 'lkPcAll') { lkPhieuRows().forEach(p => { lk.sel.phieu[p.soPhieu] = p.st === 'new' || p.st === 'upd'; }); return lkRender(); }
+  if (a === 'lkPcAll') { lkPhieuRows().forEach(p => { const on = p.st === 'new' || p.st === 'upd'; lk.sel.phieu[p._lkKey] = on; lk.sel.phieu[p.soPhieu] = on; }); return lkRender(); }
   if (a === 'lkPcFilter') { lk.pcFilter = (($('#lkPcFilter') || {}).value || '').trim(); return lkRender(); }
   if (a === 'lkPcFilterClear') { lk.pcFilter = ''; return lkRender(); }
-  if (a === 'lkPcFilterTick' || a === 'lkPcFilterUntick') { lk.pcFilter = (($('#lkPcFilter') || {}).value || '').trim(); const on = a === 'lkPcFilterTick'; lkPcFiltered(lkPhieuRows()).forEach(p => { if (p.st === 'new' || p.st === 'upd') lk.sel.phieu[p.soPhieu] = on; }); return lkRender(); }
+  if (a === 'lkPcFilterTick' || a === 'lkPcFilterUntick') { lk.pcFilter = (($('#lkPcFilter') || {}).value || '').trim(); const on = a === 'lkPcFilterTick'; lkPcFiltered(lkPhieuRows()).forEach(p => { if (p.st === 'new' || p.st === 'upd') { lk.sel.phieu[p._lkKey] = on; lk.sel.phieu[p.soPhieu] = on; } }); return lkRender(); }
   if (a === 'lkBulk') {
     const nw = (($('#lkBulkNew') || {}).value || '').trim().toUpperCase(), T = lkBulkTargets();
     if (!nw) { lk.msg = {kind: 'err', text: 'Gõ biển số mới trước khi áp dụng.'}; return lkRender(); }
     if (!T.length) { lk.msg = {kind: 'warn', text: 'Nhóm đã chọn không có phiếu nào (tích phiếu trước, hoặc chọn nhóm theo biển).'}; return lkRender(); }
-    lk.plateOv = lk.plateOv || {}; T.forEach(p => { lk.plateOv[p.soPhieu.toUpperCase()] = nw; }); lkPhieuDefaultsKeep();
-    lk.msg = {kind: 'ok', text: 'Đã đổi biển ' + T.length + ' phiếu thành ' + nw + ' (chưa ghi vào hồ sơ). Kiểm tra cột Biển số rồi bấm “Lưu vào hồ sơ”.'}; return lkRender();
+    lk.plateOv = lk.plateOv || {}; T.forEach(p => { lk.plateOv[p._lkKey] = nw; lk.plateOv[p.soPhieu.toUpperCase()] = nw; }); lkPhieuDefaultsKeep();
+    lk.msg = {kind: 'ok', text: 'Đã đổi biển ' + T.length + ' phiếu thành ' + nw + ' (chưa ghi vào hồ sơ). Kiểm tra cột Biển số rồi bấm “Ghi vào lô (phiếu cân vào bản nháp)”.'}; return lkRender();
   }
-  if (a === 'lkBulkUndo') { const T = lkBulkTargets(); lk.plateOv = lk.plateOv || {}; T.forEach(p => { delete lk.plateOv[p.soPhieu.toUpperCase()]; }); lkPhieuDefaultsKeep(); lk.msg = {kind: 'ok', text: 'Đã trả lại biển gốc cho ' + T.length + ' phiếu.'}; return lkRender(); }
+  if (a === 'lkBulkUndo') { const T = lkBulkTargets(); lk.plateOv = lk.plateOv || {}; T.forEach(p => { delete lk.plateOv[p._lkKey]; delete lk.plateOv[p.soPhieu.toUpperCase()]; }); lkPhieuDefaultsKeep(); lk.msg = {kind: 'ok', text: 'Đã trả lại biển gốc cho ' + T.length + ' phiếu.'}; return lkRender(); }
   if (a === 'lkPcNone') { Object.keys(lk.sel.phieu).forEach(k => { lk.sel.phieu[k] = false; }); return lkRender(); }
   if (a === 'lkApply') return lkApply();
 });
@@ -157,7 +157,7 @@ document.addEventListener('change', e => {
   if (sel.lkov != null) { lk.plateOv = lk.plateOv || {}; const v = t.value.trim().toUpperCase(), k = sel.lkov.toUpperCase(); if (v) lk.plateOv[k] = v; else delete lk.plateOv[k]; lkPhieuDefaultsKeep(); return lkRender(); }
   if (sel.lkalias != null) { lk.alias = lk.alias || {}; const v = t.value.trim().toUpperCase(); if (v) lk.alias[sel.lkalias] = v; else delete lk.alias[sel.lkalias]; lkPhieuDefaultsKeep(); return lkRender(); }
 });
-function lkPhieuDefaultsKeep() { lkPhieuRows().forEach(p => { if (!(p.soPhieu in lk.sel.phieu) || (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn) && lk.sel.phieu[p.soPhieu] === false && p.bien)) lk.sel.phieu[p.soPhieu] = p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn);
+function lkPhieuDefaultsKeep() { lkPhieuRows().forEach(p => { if (!(p._lkKey in lk.sel.phieu) || (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn) && lk.sel.phieu[p._lkKey] === false && p.bien)) lk.sel.phieu[p._lkKey] = p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn);
 }); }
 document.addEventListener('keydown', async e => {
   if (e.key === 'Enter' && e.target.id === 'lkPcFilter') { e.preventDefault(); lk.pcFilter = e.target.value.trim(); lkRender(); const n = document.getElementById('lkPcFilter'); if (n) { n.focus(); try { const L = n.value.length; n.setSelectionRange(L, L);
@@ -167,9 +167,9 @@ document.addEventListener('keydown', async e => {
     const n = document.getElementById(id); if (n) { n.focus(); try { const L = n.value.length; n.setSelectionRange(L, L); } catch (er) { /* ô ngày không có vùng chọn */ } }   // vẽ lại không làm mất tiêu điểm bàn phím
     return;
   }
-  /* phiếu #10: hộp thoại đang mở giữ tiêu điểm bên trong — Tab / Shift+Tab đi vòng trong hộp, không ra trang bên dưới */
+  /* phiếu #10 & lô 9c (T-23): hộp thoại đang mở giữ tiêu điểm bên trong — Tab / Shift+Tab đi vòng trong hộp, không ra trang bên dưới */
   if (e.key === 'Tab') {
-    const hop = ['stBox', 'impBox', 'rpBox', 'lkBox', 'guideBox'].map(id => document.getElementById(id)).filter(b => b && b.classList.contains('on')).pop();
+    const hop = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'tkBox', 'thBox'].map(id => document.getElementById(id)).filter(b => b && (b.classList.contains('on') || b.id === 'tkBox' || b.id === 'thBox')).pop();
     if (hop) {
       const ds = [...hop.querySelectorAll('button, input:not([type=hidden]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent);
       if (ds.length) { const i = ds.indexOf(document.activeElement), j = i < 0 ? 0 : (i + (e.shiftKey ? -1 : 1) + ds.length) % ds.length; if (i < 0 || (e.shiftKey ? i === 0 : i === ds.length - 1)) { ds[j].focus(); e.preventDefault(); return; } }
@@ -182,7 +182,6 @@ document.addEventListener('keydown', async e => {
     if (open('rpBox')) { rpClose(); e.preventDefault(); return; }
     if (open('lkBox')) { lkClose(); e.preventDefault(); return; }
     if (open('guideBox')) { document.getElementById('guideBox').classList.remove('on'); e.preventDefault(); return; }
-    const mm = document.getElementById('moreMenu'); if (mm && mm.open) { mm.open = false; e.preventDefault(); }
   }
 });
 window.addEventListener('online', () => { if ($('#lkBox').classList.contains('on') && lk.view !== 'preview') lkRender(); });

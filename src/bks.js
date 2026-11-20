@@ -6,7 +6,7 @@
   'use strict';
   const D = () => (typeof HAKDates !== 'undefined' ? HAKDates : (typeof require === 'function' ? require('./dates.js') : root.HAKDates));
   const s = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
-  const khoa = v => String(v == null ? '' : v).toUpperCase().replace(/[\s.\-]/g, '');
+  const khoa = v => String(v == null ? '' : v).normalize('NFKC').replace(/\(\s*xe\s+c[uũ]\s*\)/gi, '').toUpperCase().replace(/[\s.\-]/g, '').replace(/[\s.\-–—_·/\\]+/g, '');
   const soPhieu = v => s(v).toUpperCase().replace(/\s+/g, '');
   const ngayKhoa = v => { const p = D().parse(s(v)); return p ? String(p.key) : ''; };
   /* khóa nghiệp vụ: '' khi thiếu số phiếu hoặc ngày cân hợp lệ (phiếu đó không dùng để nhận diện trùng) */

@@ -71,7 +71,12 @@
    *  - cccdHopLe: đúng 9 hoặc 12 chữ số.
    *  - cccdTuSo: ô SỐ của Excel/Google Sheets mất số 0 đầu: 8 số → 9 số (thêm một số 0); 10–11 số → 12 số (thêm số 0 đến đủ 12); mọi trường hợp khác giữ nguyên để báo lỗi. */
   const cccdSo = v => String(v == null ? '' : v).replace(/\D/g, '');
-  const cccdHopLe = v => { const n = cccdSo(v).length; return n === 9 || n === 12; };
+  const cccdHopLe = v => {
+    const t = s(v);
+    if (!t || !/^[\d\s.\-'’`]+$/.test(t)) return false;
+    const n = cccdSo(t).length;
+    return n === 9 || n === 12;
+  };
   function cccdTuSo(n) { const d = String(Math.round(+n)); return d.length === 8 ? '0' + d : d.length === 10 || d.length === 11 ? d.padStart(12, '0') : d; }
   const api = {kiemTra, chuanHoaNgay, chuanHoaCccd, cccdSo, cccdHopLe, cccdTuSo, NGAY_EXP, NGAY_INFO};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNhapLieu = api;

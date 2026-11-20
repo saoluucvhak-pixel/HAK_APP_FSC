@@ -72,7 +72,7 @@ function stPendBox(kind) {
     const cands = q.candidates.map(id => st.cur[q.kind].find(x => x._id === id)).filter(Boolean), diffF = new Set(q.diffs.map(d => d.f));
     const cols = cands.map((c, i) => ({t: 'Bản hiện có' + (cands.length > 1 ? ' ' + (i + 1) : ''), v: cell(c, c._nguon || 'đã lưu'), id: c._id})).concat([{t: 'Dòng nguồn mới', v: cell(q.incoming, q.source)}]);
     const fkey = ['soPhieu', 'maRung', 'ngay', 'bienSo', 'noiCan', 'noiGiao', 'kl', ''];
-    const tbl = '<table><thead><tr><th></th>' + cols.map(c => '<th>' + c.t + '</th>').join('') + '</tr></thead><tbody>' + heads.map((h, i) => '<tr><td>' + h + '</td>' + cols.map(c => '<td' + (diffF.has(fkey[i]) ? ' style="background:#fff3cd"' : '') + '>' + c.v[i] + '</td>').join('') +
+    const tbl = '<table><thead><tr><th></th>' + cols.map(c => '<th>' + c.t + '</th>').join('') + '</tr></thead><tbody>' + heads.map((h, i) => '<tr><td>' + h + '</td>' + cols.map(c => '<td' + (diffF.has(fkey[i]) ? ' style="background:var(--warnBg);color:var(--warnFg)"' : '') + '>' + c.v[i] + '</td>').join('') +
     '</tr>').join('') + '</tbody></table>';
     const pick = cands.length > 1 ? '<select data-pendsel="' + q.pid + '">' + cands.map((c, i) => '<option value="' + esc(c._id) + '">Bản hiện có ' + (i + 1) + '</option>').join('') + '</select> ' : '';
     return '<div class="stPendRow" data-pid="' + q.pid + '"><div class="tw">' + tbl + '</div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">' + pick +

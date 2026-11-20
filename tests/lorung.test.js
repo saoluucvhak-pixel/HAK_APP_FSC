@@ -219,3 +219,79 @@ test('dữ liệu cũ đã có mã trùng: liệt kê đầy đủ các lô kh�
   const db = s.load(); ['fd', 'fe'].forEach((id, i) => { const o = id === 'fd' ? 'o2' : 'o1'; db.rs[o].forests[id] = L.renameLot(db.rs[o].forests[id], 'LO-DOI-' + i).forest; }); s.save(db);
   assert.strictEqual(L.duplicateGroups(s.load()).length, 0); assert.ok(s.previewLot(pkg).ok);
 });
+
+test('Lô 3a (T-06): matchOwner so mã chủ rừng không phân biệt hoa thường, chuẩn hóa khoảng trắng/CCCD; cùng mã chủ rừng nhưng khác CCCD báo mâu thuẫn; một bên thiếu CCCD vẫn khớp', () => {
+  const cur = {
+    v: 2,
+    rs: {
+      o1: {id: 'o1', info: {ma: 'CR-001', ten: 'NGUYỄN VĂN A', cccd: '049085001111'}, forests: {}}
+    }
+  };
+  // Mã khác hoa thường, CCCD có khoảng trắng -> khớp cùng chủ rừng o1
+  const m1 = L.matchOwner(cur, 'o_khac', {ma: 'cr-001', ten: 'NGUYỄN VĂN A', cccd: '049 085 001 111'});
+  assert.strictEqual(m1.hit, 'o1');
+  assert.strictEqual(m1.conflict, '');
+
+  // Một bên thiếu CCCD -> không coi là mâu thuẫn
+  const m2 = L.matchOwner(cur, 'o_khac', {ma: 'cr-001', ten: 'NGUYỄN VĂN A', cccd: ''});
+  assert.strictEqual(m2.hit, 'o1');
+  assert.strictEqual(m2.conflict, '');
+
+  // Cùng mã chủ rừng CR-001 nhưng CCCD khác hẳn -> báo mâu thuẫn, không gộp lô của người khác dưới chủ rừng trên máy
+  const m3 = L.matchOwner(cur, 'o_khac', {ma: 'CR-001', ten: 'TRẦN VĂN B', cccd: '049085009999'});
+  assert.strictEqual(m3.hit, null);
+  assert.ok(/cùng mã chủ rừng/.test(m3.conflict), m3.conflict);
+
+  const inc = {
+    v: 2,
+    rs: {
+      o_khac: {id: 'o_khac', info: {ma: 'CR-001', ten: 'TRẦN VĂN B', cccd: '049085009999'}, forests: {f9: lot('f9', 'LO-9', 15)}}
+    }
+  };
+  const plan = L.planImport(cur, inc);
+  assert.strictEqual(plan.ok, false);
+  assert.ok(plan.conflicts.length > 0);
+  assert.throws(() => L.mergeImport(cur, inc, 'skip'), /mâu thuẫn/);
+});
+
+test('Lô 3b (T-05): applyImport skip/overwrite/both nối danh mục giữa hai máy có ID ng1 trùng nhưng khác người, không bao giờ trỏ nhầm sang người của máy đích', () => {
+  const LK = require('../src/lienket');
+  const mayA = {
+    v: 2,
+    dmViTri: [{id: 'vt1', ten: 'Tổ trưởng'}],
+    dmDoiTuong: [{id: 'dt1', ma: 'DT0001', ten: 'NGUYỄN VĂN A', loai: 'thenhan', nguoi: [{id: 'ng1', hoTen: 'NGUYỄN VĂN A', cccd: '049085001111', vaiTro: {nhanCong: true}, kyHD: {nhanCong: true}}]}],
+    dmXe: [{id: 'xe1', bks: '92C-11111', chuXeId: 'ng1'}],
+    rs: {
+      o1: {id: 'o1', info: {ma: 'CR-1', ten: 'CHỦ 1', cccd: '049000000001'}, forests: {
+        fa: M.ensureForest({id: 'fa', info: {maRung: 'LO-A', tenRung: 'Lô A'}, doi: [{id: 'doi1', ten: 'Đội 1', benNhanKhoan: {doiTuongId: 'dt1', nguoiId: 'ng1'}}], nc: [{id: 'tv1', ten: 'NGUYỄN VĂN A', cccd: '049085001111', nguoiId: 'ng1', viTriId: 'vt1', doiId: 'doi1'}], dx: [], pc: []})
+      }}
+    }
+  };
+  // Tệp từ máy B cũng dùng id dt1/ng1 nhưng cho TRẦN VĂN B (CCCD khác) và đã qua chuyenDoi (LK.daChuyen === true)
+  const fileMayB = {
+    v: 2,
+    dmViTri: [{id: 'vt1', ten: 'Công nhân cưa'}],
+    dmDoiTuong: [{id: 'dt1', ma: 'DT0001', ten: 'TRẦN VĂN B', loai: 'thenhan', nguoi: [{id: 'ng1', hoTen: 'TRẦN VĂN B', cccd: '049085002222', vaiTro: {nhanCong: true}, kyHD: {nhanCong: true}}]}],
+    dmXe: [{id: 'xe1', bks: '92C-22222', chuXeId: 'ng1'}],
+    rs: {
+      o1: {id: 'o1', info: {ma: 'CR-1', ten: 'CHỦ 1', cccd: '049000000001'}, forests: {
+        fb: M.ensureForest({id: 'fb', info: {maRung: 'LO-B', tenRung: 'Lô B'}, doi: [{id: 'doi1', ten: 'Đội 1', benNhanKhoan: {doiTuongId: 'dt1', nguoiId: 'ng1'}}], nc: [{id: 'tv1', ten: 'TRẦN VĂN B', cccd: '049085002222', nguoiId: 'ng1', viTriId: 'vt1', doiId: 'doi1'}], dx: [{id: 'xr1', bienSo: '92C-22222', xeId: 'xe1', taiXeId: 'ng1', hdvcId: 'hd1'}], hdvc: [{id: 'hd1', ten: 'Đội xe 1', benKy: {doiTuongId: 'dt1', nguoiId: 'ng1'}}], pc: []})
+      }}
+    }
+  };
+  assert.strictEqual(LK.daChuyen(fileMayB), true);
+
+  for (const strat of ['skip', 'overwrite', 'both']) {
+    const s = open(tmp());
+    s.save(clone(mayA));
+    s.applyImport(clone(fileMayB), strat, strat === 'both' ? {maMoi: {}} : {});
+    const db = s.load();
+    const fb = db.rs.o1.forests.fb;
+    assert.ok(fb, 'lô B được nhập ở chiến lược ' + strat);
+    assert.notStrictEqual(fb.nc[0].nguoiId, 'ng1', 'TRẦN VĂN B không được trỏ nhầm vào ng1 (NGUYỄN VĂN A) ở chiến lược ' + strat);
+    const ngB = db.dmDoiTuong.flatMap(o => o.nguoi || []).find(p => p.id === fb.nc[0].nguoiId);
+    assert.ok(ngB && ngB.cccd === '049085002222' && ngB.hoTen === 'TRẦN VĂN B', 'lô B trỏ đúng hồ sơ TRẦN VĂN B mới được nối');
+    assert.strictEqual(fb.doi[0].benNhanKhoan.nguoiId, ngB.id);
+    assert.strictEqual(fb.hdvc[0].benKy.nguoiId, ngB.id);
+  }
+});

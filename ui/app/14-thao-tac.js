@@ -7,7 +7,7 @@ function newRs() {
   db.rs[id] = {id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
   persist();
   NAV.cur = id; NAV.curF = null; NAV.tab = 'info'; NAV.view = 'owner';
-  note('Đã tạo chủ rừng mới. Nhập thông tin rồi bấm Lưu.');
+  note('Đã tạo chủ rừng mới. Nhập thông tin rồi bấm Lưu dữ liệu vào lô (hoặc Enter).');
 }
 
 function newForest() {
@@ -21,7 +21,7 @@ function newForest() {
     nc: [], dx: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
   NAV.curF = fid; NAV.ftab = 'finfo'; NAV.tab = 'rung';
   persist();
-  note('Đã tạo rừng mới. Nhập thông tin rừng rồi bấm Lưu.');
+  note('Đã tạo rừng mới. Nhập thông tin rừng rồi bấm Lưu dữ liệu vào lô (hoặc Enter).');
 }
 
 function readForest(form) {
@@ -35,14 +35,18 @@ function readForest(form) {
 }
 
 function readLuong(form) {
-  const fd = new FormData(form);
+  const fd = new FormData(form), f = curForest(), cur = (f && fInfo(f)) || {}, cds = chucDanhAll();
+  const rHa = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('ha_' + k)]), cur.donGiaHa);
+  const rNgay = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('dn_' + k)]), cur.donGiaNgay);
+  const rTan = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('dt_' + k)]), cur.donGiaTan);
   return {
     hinhThucLuong: ['ha', 'ngaycong'].includes(fd.get('hinhThucLuong')) ? fd.get('hinhThucLuong') : 'sanluong',
-    donGiaHa: Object.fromEntries(chucDanhAll().map((cd, k) => [cd, toNum(fd.get('ha_' + k))])),
-    donGiaNgay: Object.fromEntries(chucDanhAll().map((cd, k) => [cd, toNum(fd.get('dn_' + k))])),
-    donGiaTan: Object.fromEntries(chucDanhAll().map((cd, k) => [cd, toNum(fd.get('dt_' + k))])),
+    donGiaHa: rHa.map,
+    donGiaNgay: rNgay.map,
+    donGiaTan: rTan.map,
     ngayBDLD: trim(fd.get('ngayBDLD')),
-    moHinhKy: fd.get('moHinhKy') === 'tructiep' ? 'tructiep' : 'giaokhoan'
+    moHinhKy: fd.get('moHinhKy') === 'tructiep' ? 'tructiep' : 'giaokhoan',
+    _errs: rHa.errs.concat(rNgay.errs, rTan.errs)
   };
 }
 
@@ -78,13 +82,13 @@ function forestFill(act, el) {
   return; }
   if (act === 'fillDenDk') { const ii = readForest(form), d = ngayHaEff(ii), n = d ? HAKDinhMuc.soNgay(haDoi(ii, nDoiOf(ii, (curForest() || {}).nc)), d.v) : null, kt = n && HAKDates.isValid(ii.tuNgay) ? HAKDinhMuc.ngayKetThuc(ii.tuNgay, n) : '';
   if (!kt) return hint('Chưa tính được ngày kết thúc: cần diện tích, định mức thời gian khai thác và ngày bắt đầu hợp lệ.'); setv('denNgay', kt);
-  return hint('Đã điền ngày kết thúc dự kiến ' + kt + ' (' + n + ' ngày khai thác, không tính Chủ nhật). Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa ngày.'); }
+  return hint('Đã điền ngày kết thúc dự kiến ' + kt + ' (' + n + ' ngày khai thác, không tính Chủ nhật). Bấm Lưu dữ liệu vào lô (hoặc Enter) để ghi nhận, hoặc sửa ngày.'); }
   if (act === 'dmDefault') { setv('dinhMucTanHa', ''); const k = HAKDinhMuc.keoPick(db, trim(form.elements.tuNgay.value)); document.getElementById('dmNote').textContent = k.found ? 'Sẽ dùng định mức gỗ keo mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
   return; }
   if (act === 'boKlCu') { const f = curForest(); if (!f) return; delete f.info.klHoSoCu; (f.doi || []).forEach(d => { delete d.klHoSoCu; }); persistLo(); note('Đã bỏ số khối lượng của hồ sơ cũ: khối lượng lô lấy theo tổng phiếu cân.', 'ok'); return render(); }
   const ds = pcs.map(p => HAKDates.parse(p.ngay)).filter(Boolean); if (!ds.length) return hint('Chưa có phiếu cân có ngày hợp lệ của rừng này.');
   const pick = ds.reduce((a, b) => (act === 'fillTu' ? (b.key < a.key ? b : a) : (b.key > a.key ? b : a)));
-  setv(act === 'fillTu' ? 'tuNgay' : 'denNgay', HAKDates.format(pick)); hint('Đã điền ' + (act === 'fillTu' ? 'ngày cân nhỏ nhất ' : 'ngày cân lớn nhất ') + HAKDates.format(pick) + ' (từ ' + ds.length + ' phiếu cân). Bấm Lưu thông tin rừng để ghi nhận, hoặc sửa ngày.');
+  setv(act === 'fillTu' ? 'tuNgay' : 'denNgay', HAKDates.format(pick)); hint('Đã điền ' + (act === 'fillTu' ? 'ngày cân nhỏ nhất ' : 'ngày cân lớn nhất ') + HAKDates.format(pick) + ' (từ ' + ds.length + ' phiếu cân). Bấm Lưu dữ liệu vào lô (hoặc Enter) để ghi nhận, hoặc sửa ngày.');
 }
 /* trường của đội trên form thông tin rừng (đơn giá Tổ trưởng hồ sơ cũ) ghi vào ĐỘI ĐẦU; thông tin lô giữ phần còn lại */
 function ghiDoiLo(f, info0, rf) { const t = {}; HAKModel.DOI_INFO.forEach(k => { if (k in rf) t[k] = rf[k]; }); ghiDoi(f, t, 'info', f.doi && f.doi[0]); const out = Object.assign({}, info0); HAKModel.DOI_INFO.forEach(k => { delete out[k]; }); return out; }
@@ -111,7 +115,8 @@ function saveForest(form, nhap) {
 function themDoi() {
   const f = curForest(); if (!f) return;
   const inp = document.getElementById('doiMoiTen'), ten = trim(inp && inp.value) || 'Đội ' + ((f.doi || []).length + 1);   // hình thức, cách tính, đơn giá chép từ đội đang chọn; sửa lại sau nếu khác
-  if ((f.doi || []).some(d => HAKDoi.fold(d.ten) === HAKDoi.fold(ten))) return note('Chưa thêm: đã có đội tên “' + ten + '”.', 'warn');
+  const loi = HAKModel.tenDoiLoi(f, ten, null, 'doi');
+  if (loi) return note('Chưa thêm: ' + loi + '.', 'warn');
   const t0 = curTeam(f), r = HAKModel.addTeam(f, ten, t0 && t0.id);
   if (f.doi.length === 1 && !trim(f.doi[0].ten)) r.f.doi[0].ten = 'Đội 1';   // lô có từ 2 đội: mỗi đội một tên
   Object.assign(f, {doi: r.f.doi, nc: r.f.nc}); hdMoDat('nc', r.id); persistLo();   // 3.0: mở ngay hợp đồng (đội) mới
@@ -148,6 +153,8 @@ function saveDv(form) {
 function themHd() {
   const f = curForest(); if (!f) return;
   const inp = document.getElementById('hdMoiTen'), n = ((f.hdvc || []).length + 1), ten = trim(inp && inp.value) || 'Đội xe ' + n;
+  const loi = HAKModel.tenDoiLoi(f, ten, null, 'hdvc');
+  if (loi) return note('Chưa thêm: ' + loi + '.', 'warn');
   const r = HAKModel.addHd(f, ten); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); hdMoDat('dx', r.id); persistLo();
   note('Đã thêm “' + ten + '”. Chọn đội này ở cột “Đội xe” của các xe, hoặc thêm xe khi đội đang được chọn; rồi chọn người ký của đội.'); render();
 }
@@ -188,7 +195,9 @@ function saveHdVb(form, nhap) {
 }
 function xoaHd() {
   const f = curForest(); if (!f || !NAV.curHd) return;
+  const h = (f.hdvc || []).find(x => x.id === NAV.curHd);
   const r = HAKModel.removeHd(f, NAV.curHd); if (r.error) return note('Chưa xóa: ' + r.error, 'warn');
+  if (!confirm('Xóa hợp đồng vận chuyển (đội xe) “' + ((h && h.ten) || NAV.curHd) + '” (không còn xe và phiếu cân)?')) return;
   Object.assign(f, {hdvc: r.f.hdvc}); if (r.f.sttDaCap) f.sttDaCap = r.f.sttDaCap; NAV.curHd = null; persistLo(); note('Đã xóa hợp đồng vận chuyển.'); render();
 }
 function hdCapNhatDv() {
@@ -209,8 +218,9 @@ function pcGanLoat() {
 }
 function saveLuong(form, nhap) {
   const f = curForest(); if (!f) return;
-  const nl = readLuong(form);
-  if (nl.ngayBDLD && !parseVN(nl.ngayBDLD)) { formMsg(form, chuaLuu(nhap) + 'ngày bắt đầu phải đúng dd/mm/yyyy'); return; }
+  const nl = readLuong(form), errs = (nl._errs || []).slice(); delete nl._errs;
+  if (nl.ngayBDLD && !parseVN(nl.ngayBDLD)) errs.push('ngày bắt đầu phải đúng dd/mm/yyyy');
+  if (errs.length) { formMsg(form, chuaLuu(nhap) + errs.join('; ')); return; }
   clearFormMsg(form);
   f.info = Object.assign({}, f.info, ghiDoi(f, nl, 'info'));
   if (nhap) { persistLo(); return; }
@@ -221,8 +231,8 @@ function saveVc(form, nhap) {
   const f = curForest(); if (!f) return;
   const info = Object.assign({}, f.info, readVc(form));
   const vc = info.vanChuyen, e = [];
-  if (vc.donGiaKm === 'x') e.push('Đơn giá vận chuyển (đ/tấn/km) không phải là số');
-  if (vc.coDinh === 'x') e.push('Đơn giá vận chuyển cố định không phải là số');
+  if (vc.donGiaKm === 'x' || (typeof vc.donGiaKm === 'number' && vc.donGiaKm <= 0)) e.push('Đơn giá vận chuyển (đ/tấn/km) phải là số dương');
+  if (vc.coDinh === 'x' || (typeof vc.coDinh === 'number' && vc.coDinh <= 0)) e.push('Đơn giá vận chuyển cố định phải là số dương');
   if (vc.tuNgay && !parseVN(vc.tuNgay)) e.push('ngày vận chuyển phải đúng dd/mm/yyyy');
   if (e.length) { formMsg(form, chuaLuu(nhap) + e.join('; ')); return; }
   clearFormMsg(form);
@@ -257,9 +267,12 @@ function addGiayRow() {
 
 function delForest() {
   const o = curOwner(), f = curForest(); if (!f) return;
-  if (!confirm('Xóa rừng "' + (f.info.tenRung || f.info.maRung) + '" và toàn bộ nhân công, vận chuyển, hồ sơ xuất của rừng này?')) return;
-  delete o.forests[f.id];
-  loDirty.delete(NAV.curF); NAV.curF = null; persist();
+  const fid = f.id, k = stKeyOf(o.id, fid), coNhap = loDirty.has(fid) || (stages[k] && HAKStage.dirty(stages[k]));
+  const nNc = (f.nc || []).length, nDx = (f.dx || []).length, nPc = (f.pc || []).length;
+  if (!confirm('Xóa rừng "' + (f.info.tenRung || f.info.maRung) + '" (có ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân' + (coNhap ? ' và thay đổi chưa lưu' : '') + ')?')) return;
+  delete o.forests[fid];
+  delete stages[k]; if (typeof hdMoS !== 'undefined') delete hdMoS[fid];
+  loDirty.delete(fid); NAV.curF = null; nhapTamGhi(); persist();
   note('Đã xóa rừng.');
 }
 
@@ -281,9 +294,11 @@ function saveInfo(form) {
 
 function delRs() {
   const rec = curOwner(); if (!rec) return;
-  if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" và toàn bộ nhân công, vận chuyển của hồ sơ này?')) return;
+  const fs = forestList(rec), nLo = fs.length, nNc = fs.reduce((s, f) => s + (f.nc || []).length, 0), nDx = fs.reduce((s, f) => s + (f.dx || []).length, 0), nPc = fs.reduce((s, f) => s + (f.pc || []).length, 0);
+  if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?')) return;
+  fs.forEach(f => { delete stages[stKeyOf(rec.id, f.id)]; loDirty.delete(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
   delete db.rs[rec.id];
-  NAV.cur = null; NAV.curF = null; persist();
+  NAV.cur = null; NAV.curF = null; nhapTamGhi(); persist();
   note('Đã xóa hồ sơ chủ rừng.');
 }
 
@@ -366,7 +381,7 @@ async function backupAll() {
     } finally { backupBusy = false; }
   }
   const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});
-  download(blob, 'HoSoKhaiThac_SaoLuu_' + new Date().toISOString().slice(0, 10) + '.json');
+  download(blob, 'HoSoKhaiThac_SaoLuu_' + HAKDates.fileDay() + '.json');
 }
 const LO_ST = {moi: ['ok', 'THÊM'], trung: ['warn', 'TRÙNG']};
 /* Giữ cả hai: mỗi lô trùng phải có mã mới; gợi ý sẵn, kiểm tra cùng quy tắc với lúc ghi (src/lorung.js: maTrung) */
@@ -405,14 +420,22 @@ async function importWithPreview(inc) {
   if (!p.ok) return note('Không đọc được bản sao lưu: ' + p.error, 'err');
   const row = (l, a, b) => '<tr><td>' + l + '</td><td style="text-align:right">' + fmt(a) + '</td><td style="text-align:right">' + fmt(b) + '</td></tr>';
   const I = p.incoming, E = p.existing, blocked = p.plan.conflicts.length > 0, hong = p.plan.conflicts.some(c => c.loai === 'toanVen');   // hồ sơ đã chốt trong file không toàn vẹn: không cách xử lý nào được ghi
+  const dmDiff = (() => {
+    const sig = d => JSON.stringify([(d && d.dmDoiTuong || []).map(o => [o.id, o.ten, o.mst, (o.nguoi || []).map(x => [x.id, x.hoTen, x.cccd])]), (d && d.dmXe || []).map(x => [x.id, x.bks]), (d && d.dmViTri || []).map(v => [v.id, v.ten])]);
+    const hasCur = ((db && db.dmDoiTuong || []).length + (db && db.dmXe || []).length) > 0;
+    const hasInc = ((inc && inc.dmDoiTuong || []).length + (inc && inc.dmXe || []).length) > 0;
+    return hasCur && hasInc && sig(db) !== sig(inc);
+  })();
   $('#impBody').innerHTML = '<h2>Khôi phục bản sao lưu toàn bộ</h2><table><tr><th></th><th style="text-align:right">Trong file</th><th style="text-align:right">Đang có trên máy</th></tr>' +
-    row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' + impPlanHtml(p.plan) +
+    row('Chủ rừng', I.owners, E.owners) + row('Rừng', I.forests, E.forests) + row('Nhân công', I.nc, E.nc) + row('Xe', I.dx, E.dx) + row('Phiếu cân', I.pc, E.pc) + '</table>' +
+    (dmDiff ? '<div class="msg warn" id="impDmKhac"><b>Lưu ý danh mục:</b> Danh mục đối tượng / xe / vị trí trong file khác với danh mục đang có trên máy. Khi chọn “Giữ bản trên máy”, “Ghi đè” hoặc “Giữ cả hai”, phần mềm sẽ tự nối theo CCCD / MST / BKS / tên vị trí và đưa mục lệch tên vào <b>Cần đối chiếu</b>.</div>' : '') +
+    impPlanHtml(p.plan) +
     '<p><b>Cách xử lý:</b></p>' +
     (hong ? '<div class="msg err" id="impToanVen"><b>Không khôi phục được từ file này: có hồ sơ đã chốt không toàn vẹn</b> (xem danh sách trên). Mọi cách xử lý, kể cả thay toàn bộ, đều bị dừng; chưa ghi gì. Bấm Hủy rồi chọn bản sao lưu khác để đối chiếu.</div>' : '') +
-    '<label><input type="radio" name="impStrat" value="skip"' + (blocked ? ' disabled' : ' checked') + '> Giữ bản trên máy, chỉ thêm lô/chủ mới</label>' +
-    '<label><input type="radio" name="impStrat" value="overwrite"' + (blocked ? ' disabled' : '') + '> Ghi đè các lô TRÙNG bằng dữ liệu trong file (lô khác của chủ được giữ)</label>' +
-    '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> Giữ cả hai (lô trùng trong file được thêm thành lô MỚI với <b>mã lô mới do bạn xác nhận</b>)</label>' + impMaHtml(p.plan) +
-    '<hr><label><input type="radio" name="impStrat" value="replace"' + (hong ? ' disabled' : '') + '> <b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</label>' +
+    '<label><input type="radio" name="impStrat" value="skip"' + (blocked ? ' disabled' : ' checked') + '> <span>Giữ bản trên máy, chỉ thêm lô/chủ mới</span></label>' +
+    '<label><input type="radio" name="impStrat" value="overwrite"' + (blocked ? ' disabled' : '') + '> <span>Ghi đè các lô TRÙNG bằng dữ liệu trong file (lô khác của chủ được giữ)</span></label>' +
+    '<label><input type="radio" name="impStrat" value="both"' + (blocked ? ' disabled' : '') + '> <span>Giữ cả hai (lô trùng trong file được thêm thành lô MỚI với <b>mã lô mới do bạn xác nhận</b>)</span></label>' + impMaHtml(p.plan) +
+    '<hr><label><input type="radio" name="impStrat" value="replace"' + (hong ? ' disabled' : '') + '> <span><b>Thay toàn bộ dữ liệu</b> trên máy bằng file này (khôi phục toàn bộ: xóa ' + fmt(E.owners) + ' chủ rừng và ' + fmt(E.forests) + ' lô hiện có trên máy)</span></label>' +
     '<p class="mut">Phần mềm tự sao lưu cơ sở dữ liệu hiện tại trước khi ghi và ghi trong một giao dịch: lỗi giữa chừng thì không đổi gì. Bản tra cứu Google Sheets không bị đổi.</p>' +
     '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="impCancel">Hủy</button>' + (hong ? '' : '<button class="btn" data-act="impGo">Thực hiện</button>') + '</div>';
   window.__imp = inc; window.__plan = p.plan; $('#impBox').classList.add('on');

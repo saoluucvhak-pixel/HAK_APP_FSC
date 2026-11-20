@@ -26,7 +26,9 @@ async function stSave(opt) {
   stSaving = true; const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
   try {
     const cm = HAKStage.commit(st, r => HAKPhieuCan.chuanHoaNgay2(r, null)), at = stamp(), dk = HAKStage.dirtyKinds(st);   // mọi phiếu có cột ngày cân 2 khi lưu vào hồ sơ rừng (nhập thật thì giữ, trống thì suy ra)
+    const oldNcIds = (f.nc || []).map(r => r && r.id).filter(Boolean), oldDxIds = (f.dx || []).map(r => r && r.id).filter(Boolean);
     f.nc = cm.lists.nc; f.dx = cm.lists.dx; f.pc = cm.lists.pc;
+    HAKLienKet.chuanLo(f, {daXoaNc: oldNcIds, daXoaDx: oldDxIds});   // lô 4 (T-12): gán ID dòng mới không trùng dòng vừa xóa và dọn khóa cc / xeRowId mồ côi
     if (dk.includes('nc')) { const g = ganDoi(f.doi, f.nc); if (g.doi) { f.doi = g.doi; f.nc = g.nc; } }
     if (dk.includes('dx')) { const v = ganVC(f.hdvc || null, f.dx); if (v.hdvc) { f.hdvc = v.hdvc; f.dx = v.dx; } }
     if (dk.includes('pc')) f.pc = ganPC(f.doi, f.pc);   // người mới: cùng quy tắc gán đội với bước kiểm tra (ganDoi)

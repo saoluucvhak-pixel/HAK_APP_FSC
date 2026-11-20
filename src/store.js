@@ -199,23 +199,32 @@ class Store {
     const cur = this.db.pragma('user_version', {simple: true});
     if (cur > this.target) throw new Error('Cơ sở dữ liệu thuộc phiên bản mới hơn ứng dụng (v' + cur + '). Hãy cài bản ứng dụng mới hơn.');
     if (cur === this.target) return;
-    // Có dữ liệu cũ thì sao lưu trước khi nâng cấp cấu trúc
-    if (existed && cur > 0) this.snapshotFile('truoc-nang-cap-v' + cur + '-len-v' + this.target);
+    // Có dữ liệu cũ thì sao lưu trước khi nâng cấp cấu trúc (lô 6, T-10: không sinh bản trùng khi nâng cấp lỗi mở lại nhiều lần, giữ tối đa 3 bản)
+    if (existed && cur > 0) this.snapshotFile('truoc-nang-cap-v' + cur + '-len-v' + this.target, {dedupByHash: true, keep: 3});
     const run = this.db.transaction(() => {
       for (let v = cur; v < this.target; v++) { this.migrations[v](this.db); this.db.pragma('user_version = ' + (v + 1)); }
     });
     run();
   }
 
-  /* opts.keep: chỉ giữ N bản gần nhất cùng tiền tố tag (bản tự động trước khi xóa), không đụng các bản khác */
+  /* opts.keep: chỉ giữ N bản gần nhất cùng tiền tố tag (bản tự động trước khi xóa), không đụng các bản khác; opts.dedupByHash: dùng lại bản cùng tag và cùng nội dung */
   snapshotFile(tag, opts = {}) {
     if (this.file === ':memory:') return null;
     fs.mkdirSync(this.backupDir, {recursive: true});
-    const out = path.join(this.backupDir, tag + '-' + now().replace(/[:.]/g, '-') + '.sqlite');
     this.db.pragma('wal_checkpoint(TRUNCATE)');
-    fs.copyFileSync(this.file, out);
+    const re = new RegExp('^' + tag + '-\\d{4}-.*\\.sqlite$');
+    if (opts.dedupByHash) {
+      const srcHash = crypto.createHash('sha256').update(fs.readFileSync(this.file)).digest('hex');
+      const existing = fs.readdirSync(this.backupDir).filter(n => re.test(n)).sort().reverse();
+      for (const n of existing) {
+        const p = path.join(this.backupDir, n);
+        try { if (crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex') === srcHash) return p; } catch (_) {}
+      }
+    }
+    const out = path.join(this.backupDir, tag + '-' + now().replace(/[:.]/g, '-') + '.sqlite'), tmp = out + '.tmp-' + process.pid;
+    try { fs.copyFileSync(this.file, tmp); fs.renameSync(tmp, out); }
+    catch (e) { try { fs.unlinkSync(tmp); } catch (_) {} throw e; }
     if (opts.keep > 0) {
-      const re = new RegExp('^' + tag + '-\\d{4}-.*\\.sqlite$');
       const old = fs.readdirSync(this.backupDir).filter(n => re.test(n)).sort();
       old.slice(0, Math.max(0, old.length - opts.keep)).forEach(n => { try { fs.unlinkSync(path.join(this.backupDir, n)); } catch (e) { /* bỏ qua */ } });
     }
@@ -407,6 +416,7 @@ class Store {
       rows.forests.forEach(f => { this._ghiGoi(f.id, f.goi); if (haveF.get(f.id) !== f.hash + '|' + f.owner_id) { const {goi: _g, ...r} = f; st.upF.run({...r, t}); changed++; } });
       goneO.forEach(id => { st.delO.run(id); changed++; });
       goneF.forEach(id => { if (haveF.has(id)) { st.delF.run(id); changed++; } });
+      if (this._coBangGoi() && (goneO.length || goneF.length || !keepF.size)) this.db.prepare('DELETE FROM chot_goi WHERE forest_id NOT IN (SELECT id FROM forests)').run();
       /* LỊCH SỬ BẢN CHỤP đi kèm (khôi phục từ bản .sqlite, src/khosaoluu.js): bản chụp của các lần chốt TRƯỚC được chép trong CÙNG giao dịch với hồ sơ, chỉ cho lô còn
        * trong dữ liệu vừa ghi, không ghi đè bản đã có. Lỗi ở đây hoàn tác cả lần ghi: không có trạng thái "hồ sơ đã thay nhưng thiếu lịch sử". */
       if (Array.isArray(opts.goiLichSu) && opts.goiLichSu.length && this._coBangGoi()) {
@@ -457,6 +467,7 @@ class Store {
       rowsF.forEach(f => { this._ghiGoi(f.id, f.goi); const {goi: _g, ...r} = f; st.upF.run({...r, t}); changed++; });
       delF.forEach(id => { changed += st.delF.run(id).changes; });
       delO.forEach(id => { changed += st.delO.run(id).changes; });
+      if (this._coBangGoi() && (delF.length || delO.length)) this.db.prepare('DELETE FROM chot_goi WHERE forest_id NOT IN (SELECT id FROM forests)').run();
       const n = this.db.prepare('SELECT (SELECT COUNT(*) FROM owners) o, (SELECT COUNT(*) FROM forests) f').get();
       if (n.o !== counts.owners || n.f !== counts.forests) bad('sau khi ghi có ' + n.o + ' chủ / ' + n.f + ' lô, giao diện có ' + counts.owners + ' / ' + counts.forests);
     });
@@ -558,20 +569,50 @@ class Store {
       next.congTy = {...(cur.congTy || {})};
       Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || strategy === 'overwrite') next.congTy[id] = c; });
       Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
-      if (!LK.daChuyen(incoming)) {
-        for (const [oid, owner] of Object.entries(next.rs)) {
-          for (const [fid, forest] of Object.entries(owner.forests || {})) {
-            const previous = cur.rs[oid]?.forests?.[fid];
-            if (previous && JSON.stringify(previous) === JSON.stringify(forest)) continue;
+      /* Lô 3b (T-05): nối danh mục của tệp với danh mục máy đích theo CCCD / MST / BKS / tên vị trí rồi đổi ID trong các lô lấy từ tệp,
+       * kể cả khi tệp đã qua chuyenDoi (LK.daChuyen(incoming) === true). Không để ID nội bộ ng1, xe1, vt1 của máy khác trỏ nhầm sang người/xe/vị trí của máy đích. */
+      const GD = require('./goidm');
+      const incHasDm = Array.isArray(incoming.dmDoiTuong) || Array.isArray(incoming.dmXe) || Array.isArray(incoming.dmViTri);
+      for (const [oid, owner] of Object.entries(next.rs)) {
+        for (const [fid, forest] of Object.entries(owner.forests || {})) {
+          const previous = cur.rs[oid]?.forests?.[fid];
+          if (previous && JSON.stringify(previous) === JSON.stringify(forest)) continue;
+          const loKhoa = !!(forest && (forest.chot || forest.dung));
+          if (incHasDm) {
+            const goi = GD.dongGoi(incoming, forest);
+            if (goi.doiTuong.length || goi.xe.length || goi.viTri.length) {
+              const n = GD.noi(next, goi, {loKhoa});
+              Object.assign(next, n.dm);
+              const unmapped = {
+                dt: new Set((goi.doiTuong || []).map(x => x.id).filter(id => !n.doi.dt[id])),
+                ng: new Set((goi.doiTuong || []).flatMap(o => (o.nguoi || []).map(p => p.id)).filter(id => !n.doi.ng[id])),
+                xe: new Set((goi.xe || []).map(x => x.id).filter(id => !n.doi.xe[id])),
+                vt: new Set((goi.viTri || []).map(x => x.id).filter(id => !n.doi.vt[id]))
+              };
+              GD.doiIdLo(forest, n.doi, unmapped);
+              if (n.can.length) {
+                const maLo = String((forest.info && forest.info.maRung) || fid).trim();
+                next.canDoiChieu = (next.canDoiChieu || []).concat(n.can.map(c => Object.assign({noi: 'Khôi phục lô ' + maLo}, c)));
+                if (!loKhoa) {
+                  forest.canDoiChieu = Array.isArray(forest.canDoiChieu) ? forest.canDoiChieu : [];
+                  n.can.forEach(c => { if (!forest.canDoiChieu.some(x => x.loai === c.loai && x.ref === c.ref)) forest.canDoiChieu.push(c); });
+                }
+              }
+            }
+          }
+          if (!loKhoa) {
             LK.chuanLo(forest);
             LK.noiDanhMuc(forest, next);
           }
         }
       }
     }
-    const backup = this.snapshotFile('truoc-khoi-phuc', {keep: 20});   // giữ 20 bản gần nhất (như truoc-xoa): mỗi bản là cả cơ sở dữ liệu, không để thư mục sao lưu lớn mãi
     let goiLichSu = opts && opts.goiLichSu;
     if (!goiLichSu && lsFile) goiLichSu = lsFile.filter(g => !nhan || nhan.has(String(g.forest_id))).map(g => Object.assign({}, g, {forest_id: nhan ? nhan.get(String(g.forest_id)) : String(g.forest_id)}));
+    if (strategy !== 'replace' && (!goiLichSu || !goiLichSu.length) && JSON.stringify(next) === JSON.stringify(cur)) {
+      return {backup: null, counts: Store.counts(cur), goiCu: 0, goiBoQua: lsBoQua};
+    }
+    const backup = this.snapshotFile('truoc-khoi-phuc', {keep: 20});   // giữ 20 bản gần nhất (như truoc-xoa): mỗi bản là cả cơ sở dữ liệu, không để thư mục sao lưu lớn mãi
     const kq = this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace', goiLichSu});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
     return {backup, counts: Store.counts(this.load()), goiCu: kq.goiCu || 0, goiBoQua: lsBoQua};
   }

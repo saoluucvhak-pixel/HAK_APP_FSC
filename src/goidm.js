@@ -36,8 +36,9 @@
   }
   const idMoi = (dung, tien) => { let k = dung.size + 1; while (dung.has(tien + k)) k++; const v = tien + k; dung.add(v); return v; };
 
-  /* Nối danh mục của gói vào danh mục máy (KHÔNG sửa đầu vào). Trả {dm: {dmDoiTuong, dmXe, dmViTri}, doi: {dt, ng, xe, vt} (id gói → id máy), them: [...], khac: [...], can: [...]} */
-  function noi(db, goi) {
+  /* Nối danh mục của gói vào danh mục máy (KHÔNG sửa đầu vào). opts.loKhoa: lô đã chốt/dừng không đổi được ID trong lô nên mục thêm mới phải giữ nguyên ID gốc; nếu ID gốc đã bị chiếm bởi mục khác trên máy thì đưa vào Cần đối chiếu, không cấp ID khác làm lô chốt trỏ nhầm người (lô 3c, T-07). Trả {dm: {dmDoiTuong, dmXe, dmViTri}, doi: {dt, ng, xe, vt} (id gói → id máy), them: [...], khac: [...], can: [...]} */
+  function noi(db, goi, opts) {
+    const loKhoa = !!(opts && opts.loKhoa);
     const DT = clone((db && db.dmDoiTuong) || []), XE = clone((db && db.dmXe) || []), VT = clone((db && db.dmViTri) || []);
     const doi = {dt: {}, ng: {}, xe: {}, vt: {}}, them = [], khac = [], can = [];
     const g = goi || {};
@@ -45,12 +46,22 @@
     const dungVt = new Set(VT.map(v => v.id));
     (g.viTri || []).forEach(v => {
       const m = VT.find(x => fold(x.ten) === fold(v.ten));
-      if (m) { doi.vt[v.id] = m.id; return; }
+      if (m) {
+        doi.vt[v.id] = m.id;
+        if (loKhoa && m.id !== v.id) can.push({loai: 'vitri', ref: v.id, lyDo: 'Lô đã chốt trỏ vị trí “' + s(v.ten) + '” theo ID “' + v.id + '”, nhưng trên máy vị trí này có ID “' + m.id + '”: lô chốt giữ nguyên dữ liệu gốc', goc: clone(v)});
+        return;
+      }
+      if (loKhoa && dungVt.has(v.id)) {
+        can.push({loai: 'vitri', ref: v.id, lyDo: 'Lô đã chốt trỏ vị trí “' + s(v.ten) + '” (ID “' + v.id + '”) nhưng ID này đang dùng cho vị trí khác trên máy: chưa thêm để không trỏ nhầm', goc: clone(v)});
+        return;
+      }
       const id = dungVt.has(v.id) ? idMoi(dungVt, 'vt') : (dungVt.add(v.id), v.id);
       VT.push(Object.assign(clone(v), {id})); doi.vt[v.id] = id; them.push('Vị trí “' + s(v.ten) + '”');
     });
     // đối tượng và người
     const dungDt = new Set(DT.map(o => o.id)), dungNg = new Set(DT.flatMap(o => (o.nguoi || []).map(p => p.id)));
+    const maDtUsed = new Set(DT.map(o => s(o.ma).toUpperCase()).filter(Boolean));
+    const maDtMoi = () => { let k = DT.length + 1; while (maDtUsed.has('DT' + String(k).padStart(4, '0'))) k++; const v = 'DT' + String(k).padStart(4, '0'); maDtUsed.add(v); return v; };
     const nguoiCccd = k => { for (const o of DT) for (const p of o.nguoi || []) if (so(p.cccd) && so(p.cccd) === k) return {o, p}; return null; };
     (g.doiTuong || []).forEach(o => {
       let m = null;
@@ -75,38 +86,72 @@
         doi.dt[o.id] = m.id;
         if (o.loai === 'phapnhan' && ['ten', 'diaChi', 'daiDien', 'chucVuDaiDien'].some(k => s(m[k]) !== s(o[k]))) khac.push('Đối tượng “' + s(o.ten) + '”: thông tin trong gói khác máy — DÙNG BẢN CỦA MÁY');
       }
-      const dich = m || Object.assign(clone(o), {id: dungDt.has(o.id) ? idMoi(dungDt, 'dt') : (dungDt.add(o.id), o.id), nguoi: []});
-      if (!m) { DT.push(dich); doi.dt[o.id] = dich.id; them.push('Đối tượng “' + s(o.ten) + '”'); }
+      const nguoiMoi = [];
       (o.nguoi || []).forEach(p => {
         const a = so(p.cccd) ? nguoiCccd(so(p.cccd)) : (m ? {o: m, p: (m.nguoi || []).find(q => fold(q.hoTen) === fold(p.hoTen))} : null);
         if (a && a.p) {
           if (fold(a.p.hoTen) !== fold(p.hoTen)) { can.push({loai: 'nguoi', ref: p.id, lyDo: 'Người “' + s(p.hoTen) + '” (CCCD ' + s(p.cccd) + ') trong gói trùng CCCD với “' + s(a.p.hoTen) + '” trên máy: chưa nối, đối chiếu ở Danh mục đối tượng', goc: clone(p)}); return; }
           doi.ng[p.id] = a.p.id;
+          if (loKhoa && a.p.id !== p.id) can.push({loai: 'nguoi', ref: p.id, lyDo: 'Lô đã chốt trỏ người “' + s(p.hoTen) + '” theo ID “' + p.id + '”, trên máy người này có ID “' + a.p.id + '”: lô chốt giữ nguyên dữ liệu gốc', goc: clone(p)});
           if (['ngayCap', 'noiCap', 'diaChi', 'gplx', 'hanGplx'].some(k => s(a.p[k]) && s(p[k]) && s(a.p[k]) !== s(p[k]))) khac.push('Người “' + s(p.hoTen) + '”: giấy tờ trong gói khác máy — DÙNG BẢN CỦA MÁY');
           return;
         }
+        if (loKhoa && dungNg.has(p.id)) {
+          can.push({loai: 'nguoi', ref: p.id, lyDo: 'Lô đã chốt trỏ người “' + s(p.hoTen) + '” (ID “' + p.id + '”) nhưng ID này đang thuộc về người khác trên máy: chưa thêm để tránh lô chốt trỏ nhầm người', goc: clone(p)});
+          return;
+        }
         const id = dungNg.has(p.id) ? idMoi(dungNg, 'ng') : (dungNg.add(p.id), p.id);
-        dich.nguoi = dich.nguoi || []; dich.nguoi.push(Object.assign(clone(p), {id})); doi.ng[p.id] = id; if (m) them.push('Người “' + s(p.hoTen) + '” vào đối tượng “' + s(m.ten) + '”');
+        nguoiMoi.push(Object.assign(clone(p), {id})); doi.ng[p.id] = id;
+        if (m) them.push('Người “' + s(p.hoTen) + '” vào đối tượng “' + s(m.ten) + '”');
       });
+      if (m) {
+        if (nguoiMoi.length) { m.nguoi = (m.nguoi || []).concat(nguoiMoi); }
+        return;
+      }
+      /* Lô 3c (T-07): thể nhân mà toàn bộ người bị đưa vào Cần đối chiếu (0 người hợp lệ để thêm) → KHÔNG thêm đối tượng rỗng 0 người */
+      if (o.loai !== 'phapnhan' && !nguoiMoi.length) return;
+      if (loKhoa && dungDt.has(o.id)) {
+        can.push({loai: 'doituong', ref: o.id, lyDo: 'Lô đã chốt trỏ đối tượng “' + s(o.ten) + '” (ID “' + o.id + '”) nhưng ID này đang thuộc về đối tượng khác trên máy: chưa thêm để tránh trỏ nhầm', goc: clone(o)});
+        return;
+      }
+      const id = dungDt.has(o.id) ? idMoi(dungDt, 'dt') : (dungDt.add(o.id), o.id);
+      const ma = s(o.ma) && !maDtUsed.has(s(o.ma).toUpperCase()) ? (maDtUsed.add(s(o.ma).toUpperCase()), s(o.ma)) : maDtMoi();
+      const dich = Object.assign(clone(o), {id, ma, nguoi: nguoiMoi});
+      DT.push(dich); doi.dt[o.id] = dich.id; them.push('Đối tượng “' + s(o.ten) + '”');
     });
     // xe
     const dungXe = new Set(XE.map(x => x.id));
     (g.xe || []).forEach(x => {
       const m = XE.find(y => bk(y.bks) && bk(y.bks) === bk(x.bks));
       const chu = s(x.chuXeId) ? (doi.ng[x.chuXeId] || doi.dt[x.chuXeId] || '') : '';
-      if (m) { doi.xe[x.id] = m.id; if (chu && s(m.chuXeId) && m.chuXeId !== chu) khac.push('Xe ' + s(x.bks) + ': chủ xe trong gói khác máy — DÙNG BẢN CỦA MÁY'); return; }
+      if (m) {
+        doi.xe[x.id] = m.id;
+        if (loKhoa && m.id !== x.id) can.push({loai: 'xe', ref: x.id, lyDo: 'Lô đã chốt trỏ xe ' + s(x.bks) + ' theo ID “' + x.id + '”, trên máy xe này có ID “' + m.id + '”: lô chốt giữ nguyên dữ liệu gốc', goc: clone(x)});
+        if (chu && s(m.chuXeId) && m.chuXeId !== chu) khac.push('Xe ' + s(x.bks) + ': chủ xe trong gói khác máy — DÙNG BẢN CỦA MÁY');
+        return;
+      }
+      if (loKhoa && dungXe.has(x.id)) {
+        can.push({loai: 'xe', ref: x.id, lyDo: 'Lô đã chốt trỏ xe ' + s(x.bks) + ' (ID “' + x.id + '”) nhưng ID này đang dùng cho xe khác trên máy: chưa thêm để tránh trỏ nhầm', goc: clone(x)});
+        return;
+      }
       const id = dungXe.has(x.id) ? idMoi(dungXe, 'xe') : (dungXe.add(x.id), x.id);
       XE.push(Object.assign(clone(x), {id, chuXeId: chu})); doi.xe[x.id] = id; them.push('Xe ' + s(x.bks));
     });
     return {dm: {dmDoiTuong: DT, dmXe: XE, dmViTri: VT}, doi, them, khac, can};
   }
-  /* đổi ID trong lô theo bảng doi (sửa f). Lô khóa: không đổi gì. Trả số liên kết đã đổi. */
-  function doiIdLo(f, doi) {
+  /* đổi ID trong lô theo bảng doi (sửa f; unmapped ID được xóa nếu thuộc tập unmapped để không trỏ nhầm sang mục khác của máy đích). Lô khóa: không đổi gì. Trả số liên kết đã đổi. */
+  function doiIdLo(f, doi, unmapped) {
     if (khoa(f)) return 0; let n = 0;
-    const d = (m, v) => { if (s(v) && m[v] && m[v] !== v) { n++; return m[v]; } return v; };
-    (f.nc || []).forEach(r => { if (!r) return; if (r.nguoiId) r.nguoiId = d(doi.ng, r.nguoiId); if (r.viTriId) r.viTriId = d(doi.vt, r.viTriId); });
-    (f.dx || []).forEach(r => { if (!r) return; if (r.xeId) r.xeId = d(doi.xe, r.xeId); if (r.taiXeId) r.taiXeId = d(doi.ng, r.taiXeId); });
-    [...(f.hdvc || []).map(h => h && h.benKy), ...(f.doi || []).map(x => x && x.benNhanKhoan)].forEach(b => { if (!b) return; if (b.doiTuongId) b.doiTuongId = d(doi.dt, b.doiTuongId); if (b.nguoiId) b.nguoiId = d(doi.ng, b.nguoiId); });
+    const u = unmapped || {};
+    const d = (m, uSet, v) => {
+      if (!s(v)) return v;
+      if (m && m[v]) { if (m[v] !== v) n++; return m[v]; }
+      if (uSet && uSet.has(v)) { n++; return ''; }
+      return v;
+    };
+    (f.nc || []).forEach(r => { if (!r) return; if (r.nguoiId) r.nguoiId = d(doi.ng, u.ng, r.nguoiId); if (r.viTriId) r.viTriId = d(doi.vt, u.vt, r.viTriId); });
+    (f.dx || []).forEach(r => { if (!r) return; if (r.xeId) r.xeId = d(doi.xe, u.xe, r.xeId); if (r.taiXeId) r.taiXeId = d(doi.ng, u.ng, r.taiXeId); });
+    [...(f.hdvc || []).map(h => h && h.benKy), ...(f.doi || []).map(x => x && x.benNhanKhoan)].forEach(b => { if (!b) return; if (b.doiTuongId) b.doiTuongId = d(doi.dt, u.dt, b.doiTuongId); if (b.nguoiId) b.nguoiId = d(doi.ng, u.ng, b.nguoiId); });
     return n;
   }
   const api = {idCuaLo, dongGoi, noi, doiIdLo};

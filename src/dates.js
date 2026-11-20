@@ -27,6 +27,18 @@
     const p = parse(+m[3] + '/' + +m[2] + '/' + m[1]);
     return p ? format(p) : '';
   }
+  /* 'dd/mm/yyyy' -> 'yyyy-mm-dd'; '' nếu không có thật */
+  function toIso(v) {
+    const p = parse(v);
+    return p ? String(p.y).padStart(4, '0') + '-' + pad2(p.m) + '-' + pad2(p.d) : '';
+  }
+  /* Ngày theo giờ máy địa phương (hoặc giờ Việt Nam): 'yyyy-mm-dd' — dùng cho tên tệp sao lưu (lô 9d, N-01) */
+  function fileDay(d) {
+    d = d instanceof Date ? d : new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  /* Lọc ký tự điều khiển không hợp lệ trong XML 1.0 (Word / Excel): [\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF] (lô 9d, N-02) */
+  const cleanXml = s => String(s == null ? '' : s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]/g, '');
 
   /* Lý do ngày không hợp lệ (tiếng Việt, đủ cụ thể để người dùng sửa); '' nếu hợp lệ */
   function why(v) {
@@ -61,6 +73,6 @@
     return (!r.from || k >= r.from) && (!r.to || k <= r.to);
   }
 
-  const api = {isLeap, daysIn, parse, key, isValid, format, fromIso, why, range, inRange};
+  const api = {isLeap, daysIn, parse, key, isValid, format, fromIso, toIso, fileDay, cleanXml, why, range, inRange};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKDates = api;
 })(typeof self !== 'undefined' ? self : this);

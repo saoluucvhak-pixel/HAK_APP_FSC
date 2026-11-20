@@ -241,3 +241,26 @@ test('A3: trạng thái in đợt 2 BM-09/10 theo ĐỘI XE — khóa cũ (CCCD 
   const k = {id: 'k', chot: {at: 'x'}, dx: [xe('A', 'An', '049000000001', {hdvcId: 'h1'})], hdvc: [{id: 'h1', key: '049000000001', cuoc: null, exp: {}}], inDot2: {v: 1, items: {'09:049000000001': {at: 'a'}}}};
   assert.deepStrictEqual([M.doiKhoaInVC(k), Object.keys(k.inDot2.items)], [0, ['09:049000000001']], 'lô đã chốt: không đổi dữ liệu');
 });
+
+test('Lô 7b (T-16): tenDoiLoi, updateTeam và updateHd giữ dấu tiếng Việt ("Đội Hà" ≠ "Đội Hạ"), chặn trùng NFC/khoảng trắng/hoa thường và chặn tên rỗng', () => {
+  let f = M.ensureForest({id: 'f', info: {}, nc: [nv(1, 'Tổ trưởng', 'T1', 'Tổ trưởng', '1')]});
+  f = M.updateTeam(f, 'doi1', {ten: 'Đội Hà'}).f;
+  const a = M.addTeam(f, 'Đội Hạ'); f = a.f;
+  assert.strictEqual(M.teamErrors(f).filter(e => /trùng/.test(e.text)).length, 0, '"Đội Hà" và "Đội Hạ" không bị coi là trùng tên');
+  assert.strictEqual(M.tenDoiLoi(f, 'Đội Hạ', 'doi2'), '');
+  // Gộp khoảng trắng + không phân biệt hoa thường + NFC -> báo trùng
+  assert.match(M.tenDoiLoi(f, '  đội   hà ', 'doi2'), /Đã có đội/);
+  const rDup = M.updateTeam(f, 'doi2', {ten: 'đội  hà'});
+  assert.strictEqual(rDup.ok, false);
+  assert.match(rDup.error, /Đã có đội/);
+  // Tên rỗng khi lô có nhiều đội -> bị từ chối
+  const rEmpty = M.updateTeam(f, 'doi2', {ten: '   '});
+  assert.strictEqual(rEmpty.ok, false);
+  assert.match(rEmpty.error, /không được để trống/);
+
+  // Hợp đồng vận chuyển (đội xe)
+  const h1 = M.addHd(f, 'Đội xe Hà'); f = h1.f;
+  const h2 = M.addHd(f, 'Đội xe Hạ'); f = h2.f;
+  assert.strictEqual(M.updateHd(f, h2.id, {ten: 'đội xe  hà'}).ok, false);
+  assert.strictEqual(M.updateHd(f, h2.id, {ten: '  '}).ok, false);
+});

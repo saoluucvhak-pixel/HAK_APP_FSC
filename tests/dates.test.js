@@ -82,3 +82,15 @@ test('ngày đầu/cuối kỳ và năm nhuận được tính; khoảng bị đ
   assert.strictEqual(dao.sections[0].rows.length, 0); assert.ok(dao.notes.some(n => /sau ngày kết thúc/.test(n)));
   assert.match(R.periodText('01/02/2026', '28/02/2026'), /01\/02\/2026/);
 });
+
+test('Lô 9 (N-01, N-02, T-25): fileDay trả ngày theo giờ địa phương, toIso/fromIso từ chối năm ngoài 4 chữ số hoặc ngày sai, cleanXml lọc sạch ký tự điều khiển XML', () => {
+  const L = require('../src/lorung');
+  assert.strictEqual(D.fileDay(new Date(2026, 10, 20, 3, 30, 0)), '2026-11-20');
+  assert.strictEqual(L.fileName({maLo: 'R-1'}), 'HAKQN_LoRung_R-1_' + D.fileDay() + '.json');
+  assert.strictEqual(D.toIso('20/11/2026'), '2026-11-20');
+  assert.strictEqual(D.toIso('31/02/2026'), '');
+  assert.strictEqual(D.toIso('01/01/1800'), '');
+  assert.strictEqual(D.fromIso('2026-11-20'), '20/11/2026');
+  assert.strictEqual(D.fromIso('20266-11-20'), '');
+  assert.strictEqual(D.cleanXml('A\x00B\x08C\x0BD\x0CE\x1FF\uFFFEG\uFFFFH\n\t'), 'ABCDEFGH\n\t');
+});

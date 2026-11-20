@@ -41,3 +41,22 @@ test('hướng dẫn lần đầu: bước xong tính từ dữ liệu; không s
   assert.deepEqual(T.huongDan(db).map(x => [x.id, x.xong]), [['chu', true], ['lo', true], ['nc', true], ['dx', false], ['pc', false], ['xuat', false]]);
   db.rs.o1.forests.f1.dx = [{}]; db.rs.o1.forests.f1.pc = [{}]; db.rs.o1.forests.f1.inAn.items['01'] = {}; assert.ok(T.huongDan(db).every(x => x.xong)); assert.notEqual(JSON.stringify(db), truoc);
 });
+
+test('lô 5a & lô 14 (B-04, B-05, B-06, B-07): tongTomTat loại phiếu ngày sai (31/11) và 0 tấn; fmtVi định dạng kiểu Việt Nam; mucLuc sắp theo thuTuIn khi có lô', () => {
+  assert.equal(T.fmtVi(125.375), '125,375');
+  assert.equal(T.fmtVi(2852.35, 3), '2.852,350');
+  const rec = {pc: [
+    {soPhieu: 'P1', ngay: '05/11/2026', bienSo: '92C-123.45', kl: 12.5},
+    {soPhieu: 'P2', ngay: '31/11/2026', bienSo: '92C-123.45', kl: 10},   // ngày không có thật
+    {soPhieu: 'P3', ngay: '06/11/2026', bienSo: '92C-123.45', kl: 0}]};  // 0 tấn
+  const tt = T.tongTomTat(rec);
+  assert.equal(tt.soPhieu, 1); assert.equal(tt.pcBiLoai, 2); assert.equal(tt.tongKl, 12.5);
+  assert.equal(tt.klTheoBien(['92c 12345']), 12.5);
+  const html = T.chiXemHtml({lo: {ma: 'R1', dienTich: T.fmtVi(125.375)}, tong: {nc: 2, dx: 1, pc: tt.soPhieu, pcBiLoai: tt.pcBiLoai, kl: T.fmtVi(tt.tongKl, 3)}});
+  assert.ok(html.includes('125,375') && html.includes('12,500') && html.includes('Phiếu bị loại'));
+  const lo = {info: {moHinhKy: 'giaokhoan'}, doi: [{id: 'd1', ten: 'Đội 1'}], hdvc: [{id: 'h1', ten: 'Đội xe 1'}]};
+  const files = [{path: '09_Bang_ke/Doi_xe_1.docx', pham: {ten: 'Đội xe 1'}}, {path: '08_Thanh_toan/Doi_1.docx', pham: {ten: 'Đội 1'}}];
+  const ml = T.mucLuc(files, m => 'BM-' + m, () => 1, lo, 2);
+  assert.deepEqual(ml.map(x => [x.stt, x.ma]), [[1, '08'], [2, '09']], 'đợt 2: đội khai thác (BM-08) đứng trước đội xe (BM-09)');
+});
+

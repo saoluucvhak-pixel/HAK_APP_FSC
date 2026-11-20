@@ -54,3 +54,28 @@ test('giấy ủy quyền phải cùng ngày hoặc trước hợp đồng giao 
   assert.equal(th(N.kiemTra(j('03/10/2026'))).length, 1); assert.equal(th(N.kiemTra(j('03/10/2026')))[0].kind, 'chan');
   assert.equal(th(N.kiemTra(j('02/10/2026'))).length, 0); assert.equal(th(N.kiemTra(j('01/10/2026'))).length, 0); assert.equal(th(N.kiemTra(j(''))).length, 0);
 });
+
+test('Lô 11 (11a, 11c, 11d): xóa tham chiếu #moreMenu, cccdHopLe từ chối chữ lẫn trong số, fmtNum/fmtVi không xuất "-0"', () => {
+  const fs = require('fs'), path = require('path');
+  const R = require('../ui/reports');
+  const TI = require('../src/tienich');
+  const html = require('../scripts/build-html').appSource();
+
+  // 11a: không còn #moreMenu trong mã nguồn giao diện
+  assert.equal(/moreMenu/.test(html), false, 'không còn tham chiếu #moreMenu trong giao diện');
+
+  // 11c: cccdHopLe chỉ nhận 9 hoặc 12 chữ số (chấp nhận dấu cách/chấm ngăn cách, từ chối chữ cái lẫn vào như "049067005abc")
+  assert.equal(N.cccdHopLe('049067005'), true);
+  assert.equal(N.cccdHopLe('049067005459'), true);
+  assert.equal(N.cccdHopLe('049 067 005 459'), true);
+  assert.equal(N.cccdHopLe('049067005abc'), false);
+  assert.equal(N.cccdHopLe('12345'), false);
+
+  // 11d: -0 và số âm rất nhỏ làm tròn về 0 không bao giờ xuất dấu trừ ("-0", "-0,000")
+  assert.equal(R.fmtCell(-0, 'n0'), '0');
+  assert.equal(R.fmtCell(-0, 'n3'), '0,000');
+  assert.equal(R.fmtCell(-0.0001, 'n3'), '0,000');
+  assert.equal(TI.fmtVi(-0), '0');
+  assert.equal(TI.fmtVi(-0, 3), '0,000');
+  assert.equal(TI.fmtVi(-0.0001, 3), '0,000');
+});

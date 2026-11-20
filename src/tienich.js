@@ -4,6 +4,27 @@
   'use strict';
   const s = v => (v == null ? '' : String(v)).trim();
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  const req = (n, g) => (typeof require === 'function' ? require('./' + n) : root[g]);
+  const D = () => req('dates.js', 'HAKDates'), DM = () => req('dinhmuc.js', 'HAKDinhMuc'), B = () => req('bks.js', 'HAKBks'), BM = () => req('bieumau.js', 'HAKBieuMau');
+  /* Định dạng số kiểu Việt Nam (B-07, lô 14): 1.234,567; d == null thì bỏ số 0 đuôi thập phân (vd 125.375 → "125,375", 2 → "2") */
+  function fmtVi(v, d) {
+    if (typeof v !== 'number' || !isFinite(v)) return s(v);
+    const str = d != null ? Math.abs(v).toFixed(d) : String(Math.round(Math.abs(v) * 1000) / 1000);
+    const [i, f] = str.split('.');
+    return (v < 0 && (Number(i) || Number(f)) ? '-' : '') + i.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (f ? ',' + f : '');
+  }
+  /* Tổng hợp số liệu phiếu cân cho trang Tóm tắt / Chỉ xem (B-06, B-08, lô 5a): cùng quy tắc loại phiếu (ngày hợp lệ và kgPhieu > 0) và làm tròn từng phiếu đến kg với báo cáo và BM-09/10 */
+  function tongTomTat(rec) {
+    const all = (rec && rec.pc) || [], Dt = D(), Dm = DM(), Bk = B();
+    const pcHopLe = all.filter(p => p && Dt.isValid(p.ngay) && Dm.kgPhieu(p) > 0);
+    const pcBiLoai = all.length - pcHopLe.length;
+    const tongKl = Dm.tongPhieuTan(pcHopLe);
+    const klTheoBien = bienSet => {
+      const ks = new Set([...(bienSet || [])].map(b => Bk.khoa(b)).filter(Boolean));
+      return Dm.tongPhieuTan(pcHopLe.filter(p => ks.has(Bk.khoa(p.bienSo))));
+    };
+    return {pcHopLe, pcBiLoai, soPhieu: pcHopLe.length, tongKl, klTheoBien};
+  }
 
   /* ---------- 1. DÁN TỪ EXCEL ----------
    * Chữ sao chép từ Excel / Google Sheets: mỗi dòng một hàng, các ô cách nhau bằng TAB; ô có xuống dòng hoặc TAB được bọc trong dấu nháy kép ("" là một dấu nháy).
@@ -39,10 +60,26 @@
   }
 
   /* ---------- 2. MỤC LỤC GÓI IN ----------
-   * files: [{path, pham: {ten}}] theo đúng thứ tự trong gói; tenBM(ma) → tên biểu mẫu; soBan(ma) → số bản. Trả [{stt, ma, ten, doiTuong, file, soBan}] (bỏ chính tờ mục lục). */
-  function mucLuc(files, tenBM, soBan) {
-    return (files || []).filter(f => f && f.path && !/^00_/.test(f.path)).map((f, i) => { const ma = (/(?:^|\/)(\d\d)_/.exec(f.path) || [])[1] || '';
-      return {stt: i + 1, ma, ten: (tenBM && tenBM(ma)) || '', doiTuong: s(f.pham && f.pham.ten), file: f.path, soBan: (soBan && soBan(ma)) || 1}; });
+   * files: [{path, pham: {ten}}] theo đúng thứ tự trong gói (hoặc sắp theo HAKBieuMau.thuTuIn khi truyền lo, B-04 lô 14); tenBM(ma) → tên biểu mẫu; soBan(ma) → số bản. Trả [{stt, ma, ten, doiTuong, file, soBan}] (bỏ chính tờ mục lục). */
+  function mucLuc(files, tenBM, soBan, lo, dot) {
+    let list = (files || []).filter(f => f && f.path && !/^00_/.test(f.path)).map((f, idx) => {
+      const ma = (/(?:^|\/)(\d\d)_/.exec(f.path) || [])[1] || '';
+      return {f, idx, ma, doiTuong: s(f.pham && f.pham.ten)};
+    });
+    if (lo && BM() && typeof BM().thuTuIn === 'function') {
+      const tt = BM().thuTuIn(lo, dot), rank = new Map();
+      tt.forEach((x, i) => {
+        const k1 = x.ma + '|' + s(x.doiTuong), k2 = x.ma + '|';
+        if (!rank.has(k1)) rank.set(k1, i);
+        if (!rank.has(k2)) rank.set(k2, i);
+      });
+      list = list.slice().sort((a, b) => {
+        const ra = rank.has(a.ma + '|' + a.doiTuong) ? rank.get(a.ma + '|' + a.doiTuong) : (rank.has(a.ma + '|') ? rank.get(a.ma + '|') : 9999);
+        const rb = rank.has(b.ma + '|' + b.doiTuong) ? rank.get(b.ma + '|' + b.doiTuong) : (rank.has(b.ma + '|') ? rank.get(b.ma + '|') : 9999);
+        return ra - rb || a.idx - b.idx;
+      });
+    }
+    return list.map((x, i) => ({stt: i + 1, ma: x.ma, ten: (tenBM && tenBM(x.ma)) || '', doiTuong: x.doiTuong, file: x.f.path, soBan: (soBan && soBan(x.ma)) || 1}));
   }
 
   /* ---------- 3. THEO DÕI IN LẠI, KÝ LẠI (phụ lục) ----------
@@ -76,7 +113,7 @@
       '<h1>Hồ sơ khai thác lô ' + esc(lo.ma) + (s(lo.ten) ? ' – ' + esc(lo.ten) : '') + '</h1><div class="nhan" id="chiXemNhan">BẢN CHỈ XEM · không sửa được, không nhập lại vào phần mềm</div>' +
       '<p class="mut">Tạo lúc ' + esc(d.taoLuc) + ' bằng ' + esc(d.phanMem || 'HAKQN Desktop') + (s(d.phienBan) ? ' ' + esc(d.phienBan) : '') + '. Số liệu là dữ liệu đã lưu tại thời điểm tạo.</p>' +
       '<h2>Chủ rừng và lô</h2>' + kv([['Chủ rừng', s(chu.ten) + (s(chu.ma) ? ' · mã ' + s(chu.ma) : '')], ['CCCD', chu.cccd], ['Địa chỉ', chu.diaChi], ['Mã lô', lo.ma], ['Tên lô', lo.ten], ['Địa điểm', lo.diaDiem], ['Diện tích (ha)', lo.dienTich],
-        ['Thời gian khai thác', s(lo.tuNgay) + (s(lo.denNgay) ? ' – ' + s(lo.denNgay) : '')], ['Trạng thái', lo.trangThai], ['Số nhân công', t.nc], ['Số xe', t.dx], ['Số phiếu cân', t.pc], ['Tổng khối lượng (tấn)', t.kl]]) +
+        ['Thời gian khai thác', s(lo.tuNgay) + (s(lo.denNgay) ? ' – ' + s(lo.denNgay) : '')], ['Trạng thái', lo.trangThai], ['Số nhân công', t.nc], ['Số xe', t.dx], ['Số phiếu cân', t.pc], ...(t.pcBiLoai ? [['Phiếu bị loại', t.pcBiLoai]] : []), ['Tổng khối lượng (tấn)', t.kl]]) +
       (d.chot ? '<h2>Chốt hồ sơ</h2>' + kv([['Phiên bản chốt', d.chot.phienBan], ['Dấu vân tay', d.chot.hash], ['Thời điểm chốt', d.chot.at]]) : '') +
       '<div class="wrap">' + bang('Đội khai thác', ['Đội', 'Tổ trưởng', 'Số người', 'Khối lượng (tấn)'], (d.doi || []).map(x => [x.ten, x.toTruong, x.soNguoi, x.kl]), 'cxDoi') + '</div>' +
       '<div class="wrap">' + bang('Đội xe', ['Đội xe', 'Người ký', 'Số xe', 'Số hợp đồng vận chuyển', 'Số biên bản xác nhận KL', 'Khối lượng (tấn)'], (d.doiXe || []).map(x => [x.ten, x.nguoiKy, x.soXe, x.soHD, x.soXN, x.kl]), 'cxDoiXe') + '</div>' +
@@ -103,6 +140,6 @@
     ];
   }
 
-  const api = {danParse, danO, danKiem, mucLuc, kyLai, lyDoKy, chiXemHtml, huongDan, esc};
+  const api = {danParse, danO, danKiem, mucLuc, kyLai, lyDoKy, chiXemHtml, huongDan, fmtVi, tongTomTat, esc};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKTienIch = api;
 })(typeof self !== 'undefined' ? self : this);
