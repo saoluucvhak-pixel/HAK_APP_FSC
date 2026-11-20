@@ -299,7 +299,7 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 - **Giữ cả hai**: lô trùng được thêm thành lô **mới** và bạn **xác nhận mã mới** cho từng lô (gợi ý sẵn, ví dụ `R1-2`; mã bị từ chối nếu trùng lô đã có, lô khác trong file hoặc mã cũ).
 - **Thay toàn bộ dữ liệu**: xóa dữ liệu hiện có và thay bằng file; hộp xác nhận nêu rõ số chủ và lô sẽ mất.
 
-Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác nhau** thì phần mềm **dừng**, không ghi gì và liệt kê hồ sơ cần đối chiếu.
+Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác nhau** thì phần mềm **dừng**, không ghi gì và liệt kê hồ sơ cần đối chiếu. Chủ rừng có **cùng ID nội bộ nhưng CCCD khác hẳn** (cả hai bên đều có CCCD) cũng bị coi là hai người khác nhau: phần mềm dừng để đối chiếu, áp dụng cho cả khôi phục toàn bộ (giữ, ghi đè, giữ cả hai) và khôi phục lô rừng; lời báo chỉ hiện 4 số cuối CCCD. Chỉ khác cách viết (dấu cách, dấu chấm) hoặc một bên trống CCCD thì vẫn gộp như cũ.
 
 **Bản chụp các lần chốt** (từ 3.2): cả file `.json` và file `.sqlite` của **Sao lưu toàn bộ** đều mang **mọi bản chụp** của lô đã chốt, kể cả các lần chốt trước (chốt → mở khóa → sửa → chốt lại). Khôi phục bằng **Thay toàn bộ** chép đủ các bản chụp; **Giữ bản trên máy** và **Ghi đè lô trùng** chỉ chép bản chụp của các lô thực sự lấy từ file. Bản chụp hỏng hoặc sai dấu vân tay bị bỏ qua và được báo số lượng. File `.json` do bản cũ tạo (chưa mang bản chụp cũ) vẫn khôi phục được như trước.
 
