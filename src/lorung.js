@@ -42,6 +42,13 @@
     const ids = [...new Set(Object.values(found))];
     if (ids.length > 1) return {hit: null, conflict: 'Chủ rừng “' + (info.ten || info.ma || id) + '” khớp nhiều hồ sơ khác nhau trên máy: ' +
       Object.entries(found).map(([k, v]) => ({id: 'theo ID', cccd: 'theo CCCD', ma: 'theo mã chủ rừng'}[k]) + ' → ' + ownerName(rs[v])).join('; ')};
+    /* phiếu #12 (quyết định 6 của CHỦ): CÙNG ID nội bộ nhưng CCCD hai bên đều có và KHÁC hẳn (sau chuẩn hóa chỉ lấy chữ số) = hai người khác nhau → dừng để đối chiếu,
+     * không coi là một (trước đây "Ghi đè" thay lô của người này bằng lô của người kia). Một bên trống CCCD, hoặc chỉ khác cách viết: như cũ. */
+    if (found.id) {
+      const so = v => String(v == null ? '' : v).replace(/\D/g, ''), a = so(info.cccd), b = so(((rs[found.id] || {}).info || {}).cccd), duoi = x => '…' + x.slice(-4);
+      if (a && b && a !== b) return {hit: null, conflict: 'Chủ rừng “' + (info.ten || info.ma || id) + '” (CCCD ' + duoi(a) + ') có cùng ID nội bộ với “' + ownerName(rs[found.id]) + '” (CCCD ' + duoi(b) +
+        ') trên máy: hai hồ sơ khác người, cần đối chiếu trước khi khôi phục'};
+    }
     return {hit: ids[0] || null, conflict: ''};
   }
   const maKey = v => t(v).toUpperCase();
