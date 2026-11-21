@@ -57,10 +57,24 @@ function hakSfBarHtml(screenId, total, kept, extraHtml = '') {
 let hakSfDraft = null;
 function hakSfOpenDrawer(screenId) {
   const inst = hakSfInstances[screenId]; if (!inst) return;
-  hakSfDraft = {screenId, state: inst.filter.getState(), err: ''};
+  const s = inst.filter.getState();
+  hakSfDraft = {screenId, state: s, rawTu: HAKCore.sf.fmtVN(s.tu), rawDen: HAKCore.sf.fmtVN(s.den), err: ''};
   hakSfRenderDrawer();
 }
-function hakSfRenderDrawer() {
+function hakSfSyncDraftText() {
+  if (!hakSfDraft) return true;
+  const SF = HAKCore.sf, s = hakSfDraft.state;
+  const qEl = document.getElementById('sfDrQ'); if (qEl) s.q = qEl.value;
+  const tuEl = document.getElementById('sfDrTu'), denEl = document.getElementById('sfDrDen');
+  if (tuEl && denEl) {
+    hakSfDraft.rawTu = tuEl.value; hakSfDraft.rawDen = denEl.value;
+    const a = SF.parseVN(tuEl.value), b = SF.parseVN(denEl.value);
+    if (a === null || b === null) { hakSfDraft.err = 'Ngày không hợp lệ — nhập dạng dd/mm/yyyy.'; return false; }
+    hakSfDraft.state = SF.setDates(s, a, b);
+  }
+  return true;
+}
+function hakSfRenderDrawer(focusInfo) {
   if (!hakSfDraft) return;
   const inst = hakSfInstances[hakSfDraft.screenId]; if (!inst) return;
   const cfg = inst.cfg, SF = HAKCore.sf, s = hakSfDraft.state;
@@ -69,8 +83,8 @@ function hakSfRenderDrawer() {
     if (key === 'q') return '<label><span>Từ khóa (không dấu)</span><input id="sfDrQ" value="' + esc(s.q) + '" placeholder="' + esc(cfg.searchPlaceholder || 'Nhập từ khóa…') + '"></label>';
     if (key === 'dates') {
       return '<div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">' +
-        '<label><span>Từ ngày (dd/mm/yyyy)</span><input id="sfDrTu" value="' + esc(SF.fmtVN(s.tu)) + '" placeholder="dd/mm/yyyy"></label>' +
-        '<label><span>Đến ngày (dd/mm/yyyy)</span><input id="sfDrDen" value="' + esc(SF.fmtVN(s.den)) + '" placeholder="dd/mm/yyyy"></label></div>';
+        '<label><span>Từ ngày (dd/mm/yyyy)</span><input id="sfDrTu" value="' + esc(hakSfDraft.rawTu != null ? hakSfDraft.rawTu : SF.fmtVN(s.tu)) + '" placeholder="dd/mm/yyyy"></label>' +
+        '<label><span>Đến ngày (dd/mm/yyyy)</span><input id="sfDrDen" value="' + esc(hakSfDraft.rawDen != null ? hakSfDraft.rawDen : SF.fmtVN(s.den)) + '" placeholder="dd/mm/yyyy"></label></div>';
     }
     const f = (cfg.fields || []).find(x => x.key === key); if (!f) return '';
     if (f.type === 'multi') {
@@ -109,6 +123,11 @@ function hakSfRenderDrawer() {
       '<button type="button" class="btn ghost" data-sfdr="reset">Đặt lại mặc định</button>' +
       '<span class="row" style="gap:8px"><button type="button" class="btn ghost" data-act="dlgDong">Đóng</button><button type="button" class="btn" data-sfdr="apply">Áp dụng bộ lọc</button></span>' +
     '</div>');
+  if (focusInfo) {
+    const wraps = document.querySelectorAll('#dlgBox .hak-pick-wrap');
+    if (focusInfo.scrolls) focusInfo.scrolls.forEach((sc, idx) => { if (wraps[idx]) wraps[idx].scrollTop = sc; });
+    if (focusInfo.sel) { const fel = document.querySelector(focusInfo.sel); if (fel) fel.focus(); }
+  }
 }
 document.addEventListener('input', e => {
   const q = e.target && e.target.closest && e.target.closest('[data-sfq]');
@@ -125,25 +144,29 @@ document.addEventListener('change', e => {
   const t = e.target; if (!t) return;
   const qk = t.closest && t.closest('[data-sfquick]');
   if (qk) {
-    const inst = hakSfInstances[qk.dataset.sfquick]; if (!inst) return;
-    inst.filter.setField(qk.dataset.sfkey, qk.value);
+    const sid = qk.dataset.sfquick, key = qk.dataset.sfkey, inst = hakSfInstances[sid]; if (!inst) return;
+    inst.filter.setField(key, qk.value);
     render();
+    const el = document.querySelector('[data-sfquick="' + sid + '"][data-sfkey="' + key + '"]'); if (el) el.focus();
     return;
   }
   const qb = t.closest && t.closest('[data-sfquickbool]');
   if (qb) {
-    const inst = hakSfInstances[qb.dataset.sfquickbool]; if (!inst) return;
-    inst.filter.setField(qb.dataset.sfkey, qb.checked);
+    const sid = qb.dataset.sfquickbool, key = qb.dataset.sfkey, inst = hakSfInstances[sid]; if (!inst) return;
+    inst.filter.setField(key, qb.checked);
     render();
+    const el = document.querySelector('[data-sfquickbool="' + sid + '"][data-sfkey="' + key + '"]'); if (el) el.focus();
     return;
   }
   if (hakSfDraft && t.closest('#dlgBox')) {
-    const SF = HAKCore.sf, s = hakSfDraft.state;
+    const s = hakSfDraft.state;
     if (t.dataset.sfm) {
-      const key = t.dataset.sfm, list = new Set(s.sel[key] || []);
-      if (t.checked) list.add(t.value); else list.delete(t.value);
+      hakSfSyncDraftText();
+      const scrolls = [...document.querySelectorAll('#dlgBox .hak-pick-wrap')].map(w => w.scrollTop);
+      const key = t.dataset.sfm, val = t.value, list = new Set(s.sel[key] || []);
+      if (t.checked) list.add(val); else list.delete(val);
       if (list.size) s.sel[key] = [...list]; else delete s.sel[key];
-      hakSfRenderDrawer();
+      hakSfRenderDrawer({scrolls, sel: '#dlgBox [data-sfm="' + key.replace(/"/g, '\\"') + '"][value="' + val.replace(/"/g, '\\"') + '"]'});
     } else if (t.dataset.sfdrfield) {
       if (t.value) s.one[t.dataset.sfdrfield] = t.value; else delete s.one[t.dataset.sfdrfield];
     } else if (t.dataset.sfdrbool) {
@@ -165,17 +188,8 @@ document.addEventListener('click', e => {
   if (rs) { const inst = hakSfInstances[rs.dataset.sfreset]; if (inst) { inst.filter.reset(); render(); } return; }
   if (!hakSfDraft || !t.closest('#dlgBox')) return;
   const inst = hakSfInstances[hakSfDraft.screenId]; if (!inst) return;
-  const SF = HAKCore.sf, s = hakSfDraft.state;
-  const syncText = () => {
-    const qEl = document.getElementById('sfDrQ'); if (qEl) s.q = qEl.value;
-    const tuEl = document.getElementById('sfDrTu'), denEl = document.getElementById('sfDrDen');
-    if (tuEl && denEl) {
-      const a = SF.parseVN(tuEl.value), b = SF.parseVN(denEl.value);
-      if (a === null || b === null) { hakSfDraft.err = 'Ngày không hợp lệ — nhập dạng dd/mm/yyyy.'; return false; }
-      hakSfDraft.state = SF.setDates(s, a, b);
-    }
-    return true;
-  };
+  const SF = HAKCore.sf;
+  const syncText = () => hakSfSyncDraftText();
   const mall = t.closest('[data-sfmall]');
   if (mall) {
     syncText();

@@ -135,8 +135,9 @@ document.addEventListener('click', async e => {
   }
   if (act === 'stepSave' || act === 'stepNext') {
     if (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) document.activeElement.blur();
-    const f = curForest();
-    if (f && !loKhoa(f)) {
+    const f = curForest(), st = stCur();
+    const dirty = !!(f && (loDirty.has(f.id) || (st && HAKStage.dirty(st))));
+    if (f && !loKhoa(f) && (dirty || act === 'stepSave')) {
       const r = await luuLo();
       if (r && r.ok === false) return render();
     }

@@ -21,7 +21,7 @@ function dmCu() {
 
 /* ---------- hộp thoại riêng (#dlgBox) ---------- */
 function dlgMo(html) { const b = document.getElementById('dlgBox'); if (!b) return; document.getElementById('dlgBody').innerHTML = html; b.classList.add('on'); const f = b.querySelector('input,select,button'); if (f) f.focus(); }
-function dlgDong() { const b = document.getElementById('dlgBox'); if (b) { b.classList.remove('on'); const d = document.getElementById('dlgBody'); if (d) d.innerHTML = ''; } }   // đóng là xóa nội dung (không còn form ẩn trùng id)
+function dlgDong() { if (typeof hakSfDraft !== 'undefined') hakSfDraft = null; const b = document.getElementById('dlgBox'); if (b) { b.classList.remove('on'); const d = document.getElementById('dlgBody'); if (d) d.innerHTML = ''; } }   // đóng là xóa nội dung (không còn form ẩn trùng id)
 
 /* ---------- RỜI TRANG KHI CÒN THAY ĐỔI: Lưu / Bỏ thay đổi / Tiếp tục chỉnh sửa ---------- */
 /* các màn chi tiết đăng ký bản nháp của mình: {ten, dirty(), luu() → true nếu lưu được, bo()} */
@@ -72,7 +72,7 @@ function panelSetDt() {
   const sfCfg = {
     screenId: 'dm_doi_tuong', title: 'Danh mục đối tượng',
     searchPlaceholder: 'Lọc theo tên, mã, CCCD, MST, địa chỉ…',
-    quickFields: ['q', 'loai', 'thieuCccd'],
+    quickFields: ['loai', 'thieuCccd'],
     advancedFields: ['q', 'loai', 'vaiTro', 'kyHd', 'thieuCccd', 'ngung'],
     matchQ: (o, q) => SF.hay([o.ma, o.ten, o.mst, o.diaChi, o.sdt, o.daiDien].concat((o.nguoi || []).map(p => p.hoTen + ' ' + p.cccd + ' ' + p.sdt))).includes(q),
     fields: [
@@ -84,13 +84,14 @@ function panelSetDt() {
     ]
   };
   const sfRes = hakSfApply('dm_doi_tuong', sfCfg, baseDs);
+  const sfOn = SF.activeCount(hakSfGet('dm_doi_tuong', sfCfg).filter.getState()) > 0;
   const ds = sfRes.rows, x = cd.sua;
   const bang = '<div class="wrap" id="dtWrap" style="max-height:min(60vh,520px)"><table id="dtBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Mã</th><th>Tên đối tượng</th><th>Loại</th><th>MST</th><th>Địa chỉ</th><th>SĐT</th><th>Ký hợp đồng</th><th>Người · vai trò</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(o => '<tr data-dt="' + esc(o.id) + '"><td>' + esc(o.ma) + '</td><td><b>' + esc(o.ten) + '</b></td><td>' + HAKDoiTuong.LOAI[o.loai] + '</td><td>' + esc(o.mst) + '</td><td>' + esc(o.diaChi) + '</td><td>' + esc(o.sdt) + '</td><td>' +
       esc(o.loai === 'phapnhan' ? HAKDoiTuong.kyText(o.kyHD) : HAKDoiTuong.kyText({vanChuyen: (o.nguoi || []).some(p => p.kyHD && p.kyHD.vanChuyen), nhanCong: (o.nguoi || []).some(p => p.kyHD && p.kyHD.nhanCong)})) + '</td><td>' +
       (o.nguoi || []).map(p => esc(p.hoTen) + (HAKDoiTuong.vaiText(p.vaiTro) ? ' <small class="mut">(' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + ')</small>' : '')).join('<br>') + '</td>' +
       '<td style="white-space:nowrap"><button class="btn ghost sm" data-dtsua="' + esc(o.id) + '">Sửa</button> <button class="btn ghost sm" data-dtngung="' + esc(o.id) + '">' + (o.ngung ? 'Dùng lại' : 'Ngừng') + '</button></td></tr>').join('')
-      : '<tr><td colspan="9" class="mut" id="dtTrong">Không có đối tượng nào' + (cd.q || cd.nhom !== 'tatca' ? ' khớp bộ lọc' : '') + '.</td></tr>') + '</tbody></table></div>';
+      : '<tr><td colspan="9" class="mut" id="dtTrong">Không có đối tượng nào' + (cd.q || cd.nhom !== 'tatca' || sfOn ? ' khớp bộ lọc' : '') + '.</td></tr>') + '</tbody></table></div>';
   const form = !x ? '' : '<form id="dtForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa đối tượng ' + esc(x.ma) : 'Thêm đối tượng') + '</h3>' +
     (cd.loi.length ? '<div class="msg err" id="dtLoi">' + cd.loi.map(esc).join('<br>') + '</div>' : '') +
     '<div class="grid">' + fld30('ma', 'Mã đối tượng (trống: tự cấp)', x.ma) + fld30('ten', 'Tên đối tượng', x.ten, {req: true}) +
@@ -213,7 +214,7 @@ function panelSetXe() {
   const sfCfg = {
     screenId: 'dm_xe', title: 'Danh mục xe vận chuyển',
     searchPlaceholder: 'Lọc theo BKS, loại xe, chủ xe…',
-    quickFields: ['q', 'hanGt'],
+    quickFields: ['hanGt'],
     advancedFields: ['q', 'loaiXe', 'hanGt'],
     matchQ: (v, q) => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId); return SF.hay([v.bks, v.loaiXe, c && c.nhan]).includes(q); },
     fields: [
@@ -222,6 +223,7 @@ function panelSetXe() {
     ]
   };
   const sfRes = hakSfApply('dm_xe', sfCfg, baseDs), ds = sfRes.rows;
+  const sfXeOn = SF.activeCount(hakSfGet('dm_xe', sfCfg).filter.getState()) > 0;
   const x = C.sua;
   const form = !x ? '' : '<form id="xeForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa xe ' + esc(x.bks) : 'Thêm xe') + '</h3>' + (C.loi.length ? '<div class="msg err" id="xeLoi">' + C.loi.map(esc).join('<br>') + '</div>' : '') +
     '<div class="grid">' + fld30('ngayCapNhat', 'Ngày cập nhật', x.ngayCapNhat || hom) + fld30('bks', 'Số BKS', x.bks, {req: true, ph: '92C-123.45'}) + fld30('hanKiemDinh', 'Ngày hết hạn kiểm định', x.hanKiemDinh) + fld30('hanBaoHiem', 'Ngày hết hạn bảo hiểm', x.hanBaoHiem) + fld30('loaiXe',
@@ -237,7 +239,7 @@ function panelSetXe() {
     (ds.length ? ds.map(v => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId), het = HAKXeDM.hetHan(v, hom);
       return '<tr data-xe="' + esc(v.id) + '"><td>' + esc(v.ngayCapNhat) + '</td><td><b>' + esc(v.bks) + '</b></td><td>' + esc(v.hanKiemDinh) + (het.includes('kiểm định') ? ' <span class="pill err">hết hạn</span>' : '') + '</td><td>' + esc(v.hanBaoHiem) + (het.includes('bảo hiểm') ?
       ' <span class="pill err">hết hạn</span>' : '') + '</td><td>' + esc(v.loaiXe) + '</td><td>' + (c ? esc(c.nhan) : '<span class="mut">chưa chọn</span>') + '</td>' +
-        '<td><button class="btn ghost sm" data-xesua="' + esc(v.id) + '">Sửa</button></td></tr>'; }).join('') : '<tr><td colspan="7" class="mut" id="xeTrong">Chưa có xe nào' + (C.q ? ' khớp' : '') + '.</td></tr>') + '</tbody></table></div><p class="mut" style="margin:6px 0 0">' + ds.length + ' xe</p></div>';
+        '<td><button class="btn ghost sm" data-xesua="' + esc(v.id) + '">Sửa</button></td></tr>'; }).join('') : '<tr><td colspan="7" class="mut" id="xeTrong">' + (C.q || sfXeOn ? 'Không có xe nào khớp bộ lọc.' : 'Chưa có xe nào.') + '</td></tr>') + '</tbody></table></div><p class="mut" style="margin:6px 0 0">' + ds.length + ' xe</p></div>';
 }
 function xeMo(id) { const v = id ? HAKXeDM.tim(dmXE(), id) : null; cd.xe.sua = v ? Object.assign({}, v) : {id: '', bks: '', ngayCapNhat: todayStr(), hanKiemDinh: '', hanBaoHiem: '', loaiXe: '', chuXeId: ''}; cd.xe.goc = JSON.stringify(cd.xe.sua); cd.xe.loi = []; cd.msg = null; render(); }
 async function xeLuu() {

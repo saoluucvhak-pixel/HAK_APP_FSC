@@ -20,11 +20,14 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   const dbAll = () => w.evaluate(() => window.hak.loadSync().db);
   const set = (sel, o) => w.evaluate(([sel, o]) => { const f = document.querySelector(sel); Object.entries(o).forEach(([k, v]) => { const e = f.elements[k]; if (e.type === 'checkbox') e.checked = !!v; else e.value = v; }); }, [sel, o]);
 
-  // 1. Cài đặt trên thanh chính
-  ok('Cài đặt nằm trên thanh chính, không còn menu “⋯ Thêm”', await w.isVisible('#navSet') && !(await w.$('#moreMenu')));
-  await w.click('#navSet'); await w.click('#setTab_setdt'); await w.waitForSelector('#dtBang');
-  const tabs = await w.$$eval('[id^=setTab_]', e => e.map(x => x.id.slice(7)));
-  ok('Cài đặt có Danh mục đối tượng, Danh mục xe, Vị trí, Giao diện, Hướng dẫn, Sao lưu và khôi phục', ['setdt', 'setxe', 'setvt', 'setgd', 'sethd', 'setbk'].every(k => tabs.includes(k)), tabs.join());
+  // 1. Cài đặt & Danh mục tách riêng trên thanh chính
+  ok('Cài đặt và Danh mục nằm trên thanh chính, không còn menu “⋯ Thêm”', await w.isVisible('#navSet') && await w.isVisible('#navDm') && !(await w.$('#moreMenu')));
+  await w.click('#navSet'); await w.waitForSelector('#setTab_setbk');
+  const setTabs = await w.$$eval('[id^=setTab_]', e => e.map(x => x.id.slice(7)));
+  ok('Cài đặt có Giao diện, Hướng dẫn, Sao lưu và khôi phục', ['setgd', 'sethd', 'setbk'].every(k => setTabs.includes(k)), setTabs.join());
+  await w.click('#navDm'); await w.click('#setTab_setdt'); await w.waitForSelector('#dtBang');
+  const dmTabs = await w.$$eval('[id^=setTab_]', e => e.map(x => x.id.slice(7)));
+  ok('Danh mục có Đối tượng, Xe vận chuyển, Vị trí, Công ty mua hàng', ['setdt', 'setxe', 'setvt', 'cty'].every(k => dmTabs.includes(k)), dmTabs.join());
 
   // 2. thể nhân, một người vừa Tài xế vừa Chủ xe
   await w.click('#dtThem'); await w.waitForSelector('#dtForm');
