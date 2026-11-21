@@ -170,8 +170,23 @@ function panelNC(rec) {
     '</section></div>';
 }
 function panelThanhVien(rec) {
-  const c = checkNC(rec), head = panelImport('nc', rec) + stBar('nc', rec) + stErrBox();
-  const t = rec.doi && rec.doi.length > 1 && !NAV.ncTatCa ? curTeam() : null, only = t ? r => r.doiId === t.id || !rec.doi.some(d => d.id === r.doiId) : null;   // lô nhiều đội: chỉ người của đội đang chọn (và người chưa thuộc đội)
+  const c = checkNC(rec), t = rec.doi && rec.doi.length > 1 && !NAV.ncTatCa ? curTeam() : null, baseOnly = t ? r => r.doiId === t.id || !rec.doi.some(d => d.id === r.doiId) : null;
+  const baseNc = baseOnly ? (rec.nc || []).filter(baseOnly) : (rec.nc || []);
+  const SF = HAKCore.sf, cdOpts = [...new Set(baseNc.map(r => trim(r.chucDanh)).filter(Boolean))].sort();
+  const sfCfg = {
+    screenId: 'lo_nhan_cong', title: 'Thành viên đội khai thác',
+    searchPlaceholder: 'Tìm họ tên, CCCD, chức danh…',
+    quickFields: ['q', 'coLoi'],
+    advancedFields: ['q', 'chucDanh', 'coLoi'],
+    matchQ: (r, q) => SF.hay([r.ten, r.cccd, r.chucDanh, r.vaiTro]).includes(q),
+    fields: [
+      {key: 'chucDanh', label: 'Chức danh', type: 'multi', withNone: true, options: cdOpts, match: (r, vals) => SF.inSet(vals, r.chucDanh)},
+      {key: 'coLoi', label: 'Chỉ dòng có lỗi / cảnh báo', type: 'bool', match: r => c.state[r._row] === 'err' || c.state[r._row] === 'warn'}
+    ]
+  };
+  const sfRes = hakSfApply('lo_nhan_cong', sfCfg, baseNc), sfSet = new Set(sfRes.rows);
+  const only = r => (!baseOnly || baseOnly(r)) && sfSet.has(r);
+  const head = panelImport('nc', rec) + stBar('nc', rec) + (baseNc.length ? hakSfBarHtml('lo_nhan_cong', sfRes.total, sfRes.kept) : '') + stErrBox();
   const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' :
   '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';
   const hienDoi = rec.doi?.length > 1;

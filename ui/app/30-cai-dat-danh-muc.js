@@ -68,7 +68,23 @@ function dtDocForm() {
   return x;
 }
 function panelSetDt() {
-  const ds = HAKDoiTuong.loc(dmDT(), cd.nhom, cd.q), x = cd.sua;
+  const SF = HAKCore.sf, baseDs = HAKDoiTuong.loc(dmDT(), cd.nhom, cd.q);
+  const sfCfg = {
+    screenId: 'dm_doi_tuong', title: 'Danh mục đối tượng',
+    searchPlaceholder: 'Lọc theo tên, mã, CCCD, MST, địa chỉ…',
+    quickFields: ['q', 'loai', 'thieuCccd'],
+    advancedFields: ['q', 'loai', 'vaiTro', 'kyHd', 'thieuCccd', 'ngung'],
+    matchQ: (o, q) => SF.hay([o.ma, o.ten, o.mst, o.diaChi, o.sdt, o.daiDien].concat((o.nguoi || []).map(p => p.hoTen + ' ' + p.cccd + ' ' + p.sdt))).includes(q),
+    fields: [
+      {key: 'loai', label: 'Loại', type: 'enum', options: [{value: 'thenhan', label: 'Thể nhân'}, {value: 'phapnhan', label: 'Pháp nhân'}], match: (o, v) => o.loai === v},
+      {key: 'vaiTro', label: 'Vai trò', type: 'multi', options: [{value: 'nhanCong', label: 'Nhân công'}, {value: 'taiXe', label: 'Tài xế'}, {value: 'chuXe', label: 'Chủ xe'}], match: (o, vals) => (o.nguoi || []).some(p => p.vaiTro && vals.some(k => p.vaiTro[k]))},
+      {key: 'kyHd', label: 'Quyền ký HĐ', type: 'multi', options: [{value: 'nhanCong', label: 'Ký Nhân công'}, {value: 'vanChuyen', label: 'Ký Vận chuyển'}], match: (o, vals) => vals.some(k => (o.kyHD && o.kyHD[k]) || (o.nguoi || []).some(p => p.kyHD && p.kyHD[k]))},
+      {key: 'thieuCccd', label: 'Chưa có CCCD', type: 'bool', match: o => o.loai !== 'phapnhan' && (o.nguoi || []).some(p => !trim(p.cccd))},
+      {key: 'ngung', label: 'Đang ngừng sử dụng', type: 'bool', match: o => !!o.ngung}
+    ]
+  };
+  const sfRes = hakSfApply('dm_doi_tuong', sfCfg, baseDs);
+  const ds = sfRes.rows, x = cd.sua;
   const bang = '<div class="wrap" id="dtWrap" style="max-height:min(60vh,520px)"><table id="dtBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Mã</th><th>Tên đối tượng</th><th>Loại</th><th>MST</th><th>Địa chỉ</th><th>SĐT</th><th>Ký hợp đồng</th><th>Người · vai trò</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(o => '<tr data-dt="' + esc(o.id) + '"><td>' + esc(o.ma) + '</td><td><b>' + esc(o.ten) + '</b></td><td>' + HAKDoiTuong.LOAI[o.loai] + '</td><td>' + esc(o.mst) + '</td><td>' + esc(o.diaChi) + '</td><td>' + esc(o.sdt) + '</td><td>' +
       esc(o.loai === 'phapnhan' ? HAKDoiTuong.kyText(o.kyHD) : HAKDoiTuong.kyText({vanChuyen: (o.nguoi || []).some(p => p.kyHD && p.kyHD.vanChuyen), nhanCong: (o.nguoi || []).some(p => p.kyHD && p.kyHD.nhanCong)})) + '</td><td>' +
@@ -91,7 +107,7 @@ function panelSetDt() {
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label>Lọc theo<select id="dtNhom">' + NHOM_DT.map(([k, t]) => '<option value="' + k + '"' + (cd.nhom === k ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>' +
     '<label style="flex:1;min-width:200px">Tìm<input id="dtQ" value="' + esc(cd.q) + '" placeholder="tên, mã, MST, CCCD, SĐT"></label>' +
     '<button class="btn" data-act="dtThem" id="dtThem">+ Thêm đối tượng</button><label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-dtfile="1" hidden></label><button class="btn ghost" data-act="dtMau">Tải file mẫu</button></div>' +
-    form + '<div style="margin-top:10px">' + bang + '</div><p class="mut" style="margin:6px 0 0" id="dtDem">' + ds.length + ' đối tượng</p></div>';
+    hakSfBarHtml('dm_doi_tuong', sfRes.total, sfRes.kept) + form + '<div style="margin-top:10px">' + bang + '</div><p class="mut" style="margin:6px 0 0" id="dtDem">' + ds.length + ' đối tượng</p></div>';
 }
 function dtMo(id) { const o = id ? HAKDoiTuong.tim(dmDT(), id) : null; cd.sua = o ? JSON.parse(JSON.stringify(o)) : {id: '', ma: '', ten: '', loai: 'thenhan', kyHD: {}, nguoi: []}; cd.goc = JSON.stringify(cd.sua); cd.loi = []; cd.msg = null; render();
 const f = document.querySelector('#dtForm [name=ten]'); if (f) f.focus(); }
@@ -191,8 +207,22 @@ function xeDocForm() { const fm = document.getElementById('xeForm'); if (!fm || 
 return x; }
 const chonChuXeHtml = (v, name) => '<select name="' + (name || 'chuXeId') + '"><option value="">— chưa chọn —</option>' + HAKXeDM.chonChuXe(dmDT()).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
 function panelSetXe() {
-  const C = cd.xe, w = foldVi(C.q).split(/\s+/).filter(Boolean), ds = dmXE().filter(x => { if (!w.length) return true; const c = HAKXeDM.chuXe(dmDT(), x.chuXeId); const t = foldVi([x.bks, x.loaiXe, c && c.nhan].join(' ')); return w.every(k => t.includes(k)); });
-  const x = C.sua, hom = todayStr();
+  const C = cd.xe, SF = HAKCore.sf, w = foldVi(C.q).split(/\s+/).filter(Boolean), baseDs = dmXE().filter(x => { if (!w.length) return true; const c = HAKXeDM.chuXe(dmDT(), x.chuXeId); const t = foldVi([x.bks, x.loaiXe, c && c.nhan].join(' ')); return w.every(k => t.includes(k)); });
+  const hom = todayStr();
+  const loaiOpts = [...new Set(dmXE().map(v => trim(v.loaiXe)).filter(Boolean))].sort();
+  const sfCfg = {
+    screenId: 'dm_xe', title: 'Danh mục xe vận chuyển',
+    searchPlaceholder: 'Lọc theo BKS, loại xe, chủ xe…',
+    quickFields: ['q', 'hanGt'],
+    advancedFields: ['q', 'loaiXe', 'hanGt'],
+    matchQ: (v, q) => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId); return SF.hay([v.bks, v.loaiXe, c && c.nhan]).includes(q); },
+    fields: [
+      {key: 'loaiXe', label: 'Loại xe', type: 'multi', withNone: true, options: loaiOpts, match: (v, vals) => SF.inSet(vals, v.loaiXe)},
+      {key: 'hanGt', label: 'Giấy tờ xe', type: 'enum', options: [{value: 'het', label: 'Có giấy tờ hết hạn'}, {value: 'con', label: 'Còn hạn'}], match: (v, val) => { const h = HAKXeDM.hetHan(v, hom).length > 0; return val === 'het' ? h : !h; }}
+    ]
+  };
+  const sfRes = hakSfApply('dm_xe', sfCfg, baseDs), ds = sfRes.rows;
+  const x = C.sua;
   const form = !x ? '' : '<form id="xeForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa xe ' + esc(x.bks) : 'Thêm xe') + '</h3>' + (C.loi.length ? '<div class="msg err" id="xeLoi">' + C.loi.map(esc).join('<br>') + '</div>' : '') +
     '<div class="grid">' + fld30('ngayCapNhat', 'Ngày cập nhật', x.ngayCapNhat || hom) + fld30('bks', 'Số BKS', x.bks, {req: true, ph: '92C-123.45'}) + fld30('hanKiemDinh', 'Ngày hết hạn kiểm định', x.hanKiemDinh) + fld30('hanBaoHiem', 'Ngày hết hạn bảo hiểm', x.hanBaoHiem) + fld30('loaiXe',
     'Loại xe', x.loaiXe) +
@@ -201,7 +231,8 @@ function panelSetXe() {
     '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="xeLuu">Lưu</button><button class="btn ghost" type="button" data-act="xeHuy">Hủy</button></div></form>';
   return '<div class="card"><h3 style="margin-top:0">Danh mục xe</h3>' + (cd.msg ? '<div class="msg ' + cd.msg[1] + '" id="xeMsg">' + esc(cd.msg[0]) + '</div>' : '') +
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label style="flex:1;min-width:200px">Tìm<input id="xeQ" value="' + esc(C.q) + '" placeholder="BKS, loại xe, chủ xe"></label><button class="btn" data-act="xeThem" id="xeThem">+ Thêm xe</button>' +
-    '<label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-xefile="1" hidden></label><button class="btn ghost" data-act="xeMau">Tải file mẫu</button></div>' + form +
+    '<label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-xefile="1" hidden></label><button class="btn ghost" data-act="xeMau">Tải file mẫu</button></div>' +
+    hakSfBarHtml('dm_xe', sfRes.total, sfRes.kept) + form +
     '<div class="wrap" style="max-height:min(60vh,520px);margin-top:10px"><table id="xeBang"' + (ds.length ? ' style="min-width:760px"' : '') + '><thead><tr><th>Ngày cập nhật</th><th>Số BKS</th><th>Hạn kiểm định</th><th>Hạn bảo hiểm</th><th>Loại xe</th><th>Chủ xe</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(v => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId), het = HAKXeDM.hetHan(v, hom);
       return '<tr data-xe="' + esc(v.id) + '"><td>' + esc(v.ngayCapNhat) + '</td><td><b>' + esc(v.bks) + '</b></td><td>' + esc(v.hanKiemDinh) + (het.includes('kiểm định') ? ' <span class="pill err">hết hạn</span>' : '') + '</td><td>' + esc(v.hanBaoHiem) + (het.includes('bảo hiểm') ?

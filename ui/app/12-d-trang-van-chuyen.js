@@ -28,13 +28,25 @@ function panelDoiChieuPhieuChuaGan(rec) {
         '<td><button class="btn ghost sm" data-act="stEdit" data-kind="pc" data-i="' + rec.pc.indexOf(p) + '">Sửa phiếu</button></td></tr>').join('') + '</tbody></table></div>' : '<p>Không có phiếu cần gán.</p>') + '</div>';
 }
 function panelDX(rec, hMo) {
-  const c = checkDX(rec);
-  /* 3.0: tab mở danh sách hợp đồng vận chuyển (công ty mua hàng, cước chung của lô ở đây); chọn một hợp đồng → trang chi tiết (thông tin, xe và tài xế).
-   * Rừng chưa có hợp đồng nào: thêm xe ngay dưới danh sách, xe tự vào hợp đồng theo người ký như trước. */
-  const head = panelImport('dx', rec) + stBar('dx', rec) + stErrBox() +
+  const c = checkDX(rec), baseOnly = hMo && !xeTatCa ? r => r.hdvcId === hMo.id || !(rec.hdvc || []).some(h => h.id === r.hdvcId) : null;
+  const baseDx = baseOnly ? (rec.dx || []).filter(baseOnly) : (rec.dx || []);
+  const SF = HAKCore.sf, loaiOpts = [...new Set(baseDx.map(r => trim(r.loaiXe)).filter(Boolean))].sort();
+  const sfCfg = {
+    screenId: 'lo_xe', title: 'Xe và tài xế',
+    searchPlaceholder: 'Tìm BKS, chủ xe, tài xế, loại xe…',
+    quickFields: ['q', 'coLoi'],
+    advancedFields: ['q', 'loaiXe', 'coLoi'],
+    matchQ: (r, q) => SF.hay([r.bienSo, r.chuXe, r.taiXe, r.loaiXe]).includes(q),
+    fields: [
+      {key: 'loaiXe', label: 'Loại xe', type: 'multi', withNone: true, options: loaiOpts, match: (r, vals) => SF.inSet(vals, r.loaiXe)},
+      {key: 'coLoi', label: 'Chỉ xe có lỗi / cảnh báo', type: 'bool', match: r => c.state[r._row] === 'err' || c.state[r._row] === 'warn'}
+    ]
+  };
+  const sfRes = hakSfApply('lo_xe', sfCfg, baseDx), sfSet = new Set(sfRes.rows);
+  const only = r => (!baseOnly || baseOnly(r)) && sfSet.has(r);
+  const head = panelImport('dx', rec) + stBar('dx', rec) + (baseDx.length ? hakSfBarHtml('lo_xe', sfRes.total, sfRes.kept) : '') + stErrBox() +
     (hMo ? '<div class="row" style="margin:6px 0" id="xeLoc">' + (xeTatCa ? '<span class="mut">Đang xem mọi xe của rừng.</span> <button class="btn ghost sm" data-act="xeTheoHd">Chỉ xe của hợp đồng này</button>' :
     '<h3 style="margin:0 8px 0 0">Xe và tài xế của hợp đồng</h3><button class="btn ghost sm" data-act="xeTatCa">Xem mọi xe của rừng</button>') + '</div>' : '');
-  const only = hMo && !xeTatCa ? r => r.hdvcId === hMo.id || !(rec.hdvc || []).some(h => h.id === r.hdvcId) : null;   // trang chi tiết: xe của hợp đồng này (và xe chưa thuộc hợp đồng nào)
   return head + issuesBox(c.errs, c.warns) + stTable('dx', rec, ['Chủ xe', 'Biển kiểm soát', 'Loại xe', 'Người ký HĐ', 'Đội xe', 'Tài xế', 'Số GPLX', 'Hạn GPLX', 'Hạn bảo hiểm', 'Kiểm định'],
     r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + hdCell(rec,
     r) + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c, null, only);
@@ -54,7 +66,27 @@ function panelPhieuCan(rec) {
   ' phiếu chưa thuộc hợp đồng nào (BKS không khớp duy nhất một xe): mở hợp đồng để chọn.</div>' : '') + '</div>';
   }
   const hdOnly = hMo && !pcTatCa ? r => r.hdvcId === hMo.id || !r.hdvcId : null;
-  const head = panelImport('pc', rec, hMo ? pcDauHd(rec, hMo) : '', pcCongCuHd(hMo)) + pcGanBaoHtml() + stBar('pc', rec);
+  const basePc = hdOnly ? pc.filter(hdOnly) : pc;
+  const SF = HAKCore.sf;
+  const bksOpts = [...new Set(basePc.map(r => trim(r.bienSo)).filter(Boolean))].sort();
+  const noiOpts = [...new Set(basePc.map(r => trim(r.noiGiao)).filter(Boolean))].sort();
+  const sfCfg = {
+    screenId: 'lo_phieu_can', title: 'Phiếu cân',
+    searchPlaceholder: 'Tìm số phiếu, BKS, khách hàng, nơi giao…',
+    quickFields: ['q', 'coLoi'],
+    advancedFields: ['q', 'dates', 'bienSo', 'noiGiao', 'coLoi'],
+    matchQ: (r, q) => SF.hay([r.soPhieu, r.bienSo, r.khachHang, r.noiGiao, r.ghiChu]).includes(q),
+    matchDate: (r, tu, den) => { const iso = SF.parseVN(r.ngay); if (!iso) return false; if (tu && iso < tu) return false; if (den && iso > den) return false; return true; },
+    fields: [
+      {key: 'bienSo', label: 'Biển kiểm soát', type: 'multi', withNone: true, options: bksOpts, match: (r, vals) => SF.inSet(vals, r.bienSo)},
+      {key: 'noiGiao', label: 'Nơi giao', type: 'multi', withNone: true, options: noiOpts, match: (r, vals) => SF.inSet(vals, r.noiGiao)},
+      {key: 'coLoi', label: 'Chỉ phiếu lỗi / chưa gán', type: 'bool', match: r => !HAKDates.isValid(r.ngay) || !r.hdvcId || c.state[r._row] === 'err'}
+    ]
+  };
+  const sfRes = hakSfApply('lo_phieu_can', sfCfg, basePc), sfSet = new Set(sfRes.rows);
+  const rowFilter = r => (!hdOnly || hdOnly(r)) && sfSet.has(r);
+  const sfBar = basePc.length ? hakSfBarHtml('lo_phieu_can', sfRes.total, sfRes.kept, '<b>' + fmtT(totalKg(sfRes.rows)) + ' tấn</b>') : '';
+  const head = panelImport('pc', rec, hMo ? pcDauHd(rec, hMo) : '', pcCongCuHd(hMo)) + pcGanBaoHtml() + stBar('pc', rec) + sfBar;
   if (!pc.length && !stCur()) return head + '<div class="empty">Chưa có phiếu cân. Bấm “+ Thêm phiếu cân”, hoặc “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
   const R = '<span style="display:block;text-align:right">', num = (v, f) => typeof v === 'number' ? fmt(v) : '';
   const nhieu = rec.doi && rec.doi.length > 1, tenD = d => d.ten || ('Đội ' + (rec.doi.indexOf(d) + 1));
@@ -77,8 +109,8 @@ function panelPhieuCan(rec) {
     '<br><span class="mut">' + esc(r.gioCan2 || '') + '</span></td><td>' + esc(r.bienSo) + xCell(r) +
       '</td><td>' + esc(r.soPhieu) + '</td><td style="text-align:right">' + num(r.can1) + '</td><td style="text-align:right">' + num(r.can2) +
       '</td><td style="text-align:right">' + (typeof r.klKg === 'number' ? fmt(r.klKg) : (typeof r.kl === 'number' ? fmt(Math.round(r.kl * 1000)) : '')) + '</td><td style="text-align:right">' + (typeof r.kl === 'number' ? fmtT(Math.round(r.kl * 1000)) : esc(r.kl)) +
-      '</td><td>' + esc(r.khachHang || '') + '</td><td style="text-align:right">' + num(r.donGia) + '</td><td style="text-align:right">' + num(r.thanhTien) + '</td><td>' + esc(r.noiGiao) + '</td>', c, null, hdOnly);
-  return head + gan + issuesBox(c.errs, c.warns) + t.replace('</tbody></table></div>', '</tbody><tfoot><tr><td colspan="' + (9 + (nhieu ? 1 : 0) + (hMo ? 1 : 0)) + '"><b>Tổng ' + (hdOnly ? pc.filter(hdOnly) : pc).length + ' chuyến' + (hdOnly ? ' đang xem' : '') + ' (bản ' + (stCur() ? 'nháp' :
-  'đã lưu') + ')</b></td><td style="text-align:right"><b>' + fmtT(totalKg(hdOnly ? pc.filter(hdOnly) : pc)) + ' tấn</b></td><td colspan="5"></td></tr></tfoot></table></div>');
+      '</td><td>' + esc(r.khachHang || '') + '</td><td style="text-align:right">' + num(r.donGia) + '</td><td style="text-align:right">' + num(r.thanhTien) + '</td><td>' + esc(r.noiGiao) + '</td>', c, null, rowFilter);
+  return head + gan + issuesBox(c.errs, c.warns) + t.replace('</tbody></table></div>', '</tbody><tfoot><tr><td colspan="' + (9 + (nhieu ? 1 : 0) + (hMo ? 1 : 0)) + '"><b>Tổng ' + sfRes.rows.length + ' chuyến' + (sfRes.rows.length < pc.length ? ' đang xem' : '') + ' (bản ' + (stCur() ? 'nháp' :
+  'đã lưu') + ')</b></td><td style="text-align:right"><b>' + fmtT(totalKg(sfRes.rows)) + ' tấn</b></td><td colspan="5"></td></tr></tfoot></table></div>');
 }
 
