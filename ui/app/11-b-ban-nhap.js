@@ -100,6 +100,13 @@ function stCells(kind, r, i, dm) {
   '" data-i="' + i + '" title="Xóa bản ghi đã lưu khỏi lô (có hiệu lực khi bấm Lưu)">Xóa đã lưu</button>';
   return {stat: '<td>' + stat + '</td>', act: '<td class="stAct"><button class="btn ghost sm" data-act="stEdit" data-kind="' + kind + '" data-i="' + i + '">Sửa</button> ' + del + '</td>'};
 }
+/* bảng có dữ liệu nhưng không dòng nào hiện (bộ lọc, hoặc chỉ xem đội / hợp đồng đang mở): nói rõ, KHÔNG mời nhập lại (tránh nhập trùng) */
+const ST_SF = {nc: 'lo_nhan_cong', dx: 'lo_xe', pc: 'lo_phieu_can'};
+function stTrongDoLoc(kind, n) {
+  const loc = typeof hakSfDangLoc === 'function' && hakSfDangLoc(ST_SF[kind]);
+  return '<b>Không có dòng nào khớp ' + (loc ? 'bộ lọc' : 'phạm vi đang xem') + '.</b> Lô đang có ' + n + ' ' + ST_LABEL[kind] + ' (đã có dữ liệu, không cần nhập lại).' +
+    (loc ? ' <button type="button" class="btn ghost sm" data-sfreset="' + ST_SF[kind] + '">Xóa tất cả lọc</button>' : '');
+}
 /* bảng dữ liệu có cột trạng thái, thao tác; dòng sẽ xóa hiện gạch ngang kèm “Hoàn tác” */
 function stTable(kind, rec, heads, cells, c, align, only) {
   const st = stCur(), dm = st ? new Map(HAKStage.diff(st, kind).map(d => [d.row._id, d])) : null;
@@ -107,6 +114,7 @@ function stTable(kind, rec, heads, cells, c, align, only) {
   const gone = st ? HAKStage.diff(st, kind).filter(d => d.status === 'removed') : [];
   const gtr = gone.map(d => '<tr class="stGone"><td>' + d.row._row + '</td><td class="stAct"><button class="btn ghost sm" data-act="stRestore" data-kind="' + kind + '" data-id="' + esc(d.row._id) + '">Hoàn tác</button></td>' + cells(d.row) + '<td><span class="pill err">Sẽ xóa</span></td></tr>');
   return '<div class="wrap"><table id="stTbl_' + kind + '"><thead><tr><th>Dòng</th><th>Thao tác</th>' + heads.map(h => '<th>' + h + '</th>').join('') + '<th>Trạng thái</th></tr></thead><tbody>' +
-    (rows.concat(gtr).filter(Boolean).length ? rows.concat(gtr).join('') : '<tr><td colspan="' + (heads.length + 3) + '" class="mut">Chưa có dữ liệu. Bấm <b>+ Chọn từ Danh mục</b> hoặc <b>+ Thêm ' + ST_LABEL[kind] + ' mới</b> ở thanh công cụ phía trên.</td></tr>') +
+    (rows.concat(gtr).filter(Boolean).length ? rows.concat(gtr).join('') : '<tr><td colspan="' + (heads.length + 3) + '" class="mut" data-bang-trong="' + (rec[kind].length ? 'loc' : 'rong') + '">' + (rec[kind].length ? stTrongDoLoc(kind, rec[kind].length) :
+      'Chưa có dữ liệu. Bấm <b>+ Chọn từ Danh mục</b> hoặc <b>+ Thêm ' + ST_LABEL[kind] + ' mới</b> ở thanh công cụ phía trên.') + '</td></tr>') +
     '</tbody></table></div>';
 }

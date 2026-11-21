@@ -69,7 +69,7 @@ document.addEventListener('click', async e => {
   if (act === 'dmChonNhieu') return dmChonNhieuMo(el.dataset.kind);
   if (act === 'dmChonNhieuLuu') return dmChonNhieuLuu();
   if (act === 'dmPickAll') {
-    document.querySelectorAll('#dlgBox [data-dmpick]').forEach(cb => { cb.checked = true; dmPickState.sel.add(+cb.dataset.dmpick); });
+    document.querySelectorAll('#dlgBox [data-dmpick]:not(:disabled)').forEach(cb => { cb.checked = true; dmPickState.sel.add(+cb.dataset.dmpick); });
     const cnt = document.getElementById('dmPickCount'); if (cnt) cnt.textContent = String(dmPickState.sel.size);
     const btn = document.querySelector('#dlgBox [data-act=dmChonNhieuLuu]'); if (btn) btn.disabled = !dmPickState.sel.size;
     return;

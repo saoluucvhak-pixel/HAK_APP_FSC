@@ -86,7 +86,7 @@ note('Đã đổi hợp đồng đích của phiếu ' + (p.soPhieu || '') + ' s
 /* đầu phần Phiếu cân của trang chi tiết hợp đồng */
 function pcDauHd(rec, hMo) {   // phiếu #06: một dòng tiêu đề (số phiếu, phạm vi đang xem); nút Tra cứu / In nằm trong thanh công cụ (pcCongCuHd)
   const pc = rec.pc || [], cua = pc.filter(p => p.hdvcId === hMo.id).length, chua = pc.filter(p => !p.hdvcId).length;
-  return '<div id="pcHd" class="row pcHdDau"><h3 style="margin:0">Phiếu cân của hợp đồng: ' + cua + (chua ? ' <small class="mut">· ' + chua + ' phiếu của rừng chưa thuộc hợp đồng nào</small>' : '') + '</h3>' +
+  return '<div id="pcHd" class="row pcHdDau"><h3 class="sro">Phiếu cân của hợp đồng: ' + cua + '</h3>' + (chua ? '<span class="pill warn">' + chua + ' phiếu của rừng chưa thuộc hợp đồng nào</span>' : '') +   // tên mục và số phiếu đã có ở tab mục “Phiếu cân” ngay trên: không lặp trên màn (trình đọc màn hình vẫn đọc)
     (pcTatCa ? '<span class="mut">Đang xem mọi phiếu cân của rừng.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ phiếu của hợp đồng này</button>' :
     '<span class="mut">Gồm phiếu của hợp đồng này và phiếu chưa gán.</span> <button class="btn ghost sm" data-act="pcTatCa">Xem mọi phiếu của rừng</button>') + '</div>';
 }

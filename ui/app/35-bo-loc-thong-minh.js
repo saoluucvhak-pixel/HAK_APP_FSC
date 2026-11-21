@@ -20,10 +20,16 @@ function hakSfGet(screenId, cfg) {
   }
   return hakSfInstances[screenId];
 }
+/* bộ lọc của bảng nhập liệu gắn với MỘT lô: đổi lô / chủ rừng thì bộ lọc về mặc định (không để bộ lọc của lô trước che dữ liệu lô sau) */
+const hakSfLoKey = () => (typeof NAV !== 'undefined' && NAV ? (NAV.cur || '') + '|' + (NAV.curF || '') : '');
 function hakSfApply(screenId, cfg, rows, ctx) {
-  const inst = hakSfGet(screenId, cfg);
+  const inst = hakSfGet(screenId, cfg), lo = /^lo_/.test(screenId) ? hakSfLoKey() : null;
+  if (lo !== null && inst.lo !== undefined && inst.lo !== lo) inst.filter.reset();
+  if (lo !== null) inst.lo = lo;
   return inst.filter.filter(rows, ctx);
 }
+/* bảng nhập liệu đang có điều kiện lọc không (để nói đúng “không có dòng khớp bộ lọc” thay cho “chưa có dữ liệu”) */
+const hakSfDangLoc = screenId => { const inst = hakSfInstances[screenId]; return !!(inst && HAKCore.sf.activeCount(inst.filter.getState())); };
 function hakSfBarHtml(screenId, total, kept, extraHtml = '') {
   const inst = hakSfInstances[screenId]; if (!inst) return '';
   const {cfg, filter} = inst, state = filter.getState(), SF = HAKCore.sf;

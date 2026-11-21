@@ -210,20 +210,22 @@ function dmChonNhieuMo(kind) {
   } else {
     const hId = hdMo('dx');
     const daCo = new Set(st.cur.dx.filter(r => !hId || r.hdvcId === hId).map(r => HAKStage.bienKey(r.bienSo)));
-    dmPickState.list = dmNguonXe().filter(x => !daCo.has(HAKStage.bienKey(x.bienSo)));
+    /* xe đã thuộc ĐỘI XE KHÁC của cùng lô: vẫn hiện nhưng không chọn được (một biển số chỉ một dòng trong lô; chọn vào sẽ bị chặn lưu vì trùng BKS) */
+    const khac = new Map(st.cur.dx.filter(r => hId && r.hdvcId !== hId).map(r => [HAKStage.bienKey(r.bienSo), r.hdvcId ? tenDoiVc(rec, (rec.hdvc || []).find(h => h.id === r.hdvcId) || {}) : 'xe chưa thuộc đội xe nào']));
+    dmPickState.list = dmNguonXe().filter(x => !daCo.has(HAKStage.bienKey(x.bienSo))).map(x => khac.has(HAKStage.bienKey(x.bienSo)) ? Object.assign({}, x, {_oKhac: khac.get(HAKStage.bienKey(x.bienSo))}) : x);
   }
   dmChonNhieuRender();
 }
 function dmChonNhieuRender() {
   const kind = dmPickState.kind, q = trim(dmPickState.q).toLowerCase();
-  const items = dmPickState.list.map((r, i) => ({r, i})).filter(({r}) => !q || JSON.stringify(r).toLowerCase().includes(q));
+  const items = dmPickState.list.map((r, i) => ({r, i})).filter(({r}) => !q || foldVi(JSON.stringify(r)).includes(foldVi(q)));   // tìm không dấu như mọi ô tìm khác
   const title = kind === 'nc' ? 'Chọn nhân công từ Danh mục đối tượng' : 'Chọn xe từ Danh mục xe vận chuyển';
   const rows = items.length ? items.map(({r, i}) => {
     const chk = dmPickState.sel.has(i) ? ' checked' : '';
     if (kind === 'nc') {
       return '<tr><td><input type="checkbox" data-dmpick="' + i + '"' + chk + '></td><td><b>' + esc(r.ten) + '</b>' + (r._nhan ? '<br><small class="mut">' + esc(r._nhan) + '</small>' : '') + '</td><td>' + (r.cccd ? esc(r.cccd) : '<span class="pill warn">chưa có CCCD</span>') + '</td><td>' + esc(r.viTri || r.chucVu || '') + '</td></tr>';
     }
-    return '<tr><td><input type="checkbox" data-dmpick="' + i + '"' + chk + '></td><td><b>' + esc(r.bienSo) + '</b></td><td>' + esc(r.chuXe || '') + '</td><td>' + esc(r.taiXe || '') + '</td><td>' + esc(r.loaiXe || '') + '</td></tr>';
+    return '<tr' + (r._oKhac ? ' class="mut"' : '') + '><td><input type="checkbox" data-dmpick="' + i + '"' + (r._oKhac ? ' disabled title="Xe đã có trong lô ở ' + esc(r._oKhac) + '"' : chk) + '></td><td><b>' + esc(r.bienSo) + '</b>' + (r._oKhac ? ' <span class="pill warn" data-xe-khac>đã ở ' + esc(r._oKhac) + '</span>' : '') + '</td><td>' + esc(r.chuXe || '') + '</td><td>' + esc(r.taiXe || '') + '</td><td>' + esc(r.loaiXe || '') + '</td></tr>';
   }).join('') : '<tr><td colspan="5" class="mut">Không còn mục nào chưa có trong hợp đồng này (hoặc không khớp tìm kiếm). Bạn có thể bấm “+ Nhập mới” hoặc mở Danh mục để thêm trước.</td></tr>';
   dlgMo('<h3 style="margin-top:0">' + title + '</h3>' +
     '<div class="row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
@@ -240,7 +242,7 @@ function dmChonNhieuRender() {
 }
 async function dmChonNhieuLuu() {
   const kind = dmPickState.kind, st = stGet(true), rec = curRec(); if (!st || !rec) return;
-  const chon = [...dmPickState.sel].map(i => dmPickState.list[i]).filter(Boolean);
+  const chon = [...dmPickState.sel].map(i => dmPickState.list[i]).filter(r => r && !r._oKhac);
   if (!chon.length) return;
   const t = curTeam();
   let maxRow = st.cur[kind].reduce((m, r) => Math.max(m, +r._row || 0), 1);

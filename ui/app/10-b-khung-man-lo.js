@@ -34,7 +34,7 @@ function loCrumb(job) {
   const o = curOwner(), f = curForest(); if (!o || !f) return '';
   const man = {finfo: 'Thông tin rừng', nc: 'Nhân công', dx: 'Vận chuyển', kt: 'Kiểm tra trước khi xuất', xuat: 'Xuất hồ sơ', inpc: 'In phiếu cân'}[NAV.ftab] || '';
   let doi = '';
-  if (NAV.ftab === 'nc' && job.doi && curTeam(f)) { const t = curTeam(f); doi = 'Đội “' + esc(trim(t.ten) || 'Đội ' + (job.doi.findIndex(d => d.id === t.id) + 1)) + '”'; }
+  if (NAV.ftab === 'nc' && job.doi && curTeam(f)) { const t = curTeam(f); doi = esc(tenDoiNc(job, t)); }   // cùng một tên đội với danh sách đội và khung “Chi tiết” (lô một đội chưa đặt tên: “Đội khai thác”)
   if (NAV.ftab === 'dx' && job.hdvc) { const h = job.hdvc.find(x => x.id === NAV.curHd); if (h) { const k = job.hdvc.indexOf(h); doi = 'Đội xe “' + esc(trim(h.ten) || 'Đội xe ' + (k + 1)) + '”'; } }
   const part = [['Chủ rừng “' + esc(o.info.ten || '') + '”', 'data-tab="info"'],
     ['Lô <b>' + esc(f.info.maRung || '(chưa có mã)') + '</b>', 'data-ftab="finfo"']];

@@ -8,7 +8,7 @@ function panelVanChuyen(rec) {
   const detail = khungMucLo('dx', [
     ...(h ? [['chung', 'Hợp đồng & cước', () => panelHdvc(rec), null, !!(h.benKy || h.donViId || h.ben)]] : []),
     ['xe', 'Xe và tài xế', () => panelDX(rec, h), xe.length, xe.length > 0],
-    ['phieu', 'Phiếu cân', () => panelPhieuCan(rec), pc.length + ' · ' + fmtTan(klPhieu(pc)) + ' t', pc.length > 0],
+    ['phieu', 'Phiếu cân', () => panelPhieuCan(rec), pc.length + ' · ' + fmtT(totalKg(pc)) + ' t', pc.length > 0],
     ['vanban', 'Số văn bản', () => panelHdvcVB(rec), null, !!(h && h.exp && (h.exp.soVC || h.exp.ngayVC))],
     ...(chuaGanCount ? [['doichieu', 'Phiếu chưa gán', () => panelDoiChieuPhieuChuaGan(rec), chuaGanCount, false]] : [])
   ], h ? 'chung' : pc.length ? 'phieu' : 'xe', {inspector: true});
@@ -46,7 +46,7 @@ function panelDX(rec, hMo) {
   const only = r => (!baseOnly || baseOnly(r)) && sfSet.has(r);
   const head = panelImport('dx', rec) + stBar('dx', rec) + (baseDx.length ? hakSfBarHtml('lo_xe', sfRes.total, sfRes.kept) : '') + stErrBox() +
     (hMo ? '<div class="row" style="margin:6px 0" id="xeLoc">' + (xeTatCa ? '<span class="mut">Đang xem mọi xe của rừng.</span> <button class="btn ghost sm" data-act="xeTheoHd">Chỉ xe của hợp đồng này</button>' :
-    '<h3 style="margin:0 8px 0 0">Xe và tài xế của hợp đồng</h3><button class="btn ghost sm" data-act="xeTatCa">Xem mọi xe của rừng</button>') + '</div>' : '');
+    '<h3 class="sro">Xe và tài xế của hợp đồng</h3><button class="btn ghost sm" data-act="xeTatCa">Xem mọi xe của rừng</button>') + '</div>' : '');
   return head + issuesBox(c.errs, c.warns) + stTable('dx', rec, ['Chủ xe', 'Biển kiểm soát', 'Loại xe', 'Người ký HĐ', 'Đội xe', 'Tài xế', 'Số GPLX', 'Hạn GPLX', 'Hạn bảo hiểm', 'Kiểm định'],
     r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + hdCell(rec,
     r) + '</td><td>' + esc(r.taiXe) + '</td><td>' + esc(r.gplx) + '</td><td>' + esc(r.hanGplx) + '</td><td>' + esc(r.hanBH) + '</td><td>' + esc((r.kdTu || r.kdDen) ? (r.kdTu || '…') + ' – ' + (r.kdDen || '…') : '') + '</td>', c, null, only);
@@ -102,13 +102,17 @@ function panelPhieuCan(rec) {
     '<label>Gán vào <select id="pgDoi">' + rec.doi.map(x => '<option value="' + esc(x.id) + '">' + esc(tenD(x)) + '</option>').join('') + '</select></label><button class="btn sm" data-act="pcGanLoat">Gán các phiếu đang lọc</button></div>' +
     '<div class="mut" style="margin-top:4px">' + rec.doi.map(x => esc(tenD(x)) + ': ' + pc.filter(p => p.doiId === x.id).length + ' phiếu, ' + fmtTan(klPhieu(pc.filter(p => p.doiId === x.id))) + ' tấn').join(' · ') + ' · chưa gán: ' + pc.filter(p => !rec.doi.some(x => x.id === p.doiId)).length +
     ' phiếu</div></div>' : '';
-  const t = stTable('pc', rec, [...(nhieu ? ['Đội'] : []), ...(hMo ? ['Xe · hợp đồng'] : []), /* phiếu #06 (D-01): tiêu đề một dòng, tên đầy đủ ở title */ ...[['Cân lần 1', 'Cân lần 1: ngày, giờ'], ['Cân lần 2', 'Cân lần 2: ngày, giờ'], ['BKS', 'Biển kiểm soát'], ['Số phiếu', 'Số phiếu cân']].map(([t, d]) => '<span title="' + d + '">' + t + '</span>'),
-  ...[['Cân 1 (kg)', 'Cân lần 1 (kg)'], ['Cân 2 (kg)', 'Cân lần 2 (kg)'], ['KL (kg)', 'Khối lượng (kg)'], ['KL (tấn)', 'Khối lượng (tấn)']].map(([t, d]) => R.replace('>', ' title="' + d + '">') + t + '</span>'),
-  'Khách hàng', R + 'Đơn giá</span>', R + 'Thành tiền</span>', 'Nơi giao'],
-    r => dCell(r) + (hMo ? pcCotHd(rec, r, hMo) : '') + '<td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay) : esc(r.ngay) + '<br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + ' (bấm Sửa)</small>') + '<br><span class="mut">' + esc(r.gioCan1 || '') + '</span></td><td>' + ngay2Cell(r) +
-    '<br><span class="mut">' + esc(r.gioCan2 || '') + '</span></td><td>' + esc(r.bienSo) + xCell(r) +
-      '</td><td>' + esc(r.soPhieu) + '</td><td style="text-align:right">' + num(r.can1) + '</td><td style="text-align:right">' + num(r.can2) +
-      '</td><td style="text-align:right">' + (typeof r.klKg === 'number' ? fmt(r.klKg) : (typeof r.kl === 'number' ? fmt(Math.round(r.kl * 1000)) : '')) + '</td><td style="text-align:right">' + (typeof r.kl === 'number' ? fmtT(Math.round(r.kl * 1000)) : esc(r.kl)) +
+  /* thứ tự cột (rà soát 21/11): khóa phiếu → thời điểm cân → xe → các cột khối lượng liền nhau (kg rồi tấn) → tiền, nơi giao; cùng thứ tự với Sổ phiếu cân và bảng xem trước HoSoKeo.
+   * “Ngày cân 1/2” là NGÀY GIỜ, “Cân 1/2 (kg)” là KHỐI LƯỢNG (trước đây cùng gọi “Cân lần …”, dễ nhầm). KL (kg) không ghi trên phiếu thì hiện số suy ra từ tấn, chữ nhạt, có ghi chú. */
+  const H = (t, d) => '<span title="' + d + '">' + t + '</span>', HR = (t, d) => R.replace('>', ' title="' + d + '">') + t + '</span>';
+  const kgCell = r => typeof r.klKg === 'number' ? fmt(r.klKg) : (typeof r.kl === 'number' ? '<span class="mut" title="Phiếu không ghi khối lượng kg: suy ra từ khối lượng tấn × 1000">' + fmt(Math.round(r.kl * 1000)) + '</span>' : '');
+  const t = stTable('pc', rec, [...(nhieu ? ['Đội'] : []), H('Số phiếu', 'Số phiếu cân'), H('Ngày cân 1', 'Ngày, giờ cân lần 1'), H('Ngày cân 2', 'Ngày, giờ cân lần 2'), H('BKS trên phiếu', 'Biển kiểm soát ghi trên phiếu cân'),
+    ...(hMo ? ['Xe · hợp đồng'] : []), HR('Cân 1 (kg)', 'Khối lượng cân lần 1 (kg)'), HR('Cân 2 (kg)', 'Khối lượng cân lần 2 (kg)'), HR('KL (kg)', 'Khối lượng hàng (kg) = Cân 1 − Cân 2'), HR('KL (tấn)', 'Khối lượng hàng (tấn): số dùng để cộng tổng'),
+    'Khách hàng', R + 'Đơn giá</span>', R + 'Thành tiền</span>', 'Nơi giao'],
+    r => dCell(r) + '<td><b>' + esc(r.soPhieu) + '</b></td><td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay) : esc(r.ngay) + '<br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + ' (bấm Sửa)</small>') + '<br><span class="mut">' + esc(r.gioCan1 || '') + '</span></td><td>' + ngay2Cell(r) +
+    '<br><span class="mut">' + esc(r.gioCan2 || '') + '</span></td><td>' + esc(r.bienSo) + xCell(r) + '</td>' + (hMo ? pcCotHd(rec, r, hMo) : '') +
+      '<td style="text-align:right">' + num(r.can1) + '</td><td style="text-align:right">' + num(r.can2) +
+      '</td><td style="text-align:right">' + kgCell(r) + '</td><td style="text-align:right">' + (typeof r.kl === 'number' ? fmtT(Math.round(r.kl * 1000)) : esc(r.kl)) +
       '</td><td>' + esc(r.khachHang || '') + '</td><td style="text-align:right">' + num(r.donGia) + '</td><td style="text-align:right">' + num(r.thanhTien) + '</td><td>' + esc(r.noiGiao) + '</td>', c, null, rowFilter);
   return head + gan + issuesBox(c.errs, c.warns) + t.replace('</tbody></table></div>', '</tbody><tfoot><tr><td colspan="' + (9 + (nhieu ? 1 : 0) + (hMo ? 1 : 0)) + '"><b>Tổng ' + sfRes.rows.length + ' chuyến' + (sfRes.rows.length < pc.length ? ' đang xem' : '') + ' (bản ' + (stCur() ? 'nháp' :
   'đã lưu') + ')</b></td><td style="text-align:right"><b>' + fmtT(totalKg(sfRes.rows)) + ' tấn</b></td><td colspan="5"></td></tr></tfoot></table></div>');

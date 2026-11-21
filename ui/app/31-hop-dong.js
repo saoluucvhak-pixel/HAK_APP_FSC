@@ -65,7 +65,7 @@ function panelDsVC(rec, opt = {}) {
     const so = soHdVc(rec, h), on = h.id === selId;
     return '<tr class="hak-master-row' + (on ? ' on' : '') + '" data-act="chonHd" data-hd="' + esc(h.id) + '" aria-selected="' + (on ? 'true' : 'false') + '" tabindex="0">' +
       '<td style="text-align:center">' + (i + 1) + '</td>' +
-      '<td><b>' + esc(tenDoiVc(rec, h)) + '</b><br><small class="mut">' + (so ? 'HĐ ' + esc(so) : 'chưa có số') + ' · ' + esc(ky(h)) + ' · ' + esc(cuocText(rec, h)) + '</small></td>' +
+      '<td><b>' + esc(tenDoiVc(rec, h)) + '</b><br><small class="mut">' + (so ? 'HĐ ' + esc(so) : 'chưa có số') + ' · ' + esc(ky(h)) + ' · ' + cuocText(rec, h) + '</small></td>' +
       '<td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td>' +
       '<td style="text-align:center">' + soPhieu(h) + '</td></tr>';
   };
