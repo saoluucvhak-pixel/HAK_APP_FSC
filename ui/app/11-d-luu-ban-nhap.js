@@ -67,7 +67,7 @@ CONG_KT.doiKT = () => { const rec = curRec(); if (!rec) return null; const B = d
 /* Chặn rời lô khi còn bản nháp: bắt sự kiện bấm ở pha bắt (trước mọi xử lý khác) với các nút đổi lô, đổi chủ rừng, sang màn hình khác */
 document.addEventListener('click', e => {
   if (stBypass || !stDirtyCur()) return; const t = e.target; if (!t.closest || t.closest('#stBox')) return;
-  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],[data-muc-lo],[data-act=hdQuayLai],[data-act=chonDoi],[data-act=chonHd],#navHome,[data-act=openNorm],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
+  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],[data-muc-lo],[data-act=hdQuayLai],[data-act=chonDoi],[data-act=chonHd],#navHome,[data-act=openDm],[data-act=openNorm],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
   if (nav.matches('[data-muc-lo][aria-current]')) return;
   if ((nav.dataset.sforest && nav.dataset.sforest === NAV.curF) || (nav.dataset.forest && nav.dataset.forest === NAV.curF)) return;   // bấm lại đúng lô đang mở
   e.preventDefault(); e.stopPropagation();
@@ -148,20 +148,29 @@ function doiCell(rec, r) {
   return '<select data-ncdoi="' + ix + '">' + (d ? '' : '<option value="" selected>(chưa thuộc đội)</option>') + rec.doi.map((x, k) => '<option value="' + esc(x.id) + '"' + (x.id === r.doiId ? ' selected' : '') + '>' + esc(x.ten || ('Đội ' + (k + 1))) + '</option>').join('') + '</select>';
 }
 function panelNC(rec) {
-  if (rec.doi && !hdMoHopLe('nc', rec)) return panelDsNC(rec);   // 3.0: tab mở danh sách hợp đồng; chọn một hợp đồng mới vào trang chi tiết
+  if (rec.doi && rec.doi.length && !hdMoHopLe('nc', rec)) hdMoDat('nc', rec.doi[0].id);
   const d = rec.doi?.find(x => x.id === hdMo('nc'));
-  const count = rec.nc.filter(r => !d || r.doiId === d.id).length;
-  return (d ? hdDau('nc', rec, tenDoiNc(rec, d), soHdNc(rec, d)) : '') + khungMucLo('nc', [
-    ['chung', 'Thông tin hợp đồng, bên nhận khoán', () => panelDoiKT(rec)],
-    ['dongia', 'Hình thức và đơn giá', () => panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec)],
-    ['thanhvien', 'Thành viên', () => panelThanhVien(rec), count],
-    ['chamcong', 'Chấm công', () => panelChamCong(recDoiChon(rec))],
-    ['vanban', 'Số và ngày văn bản', () => panelDoiVB(rec)]
-  ]);
+  const teamNc = rec.nc.filter(r => !d || r.doiId === d.id);
+  const count = teamNc.length;
+  const infoD = d ? infoTeam(rec, d) : {};
+  const hasCc = d ? Object.values(rec.cc || {}).some(m => teamNc.some(r => m && m[HAKChamCong.personKey(r)] && Object.keys(m[HAKChamCong.personKey(r)]).length)) : false;
+  const detail = khungMucLo('nc', [
+    ['chung', 'Thông tin HĐ', () => panelDoiKT(rec), null, !!(d && (d.ten || d.benNhanKhoan))],
+    ['dongia', 'Hình thức & đơn giá', () => panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec), null, !!(infoD && infoD.cachTinh)],
+    ['thanhvien', 'Thành viên', () => panelThanhVien(rec), count, count > 0],
+    ['chamcong', 'Chấm công', () => panelChamCong(recDoiChon(rec)), null, hasCc],
+    ['vanban', 'Số văn bản', () => panelDoiVB(rec), null, !!(d && d.exp && (d.exp.soKT || d.exp.ngayKT))]
+  ], 'chung', {inspector: true});
+  if (!rec.doi) return detail;
+  return '<div class="hak-master-detail">' +
+    '<aside class="hak-master-pane">' + panelDsNC(rec, {master: true, selId: d ? d.id : ''}) + '</aside>' +
+    '<section class="hak-detail-pane">' +
+      '<div class="hak-pane-head"><h3>' + (d ? 'Chi tiết: ' + esc(tenDoiNc(rec, d)) + (soHdNc(rec, d) ? ' · HĐ ' + esc(soHdNc(rec, d)) : '') : 'Chi tiết hợp đồng nhân công') + '</h3></div>' +
+      detail +
+    '</section></div>';
 }
 function panelThanhVien(rec) {
   const c = checkNC(rec), head = panelImport('nc', rec) + stBar('nc', rec) + stErrBox();
-  if (!rec.nc.length && !stCur()) return head + '<div class="empty">Chưa có nhân công. Bấm “+ Thêm nhân công” để chọn từ Danh mục đối tượng.</div>';
   const t = rec.doi && rec.doi.length > 1 && !NAV.ncTatCa ? curTeam() : null, only = t ? r => r.doiId === t.id || !rec.doi.some(d => d.id === r.doiId) : null;   // lô nhiều đội: chỉ người của đội đang chọn (và người chưa thuộc đội)
   const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' :
   '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';

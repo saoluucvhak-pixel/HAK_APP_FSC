@@ -25,45 +25,56 @@ function hdDau(k, rec, ten, so) {
     '<div class="hdDauTen"><b>' + (k === 'nc' ? 'Hợp đồng nhân công' : 'Hợp đồng vận chuyển') + '</b> · <span id="hdDauTen">' + esc(ten) + '</span> · <span id="hdDauSo">' + (so ? 'số ' + esc(so) : '<span class="mut">chưa có số</span>') + '</span></div></div>';
 }
 
-/* ---------- danh sách hợp đồng nhân công (mỗi đội một hợp đồng) ---------- */
-function panelDsNC(rec) {
-  const ds = rec.doi || [], pc = rec.pc || [], nhieu = ds.length > 1, chua = (rec.nc || []).filter(r => !ds.some(d => d.id === r.doiId)).length;
+/* ---------- danh sách hợp đồng nhân công (Cha — Master Pane) ---------- */
+function panelDsNC(rec, opt = {}) {
+  const ds = rec.doi || [], chua = (rec.nc || []).filter(r => !ds.some(d => d.id === r.doiId)).length;
+  const selId = opt.selId || '';
   const tt = d => { const x = (rec.nc || []).find(r => r.doiId === d.id && isTT(r)); return x ? x.ten : ''; };
-  const ben = d => { const n = benTen(d.benNhanKhoan); if (n) return esc(n) + ' <small class="mut">(bên nhận khoán)</small>'; const t = tt(d); return t ? esc(t) + ' <small class="mut">(Tổ trưởng)</small>' : '<span class="mut">—</span>'; };
-  const pbk = HAKPhanBo.tinh(rec), cg = pbk.cheDo === 'theoPhieu' ? chuaGanCuaLo(rec) : null;   // phiếu #03: còn phiếu chưa gán đội → nói rõ thay cho “—” im lặng
+  const ben = d => { const n = benTen(d.benNhanKhoan); if (n) return n; const t = tt(d); return t ? t + ' (TT)' : '—'; };
+  const pbk = HAKPhanBo.tinh(rec), cg = pbk.cheDo === 'theoPhieu' ? chuaGanCuaLo(rec) : null;
   const kl = d => {
     const x = pbk.doi.find(y => y.id === d.id);
-    if (x && x.kg > 0) return fmtT(x.kg) + ' tấn';
-    return cg ? '<span class="mut" title="' + esc(HAKPhanBo.chuaGanDong(cg)) + '">chưa gán phiếu</span>' : '—';
-  };   // 3.0: khối lượng theo phân bổ (cùng kết quả với biểu mẫu)
-  const row = (d, i) => { const info = infoTeam(rec, d), so = soHdNc(rec, d);
-    return '<tr data-act="chonDoi" data-doi="' + esc(d.id) + '" tabindex="0" style="cursor:pointer"><td style="text-align:center">' + (i + 1) + '</td><td>' + (so ? '<b>' + esc(so) + '</b>' : '<span class="mut">chưa có số</span>') + '</td><td><b>' + esc(tenDoiNc(rec, d)) + '</b></td><td>' +
-    (isDirect(info) ? 'Ký với cá nhân' : 'Giao khoán') + '</td><td>' + ben(d) + '</td>' +
-      '<td style="text-align:center">' + (rec.nc || []).filter(r => r.doiId === d.id).length + '</td><td style="text-align:right">' + kl(d) + '</td><td><button class="btn sm" data-act="chonDoi" data-doi="' + esc(d.id) + '">Mở</button></td></tr>'; };
-  return '<div class="card" id="dsHdNc"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Hợp đồng nhân công của rừng: ' + ds.length + '</h3>' +
-    '<span class="row" style="gap:6px"><input id="doiMoiTen" placeholder="Tên đội mới, ví dụ Đội ' + (ds.length + 1) + '" style="width:200px"><button class="btn ghost sm" data-act="themDoi">+ Thêm hợp đồng (đội)</button></span></div>' +
-    '<p class="mut" style="margin:6px 0">Mỗi đội khai thác ký một hợp đồng nhân công. Bấm một dòng để mở hợp đồng: thông tin, đơn giá, thành viên, chấm công.</p>' +
-    '<div class="wrap" style="max-height:min(60vh,520px)"><table id="dsHdNcTbl" style="min-width:760px"><thead><tr><th>STT</th><th>Số hợp đồng</th><th>Đội</th><th>Hình thức</th><th>Bên nhận khoán / người ký</th><th>Số người</th><th>Khối lượng</th><th></th></tr></thead><tbody>' +
-    (ds.length ? ds.map(row).join('') : '<tr><td colspan="8" class="mut">Chưa có hợp đồng nào: bấm “+ Thêm hợp đồng (đội)”.</td></tr>') + '</tbody></table></div>' +
-    '</div>' + panelPhanBo(rec) + '<div>' + (chua ? '<div class="msg warn" style="margin-top:6px" id="dsHdNcChua">' + chua + ' người chưa thuộc đội nào: mở một hợp đồng rồi chọn đội ở cột Đội của bảng nhân công.</div>' : '') + '</div>';
+    if (x && x.kg > 0) return fmtT(x.kg) + ' t';
+    return cg ? 'chưa gán' : '—';
+  };
+  const row = (d, i) => {
+    const info = infoTeam(rec, d), so = soHdNc(rec, d), on = d.id === selId;
+    const cnt = (rec.nc || []).filter(r => r.doiId === d.id).length;
+    return '<tr class="hak-master-row' + (on ? ' on' : '') + '" data-act="chonDoi" data-doi="' + esc(d.id) + '" aria-selected="' + (on ? 'true' : 'false') + '" tabindex="0">' +
+      '<td style="text-align:center">' + (i + 1) + '</td>' +
+      '<td><b>' + esc(tenDoiNc(rec, d)) + '</b><br><small class="mut">' + (so ? 'HĐ ' + esc(so) : 'chưa có số') + ' · ' + (isDirect(info) ? 'Trực tiếp' : 'Giao khoán') + ' · ' + esc(ben(d)) + '</small></td>' +
+      '<td style="text-align:center">' + cnt + '</td>' +
+      '<td style="text-align:right;white-space:nowrap">' + kl(d) + '</td></tr>';
+  };
+  return '<div id="dsHdNc"><div class="hak-pane-head"><h3>Đội / Hợp đồng (' + ds.length + ')</h3></div>' +
+    '<div class="hak-pane-body" style="padding:10px 12px"><div class="row" style="gap:6px;margin-bottom:8px"><input id="doiMoiTen" placeholder="Tên đội mới…" style="flex:1;min-width:110px"><button class="btn sm" data-act="themDoi">+ Thêm đội</button></div>' +
+    '<div class="hak-master-list"><table id="dsHdNcTbl"><thead><tr><th>#</th><th>Đội · Hợp đồng</th><th>Người</th><th style="text-align:right">KL</th></tr></thead><tbody>' +
+    (ds.length ? ds.map(row).join('') : '<tr><td colspan="4" class="mut">Chưa có đội nào: nhập tên rồi bấm “+ Thêm đội”.</td></tr>') + '</tbody></table></div>' +
+    (chua ? '<div class="msg warn" style="margin-top:8px" id="dsHdNcChua">' + chua + ' người chưa thuộc đội nào.</div>' : '') + '</div></div>' +
+    (ds.length > 1 ? '<div style="padding:0 12px 12px">' + panelPhanBo(rec) + '</div>' : '');
 }
 
-/* ---------- danh sách hợp đồng vận chuyển (mỗi đội xe một hợp đồng) ---------- */
-function panelDsVC(rec) {
+/* ---------- danh sách hợp đồng vận chuyển (Cha — Master Pane) ---------- */
+function panelDsVC(rec, opt = {}) {
   const F = {dx: rec.dx, hdvc: rec.hdvc || []}, list = HAKModel.hdOrder(F), gs = groupsDX(rec), pc = rec.pc || [];
-  const ky = h => { const n = benTen(h.benKy); if (n) return esc(n);
-    if (h.donViId) return esc((h.ben || {}).ten || '(đơn vị)'); const g = gs.find(x => x.hd === h); return g ? esc(g.ten || '') + ' <small class="mut">(' + esc(g.vaiTro) + ')</small>' : '<span class="mut">chưa có người ký</span>'; };
+  const selId = opt.selId || '';
+  const ky = h => { const n = benTen(h.benKy); if (n) return n;
+    if (h.donViId) return (h.ben || {}).ten || '(đơn vị)'; const g = gs.find(x => x.hd === h); return g ? (g.ten || '') + ' (' + g.vaiTro + ')' : 'chưa có bên ký'; };
   const soPhieu = h => pc.filter(p => p.hdvcId === h.id).length;
-  const row = (h, i) => { const so = soHdVc(rec, h);
-    return '<tr data-act="chonHd" data-hd="' + esc(h.id) + '" tabindex="0" style="cursor:pointer"><td style="text-align:center">' + (i + 1) + '</td><td>' + (so ? '<b>' + esc(so) + '</b>' : '<span class="mut">chưa có số</span>') + '</td><td><b>' + esc(tenDoiVc(rec, h)) + '</b></td><td>' + ky(h) + '</td>' +
-      '<td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td><td style="text-align:center">' + soPhieu(h) + '</td><td>' + cuocText(rec, h) + '</td><td><button class="btn sm" data-act="chonHd" data-hd="' + esc(h.id) + '">Mở</button></td></tr>'; };
+  const row = (h, i) => {
+    const so = soHdVc(rec, h), on = h.id === selId;
+    return '<tr class="hak-master-row' + (on ? ' on' : '') + '" data-act="chonHd" data-hd="' + esc(h.id) + '" aria-selected="' + (on ? 'true' : 'false') + '" tabindex="0">' +
+      '<td style="text-align:center">' + (i + 1) + '</td>' +
+      '<td><b>' + esc(tenDoiVc(rec, h)) + '</b><br><small class="mut">' + (so ? 'HĐ ' + esc(so) : 'chưa có số') + ' · ' + esc(ky(h)) + ' · ' + esc(cuocText(rec, h)) + '</small></td>' +
+      '<td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td>' +
+      '<td style="text-align:center">' + soPhieu(h) + '</td></tr>';
+  };
   const chua = (rec.dx || []).filter(r => !list.some(h => h.id === r.hdvcId)).length;
-  return '<div class="card" id="dsHdVc"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Hợp đồng vận chuyển của rừng: ' + list.length + '</h3>' +
-    '<span class="row" style="gap:6px"><input id="hdMoiTen" placeholder="Tên đội xe mới" style="width:180px"><button class="btn ghost sm" data-act="themHd">+ Thêm hợp đồng vận chuyển</button></span></div>' +
-    '<p class="mut" style="margin:6px 0">Mỗi đội xe ký một hợp đồng vận chuyển. Bấm một dòng để mở: thông tin hợp đồng, xe và tài xế, phiếu cân.</p>' +
-    '<div class="wrap" style="max-height:min(60vh,520px)"><table id="dsHdVcTbl" style="min-width:760px"><thead><tr><th>STT</th><th>Số hợp đồng</th><th>Đội xe</th><th>Bên ký</th><th>Số xe</th><th>Số phiếu cân</th><th>Cước</th><th></th></tr></thead><tbody>' +
-    (list.length ? list.map(row).join('') : '<tr><td colspan="8" class="mut">Chưa có hợp đồng vận chuyển: bấm “+ Thêm hợp đồng vận chuyển”, hoặc thêm xe bên dưới (xe tự vào hợp đồng theo người ký).</td></tr>') + '</tbody></table></div>' +
-    (chua && list.length ? '<div class="msg warn" style="margin-top:6px" id="dsHdVcChua">' + chua + ' xe chưa thuộc hợp đồng nào: mở một hợp đồng rồi chọn đội xe ở cột Đội xe.</div>' : '') + '</div>';
+  return '<div id="dsHdVc"><div class="hak-pane-head"><h3>Hợp đồng vận chuyển (' + list.length + ')</h3></div>' +
+    '<div class="hak-pane-body" style="padding:10px 12px"><div class="row" style="gap:6px;margin-bottom:8px"><input id="hdMoiTen" placeholder="Tên đội xe mới…" style="flex:1;min-width:110px"><button class="btn sm" data-act="themHd">+ Thêm HĐ</button></div>' +
+    '<div class="hak-master-list"><table id="dsHdVcTbl"><thead><tr><th>#</th><th>Đội xe · Hợp đồng</th><th>Xe</th><th>Phiếu</th></tr></thead><tbody>' +
+    (list.length ? list.map(row).join('') : '<tr><td colspan="4" class="mut">Chưa có hợp đồng vận chuyển: bấm “+ Thêm HĐ”.</td></tr>') + '</tbody></table></div>' +
+    (chua && list.length ? '<div class="msg warn" style="margin-top:8px" id="dsHdVcChua">' + chua + ' xe chưa thuộc hợp đồng nào.</div>' : '') + '</div></div>';
 }
 
 /* bàn phím: Enter / Space trên một dòng danh sách mở hợp đồng (như bấm chuột) */

@@ -66,6 +66,14 @@ document.addEventListener('click', async e => {
   if (act === 'luongLay') return luongLayDonGia();
   if (act === 'loTuLoCu') return loTuLoCuTao();
   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
+  if (act === 'dmChonNhieu') return dmChonNhieuMo(el.dataset.kind);
+  if (act === 'dmChonNhieuLuu') return dmChonNhieuLuu();
+  if (act === 'dmPickAll') {
+    document.querySelectorAll('#dlgBox [data-dmpick]').forEach(cb => { cb.checked = true; dmPickState.sel.add(+cb.dataset.dmpick); });
+    const cnt = document.getElementById('dmPickCount'); if (cnt) cnt.textContent = String(dmPickState.sel.size);
+    const btn = document.querySelector('#dlgBox [data-act=dmChonNhieuLuu]'); if (btn) btn.disabled = !dmPickState.sel.size;
+    return;
+  }
   if (act === 'openDm' || act === 'openSetDt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setdt'; cd.msg = null; return render(); }
   if (act === 'openSetXe') { NAV.cur = null; NAV.curF = null; NAV.view = 'setxe'; cd.msg = null; return render(); }
   if (act === 'openSetVt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setvt'; cd.vtMsg = null; return render(); }
@@ -123,6 +131,19 @@ document.addEventListener('click', async e => {
     mh.msg = r && r.ok
       ? {kind: 'ok', text: 'Đã lưu công ty mua hàng và địa điểm vận chuyển đến cho rừng này: ' + snap.ten + ' – ' + snap.diaChi + '.'}
       : {kind: 'err', text: 'Đã chọn nhưng CHƯA lưu công ty mua hàng: ' + ((r && r.error) || 'lỗi lưu dữ liệu')};
+    return render();
+  }
+  if (act === 'stepSave' || act === 'stepNext') {
+    if (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) document.activeElement.blur();
+    const f = curForest();
+    if (f && !loKhoa(f)) {
+      const r = await luuLo();
+      if (r && r.ok === false) return render();
+    }
+    if (act === 'stepNext') {
+      if (el.dataset.nextMuc && el.dataset.loNhom) mucLoDaMo.set(mucLoKey(el.dataset.loNhom), el.dataset.nextMuc);
+      else if (el.dataset.nextFtab) NAV.ftab = el.dataset.nextFtab;
+    }
     return render();
   }
   if (act === 'guide') return document.getElementById('guideBox').classList.add('on');

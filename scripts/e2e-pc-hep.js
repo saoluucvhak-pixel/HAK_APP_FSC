@@ -26,7 +26,9 @@ async function do1(rong, cao) {
     const rw = wr.getBoundingClientRect(), rn = nav.getBoundingClientRect(), cs = getComputedStyle(main);
     const noiDung = main.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const cot = [...t.rows[0].cells].filter(c => c.getBoundingClientRect().right <= rw.right + 1).map(c => c.textContent.trim());
-    return {vw: innerWidth, noiDung: Math.round(noiDung), wrapW: Math.round(rw.width), tile: Math.round(rw.width / noiDung * 100), cot, navTren: rn.bottom <= rw.top + 1, navTrai: rn.right <= rw.left + 1, cuonTrang: document.documentElement.scrollWidth > innerWidth + 1};
+    const master = document.querySelector('.hak-master-pane'), detail = document.querySelector('.hak-detail-pane');
+    const rm = master && master.getBoundingClientRect(), rd = detail && detail.getBoundingClientRect();
+    return {vw: innerWidth, noiDung: Math.round(noiDung), wrapW: Math.round(rw.width), tile: Math.round(rw.width / noiDung * 100), cot, navTren: rn.bottom <= rw.top + 1, navTrai: rn.right <= rw.left + 1, masterTrai: !!(rm && rd && rm.right <= rd.left + 2), cuonTrang: document.documentElement.scrollWidth > innerWidth + 1};
   });
   await app.close(); m.errs = errs; return m;
 }
@@ -37,7 +39,7 @@ async function do1(rong, cao) {
   ok('1024×700: khung bảng phiếu cân rộng ≥ 85 % vùng nội dung (' + a.wrapW + '/' + a.noiDung + ' px = ' + a.tile + ' %)', a.tile >= 85, JSON.stringify(a));
   ok('1024×700: thấy trọn ≥ 5 cột đầu không cần cuộn ngang (' + a.cot.join(', ') + ')', a.cot.length >= 5, JSON.stringify(a.cot));
   ok('1024×700: trang không cuộn ngang (chỉ khung bảng cuộn)', !a.cuonTrang);
-  ok('1920×1080: cột mục vẫn nằm bên trái bảng (bố cục khung rộng không đổi)', b.navTrai, JSON.stringify(b));
+  ok('1920×1080: bảng Cha nằm bên trái khung Con (bố cục Cha–Con hai cột)', b.masterTrai, JSON.stringify(b));
   ok('không có lỗi script', !a.errs.length && !b.errs.length, a.errs.concat(b.errs).join(' | '));
   console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

@@ -6,8 +6,8 @@ const dmNguonLd = () => {
   /* 3.0: trước hết người có vai trò Nhân công trong Danh mục đối tượng (nhãn: đối tượng — người); sau đó danh mục lao động cũ và người đã có ở các lô (chưa có trong danh mục mới) */
   const moi = HAKDoiTuong.nguoiTheoVaiTro(dmDT(), 'nhanCong').map(({dt, ng}) => ({ngayCapNhat: dt.ngayCapNhat || '', cccd: HAKDanhMuc.cccdSo(ng.cccd), ten: ng.hoTen, gioiTinh: ng.gioiTinh || '', ngaySinh: ng.ngaySinh || '', diaChi: ng.diaChi || '', ngayCap: ng.ngayCap || '', noiCap: ng.noiCap || '',
   sdt: ng.sdt || '',
-    chucVu: '', viTri: ten30(ng.viTriId), _ngId: ng.id, _viTriId: ng.viTriId || '', _nhan: HAKDoiTuong.nhanNguoi(dt, ng)})).filter(r => r.cccd);
-  const coMoi = new Set(moi.map(r => r.cccd));
+    chucVu: '', viTri: ten30(ng.viTriId), _ngId: ng.id, _viTriId: ng.viTriId || '', _nhan: HAKDoiTuong.nhanNguoi(dt, ng)})).filter(r => trim(r.ten));
+  const coMoi = new Set(moi.map(r => r.cccd).filter(Boolean));
   const dm = HAKDanhMuc.laoDongHieuLuc(db.dmLaoDong || []).filter(r => !coMoi.has(HAKDanhMuc.cccdSo(r.cccd))), co = new Set(dm.map(r => HAKDanhMuc.cccdSo(r.cccd)).concat([...coMoi]));
   const them = HAKModel.nguoiDanhMuc(db.rs).filter(r => !co.has(HAKDanhMuc.cccdSo(r.cccd))).map(r => ({ngayCapNhat: '', cccd: HAKDanhMuc.cccdSo(r.cccd), ten: r.ten, gioiTinh: '', ngaySinh: r.ngaySinh || '', diaChi: r.diaChi || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', sdt: r.sdt || '',
   chucVu: r.vaiTro || '', viTri: r.chucDanh || ''}));
@@ -196,3 +196,93 @@ document.addEventListener('change', e => {
   const v = NHAP_O_NGAY.test(t.name) ? HAKNhapLieu.chuanHoaNgay(t.value) : NHAP_O_CCCD.test(t.name) ? HAKNhapLieu.chuanHoaCccd(t.value) : null;
   if (v != null && v !== t.value) t.value = v;
 }, true);
+
+/* ========== Chọn nhiều người / nhiều xe từ Danh mục đưa thẳng vào hợp đồng của lô ========== */
+const dmPickState = {kind: '', list: [], sel: new Set(), q: ''};
+function dmChonNhieuMo(kind) {
+  const st = stGet(true), rec = curRec(); if (!st || !rec) return;
+  dmPickState.kind = kind; dmPickState.sel = new Set(); dmPickState.q = '';
+  if (kind === 'nc') {
+    const t = curTeam(), dId = t ? t.id : '';
+    const daCoCccd = new Set(st.cur.nc.filter(r => !rec.doi || rec.doi.length < 2 || r.doiId === dId).map(r => HAKModel.cccdSo(r.cccd)).filter(Boolean));
+    const daCoId = new Set(st.cur.nc.filter(r => !rec.doi || rec.doi.length < 2 || r.doiId === dId).map(r => r.nguoiId).filter(Boolean));
+    dmPickState.list = dmNguonLd().filter(r => !(r.cccd && daCoCccd.has(HAKModel.cccdSo(r.cccd))) && !(r._ngId && daCoId.has(r._ngId)));
+  } else {
+    const hId = hdMo('dx');
+    const daCo = new Set(st.cur.dx.filter(r => !hId || r.hdvcId === hId).map(r => HAKStage.bienKey(r.bienSo)));
+    dmPickState.list = dmNguonXe().filter(x => !daCo.has(HAKStage.bienKey(x.bienSo)));
+  }
+  dmChonNhieuRender();
+}
+function dmChonNhieuRender() {
+  const kind = dmPickState.kind, q = trim(dmPickState.q).toLowerCase();
+  const items = dmPickState.list.map((r, i) => ({r, i})).filter(({r}) => !q || JSON.stringify(r).toLowerCase().includes(q));
+  const title = kind === 'nc' ? 'Chọn nhân công từ Danh mục đối tượng' : 'Chọn xe từ Danh mục xe vận chuyển';
+  const rows = items.length ? items.map(({r, i}) => {
+    const chk = dmPickState.sel.has(i) ? ' checked' : '';
+    if (kind === 'nc') {
+      return '<tr><td><input type="checkbox" data-dmpick="' + i + '"' + chk + '></td><td><b>' + esc(r.ten) + '</b>' + (r._nhan ? '<br><small class="mut">' + esc(r._nhan) + '</small>' : '') + '</td><td>' + (r.cccd ? esc(r.cccd) : '<span class="pill warn">chưa có CCCD</span>') + '</td><td>' + esc(r.viTri || r.chucVu || '') + '</td></tr>';
+    }
+    return '<tr><td><input type="checkbox" data-dmpick="' + i + '"' + chk + '></td><td><b>' + esc(r.bienSo) + '</b></td><td>' + esc(r.chuXe || '') + '</td><td>' + esc(r.taiXe || '') + '</td><td>' + esc(r.loaiXe || '') + '</td></tr>';
+  }).join('') : '<tr><td colspan="5" class="mut">Không còn mục nào chưa có trong hợp đồng này (hoặc không khớp tìm kiếm). Bạn có thể bấm “+ Nhập mới” hoặc mở Danh mục để thêm trước.</td></tr>';
+  dlgMo('<h3 style="margin-top:0">' + title + '</h3>' +
+    '<div class="row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
+      '<input id="dmPickQ" value="' + esc(dmPickState.q) + '" placeholder="Tìm theo tên, CCCD, biển số…" style="flex:1;min-width:200px">' +
+      '<button type="button" class="btn ghost sm" data-act="dmPickAll">Chọn tất cả đang hiện (' + items.length + ')</button>' +
+    '</div>' +
+    '<div class="hak-pick-wrap"><table><thead><tr><th style="width:36px"></th>' +
+      (kind === 'nc' ? '<th>Họ và tên / Đối tượng</th><th>CCCD</th><th>Vị trí mặc định</th>' : '<th>Biển kiểm soát</th><th>Chủ xe</th><th>Tài xế</th><th>Loại xe</th>') +
+    '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<div class="row" style="justify-content:space-between;align-items:center;margin-top:10px">' +
+      '<span class="mut">Đã chọn: <b id="dmPickCount">' + dmPickState.sel.size + '</b></span>' +
+      '<span class="row" style="gap:8px"><button type="button" class="btn ghost" data-act="dlgDong">Hủy</button><button type="button" class="btn" data-act="dmChonNhieuLuu"' + (dmPickState.sel.size ? '' : ' disabled') + '>Đưa vào hợp đồng & Lưu</button></span>' +
+    '</div>');
+}
+async function dmChonNhieuLuu() {
+  const kind = dmPickState.kind, st = stGet(true), rec = curRec(); if (!st || !rec) return;
+  const chon = [...dmPickState.sel].map(i => dmPickState.list[i]).filter(Boolean);
+  if (!chon.length) return;
+  const t = curTeam();
+  let maxRow = st.cur[kind].reduce((m, r) => Math.max(m, +r._row || 0), 1);
+  chon.forEach(d => {
+    const vals = {};
+    if (kind === 'nc') {
+      const r = HAKDanhMuc.chupLaoDong(d, {vaiTro: 'Công nhân', danhXung: d.gioiTinh === 'Nữ' ? 'Bà' : 'Ông'});
+      Object.assign(vals, r, {maRung: rec.info.maRung});
+      if (d._ngId) vals.nguoiId = d._ngId;
+      if (d._viTriId) vals.viTriId = d._viTriId;
+    } else {
+      const r = HAKDanhMuc.chupXe(d, {});
+      Object.assign(vals, d._goc || {}, r, {maRung: rec.info.maRung});
+      if (d._xeId) vals.xeId = d._xeId;
+    }
+    const row = ST_NORM[kind](vals);
+    row._row = ++maxRow;
+    row._nguon = 'Danh mục';
+    if (vals.nguoiId) row.nguoiId = vals.nguoiId;
+    if (vals.viTriId) row.viTriId = vals.viTriId;
+    if (vals.xeId) row.xeId = vals.xeId;
+    if (d.ngayCapNhat) row._dmNgay = trim(d.ngayCapNhat);
+    if (kind === 'nc' && rec.doi && t) row.doiId = t.id;
+    if (kind === 'dx') pgSauThemXe(st, row);
+    HAKStage.addRow(st, kind, row);
+  });
+  st.src[kind] = 'Danh mục';
+  dlgDong();
+  await stSave();
+}
+document.addEventListener('change', e => {
+  const cb = e.target && e.target.closest && e.target.closest('#dlgBox [data-dmpick]'); if (!cb) return;
+  const idx = +cb.dataset.dmpick;
+  if (cb.checked) dmPickState.sel.add(idx); else dmPickState.sel.delete(idx);
+  const cnt = document.getElementById('dmPickCount'); if (cnt) cnt.textContent = String(dmPickState.sel.size);
+  const btn = document.querySelector('#dlgBox [data-act=dmChonNhieuLuu]'); if (btn) btn.disabled = !dmPickState.sel.size;
+});
+document.addEventListener('input', e => {
+  if (!e.target || e.target.id !== 'dmPickQ') return;
+  dmPickState.q = e.target.value;
+  const pos = e.target.selectionStart;
+  dmChonNhieuRender();
+  const qEl = document.getElementById('dmPickQ');
+  if (qEl) { qEl.focus(); if (pos != null) qEl.setSelectionRange(pos, pos); }
+});

@@ -167,7 +167,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .hak-ui .hak-detail-tabs{gap:6px;padding:4px 0}
 @media (max-width:1100px){.grid2{grid-template-columns:1fr}}
 @media (max-width:900px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}main{padding:14px}header.top,#ctxBar{position:static}header.top h1 small{display:none}header.top{padding:8px 12px;gap:6px}.nav .nb,.hbtn{padding:5px 10px;font-size:13px}.nav{order:3;flex:1 1 100%}}
-.mucLayout{display:grid;grid-template-columns:minmax(150px,212px) minmax(0,1fr);gap:12px;align-items:start}
+.mucLayout{display:grid;grid-template-columns:minmax(180px,max-content) minmax(0,1fr);gap:12px;align-items:start}
 @media (min-width:901px) and (max-width:1300px){.mucLayout{grid-template-columns:minmax(0,1fr)}.mucNav{display:flex;flex-wrap:wrap}.mucNav button{flex:0 0 auto}}
 .mucNav{display:grid;gap:4px;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px}
 .mucNav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;padding:8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
@@ -194,7 +194,42 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 /* phiếu #10: khung hẹp (≤ 1100 px CSS, ví dụ 1366×768 phóng 125–150 % hoặc cửa sổ thu nhỏ): cột mục lên trên thành một thanh ngang, bảng (phiếu cân…) được cả bề rộng */
 @media (max-width:1100px){.mucLayout{grid-template-columns:minmax(0,1fr)}.mucNav{display:flex;flex-wrap:wrap}.mucNav button{flex:0 0 auto}}
 @media (max-width:650px){.mucLayout{grid-template-columns:minmax(0,1fr)}.mucNav{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media print{header.top,#ctxBar,aside,.btn,.tabs,.mucNav{display:none!important}.layout,.mucLayout{display:block}main{padding:0}.card{box-shadow:none;break-inside:avoid}}
+/* HAK Enterprise V10.4: Master-Detail Cha-Con, Quy trinh tung buoc & Danh muc rieng */
+.hak-steps{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px;padding:6px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r)}
+.hak-step{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid transparent;border-radius:var(--rs);background:transparent;color:var(--mut-aa);font:inherit;font-size:13px;font-weight:550;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
+.hak-step:hover{background:var(--hover);color:var(--ink)}
+.hak-step.on{background:var(--card);color:var(--ink);border-color:var(--brand);box-shadow:var(--shadow);font-weight:700}
+.hak-step-n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;background:var(--line);color:var(--ink)}
+.hak-step.on .hak-step-n{background:var(--brand);color:var(--onBrand)}
+.hak-step.ok .hak-step-n{background:var(--ok);color:#fff}
+.hak-step.err .hak-step-n{background:var(--err);color:#fff}
+.hak-step-st{font-size:11px;font-weight:650}
+.hak-step.ok .hak-step-st{color:var(--ok)}.hak-step.warn .hak-step-st{color:var(--warnFg,#6b4a10)}.hak-step.err .hak-step-st{color:var(--err)}
+.hak-master-detail{display:grid;grid-template-columns:minmax(290px,360px) minmax(0,1fr);gap:14px;align-items:start}
+.hak-master-pane,.hak-detail-pane{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.hak-pane-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--paper)}
+.hak-pane-head h3{margin:0;font-size:14.5px;display:flex;align-items:center;gap:6px}
+.hak-pane-body{padding:12px 14px;min-width:0}
+@media (max-width:1100px){.hak-master-detail{grid-template-columns:minmax(0,1fr)}.hak-pane-body{padding:6px 8px}}
+.hak-master-list{max-height:62vh;overflow:auto}
+.hak-master-list table{width:100%;border-collapse:collapse;font-size:13px}
+.hak-master-list th,.hak-master-list td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.hak-master-list th{background:var(--th);font-size:11.5px;color:var(--mut-aa);position:sticky;top:0;z-index:1;white-space:nowrap}
+.hak-master-row{cursor:pointer;transition:background .1s}
+.hak-master-row:hover{background:var(--hover)}
+.hak-master-row.on{background:var(--accSoft);box-shadow:inset 3px 0 0 var(--brand)}
+.hak-inspector-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:8px 14px 0;border-bottom:1px solid var(--line);background:var(--paper)}
+.hak-inspector-tabs button{display:inline-flex;align-items:center;gap:5px;border:0;border-bottom:2px solid transparent;background:transparent;padding:8px 10px;font:inherit;font-size:13px;color:var(--mut-aa);cursor:pointer;white-space:nowrap;border-radius:6px 6px 0 0}
+.hak-inspector-tabs button:hover{color:var(--ink);background:var(--hover)}
+.hak-inspector-tabs button[aria-current="page"],.hak-inspector-tabs button.on{color:var(--brand);border-bottom-color:var(--brand);font-weight:700;background:var(--card)}
+.hak-step-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.hak-step-footer .row{gap:8px;margin-left:auto}
+.hak-catalog-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px;padding:4px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r)}
+.hak-catalog-tabs button{border:1px solid transparent;background:transparent;color:var(--mut-aa);padding:7px 14px;border-radius:var(--rs);font:inherit;font-weight:550;cursor:pointer}
+.hak-catalog-tabs button:hover{color:var(--ink);background:var(--hover)}
+.hak-catalog-tabs button[aria-current="page"]{background:var(--card);color:var(--brand);border-color:var(--line);box-shadow:var(--shadow);font-weight:700}
+.hak-pick-wrap{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:var(--rs);margin:8px 0}
+@media print{header.top,#ctxBar,aside,.btn,.tabs,.mucNav,.hak-steps,.hak-inspector-tabs,.hak-step-footer{display:none!important}.layout,.mucLayout,.hak-master-detail{display:block}main{padding:0}.card{box-shadow:none;break-inside:avoid}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -206,6 +241,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
   </button>
   <nav class="nav">
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
+    <button class="nb" data-act="openDm" id="navDm">Danh mục</button>
     <button class="nb deskOnly" data-act="lkOpen" title="Tra cứu Google Sheets" hidden>Tra cứu</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>

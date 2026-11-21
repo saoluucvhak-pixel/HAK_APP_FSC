@@ -90,7 +90,7 @@ function pcDauHd(rec, hMo) {   // phiếu #06: một dòng tiêu đề (số phi
     (pcTatCa ? '<span class="mut">Đang xem mọi phiếu cân của rừng.</span> <button class="btn ghost sm" data-act="pcTheoHd">Chỉ phiếu của hợp đồng này</button>' :
     '<span class="mut">Gồm phiếu của hợp đồng này và phiếu chưa gán.</span> <button class="btn ghost sm" data-act="pcTatCa">Xem mọi phiếu của rừng</button>') + '</div>';
 }
-const pcCongCuHd = hMo => (HB ? '<button class="btn ghost sm" data-act="lkOpen" id="pcTraCuu">Tra cứu HoSoKeo</button>' : '') + '<button class="btn ghost sm" data-act="pcPrint" data-hd="' + esc(hMo.id) + '">In phiếu cân</button>';
+const pcCongCuHd = hMo => (HB ? '<button class="btn ghost sm" data-act="lkOpen" id="pcTraCuu">Lấy từ Google Sheets</button>' : '') + (hMo ? '<button class="btn ghost sm" data-act="pcPrint" data-hd="' + esc(hMo.id) + '">In phiếu cân</button>' : '');
 /* hai cột của trang chi tiết: Xe của hợp đồng (ID dòng xe; giữ BKS gốc của phiếu) và Hợp đồng (chuyển phiếu) */
 function pcCotHd(rec, r, hMo) {
   const f = curForest(), ix = (rec.pc || []).indexOf(r), sua = !stCur() && ix >= 0 && f && !loKhoa(f), hId = r.hdvcId || '';

@@ -1,15 +1,23 @@
 function panelVanChuyen(rec) {
+  const list = HAKModel.hdOrder({dx: rec.dx, hdvc: rec.hdvc || []});
+  if (list.length && !hdMoHopLe('dx', rec)) hdMoDat('dx', list[0].id);
   const h = rec.hdvc ? hdMoHopLe('dx', rec) : null;
-  if (!h && rec.hdvc?.length) return panelDsVC(rec) + '<button class="btn ghost sm" data-muc-lo="doichieu" data-lo-nhom="dx">Phiếu chưa thuộc hợp đồng</button>' +
-    (mucLoDangMo('dx') === 'doichieu' ? panelDoiChieuPhieuChuaGan(rec) : panelPhieuCan(rec));
   const xe = rec.dx.filter(r => !h || r.hdvcId === h.id);
   const pc = (rec.pc || []).filter(r => !h || r.hdvcId === h.id);
-  return (h ? hdDau('dx', rec, tenDoiVc(rec, h), soHdVc(rec, h)) : panelDsVC(rec)) + khungMucLo('dx', [
-    ...(h ? [['chung', 'Hợp đồng, bên ký, cước', () => panelHdvc(rec)]] : []),   // phiếu #06 (D-08): nhãn ngắn, không xuống dòng ở 150%
-    ['xe', 'Xe và tài xế', () => panelDX(rec, h), xe.length],
-    ['phieu', 'Phiếu cân', () => panelPhieuCan(rec), pc.length + ' · ' + fmtTan(klPhieu(pc)) + ' tấn'],
-    ['vanban', 'Số và ngày văn bản', () => panelHdvcVB(rec)]
-  ], h ? 'chung' : pc.length ? 'phieu' : 'xe');
+  const chuaGanCount = (rec.pc || []).filter(p => !(rec.hdvc || []).some(x => x.id === p.hdvcId)).length;
+  const detail = khungMucLo('dx', [
+    ...(h ? [['chung', 'Hợp đồng & cước', () => panelHdvc(rec), null, !!(h.benKy || h.donViId || h.ben)]] : []),
+    ['xe', 'Xe và tài xế', () => panelDX(rec, h), xe.length, xe.length > 0],
+    ['phieu', 'Phiếu cân', () => panelPhieuCan(rec), pc.length + ' · ' + fmtTan(klPhieu(pc)) + ' t', pc.length > 0],
+    ['vanban', 'Số văn bản', () => panelHdvcVB(rec), null, !!(h && h.exp && (h.exp.soVC || h.exp.ngayVC))],
+    ...(chuaGanCount ? [['doichieu', 'Phiếu chưa gán', () => panelDoiChieuPhieuChuaGan(rec), chuaGanCount, false]] : [])
+  ], h ? 'chung' : pc.length ? 'phieu' : 'xe', {inspector: true});
+  return '<div class="hak-master-detail">' +
+    '<aside class="hak-master-pane">' + panelDsVC(rec, {master: true, selId: h ? h.id : ''}) + '</aside>' +
+    '<section class="hak-detail-pane">' +
+      '<div class="hak-pane-head"><h3>' + (h ? 'Chi tiết: ' + esc(tenDoiVc(rec, h)) + (soHdVc(rec, h) ? ' · HĐ ' + esc(soHdVc(rec, h)) : '') : 'Vận chuyển & Phiếu cân') + '</h3></div>' +
+      detail +
+    '</section></div>';
 }
 function panelDoiChieuPhieuChuaGan(rec) {
   const ids = new Set((rec.hdvc || []).map(h => h.id));
@@ -26,7 +34,6 @@ function panelDX(rec, hMo) {
   const head = panelImport('dx', rec) + stBar('dx', rec) + stErrBox() +
     (hMo ? '<div class="row" style="margin:6px 0" id="xeLoc">' + (xeTatCa ? '<span class="mut">Đang xem mọi xe của rừng.</span> <button class="btn ghost sm" data-act="xeTheoHd">Chỉ xe của hợp đồng này</button>' :
     '<h3 style="margin:0 8px 0 0">Xe và tài xế của hợp đồng</h3><button class="btn ghost sm" data-act="xeTatCa">Xem mọi xe của rừng</button>') + '</div>' : '');
-  if (!rec.dx.length && !stCur()) return head + '<div class="empty">Chưa có xe. Bấm “+ Thêm xe” để chọn từ Danh mục xe.</div>';
   const only = hMo && !xeTatCa ? r => r.hdvcId === hMo.id || !(rec.hdvc || []).some(h => h.id === r.hdvcId) : null;   // trang chi tiết: xe của hợp đồng này (và xe chưa thuộc hợp đồng nào)
   return head + issuesBox(c.errs, c.warns) + stTable('dx', rec, ['Chủ xe', 'Biển kiểm soát', 'Loại xe', 'Người ký HĐ', 'Đội xe', 'Tài xế', 'Số GPLX', 'Hạn GPLX', 'Hạn bảo hiểm', 'Kiểm định'],
     r => '<td>' + esc(r.chuXe) + '</td><td>' + esc(r.bienSo) + '</td><td>' + esc(r.loaiXe) + '</td><td>' + (driverSigns(r) ? 'Tài xế' : 'Chủ xe') + '</td><td>' + hdCell(rec,
@@ -47,7 +54,7 @@ function panelPhieuCan(rec) {
   ' phiếu chưa thuộc hợp đồng nào (BKS không khớp duy nhất một xe): mở hợp đồng để chọn.</div>' : '') + '</div>';
   }
   const hdOnly = hMo && !pcTatCa ? r => r.hdvcId === hMo.id || !r.hdvcId : null;
-  const head = panelImport('pc', rec, hMo ? pcDauHd(rec, hMo) : '', hMo ? pcCongCuHd(hMo) : '') + pcGanBaoHtml() + stBar('pc', rec);
+  const head = panelImport('pc', rec, hMo ? pcDauHd(rec, hMo) : '', pcCongCuHd(hMo)) + pcGanBaoHtml() + stBar('pc', rec);
   if (!pc.length && !stCur()) return head + '<div class="empty">Chưa có phiếu cân. Bấm “+ Thêm phiếu cân”, hoặc “Tải file mẫu”, mỗi chuyến một dòng theo phiếu cân nhà máy, rồi nạp lại.</div>';
   const R = '<span style="display:block;text-align:right">', num = (v, f) => typeof v === 'number' ? fmt(v) : '';
   const nhieu = rec.doi && rec.doi.length > 1, tenD = d => d.ten || ('Đội ' + (rec.doi.indexOf(d) + 1));

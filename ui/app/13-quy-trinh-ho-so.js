@@ -239,10 +239,10 @@ function panelXuat(rec) {
 
 function renderCtx() {
   const o = curOwner(), f = curForest();
-  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && NAV.view !== 'norm' && NAV.view !== 'dm' && !SET_VIEWS.includes(NAV.view));
+  const nh = document.getElementById('navHome'); if (nh) nh.classList.toggle('on', !o && NAV.view !== 'norm' && !DM_VIEWS.includes(NAV.view) && !SET_VIEWS.includes(NAV.view));
   const ns = document.getElementById('navSet'); if (ns) ns.classList.toggle('on', SET_VIEWS.includes(NAV.view));
-  { const ly = document.querySelector('.layout'); if (ly) ly.classList.toggle('khongSide', SET_VIEWS.includes(NAV.view)); }   // phiếu #06b (D-05): Cài đặt không hiện cột chủ rừng (Lọc chủ rừng, + Chủ rừng mới, danh sách chủ rừng)
-  const nd = document.getElementById('navDm'); if (nd) nd.classList.toggle('on', NAV.view === 'dm');
+  { const ly = document.querySelector('.layout'); if (ly) ly.classList.toggle('khongSide', SET_VIEWS.includes(NAV.view) || DM_VIEWS.includes(NAV.view)); }   // Danh mục & Cài đặt không hiện cột chủ rừng
+  const nd = document.getElementById('navDm'); if (nd) nd.classList.toggle('on', DM_VIEWS.includes(NAV.view));
   const nn = document.getElementById('navNorm'); if (nn) nn.classList.toggle('on', NAV.view === 'norm');
   $('#ctxOwner').innerHTML = 'Chủ rừng: <b>' + esc(o ? (o.info.ten || '(chưa đặt tên)') : 'chưa mở') + '</b>';
   $('#ctxForest').innerHTML = 'Rừng: <b>' + esc(f ? ((f.info.maRung || '(chưa có mã)') + (f.info.tenRung ? ' · ' + f.info.tenRung : '')) : 'chưa mở') + '</b>';

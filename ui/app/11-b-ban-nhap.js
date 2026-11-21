@@ -40,9 +40,11 @@ function stBar(kind, rec) {
   const st = stCur(), o = curOwner(), c = st ? HAKStage.counts(st, kind) : null, dk = st ? HAKStage.dirtyKinds(st) : [];
   /* phiếu #06 (D-03): chủ rừng / lô đã có ở thanh ngữ cảnh và đường dẫn — chỉ ghi nguồn của lượt nhập đang làm */
   const info = st && st.src[kind] ? '<span class="stInfo mut">Nguồn lượt này: <b>' + esc(st.src[kind]) + '</b></span>' : '';
-  /* nhân công / xe: MỘT thanh công cụ — thêm một dòng và nhập Excel ở danh mục (thay cho hai khối riêng) */
-  const add = kind === 'pc' ? '' : '<button class="btn sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + '</button>' +
-    (window.hak?.testLegacyImport ? '' : '<button class="btn ghost sm" data-act="' + (kind === 'nc' ? 'openSetDt' : 'openSetXe') + '" data-quaylai="' + kind + '">Nhập Excel tại ' + (kind === 'nc' ? 'Danh mục đối tượng' : 'Danh mục xe') + '</button>');
+  /* nhân công / xe: tách bạch Chọn từ Danh mục (nhiều dòng) và Nhập mới */
+  const add = kind === 'pc' ? '' :
+    '<button class="btn sm" data-act="dmChonNhieu" data-kind="' + kind + '">+ Chọn từ Danh mục' + (kind === 'dx' ? ' xe' : '') + '</button>' +
+    '<button class="btn ghost sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + ' mới</button>' +
+    (window.hak?.testLegacyImport ? '' : '<button class="btn ghost sm" data-act="' + (kind === 'nc' ? 'openSetDt' : 'openSetXe') + '" data-quaylai="' + kind + '">Mở ' + (kind === 'nc' ? 'Danh mục đối tượng' : 'Danh mục xe') + ' (Excel)</button>');
   const sum = c ? ('Thêm mới <b>' + c.new + '</b> · Sửa <b>' + c.changed + '</b> · Xóa <b>' + c.removed + '</b> · Giữ nguyên <b>' + c.same + '</b>') : '';
   const bar = dk.length ? '<div class="msg warn stDirty" id="stDirty"><b>Chưa lưu</b> ' + (dk.length > 1 || dk[0] !== kind ? '(còn thay đổi ở ' + dk.map(k => ST_LABEL[k]).join(', ') + ') ' : '') + '— ' + (c && (c.new + c.changed + c.removed) ? sum + '. ' : '') + 'Hồ sơ chỉ dùng dữ liệu đã lưu.' +
     ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : '';
@@ -104,5 +106,7 @@ function stTable(kind, rec, heads, cells, c, align, only) {
   const rows = rec[kind].map((r, i) => only && !only(r) ? '' : '<tr class="' + (c.state[r._row] === 'err' ? 'rerr' : c.state[r._row] === 'warn' ? 'rwarn' : '') + '">' + (x => '<td>' + r._row + '</td>' + x.act + cells(r) + x.stat)(stCells(kind, r, i, dm)) + '</tr>');
   const gone = st ? HAKStage.diff(st, kind).filter(d => d.status === 'removed') : [];
   const gtr = gone.map(d => '<tr class="stGone"><td>' + d.row._row + '</td><td class="stAct"><button class="btn ghost sm" data-act="stRestore" data-kind="' + kind + '" data-id="' + esc(d.row._id) + '">Hoàn tác</button></td>' + cells(d.row) + '<td><span class="pill err">Sẽ xóa</span></td></tr>');
-  return '<div class="wrap"><table id="stTbl_' + kind + '"><thead><tr><th>Dòng</th><th>Thao tác</th>' + heads.map(h => '<th>' + h + '</th>').join('') + '<th>Trạng thái</th></tr></thead><tbody>' + rows.concat(gtr).join('') + '</tbody></table></div>';
+  return '<div class="wrap"><table id="stTbl_' + kind + '"><thead><tr><th>Dòng</th><th>Thao tác</th>' + heads.map(h => '<th>' + h + '</th>').join('') + '<th>Trạng thái</th></tr></thead><tbody>' +
+    (rows.concat(gtr).filter(Boolean).length ? rows.concat(gtr).join('') : '<tr><td colspan="' + (heads.length + 3) + '" class="mut">Chưa có dữ liệu. Bấm <b>+ Chọn từ Danh mục</b> hoặc <b>+ Thêm ' + ST_LABEL[kind] + ' mới</b> ở thanh công cụ phía trên.</td></tr>') +
+    '</tbody></table></div>';
 }

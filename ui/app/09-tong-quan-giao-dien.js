@@ -105,11 +105,12 @@ function renderMsgs() {
 }
 
 function renderMain() {
-  if (NAV.view === 'dm') NAV.view = 'setdt';   // 3.0: Danh mục cũ thay bằng Cài đặt → Danh mục đối tượng
-  const P30 = {setdt: panelSetDt, setxe: panelSetXe, setvt: panelSetVt, setgd: panelSetGd, sethd: panelSetHd, setcan: panelSetCan};
+  if (NAV.view === 'dm') NAV.view = 'setdt';
+  const DM30 = {setdt: panelSetDt, setxe: panelSetXe, setvt: panelSetVt, cty: panelCty};
+  if (DM30[NAV.view]) { $('#main').innerHTML = renderMsgs() + danhMucFrame(NAV.view, DM30[NAV.view]()); return; }
+  const P30 = {setgd: panelSetGd, sethd: panelSetHd, setcan: panelSetCan};
   if (P30[NAV.view]) { $('#main').innerHTML = renderMsgs() + settingsFrame(NAV.view, P30[NAV.view]()); return; }
   if (NAV.view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
-  if (NAV.view === 'cty') { $('#main').innerHTML = renderMsgs() + settingsFrame('cty', panelCty()); return; }
   if (NAV.view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
   if (NAV.view === 'setbk') { $('#main').innerHTML = renderMsgs() + settingsFrame('setbk', panelKhoSaoLuu()); kslLoad(); return; }
   if (NAV.view === 'setgs') { $('#main').innerHTML = renderMsgs() + settingsFrame('setgs', panelSetGs()); return; }
