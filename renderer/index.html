@@ -293,7 +293,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .hak-pane-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--paper)}
 .hak-pane-head h3{margin:0;font-size:14.5px;display:flex;align-items:center;gap:6px}
 .hak-pane-body{padding:12px 14px;min-width:0}
-@media (max-width:1100px){.hak-master-detail{grid-template-columns:minmax(0,1fr)}.hak-pane-body{padding:6px 8px}.hak-master-list{max-height:130px}.hak-pane-head{padding:7px 12px}.hak-master-list th,.hak-master-list td{padding:5px 8px}}
+/* khung danh sách là <aside>: không nhận kiểu dính (sticky) của cột chủ rừng. Khung hẹp (≤ 1100 px, hai khung xếp chồng) mà dính ở đỉnh thì che khung chi tiết khi cuộn, các nút bên dưới bấm không được */
+@media (max-width:1100px){.hak-master-pane{position:static;top:auto;max-height:none}.hak-master-detail{grid-template-columns:minmax(0,1fr)}.hak-pane-body{padding:6px 8px}.hak-master-list{max-height:130px}.hak-pane-head{padding:7px 12px}.hak-master-list th,.hak-master-list td{padding:5px 8px}}
 .hak-master-list{max-height:62vh;overflow:auto}
 .hak-master-list table{width:100%;border-collapse:collapse;font-size:13px}
 .hak-master-list th,.hak-master-list td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}

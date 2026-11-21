@@ -5,6 +5,7 @@
  *  A5  lưu lô: chỉ hỏi trùng với lô khác cho phiếu MỚI / vừa đổi số, ngày; so theo số phiếu + ngày cân (không hỏi lại phiếu đã lưu);
  *  B1  danh sách hợp đồng vận chuyển không hiện mã HTML thô;  B2  trang phiếu cân không lặp tiêu đề “Phiếu cân của hợp đồng”;
  *  B3  đường dẫn dùng đúng tên đội như danh sách đội;  B4  tab mục Phiếu cân ghi tấn 3 số lẻ như dòng Tổng;
+ *  A7  khung hẹp (≤ 1100 px): khung danh sách (<aside>) không dính ở đỉnh, không che nút của khung chi tiết (lỗi của bố cục V10.4, làm hỏng 4 bộ e2e trên CI Windows);
  *  C   bảng phiếu cân: Số phiếu → Ngày cân 1/2 → BKS trên phiếu → Xe · hợp đồng → các cột kg liền nhau → KL (tấn); không còn tiêu đề “Cân lần 1” cho cột ngày.
  * Chạy: xvfb-run -a node scripts/e2e-nang-cap-2111.js */
 const {_electron: electron} = require('playwright-core');
@@ -84,6 +85,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const daLuu = await w.evaluate(() => (window.hak.loadSync().db.rs.own1.forests.fa.pc || []).map(p => p.soPhieu));
   ok('A5: ZZ9 và ZZ8 đã lưu vào lô R-A', daLuu.includes('ZZ9') && daLuu.includes('ZZ8'), JSON.stringify(daLuu));
 
+  // A7 — khung hẹp (1024×700, hai khung danh sách / chi tiết xếp chồng): khung danh sách (<aside>) không dính ở đỉnh, không che nút của khung chi tiết
+  await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].setContentSize(1024, 700)); await w.waitForTimeout(300);
+  await moLo('fa', 'nc'); await moHd('nc', 'thanhvien');
+  const che = await w.evaluate(() => { const m = document.querySelector('.hak-master-pane'), d = document.querySelector('.hak-detail-pane'); if (!m || !d) return {thieu: true};
+    const nut = [...d.querySelectorAll('button')].pop(); nut.scrollIntoView({block: 'start'}); const b = nut.getBoundingClientRect(), tren = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return {pos: getComputedStyle(m).position, nut: nut.textContent.trim().slice(0, 30), biChe: !!(tren && tren.closest('.hak-master-pane')), trungNut: tren === nut || nut.contains(tren)}; });
+  ok('A7: cửa sổ 1024×700: khung danh sách không dính (sticky) và không che nút của khung chi tiết khi cuộn', che.pos !== 'sticky' && !che.biChe && che.trungNut, JSON.stringify(che));
   ok('không có lỗi script', !errs.length, errs.join(' | '));
   await app.close();
   console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
