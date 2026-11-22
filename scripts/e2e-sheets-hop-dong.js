@@ -170,6 +170,10 @@ const seed = {v: 2, dmXeVC: [xeDm], rs: {oh: own('oh', 'CR-H', 'ĐẶNG VĂN HAI
   await w.evaluate(() => window.__hak.nhapTest.persistNow()); await w.waitForTimeout(400);
   ok('QĐ7: một lần lưu khác (persistNow vì việc khác) cũng KHÔNG đưa chủ rừng / lô nháp xuống dữ liệu đã lưu', !Object.values((await db()).rs).some(o => o.info.cccd === C(11)) && Object.keys((await db()).rs).length === Object.keys(JSON.parse(before).rs).length);
   await closeModal();
+  await w.waitForTimeout(1500); await w.reload(); await w.waitForSelector('#side'); await w.waitForTimeout(1200);   // tự lưu tạm + khôi phục bản nháp khi mở lại (hộp xác nhận được chấp nhận)
+  const oR = await mem();
+  ok('mở lại ứng dụng, khôi phục bản nháp: chủ rừng + 2 lô nháp (kèm phiếu, xe) trở lại, vẫn chưa lưu xuống dữ liệu đã lưu', !!oR && oR.fs.length === 2 && oR.fs.every(f => f.dirty && f.moi && f.pcN > 0) && !Object.values((await db()).rs).some(o => o.info.cccd === C(11)), JSON.stringify(oR));
+  oA = oR;
   const saveLot0 = async (oid, fid) => { for (const s of ['[data-open=' + oid + ']', '[data-tab=rung]', '[data-forest=' + fid + ']']) { await w.click(s); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop'); await w.waitForTimeout(150); } return stSave(w); };
   const fA1 = fsA.find(f => f.pcN > 0), fA2 = fsA.find(f => f !== fA1);
   const rA = await saveLot0(oA.id, fA1.id);
