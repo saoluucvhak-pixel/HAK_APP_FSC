@@ -45,8 +45,9 @@ function gsFromGroups(r) {
   gs.list = [...m.values()]; gs.byKey = m; gs.noHd = noHd; gs.page = 0;
   if (!lk.q) gs.list.sort((a, b) => a.hd.localeCompare(b.hd, 'vi', {numeric: true}));
 }
-/* Làm giàu trạng thái từng hợp đồng: ưu tiên các dòng ĐANG HIỆN (trang hiện tại của bộ lọc), phần còn lại chạy nền theo lô nhỏ, nhường luồng giữa các lô (setTimeout);
- * dừng khi đóng màn hoặc có lần chạy mới; luôn dọn gs.prog khi thoát. */
+/* Làm giàu trạng thái từng hợp đồng bằng lookup:summaryHd (nhẹ, không trả phiếu/GPS; mỗi lượt ≤ 200 mã): trước hết các dòng ĐANG HIỆN (trang hiện tại của bộ lọc),
+ * rồi phần còn lại theo lô 200, nhường luồng giữa các lô (setTimeout); dừng khi đóng màn hoặc có lần chạy mới; luôn dọn gs.prog khi thoát. buildHd chỉ dùng khi mở một hợp đồng. */
+const GS_SUM_LO = 200;
 async function gsEnrich() {
   const run = ++gs.run, todo = gs.list.filter(g => !gs.sum.has(g.key));
   if (!todo.length) { gs.prog = null; return; }
@@ -56,13 +57,17 @@ async function gsEnrich() {
   try {
     while (alive()) {
       const vis = gsFiltered().slice(gs.page * GS_PAGE, gs.page * GS_PAGE + GS_PAGE).filter(g => !gs.sum.has(g.key));
-      const part = vis.length ? vis.slice(0, 10) : todo.filter(g => !gs.sum.has(g.key)).slice(0, 5);
+      const part = vis.length ? vis : todo.filter(g => !gs.sum.has(g.key)).slice(0, GS_SUM_LO);
       if (!part.length) break;
-      const res = await Promise.all(part.map(g => HB.lookup.buildHd(g.hd).catch(() => null)));
+      let r = null; try { r = await HB.lookup.summaryHd(part.map(g => g.hd)); } catch (er) { r = {ok: false, error: (er && er.message) || String(er)}; }
       if (!alive()) break;
-      part.forEach((g, j) => gs.sum.set(g.key, gsSummary(res[j])));
+      part.forEach((g, j) => {
+        const x = r && r.ok && r.items ? r.items[j] : null;
+        gs.sum.set(g.key, x ? {status: GS_ST[x.status] ? x.status : 'err', why: Array.isArray(x.why) ? x.why : [], ten: x.ten || '', cccd: x.cccd || '', ngay: x.ngay || '', nRung: x.nRung || 0, nPhieu: x.nPhieu || 0, tan: x.tan || 0, nCccd: x.nCccd || 0}
+          : gsSummary({ok: false, error: (r && r.error) || 'Không tính được trạng thái'}));
+      });
       done += part.length; gs.prog.done = Math.min(total, done); gsRefreshList();
-      await new Promise(r => setTimeout(r, vis.length ? 0 : 20));   // nhường luồng cho giao diện giữa các lô
+      await new Promise(rs => setTimeout(rs, vis.length ? 0 : 20));   // nhường luồng cho giao diện giữa các lô
     }
   } finally {
     if (run === gs.run || !$('#lkBox').classList.contains('on')) gs.prog = null;
