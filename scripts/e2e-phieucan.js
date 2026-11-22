@@ -114,7 +114,7 @@ const P = (stt, so, bien, c1, c2, kg, kh, g1, g2, gia, tien) => ({donGia: gia ==
   await w.waitForTimeout(700); await w.evaluate(d => window.hak.save(d), D2); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]');
   const card = await w.innerText('#pcPrintCard');
-  ok('báo rõ phiếu còn thiếu: 3 phiếu đủ thông tin, 1 phiếu thiếu cân lần 1/2, giờ cân, khách hàng; chỉ cách bổ sung', /4 phiếu cân của rừng này/.test(card) && /3 phiếu đủ thông tin/.test(card) && /cân lần 1 \(1 phiếu\)/.test(card) && /giờ cân 1 \(1 phiếu\)/.test(card) && /khách hàng \(1 phiếu\)/.test(card) && /đơn giá \(1 phiếu\)/.test(card) && /Tra cứu Google Sheets/.test(card), card);
+  ok('báo rõ phiếu còn thiếu: 3 phiếu đủ thông tin, 1 phiếu thiếu cân lần 1/2, giờ cân, khách hàng; chỉ cách bổ sung', /4 phiếu cân của rừng này/.test(card) && /3 phiếu đủ thông tin/.test(card) && /cân lần 1 \(1 phiếu\)/.test(card) && /giờ cân 1 \(1 phiếu\)/.test(card) && /khách hàng \(1 phiếu\)/.test(card) && /đơn giá \(1 phiếu\)/.test(card) && /Dữ liệu Google Sheets/.test(card), card);
   const pw3 = await goc();
   await pw3.waitForFunction(() => document.querySelectorAll('#tb tr.row').length === 4, null, {timeout: 15000});
   const t3 = await pw3.$eval('#render', r => r.innerText);

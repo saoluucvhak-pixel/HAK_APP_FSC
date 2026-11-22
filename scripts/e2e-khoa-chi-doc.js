@@ -47,7 +47,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 5. áp bản tra cứu Google Sheets vào lô khóa
   const imp = await w.evaluate(p => window.hak.lookup.importExcel(p), path.join(FIX, 'gia_lap_HoSoKeo_QC.xlsx'));
   ok('nạp bản tra cứu giả lập', imp && imp.ok, JSON.stringify(imp).slice(0, 200));
-  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lktab=""]'); await w.fill('#lkQ', 'nguyen van an'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(300);
+  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lklayout=flat]'); await w.click('[data-lktab=""]'); await w.fill('#lkQ', 'nguyen van an'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(300);
   await w.click('[data-lkgrp]').catch(() => {}); await w.waitForTimeout(300); await w.click('[data-lkpick]').catch(() => {});
   await w.click('[data-act=lkModeFill]'); await w.waitForSelector('[data-act=lkApply]');
   await w.click('[data-act=lkApply]'); await w.waitForTimeout(600);

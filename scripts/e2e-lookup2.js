@@ -9,7 +9,7 @@ const FIX = path.join(root, 'tests', 'fixtures');
 const dbFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-lk2-')), 'lk2.sqlite');
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
-const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lktab="' + tab + '"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200); };
+const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lklayout=flat]'); await w.click('[data-lktab="' + tab + '"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200); };
 
 (async () => {
   let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
@@ -60,7 +60,7 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   ok('nhập lại không tạo phiếu trùng (đúng 1 dòng 1002)', (main.match(/1002\/2026\/NK/g) || []).length === 1);
   // 5b. Chế độ cha–con (master–detail), chip điều kiện (Smart Filter), bộ lọc đã lưu
   if (await w.isVisible('#lkBox.on')) await w.click('[data-act=lkClose]');
-  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ');
+  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lklayout=flat]'); 
   if (await w.$('[data-act=lkClearAll]')) await w.click('[data-act=lkClearAll]');
   await w.fill('#lkQ', 'nguyen van an'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200);
   await w.click('[data-lklayout=tree]'); await w.waitForSelector('tr.lkg'); await w.waitForTimeout(300);
@@ -93,7 +93,7 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   await w.click('header [data-act=lkOpen]'); await w.click('[data-act=lkSync]'); await w.waitForFunction(() => /Chưa cập nhật bản tra cứu/.test(document.getElementById('lkBody').innerText), null, {timeout: 60000});
   const body = await w.innerText('#lkBody');
   ok('đồng bộ khi không kết nối: báo nguyên nhân và nói rõ vẫn dùng bản cũ', /Không kết nối được/.test(body) && /vẫn được dùng|vẫn dùng/.test(body), body.slice(0, 300));
-  await w.fill('#lkQ', 'nguyen van an'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200);
+  await w.click('[data-lklayout=flat]'); await w.fill('#lkQ', 'nguyen van an'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200);
   ok('sau lỗi vẫn tra cứu offline được bản đã lưu', (await w.$$('[data-lkpick]')).length > 0);
   ok('không có lỗi JavaScript sau khi mở lại', errs.length === 0, errs.join('; '));
   await app.close();

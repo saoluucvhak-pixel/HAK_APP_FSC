@@ -39,7 +39,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('1366×768 150%: mở mục Phiếu cân của hợp đồng (8 phiếu) thấy trọn ít nhất 3 dòng bảng, không cần cuộn (thấy ' + m.thay + '/' + m.tong + ')', m.thay >= 3, 'thấy ' + m.thay + '/' + m.tong + ' dòng');
   ok('cột Thao tác đứng sau cột Dòng, không dính mép phải (không sticky) nên không đè cột số', m.cot2 === 'Thao tác' && !m.sticky && m.cuoi !== 'Thao tác', JSON.stringify([m.cot2, m.cuoi, m.sticky]));
   ok('tiêu đề cột một dòng (mọi ô tiêu đề cùng chiều cao, không xuống 2–4 dòng)', m.hThMax - m.hThMin < 2 && m.hThMax < 40, m.hThMin + '–' + m.hThMax + 'px');
-  ok('hai nút Sửa / Xóa đã lưu cùng một hàng (không chồng nhau)', m.btn.length === 2 && Math.abs(m.btn[0] - m.btn[1]) <= 1, JSON.stringify(m.btn));
+  ok('các nút Sửa / Đổi số / Xóa của phiếu đã lưu cùng một hàng (không chồng nhau)', m.btn.length === 3 && Math.max(...m.btn) - Math.min(...m.btn) <= 1, JSON.stringify(m.btn));
   ok('đầu hợp đồng một dòng, không lặp tên rừng; không còn khối “Chủ rừng: … · Lô: …”', !m.coRung && !/Rừng R-A/.test(m.dau) && !/Chủ rừng:/.test(m.stInfo) && m.hH3 > 0 && m.hH3 < 32, JSON.stringify([m.dau, m.stInfo, m.hH3, m.hDau]));   // một dòng = chiều cao thật của tiêu đề (h3 là flex nên innerText luôn xuống dòng giữa các mục, không đo bằng ký tự xuống dòng)
   ok('nhãn mục bên trái không xuống dòng', m.nav.every(x => x.h <= m.nav[0].h + 1 && x.h < 44), JSON.stringify(m.nav));
   ok('trang không cuộn ngang', !m.cuonNgang);

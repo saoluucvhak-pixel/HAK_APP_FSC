@@ -16,7 +16,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const forest = async () => Object.values(Object.values((await db()).rs)[0].forests)[0];
   const pcOf = async so => (await forest()).pc.find(p => p.soPhieu === so);
-  const find = async q => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lktab="HoSoKeo_QC"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250); };
+  const find = async q => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lklayout=flat]'); await w.click('[data-lktab="HoSoKeo_QC"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250); };
   const printText = async expectRows => {
     await w.click('[data-ftab=xuat]'); await w.waitForSelector('#pcPrintCard');
     const pw = await require('./lib-stage').moInPhieuCan(w);
