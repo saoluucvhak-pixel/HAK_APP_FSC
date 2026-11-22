@@ -11,11 +11,12 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-chu-dc-')), dbFile = pa
 let fail = 0; const ok = (n, c, x) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + n + (!c && x ? ' — ' + x : '')); if (!c) fail++; };
 
 const pc = (so, ngay, bien, kl) => ({soPhieu: so, ngay, bienSo: bien, kl, klKg: Math.round(kl * 1000), noiGiao: 'KCN giả lập'});
-const lot = (id, ma, o) => ({id, info: Object.assign({maRung: ma, tenRung: 'Lô ' + ma, diaDiem: 'Thôn giả lập', dienTich: 2.5, lat: 15.6, lng: 108.1, tuNgay: '01/01/2026', denNgay: '30/06/2026'}, o.info || {}), nc: [], dx: [], pc: o.pc || [], chot: o.chot});
+const xe = bien => ({_row: 2, maRung: 'R-A', stt: '1', chuXe: 'LÊ VĂN XE giả lập', ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', bienSo: bien, loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'});
+const lot = (id, ma, o) => ({id, info: Object.assign({maRung: ma, tenRung: 'Lô ' + ma, diaDiem: 'Thôn giả lập', dienTich: 2.5, lat: 15.6, lng: 108.1, tuNgay: '01/01/2026', denNgay: '30/06/2026'}, o.info || {}), nc: [], dx: o.dx || [], pc: o.pc || [], chot: o.chot});
 const seed = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01', ten: 'Nguyễn Văn An giả lập', cccd: '049000000001', ngayCap: '15/08/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', danhXung: 'Ông', soHopDong: '101', ngayKyHopDong: '01/01/2026'}, nc: [], dx: [], exp: {},
   forests: {
-    fa: lot('fa', 'R-A', {info: {nguon: {hd: '101', maRung: 'R-A', at: '2026-02-01T00:00:00.000Z'}}, pc: [pc('1001/2026/NK', '22/01/2026', '92C-12345', 2.84), pc('1002/2026/NK', '23/01/2026', '92C-12345', 4.44)]}),
-    fb: lot('fb', 'R-B', {pc: [pc('7777/2026/NK', '05/02/2026', '92C-77777', 3)]}),
+    fa: lot('fa', 'R-A', {dx: [xe('92C-12345')], info: {nguon: {hd: '101', maRung: 'R-A', at: '2026-02-01T00:00:00.000Z'}}, pc: [pc('1001/2026/NK', '22/01/2026', '92C-12345', 2.84), pc('1002/2026/NK', '22/01/2026', '92C-12345', 4.44)]}),
+    fb: lot('fb', 'R-B', {pc: [pc('7777/2026/NK', '22/01/2026', '92C-77777', 3)]}),
     fc: lot('fc', 'R-C', {pc: [pc('8888/2026/NK', '06/02/2026', '92C-88888', 2)], chot: {phienBan: 1, at: '2026-03-01T00:00:00.000Z', lyDo: 'giả lập'}})}}}};
 
 (async () => {
@@ -55,7 +56,7 @@ const seed = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01', ten: 'Nguyễn V
   await w.fill('#infoForm [name=soHopDong]', 'HD-KHONG-CO');
   await w.click('#dcChu [data-act=dsMo]'); await w.waitForTimeout(700);
   ok('hợp đồng không có trên Sheet: Mở không mở khung/modal trống, có báo lỗi', await modalOff() && /HD-KHONG-CO|Không có dòng nào/.test(await w.innerText('#toast, .toast, #notes, body')));
-  await w.click('#dcChu [data-act=dsDoiChieu]'); await w.waitForSelector('#dcLoi');
+  await w.fill('#infoForm [name=soHopDong]', 'HD-KHONG-CO'); await w.click('#dcChu [data-act=dsDoiChieu]'); await w.waitForSelector('#dcLoi');
   ok('hợp đồng không có: Đối chiếu báo lỗi rõ', /HD-KHONG-CO/.test(await w.innerText('#dcLoi')));
   await w.fill('#infoForm [name=soHopDong]', '101');
   await w.click('#dcChu [data-act=dsMo]'); await w.waitForSelector('#hdBox.on', {timeout: 8000});
@@ -75,7 +76,7 @@ const seed = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01', ten: 'Nguyễn V
   ok('Đối chiếu ở hồ sơ rừng không ghi gì', JSON.stringify(await db()) === d0);
 
   /* ===== Đổi số phiếu riêng ===== */
-  const toPc = async fid => { await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=dx]'); await w.waitForTimeout(400);
+  const toPc = async fid => { if (await w.$('#lkBox.on')) { await w.keyboard.press('Escape'); await w.waitForTimeout(200); } await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=dx]'); await w.waitForTimeout(400);
     const hd = await w.$('#dsHdVcTbl tbody tr[data-act=chonHd]'); if (hd) { const id = await hd.getAttribute('data-hd'); await w.evaluate(id => window.__hak.hdMo('dx', id), id); await w.waitForTimeout(300); }
     await w.click('.mucNav [data-muc-lo]:has-text("Phiếu cân")'); await w.waitForTimeout(400); };
   await toPc('fa');
@@ -85,9 +86,9 @@ const seed = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01', ten: 'Nguyễn V
   ok('hộp Đổi số: số hiện tại và ngày/khối lượng chỉ đọc; ô số mới + lý do bắt buộc', await w.$eval('#dsForm input[readonly]', () => true) && !!(await w.$('#dsSoMoi')) && !!(await w.$('#dsLyDo')));
   await w.fill('#dsSoMoi', '1001/2026/NK-B'); await w.fill('#dsLyDo', 'ab'); await w.click('#dsOk'); await w.waitForTimeout(200);
   ok('thiếu lý do (dưới 3 ký tự): chặn', /ít nhất 3/.test(await w.innerText('#dsLoi')));
-  await w.fill('#dsSoMoi', '1002/2026/NK'); await w.fill('#dsLyDo', 'Trạm cân in lại'); await w.click('#dsOk'); await w.waitForTimeout(200);
-  if (await w.$('#dsForm')) { const loi = await w.innerText('#dsLoi').catch(() => ''); ok('trùng số phiếu với phiếu khác trong lô: chặn hoặc cảnh báo', /đã có trong lô/.test(loi) || !!(await w.$('#dsCanhBao')), loi); await w.fill('#dsSoMoi', '1001/2026/NK-B'); }
-  else { ok('(đổi số 1002 đã đi qua)', false, 'hộp đóng ngoài dự kiến'); }
+  await w.fill('#dsSoMoi', '1002/2026/NK'); await w.fill('#dsLyDo', 'Trạm cân in lại'); await w.click('#dsOk'); await w.waitForTimeout(250);
+  ok('trùng số phiếu + ngày với phiếu khác trong lô: chặn, hộp vẫn mở', !!(await w.$('#dsForm')) && /đã có trong lô/.test(await w.innerText('#dsLoi')), await w.innerText('#dsForm').catch(() => ''));
+  await w.fill('#dsSoMoi', '1001/2026/NK-B');
   await w.fill('#dsLyDo', 'Trạm cân in lại'); await w.click('#dsOk'); await w.waitForTimeout(400);
   ok('đổi số thành công, hộp đóng', !(await w.$('#stBox.on')));
   const tb = await w.innerText('#stTbl_pc');

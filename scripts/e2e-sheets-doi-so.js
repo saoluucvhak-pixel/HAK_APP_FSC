@@ -35,13 +35,16 @@ fs.writeFileSync(f3, book([['S-1001B', ...P1.slice(1)], ['S-1002X', ...P2.slice(
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx'}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
   await app.evaluate(({BrowserWindow}) => { BrowserWindow.getAllWindows()[0].setContentSize(1024, 768); }); await w.waitForSelector('#side');
+  // hồ sơ có sẵn: chủ rừng đúng CCCD, lô GL-S01 và xe 92C-22222 (phiếu cân chỉ lưu được khi biển số có trong danh sách xe)
+  const xe = {_row: 2, maRung: 'GL-S01', stt: '1', chuXe: 'LÊ VĂN XE giả lập', ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', bienSo: '92C-22222', loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'};
+  await w.evaluate(x => window.hak.save(x), {v: 2, rs: {os: {id: 'os', info: {ma: 'CR-S', ten: TEN, cccd: CC, ngayCap: '15/08/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', danhXung: 'Ông', soHopDong: '', ngayKyHopDong: ''}, nc: [], dx: [], exp: {}, forests: {fs: {id: 'fs', info: {maRung: 'GL-S01', tenRung: 'Lô GL-S01', diaDiem: 'Thôn Đổi', dienTich: 5}, nc: [], dx: [xe], pc: []}}}}}); await w.reload(); await w.waitForSelector('#side');
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const lotOf = async () => { const d = await db(); const o = Object.values(d.rs).find(x => String(x.info.cccd) === CC); return o ? {o, f: Object.values(o.forests).find(f => f.info.maRung === 'GL-S01')} : {}; };
   const tong = f => ((f && f.pc) || []).reduce((t, p) => t + (typeof p.klKg === 'number' ? p.klKg : Math.round(p.kl * 1000)), 0);
   const load = async f => (await w.evaluate(p => window.hak.lookup.importExcel(p), f)).ok;
-  const openModal = async () => { await w.evaluate(() => window.lkMoHopDong('HD-S01')); await w.waitForSelector('#hdBox.on'); await w.click('#hdBox [data-gstab=pc]'); await w.waitForSelector('#hdBox .gsPcT'); };
-  const closeModal = async () => { await w.keyboard.press('Escape'); await w.waitForTimeout(150); };
-  const stBan = async () => { const {o, f} = await lotOf(); await w.click('[data-open=' + o.id + ']'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + f.id + ']'); await stSave(w); };
+  const openModal = async () => { await w.evaluate(() => window.moDuLieuSheets({maHd: 'HD-S01'})); await w.waitForSelector('#hdBox.on'); await w.click('#hdBox [data-gstab=pc]'); await w.waitForSelector('#hdBox .gsPcT'); };
+  const closeModal = async () => { await w.keyboard.press('Escape'); await w.waitForTimeout(150); if (await w.$('#lkBox.on')) { await w.keyboard.press('Escape'); await w.waitForTimeout(150); } };
+  const stBan = async () => { const {o, f} = await lotOf(); for (const s of ['[data-open=' + o.id + ']', '[data-tab=rung]', '[data-forest=' + f.id + ']']) { await w.click(s); if (await w.$('#stBox.on #stGSave')) { await w.click('#stGSave'); await w.waitForTimeout(600); } } return stSave(w); };
   const apply = async () => { await w.click('#hdBox [data-act=gsApply]'); await w.waitForTimeout(700); if (await w.$('#hdAsk.on')) await w.click('#hdAskBody [data-act=gsAskYes]'); await w.waitForTimeout(700); };
   const pcRows = () => w.$$eval('#hdBox .gsPcT tbody tr', r => r.map(x => x.innerText.replace(/\s+/g, ' ')));
 

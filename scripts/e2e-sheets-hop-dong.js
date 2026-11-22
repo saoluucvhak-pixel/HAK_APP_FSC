@@ -31,6 +31,10 @@ let kn = 0; const K1 = (...a) => K.push(keo(++kn, ...a));
 R.push(rung(1, C(11), NA, 'HD-A01', D(2026, 2, 1), 'Thôn Alpha', 1, 10), rung(2, C(11), NA, 'HD-A01', D(2026, 2, 1), 'Thôn Beta', 2, 10));
 T.push(toado('GL-A01', 'HD-A01', C(11), NA, 'Thôn Alpha', 10000, 15.6, 108.1), toado('GL-A02', 'HD-A01', C(11), NA, 'Thôn Beta', 20000, 15.7, 108.2));
 for (let i = 1; i <= 6; i++) K1(C(11), 'HD-A01', 'A-' + String(i).padStart(4, '0'), D(2026, 3, i), '92C-11111', 4000, NA, 'Thôn Alpha');
+// H: hợp đồng 1 rừng, lô và xe đã có sẵn trong ứng dụng (để kiểm "Lưu dữ liệu vào lô" và cập nhật lần 2)
+R.push(rung(12, C(20), 'ĐẶNG VĂN HAI giả lập', 'HD-H08', D(2026, 2, 9), 'Thôn Hai', 2, 10));
+T.push(toado('GL-H01', 'HD-H08', C(20), 'ĐẶNG VĂN HAI giả lập', 'Thôn Hai', 20000, 15.68, 108.18));
+for (let i = 1; i <= 3; i++) K1(C(20), 'HD-H08', 'H-000' + i, D(2026, 3, 20 + i), '92C-12121', 2000, 'ĐẶNG VĂN HAI giả lập', 'Thôn Hai');
 // B: hai rừng THIẾU HECTA, địa chỉ khác tọa độ: ghép theo thứ tự, ghép tạm (QĐ10)
 R.push(rung(3, C(12), NB, 'HD-B02', D(2026, 2, 2), 'Xóm Xa', null, null), rung(4, C(12), NB, 'HD-B02', D(2026, 2, 2), 'Xóm Ya', null, null));
 T.push(toado('GL-B01', 'HD-B02', C(12), NB, 'Khu Một', 5000, 15.61, 108.11), toado('GL-B02', 'HD-B02', C(12), NB, 'Khu Hai', 7000, 15.62, 108.12));
@@ -60,19 +64,21 @@ const xlsx = path.join(dir, 'gia_lap_hop_dong.xlsx'); fs.writeFileSync(xlsx, boo
 const lotE = {id: 'fe', info: {maRung: 'GL-E01', tenRung: 'Lô GL-E01', diaDiem: 'Thôn Em', dienTich: 2}, nc: [], dx: [], pc: []};
 const lotF = {id: 'ff', info: {maRung: 'GL-F01', tenRung: 'Lô GL-F01', diaDiem: 'Thôn Phượng', dienTich: 2}, nc: [], dx: [], pc: [], chot: {phienBan: 1, at: '2026-03-20T00:00:00.000Z', lyDo: 'giả lập'}};
 const own = (id, ma, ten, cccd, lot) => ({id, info: {ma, ten, cccd, ngayCap: '15/08/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', danhXung: 'Ông', soHopDong: '', ngayKyHopDong: ''}, nc: [], dx: [], exp: {}, forests: {[lot.id]: lot}});
-const seed = {v: 2, rs: {oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99), lotE), of: own('of', 'CR-F', NF, C(18), lotF)}};
+const xe = {_row: 2, maRung: 'GL-H01', stt: '1', chuXe: 'LÊ VĂN XE giả lập', ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', bienSo: '92C-12121', loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'};
+const lotH = {id: 'fh', info: {maRung: 'GL-H01', tenRung: 'Lô GL-H01', diaDiem: 'Thôn Hai', dienTich: 2}, nc: [], dx: [xe], pc: []};
+const seed = {v: 2, rs: {oh: own('oh', 'CR-H', 'ĐẶNG VĂN HAI giả lập', C(20), lotH), oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99), lotE), of: own('of', 'CR-F', NF, C(18), lotF)}};
 
 (async () => {
   const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx'}});
   const app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept());
-  const size = (a, b) => app.evaluate(({BrowserWindow}, [a, b]) => { BrowserWindow.getAllWindows()[0].setContentSize(a, b); }, [a, b]);
+  const size = (a, b) => app.evaluate(({BrowserWindow}, [a, b]) => { const x = BrowserWindow.getAllWindows()[0]; x.setMinimumSize(Math.min(a, 1024), Math.min(b, 640)); x.setContentSize(a, b); }, [a, b]);
   await size(1024, 768); await w.waitForSelector('#side');
   await w.evaluate(x => window.hak.save(x), seed); await w.reload(); await w.waitForSelector('#side');
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const forestsOf = async ma => { const d = await db(); return Object.values(d.rs).flatMap(o => Object.values(o.forests).map(f => ({o, f}))).filter(x => x.f.info.maRung === ma); };
   ok('nhập Excel giả lập 3 tab', (await w.evaluate(p => window.hak.lookup.importExcel(p), xlsx)).ok);
-  const openModal = async hd => { await w.evaluate(h => window.lkMoHopDong(h), hd); await w.waitForSelector('#hdBox.on', {timeout: 8000}); await w.waitForSelector('#hdBox [data-gsrg]'); };
-  const closeModal = async () => { await w.keyboard.press('Escape'); await w.waitForTimeout(150); };
+  const openModal = async hd => { await w.evaluate(h => window.moDuLieuSheets({maHd: h}), hd); await w.waitForSelector('#hdBox.on', {timeout: 8000}); await w.waitForSelector('#hdBox [data-gsrg]'); };
+  const closeModal = async () => { await w.keyboard.press('Escape'); await w.waitForTimeout(150); if (await w.$('#lkBox.on')) { await w.keyboard.press('Escape'); await w.waitForTimeout(150); } };
   const rowsOf = () => w.$$eval('[data-gsrow]', r => r.map(x => x.dataset.gsrow));
 
   /* ===== 1. Bảng hợp đồng ===== */
@@ -80,9 +86,9 @@ const seed = {v: 2, rs: {oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99),
   await w.waitForFunction(() => !document.querySelector('#lkBox [role=status]') && !/đang tính/.test(document.getElementById('gsList').innerText), null, {timeout: 20000});
   ok('màn đầu mặc định là bảng hợp đồng (không phải danh sách dòng Sheet)', !!(await w.$('#gsList table.gsTbl')) && !(await w.$('[data-lkpick]')));
   let keys = await rowsOf();
-  ok('bảng liệt kê đủ 8 hợp đồng của Sheet giả lập', keys.length === 8 && ['HD-A01', 'HD-B02', 'HD-B03', 'HD-C300', 'HD-D04', 'HD-E05', 'HD-F06', 'HD-G07'].every(k => keys.includes(k)), keys.join(','));
+  ok('bảng liệt kê đủ 9 hợp đồng của Sheet giả lập', keys.length === 9 && ['HD-A01', 'HD-B02', 'HD-B03', 'HD-C300', 'HD-D04', 'HD-E05', 'HD-F06', 'HD-G07', 'HD-H08'].every(k => keys.includes(k)), keys.join(','));
   const rowA = await w.innerText('[data-gsrow="HD-A01"]');
-  ok('dòng hợp đồng: chủ rừng, CCCD, số rừng 2, số phiếu 6, tổng 24 tấn', /NGUYỄN VĂN ĐÔNG giả lập/.test(rowA) && rowA.includes(C(11)) && /\b2\b/.test(rowA) && /\b6\b/.test(rowA) && /\b24\b/.test(rowA), rowA.replace(/\s+/g, ' '));
+  ok('dòng hợp đồng: chủ rừng, CCCD, số rừng 2, số phiếu 6, tổng 24 tấn', /NGUYỄN VĂN ĐÔNG giả lập/.test(rowA) && rowA.includes('049…011') && /\b2\b/.test(rowA) && /\b6\b/.test(rowA) && /\b24\b/.test(rowA), rowA.replace(/\s+/g, ' '));
   ok('hợp đồng nhiều CCCD hiện trạng thái Lỗi dữ liệu và dấu +1 CCCD', /Lỗi dữ liệu/.test(await w.innerText('[data-gsrow="HD-D04"]')) && /\+1/.test(await w.innerText('[data-gsrow="HD-D04"]')));
   ok('hợp đồng ghép tạm hiện Cần xem', /Cần xem/.test(await w.innerText('[data-gsrow="HD-B02"]')));
   // tìm không dấu
@@ -92,7 +98,7 @@ const seed = {v: 2, rs: {oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99),
   ok('tìm không dấu theo tên có chữ Ă/Ì: ra HD-B02', (await rowsOf()).join() === 'HD-B02');
   await w.fill('#lkQ', 'khong-co-hop-dong-nay'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(500);
   ok('tìm không thấy: báo trống, không có dòng', (await rowsOf()).length === 0 && /Không có hợp đồng nào khớp/.test(await w.innerText('#gsList')));
-  await w.fill('#lkQ', ''); await w.click('[data-act=lkFind]'); await w.waitForFunction(() => document.querySelectorAll('[data-gsrow]').length === 8);
+  await w.fill('#lkQ', ''); await w.click('[data-act=lkFind]'); await w.waitForFunction(() => document.querySelectorAll('[data-gsrow]').length === 9);
   // lọc theo trạng thái
   await w.click('[data-gsstat=err]'); await w.waitForTimeout(150);
   ok('lọc theo "Lỗi dữ liệu": chỉ còn hợp đồng nhiều CCCD', (await rowsOf()).join() === 'HD-D04');
@@ -152,27 +158,34 @@ const seed = {v: 2, rs: {oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99),
   ok('phiếu cân CHƯA vào dữ liệu đã lưu (chỉ ở bản nháp) cho đến khi bấm Lưu dữ liệu vào lô', fsA.every(f => (f.pc || []).length === 0));
   ok('rừng mới có thời điểm tạo (QĐ8)', fsA.every(f => !!f.taoLuc));
   await closeModal();
-  // lưu bản nháp từng lô
-  for (const f of fsA) {
-    await w.evaluate(([o, f]) => window.__hak && window.__hak.moRung ? window.__hak.moRung(o, f) : null, [oA.id, f.id]).catch(() => {});
-    await w.click('[data-open=' + oA.id + ']').catch(() => {}); await w.click('[data-tab=rung]').catch(() => {}); await w.click('[data-forest=' + f.id + ']').catch(() => {});
-    await stSave(w);
-  }
-  d = await db(); const fsA2 = Object.values(Object.values(d.rs).find(o => o.info.cccd === C(11)).forests);
-  const nPc = fsA2.reduce((n, f) => n + (f.pc || []).length, 0), kg = fsA2.reduce((t, f) => t + (f.pc || []).reduce((s, p) => s + (p.klKg || Math.round(p.kl * 1000)), 0), 0);
-  ok('sau "Lưu dữ liệu vào lô": đủ 6 phiếu, tổng 24 tấn', nPc === 6 && kg === 24000, nPc + ' phiếu ' + kg + ' kg');
-  const at0 = fsA2.map(f => (f.info.nguon || {}).at).join('|'), dbA = JSON.stringify(Object.values(d.rs).find(o => o.info.cccd === C(11)));
-  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on'); await w.waitForSelector('[data-gsrow]');
-  await openModal('HD-A01'); await w.click('#hdBox [data-gstab=pc]'); await w.waitForSelector('#hdBox .gsPcT');
+  // bỏ bản nháp của hai lô vừa tạo (chỉ nhằm dọn): phần lưu và idempotent kiểm ở hợp đồng HD-H08 có sẵn xe
+  for (const f of fsA) { for (const s of ['[data-open=' + oA.id + ']', '[data-tab=rung]', '[data-forest=' + f.id + ']']) { await w.click(s); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop'); await w.waitForTimeout(150); } await w.evaluate(() => { const b = document.querySelector('[data-act=stDiscard]'); if (b) b.click(); }); await w.waitForTimeout(300); }
+  const saveLot = async (oid, fid) => { for (const s of ['[data-open=' + oid + ']', '[data-tab=rung]', '[data-forest=' + fid + ']']) { await w.click(s); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop'); await w.waitForTimeout(150); } return stSave(w); };
+  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on'); await w.waitForSelector('#lkQ');
+  await openModal('HD-H08'); await w.click('#hdBox [data-gstab=pc]'); await w.waitForSelector('#hdBox .gsPcT');
+  await w.click('[data-act=gsAll]'); await w.click('#hdBox [data-act=gsApply]'); await w.waitForSelector('#gsSum', {timeout: 10000});
+  const sumH = await w.innerText('#gsSum');
+  ok('hợp đồng 1 rừng, lô đã có: không hỏi tạo mới; tóm tắt nêu bản nháp và nhắc Lưu dữ liệu vào lô', /bản nháp/i.test(sumH) && /Lưu dữ liệu vào lô/.test(sumH) && /phiếu thêm 3/.test(sumH), sumH.replace(/\s+/g, ' '));
+  await closeModal();
+  d = await db(); const oH = Object.values(d.rs).find(o => o.info.cccd === C(20));
+  ok('phiếu cân CHƯA vào dữ liệu đã lưu (chỉ ở bản nháp) cho đến khi bấm Lưu dữ liệu vào lô', Object.values(oH.forests)[0].pc.length === 0);
+  const rsv = await saveLot(oH.id, 'fh');
+  ok('Lưu dữ liệu vào lô thành công', rsv && rsv.ok, JSON.stringify(rsv));
+  d = await db(); const fH = Object.values(d.rs).find(o => o.info.cccd === C(20)).forests.fh;
+  ok('sau "Lưu dữ liệu vào lô": đủ 3 phiếu, tổng 6 tấn', fH.pc.length === 3 && fH.pc.reduce((t, p) => t + (p.klKg || 0), 0) === 6000, fH.pc.length + ' phiếu');
+  ok('nguồn ghi mã hợp đồng và mã rừng', fH.info.nguon && fH.info.nguon.hd === 'HD-H08' && fH.info.nguon.maRung === 'GL-H01', JSON.stringify(fH.info.nguon));
+  const at0 = fH.info.nguon.at, dbH = JSON.stringify(Object.values(d.rs).find(o => o.info.cccd === C(20)));
+  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ');
+  await openModal('HD-H08'); await w.click('#hdBox [data-gstab=pc]'); await w.waitForSelector('#hdBox .gsPcT');
   ok('mở lại lần 2: mọi phiếu hiện "Trùng — bỏ qua", không còn phiếu mới', (await w.$$eval('#hdBox .gsPcT tbody tr', r => r.map(x => /Trùng/.test(x.innerText)))).every(Boolean));
   await w.click('[data-act=gsAll]'); await w.click('#hdBox [data-act=gsApply]'); await w.waitForTimeout(800);
   if (await w.$('#hdAsk.on')) await w.click('#hdAskBody [data-act=gsAskNo]');
   await w.waitForTimeout(300);
   const msg2 = await w.innerText('#hdBox .gsDtB');
-  ok('lần 2 idempotent: báo không có thay đổi nào cần ghi, hồ sơ giữ nguyên', (/Không có thay đổi nào|Chưa chọn mục nào/.test(msg2)) && JSON.stringify(Object.values((await db()).rs).find(o => o.info.cccd === C(11))) === dbA, msg2.replace(/\s+/g, ' ').slice(0, 200));
-  ok('thời điểm nguồn (info.nguon.at) không đổi khi dữ liệu không đổi', Object.values(Object.values((await db()).rs).find(o => o.info.cccd === C(11)).forests).map(f => (f.info.nguon || {}).at).join('|') === at0);
-  await closeModal(); await w.click('[data-act=lkClose]').catch(() => {});
-
+  ok('lần 2 idempotent: báo không có thay đổi nào cần ghi, hồ sơ giữ nguyên', (/Không có thay đổi nào|Chưa chọn mục nào/.test(msg2)) && JSON.stringify(Object.values((await db()).rs).find(o => o.info.cccd === C(20))) === dbH, msg2.replace(/\s+/g, ' ').slice(0, 200));
+  ok('thời điểm nguồn (info.nguon.at) không đổi khi dữ liệu không đổi', (await db()).rs[oH.id].forests.fh.info.nguon.at === at0);
+  ok('lần 2 không tạo bản nháp mới (không còn mục chưa lưu)', (await w.evaluate(() => window.__stDirty())).length === 0);
+  await closeModal();
   /* ===== 5. Hộp xác nhận 2 bước (QĐ4) — HD-D04 ===== */
   await w.click('header [data-act=lkOpen]'); await w.waitForSelector('[data-gsrow]'); await openModal('HD-D04');
   const aply = '#hdBox [data-act=gsApply]';
@@ -206,9 +219,11 @@ const seed = {v: 2, rs: {oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99),
   await openModal('HD-B03');
   ok('rừng không ghép được: hiện "chưa có mã rừng", không tự nhận phiếu', /chưa có mã rừng/.test(await w.innerText('#gsMaster')));
   await w.click('#hdBox [data-gstab=pc]'); await w.waitForSelector('#hdBox .gsPcT');
+  const dB3 = JSON.stringify(await db());
   await w.click('#hdBox [data-act=gsAll]'); await w.click(aply); await w.waitForTimeout(600);
   if (await w.$('#hdAsk.on')) await w.click('#hdAskBody [data-act=gsAskNo]');
-  ok('"chưa có mã rừng": không tạo lô nào cho HD-B03', !(await forestsOf('')).length || true);
+  await w.waitForTimeout(200);
+  ok('"chưa có mã rừng": không tạo lô nào, hồ sơ giữ nguyên', JSON.stringify(await db()) === dB3);
   await closeModal();
 
   /* ===== 7. Chặn ghi CCCD khác (R6) — HD-E05; lô chốt — HD-F06 ===== */
@@ -254,24 +269,24 @@ const seed = {v: 2, rs: {oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99),
 
   /* ===== 10. Ca biên: hợp đồng không tồn tại ===== */
   await w.click('[data-act=lkClose]').catch(() => {}); await closeModal();
-  const rs = await w.evaluate(async () => { const a = await window.lkMoHopDong('HD-KHONG-CO'), b = await window.lkMoHopDong('   '), c = await window.moDuLieuSheets({maHd: 'HD-KHONG-CO-2'}); return [a, b, c]; });
+  const rs = await w.evaluate(async () => { const a = await window.moDuLieuSheets({maHd: 'HD-KHONG-CO'}), b = await window.moDuLieuSheets({maHd: '   '}), c = await window.moDuLieuSheets({maHd: 'HD-KHONG-CO-2'}); return [a, b, c]; });
   ok('hợp đồng không tồn tại / rỗng: trả lỗi, KHÔNG mở modal trống', rs.every(x => x && x.ok === false && x.error) && !(await w.$('#hdBox.on')), JSON.stringify(rs));
   ok('báo lỗi rõ ràng trên màn Dữ liệu Google Sheets', /HD-KHONG-CO/.test(await w.innerText('#lkBox')));
   await w.evaluate(() => { document.getElementById('lkBox').classList.remove('on'); });
 
   /* ===== 11. Chuỗi độc hại từ Sheet — HD-G07 ===== */
-  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('[data-gsrow]');
-  await w.fill('#lkQ', 'doc hai'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(800);
-  await w.fill('#lkQ', ''); await w.click('[data-act=lkFind]'); await w.waitForFunction(() => document.querySelectorAll('[data-gsrow]').length === 8); await w.waitForTimeout(600);
+  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ');
+  await w.fill('#lkQ', ''); await w.click('[data-act=lkFind]'); await w.waitForTimeout(500);
+  await w.fill('#lkQ', ''); await w.click('[data-act=lkFind]'); await w.waitForFunction(() => document.querySelectorAll('[data-gsrow]').length === 9); await w.waitForTimeout(600);
   const dom = () => w.evaluate(() => ({flags: [window.__xss, window.__xss2, window.__xss3, window.__xss4], bad: document.querySelectorAll('#lkBox img, #hdBox img, #lkBox script, #hdBox script, #lkBox svg[onload], #hdBox svg[onload], #lkBox [onerror], #hdBox [onerror]').length}));
   let x = await dom();
   ok('bảng hợp đồng: chuỗi độc hại không thực thi (cờ window trống) và không sinh thẻ img/script', x.flags.every(v => v === undefined) && x.bad === 0, JSON.stringify(x));
-  ok('bảng hiển thị chuỗi độc hại dưới dạng chữ', /<img src=x/.test(await w.innerText('#gsList')) || (await w.$$eval('[data-gsrow]', r => r.length)) === 8);
+  ok('bảng hiển thị chuỗi độc hại dưới dạng chữ', /<img src=x/.test(await w.innerText('#gsList')));
   await openModal('HD-G07');
   for (const tab of ['ho', 'gps', 'pc']) { await w.click('#hdBox [data-gstab=' + tab + ']'); await w.waitForTimeout(150); }
   x = await dom();
   ok('modal (3 thẻ): chuỗi độc hại không thực thi và không sinh thẻ nguy hiểm', x.flags.every(v => v === undefined) && x.bad === 0, JSON.stringify(x));
-  ok('modal hiển thị nguyên văn chuỗi độc hại dưới dạng chữ', /<img src=x/.test(await w.innerText('#hdBox')) || /<script>/.test(await w.innerText('#hdBox')));
+  ok('modal hiển thị nguyên văn chuỗi độc hại dưới dạng chữ', /<img src=x/.test(await w.innerText('#hdBox')) && /<script>/.test(await w.innerText('#hdBox')));
   ok('thuộc tính data-* và aria-label không bị phá ("> không thoát khỏi thuộc tính)', await w.evaluate(() => ![...document.querySelectorAll('#lkBox *, #hdBox *')].some(e => [...e.attributes].some(a => /^on/i.test(a.name)))));
   await closeModal();
   ok('không có lỗi JavaScript', errs.length === 0, errs.join(' | '));
