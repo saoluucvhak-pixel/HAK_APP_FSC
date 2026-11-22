@@ -53,7 +53,8 @@ async function stSave(opt) {
   } finally { stSaving = false; }
 }
 let stErrList = null;
-function stDiscard(silent) { const k = stKey(); if (!stages[k] && !loDirty.has(NAV.curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(NAV.curF); nhapTamGhi(); stErrList = null;
+function stDiscard(silent) { const k = stKey(); if (!stages[k] && !loDirty.has(NAV.curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(NAV.curF); if (NAV.cur && !db.rs[NAV.cur]) { NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; } else if (NAV.curF && !curForest()) NAV.curF = null;   // lô / chủ rừng tạo từ bản nháp (Google Sheets) bị bỏ hẳn: rời khỏi màn của chúng
+nhapTamGhi(); stErrList = null;
 if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.', 'warn'); render(); }
 /* hỏi khi rời lô còn thay đổi chưa lưu: Lưu và tiếp tục / Bỏ thay đổi / Quay lại chỉnh sửa */
 let stBypass = false;

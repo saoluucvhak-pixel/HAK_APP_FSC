@@ -68,7 +68,9 @@ fs.writeFileSync(f3, book([['S-1001B', ...P1.slice(1)], ['S-1002X', ...P2.slice(
   ok('thông báo nêu bỏ qua phiếu nghi đổi số chưa chọn hoặc không có gì để ghi', /nghi đổi số chưa chọn|Không có thay đổi|Chưa chọn mục nào/.test(await w.innerText('#hdBox .gsDtB')), (await w.innerText('#hdBox .gsDtB')).replace(/\s+/g, ' ').slice(0, 250));
   await w.click('[data-act=gsDsn][data-v=doi]'); await w.waitForTimeout(150);
   ok('chọn "Đổi số": hàng chuyển sang "Đổi số", nêu "giữ nguyên phiếu"', /Đổi số S-1001 → S-1001B \(giữ nguyên phiếu\)/.test((await pcRows()).join(' ')) || /Đã chọn đổi số/.test(await w.innerText('.gsSus')));
-  await apply(); await closeModal(); await stBan();
+  await apply(); await closeModal();
+  ok('QĐ7: "Cập nhật" chỉ đổi số trong BẢN NHÁP — dữ liệu đã lưu vẫn là số cũ cho đến khi bấm Lưu dữ liệu vào lô', JSON.stringify(await db()) === dBefore || (await lotOf()).f.pc.every(x => x.soPhieu !== 'S-1001B'));
+  await stBan();
   ({f} = await lotOf());
   ok('sau đổi số: vẫn 2 phiếu, KHÔNG cộng đôi tổng tấn (7.280 kg, không phải 10.120 kg)', f.pc.length === 2 && tong(f) === 7280, f.pc.length + ' phiếu, ' + tong(f) + ' kg');
   const p = f.pc.find(x => x._id === id1001);

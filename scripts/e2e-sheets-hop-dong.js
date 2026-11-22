@@ -66,7 +66,8 @@ const lotF = {id: 'ff', info: {maRung: 'GL-F01', tenRung: 'Lô GL-F01', diaDiem:
 const own = (id, ma, ten, cccd, lot) => ({id, info: {ma, ten, cccd, ngayCap: '15/08/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', danhXung: 'Ông', soHopDong: '', ngayKyHopDong: ''}, nc: [], dx: [], exp: {}, forests: {[lot.id]: lot}});
 const xe = {_row: 2, maRung: 'GL-H01', stt: '1', chuXe: 'LÊ VĂN XE giả lập', ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', bienSo: '92C-12121', loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'};
 const lotH = {id: 'fh', info: {maRung: 'GL-H01', tenRung: 'Lô GL-H01', diaDiem: 'Thôn Hai', dienTich: 2}, nc: [], dx: [xe], pc: []};
-const seed = {v: 2, rs: {oh: own('oh', 'CR-H', 'ĐẶNG VĂN HAI giả lập', C(20), lotH), oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99), lotE), of: own('of', 'CR-F', NF, C(18), lotF)}};
+const xeDm = {ngayCapNhat: '01/02/2026', bienSo: '92C-11111', chuXe: 'LÊ VĂN XE giả lập', ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA giả lập', diaChi: 'Đà Nẵng', loaiXe: 'Xe tải', nguoiKy: 'Chủ xe', sdt: '0905123456'};   // xe 92C-11111 có sẵn trong danh mục xe (dữ liệu giả lập): thêm vào lô thì chụp đủ thông tin từ danh mục
+const seed = {v: 2, dmXeVC: [xeDm], rs: {oh: own('oh', 'CR-H', 'ĐẶNG VĂN HAI giả lập', C(20), lotH), oe: own('oe', 'CR-E', 'CHỦ KHÁC giả lập', C(99), lotE), of: own('of', 'CR-F', NF, C(18), lotF)}};
 
 (async () => {
   const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx'}});
@@ -146,20 +147,54 @@ const seed = {v: 2, rs: {oh: own('oh', 'CR-H', 'ĐẶNG VĂN HAI giả lập', C
   /* ===== 4. Cập nhật vào hồ sơ: ghi BẢN NHÁP, idempotent lần 2 (HD-A01) ===== */
   await w.click('[data-act=gsAll]'); await w.waitForTimeout(100);
   const before = JSON.stringify(await db());
-  await w.click('#hdBox [data-act=gsApply]'); await w.waitForSelector('#hdAskBody [data-act=gsAskYes]'); 
-  ok('chưa có chủ rừng/lô: hỏi xác nhận tạo mới (liệt kê chủ rừng, lô mới)', /chủ rừng mới/.test(await w.innerText('#hdAskBody')) && /lô mới GL-A01/.test(await w.innerText('#hdAskBody')) && /lô mới GL-A02/.test(await w.innerText('#hdAskBody')));
+  await w.click('#hdBox [data-act=gsApply]'); await w.waitForSelector('#hdAskBody [data-act=gsAskYes]');
+  const askT = await w.innerText('#hdAskBody');
+  ok('chưa có chủ rừng/lô: hỏi xác nhận tạo mới (liệt kê chủ rừng, lô mới) và nói rõ chỉ vào bản nháp', /chủ rừng mới/.test(askT) && /lô mới GL-A01/.test(askT) && /lô mới GL-A02/.test(askT) && /bản nháp/i.test(askT) && /Lưu dữ liệu vào lô/.test(askT));
+  ok('QĐ mới 3: hộp xác nhận liệt kê biển 92C-11111 chưa có trong xe của lô; ô "Thêm xe vào lô" MẶC ĐỊNH TÍCH', /92C-11111/.test(askT) && /chưa có trong danh sách xe/.test(askT) && await w.$eval('#hdAskBody [data-gsopt=themXe]', c => c.checked));
   await w.click('#hdAskBody [data-act=gsAskNo]'); await w.waitForTimeout(200);
   ok('Hủy ở hộp xác nhận: hồ sơ giữ nguyên', JSON.stringify(await db()) === before && /Đã hủy/.test(await w.innerText('#hdBox .gsMsg')));
+  ok('Hủy: cũng không có chủ rừng / lô nháp nào trong bộ nhớ', await w.evaluate(c => { const T = window.__hak.nhapTest; return !Object.values(T.db().rs).some(o => o.info.cccd === c) && !T.loMoi().length && !T.chuNhap().length; }, C(11)));
   await w.click('#hdBox [data-act=gsApply]'); await w.click('#hdAskBody [data-act=gsAskYes]'); await w.waitForSelector('#gsSum', {timeout: 10000});
   const sum = await w.innerText('#gsSum');
-  ok('tóm tắt: đã cập nhật vào BẢN NHÁP, nhắc bấm "Lưu dữ liệu vào lô"', /bản nháp/i.test(sum) && /Lưu dữ liệu vào lô/.test(sum), sum.replace(/\s+/g, ' '));
-  let d = await db(); const oA = Object.values(d.rs).find(o => o.info.cccd === C(11)); const fsA = oA ? Object.values(oA.forests) : [];
-  ok('chủ rừng và 2 lô GL-A01, GL-A02 đã được tạo, đúng CCCD', !!oA && fsA.length === 2 && fsA.map(f => f.info.maRung).sort().join() === 'GL-A01,GL-A02');
-  ok('phiếu cân CHƯA vào dữ liệu đã lưu (chỉ ở bản nháp) cho đến khi bấm Lưu dữ liệu vào lô', fsA.every(f => (f.pc || []).length === 0));
+  ok('tóm tắt: mọi thay đổi ở BẢN NHÁP, CHƯA lưu, nhắc bấm "Lưu dữ liệu vào lô" (kèm nút mở lô)', /bản nháp/i.test(sum) && /chưa lưu/i.test(sum) && /Lưu dữ liệu vào lô/.test(sum) && !!(await w.$('#gsSum [data-act=gsMoLo]')), sum.replace(/\s+/g, ' '));
+  ok('QĐ7 nghĩa đen: KHÔNG ghi gì xuống dữ liệu đã lưu (chủ rừng, lô, tọa độ, giấy tờ, ánh xạ… đều chưa)', JSON.stringify(await db()) === before);
+  let d;
+  const mem = () => w.evaluate(c => { const T = window.__hak.nhapTest, db = T.db(), stages = T.stages(), loDirty = new Set(T.loDirty()), loMoi = new Set(T.loMoi()); const o = Object.values(db.rs).find(x => x.info.cccd === c); return o ? {id: o.id, ten: o.info.ten, fs: Object.values(o.forests).map(f => ({id: f.id, ma: f.info.maRung, lat: f.info.lat, nguon: f.info.nguon, giayTo: (f.info.giayTo || []).length, taoLuc: f.taoLuc, dx: (stages[o.id + '|' + f.id] || {cur: {dx: []}}).cur.dx.map(x => x.bienSo), pcN: (stages[o.id + '|' + f.id] || {cur: {pc: []}}).cur.pc.length, dirty: loDirty.has(f.id), moi: loMoi.has(f.id)}))} : null; }, C(11));
+  let oA = await mem(); const fsA = oA ? oA.fs : [];
+  ok('trong bộ nhớ (bản nháp): chủ rừng và 2 lô GL-A01, GL-A02 đã được tạo, đúng CCCD, đều đánh dấu chưa lưu', !!oA && fsA.length === 2 && fsA.map(f => f.ma).sort().join() === 'GL-A01,GL-A02' && fsA.every(f => f.dirty && f.moi), JSON.stringify(oA));
+  ok('bản nháp có tọa độ, nguồn hợp đồng, và phiếu cân ở bản nháp từng lô', fsA.every(f => typeof f.lat === 'number' && f.nguon && f.nguon.hd === 'HD-A01') && fsA.reduce((t, f) => t + f.pcN, 0) === 6, JSON.stringify(fsA));
+  ok('xe 92C-11111 đã được thêm vào danh sách xe (bản nháp) của lô nhận phiếu, mỗi lô đúng một xe, không trùng', fsA.every(f => f.pcN === 0 || (f.dx.length === 1 && f.dx[0] === '92C-11111')), JSON.stringify(fsA.map(f => f.dx)));
+  ok('xe có sẵn trong danh mục xe: được chụp đủ chủ xe từ danh mục (không tạo xe trùng)', await w.evaluate(c => { const T = window.__hak.nhapTest, o = Object.values(T.db().rs).find(x => x.info.cccd === c); return Object.values(o.forests).every(f => { const st = T.stages()[o.id + '|' + f.id]; return !st || !st.cur.dx.length || (st.cur.dx.length === 1 && st.cur.dx[0].chuXe === 'LÊ VĂN XE giả lập' && st.cur.dx[0]._nguon === 'Danh mục'); }); }, C(11)));
   ok('rừng mới có thời điểm tạo (QĐ8)', fsA.every(f => !!f.taoLuc));
+  ok('bảng Chưa lưu của ứng dụng liệt kê 2 lô nháp', (await w.evaluate(() => window.__stDirty())).length === 2);
+  await w.evaluate(() => window.__hak.nhapTest.persistNow()); await w.waitForTimeout(400);
+  ok('QĐ7: một lần lưu khác (persistNow vì việc khác) cũng KHÔNG đưa chủ rừng / lô nháp xuống dữ liệu đã lưu', !Object.values((await db()).rs).some(o => o.info.cccd === C(11)) && Object.keys((await db()).rs).length === Object.keys(JSON.parse(before).rs).length);
   await closeModal();
-  // bỏ bản nháp của hai lô vừa tạo (chỉ nhằm dọn): phần lưu và idempotent kiểm ở hợp đồng HD-H08 có sẵn xe
-  for (const f of fsA) { for (const s of ['[data-open=' + oA.id + ']', '[data-tab=rung]', '[data-forest=' + f.id + ']']) { await w.click(s); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop'); await w.waitForTimeout(150); } await w.evaluate(() => { const b = document.querySelector('[data-act=stDiscard]'); if (b) b.click(); }); await w.waitForTimeout(300); }
+  const saveLot0 = async (oid, fid) => { for (const s of ['[data-open=' + oid + ']', '[data-tab=rung]', '[data-forest=' + fid + ']']) { await w.click(s); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop'); await w.waitForTimeout(150); } return stSave(w); };
+  const fA1 = fsA.find(f => f.pcN > 0), fA2 = fsA.find(f => f !== fA1);
+  const rA = await saveLot0(oA.id, fA1.id);
+  ok('"Lưu dữ liệu vào lô" lô ' + fA1.ma + ': không còn bị chặn "chưa có trong danh sách xe" (xe đã thêm theo ô tích)', !(rA && rA.errs && rA.errs.some(e => /chưa có trong danh sách xe/.test(e))), JSON.stringify(rA && rA.errs));
+  if (rA && rA.ok) {
+    d = await db(); const oS = Object.values(d.rs).find(o => o.info.cccd === C(11)), fS = oS ? Object.values(oS.forests) : [];
+    ok('sau khi lưu lô ' + fA1.ma + ': chủ rừng + đúng 1 lô vào dữ liệu đã lưu, kèm phiếu và xe; lô còn lại vẫn là bản nháp', !!oS && fS.length === 1 && fS[0].info.maRung === fA1.ma && fS[0].pc.length === fA1.pcN && fS[0].dx.length === 1 && fS[0].dx[0].bienSo === '92C-11111', JSON.stringify(fS.map(f => [f.info.maRung, f.pc.length, f.dx.length])));
+    ok('chủ rừng đã lưu mang đủ thông tin (tên, CCCD)', !!oS && oS.info.ten === NA && oS.info.cccd === C(11));
+  } else ok('lưu được lô ' + fA1.ma, false, JSON.stringify(rA));
+  // bỏ bản nháp lô còn lại: lô nháp mới biến mất hẳn
+  for (const s of ['[data-open=' + oA.id + ']', '[data-tab=rung]', '[data-forest=' + fA2.id + ']']) { await w.click(s); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop'); await w.waitForTimeout(150); }
+  await w.evaluate(() => { const b = document.querySelector('[data-act=stDiscard]'); if (b) b.click(); }); await w.waitForTimeout(300);
+  ok('"Bỏ thay đổi" lô nháp mới: lô biến mất khỏi bộ nhớ, không còn mục chưa lưu', ((await mem()) || {fs: []}).fs.every(f => f.id !== fA2.id) && (await w.evaluate(() => window.__stDirty())).length === 0 && JSON.stringify(Object.keys((await db()).rs[oA.id].forests)) === JSON.stringify([fA1.id]));
+  /* --- bỏ tích "Thêm xe vào lô": giữ hành vi chặn như cũ (HD-C300, biển 92C-30000 không có trong danh mục) --- */
+  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on'); await w.waitForSelector('#lkQ');
+  await openModal('HD-C300'); await w.click('#hdBox [data-gstab=pc]'); await w.waitForSelector('#hdBox .gsPcT'); await w.click('[data-act=gsAll]'); await w.click('#hdBox [data-act=gsApply]'); await w.waitForSelector('#hdAskBody [data-act=gsAskYes]');
+  await w.uncheck('#hdAskBody [data-gsopt=themXe]'); await w.click('#hdAskBody [data-act=gsAskYes]'); await w.waitForSelector('#gsSum', {timeout: 15000});
+  const oC = await w.evaluate(c => { const T = window.__hak.nhapTest, o = Object.values(T.db().rs).find(x => x.info.cccd === c); if (!o) return null; const f = Object.values(o.forests)[0]; const st = T.stages()[o.id + '|' + f.id]; return {o: o.id, f: f.id, dx: st ? st.cur.dx.length : -1, pc: st ? st.cur.pc.length : -1}; }, C(14));
+  ok('bỏ tích "Thêm xe vào lô": lô nháp có 300 phiếu nhưng KHÔNG có xe nào được thêm', !!oC && oC.dx === 0 && oC.pc === 300, JSON.stringify(oC));
+  await closeModal();
+  const rC = await saveLot0(oC.o, oC.f);
+  ok('bỏ tích: "Lưu dữ liệu vào lô" vẫn bị chặn "Biển … chưa có trong danh sách xe" (như cũ), chưa ghi gì xuống dữ liệu đã lưu', rC && !rC.ok && (rC.errs || []).some(e => /chưa có trong danh sách xe/.test(e)) && !Object.values((await db()).rs).some(o => o.info.cccd === C(14)), JSON.stringify(rC && (rC.errs || []).slice(0, 1)));
+  await w.click('#side [data-open], #navHome').catch(() => {}); await w.waitForTimeout(200); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop');   // rời lô đang mở: hộp "Còn thay đổi chưa lưu" → Bỏ thay đổi
+  await w.waitForTimeout(300);
+  ok('bỏ thay đổi lô nháp C300: chủ rừng và lô nháp biến mất, không còn mục chưa lưu', (await w.evaluate(c => !Object.values(window.__hak.nhapTest.db().rs).some(o => o.info.cccd === c), C(14))) && (await w.evaluate(() => window.__stDirty())).length === 0);
   const saveLot = async (oid, fid) => { for (const s of ['[data-open=' + oid + ']', '[data-tab=rung]', '[data-forest=' + fid + ']']) { await w.click(s); if (await w.$('#stBox.on #stGDrop')) await w.click('#stGDrop'); await w.waitForTimeout(150); } return stSave(w); };
   await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on'); await w.waitForSelector('#lkQ');
   await openModal('HD-H08'); await w.click('#hdBox [data-gstab=pc]'); await w.waitForSelector('#hdBox .gsPcT');
@@ -169,6 +204,7 @@ const seed = {v: 2, rs: {oh: own('oh', 'CR-H', 'ĐẶNG VĂN HAI giả lập', C
   await closeModal();
   d = await db(); const oH = Object.values(d.rs).find(o => o.info.cccd === C(20));
   ok('phiếu cân CHƯA vào dữ liệu đã lưu (chỉ ở bản nháp) cho đến khi bấm Lưu dữ liệu vào lô', Object.values(oH.forests)[0].pc.length === 0);
+  ok('thông tin lô (info.nguon) của lô đã có cũng CHƯA lưu cho đến khi bấm Lưu dữ liệu vào lô', !Object.values(oH.forests)[0].info.nguon);
   const rsv = await saveLot(oH.id, 'fh');
   ok('Lưu dữ liệu vào lô thành công', rsv && rsv.ok, JSON.stringify(rsv));
   d = await db(); const fH = Object.values(d.rs).find(o => o.info.cccd === C(20)).forests.fh;

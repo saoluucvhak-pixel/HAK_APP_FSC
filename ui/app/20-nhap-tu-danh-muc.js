@@ -110,17 +110,18 @@ function nhapTamGhi() {
   if (nhapTamTat) return;
   try {
     const ks = stDirtyList(); if (!ks.length) { if (!nhapTamCho && nhapTamLastJson) { nhapTamLastJson = ''; nhapTamXoa(); } return; }
-    const lots = {}, sts = {};
+    const lots = {}, sts = {}, chu = {}, moi = [], alias = {};
     ks.forEach(k => {
       const [oid, fid] = k.split('|'), f = db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; if (!f) return;
-      if (loDirty.has(fid)) lots[k] = f;
+      if (loDirty.has(fid)) { lots[k] = f; if (loMoi.has(fid)) moi.push(fid); if (chuNhap.has(oid) && !chu[oid]) { const {forests: _f, ...o} = db.rs[oid]; chu[oid] = {moi: !!chuNhap.get(oid).moi, o}; } }
       if (stages[k] && HAKStage.dirty(stages[k])) sts[k] = nhapTamStageGon(stages[k]);
     });
+    aliasNhap.forEach((v, key) => { if (db.bienAlias && key in db.bienAlias) alias[key] = {v: db.bienAlias[key], had: v.had, old: v.old, lots: [...v.lots]}; });   // ánh xạ biển số chưa lưu (QĐ7)
     if (!Object.keys(lots).length && !Object.keys(sts).length) { if (nhapTamLastJson) { nhapTamLastJson = ''; nhapTamXoa(); } return; }
-    const body = JSON.stringify({lots, stages: sts});
+    const body = JSON.stringify({lots, stages: sts, chu, moi, alias});
     if (body === nhapTamLastJson) return;   // Lô 9b (T-21): không stringify/ghi lại khi bản nháp không đổi
     nhapTamLastJson = body;
-    localStorage.setItem(NHAP_TAM_KEY, JSON.stringify({at: new Date().toISOString(), lots, stages: sts}));
+    localStorage.setItem(NHAP_TAM_KEY, JSON.stringify({at: new Date().toISOString(), lots, stages: sts, chu, moi, alias}));
   } catch (e) {
     if (!nhapTamLoiDaBao && typeof note === 'function') { nhapTamLoiDaBao = true; note('Không tự lưu tạm được bản nháp trên trình duyệt (đầy bộ nhớ tạm): hãy bấm “Lưu dữ liệu vào lô” để ghi trực tiếp vào cơ sở dữ liệu.', 'warn'); }
   }
@@ -128,16 +129,25 @@ function nhapTamGhi() {
 let nhapTamCho = false;   // đang chờ người dùng trả lời khôi phục: chưa xóa bản tạm
 function nhapTamKhoiPhuc() {
   const d = nhapTamDoc(); if (!d) return;
-  const ten = []; const lots = Object.entries(d.lots || {}).filter(([k]) => { const [oid, fid] = k.split('|'); return db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; });
-  const sts = Object.entries(d.stages || {}).filter(([k]) => { const [oid, fid] = k.split('|'); return db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; });
+  const chu = d.chu || {}, moiSet = new Set(d.moi || []);   // lô / chủ rừng tạo từ bản nháp (QĐ7) chưa có trong dữ liệu đã lưu: khôi phục kèm chủ rừng
+  const coLo = (oid, fid) => db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid], coDich = k => { const [oid, fid] = k.split('|'); return coLo(oid, fid) || (moiSet.has(fid) && chu[oid] && chu[oid].o); };
+  const ten = []; const lots = Object.entries(d.lots || {}).filter(([k]) => coDich(k));
+  const sts = Object.entries(d.stages || {}).filter(([k]) => { const [oid, fid] = k.split('|'); return coLo(oid, fid) || (lots.some(([k2]) => k2 === k)); });
   if (!lots.length && !sts.length) return nhapTamXoa();
-  const ma = new Set(); [...lots, ...sts].forEach(([k]) => { const [oid, fid] = k.split('|'); const f = db.rs[oid].forests[fid]; ma.add((f.info && f.info.maRung) || fid); });
+  const ma = new Set(); [...lots, ...sts].forEach(([k]) => { const [oid, fid] = k.split('|'); const f = coLo(oid, fid) || (d.lots && d.lots[k]) || {}; ma.add((f.info && f.info.maRung) || fid); });
   nhapTamCho = true;
   const ok = confirm('Lần làm việc trước còn thay đổi chưa lưu (tự lưu tạm lúc ' + (d.at ? new Date(d.at).toLocaleString('vi-VN') : '?') + ') ở lô: ' + [...ma].join(', ') + '.\n\nKhôi phục các thay đổi này vào bản nháp? (Chưa ghi vào dữ liệu; bấm “Lưu dữ liệu vào lô” mới ghi.)');
   nhapTamCho = false;
   if (!ok) return nhapTamXoa();
   if (!savedSnap) savedSnap = (saveCache && saveCache.snap) || HAKDelta.snapshot(dbGhi());
-  lots.forEach(([k, f]) => { const [oid, fid] = k.split('|'); db.rs[oid].forests[fid] = f; loDirty.add(fid); });
+  doiDuLieu();
+  lots.forEach(([k, f]) => {
+    const [oid, fid] = k.split('|'), c = chu[oid];
+    if (!db.rs[oid]) { const {id, ...o} = c.o; db.rs[oid] = Object.assign({}, o, {id: oid, forests: {}}); chuNhap.set(oid, {moi: true}); }
+    else if (c && !c.moi) { Object.assign(db.rs[oid], c.o, {forests: db.rs[oid].forests}); chuNhap.set(oid, {moi: false}); }
+    db.rs[oid].forests[fid] = f; loDirty.add(fid); if (moiSet.has(fid)) loMoi.add(fid);
+  });
+  Object.entries(d.alias || {}).forEach(([key, v]) => { if (!v || typeof v.v !== 'string') return; db.bienAlias = db.bienAlias || {}; db.bienAlias[key] = v.v; aliasNhap.set(key, {had: !!v.had, old: v.old, lots: new Set((v.lots || []).filter(id => loDirty.has(id)))}); });
   sts.forEach(([k, st]) => { stages[k] = st; });
   note('Đã khôi phục thay đổi chưa lưu của lô ' + [...ma].join(', ') + ' vào bản nháp. Kiểm tra rồi bấm “Lưu dữ liệu vào lô”.', 'warn');
   render();
