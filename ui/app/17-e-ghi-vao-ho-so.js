@@ -1,4 +1,14 @@
 /* ----- Ghi vào hồ sơ: kiểm tra đủ lựa chọn, áp dụng một lần, lưu trong một giao dịch ----- */
+/* Tạo chủ rừng / lô mới: MỘT nơi duy nhất ghi db.rs mới, dùng chung cho lkApply (từng rừng) và hộp thoại hợp đồng (gsApply). Lô mới có thời điểm tạo `taoLuc` (QĐ8: thứ tự nhập của rừng mới; không điền ngược cho lô cũ). */
+function lkNewOwner(ma, src, mark) {
+  const id = newId('rs'), o = db.rs[id] = {id, info: {ma, danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
+  mark(o, 'ma', src); return o;
+}
+function lkNewForest(o, at) {
+  const fid = newId('f'), n = forestList(o).length + 1;
+  return o.forests[fid] = {id: fid, info: {maRung: '', tenRung: 'Rừng ' + n, diaDiem: '', lat: null, lng: null, dienTich: null, dinhMucTanHa: null, dinhMucNgayHa: null, cuLy: null, tuNgay: '', denNgay: '', donGia: null, giayTo: []},
+    nc: [], dx: [], pc: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: '', taoLuc: at};
+}
 async function lkApply() {
   const c = lk.cand, F = c.forests[lk.fi], s = lk.sel, errs = [];
   { const T0 = lk.mode === 'fill' ? lkTarget() : null;
@@ -16,14 +26,8 @@ async function lkApply() {
     if (lk.mode === 'new') {
       const fv = F.fields.find(x => x.key === 'maRung');
       if (fv && findForestByMa(fv.value)) throw new Error('Mã rừng ' + fv.value + ' đã có');
-      if (!o) {
-        const id = newId('rs');
-        o = db.rs[id] = {id, info: {ma: c.cccd, danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
-        mark(o, 'ma', (c.owner.fields.find(x => x.key === 'cccd') || c.owner.fields[0] || {}).src || {tab: 'HoSoRung_QC', row: 0, col: 'Mã KH_CCCD'});
-      }
-      const fid = newId('f'), n = forestList(o).length + 1;
-      f = o.forests[fid] = {id: fid, info: {maRung: '', tenRung: 'Rừng ' + n, diaDiem: '', lat: null, lng: null, dienTich: null, dinhMucTanHa: null, dinhMucNgayHa: null, cuLy: null, tuNgay: '', denNgay: '', donGia: null, giayTo: []},
-        nc: [], dx: [], pc: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
+      if (!o) o = lkNewOwner(c.cccd, (c.owner.fields.find(x => x.key === 'cccd') || c.owner.fields[0] || {}).src || {tab: 'HoSoRung_QC', row: 0, col: 'Mã KH_CCCD'}, mark);
+      f = lkNewForest(o, at); const n = forestList(o).length;
       if (!fv) { let k = n, code = (o.info.ma || 'CR') + '-R' + k; while (findForestByMa(code)) code = (o.info.ma || 'CR') + '-R' + (++k); f.info.maRung = code; }
     }
     c.owner.fields.forEach(x => { if (s.owner[x.key] === 'new') { o.info[x.key] = x.value; mark(o, x.key, x.src); } });
@@ -169,7 +173,7 @@ document.addEventListener('keydown', async e => {
   }
   /* phiếu #10 & lô 9c (T-23): hộp thoại đang mở giữ tiêu điểm bên trong — Tab / Shift+Tab đi vòng trong hộp, không ra trang bên dưới */
   if (e.key === 'Tab') {
-    const hop = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'tkBox', 'thBox'].map(id => document.getElementById(id)).filter(b => b && (b.classList.contains('on') || b.id === 'tkBox' || b.id === 'thBox')).pop();
+    const hop = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'hdBox', 'hdAsk', 'tkBox', 'thBox'].map(id => document.getElementById(id)).filter(b => b && (b.classList.contains('on') || b.id === 'tkBox' || b.id === 'thBox')).pop();
     if (hop) {
       const ds = [...hop.querySelectorAll('button, input:not([type=hidden]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent);
       if (ds.length) { const i = ds.indexOf(document.activeElement), j = i < 0 ? 0 : (i + (e.shiftKey ? -1 : 1) + ds.length) % ds.length; if (i < 0 || (e.shiftKey ? i === 0 : i === ds.length - 1)) { ds[j].focus(); e.preventDefault(); return; } }
@@ -178,6 +182,7 @@ document.addEventListener('keydown', async e => {
   if (e.key === 'Escape' && !e.defaultPrevented) {   // Esc đóng hộp thoại trên cùng (hộp nhập/khôi phục → báo cáo → tra cứu → hướng dẫn); hộp nhập/khôi phục = Hủy, không ghi gì
     const open = id => { const b = document.getElementById(id); return b && b.classList.contains('on') ? b : null; };
     { const sb = open('stBox'), nut = sb && (sb.querySelector('#stGBack') || sb.querySelector('[data-act=stClose]')); if (nut) { nut.click(); e.preventDefault(); return; } }   // phiếu #10: hộp Lưu / Bỏ / Quay lại → Quay lại; hộp có nút Đóng → Đóng
+    { const ak = open('hdAsk'); if (ak) { const no = ak.querySelector('[data-act=gsAskNo]'); if (no) no.click(); e.preventDefault(); return; } if (open('hdBox')) { gsClose(); e.preventDefault(); return; } }   // hộp xác nhận trên cùng → hộp thoại hợp đồng
     if (open('impBox')) { window.__imp = null; $('#impBox').classList.remove('on'); e.preventDefault(); return; }
     if (open('rpBox')) { rpClose(); e.preventDefault(); return; }
     if (open('lkBox')) { lkClose(); e.preventDefault(); return; }

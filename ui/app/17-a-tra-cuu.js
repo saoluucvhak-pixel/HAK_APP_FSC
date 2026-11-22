@@ -1,6 +1,6 @@
-/* ========== Tra cứu Google Sheets (chỉ bản desktop) ========== */
+/* ========== Dữ liệu Google Sheets (chỉ bản desktop; mã nội bộ giữ tiền tố lk để tương thích bộ lọc đã lưu và các màn khác) ========== */
 const LK_TABS = [['', 'Tất cả'], ['HoSoKeo_QC', 'HoSoKeo (phiếu cân)'], ['HoSoRung_QC', 'HoSoRung (chủ rừng, hợp đồng)'], ['ToaDoRung_QC', 'ToaDoRung (tọa độ, giấy tờ)']];
-const lk = {view: 'search', tab: '', q: '', f: {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}, adv: false, layout: 'flat', gsel: '', presetSel: '', dt: 'rung', det: {}, conds: [], res: null, st: null, busy: '', msg: null, cand: null, fi: 0, mode: '',
+const lk = {view: 'search', tab: '', q: '', f: {from: '', to: '', minTan: '', maxTan: '', status: '', onlyIssues: false, sort: 'relevance'}, adv: false, layout: 'hd', gsel: '', presetSel: '', dt: 'rung', det: {}, conds: [], res: null, st: null, busy: '', msg: null, cand: null, fi: 0, mode: '',
 owner: '', sel: null};
 const foldVi = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
 /* Tên hiển thị của vai trò dữ liệu: bộ tên chuẩn HoSoKeo/HoSoRung/ToaDoRung (mã vai trò bên trong giữ hậu tố _QC để tương thích dữ liệu đã lưu) */
@@ -18,8 +18,10 @@ async function lkOpen() {
 }
 const lkClose = () => $('#lkBox').classList.remove('on');
 async function lkSearch() {
-  const r = await HB.lookup.search(lk.q, lk.tab, Object.assign({}, lk.f, lk.layout === 'tree' ? {group: 'contract'} : {}));
+  const hdL = lk.layout === 'hd';   // màn đầu: bảng toàn bộ hợp đồng (nhóm theo hợp đồng, không giới hạn 300 dòng)
+  const r = await HB.lookup.search(lk.q, hdL ? '' : lk.tab, Object.assign({}, lk.f, lk.layout === 'tree' || hdL ? {group: 'contract'} : {}, hdL ? {limit: 100000} : {}));
   lk.res = r.ok ? r : {rows: [], total: 0, facets: {tab: {}, status: {}, issues: 0}, stats: {}, relax: []}; if (!r.ok) lk.msg = {kind: 'err', text: r.error};
+  if (hdL) { gsFromGroups(lk.res); gsEnrich(); }
   if (lk.layout === 'tree') { const G = lk.res.groups || []; lk.gsel = (G.find(g => g.key === lk.gsel) || G[0] || {}).key || ''; await lkLoadDetail(); }
 }
 async function lkLoad(kind) {

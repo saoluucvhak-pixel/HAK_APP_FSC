@@ -45,7 +45,7 @@ function homeSysFill() {
     const lkTxt = a ? 'Bản tra cứu: <b>' + esc(a.detail || a.source) + '</b>, nạp ' + esc(String(a.loadedAt || '').replace('T', ' ').slice(0, 16)) + ' (' + Object.values(a.counts || {}).reduce((x, y) => x + y, 0) + ' dòng)' : 'Chưa có bản tra cứu: bấm <b>Đồng bộ ngay</b> ở Tra cứu Google Sheets.';
     const bk = !rm ? '' : rm.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào.' : 'Sao lưu toàn bộ gần nhất cách đây <b>' + rm.days + ' ngày</b>' + (rm.due ? ' (đã đến hạn nhắc).' : '.');
     box.innerHTML = '<h3>Hệ thống</h3><div class="sysl"><div>' + lkTxt + '</div><div class="' + (rm && rm.due ? 'warnTxt' : '') + '">' + bk + '</div></div>' +
-      '<div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="lkOpen">Tra cứu Google Sheets</button><button class="btn ghost sm" data-act="rpDoiChieu"' + (a ? '' : ' disabled') + '>Báo cáo đối chiếu</button><button class="btn ghost sm" data-act="backup">Sao lưu toàn bộ</button><button class="btn ghost sm" data-act="openSettings">Cài đặt</button></div>';
+      '<div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="lkOpen">Dữ liệu Google Sheets</button><button class="btn ghost sm" data-act="rpDoiChieu"' + (a ? '' : ' disabled') + '>Báo cáo đối chiếu</button><button class="btn ghost sm" data-act="backup">Sao lưu toàn bộ</button><button class="btn ghost sm" data-act="openSettings">Cài đặt</button></div>';
   }).catch(() => {});
 }
 function panelHome() {
@@ -65,7 +65,7 @@ function panelHome() {
   const H = homeData();
   const kp = (v, l, f, acc) => '<div' + (acc ? ' class="acc"' : '') + '><b>' + esc(F(v, f)) + '</b>' + esc(l) + '</div>';
   return '<div class="hero"><div><h2>Tổng quan</h2><p class="mut">' + todayStr() + ' · dữ liệu lưu ' + (HB ? 'trong SQLite trên máy' : 'trong trình duyệt') + '</p></div>' +
-    '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Tra cứu</button>' : '') + '</div></div>' +
+    '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Dữ liệu Google Sheets</button>' : '') + '</div></div>' +
     huongDanBox() + viecCanLamBox(recs) +
     '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(H.T.du * 10) / 10, 'Sản lượng dự kiến (tấn)', 'n1') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)',
     'n3') + kp(Math.round(H.T.tt * 1000) / 1000, 'Khối lượng thực tế nhập tay (tấn)', 'n3') + kp(H.T.du ? Math.round(tot.t / H.T.du * 1000) / 10 : 0, 'Đã cân so với dự kiến', 'pct') + kp(tot.n, 'Số chuyến', 'n0') + kp(H.T.nc, 'Lao động', 'n0') + kp(H.T.dx, 'Số xe', 'n0') + kp(avg, 'Tiến độ hồ sơ TB',
@@ -76,7 +76,7 @@ function panelHome() {
     '<p class="mut">Tất cả hồ sơ đã đạt 100%.</p>') + '</div>' +
     '<div class="card"><h3>Phiếu cân gần đây</h3>' + (recent.length ? '<div class="wrap" style="max-height:none"><table><tr><th>Ngày</th><th>Số phiếu</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th></tr>' + recent.map(p => '<tr><td>' + esc(p.ngay) + '</td><td>' +
     esc(p.soPhieu) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + esc(F(+p.kl || 0,
-    'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Tra cứu Google Sheets' : '') + '.</p>') + '</div></div>' +
+    'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Dữ liệu Google Sheets' : '') + '.</p>') + '</div></div>' +
     '<div class="grid2" style="margin-top:16px"><div class="card"><h3>Cần chú ý ở các rừng</h3>' + homeAlertsHtml(H.A) + '</div><div class="card"><h3>Sản lượng theo tháng</h3>' + homeMonthsHtml(H.months) + '</div></div>' +
     '<div class="card" id="homeSys" style="margin-top:16px"><h3>Hệ thống</h3><p class="mut">' + (HB ? 'Đang kiểm tra bản tra cứu và sao lưu…' : 'Bản chạy trong trình duyệt: dữ liệu lưu trong trình duyệt, hãy sao lưu thường xuyên.') + '</p></div>' + (setTimeout(homeSysFill, 0), '');
 }
