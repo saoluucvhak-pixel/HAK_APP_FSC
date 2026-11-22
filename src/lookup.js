@@ -37,6 +37,7 @@ const TAB_NAMES = Object.keys(TABS);
 const fold = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().replace(/\s+/g, ' ').trim();
 const clean = v => (v == null ? '' : String(v)).replace(/\s+/g, ' ').trim();
 const pad2 = n => String(n).padStart(2, '0');
+const maskCccd = c => { const d = String(c == null ? '' : c).replace(/\D/g, ''); return d.length > 6 ? d.slice(0, 3) + '…' + d.slice(-3) : d; };   // che giữa CCCD trong chuỗi cảnh báo (3 số đầu…3 số cuối)
 const normHd = v => clean(v).toUpperCase();   // khóa hợp đồng: không phân biệt hoa/thường, gọn khoảng trắng (S1)
 const baseCccd = v => clean(v).replace(/_\d+$/, '');
 const stripSuffix = v => clean(v).replace(/_\d+$/, '');
@@ -478,8 +479,9 @@ class Lookup {
 
   rows(where, args) {
     const a = this.activeSet(); if (!a) return [];
-    return this.db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE set_id=? AND ' + where + ' ORDER BY tab, row_no').all(a.id, ...args)
-      .map(r => Object.assign(JSON.parse(r.data), {_tab: r.tab, _row: r.row_no}));
+    /* KHÔNG ORDER BY trong SQL: có ORDER BY tab,row_no thì SQLite chọn idx_lr_tab (quét cả bản) thay vì idx_lr_hd/cccd → mỗi lần tra O(N). Sắp xếp trong JS. */
+    return this.db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE set_id=? AND ' + where).all(a.id, ...args)
+      .sort((x, y) => (x.tab < y.tab ? -1 : x.tab > y.tab ? 1 : x.row_no - y.row_no)).map(r => Object.assign(JSON.parse(r.data), {_tab: r.tab, _row: r.row_no}));
   }
 
   /* Tìm kiếm thông minh.
@@ -579,15 +581,19 @@ class Lookup {
   /* Đọc ba tab theo MÃ HỢP ĐỒNG đã chuẩn hóa (HOA, gọn khoảng trắng) mà KHÔNG cần migration: k_hd lưu nguyên văn nên chọn các giá trị k_hd phân biệt rồi so chuẩn hóa trong JS, truy vấn tiếp theo vẫn dùng idx_lr_hd. */
   hdRows(hd) {
     const a = this.activeSet(), none = {rung: [], toado: [], keo: []}; if (!a) return none;
-    if (!this._hdKs || this._hdKs.setId !== a.id) this._hdKs = {setId: a.id, ks: this.db.prepare("SELECT DISTINCT k_hd FROM lookup_rows WHERE set_id=? AND k_hd<>''").all(a.id).map(r => ({raw: r.k_hd, n: normHd(r.k_hd)}))};   // đệm theo set_id (AUTOINCREMENT nên không tái dùng); load() cũng xóa đệm
-    const ks = this._hdKs.ks.filter(k => k.n === hd).map(k => k.raw);
+    if (!this._hdKs || this._hdKs.setId !== a.id) {   // đệm theo set_id (AUTOINCREMENT nên không tái dùng); load() cũng xóa đệm. Chỉ mục Map<normHd, [k_hd thô]> dựng một lần: tra O(1), không lọc tuyến tính mỗi lần buildHd
+      const idx = new Map();
+      this.db.prepare("SELECT DISTINCT k_hd FROM lookup_rows WHERE set_id=? AND k_hd<>''").all(a.id).forEach(r => { const n = normHd(r.k_hd); if (!idx.has(n)) idx.set(n, []); idx.get(n).push(r.k_hd); });
+      this._hdKs = {setId: a.id, idx};
+    }
+    const ks = this._hdKs.idx.get(hd) || [];
     if (!ks.length) return none;
     const all = this.rows('k_hd IN (' + ks.map(() => '?').join(',') + ')', ks);
     return {rung: all.filter(r => r._tab === 'HoSoRung_QC'), toado: all.filter(r => r._tab === 'ToaDoRung_QC'), keo: all.filter(r => r._tab === 'HoSoKeo_QC')};
   }
 
   /* Tra cứu theo MÃ HỢP ĐỒNG (S1, QĐ1, QĐ4, QĐ10). Nhiều CCCD là CẢNH BÁO NẶNG (canhBaoNang), không phải lỗi. */
-  buildHd(raw) {
+  buildHd(raw, light) {
     const hd = normHd(raw);
     if (!this.activeSet()) return {ok: false, hd, error: 'Chưa có bản tra cứu: hãy cập nhật dữ liệu Google Sheets hoặc mở file Excel.'};
     if (!hd) return {ok: false, hd, error: 'Mã hợp đồng trống.'};
@@ -603,8 +609,8 @@ class Lookup {
     const nhieuCccd = cccdList.length > 1 || extra.size > 1, noRung = !keys.size && extra.size > 1;
     if (noRung) cccdList = [...extra.values()].sort();
     const canhBaoNang = nhieuCccd ? [{ma: 'nhieu-cccd', cccd: cccdList.slice(), dong: noRung ? [...Td.map(r => r._row), ...Ke.map(r => r._row)] : Rg.filter(r => cKey('HoSoRung_QC', r)).map(r => r._row)}] : [];
-    if (noRung) warns.push('Mã hợp đồng ' + hd + ' không có HoSoRung nhưng thuộc ' + cccdList.length + ' CCCD khác nhau ở ToaDoRung/HoSoKeo (' + cccdList.join(', ') + '): cảnh báo nặng, cần xác nhận hai lần trước khi cập nhật.');
-    else if (nhieuCccd) warns.push('Mã hợp đồng ' + hd + ' thuộc ' + cccdList.length + ' CCCD khác nhau ở HoSoRung (' + cccdList.join(', ') + ', dòng ' + canhBaoNang[0].dong.join(', ') + '): cảnh báo nặng, cần xác nhận hai lần trước khi cập nhật.');
+    if (noRung) warns.push('Mã hợp đồng ' + hd + ' không có HoSoRung nhưng thuộc ' + cccdList.length + ' CCCD khác nhau ở ToaDoRung/HoSoKeo (' + cccdList.map(maskCccd).join(', ') + '): cảnh báo nặng, cần xác nhận hai lần trước khi cập nhật.');
+    else if (nhieuCccd) warns.push('Mã hợp đồng ' + hd + ' thuộc ' + cccdList.length + ' CCCD khác nhau ở HoSoRung (' + cccdList.map(maskCccd).join(', ') + ', dòng ' + canhBaoNang[0].dong.join(', ') + '): cảnh báo nặng, cần xác nhận hai lần trước khi cập nhật.');
     const lech = [], lechKeo = new Set(), thieu = {HoSoKeo: [], ToaDoRung: []};
     [['HoSoKeo_QC', Ke], ['ToaDoRung_QC', Td]].forEach(([tab, rows]) => rows.forEach(r => {
       const k = cKey(tab, r);
@@ -651,9 +657,36 @@ class Lookup {
     const primary = (noRung ? '' : cccdList[0]) || Td.map(r => keysOf('ToaDoRung_QC', r).cccd).find(Boolean) || Ke.map(r => keysOf('HoSoKeo_QC', r).cccd).find(Boolean) || '';
     const pk = primary ? (NL.cccdSo(primary) || primary) : '', pick = (tab, rows) => rows.find(r => pk && cKey(tab, r) === pk) || rows[0] || null;
     const R0 = pick('HoSoRung_QC', Rg), owner = ownerOf(primary, R0, pick('ToaDoRung_QC', Td), pick('HoSoKeo_QC', Ke));
-    const others = primary ? this.rows('tab=? AND k_cccd=? AND k_hd<>?', ['HoSoRung_QC', primary, '']).filter(r => normHd(r['Mã hợp đồng']) !== hd).map(r => ({hd: clean(r['Mã hợp đồng']), diaChi: dedupe(r['ĐỊA CHỈ RỪNG']), hecta: r['HECTA'], tinhTrang: r['Tình trạng Hợp đồng'] || ''})) : [];
+    const others = primary && !light ? this.rows('tab=? AND k_cccd=? AND k_hd<>?', ['HoSoRung_QC', primary, '']).filter(r => normHd(r['Mã hợp đồng']) !== hd).map(r => ({hd: clean(r['Mã hợp đồng']), diaChi: dedupe(r['ĐỊA CHỈ RỪNG']), hecta: r['HECTA'], tinhTrang: r['Tình trạng Hợp đồng'] || ''})) : [];
     const phieu = Ke.map(r => Object.assign(phieuOf(r, true), {lechCccd: lechKeo.has(r._row)}));
     return {ok: true, hd, cccd: primary, cccdList, nhieuCccd, canhBaoNang, lech, owner, forests, phieu, others, warns, notes};
+  }
+
+  /* Tóm tắt nhẹ NHIỀU hợp đồng một lượt (≤ 200 mã): {ok, items:[{hd, ok, status:'ok'|'warn'|'err', why:[…], ten, cccd, ngay, nRung, nPhieu, tan, nCccd}]}.
+   * Cùng quy tắc trạng thái với bảng hợp đồng ở giao diện; KHÔNG trả phiếu/GPS. tan = tổng tấn phiếu hợp lệ (không lỗi, không lệch CCCD). */
+  summaryHd(list) {
+    if (!Array.isArray(list)) return {ok: false, error: 'Danh sách mã hợp đồng không hợp lệ.'};
+    if (list.length > 200) return {ok: false, error: 'Tối đa 200 mã hợp đồng mỗi lần.'};
+    return {ok: true, items: list.map(raw => {
+      const hd = typeof raw === 'string' ? raw : '', d = hd.length > 64 ? {ok: false, error: 'Mã hợp đồng không hợp lệ.'} : this.buildHd(hd, true);
+      if (!d.ok) return {hd, ok: false, status: 'err', why: [d.error || 'Không đọc được hợp đồng'], ten: '', cccd: '', ngay: '', nRung: 0, nPhieu: 0, tan: 0, nCccd: 0};
+      const own = Object.fromEntries(d.owner.fields.map(x => [x.key, x.value])), F = d.forests, why = [];
+      const tan = Math.round(d.phieu.filter(p => !p.issue && !p.lechCccd).reduce((t, p) => t + (p.kl || 0), 0) * 1000) / 1000;
+      let status = 'ok';
+      if (d.canhBaoNang.length) { status = 'err'; why.push('thuộc ' + d.cccdList.length + ' CCCD khác nhau'); }
+      else {
+        if (d.lech.length || d.phieu.some(p => p.lechCccd)) why.push('lệch CCCD');
+        if (d.phieu.some(p => p.issue)) why.push('phiếu cân lỗi');
+        if (!F.some(x => x.dong != null)) why.push('thiếu HoSoRung');
+        else if (!F.some(x => x.maRung)) why.push('thiếu ToaDoRung (chưa có mã rừng)');
+        else if (F.some(x => x.dong != null && !x.maRung)) why.push('rừng chưa có mã');
+        if (F.some(x => x.ghepTam)) why.push('ghép mã rừng tạm');
+        if (F.length > 1 && F.some(x => x.dong != null && x.duKienKg == null)) why.push('thiếu hecta/định mức');
+        if (F.some(x => x.gps.some(g => !g.ok))) why.push('tọa độ cần xem');
+        if (why.length) status = 'warn';
+      }
+      return {hd: d.hd, ok: true, status, why, ten: own.ten || '', cccd: d.cccd || '', ngay: own.ngayKyHopDong || '', nRung: F.length, nPhieu: d.phieu.length, tan, nCccd: d.cccdList.length};
+    })};
   }
 
   build(cccd, hd, rungHint) {
@@ -697,7 +730,7 @@ function ownerOf(cccd, R, T, K) {
   const nameSrc = R ? src('HoSoRung_QC', R._row, 'Họ và tên chủ rừng') : T ? src('ToaDoRung_QC', T._row, 'HoVaTenChuRung') : src('HoSoKeo_QC', K._row, 'Họ và tên chủ rừng');
   if (name) f.push(field('ten', 'Họ và tên', name, nameSrc));
   const rawId = R ? baseCccd(R['Mã KH_CCCD']) : T ? baseCccd(T['SoCCCD']) : cccd;
-  if (/^(\d{9}|\d{12})$/.test(rawId)) f.push(field('cccd', 'CCCD', rawId, R ? src('HoSoRung_QC', R._row, 'Mã KH_CCCD') : src('ToaDoRung_QC', T._row, 'SoCCCD')));
+  if (/^(\d{9}|\d{12})$/.test(rawId)) f.push(field('cccd', 'CCCD', rawId, R ? src('HoSoRung_QC', R._row, 'Mã KH_CCCD') : T ? src('ToaDoRung_QC', T._row, 'SoCCCD') : src('HoSoKeo_QC', K._row, 'Mã khách hàng')));   // hợp đồng chỉ có HoSoKeo: nguồn là phiếu cân (trước đây T null làm ném lỗi)
   if (R) {
     if (R['Ngày cấp']) f.push(field('ngayCap', 'Ngày cấp CCCD', R['Ngày cấp'], src('HoSoRung_QC', R._row, 'Ngày cấp')));
     if (clean(R['Mã hợp đồng'])) f.push(field('soHopDong', 'Số hợp đồng', clean(R['Mã hợp đồng']), src('HoSoRung_QC', R._row, 'Mã hợp đồng')));
@@ -797,4 +830,13 @@ function checkQuery(q) {
   return null;
 }
 
-module.exports = {checkQuery, describe, cellValue, moneyOf, parseQuery, Lookup, MIGRATION, TABS, TAB_NAMES, buildTemplate, STD, STD_NAMES, roleLabel, resolveTabs, allCols, nameKind, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};
+/* Làm sạch opts của lookup:search ở tầng IPC: limit chỉ nhận số nguyên dương ≤ 100000 (âm/NaN/chuỗi/vượt trần → bỏ, dùng mặc định). */
+function cleanSearchOpts(opts) {
+  if (typeof opts === 'number') opts = {limit: opts};
+  if (!opts || typeof opts !== 'object' || Array.isArray(opts)) return {};
+  const o = {...opts};
+  if ('limit' in o && !(Number.isInteger(o.limit) && o.limit > 0 && o.limit <= 100000)) delete o.limit;
+  return o;
+}
+
+module.exports = {checkQuery, cleanSearchOpts, maskCccd, describe, cellValue, moneyOf, parseQuery, Lookup, MIGRATION, TABS, TAB_NAMES, buildTemplate, STD, STD_NAMES, roleLabel, resolveTabs, allCols, nameKind, parseWorkbook, parseCoord, isPlate, plateKey, fold, dedupe};

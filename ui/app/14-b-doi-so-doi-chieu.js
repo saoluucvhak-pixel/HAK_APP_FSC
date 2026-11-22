@@ -88,6 +88,9 @@ function dcCapNhatNut() {
   k.querySelectorAll('[data-act=dsMo],[data-act=dsDoiChieu]').forEach(b => { b.disabled = !!why; if (why) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled'); });
   const p = k.querySelector('.dcLyDo'); if (p) p.textContent = why || 'Đối chiếu chỉ so sánh, không ghi gì vào hồ sơ và không chặn lưu.';
 }
+/* phiếu Sheet hợp lệ: cùng quy tắc gsSummary (bỏ phiếu lỗi và phiếu lệch CCCD) */
+const dcPhieuHopLe = sh => (sh.phieu || []).filter(p => !p.issue && !p.lechCccd);
+const dcTanSheet = sh => Math.round(dcPhieuHopLe(sh).reduce((t, p) => t + (p.kl > 0 ? p.kl : 0), 0) * 1000) / 1000;
 /* hàm thuần: so từng mục. nhap = giá trị đã nhập; sh = kết quả lookup.buildHd; ctx = {lots} lô của chủ rừng đã lưu mã hợp đồng (rỗng: không so số rừng/tổng tấn) */
 function dcSoSanh(nhap, sh, ctx) {
   const rows = [], so = (muc, nh, sv, lech, ghiChu) => rows.push({muc, nh, sv, lech: !!lech, ghiChu: ghiChu || ''});
@@ -98,9 +101,9 @@ function dcSoSanh(nhap, sh, ctx) {
   if (ngayS) so('Ngày ký hợp đồng', nhap.ngayKy, String(ngayS), dcNgay(nhap.ngayKy) !== dcNgay(ngayS)); else so('Ngày ký hợp đồng', nhap.ngayKy, '(Sheet không có)', false);
   const lots = (ctx && ctx.lots) || [];
   if (lots.length) {
-    const tanS = Math.round((sh.phieu || []).reduce((t, p) => t + (p.kl > 0 ? p.kl : 0), 0) * 1000) / 1000, tanA = Math.round(dcTan(lots) * 1000) / 1000;
+    const tanS = dcTanSheet(sh), tanA = Math.round(dcTan(lots) * 1000) / 1000;
     so('Số rừng', String(lots.length), String((sh.forests || []).length), lots.length !== (sh.forests || []).length, 'lô của chủ rừng đã lưu mã hợp đồng này');
-    so('Tổng tấn phiếu cân', dcFmtTan(tanA), dcFmtTan(tanS), Math.abs(tanA - tanS) > 0.0005, (sh.phieu || []).length + ' phiếu trên Sheet');
+    so('Tổng tấn phiếu cân', dcFmtTan(tanA), dcFmtTan(tanS), Math.abs(tanA - tanS) > 0.0005, dcPhieuHopLe(sh).length + ' phiếu hợp lệ trên Sheet; phía hồ sơ chỉ tính phiếu đã lưu, chưa tính bản nháp');
   } else so('Số rừng · tổng tấn', '(chưa có lô lưu mã hợp đồng này)', '(không so)', false, 'chỉ so khi lô đã lưu mã hợp đồng');
   return rows;
 }
@@ -108,9 +111,9 @@ function dcSoSanh(nhap, sh, ctx) {
 function dcSoSanhRung(o, f, sh, hd) {
   const rows = [], so = (muc, nh, sv, lech, ghiChu) => rows.push({muc, nh, sv, lech: !!lech, ghiChu: ghiChu || ''});
   const lots = dcLoCuaHd(o, hd), nLo = lots.length || 1, use = lots.length ? lots : [f];
-  const tanS = Math.round((sh.phieu || []).reduce((t, p) => t + (p.kl > 0 ? p.kl : 0), 0) * 1000) / 1000, tanA = Math.round(dcTan(use) * 1000) / 1000;
+  const tanS = dcTanSheet(sh), tanA = Math.round(dcTan(use) * 1000) / 1000;
   so('Số rừng của hợp đồng', String(nLo), String((sh.forests || []).length), nLo !== (sh.forests || []).length, lots.length ? '' : 'lô này chưa lưu mã hợp đồng: so theo một lô');
-  so('Tổng tấn phiếu cân', dcFmtTan(tanA), dcFmtTan(tanS), Math.abs(tanA - tanS) > 0.0005);
+  so('Tổng tấn phiếu cân', dcFmtTan(tanA), dcFmtTan(tanS), Math.abs(tanA - tanS) > 0.0005, 'phía hồ sơ chỉ tính phiếu đã lưu, chưa tính bản nháp');
   const nP = use.reduce((n, x) => n + (x.pc || []).length, 0); so('Số phiếu cân', String(nP), String((sh.phieu || []).length), nP !== (sh.phieu || []).length);
   const i = f.info || {}, F = (sh.forests || []).find(x => dcHd(x.maRung) === dcHd(i.maRung) && x.maRung);
   if (!F) so('Rừng ' + (i.maRung || '?'), i.maRung || '', '(mã rừng không có trên Sheet)', true);

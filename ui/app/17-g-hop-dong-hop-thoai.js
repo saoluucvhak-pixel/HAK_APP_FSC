@@ -27,11 +27,26 @@ function gsEff() {
     const X = gsCompose(F, Tf), code = man || X.maRung || '', tam = !!F.ghepTam && !m.conf[k] && j === k && !man;
     out.push({k, id: 'r' + k, F, Tf, X, code, tam, ok: !!code && !tam});
   });
-  return out;
+  return gsOrder(out);
 }
+/* QĐ8: khi hợp đồng đã có lô lưu trong ứng dụng, thứ tự phân bổ theo thứ tự nhập của lô (forestListNhap: taoLuc tăng dần; lô cũ không có taoLuc xếp trước, giữ vị trí hiện có);
+ * rừng chưa có lô (sẽ tạo mới, mới nhất) xếp sau theo thứ tự Sheet. Chưa có lô nào: giữ thứ tự Sheet. */
+function gsOrder(out) {
+  const rk = new Map(), pos = new Map();
+  out.forEach((e, i) => { const t = gsTarget(e); if (!t.exists) return; if (!pos.has(t.o.id)) { const ow = {}; forestListNhap(t.o).forEach((f, j) => { ow[f.id] = j; }); pos.set(t.o.id, ow); } rk.set(e, {oid: t.o.id, r: pos.get(t.o.id)[t.f.id]}); });
+  if (!rk.size) return out;
+  return out.map((e, i) => [e, i]).sort((a, b) => { const x = rk.get(a[0]), y = rk.get(b[0]); if (!x !== !y) return x ? -1 : 1; if (x && y && x.oid !== y.oid) return x.oid < y.oid ? -1 : 1; if (x && y && x.r !== y.r) return x.r - y.r; return a[1] - b[1]; }).map(z => z[0]);
+}
+/* số rừng của hợp đồng đã có lô nhưng không có taoLuc (lô cũ): thứ tự nhập của chúng chỉ là thứ tự lưu trong hồ sơ */
+const gsLoCuThieuTaoLuc = eff => eff.filter(e => { const t = gsTarget(e); return t.exists && !t.f.taoLuc; }).length;
 const gsEffOf = k => gsEff().find(e => e.k === k) || null;
 /* Lô đích của một rừng (theo mã rừng) và bản nháp của lô */
+function gsWithCache(fn) { if (gs.tc) return fn(); gs.tc = new Map(); try { return fn(); } finally { gs.tc = null; } }   // gsTarget được dùng lại trong MỘT lần vẽ / phân bổ
 function gsTarget(e) {
+  if (!gs.tc) return gsTargetRaw(e);
+  const k = e.code || ''; if (!gs.tc.has(k)) gs.tc.set(k, gsTargetRaw(e)); return gs.tc.get(k);
+}
+function gsTargetRaw(e) {
   const h = e.code ? HAKLoRung.lotsByMa(db, e.code)[0] : null;
   if (!h || !db.rs[h.owner] || !db.rs[h.owner].forests[h.forest]) return {exists: false, o: null, f: null, pc: [], dx: [], giay: [], oi: {}, fi: {}};
   const o = db.rs[h.owner], f = o.forests[h.forest], st = (f.pc || []).length ? stGetFor(o.id, f.id, true) : stages[stKeyOf(o.id, f.id)];
@@ -49,7 +64,8 @@ function gsOwnerCheck(eff) {
     err = 'Chủ rừng “' + (o.info.ten || o.info.ma || '') + '” trong ứng dụng có CCCD ' + gsMask(o.info.cccd) + ' khác CCCD của hợp đồng ' + d.hd + ' (' + d.cccdList.map(gsMask).join(', ') + '): không ghi, không tự đổi chủ rừng.';
   return {o, err};
 }
-const gsAliasOf = raw => ((db.bienAlias || {})[foldVi(raw)]) || (gs.m.alias || {})[foldVi(raw)] || '';
+const gsOwnStr = (o, k) => (o && typeof o === 'object' && Object.hasOwn(o, k) && typeof o[k] === 'string') ? o[k] : '';   // 'constructor', 'toString'… không được coi là đã ghép
+const gsAliasOf = raw => { const k = foldVi(raw); return gsOwnStr(db.bienAlias, k) || gsOwnStr(gs.m && gs.m.alias, k); };
 
 /* ----- Phiếu cân của hợp đồng: trạng thái từng dòng Sheet so với lô đã có (mới / đổi / trùng / nghi đổi số / lệch CCCD / lỗi / cần ghép xe) ----- */
 function gsLots(eff) {
@@ -71,7 +87,7 @@ function gsRows() {
     if (kp && r.st !== 'dup') seen.add(kp);
     return r;
   });
-  const cand = rows.filter(r => r.st === 'new');
+  const cand = rows.filter(r => r.st === 'new'); let byNo = null;
   if (cand.length) {
     const sheet = cand.map(r => ({idx: r.idx, so: r.p.soPhieu, ngay: r.p.ngay, bks: r.bien, kg: r.p.klKg}));
     const lo = lots.map(x => ({id: x.loId + ':' + x.p._id, so: x.p.soPhieu, ngay: x.p.ngay, bks: x.p.bienSo, kg: typeof x.p.klKg === 'number' ? x.p.klKg : Math.round((x.p.kl || 0) * 1000), soCu: x.p.soCu, lo: x.lo}));
@@ -97,7 +113,8 @@ function gsRows() {
         else { r.st = 'dsn'; r.note = 'Nghi đổi số: chọn “Đổi số” hoặc “Là chuyến khác”; mặc định không ghi'; }
       } else if (k.tt === 'khong-xet') { r.st = 'issue'; r.note = 'Thiếu số phiếu hoặc ngày cân'; }
       else {
-        const no = B.soPhieu(r.p.soPhieu), samNo = lots.find(x => B.soPhieu(x.p.soPhieu) === no);
+        if (!byNo) { byNo = new Map(); lots.forEach(x => { const n = B.soPhieu(x.p.soPhieu); if (!byNo.has(n)) byNo.set(n, x); }); }   // dựng một lần, không quét tuyến tính cho từng phiếu
+        const no = B.soPhieu(r.p.soPhieu), samNo = byNo.get(no);
         if (samNo) r.note = 'Cùng số phiếu với phiếu đã có ngày ' + (samNo.p.ngay || '?') + ' nhưng khác ngày cân: hợp lệ nếu là chuyến khác';
       }
     });
@@ -113,10 +130,12 @@ function gsUsed(e, rows) {
   return {dadung, them, tong: dadung + them};
 }
 /* Phân bổ phiếu mới vào rừng (hàm thuần src/phanbophieu.js). keepTay=false: xóa mọi đổi tay rồi tính lại cả hợp đồng. */
-function gsAlloc(keepTay) {
+function gsAlloc(keepTay) { return gsWithCache(() => gsAllocIn(keepTay)); }
+function gsAllocIn(keepTay) {
   const m = gs.m, eff = gsEff(); if (!keepTay) m.tay.clear();
   const rows = gsRows(), news = rows.filter(r => r.st === 'new');
-  Object.keys(m.as).forEach(k => { if (!news.some(r => r.key === k)) delete m.as[k]; });
+  const newKeys = new Set(news.map(r => r.key));
+  Object.keys(m.as).forEach(k => { if (!newKeys.has(k)) delete m.as[k]; });
   const rungs = eff.map(e => ({id: e.id, ha: e.ok ? e.F.hecta : null, dinhMuc: e.ok ? e.F.dinhMuc : null}));
   const daDung = eff.map(e => ({rungId: e.id, kg: gsUsed(e, []).dadung})).filter(x => x.kg > 0);
   const phieu = news.map(r => ({key: r.key, so: r.p.soPhieu, ngay: r.p.ngay, kg: r.p.klKg, row: r.p.row, rungTay: m.tay.has(r.key) ? (m.as[r.key] >= 0 ? 'r' + m.as[r.key] : '') : undefined}));
@@ -162,11 +181,16 @@ function gsNewState(d) {
 }
 function gsSetCode(k, val) {
   const m = gs.m, v = String(val || '').trim(), codes = m.d.forests.map((F, j) => ({j, code: F.maRung})).filter(x => x.code), hit = codes.find(x => x.code.toUpperCase() === v.toUpperCase());
-  const cur = m.tOf[k];
+  const cur = m.tOf[k]; let h = -1;
   if (!v) { m.tOf[k] = -1; delete m.manual[k]; }
-  else if (hit) { const h = m.tOf.findIndex(x => x === hit.j); m.tOf[k] = hit.j; if (h >= 0 && h !== k) m.tOf[h] = cur; delete m.manual[k]; }
-  else { m.tOf[k] = -1; m.manual[k] = v.slice(0, 64); }
-  m.conf[k] = true; gsEff().forEach(e => gsInitSel(e.k)); gsAlloc(true);
+  else if (hit) { h = m.tOf.findIndex(x => x === hit.j); m.tOf[k] = hit.j; if (h >= 0 && h !== k) m.tOf[h] = cur; delete m.manual[k]; }
+  else {   // mã gõ tay: không được trùng mã đang dùng cho rừng khác của hợp đồng này
+    const dup = gsEff().find(e => e.k !== k && e.code && e.code.toUpperCase() === v.toUpperCase());
+    if (dup) return {err: 'Mã rừng “' + v.slice(0, 64) + '” đã được dùng cho một rừng khác của hợp đồng này: không đổi.'};
+    m.tOf[k] = -1; m.manual[k] = v.slice(0, 64);
+  }
+  m.conf[k] = true; [k, h].forEach(j => { if (j >= 0) gsInitSel(j); }); gsAlloc(true);   // chỉ đặt lại lựa chọn của rừng liên quan (k và rừng bị hoán đổi h)
+  return {ok: true};
 }
 
 /* ----- Mở / đóng ----- */
@@ -176,6 +200,7 @@ function gsOpen(d, opener) {
 }
 function gsClose() {
   const b = $('#hdBox'); if (!b.classList.contains('on')) return;
+  if (gs.m && gs.m.busy) return;   // đang ghi vào hồ sơ: không đóng (tránh mất bản nháp / TypeError trong gsApply)
   b.classList.remove('on'); $('#hdBody').innerHTML = '';
   const m = gs.m; gs.m = null;
   gsRefreshList();
@@ -278,7 +303,7 @@ function gsTabPc(e, eff, rows) {
     '<select data-gsas="' + esc(r.key) + '" aria-label="Vào rừng — phiếu ' + esc(r.p.soPhieu) + '"' + (multi ? '' : ' disabled') + '><option value="-1"' + (m.as[r.key] === -1 ? ' selected' : '') + '>Chưa phân bổ</option>' + eff.map((x, i) => '<option value="' + x.k + '"' + (m.as[r.key] === x.k ? ' selected' : '') + '>Rừng ' + (i + 1) + ': ' + esc(x.code || 'chưa có mã') + '</option>').join('') + '</select>';
   const warnList = [];
   eff.forEach((x, i) => { const u = gsUsed(x, rows), du = x.F.duKienKg; if (du != null && u.tong > du) warnList.push('<div class="msg err gsMsg"><b>Rừng ' + (i + 1) + ' ' + esc(x.code) + ': Vượt dự kiến ' + gsTan(u.tong - du) + ' tấn</b> (so với dự kiến ' + gsTan(du) + ' t, chưa cộng dung sai). Vẫn cập nhật được.</div>'); else if (x.ok && du == null && multi) warnList.push('<div class="msg warn gsMsg">Rừng ' + (i + 1) + ' ' + esc(x.code) + ': không tính được dự kiến (thiếu hecta/định mức), không tự nhận phiếu; vẫn phân bổ tay được.</div>'); });
-  return '<div class="gsBlk"><div class="gsBh"><b>Phiếu cân của hợp đồng (HoSoKeo)</b><label class="gsInl"><input type="checkbox" data-gson="2"' + (s.on[2] ? ' checked' : '') + '> Cập nhật phiếu cân vào rừng này</label></div>' +
+  return '<div class="gsBlk"><div class="gsBh"><b>Phiếu cân của hợp đồng (HoSoKeo)</b><label class="gsInl"><input type="checkbox" data-gson="2"' + (s.on[2] ? ' checked' : '') + '> Cập nhật phiếu cân vào rừng này (vào bản nháp, chưa lưu)</label></div>' +
     '<div class="gsRule">' + (multi ? '<b>Phân bổ:</b> theo ngày cân; rừng nhập trước nhận đến hết sản lượng dự kiến (+ dung sai), phần còn lại sang rừng sau; rừng cuối nhận phần dư.' : '<b>Hợp đồng 1 rừng:</b> mọi phiếu mặc định vào rừng này.') + '</div>' + gsDsnHtml(rows) +
     '<div class="gsTools row">' + (multi ? '<button type="button" class="btn sm" data-act="gsAuto">Phân bổ tự động</button><button type="button" class="btn sm ghost" data-act="gsFill" data-k="' + e.k + '">Phân bổ phiếu còn lại vào rừng ' + (eff.indexOf(e) + 1) + '</button><button type="button" class="btn sm ghost" data-act="gsClear">Xóa phân bổ</button><label class="gsInl">Dung sai <input type="number" min="0" max="30" step="1" data-gstol value="' + m.tol + '" style="width:62px" aria-label="Dung sai phần trăm (0 đến 30)"> %</label>' : '') +
     '<span class="gsGrow"></span><label class="gsInl">Lọc <select data-gspcf aria-label="Lọc phiếu theo trạng thái">' + [['all', 'Tất cả'], ['new', 'Mới'], ['upd', 'Đổi'], ['same', 'Trùng'], ['dsn', 'Nghi đổi số'], ['lech', 'Lệch CCCD'], ['issue', 'Cần kiểm tra'], ['alias', 'Cần ghép xe'], ['unassigned', 'Chưa phân bổ']].map(([v, l]) => '<option value="' + v + '"' + (m.pcF === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
@@ -292,7 +317,8 @@ function gsTabPc(e, eff, rows) {
     '<datalist id="gsPlates">' + [...new Set(eff.flatMap(x => gsTarget(x).dx.map(v => v.bienSo)).filter(Boolean))].map(v => '<option value="' + esc(v) + '">').join('') + '</datalist>' +
     '<div class="row gsPg"><span>' + F.length + ' phiếu · trang ' + (m.page + 1) + '/' + pages + '</span><button type="button" class="btn sm ghost" data-act="gsPcPage" data-d="-1"' + (m.page ? '' : ' disabled') + ' aria-label="Trang phiếu trước">‹</button><button type="button" class="btn sm ghost" data-act="gsPcPage" data-d="1"' + (m.page < pages - 1 ? '' : ' disabled') + ' aria-label="Trang phiếu sau">›</button></div></div>';
 }
-function gsRender() {
+function gsRender() { return gsWithCache(gsRenderIn); }
+function gsRenderIn() {
   const m = gs.m; if (!m) return;
   const body = document.getElementById('hdBody');
   const a = document.activeElement; let fk = null;
@@ -303,15 +329,16 @@ function gsRender() {
   const alerts = (d.canhBaoNang.length ? '<div class="msg err gsMsg" id="gsHeavy"><b>Cảnh báo nặng: mã hợp đồng ' + esc(d.hd) + ' thuộc ' + d.cccdList.length + ' CCCD khác nhau</b> (' + d.cccdList.map(c => esc(gsMask(c))).join(', ') + ') ở HoSoRung dòng ' + d.canhBaoNang[0].dong.map(esc).join(', ') + '.' +
     (m.ack ? ' <span class="pill ok">Đã xác nhận 2 bước — được phép cập nhật</span>' : ' Chưa thể cập nhật cho đến khi bạn xác nhận 2 lần. <button type="button" class="btn sm" data-act="gsAck">Xác nhận cảnh báo (2 bước)…</button>') + '</div>' : '') +
     (d.warns.filter(w => !/cảnh báo nặng/.test(w)).map(w => '<div class="msg warn gsMsg">' + esc(w) + '</div>').join('')) + (d.notes.length ? '<details class="gsNotes"><summary class="mut">Ghi chú dữ liệu (' + d.notes.length + ')</summary><ul class="issues">' + d.notes.map(n => '<li>' + esc(n) + '</li>').join('') + '</ul></details>' : '') + (m.msg ? '<div class="msg ' + m.msg.kind + ' gsMsg" role="status">' + esc(m.msg.text) + '</div>' : '') +
-    (m.sum ? '<div class="msg ok gsMsg" id="gsSum" role="status"><b>Đã cập nhật vào hồ sơ (bản nháp):</b><br>' + m.sum.map(esc).join('<br>') + '<br>Phiếu cân đã vào BẢN NHÁP: bấm “Lưu dữ liệu vào lô” ở từng lô để chính thức lưu.</div>' : '');
+    (m.sum ? '<div class="msg ok gsMsg" id="gsSum" role="status"><b>Kết quả cập nhật:</b> thông tin chủ rừng, rừng, tọa độ, giấy tờ <b>đã ghi và đã lưu</b> vào hồ sơ; phiếu cân chỉ vào <b>BẢN NHÁP</b>.<br>' + m.sum.map(esc).join('<br>') + (m.sumPhieu ? '<br><b>Phiếu cân chưa được lưu:</b> bấm “Lưu dữ liệu vào lô” ở từng lô để lưu chính thức.' : '') + '</div>' : '') +
+    (gsLoCuThieuTaoLuc(eff) >= 2 ? '<div class="msg warn gsMsg" id="gsCu">Hợp đồng nhiều rừng cũ không có thời điểm tạo: thứ tự “nhập trước” của các rừng này chỉ theo thứ tự lưu trong hồ sơ, hãy kiểm tra thứ tự rừng trước khi phân bổ phiếu.</div>' : '');
   const tabs = [['ho', 'Hồ sơ rừng'], ['gps', 'Tọa độ' + (e ? ' (' + e.X.gps.length + ')' : '')], ['pc', 'Phiếu cân (' + d.phieu.length + ')']];
   const con = e ? '<div class="gsDt"><div class="gsTabs" role="tablist" aria-label="Nội dung của rừng">' + tabs.map(([k, l]) => '<button type="button" role="tab" class="gsTab' + (m.tab === k ? ' on' : '') + '" aria-selected="' + (m.tab === k) + '" data-gstab="' + k + '">' + l + '</button>').join('') + '</div><div class="gsDtB" role="tabpanel">' + alerts + (m.tab === 'ho' ? gsTabHo(e) : m.tab === 'gps' ? gsTabGps(e) : gsTabPc(e, eff, rows)) + '</div></div>' :
     '<div class="gsDt"><div class="gsDtB">' + alerts + '<p class="mut">Không có dữ liệu rừng để cập nhật.</p></div></div>';
   const tot = eff.map((x, i) => { const c = gsCount(x, rows); return 'R' + (i + 1) + ': ' + c.f + ' trường · ' + c.g + ' điểm · ' + c.p + ' phiếu'; }).join(' | ');
   const blocked = d.canhBaoNang.length && !m.ack;
-  body.innerHTML = '<div class="gsHead"><div><h2 id="hdTitle">' + esc(d.hd) + ' · ' + esc(own.ten || '(chưa rõ chủ rừng)') + '</h2><div class="mut">CCCD ' + esc(d.cccd || '—') + ' · ký ' + esc(own.ngayKyHopDong || '—') + ' · ' + eff.length + ' rừng · ' + d.phieu.length + ' phiếu cân</div></div><div class="row"><span class="pill ' + st[1] + '">' + st[0] + '</span><button type="button" class="btn ghost sm" data-act="gsClose">Đóng ✕</button></div></div>' +
+  body.innerHTML = '<div class="gsHead"><div><h2 id="hdTitle">' + esc(d.hd) + ' · ' + esc(own.ten || '(chưa rõ chủ rừng)') + '</h2><div class="mut">CCCD ' + esc(d.cccd ? gsMask(d.cccd) : '—') + ' · ký ' + esc(own.ngayKyHopDong || '—') + ' · ' + eff.length + ' rừng · ' + d.phieu.length + ' phiếu cân</div></div><div class="row"><span class="pill ' + st[1] + '">' + st[0] + '</span><button type="button" class="btn ghost sm" data-act="gsClose"' + (m.busy ? ' disabled' : '') + '>Đóng ✕</button></div></div>' +
     '<div class="gsMb">' + gsChaHtml(eff, rows) + con + '</div>' +
-    '<div class="gsFoot"><span class="mut gsTot" id="gsTot">' + esc(tot || 'Chưa chọn gì') + '</span><span class="row"><button type="button" class="btn ghost" data-act="gsAll">Chọn phần mới</button><button type="button" class="btn ghost" data-act="gsClose">Đóng</button><button type="button" class="btn" data-act="gsApply"' + (blocked || m.busy || !eff.length ? ' disabled' : '') + (blocked ? ' title="Cần xác nhận cảnh báo nhiều CCCD (2 bước) trước"' : '') + '>Cập nhật vào hồ sơ</button></span></div>';
+    '<div class="gsFoot"><span class="mut gsTot" id="gsTot">' + esc(tot || 'Chưa chọn gì') + '</span><span class="row"><button type="button" class="btn ghost" data-act="gsAll">Chọn phần mới</button><button type="button" class="btn ghost" data-act="gsClose"' + (m.busy ? ' disabled' : '') + '>Đóng</button><button type="button" class="btn" data-act="gsApply"' + (blocked || m.busy || !eff.length ? ' disabled' : '') + (blocked ? ' title="Cần xác nhận cảnh báo nhiều CCCD (2 bước) trước"' : '') + ' title="Chủ rừng, rừng, tọa độ, giấy tờ được ghi và lưu ngay; phiếu cân vào bản nháp, cần bấm Lưu dữ liệu vào lô">Cập nhật vào hồ sơ</button></span></div>';
   const nsc = body.querySelector('.gsDtB'); if (nsc) nsc.scrollTop = scT; const nmb = body.querySelector('.gsMb'); if (nmb) nmb.scrollTop = scM;
   if (fk) { let n = null; if (fk[0] === 'id') n = document.getElementById(fk[1]); else if (fk[0] === 'data-act') n = [...body.querySelectorAll('[data-act]')].find(x => x.dataset.act === fk[1] && x.dataset.k === fk[2] && x.dataset.d === fk[3]); else n = [...body.querySelectorAll('[' + fk[0] + ']')].find(x => x.getAttribute(fk[0]) === fk[1]);
     if (n && n.focus) n.focus(); }

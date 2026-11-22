@@ -3,7 +3,7 @@ const {app, BrowserWindow, ipcMain, dialog, Menu, shell, net, safeStorage, sessi
 const path = require('path');
 const fs = require('fs');
 const {Store, SCHEMA_VERSION} = require('./store');
-const {Lookup, checkQuery} = require('./lookup');
+const {Lookup, checkQuery, cleanSearchOpts} = require('./lookup');
 const LoRung = require('./lorung');
 const Settings = require('./settings');
 const DM = require('./datamove');
@@ -282,9 +282,10 @@ function registerIpc() {
   ipcMain.handle('google:status', () => gauth.status());
   ipcMain.handle('google:login', async () => { try { return {ok: true, status: await gauth.login()}; } catch (e) { log('ERROR', 'google login: ' + e.code); return {ok: false, code: e.code, error: e.message, status: gauth.status()}; } });
   ipcMain.handle('google:logout', () => ({ok: true, status: gauth.logout()}));
-  ipcMain.handle('lookup:search', (e, q, tab, opts) => checkQuery(q) || wrap(() => lookup.search(q || '', tab || '', opts || {}))());
+  ipcMain.handle('lookup:search', (e, q, tab, opts) => checkQuery(q) || wrap(() => lookup.search(q || '', tab || '', cleanSearchOpts(opts)))());
   ipcMain.handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
+  ipcMain.handle('lookup:summaryHd', (e, list) => wrap(() => lookup.summaryHd(list))());
   ipcMain.handle('lookup:buildHd', (e, hd) => wrap(() => { if (typeof hd !== 'string' || !hd.trim() || hd.length > 64) return {ok: false, error: 'Mã hợp đồng không hợp lệ.'}; return lookup.build(hd); })());
   /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
   const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
