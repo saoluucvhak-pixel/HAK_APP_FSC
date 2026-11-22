@@ -98,7 +98,7 @@ function stCells(kind, r, i, dm) {
   const stat = (L[1] ? '<span class="pill ' + L[0] + '" title="' + esc(tip) + '">' + L[1] + '</span>' : '<span class="mut">Đã lưu</span>') + (r._nguon ? '<br><small class="mut">' + esc(r._nguon) + '</small>' : '');
   const del = s === 'new' ? '<button class="btn ghost sm" data-act="stDel" data-kind="' + kind + '" data-i="' + i + '" title="Bỏ dòng này khỏi lượt nhập (chưa lưu nên không ảnh hưởng dữ liệu đã lưu)">Bỏ dòng</button>' : '<button class="btn ghost sm" data-act="stDel" data-kind="' + kind +
   '" data-i="' + i + '" title="Xóa bản ghi đã lưu khỏi lô (có hiệu lực khi bấm Lưu)">Xóa đã lưu</button>';
-  return {stat: '<td>' + stat + '</td>', act: '<td class="stAct"><button class="btn ghost sm" data-act="stEdit" data-kind="' + kind + '" data-i="' + i + '">Sửa</button> ' + del + '</td>'};
+  return {stat: '<td>' + stat + '</td>', act: '<td class="stAct"><button class="btn ghost sm" data-act="stEdit" data-kind="' + kind + '" data-i="' + i + '">Sửa</button> ' + (kind === 'pc' && s !== 'new' ? '<button class="btn ghost sm" data-act="pcDoiSo" data-i="' + i + '" title="Đổi số phiếu của chuyến đã lưu: bắt lý do, ghi nhật ký, giữ nguyên khối lượng">Đổi số</button> ' : '') + del + '</td>'};
 }
 /* bảng có dữ liệu nhưng không dòng nào hiện (bộ lọc, hoặc chỉ xem đội / hợp đồng đang mở): nói rõ, KHÔNG mời nhập lại (tránh nhập trùng) */
 const ST_SF = {nc: 'lo_nhan_cong', dx: 'lo_xe', pc: 'lo_phieu_can'};

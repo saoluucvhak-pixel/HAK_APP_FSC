@@ -42,8 +42,10 @@ function stOpen(kind, idx, vals, parent) {
 function stRender() {
   const kind = stm.kind, st = stCur(), rec = curRec(), o = curOwner(); if (!st || !rec) return;
   const plates = [...new Set(st.cur.dx.map(x => x.bienSo).filter(Boolean))];
+  const daLuu = kind === 'pc' && stm.id && st.base.pc.some(b => b._id === stm.id);   // ô Số phiếu của dòng ĐÃ LƯU bị khóa: đổi số phải qua “Đổi số phiếu” (có lý do, có nhật ký)
   const fld = ([k, label, opt]) => {
     const v = stm.vals[k] == null ? '' : stm.vals[k];
+    if (daLuu && k === 'soPhieu') return '<label><span>' + esc(label) + ' (đã lưu: chỉ đổi qua nút bên cạnh)</span><span class="row" style="gap:6px;flex-wrap:nowrap"><input name="' + k + '" value="' + esc(v) + '" readonly aria-readonly="true" style="flex:1"><button type="button" class="btn ghost sm" data-act="pcDoiSoForm">Đổi số phiếu…</button></span></label>';
     if (opt === 'XE') return '<label><span>' + esc(label) + '</span><select name="' + k + '">' + '<option value="">— chọn xe của lô —</option>' + plates.map(p => '<option value="' + esc(p) + '"' + (HAKStage.bienKey(p) === HAKStage.bienKey(v) ? ' selected' : '') + '>' + esc(p) +
     '</option>').join('') + (v && !plates.some(p => HAKStage.bienKey(p) === HAKStage.bienKey(v)) ? '<option value="' + esc(v) + '" selected>' + esc(v) + ' (chưa có trong lô)</option>' : '') + '<option value="__new">+ Thêm xe mới…</option></select></label>';
     if (opt) { const list = typeof opt === 'function' ? opt() : opt;
@@ -92,6 +94,7 @@ function stFinishRow() {
   }
   row._nguon = old && old._nguon ? old._nguon : 'Nhập tay';
   if (old && old.id && !row.id) row.id = old.id;
+  if (old && old.soCu && !row.soCu) row.soCu = JSON.parse(JSON.stringify(old.soCu));   // biểu mẫu không mang soCu: giữ vết đổi số của phiếu
   if (kind === 'pc') { ['hdvcId', 'xeRowId', 'xeTay'].forEach(k => { if (old && old[k] && !row[k]) row[k] = old[k]; }); if (!old && hdMo('dx')) { const f = curForest(), c = f && phieuDich(f, st.cur.dx, hdMo('dx'), row.bienSo); if (c) { row.hdvcId = c.hdvcId;
   if (c.xe && c.xe.id) row.xeRowId = c.xe.id; } } }   // 3.0: phiếu thêm tay ở hợp đồng đang mở   // 3.0: ID dòng (chấm công, phiếu cân, phân bổ nối theo ID) không đổi khi sửa
   ['nguoiId', 'viTriId', 'xeId', 'taiXeId'].forEach(k => { const v = vals[k] != null ? vals[k] : old && old[k]; if (v) row[k] = v; });   // 3.0: liên kết danh mục (chọn từ danh mục; sửa tay giữ liên kết)

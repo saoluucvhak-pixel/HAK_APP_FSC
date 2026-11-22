@@ -163,3 +163,10 @@ test('DON-4 merge khớp theo số cũ không được báo "thay đổi số ph
   assert.strictEqual(rep.same, 1); assert.deepStrictEqual(rep.changes, []); assert.strictEqual(st2.cur.pc[0].soPhieu, 'GL5-0102');
   const rep1 = S.merge(st, 'pc', [{soPhieu: 'GL5-0101', ngay: NGAY, bienSo: '43C-500.05', kl: 21.3}], {source: 'Google Sheets'}); assert.deepStrictEqual(rep1.changes, []);
 });
+
+test('updateRow: sửa một ô khác của phiếu đã đổi số (biểu mẫu không mang soCu) KHÔNG làm mất soCu', () => {
+  const st = mk([pc1()]); assert.strictEqual(S.doiSoPhieu(st, 'p1', 'GL5-0102', META(), CTX()).ok, true);
+  const form = Object.assign({}, st.cur.pc[0]); delete form.soCu; form.ghiChu = 'sửa tay ô khác';
+  S.updateRow(st, 'pc', 'p1', form);
+  assert.strictEqual(st.cur.pc[0].soCu.length, 1); assert.strictEqual(st.cur.pc[0].soCu[0].so, 'GL5-0101'); assert.strictEqual(st.cur.pc[0].soPhieu, 'GL5-0102');
+});
