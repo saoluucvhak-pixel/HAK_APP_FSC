@@ -45,18 +45,29 @@ function gsFromGroups(r) {
   gs.list = [...m.values()]; gs.byKey = m; gs.noHd = noHd; gs.page = 0;
   if (!lk.q) gs.list.sort((a, b) => a.hd.localeCompare(b.hd, 'vi', {numeric: true}));
 }
+/* Làm giàu trạng thái từng hợp đồng: ưu tiên các dòng ĐANG HIỆN (trang hiện tại của bộ lọc), phần còn lại chạy nền theo lô nhỏ, nhường luồng giữa các lô (setTimeout);
+ * dừng khi đóng màn hoặc có lần chạy mới; luôn dọn gs.prog khi thoát. */
 async function gsEnrich() {
   const run = ++gs.run, todo = gs.list.filter(g => !gs.sum.has(g.key));
   if (!todo.length) { gs.prog = null; return; }
-  gs.prog = {done: 0, total: todo.length};
-  for (let i = 0; i < todo.length; i += 10) {
-    if (run !== gs.run || !$('#lkBox').classList.contains('on')) return;
-    const part = todo.slice(i, i + 10), res = await Promise.all(part.map(g => HB.lookup.buildHd(g.hd).catch(() => null)));
-    if (run !== gs.run) return;
-    part.forEach((g, j) => gs.sum.set(g.key, gsSummary(res[j])));
-    gs.prog.done = Math.min(todo.length, i + 10); gsRefreshList();
+  const total = todo.length; let done = 0;
+  gs.prog = {done: 0, total};
+  const alive = () => run === gs.run && $('#lkBox').classList.contains('on');
+  try {
+    while (alive()) {
+      const vis = gsFiltered().slice(gs.page * GS_PAGE, gs.page * GS_PAGE + GS_PAGE).filter(g => !gs.sum.has(g.key));
+      const part = vis.length ? vis.slice(0, 10) : todo.filter(g => !gs.sum.has(g.key)).slice(0, 5);
+      if (!part.length) break;
+      const res = await Promise.all(part.map(g => HB.lookup.buildHd(g.hd).catch(() => null)));
+      if (!alive()) break;
+      part.forEach((g, j) => gs.sum.set(g.key, gsSummary(res[j])));
+      done += part.length; gs.prog.done = Math.min(total, done); gsRefreshList();
+      await new Promise(r => setTimeout(r, vis.length ? 0 : 20));   // nhường luồng cho giao diện giữa các lô
+    }
+  } finally {
+    if (run === gs.run || !$('#lkBox').classList.contains('on')) gs.prog = null;
+    if (run === gs.run) gsRefreshList();
   }
-  if (run === gs.run) { gs.prog = null; gsRefreshList(); }
 }
 const gsFiltered = () => gs.stat ? gs.list.filter(g => (gs.sum.get(g.key) || {}).status === gs.stat) : gs.list;
 
@@ -66,7 +77,7 @@ function gsListInner() {
   const chip = (k, l, n) => '<button type="button" class="gsChip' + (gs.stat === k ? ' on' : '') + '" data-gsstat="' + k + '" aria-pressed="' + (gs.stat === k) + '">' + l + (n == null ? '' : ' <span class="pill">' + fmt(n) + '</span>') + '</button>';
   const rows = L.slice(gs.page * GS_PAGE, gs.page * GS_PAGE + GS_PAGE).map(g => {
     const s = gs.sum.get(g.key), st = s ? GS_ST[s.status] : null, cccd = s && s.cccd ? s.cccd : [...g.cccds][0] || '';
-    return '<tr class="gsRow" data-gsrow="' + esc(g.key) + '" tabindex="0" aria-label="Mở hợp đồng ' + esc(g.hd) + '"><td><b>' + esc(g.hd) + '</b></td><td>' + esc((s && s.ten) || g.ten) + '</td><td>' + esc(cccd) + (s && s.nCccd > 1 ? ' <span class="pill err" title="Mã hợp đồng thuộc nhiều CCCD">+' + (s.nCccd - 1) + '</span>' : '') +
+    return '<tr class="gsRow" data-gsrow="' + esc(g.key) + '" tabindex="0" aria-label="Mở hợp đồng ' + esc(g.hd) + '"><td><b>' + esc(g.hd) + '</b></td><td>' + esc((s && s.ten) || g.ten) + '</td><td>' + esc(gsMask(cccd)) + (s && s.nCccd > 1 ? ' <span class="pill err" title="Mã hợp đồng thuộc nhiều CCCD">+' + (s.nCccd - 1) + '</span>' : '') +
       '</td><td>' + (s ? esc(s.ngay) : '…') + '</td><td class="num">' + (s ? s.nRung : '…') + '</td><td class="num">' + (s ? s.nPhieu : '…') + '</td><td class="num">' + (s ? numTxt(s.tan) : '…') + '</td><td>' +
       (st ? '<span class="pill ' + st[1] + '">' + st[0] + '</span>' + (s.why.length ? '<div class="mut gsWhy">' + s.why.slice(0, 2).map(esc).join('; ') + (s.why.length > 2 ? '…' : '') + '</div>' : '') : '<span class="mut">đang tính…</span>') + '</td></tr>';
   }).join('');
@@ -117,5 +128,7 @@ async function gsOpenHd(raw, opener) {
     const d = await HB.lookup.buildHd(raw);
     if (!d || !d.ok) { lk.msg = {kind: 'err', text: (d && d.error) || 'Không đọc được hợp đồng.'}; lkRender(); return; }
     gsOpen(d, opener);
+  } catch (er) {
+    lk.msg = {kind: 'err', text: 'Không mở được hợp đồng ' + String(raw) + ': ' + ((er && er.message) || er)}; lkRender();
   } finally { gs.busyOpen = false; }
 }

@@ -26,7 +26,8 @@ function lkInitSel() {
   F.docs.forEach((d, i) => { s.docs[i] = !T.giay.some(g => g.loai === d.loai && (same(g.so, d.so) || !d.so)); });
   lk.sel = s; lk.pcFilter = ''; lkPhieuDefaults();
 }
-function lkAliasOf(raw) { return ((db.bienAlias || {})[foldVi(raw)]) || (lk.alias || {})[foldVi(raw)] || ''; }
+const lkOwnStr = (o, k) => (o && typeof o === 'object' && Object.hasOwn(o, k) && typeof o[k] === 'string') ? o[k] : '';   // khóa 'constructor', 'toString'… không được coi là đã ghép
+function lkAliasOf(raw) { const k = foldVi(raw); return lkOwnStr(db.bienAlias, k) || lkOwnStr(lk.alias, k); }
 /* Đổi biển số hàng loạt ngay lúc tra cứu: chọn nhóm phiếu (đang tích, hoặc cùng một biển trên bảng) rồi gõ biển mới một lần; vẫn chỉ vào bản nháp */
 function lkBulkHtml(P, chosen) {
   const groups = {}; P.filter(p => p.st !== 'issue').forEach(p => { const k = p.bien || ('(tên xe) ' + p.bienRaw); groups[k] = (groups[k] || 0) + 1; });
