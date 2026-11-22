@@ -155,7 +155,7 @@
         (r.giaLoi || []).forEach(m => mark(r, 'err', m + ' (sửa hoặc để trống ô này rồi nạp lại; giá trị đã lưu không bị đổi)'));
         [['can1', 'Cân lần 1'], ['can2', 'Cân lần 2'], ['klKg', 'Khối lượng (kg)']].forEach(([k, label]) => { if (r[k] === 'x' || (typeof r[k] === 'number' && r[k] < 0)) mark(r, 'err', label + ' phải là số không âm'); });
         if (typeof r.klKg === 'number' && typeof r.kl === 'number' && r.klKg > 0 && Math.abs(r.klKg / 1000 - r.kl) > 0.0005) mark(r, 'warn', 'Khối lượng kg (' + ctx.fmt(r.klKg) + ') và tấn (' + fmtT(Math.round(r.kl * 1000)) + ') không khớp nhau');
-        if (typeof r.can1 === 'number' && typeof r.can2 === 'number' && typeof r.klKg === 'number' && r.klKg > 0 && Math.abs(Math.abs(r.can1 - r.can2) - r.klKg) > 1) mark(r, 'warn', 'Khối lượng kg không bằng chênh lệch cân lần 1 và cân lần 2');
+        if (typeof r.can1 === 'number' && typeof r.can2 === 'number' && typeof r.klKg === 'number' && r.klKg > 0 && !canDao && Math.abs((r.can1 - r.can2) - r.klKg) > 1) mark(r, 'warn', 'Khối lượng kg không bằng chênh lệch cân lần 1 và cân lần 2');
       });
       /* đối chiếu khối lượng khai thác với tổng phiếu cân (mục tiêu “nhất quán số liệu” của QT-FSC-01): ngưỡng người dùng đặt (pcNguong, %) áp dụng cho cả số dự kiến;
        * không đặt ngưỡng thì vẫn đối chiếu KHỐI LƯỢNG THỰC TẾ (số ghi vào BM-08, BM-14) với ngưỡng mặc định PC_NGUONG_MAC_DINH %, để biên bản không ghi khác tổng phiếu cân mà không ai biết */

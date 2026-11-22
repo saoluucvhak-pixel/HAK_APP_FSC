@@ -18,6 +18,8 @@
     pc: r => BKS().soPhieu(r.soPhieu)   // số phiếu chuẩn hóa như HAKBks.khoaPhieu (viết hoa, bỏ khoảng trắng): “PA 1” và “PA1” là một số phiếu
   };
   const KINDS = ['nc', 'dx', 'pc'];
+  /* ngày sinh theo lịch (1/2/1990 và 01/02/1990 là một ngày); không đọc được thì để nguyên chữ đã chuẩn hóa */
+  const ngaySinhKhoa = v => { const t = String(v == null ? '' : v).trim(); const m = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/.exec(t); return m ? m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') : t.toLowerCase(); };
   const sig = r => JSON.stringify(Object.keys(r).filter(k => k[0] !== '_').sort().map(k => [k, r[k]]));
   const clone = x => JSON.parse(JSON.stringify(x));
   /* _id nội bộ: duy nhất trong TOÀN BỘ lô (nhân công, xe, phiếu cân; bản đã lưu lẫn bản nháp, kể cả dòng chờ xóa có thể hoàn tác).
@@ -97,7 +99,9 @@
       const r = clone(r0), k = key(r), suy = !!r._ngay2Suy; delete r._ngay2Suy; if (opt.source) r._nguon = opt.source;
       if (k) { if (seenInFile.has(k)) rep.dupInFile.push(k); seenInFile.set(k, (seenInFile.get(k) || 0) + 1); }
       const dup2 = k && seenInFile.get(k) > 1;
-      const matches = k && !dup2 ? list.filter(x => key(x) === k) : [];
+      /* nhân công CHƯA có CCCD chỉ ghép được theo họ tên: hai người trùng tên mà ngày sinh khác nhau là hai người, không ghi đè lên nhau */
+      const khacNguoi = x => kind === 'nc' && !cccd(r.cccd) && !cccd(x.cccd) && ngaySinhKhoa(x.ngaySinh) && ngaySinhKhoa(r.ngaySinh) && ngaySinhKhoa(x.ngaySinh) !== ngaySinhKhoa(r.ngaySinh);
+      const matches = k && !dup2 ? list.filter(x => key(x) === k && !khacNguoi(x)) : [];
       const addNew = () => { r._id = newId(st); r._srcRow = r._row; r._row = nextRow(list); list.push(r); rep.add++; rep.ids.push(r._id); };
       if (!matches.length) return addNew();
       let target = null;

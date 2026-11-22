@@ -32,7 +32,7 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   // ===== 1. ngày cân 2 =====
   await open('dx');
   const hdr = await w.$$eval('#main table thead th', t => t.map(x => x.innerText.trim()));
-  ok('bảng phiếu cân có hai cột “Cân lần 1” và “Cân lần 2” (ngày, giờ), đủ ngày cân 2', hdr.includes('Cân lần 1') && hdr.includes('Cân lần 2')   /* phiếu #06: tiêu đề ngắn */, hdr.join('|'));
+  ok('bảng phiếu cân có hai cột “Ngày cân 1” và “Ngày cân 2” (ngày, giờ; trước 21/11 tên “Cân lần 1/2”), đủ ngày cân 2', hdr.includes('Ngày cân 1') && hdr.includes('Ngày cân 2')   /* phiếu #06: tiêu đề ngắn */, hdr.join('|'));
   ok('N1 cùng ngày: ngày cân 2 = 05/10/2026, ghi “suy ra”', /05\/10\/2026 08:15:00 05\/10\/2026 suy ra 09:40:00/.test(await row('N1')), await row('N1'));
   ok('N2 qua nửa đêm (23:50 → 00:20): ngày cân 2 = 06/10/2026 suy ra', /05\/10\/2026 23:50:00 06\/10\/2026 suy ra 00:20:00/.test(await row('N2')), await row('N2'));
   ok('N3 qua năm (31/12 23:00 → 01:00): ngày cân 2 = 01/01/2027 suy ra', /31\/12\/2026 23:00:00 01\/01\/2027 suy ra 01:00:00/.test(await row('N3')), await row('N3'));
