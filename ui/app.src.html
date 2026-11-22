@@ -189,7 +189,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .pcInLoc{flex-wrap:wrap;gap:10px}
 .importActions{flex-wrap:wrap;gap:6px}
 .pcInFrame{display:block;width:100%;height:70vh;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
-@media (max-width:1100px){header.top{gap:8px;padding-inline:10px}.brand h1{font-size:13px}.brand h1 small{display:none}.nav .nb,.hbtn{padding-inline:8px}}
+/* header.top .brand: đặc hiệu hơn quy tắc header.top h1 small ở trên, nếu không dòng phụ vẫn hiện, thanh chính rộng ~500 px và nút Tìm xuống hàng thứ hai ở 1024 px */
+@media (max-width:1100px){header.top{gap:8px;padding-inline:10px}header.top .brand h1{font-size:13px}header.top .brand h1 small{display:none}.nav .nb,.hbtn{padding-inline:8px}}
 @media (min-width:700px) and (max-width:950px){header.top{flex-wrap:nowrap}.brand h1{display:none}.nav{flex:1 1 auto;order:0;flex-wrap:nowrap}}
 /* phiếu #10: khung hẹp (≤ 1100 px CSS, ví dụ 1366×768 phóng 125–150 % hoặc cửa sổ thu nhỏ): cột mục lên trên thành một thanh ngang, bảng (phiếu cân…) được cả bề rộng */
 @media (max-width:1100px){.mucLayout{grid-template-columns:minmax(0,1fr)}.mucNav{display:flex;flex-wrap:wrap}.mucNav button{flex:0 0 auto}}
@@ -210,9 +211,11 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .hak-pane-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--paper)}
 .hak-pane-head h3{margin:0;font-size:14.5px;display:flex;align-items:center;gap:6px}
 .hak-pane-body{padding:12px 14px;min-width:0}
-@media (max-width:1100px){main{padding:10px 14px}header.top{padding:4px 12px}.hak-master-detail{grid-template-columns:minmax(230px,270px) minmax(0,1fr);gap:8px}.hak-pane-body{padding:3px 6px}.hak-pane-head{padding:4px 8px}.hak-master-list th,.hak-master-list td{padding:3px 5px}.hak-inspector-tabs{padding:2px 6px 0}.hak-steps{margin:2px 0 3px;padding:2px 4px}.loDau{margin:0;gap:2px 6px}.napCard{padding:3px 6px;margin-bottom:3px}.hak-sf-bar{padding:2px 6px;margin:2px 0}.issWarn{padding:3px 6px;margin:2px 0}#stTbl_pc th,#stTbl_pc td{padding:3px 6px}}
+@media (max-width:1100px){main{padding:10px 14px}header.top{padding:4px 12px}.hak-master-detail{grid-template-columns:minmax(0,1fr);gap:8px}.hak-pane-body{padding:3px 6px}.hak-pane-head{padding:4px 8px}.hak-master-list th,.hak-master-list td{padding:3px 5px}.hak-inspector-tabs{padding:2px 6px 0}.hak-steps{margin:2px 0 3px;padding:2px 4px}.loDau{margin:0;gap:2px 6px}.napCard{padding:3px 6px;margin-bottom:3px}.hak-sf-bar{padding:2px 6px;margin:2px 0}.issWarn{padding:3px 6px;margin:2px 0}#stTbl_pc th,#stTbl_pc td{padding:3px 6px}}
 @media (max-width:760px){.hak-master-detail{grid-template-columns:minmax(0,1fr)}.hak-master-list{max-height:130px}}
 .hak-master-list{max-height:62vh;overflow:auto}
+/* khung hẹp: danh sách Cha xếp TRÊN chi tiết và thấp lại (đặt sau quy tắc 62vh để thắng cùng độ đặc hiệu) */
+@media (max-width:1100px){.hak-master-list{max-height:130px}}
 .hak-master-list table{width:100%;border-collapse:collapse;font-size:13px}
 .hak-master-list th,.hak-master-list td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .hak-master-list th{background:var(--th);font-size:11.5px;color:var(--mut-aa);position:sticky;top:0;z-index:1;white-space:nowrap}
