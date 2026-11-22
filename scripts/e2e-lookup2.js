@@ -56,7 +56,7 @@ const find = async (w, q, tab = '') => { await w.click('header [data-act=lkOpen]
   ok('phiếu đã có hiện “bỏ qua”, ô chọn bị khóa', /bỏ qua/.test(await w.innerText('#lkBody')) && await w.isDisabled('[data-lkpc="1002/2026/NK"]'));
   await w.click('[data-act=lkApply]'); await w.waitForTimeout(300); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   if (await w.isVisible('#lkBox.on')) await w.click('[data-act=lkClose]');
-  await w.click('[data-ftab=dx]'); main = await w.innerText('#main');
+  await w.click('[data-ftab=dx]'); main = await w.$eval('#main', el => el.innerText);
   ok('nhập lại không tạo phiếu trùng (đúng 1 dòng 1002)', (main.match(/1002\/2026\/NK/g) || []).length === 1);
   // 5b. Chế độ cha–con (master–detail), chip điều kiện (Smart Filter), bộ lọc đã lưu
   if (await w.isVisible('#lkBox.on')) await w.click('[data-act=lkClose]');

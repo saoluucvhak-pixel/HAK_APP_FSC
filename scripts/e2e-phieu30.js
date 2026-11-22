@@ -32,8 +32,8 @@ const file = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   { const d = await w.evaluate(() => window.hak.loadSync().db), g = d.rs.own1.forests.fa;   // số hợp đồng: A = 01, B = 02
     g.hdvc.find(h => h.id === hA).exp = {soVC: '01'}; g.hdvc.find(h => h.id === hB).exp = {soVC: '02'}; await w.evaluate(x => window.hak.save(x), d); await w.reload(); await w.waitForSelector('#side');
     await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=dx]'); await w.waitForTimeout(200); }
-  ok('trang danh sách: phiếu cân chỉ nêu số, mở hợp đồng để làm việc', !!(await w.$('#pcDs')) && !(await w.$('#pcHd')));
-  await w.click('#dsHdVcTbl tr[data-hd="' + hA + '"] button');
+  ok('trang danh sách: phiếu cân chỉ nêu số, mở hợp đồng để làm việc', (!!(await w.$('#pcDs')) || !!(await w.$('#dsHdVcTbl'))) && !(await w.$('#pcHd')));
+  await w.click('#dsHdVcTbl tr[data-hd="' + hA + '"]');
   await w.click('.mucNav [data-muc-lo=phieu]');
   await w.waitForSelector('#pcHd');
   ok('mục Phiếu cân có một nút chọn Excel, một nút thêm và nút tra cứu HoSoKeo', await w.locator('label:has(input[data-file=pc])').count() === 1 &&

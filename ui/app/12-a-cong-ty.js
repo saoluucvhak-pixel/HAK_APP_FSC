@@ -9,7 +9,7 @@ const addrRowHtml = a => '<div class="ctyAddr row" style="margin-top:6px" data-a
 a.lng)) + '" style="flex:1 1 170px"><button type="button" class="btn danger sm" data-act="ctyDelAddr">Xóa</button></div>';
 function ctyForestsUsing() { const c = theCompany(); return c ? Object.values(db.rs).reduce((n, o) => n + forestList(o).filter(f => f.info.muaHang && f.info.muaHang.congTyId === c.id).length, 0) : 0; }
 function panelCty() {
-  const c = cty.edit || theCompany() || MH.newCompany(), m = cty.msg; cty.msg = null; cty.edit = c; cty.goc = JSON.stringify(MH.clean(c, newId));
+  const c = cty.edit || theCompany() || MH.newCompany(), m = cty.msg; cty.msg = null; cty.edit = c; const out0 = MH.clean(c, newId); if (!c.toaDoSai) delete out0.toaDoSai; cty.goc = JSON.stringify(out0);
   const f = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span><input name="' + k + '" value="' + esc(c[k] ?? '') + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '></label>';
   return '<div class="hero"><div><h2>Công ty mua hàng</h2><p class="mut">Khai một lần cho cả phần mềm. Mỗi rừng chỉ chọn <b>địa chỉ giao hàng</b> của công ty này ở <b>tab Vận chuyển</b>; địa chỉ đó là địa điểm vận chuyển đến trong BM-04, BM-09, BM-10 và Sổ phiếu cân.' +
     (theCompany() ? ' ' + ctyForestsUsing() + ' rừng đã chọn địa chỉ giao.' : '') + '</p></div></div>' + (m ? '<div class="msg ' + m.kind + '">' + esc(m.text) + '</div>' : '') +
@@ -28,7 +28,9 @@ function ctyReadForm() {
   const td = HAKCuLy.parseToaDo(fd.get('toaDo')); c.lat = td ? td.lat : null; c.lng = td ? td.lng : null; c.toaDoSai = String(fd.get('toaDo') || '').trim() && !td ? String(fd.get('toaDo')).trim() : '';
   c.diaChiGiao = [...form.querySelectorAll('.ctyAddr')].map(r => { const raw = r.querySelector('[name=a_toado]').value, t = HAKCuLy.parseToaDo(raw);
   return {id: r.dataset.aid || '', nhan: r.querySelector('[name=a_nhan]').value, diaChi: r.querySelector('[name=a_dia]').value, lat: t ? t.lat : null, lng: t ? t.lng : null, toaDoSai: raw.trim() && !t ? raw.trim() : ''}; });
-  return MH.clean(c, newId);
+  const out = MH.clean(c, newId);
+  if (!c.toaDoSai) delete out.toaDoSai;
+  return out;
 }
 /* tọa độ gõ sai dạng không được lặng lẽ bỏ: báo như lỗi chặn lưu */
 function ctyGeoErrors(c) { const e = []; if (c.toaDoSai) e.push('Tọa độ trụ sở “' + c.toaDoSai + '” sai dạng (vd 15.912345, 108.123456; vĩ độ trước, kinh độ sau)');

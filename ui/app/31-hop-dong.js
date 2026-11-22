@@ -35,7 +35,7 @@ function panelDsNC(rec, opt = {}) {
   const kl = d => {
     const x = pbk.doi.find(y => y.id === d.id);
     if (x && x.kg > 0) return fmtT(x.kg) + ' t';
-    return cg ? 'chưa gán' : '—';
+    return cg ? 'chưa gán phiếu' : '—';
   };
   const row = (d, i) => {
     const info = infoTeam(rec, d), so = soHdNc(rec, d), on = d.id === selId;
@@ -51,7 +51,7 @@ function panelDsNC(rec, opt = {}) {
     '<div class="hak-master-list"><table id="dsHdNcTbl"><thead><tr><th>#</th><th>Đội · Hợp đồng</th><th>Người</th><th style="text-align:right">KL</th></tr></thead><tbody>' +
     (ds.length ? ds.map(row).join('') : '<tr><td colspan="4" class="mut">Chưa có đội nào: nhập tên rồi bấm “+ Thêm đội”.</td></tr>') + '</tbody></table></div>' +
     (chua ? '<div class="msg warn" style="margin-top:8px" id="dsHdNcChua">' + chua + ' người chưa thuộc đội nào.</div>' : '') + '</div></div>' +
-    (ds.length > 1 ? '<div style="padding:0 12px 12px">' + panelPhanBo(rec) + '</div>' : '');
+    (ds.length ? '<div style="padding:0 12px 12px">' + panelPhanBo(rec) + '</div>' : '');
 }
 
 /* ---------- danh sách hợp đồng vận chuyển (Cha — Master Pane) ---------- */
@@ -65,7 +65,7 @@ function panelDsVC(rec, opt = {}) {
     const so = soHdVc(rec, h), on = h.id === selId;
     return '<tr class="hak-master-row' + (on ? ' on' : '') + '" data-act="chonHd" data-hd="' + esc(h.id) + '" aria-selected="' + (on ? 'true' : 'false') + '" tabindex="0">' +
       '<td style="text-align:center">' + (i + 1) + '</td>' +
-      '<td><b>' + esc(tenDoiVc(rec, h)) + '</b><br><small class="mut">' + (so ? 'HĐ ' + esc(so) : 'chưa có số') + ' · ' + esc(ky(h)) + ' · ' + esc(cuocText(rec, h)) + '</small></td>' +
+      '<td><b>' + esc(tenDoiVc(rec, h)) + '</b><br><small class="mut">' + (so ? 'HĐ ' + esc(so) : 'chưa có số') + ' · ' + esc(ky(h)) + ' · ' + cuocText(rec, h) + '</small></td>' +
       '<td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td>' +
       '<td style="text-align:center">' + soPhieu(h) + '</td></tr>';
   };

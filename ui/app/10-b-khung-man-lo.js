@@ -68,13 +68,14 @@ function panelRung(own, chuTab) {
   const job = curRec(), g = gateRaw(job);
   const kt = exportCheck(job);
   const stFinfo = !g.info.length ? 'ok' : 'warn';
-  const stNc = f.nc.length && !g.nc.length ? 'ok' : f.nc.length ? 'warn' : '';
-  const stDx = f.dx.length && f.pc.length && !g.dx.length && !g.pc.length ? 'ok' : (f.dx.length || f.pc.length) ? 'warn' : '';
+  const nc = f.nc || [], dx = f.dx || [], pc = f.pc || [];
+  const stNc = nc.length && !(g.nc && g.nc.errs && g.nc.errs.length) ? 'ok' : nc.length ? 'warn' : '';
+  const stDx = dx.length && pc.length && !(g.dx && g.dx.errs && g.dx.errs.length) && !(g.pc && g.pc.errs && g.pc.errs.length) ? 'ok' : (dx.length || pc.length) ? 'warn' : '';
   const stKt = kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok';
   const ft = [
     ['finfo', 'Thông tin rừng', stFinfo, stFinfo === 'ok' ? '✓' : '!'],
-    ['nc', 'Nhân công (' + f.nc.length + ')', stNc, stNc === 'ok' ? '✓' : f.nc.length ? '!' : ''],
-    ['dx', 'Vận chuyển (' + f.dx.length + ' xe · ' + f.pc.length + ' phiếu)', stDx, stDx === 'ok' ? '✓' : (f.dx.length || f.pc.length) ? '!' : ''],
+    ['nc', 'Nhân công (' + nc.length + ')', stNc, stNc === 'ok' ? '✓' : nc.length ? '!' : ''],
+    ['dx', 'Vận chuyển (' + dx.length + ' xe · ' + pc.length + ' phiếu)', stDx, stDx === 'ok' ? '✓' : (dx.length || pc.length) ? '!' : ''],
     ['kt', 'Kiểm tra (' + (kt.chan.length ? kt.chan.length + ' chặn' : kt.doi.length ? kt.doi.length + ' đối chiếu' : 'đạt') + ')', stKt, stKt === 'ok' ? '✓' : stKt === 'err' ? '✕' : '!'],
     ['xuat', 'Xuất hồ sơ', f.chot ? 'ok' : '', f.chot ? 'Đã chốt' : '']
   ];

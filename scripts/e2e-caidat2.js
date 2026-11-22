@@ -17,7 +17,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('menu ngang có “Cài đặt”, không còn “Công ty mua hàng”', !!(await w.$('header.top .nav #navSet')) && !(await w.$('header.top .nav [data-act=openCty]')) && !/Công ty mua hàng/.test(await w.innerText('header.top .nav')));
   await w.click('#navSet'); await w.waitForSelector('#setBox');
   const muc = await w.$$eval('[id^=setTab_]', b => b.map(x => x.textContent));   // 3.0: thêm Danh mục đối tượng, Danh mục xe, Vị trí, Giao diện, Hướng dẫn, Cần đối chiếu
-  ok('Cài đặt có các mục: Hệ thống, Sao lưu và khôi phục, Google Sheets, Công ty mua hàng, Hiển thị số (và các mục 3.0)', ['Hệ thống', 'Sao lưu và khôi phục', 'Google Sheets', 'Công ty mua hàng', 'Hiển thị số', 'Danh mục đối tượng', 'Danh mục xe'].every(x => muc.includes(x)), muc.join('|'));
+  ok('Cài đặt có các mục: Hệ thống, Sao lưu và khôi phục, Google Sheets, Hiển thị số (và các mục 3.0)', ['Hệ thống', 'Sao lưu và khôi phục', 'Google Sheets', 'Hiển thị số'].every(x => muc.includes(x)), muc.join('|'));
   // 2. Google Sheets: địa chỉ nằm trong Cài đặt
   await w.click('#setTab_setgs'); await w.waitForSelector('#setGsLink');
   const url = 'https://docs.google.com/spreadsheets/d/ABCDEFG1234567890/edit?usp=sharing';
@@ -30,11 +30,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('màn Tra cứu không còn ô nhập địa chỉ bảng tính; ghi địa chỉ đang dùng và nút “Đổi trong Cài đặt”', !(await w.$('#lkLink')) && /Địa chỉ bảng tính/.test(await w.innerText('#lkBody')) && !!(await w.$('[data-act=lkToSettings]')));
   await w.click('[data-act=lkToSettings]'); await w.waitForSelector('#setGsLink');
   ok('“Đổi trong Cài đặt” mở đúng mục Google Sheets và đóng hộp Tra cứu', (await w.inputValue('#setGsLink')) === url && !(await w.$('#lkBox.on')));
-  // 4. Công ty trong Cài đặt
-  await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
-  ok('thông tin công ty nằm trong Cài đặt (mục Công ty)', !!(await w.$('#ctyForm')) && (await w.$$eval('[id^=setTab_][aria-current]', b => b.map(x => x.textContent))).includes('Công ty mua hàng'), (await w.$$eval('.tabs button.on', b => b.map(x => x.textContent))).join('/'));
+  // 4. Công ty trong Danh mục dùng chung (chuẩn V10.4)
+  await w.click('#navDm'); await w.waitForSelector('#setTab_cty'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
+  ok('thông tin công ty nằm trong Danh mục (mục Công ty)', !!(await w.$('#ctyForm')) && (await w.$$eval('[id^=setTab_][aria-current]', b => b.map(x => x.textContent))).includes('Công ty mua hàng'), (await w.$$eval('.tabs button.on', b => b.map(x => x.textContent))).join('/'));
   // 5. Hiển thị số
-  await w.click('#setTab_setfmt'); await w.waitForSelector('[name=numStyle]');
+  await w.click('#navSet'); await w.waitForSelector('#setTab_setfmt'); await w.click('#setTab_setfmt'); await w.waitForSelector('[name=numStyle]');
   ok('mục Hiển thị số: nêu ngày luôn dd/mm/yyyy và hai kiểu số', /dd\/mm\/yyyy/.test(await w.innerText('#main')) && (await w.$$('[name=numStyle]')).length === 2);
   await w.click('[name=numStyle][value=en]'); await w.waitForTimeout(400);
   ok('chọn kiểu quốc tế: lưu vào cơ sở dữ liệu', (await w.evaluate(() => window.hak.loadSync().db.dinhDangSo)) === 'en');

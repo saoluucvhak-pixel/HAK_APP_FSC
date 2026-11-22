@@ -151,10 +151,10 @@ document.addEventListener('change', e => {
   if (sel.lkarea != null) { s.area = /^\d+$/.test(sel.lkarea) ? +sel.lkarea : sel.lkarea; return lkRender(); }
   if (sel.lkgps != null) { s.gps = /^\d+$/.test(sel.lkgps) ? +sel.lkgps : sel.lkgps; return; }
   if (sel.lkdoc != null) { s.docs[sel.lkdoc] = t.checked; return; }
-  if (sel.lkpc != null) { s.phieu[sel.lkpc] = t.checked; return lkRender(); }
+  if (sel.lkpc != null) { s.phieu[sel.lkpc] = t.checked; if (t.dataset.lkkey) s.phieu[t.dataset.lkkey] = t.checked; return lkRender(); }
   if ('lkplonly' in sel) { s.plateOnly = t.checked; return lkRender(); }
   if ('lkref' in sel) { s.ref = t.checked; return; }
-  if (sel.lkov != null) { lk.plateOv = lk.plateOv || {}; const v = t.value.trim().toUpperCase(), k = sel.lkov.toUpperCase(); if (v) lk.plateOv[k] = v; else delete lk.plateOv[k]; lkPhieuDefaultsKeep(); return lkRender(); }
+  if (sel.lkov != null) { lk.plateOv = lk.plateOv || {}; const v = t.value.trim().toUpperCase(), k = sel.lkov.toUpperCase(), k2 = (t.dataset.lkkey || '').toUpperCase(); if (v) { lk.plateOv[k] = v; if (k2) lk.plateOv[k2] = v; } else { delete lk.plateOv[k]; if (k2) delete lk.plateOv[k2]; } lkPhieuDefaultsKeep(); return lkRender(); }
   if (sel.lkalias != null) { lk.alias = lk.alias || {}; const v = t.value.trim().toUpperCase(); if (v) lk.alias[sel.lkalias] = v; else delete lk.alias[sel.lkalias]; lkPhieuDefaultsKeep(); return lkRender(); }
 });
 function lkPhieuDefaultsKeep() { lkPhieuRows().forEach(p => { if (!(p._lkKey in lk.sel.phieu) || (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn) && lk.sel.phieu[p._lkKey] === false && p.bien)) lk.sel.phieu[p._lkKey] = p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn);

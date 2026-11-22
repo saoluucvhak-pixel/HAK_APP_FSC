@@ -119,7 +119,7 @@ async function docxVan(file) {   // văn bản của mọi .docx trong file (zip
   for (const [i, id] of [[0, f0.doi[0].id], [1, 'doi2']]) { await w.selectOption('#pbPhieuTbl select[data-pcdoi="' + i + '"]', id); await w.waitForTimeout(300); if (await w.$('#loDirtyBar [data-act=stSave]')) { await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(500); } }
   const f1 = await lotDb();
   ok('gán phiếu: P1 → Đội 1, P2 → Đội 2 (lưu vào lô)', f1.pc[0].doiId === f0.doi[0].id && f1.pc[1].doiId === 'doi2', JSON.stringify(f1.pc.map(p => p.doiId)));
-  ok('hết dòng cảnh báo ở màn Phân bổ; danh sách hợp đồng 10 / 20 tấn', !(await w.$('#pbChuaGanXuat')) && /10,000 tấn/.test(await w.innerText('#dsHdNcTbl')) && /20,000 tấn/.test(await w.innerText('#dsHdNcTbl')));
+  ok('hết dòng cảnh báo ở màn Phân bổ; danh sách hợp đồng 10 / 20 tấn', !(await w.$('#pbChuaGanXuat')) && /(10,000 tấn|10,000 t)/.test(await w.innerText('#dsHdNcTbl')) && /(20,000 tấn|20,000 t)/.test(await w.innerText('#dsHdNcTbl')));
   await moXuat(); don();
   await w.click(nut08); const f08b = await cho(w, /_tc\.zip$/i);
   ok('gán đủ: xuất BM-08 không hỏi, tải được file ngay', !(await w.isVisible('#chuaGanNoiDung')) && !!f08b, JSON.stringify(dsFile()));

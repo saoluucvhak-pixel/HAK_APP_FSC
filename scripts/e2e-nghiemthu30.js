@@ -71,7 +71,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
   const fb0 = await lotDb('fb');
   const dmCu = (await w.evaluate(() => window.hak.loadSync().db)).dinhMuc || {};
   await moRung('fa', 'nc'); if (await w.$('#loDirtyBar [data-act=stSave]')) { await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(600); }   // lô không còn thay đổi chưa lưu
-  await w.click('#navSet'); await w.click('#setTab_setvt'); await w.waitForSelector('#vtBang');
+  await (async () => { if (await w.$('#navDm')) await w.click('#navDm'); else await w.click('#navSet'); })(); await w.click('#setTab_setvt'); await w.waitForSelector('#vtBang');
   await w.fill('[data-vtten="vt2"]', 'Thợ cưa'); await w.click('[data-vtdoi="vt2"]'); await w.waitForTimeout(600);
   const fa1 = await lotDb('fa'), fb1 = await lotDb('fb');
   ok('đổi tên vị trí: lô đang lập nhận tên mới (dòng nhân công, đơn giá)', fa1.nc.some(r => r.chucDanh === 'Thợ cưa') && !fa1.nc.some(r => r.chucDanh === 'Công nhân cưa') && 'Thợ cưa' in ((fa1.doi[0].hinhThuc || {}).donGiaTan || {}), JSON.stringify(fa1.doi[0].hinhThuc));

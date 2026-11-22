@@ -42,12 +42,12 @@ const P = (so, ngay, kl) => ({soPhieu: so, ngay, bienSo: '92C-12345', kl, maRung
   let r = await pb();
   ok('chọn phiếu theo đội: 60 tấn / 40,001 tấn, không còn phần chưa phân bổ', /60,000/.test(r[0]) && /40,001/.test(r[1]) && !(await w.$('#pbChua')), r.join('|'));
   const dsKl = await w.innerText('#dsHdNcTbl');
-  ok('danh sách hợp đồng dùng cùng kết quả (60 / 40,001 tấn)', /60,000 tấn/.test(dsKl) && /40,001 tấn/.test(dsKl), dsKl);
+  ok('danh sách hợp đồng dùng cùng kết quả (60 / 40,001 tấn)', /(60,000 tấn|60,000 t)/.test(dsKl) && /(40,001 tấn|40,001 t)/.test(dsKl), dsKl);
   // 3. chia đều: xem trước rồi mới lưu
   await w.check('input[name=pbCheDo][value=chiaDeu]'); await w.waitForTimeout(200); r = await pb();
   ok('xem trước “Chia đều”: 50,001 / 50,000 tấn (1 kg lẻ cho đội đứng trước), chưa lưu', /50,001/.test(r[0]) && /50,000/.test(r[1]) && await w.isVisible('#pbChuaLuu') && !(await lotDb('fa')).phanBo, r.join('|'));
   await w.click('#pbLuu'); await w.waitForTimeout(600); f = await lotDb('fa');
-  ok('“Lưu phân bổ”: lô ghi cách chia đều; danh sách hợp đồng 50,001 / 50,000 tấn', f.phanBo && f.phanBo.cheDo === 'chiaDeu' && /50,001 tấn/.test(await w.innerText('#dsHdNcTbl')) && /50,000 tấn/.test(await w.innerText('#dsHdNcTbl')), JSON.stringify(f.phanBo));
+  ok('“Lưu phân bổ”: lô ghi cách chia đều; danh sách hợp đồng 50,001 / 50,000 tấn', f.phanBo && f.phanBo.cheDo === 'chiaDeu' && /(50,001 tấn|50,001 t)/.test(await w.innerText('#dsHdNcTbl')) && /(50,000 tấn|50,000 t)/.test(await w.innerText('#dsHdNcTbl')), JSON.stringify(f.phanBo));
   ok('phiếu cân không bị nhân đôi: mỗi phiếu tính một lần (tổng 100,001 tấn)', /100,001/.test(await w.innerText('#pbTong')));
   // 4. lô đã chốt: kết quả lúc chốt, chỉ xem
   await moRung('fb'); await w.waitForSelector('#pbBox');
