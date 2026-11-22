@@ -2,7 +2,7 @@
 !include "FileFunc.nsh"
 
 Name "HAKQN - Ho so khai thac va van chuyen go keo"
-OutFile "..\dist\HAKQN-HoSoKhaiThac-Setup-3.1.0.exe"
+OutFile "..\dist\HAKQN-HoSoKhaiThac-Setup-3.2.0.exe"
 InstallDir "$LOCALAPPDATA\Programs\HAKQN"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
@@ -38,7 +38,7 @@ Section "MainSection" SEC01
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HAKQN" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HAKQN" "DisplayIcon" '"$INSTDIR\HAKQN - Ho so khai thac va van chuyen go keo.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HAKQN" "Publisher" "HAK Group"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HAKQN" "DisplayVersion" "3.1.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HAKQN" "DisplayVersion" "3.2.0"
 SectionEnd
 
 Section "Uninstall"
