@@ -202,6 +202,7 @@
     const i = st.cur[kind].findIndex(x => x._id === id); if (i < 0) return {ok: false, error: 'Không tìm thấy dòng.'};
     const old = st.cur[kind][i], next = Object.assign({}, clone(row), {_id: id}); if (old._row != null && next._row == null) next._row = old._row;
     if (old.doiId !== undefined && next.doiId === undefined) next.doiId = old.doiId;   // nhân công: sửa một người không làm người đó rời đội (cấu trúc 2.0)
+    if (old.soCu !== undefined && next.soCu === undefined) next.soCu = clone(old.soCu);   // sửa một ô khác của phiếu đã đổi số không làm mất vết đổi số (biểu mẫu không mang soCu)
     const tay = new Set(old._tay || []); Object.keys(next).forEach(f => { if (f[0] !== '_' && f !== 'giaLoi' && !same(old[f], next[f])) tay.add(f); }); if (tay.size) next._tay = [...tay];   // trường sửa tay: nhập file sau đó không ghi đè
     if (kind === 'dx' && bienKey(old.bienSo) !== bienKey(next.bienSo)) {   // đổi biển số xe: các phiếu cân liên kết đổi theo, số chuyến và khối lượng không đổi
       const linked = linkedPc(st, old.bienSo); linked.forEach(p => { p.bienSo = next.bienSo; p._plateSrc = 'Sửa biển số xe'; });

@@ -112,7 +112,7 @@ function panelPhieuCan(rec) {
   const t = stTable('pc', rec, [...(nhieu ? ['Đội'] : []), H('Số phiếu', 'Số phiếu cân'), H('Ngày cân 1', 'Ngày, giờ cân lần 1'), H('Ngày cân 2', 'Ngày, giờ cân lần 2'), H('BKS trên phiếu', 'Biển kiểm soát ghi trên phiếu cân'),
     ...(hMo ? ['Xe · hợp đồng'] : []), HR('Cân 1 (kg)', 'Khối lượng cân lần 1 (kg)'), HR('Cân 2 (kg)', 'Khối lượng cân lần 2 (kg)'), HR('KL (kg)', 'Khối lượng hàng (kg) = Cân 1 − Cân 2'), HR('KL (tấn)', 'Khối lượng hàng (tấn): số dùng để cộng tổng'),
     'Khách hàng', R + 'Đơn giá</span>', R + 'Thành tiền</span>', 'Nơi giao'],
-    r => dCell(r) + '<td><b>' + esc(r.soPhieu) + '</b></td><td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay) : esc(r.ngay) + '<br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + ' (bấm Sửa)</small>') + '<br><span class="mut">' + esc(r.gioCan1 || '') + '</span></td><td>' + ngay2Cell(r) +
+    r => dCell(r) + '<td><b>' + esc(r.soPhieu) + '</b>' + soCuHtml(r) + '</td><td>' + (HAKDates.isValid(r.ngay) ? esc(r.ngay) : esc(r.ngay) + '<br><small style="color:var(--err)">' + esc(HAKDates.why(r.ngay)) + ' (bấm Sửa)</small>') + '<br><span class="mut">' + esc(r.gioCan1 || '') + '</span></td><td>' + ngay2Cell(r) +
     '<br><span class="mut">' + esc(r.gioCan2 || '') + '</span></td><td>' + esc(r.bienSo) + xCell(r) + '</td>' + (hMo ? pcCotHd(rec, r, hMo) : '') +
       '<td style="text-align:right">' + num(r.can1) + '</td><td style="text-align:right">' + num(r.can2) +
       '</td><td style="text-align:right">' + kgCell(r) + '</td><td style="text-align:right">' + (typeof r.kl === 'number' ? fmtT(Math.round(r.kl * 1000)) : esc(r.kl)) +

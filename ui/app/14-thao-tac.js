@@ -16,7 +16,7 @@ function newForest() {
   let k = n, code = base + k;
   while (HAKLoRung.lotsByMa(db, code).length) code = base + (++k);
   const fid = newId('f');
-  o.forests[fid] = {id: fid, info: {maRung: code, tenRung: 'Rừng ' + k, diaDiem: '', lat: null, lng: null, dienTich: null,
+  o.forests[fid] = {id: fid, taoLuc: new Date().toISOString(), info: {maRung: code, tenRung: 'Rừng ' + k, diaDiem: '', lat: null, lng: null, dienTich: null,
     dinhMucTanHa: null, cuLy: null, tuNgay: '', denNgay: '', giayTo: []},
     nc: [], dx: [], pc: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
   NAV.curF = fid; NAV.ftab = 'finfo'; NAV.tab = 'rung';

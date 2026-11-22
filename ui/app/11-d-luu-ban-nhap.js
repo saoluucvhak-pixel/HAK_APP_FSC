@@ -26,7 +26,7 @@ async function stSave(opt) {
   if (mine.size) Object.values(db.rs).forEach(ow => forestList(ow).forEach(ff => { if (ow.id === NAV.cur && ff.id === NAV.curF) return; (ff.pc || []).forEach(p => { const k = khoaSo(p); if (mine.has(k) || (!HAKBks.khoaPhieu(p) && [...mine].some(m => m.split('|')[0] === k))) dups.push(p.soPhieu + (p.ngay ? ' ngày ' + p.ngay : '') + ' (lô ' + (ff.info.maRung || '?') + ', ' + (ow.info.ten || '') + ')'); }); }));
   if (dups.length && !opt?.confirmedDup && !confirm('Có ' + dups.length + ' phiếu cân cùng số phiếu và ngày cân đang có ở lô khác:\n' + dups.slice(0,
   10).map(x => '• ' + x).join('\n') + (dups.length > 10 ? '\n• …' : '') + '\n\nHai nơi cân hoặc hai lô có thể dùng trùng số phiếu. Đối chiếu kỹ (ngày, biển số, khối lượng) rồi bấm OK để vẫn lưu vào lô này, hoặc Hủy để quay lại.')) return {ok: false, error: 'chờ đối chiếu'};
-  stSaving = true; const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
+  stSaving = true; const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, soLog: f.soLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
   try {
     const cm = HAKStage.commit(st, r => HAKPhieuCan.chuanHoaNgay2(r, null)), at = stamp(), dk = HAKStage.dirtyKinds(st);   // mọi phiếu có cột ngày cân 2 khi lưu vào hồ sơ rừng (nhập thật thì giữ, trống thì suy ra)
     const oldNcIds = (f.nc || []).map(r => r && r.id).filter(Boolean), oldDxIds = (f.dx || []).map(r => r && r.id).filter(Boolean);
@@ -36,6 +36,8 @@ async function stSave(opt) {
     if (dk.includes('dx')) { const v = ganVC(f.hdvc || null, f.dx); if (v.hdvc) { f.hdvc = v.hdvc; f.dx = v.dx; } }
     if (dk.includes('pc')) f.pc = ganPC(f.doi, f.pc);   // người mới: cùng quy tắc gán đội với bước kiểm tra (ganDoi)
     if (cm.bienLog.length) f.bienLog = (f.bienLog || []).concat(cm.bienLog);
+    /* nhật ký đổi số phiếu: nằm NGOÀI nhatKy (nằm trong dấu vân tay), chỉ tạo khi có bản ghi thật; loại trùng theo pid + soCu + at */
+    if ((cm.soLog || []).length) { const kk = e => e.pid + '|' + e.soCu + '|' + e.at, daCo = new Set((f.soLog || []).map(kk)); f.soLog = (f.soLog || []).concat(cm.soLog.filter(e => !daCo.has(kk(e)))); }
     if (dk.includes('nc')) { f.ncAt = at; if (st.src.nc && /^Excel: /.test(st.src.nc)) f.ncFile = st.src.nc.slice(7); }
     if (dk.includes('dx')) { f.dxAt = at; if (st.src.dx && /^Excel: /.test(st.src.dx)) f.dxFile = st.src.dx.slice(7); }
     if (dk.includes('pc')) { f.pcAt = at; if (st.src.pc && /^Excel: /.test(st.src.pc)) f.pcFile = st.src.pc.slice(7); else if (st.src.pc && /Google/.test(st.src.pc) && !f.pcFile) f.pcFile = 'Tra cứu Google Sheets'; }
@@ -46,7 +48,7 @@ async function stSave(opt) {
     pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
-    Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
+    Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog; if (!snap.soLog) delete f.soLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
     pushNote('Không lưu được, dữ liệu đã lưu giữ nguyên và bản nháp vẫn còn để thử lại: ' + e.message, 'err'); render(); return {ok: false, error: e.message};
   } finally { stSaving = false; }
 }
