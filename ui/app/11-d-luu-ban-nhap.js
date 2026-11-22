@@ -165,7 +165,10 @@ function panelNC(rec) {
   return '<div class="hak-master-detail">' +
     '<aside class="hak-master-pane">' + panelDsNC(rec, {master: true, selId: d ? d.id : ''}) + '</aside>' +
     '<section class="hak-detail-pane">' +
-      '<div class="hak-pane-head"><h3>' + (d ? 'Chi tiết: ' + esc(tenDoiNc(rec, d)) + (soHdNc(rec, d) ? ' · HĐ ' + esc(soHdNc(rec, d)) : '') : 'Chi tiết hợp đồng nhân công') + '</h3></div>' +
+      '<div class="hak-pane-head" id="hdDau">' +
+        (d ? '<button class="btn ghost sm" data-act="hdQuayLai" data-kind="nc" id="hdQuayLai" style="margin-right:8px">← Quay lại danh sách</button>' : '') +
+        '<div class="hdDauTen"><h3>' + (d ? 'Chi tiết: <span id="hdDauTen">' + esc(tenDoiNc(rec, d)) + '</span>' + (soHdNc(rec, d) ? ' · <span id="hdDauSo">số ' + esc(soHdNc(rec, d)) + '</span>' : '') : 'Chi tiết hợp đồng nhân công') + '</h3></div>' +
+      '</div>' +
       detail +
     '</section></div>';
 }

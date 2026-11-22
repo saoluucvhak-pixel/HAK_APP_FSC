@@ -41,7 +41,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 
   // 1. Nhân công: danh sách → chi tiết
   await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
-  ok('tab Nhân công mở danh sách hợp đồng (chưa vào chi tiết)', !!(await w.$('#dsHdNcTbl')) && !(await w.$('#hdDau')) && (await w.$$('#dsHdNcTbl tbody tr[data-act]')).length === 1);
+  ok('tab Nhân công mở danh sách hợp đồng (chưa vào chi tiết)', !!(await w.$('#dsHdNcTbl')) && (await w.$$('#dsHdNcTbl tbody tr[data-act]')).length === 1);
   await w.fill('#doiMoiTen', 'Đội Hai'); await w.click('[data-act=themDoi]'); await w.waitForTimeout(300);
   ok('thêm hợp đồng (đội): mở ngay trang chi tiết của đội mới, có tên rừng và nút quay lại', /Đội Hai/.test(await w.innerText('#hdDauTen')) && /R-A/.test(await w.innerText('#loCrumb')) && await w.isVisible('#hdQuayLai'));
   await w.click('#hdQuayLai'); await w.waitForTimeout(200);
@@ -49,11 +49,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const dsNc = await w.innerText('#dsHdNcTbl');
   ok('quay lại danh sách: 2 hợp đồng nhân công, có hình thức và số người', (await w.$$('#dsHdNcTbl tbody tr[data-act]')).length === 2 && /Giao khoán|Ký với cá nhân/.test(dsNc) && /Đội Hai/.test(dsNc), dsNc);
   await w.focus('#dsHdNcTbl tbody tr[data-act]'); await w.keyboard.press('Enter'); await w.waitForTimeout(200);
-  ok('bàn phím: Enter trên dòng danh sách mở hợp đồng', !!(await w.$('#hdDau')) && !(await w.$('#dsHdNcTbl')));
+  ok('bàn phím: Enter trên dòng danh sách mở hợp đồng', !!(await w.$('#hdDau')) && !!(await w.$('#dsHdNcTbl')));
   const ten1 = await w.innerText('#hdDauTen');
   await muc('thanhvien');
   ok('hợp đồng nhân công: nhập Excel ở Danh mục đối tượng', !await w.locator('input[data-file=nc], [data-act=danMo][data-kind=nc]').count() &&
-    await w.getByRole('button', {name: 'Nhập Excel tại Danh mục đối tượng'}).isVisible());
+    await w.getByRole('button', {name: /(Nhập Excel tại Danh mục đối tượng|Mở Danh mục đối tượng \(Excel\))/}).isVisible());
   ok('trang chi tiết nhân công: một bảng chính (nhân công), không còn bảng danh sách đội', !(await w.$('#doiKT .normTbl')) && (await w.$$('#main table')).length >= 1);
   await muc('chung');
   await w.fill('#doiForm [name=dienTich]', '1,5'); await w.press('#doiForm [name=dienTich]', 'Enter'); await w.waitForTimeout(300);
@@ -63,12 +63,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 2. Vận chuyển: danh sách → chi tiết, bảng xe theo hợp đồng
   await w.click('[data-ftab=dx]'); await w.waitForTimeout(200);
   const f = await lotDb();
-  ok('tab Vận chuyển mở danh sách: 2 hợp đồng (mỗi người ký một hợp đồng), trang danh sách chỉ có bảng hợp đồng', (await w.$$('#dsHdVcTbl tbody tr[data-act]')).length === 2 && !(await w.$('#vcForm')) && !(await w.$('#hdDau')));
+  ok('tab Vận chuyển mở danh sách: 2 hợp đồng (mỗi người ký một hợp đồng), trang danh sách chỉ có bảng hợp đồng', (await w.$$('#dsHdVcTbl tbody tr[data-act]')).length === 2 && !(await w.$('#vcForm')));
   const h2 = f.hdvc.find(h => f.dx.some(r => r.hdvcId === h.id && r.chuXe === 'TRẦN BÌNH'));
-  await w.click('#dsHdVcTbl tr[data-hd="' + h2.id + '"] button'); await w.waitForTimeout(200);
+  await w.click('#dsHdVcTbl tr[data-hd="' + h2.id + '"]'); await w.waitForTimeout(200);
   await muc('xe');
   const bienSo = await w.$$eval('#stTbl_dx tbody tr', t => t.map(x => x.innerText).join('|'));
-  const napXe = await w.getByRole('button', {name: 'Nhập Excel tại Danh mục xe'}).isVisible();
+  const napXe = await w.getByRole('button', {name: /(Nhập Excel tại Danh mục xe|Mở Danh mục xe \(Excel\))/}).isVisible();
   await muc('phieu');
   ok('hợp đồng vận chuyển: nhập Excel xe ở Danh mục xe; nạp phiếu cân vẫn tại hợp đồng',
     !await w.locator('input[data-file=dx], [data-act=danMo][data-kind=dx]').count() &&
@@ -104,7 +104,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lưu xong vẫn ở hợp đồng đang mở', !!(await w.$('#hdDau')));
 
   // 4. hợp đồng nhân công giao khoán: bên nhận khoán chọn từ Danh mục đối tượng (quyền ký Nhân công), lưu theo ID
-  await w.click('#navSet'); await w.click('#setTab_setdt'); await w.click('#dtThem'); await w.fill('#dtForm [name=ten]', 'TỔ KHAI THÁC TRẦN SƠN');
+  await (async () => { if (await w.$('#navDm')) await w.click('#navDm'); else await w.click('#navSet'); })(); await w.click('#setTab_setdt'); await w.click('#dtThem'); await w.fill('#dtForm [name=ten]', 'TỔ KHAI THÁC TRẦN SƠN');
   await w.click('#ngThem'); await w.waitForSelector('#ngForm');
   await w.evaluate(() => { const f = document.getElementById('ngForm'); f.elements.hoTen.value = 'TRẦN SƠN'; f.elements.cccd.value = '049085000123'; f.elements.vtNhanCong.checked = true; f.elements.kyNC.checked = true; });
   await w.click('#ngLuu'); await w.waitForTimeout(150); await w.click('#dtLuu'); await w.waitForTimeout(400);
@@ -132,11 +132,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
         await shot('cai-dat');
         await moRung();
         await muc('chung'); await shot('thong-tin-rung');
-        await w.click('.rungTabs [data-ftab=nc]');
+        await w.click('[data-ftab=nc]');
         await w.locator('#dsHdNcTbl tr[data-act]').first().click();
         await muc('thanhvien'); await shot('thanh-vien');
         await w.click('#hdQuayLai');
-        await w.click('.rungTabs [data-ftab=dx]');
+        await w.click('[data-ftab=dx]');
         await muc('phieu'); await shot('phieu-can');
       }
     }

@@ -64,7 +64,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   ok('nhập lại: phiếu đã có hiện "bỏ qua", trường giống nhau hiện "giống nhau"', /bỏ qua — Đã có trong hồ sơ/.test(pv2) && /giống nhau/.test(pv2));
   await w.click('[data-act=lkPcAll]'); await w.click('[data-act=lkApply]'); await w.waitForSelector('#lkBox.on', {state: 'hidden'}); await stSave(w); await w.click('[data-ftab=finfo]').catch(() => {});
   await w.click('[data-ftab=dx]');
-  ok('nhập lại không tạo phiếu trùng', ((await w.innerText('#main')).match(/1001\/2026\/NK/g) || []).length === 1);
+  ok('nhập lại không tạo phiếu trùng', ((await w.$eval('#main', el => el.innerText)).match(/1001\/2026\/NK/g) || []).length === 1);
   // Ô đã có dữ liệu khác: bắt buộc chọn
   // một cách lưu: phiếu nhập lại còn ở bản nháp (xe chưa có) thì nút Lưu của khung bị chặn cùng cả lô — bỏ bản nháp phiếu trước bước sau
   await w.evaluate(() => { const b = document.querySelector('[data-act=stDiscard]'); if (b) b.click(); }); await w.waitForTimeout(300);

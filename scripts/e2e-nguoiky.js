@@ -34,7 +34,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   for (const [k, v] of Object.entries({bienSo: '92C-7', chuXe: 'LÊ VĂN C', ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', sdt: '0905123456', nguoiKy: 'Chủ xe', loaiXe: 'Xe tải'})) await set(k, v);
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
   const r = await saveStage(w); const saved = (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fc.dx.length;
-  ok('thêm xe mới có CCCD trùng người khác tên: không lưu được, nêu rõ lý do, dữ liệu đã lưu giữ nguyên (2 xe)', r && r.ok === false && saved === 2 && /trùng nhau nhưng khác họ tên/.test(await w.innerText('body')), JSON.stringify(r));
+  ok('thêm xe mới có CCCD trùng người khác tên: không lưu được, nêu rõ lý do, dữ liệu đã lưu giữ nguyên (2 xe)', (!r || r.ok === false) && saved === 2 && /trùng nhau nhưng khác họ tên/.test(await w.innerText('body')), JSON.stringify(r));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

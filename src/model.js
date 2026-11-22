@@ -287,7 +287,7 @@
     const out = ensureForest(f), h = out.hdvc.find(x => x.id === id); if (!h) return {ok: false, error: 'Không có đội xe này'};
     if (has(patch, 'ten')) {
       const t = trim(patch.ten);
-      if (!t && (trim(h.ten) || !h.donViId)) return {ok: false, error: 'Tên đội xe không được để trống'};
+      if (!t && (trim(h.ten) || (!h.donViId && !patch.donVi))) return {ok: false, error: 'Tên đội xe không được để trống'};
       if (t) { const loi = tenDoiLoi(out, t, id, 'hdvc'); if (loi) return {ok: false, error: loi}; }
       h.ten = t;
     }

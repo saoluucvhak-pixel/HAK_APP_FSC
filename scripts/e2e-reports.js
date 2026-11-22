@@ -108,7 +108,7 @@ async function wordTables(file) {
   await w.fill('#rpFrom', '2026-03-01'); await w.dispatchEvent('#rpFrom', 'change'); await w.fill('#rpTo', '2026-01-01'); await w.dispatchEvent('#rpTo', 'change');
   for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f));
   await w.click('[data-act=rpWord]'); await w.waitForTimeout(400);
-  ok('kỳ sai (từ > đến): báo lỗi, không xuất file', (await w.textContent('#rpBody .msg')).includes('Ngày bắt đầu phải trước') && fs.readdirSync(out).length === 0);
+  ok('kỳ sai (từ > đến): báo lỗi, không xuất file', (await w.innerText('#rpBody')).includes('Ngày bắt đầu phải trước') && fs.readdirSync(out).length === 0);
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('; '));
   await app.close();
   console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);

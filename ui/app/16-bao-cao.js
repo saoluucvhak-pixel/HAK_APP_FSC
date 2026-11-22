@@ -11,7 +11,8 @@ function rpDoiList(jr) {
       const sr = subRec(jr, B, d), tan = typeof d.khoiLuong === 'number' ? d.khoiLuong : klPhieu((jr.pc || []).filter(p => p.doiId === d.id));
       let tien = null; try { tien = payRows(sr, ex).sum; } catch (e) { /* chưa đủ dữ liệu tính tiền */ }
       const bs = basisOf(sr.info);
-      return {id: d.id, ten: trim(d.ten) || 'Đội ' + (i + 1), tt: (d.tt || {}).ten || '', nguoi: d.n, khoiLuong: d.khoiLuong, thanhTien: tien, tienTrenTan: bs.qty === 'tấn' && tan > 0 && tien ? tien / tan : null, cachTinh: bs.unit};
+      const klPhanBo = (B.klNguon === 'nhap' || B.klNguon === 'chiadeu') ? d.khoiLuong : null;
+      return {id: d.id, ten: trim(d.ten) || 'Đội ' + (i + 1), tt: (d.tt || {}).ten || '', nguoi: d.n, khoiLuong: klPhanBo, thanhTien: tien, tienTrenTan: bs.qty === 'tấn' && tan > 0 && tien ? tien / tan : null, cachTinh: bs.unit};
     });
   } catch (e) { return []; }
 }
