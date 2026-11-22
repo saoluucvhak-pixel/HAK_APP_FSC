@@ -1,4 +1,7 @@
-const dmDoiTacAll = () => doiTacKyVC();   // 3.0: từ Danh mục đối tượng (quyền ký Vận chuyển); danh mục Đối tác cũ chỉ còn để chuyển đổi
+const dmDoiTacAll = () => {
+  const dt = doiTacKyVC(), ids = new Set(dt.map(x => x && x.id));
+  return [...dt, ...(db.dmDoiTac || []).filter(d => d && !ids.has(d.id))];
+};
 const dmVC = () => dmDoiTacAll().filter(x => x && x.loai === 'doanhnghiep').sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
 const dmCaNhan = () => dmDoiTacAll().filter(x => x && x.loai !== 'doanhnghiep').sort((a, b) => String(a.ten).localeCompare(String(b.ten), 'vi'));
 const doiTacCua = h => h && h.donViId ? HAKDanhMuc.timDoiTac(dmDoiTacAll(), h.donViId) : null;

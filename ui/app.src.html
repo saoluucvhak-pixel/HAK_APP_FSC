@@ -39,12 +39,12 @@ header.top h1 small{display:block;font-size:11.5px;font-weight:400;opacity:.72;m
 .layout{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:calc(100vh - 86px)}
 .layout.khongSide{grid-template-columns:minmax(0,1fr)}.layout.khongSide #side{display:none}
 aside{background:var(--card);border-right:1px solid var(--line);padding:14px;overflow:auto;max-height:calc(100vh - 86px);position:sticky;top:86px;align-self:start}
-main{padding:22px 26px;min-width:0;max-width:1400px}
+main{padding:14px 20px;min-width:0;max-width:1400px}
 h2{font-size:20px;margin:0 0 2px;font-weight:650;letter-spacing:-.1px}
 h3{font-size:14.5px;margin:20px 0 10px;color:var(--ink);font-weight:650}
 h4{font-size:13.5px}
 .mut{color:var(--mut-aa)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow)}
 /* 3.0: bảng dữ liệu rộng cuộn trong khung; cột Thao tác (Sửa, Xóa) ghim bên phải để luôn thấy ở 100–150 % */
 /* phiếu #06 (D-01, D-02, D-03, D-04): cột Thao tác đứng sau cột Dòng (không dính mép phải đè cột số); tiêu đề một dòng; đầu hợp đồng và thanh công cụ gọn một dòng */
 .wrap table[id^=stTbl_] th{white-space:nowrap}
@@ -53,7 +53,7 @@ h4{font-size:13.5px}
 .napCard{padding:8px 12px;margin-bottom:6px}.napThanh{gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}.napTinhTrang{font-size:12px;margin-left:auto}
 .pcHdDau{gap:8px;flex-wrap:wrap;align-items:baseline}
 .mucNav .pill{white-space:nowrap}.mucNav button{white-space:nowrap}   /* phiếu #06 (D-08): nhãn mục một dòng ở 150% */
-#stTbl_pc td{white-space:nowrap}#stTbl_pc select{padding:3px 6px;font-size:13px}.pcXeHd .pcXe,.pcXeHd .pcHdCua{display:inline-flex;align-items:center;gap:4px}
+#stTbl_pc td{white-space:nowrap}#stTbl_pc th,#stTbl_pc td{padding:4px 7px;font-size:12.5px}#stTbl_pc select{padding:2px 5px;font-size:12.5px}.pcXeHd .pcXe,.pcXeHd .pcHdCua{display:inline-flex;align-items:center;gap:4px}
 .card>h3:first-child{margin-top:0}
 /* Nút */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--acc);background:var(--acc);color:var(--accInk);border-radius:var(--rs);padding:7px 14px;font:inherit;font-weight:550;cursor:pointer;text-decoration:none;transition:background .12s,box-shadow .12s}
@@ -205,13 +205,13 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .hak-step.err .hak-step-n{background:var(--err);color:#fff}
 .hak-step-st{font-size:11px;font-weight:650}
 .hak-step.ok .hak-step-st{color:var(--ok)}.hak-step.warn .hak-step-st{color:var(--warnFg,#6b4a10)}.hak-step.err .hak-step-st{color:var(--err)}
-.hak-master-detail{display:grid;grid-template-columns:minmax(290px,360px) minmax(0,1fr);gap:14px;align-items:start}
+.hak-master-detail{display:grid;grid-template-columns:minmax(290px,360px) minmax(0,1fr);gap:10px;align-items:start}
 .hak-master-pane,.hak-detail-pane{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
-.hak-pane-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--paper)}
+.hak-pane-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--paper)}
 .hak-pane-head h3{margin:0;font-size:14.5px;display:flex;align-items:center;gap:6px}
 .hak-pane-body{padding:12px 14px;min-width:0}
-/* khung danh sách là <aside>: không nhận kiểu dính (sticky) của cột chủ rừng. Khung hẹp (≤ 1100 px, hai khung xếp chồng) mà dính ở đỉnh thì che khung chi tiết khi cuộn, các nút bên dưới bấm không được */
-@media (max-width:1100px){.hak-master-pane{position:static;top:auto;max-height:none}.hak-master-detail{grid-template-columns:minmax(0,1fr)}.hak-pane-body{padding:6px 8px}.hak-master-list{max-height:130px}.hak-pane-head{padding:7px 12px}.hak-master-list th,.hak-master-list td{padding:5px 8px}}
+@media (max-width:1100px){main{padding:10px 14px}header.top{padding:4px 12px}.hak-master-detail{grid-template-columns:minmax(230px,270px) minmax(0,1fr);gap:8px}.hak-pane-body{padding:3px 6px}.hak-pane-head{padding:4px 8px}.hak-master-list th,.hak-master-list td{padding:3px 5px}.hak-inspector-tabs{padding:2px 6px 0}.hak-steps{margin:2px 0 3px;padding:2px 4px}.loDau{margin:0;gap:2px 6px}.napCard{padding:3px 6px;margin-bottom:3px}.hak-sf-bar{padding:2px 6px;margin:2px 0}.issWarn{padding:3px 6px;margin:2px 0}#stTbl_pc th,#stTbl_pc td{padding:3px 6px}}
+@media (max-width:760px){.hak-master-detail{grid-template-columns:minmax(0,1fr)}.hak-master-list{max-height:130px}}
 .hak-master-list{max-height:62vh;overflow:auto}
 .hak-master-list table{width:100%;border-collapse:collapse;font-size:13px}
 .hak-master-list th,.hak-master-list td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}

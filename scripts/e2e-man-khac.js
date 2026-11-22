@@ -33,7 +33,10 @@ const moLo = async (w, fid, ftab) => { await w.click('[data-open=own1]'); await 
     await w.evaluate(() => window.__hak.mucLo('dx', 'phieu')); await w.waitForTimeout(300); await w.evaluate(() => window.scrollTo(0, 0));
     const g = await w.evaluate(() => { const b = document.getElementById('issWarn'); return b ? {co: true, nut: (b.querySelector('button') || {}).innerText, li: b.querySelectorAll('li').length, cao: Math.round(b.getBoundingClientRect().height), txt: b.innerText} : {co: false}; });
     ok('khung cảnh báo gập mặc định: một dòng có số lượng và nút “Xem”, chưa hiện danh sách', g.co && /Cảnh báo \(\d+\)/.test(g.txt) && g.nut === 'Xem' && g.li === 0 && g.cao < 50, JSON.stringify(g));
-    const thay = await w.evaluate(() => { const t = document.getElementById('stTbl_pc'), H = window.innerHeight, rows = t ? [...t.tBodies[0].rows] : []; return rows.filter(r => { const b = r.getBoundingClientRect(); return b.top >= 0 && b.bottom <= H; }).length; });
+    const thay = await w.evaluate(() => {
+      const t = document.getElementById('stTbl_pc'), H = window.innerHeight, rows = t ? [...t.tBodies[0].rows] : [];
+      return rows.filter(r => { const b = r.getBoundingClientRect(); return b.top >= 0 && b.bottom <= H; }).length;
+    });
     ok('1366×768 150 % có cảnh báo: vẫn thấy trọn ít nhất 3 dòng bảng phiếu cân khi mở (thấy ' + thay + '/8)', thay >= 3, 'thấy ' + thay);
     await w.click('#issWarn button'); await w.waitForTimeout(200);
     const m = await w.evaluate(() => { const b = document.getElementById('issWarn'); return {li: b.querySelectorAll('li').length, nut: b.querySelector('button').innerText, txt: b.innerText}; });
@@ -47,6 +50,7 @@ const moLo = async (w, fid, ftab) => { await w.click('[data-open=own1]'); await 
     await w.click('#navSet'); await w.waitForTimeout(300);
     const s = await w.evaluate(() => { const l = document.querySelector('.layout'), sd = document.getElementById('side'); return {kho: l.classList.contains('khongSide'), an: getComputedStyle(sd).display === 'none', rong: Math.round(document.querySelector('main').getBoundingClientRect().width), W: window.innerWidth, ngang: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1}; });
     ok('Cài đặt không hiện cột chủ rừng (Lọc chủ rừng, + Chủ rừng mới, danh sách) và nội dung rộng hết khung', s.kho && s.an && s.rong > s.W * 0.9 && !s.ngang, JSON.stringify(s));
+    if (await w.$('#navDm')) { await w.click('#navDm'); await w.waitForTimeout(300); }
     for (const [tab, id] of [['setdt', 'dtWrap'], ['setxe', 'xeBang']]) {
       await w.click('#setTab_' + tab).catch(async () => { await w.click(tab === 'setdt' ? '[data-act=openSetDt]' : '[data-act=openSetXe]'); }); await w.waitForTimeout(300);
       const c = await w.evaluate(id => { const e = document.getElementById(id), wr = e && (e.classList.contains('wrap') ? e : e.closest('.wrap')); return wr ? {cw: wr.clientWidth, sw: wr.scrollWidth, hang: wr.querySelectorAll('tbody tr[data-dt],tbody tr[data-xe]').length} : null; }, id);

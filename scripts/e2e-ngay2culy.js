@@ -60,7 +60,7 @@ const SEED = {v: 2, congTy: {c1: C1}, rs: {own1: {id: 'own1', info: {ma: 'CR-01'
   ok('ngày cân 2 nhập thật (N6 = 11/10/2026) giữ nguyên sau khi lưu', (await db()).rs.own1.forests.fa.pc.find(p => p.soPhieu === 'N6').ngay2 === '11/10/2026');
 
   // ===== 2. cự ly tự tính =====
-  await w.click('#navSet'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
+  await w.click('#navDm'); await w.waitForSelector('#setTab_cty'); await w.click('#setTab_cty'); await w.waitForSelector('#ctyForm');
   await w.fill('#ctyForm [name=toaDo]', 'abc'); await w.click('#ctyForm button[type=submit]'); await w.waitForTimeout(300);
   ok('tọa độ trụ sở gõ sai dạng: báo lỗi, không lưu', /Tọa độ trụ sở “abc” sai dạng/.test(await w.innerText('#ctyMsg')) && (await db()).congTy.c1.lat == null);
   await w.fill('#ctyForm [name=toaDo]', '30, 108'); await w.click('#ctyForm button[type=submit]'); await w.waitForTimeout(300);

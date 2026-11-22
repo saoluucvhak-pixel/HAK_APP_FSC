@@ -18,7 +18,7 @@ function newForest() {
   const fid = newId('f');
   o.forests[fid] = {id: fid, info: {maRung: code, tenRung: 'Rừng ' + k, diaDiem: '', lat: null, lng: null, dienTich: null,
     dinhMucTanHa: null, cuLy: null, tuNgay: '', denNgay: '', giayTo: []},
-    nc: [], dx: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
+    nc: [], dx: [], pc: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
   NAV.curF = fid; NAV.ftab = 'finfo'; NAV.tab = 'rung';
   persist();
   note('Đã tạo rừng mới. Nhập thông tin rừng rồi bấm Lưu dữ liệu vào lô (hoặc Enter).');
@@ -231,8 +231,10 @@ function saveVc(form, nhap) {
   const f = curForest(); if (!f) return;
   const info = Object.assign({}, f.info, readVc(form));
   const vc = info.vanChuyen, e = [];
-  if (vc.donGiaKm === 'x' || (typeof vc.donGiaKm === 'number' && vc.donGiaKm <= 0)) e.push('Đơn giá vận chuyển (đ/tấn/km) phải là số dương');
-  if (vc.coDinh === 'x' || (typeof vc.coDinh === 'number' && vc.coDinh <= 0)) e.push('Đơn giá vận chuyển cố định phải là số dương');
+  if (vc.donGiaKm === 'x') e.push('Đơn giá vận chuyển (đ/tấn/km) không phải là số');
+  else if (typeof vc.donGiaKm === 'number' && vc.donGiaKm <= 0) e.push('Đơn giá vận chuyển (đ/tấn/km) phải là số dương');
+  if (vc.coDinh === 'x') e.push('Đơn giá vận chuyển cố định không phải là số');
+  else if (typeof vc.coDinh === 'number' && vc.coDinh <= 0) e.push('Đơn giá vận chuyển cố định phải là số dương');
   if (vc.tuNgay && !parseVN(vc.tuNgay)) e.push('ngày vận chuyển phải đúng dd/mm/yyyy');
   if (e.length) { formMsg(form, chuaLuu(nhap) + e.join('; ')); return; }
   clearFormMsg(form);

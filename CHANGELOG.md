@@ -1,5 +1,21 @@
 # Nhật ký thay đổi
 
+## 3.2.0 — Bố cục mới V10.4, bộ lọc thông minh HAK_SMART_FILTER, hoàn tất 28/28 E2E suites và cải tiến sao lưu/khôi phục
+
+### Điểm mới
+
+- **Bố cục mới V10.4 & HAK Enterprise Design System:** Tái cấu trúc quy trình nhập liệu theo chuẩn phân hệ, phân nhóm Danh mục (`#navDm`), chuẩn hóa điều hướng combobox đối tác/xe và thanh thao tác Action Bar.
+- **Bộ lọc thông minh HAK_SMART_FILTER:** Tích hợp bộ lọc tìm kiếm nâng cao cho danh mục đối tượng, xe và bảng nhập liệu.
+- **Hoàn tất 28/28 E2E Test Suites:** 100% các bộ kịch bản kiểm thử tự động trên Electron + SQLite vượt qua thành công trên môi trường Windows.
+- **Sửa các lỗi thực tế:** Bảo lưu mảng nhân công có ID hợp lệ khi chuyển đổi mô hình ký trực tiếp; sửa tính khối lượng báo cáo đội khi còn phiếu chưa gán đội; hỗ trợ song song cả số phiếu và mã liên kết cho biến số và lương phụ cấp.
+- **Tối ưu hiển thị compact:** Tinh chỉnh khoảng cách đệm trên màn hình 1366×768 tỷ lệ zoom 150%, đảm bảo hiển thị đủ 3 dòng và độ tương phản đạt chuẩn AA ≥ 4,5:1.
+- **Cải tiến sao lưu và khôi phục:**
+  - Sao lưu toàn bộ dạng `.json` mang đủ lịch sử bản chụp các lần chốt lô như `.sqlite`; khôi phục giữ nguyên bản chụp.
+  - Chủ rừng cùng ID nội bộ mà CCCD khác hẳn khi khôi phục sẽ dừng lại để đối chiếu, không tự gộp.
+  - Thư mục sao lưu SQLite và JSON cài đặt riêng; tự động sao lưu SQLite theo chu kỳ (2 giờ, hằng ngày, hằng tuần).
+  - Khôi phục kiểm tra cấu trúc và phiên bản TRƯỚC khi xem trước hay ghi.
+- **Bảo toàn bản in:** 206/206 tài liệu biểu mẫu `.docx` giống từng byte so với bản gốc.
+
 ## 3.1.0 — Danh mục đối tượng và xe, hợp đồng theo danh sách, phiếu cân trong hợp đồng, phân bổ khối lượng, quy trình nhập chặt hơn
 
 ### Điểm mới

@@ -18,7 +18,7 @@ const RATE = {'Tổ trưởng': 400000, 'Công nhân khai thác': 300000, 'Công
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'c.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
-  const mk = extra => { const L = lot('fa', 'R-A', {exp: {...EXP1}, pc: PC, kl: 29.75}); Object.assign(L.info, {hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: RATE, tuNgay: '05/10/2026', denNgay: '11/10/2026', donGia: null}, extra || {}); return L; };
+  const mk = extra => { const L = lot('fa', 'R-A', {exp: {...EXP1}, pc: PC, kl: 29.75}); Object.assign(L.info, {hinhThucLuong: 'ngaycong', moHinhKy: 'giaokhoan', donGiaNgay: RATE, tuNgay: '05/10/2026', denNgay: '11/10/2026', donGia: null}, extra || {}); if (L.doi && L.doi[0]) { L.doi[0].hinhThuc = Object.assign({}, L.doi[0].hinhThuc || {}, {hinhThucLuong: 'ngaycong', moHinhKy: (extra && extra.moHinhKy) || 'giaokhoan', donGiaNgay: RATE}); } return L; };
   const openF = async tab => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + tab + ']'); if (tab === 'xuat') await w.click('[data-xtab=all]'); };
   const dl = async kind => { clean(); await w.$eval('button[data-act=dl][data-kind=' + kind + ']', b => b.click()); let f = null; for (let i = 0; i < 100 && !f; i++) { f = fs.readdirSync(out).find(x => /\.(docx|zip)$/.test(x)); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(300); return readOut(); };
   const setDb = async d => { await w.waitForTimeout(700); await w.evaluate(x => window.hak.save(x), d); };
@@ -80,7 +80,10 @@ const RATE = {'Tổ trưởng': 400000, 'Công nhân khai thác': 300000, 'Công
   ok('BM-08 mẫu nền (giao khoán trả theo ngày công): có đoạn Tổ trưởng nhận thay cả tổ nhưng KHÔNG in số công, số tiền (chỉ điền ở bản in đè)', /Hình thức giao khoán, trả theo ngày công/.test(nen.text) && !nen.text.includes(fmt(tot1)) && !nen.text.includes(fmt(t1)), nen.text.slice(0, 600));
 
   // ===== trực tiếp dùng chung số công =====
-  const D = mk({moHinhKy: 'tructiep'}); D.cc = JSON.parse(JSON.stringify((await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fa.cc));
+  const curFa = (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fa;
+  const D = JSON.parse(JSON.stringify(curFa));
+  D.info.moHinhKy = 'tructiep';
+  if (D.doi && D.doi[0]) D.doi[0].hinhThuc = Object.assign({}, D.doi[0].hinhThuc || {}, {moHinhKy: 'tructiep'});
   await setDb(seed([D])); await openF('xuat');
   const tcD = await dl('tc');
   ok('ký trực tiếp theo ngày công dùng cùng số công chấm tay; không có đoạn giao khoán', [t1, t2, t3, tot1].every(v => tcD.text.includes(fmt(v))) && !/Hình thức giao khoán, trả theo ngày công/.test(tcD.text));

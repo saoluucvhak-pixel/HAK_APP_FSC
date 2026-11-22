@@ -15,7 +15,10 @@ function panelVanChuyen(rec) {
   return '<div class="hak-master-detail">' +
     '<aside class="hak-master-pane">' + panelDsVC(rec, {master: true, selId: h ? h.id : ''}) + '</aside>' +
     '<section class="hak-detail-pane">' +
-      '<div class="hak-pane-head"><h3>' + (h ? 'Chi tiết: ' + esc(tenDoiVc(rec, h)) + (soHdVc(rec, h) ? ' · HĐ ' + esc(soHdVc(rec, h)) : '') : 'Vận chuyển & Phiếu cân') + '</h3></div>' +
+      '<div class="hak-pane-head" id="hdDau">' +
+        (h ? '<button class="btn ghost sm" data-act="hdQuayLai" data-kind="dx" id="hdQuayLai" style="margin-right:8px">← Quay lại danh sách</button>' : '') +
+        '<div class="hdDauTen"><h3>' + (h ? 'Chi tiết: <span id="hdDauTen">' + esc(tenDoiVc(rec, h)) + '</span>' + (soHdVc(rec, h) ? ' · <span id="hdDauSo">số ' + esc(soHdVc(rec, h)) + '</span>' : '') : 'Vận chuyển & Phiếu cân') + '</h3></div>' +
+      '</div>' +
       detail +
     '</section></div>';
 }
