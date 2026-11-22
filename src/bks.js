@@ -30,6 +30,8 @@
     const k = khoaPhieu(p), nguon = s(p && p.nguonId);
     return (pcRung || []).filter(q => q && ((nguon && s(q.nguonId) === nguon) || (k && khoaPhieu(q) === k)));
   }
-  const api = {khoa, khoaPhieu, soPhieu, chonXe, phieuDaCo};
+  /* mọi khóa nhận diện một phiếu: khóa hiện hành rồi khóa bí danh của từng soCu[] (ngày của chính bí danh; thiếu thì lấy ngày phiếu). Dữ liệu cũ không có soCu → chỉ một khóa. */
+  const khoaTatCa = p => [khoaPhieu(p)].concat(((p && p.soCu) || []).map(c => khoaPhieu({soPhieu: c && c.so, ngay: (c && c.ngay) || (p && p.ngay)})));
+  const api = {khoa, khoaPhieu, soPhieu, chonXe, phieuDaCo, khoaTatCa};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKBks = api;
 })(typeof self !== 'undefined' ? self : this);

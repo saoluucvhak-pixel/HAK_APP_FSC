@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mô phỏng V3 Dữ liệu Google Sheets</title>
+<style>
+:root{--bg:#f6f2e8;--card:#fffdf8;--ink:#1b2438;--mut:#6b7285;--line:#ddd5c2;--brand:#1f2f55;--brandH:#2c4075;--onBrand:#fff;--gold:#b8913f;--goldSoft:#f3e8cc;--ok:#1f7a4d;--okBg:#e1f2e8;--warn:#9a6700;--warnBg:#fdf1cf;--err:#b3261e;--errBg:#fbe3e0;--new:#1e5fa8;--newBg:#e0ecf9;--th:#ece5d3;--bar:#16213d}
+@media (prefers-color-scheme:dark){:root{--bg:#10162a;--card:#182039;--ink:#ece8dc;--mut:#98a0b5;--line:#2c3556;--brand:#d4b46a;--brandH:#e3c785;--onBrand:#16213d;--gold:#d4b46a;--goldSoft:#2d2a1f;--ok:#6fd1a0;--okBg:#173326;--warn:#e8c25a;--warnBg:#3a3016;--err:#ff8a80;--errBg:#3d1c1a;--new:#8ab8f0;--newBg:#182c47;--th:#222b49;--bar:#0b1022}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+.note{background:var(--goldSoft);border-bottom:1px solid var(--line);padding:8px 16px;font-size:12.5px;color:var(--ink)}
+.top{background:var(--bar);color:#f1ede2;display:flex;gap:4px;padding:0 12px;align-items:center;flex-wrap:wrap}
+.top b{padding:11px 12px 11px 4px;color:#e3c785}.top span{padding:11px 12px;font-size:13px;opacity:.8}.top span.on{opacity:1;border-bottom:3px solid #e3c785;font-weight:600}
+.crumb{padding:10px 16px 0;color:var(--mut);font-size:12.5px}
+h1{margin:4px 16px 2px;font-size:20px}.sub{margin:0 16px 10px;color:var(--mut);font-size:13px}
+.bar2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 16px 10px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px}
+.bar2 input[type=search]{flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.chip{padding:3px 9px;border-radius:99px;font-size:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}.chip.on{background:var(--brand);color:var(--onBrand);border-color:var(--brand)}
+.sync{font-size:12px;color:var(--mut)}
+.wrap{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:12px;margin:0 16px 16px;align-items:start}
+@media(max-width:1000px){.wrap{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.panel h2{margin:0;padding:9px 12px;font-size:13.5px;background:var(--th);border-bottom:1px solid var(--line)}
+.hd{display:block;width:100%;text-align:left;padding:9px 12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;font:inherit}
+.hd:hover{background:var(--goldSoft)}.hd.on{background:var(--goldSoft);box-shadow:inset 4px 0 0 var(--gold)}
+.hd .r1{display:flex;justify-content:space-between;gap:8px;font-weight:600}.hd .r2{color:var(--mut);font-size:12.5px;margin-top:2px}
+.st{font-size:11.5px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.st.ok{background:var(--okBg);color:var(--ok)}.st.warn{background:var(--warnBg);color:var(--warn)}.st.err{background:var(--errBg);color:var(--err)}
+.det{padding:12px}.head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px}
+.head .t{font-size:16px;font-weight:700}.head .m{color:var(--mut);font-size:12.5px}
+.alert{padding:8px 10px;border-radius:6px;margin:8px 0;font-size:13px;border:1px solid}
+.alert.warn{background:var(--warnBg);border-color:var(--warn);color:var(--ink)}.alert.err{background:var(--errBg);border-color:var(--err)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.rt{padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer;font:inherit}
+.rt.on{background:var(--brand);color:var(--onBrand);border-color:var(--brand)}
+.blk{border:1px solid var(--line);border-radius:8px;margin:10px 0;overflow:hidden}
+.bh{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:var(--th);flex-wrap:wrap}
+.bh b{font-size:13.5px}.bh label{font-size:12.5px;display:flex;gap:6px;align-items:center;cursor:pointer}
+.bh .lk{font-size:12px;color:var(--brand);background:none;border:0;cursor:pointer;text-decoration:underline;font:inherit;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;background:var(--th);padding:6px 8px;font-weight:600;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.diff{background:var(--warnBg)}.same{color:var(--mut)}.tg{font-size:11px;padding:1px 7px;border-radius:99px;font-weight:600}
+.tg.new{background:var(--newBg);color:var(--new)}.tg.chg{background:var(--warnBg);color:var(--warn)}.tg.dup{background:var(--th);color:var(--mut)}.tg.bad{background:var(--errBg);color:var(--err)}
+.off{opacity:.45}.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--line);background:var(--th)}
+.btn{padding:8px 16px;border-radius:8px;border:1px solid var(--brand);background:var(--brand);color:var(--onBrand);font:inherit;font-weight:600;cursor:pointer}.btn.sec{background:transparent;color:var(--brand)}
+.btn:focus-visible,.hd:focus-visible,.rt:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.sum{margin:10px 0;padding:10px 12px;background:var(--okBg);border:1px solid var(--ok);border-radius:8px;display:none}
+.tbwrap{overflow-x:auto}.empty{padding:18px;color:var(--mut);text-align:center}
+
+.stick{position:sticky;bottom:0;z-index:5;box-shadow:0 -4px 12px rgba(0,0,0,.12)}
+.cap{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;padding:10px 12px}
+.cb{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.cb .l{display:flex;justify-content:space-between;font-size:12.5px;gap:6px}.meter{height:8px;background:var(--th);border-radius:99px;margin:6px 0 4px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok)}.meter i.over{background:var(--err)}.meter i.near{background:var(--gold)}
+.rule{padding:8px 12px;font-size:12.5px;color:var(--mut);border-bottom:1px solid var(--line);background:var(--card)}
+.bdg{display:inline-block;margin-left:6px;min-width:20px;text-align:center;padding:0 6px;border-radius:99px;background:var(--gold);color:#16213d;font-size:11.5px;font-weight:700}
+.rt.on .bdg{background:#e3c785}.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+.tools select,.tools input,td select{padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;font-size:12.5px}
+.btn.sm{padding:5px 11px;font-size:12.5px}.pg{display:flex;gap:6px;align-items:center;justify-content:flex-end;padding:8px 12px;font-size:12.5px;color:var(--mut)}
+.hid{padding:6px 10px;font-size:12.5px;color:var(--mut);background:var(--bg);border-bottom:1px solid var(--line)}
+.hid button{background:none;border:0;color:var(--brand);text-decoration:underline;cursor:pointer;font:inherit}
+.quick{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+
+.scr{display:flex;gap:6px;margin-left:auto}.scr button{padding:3px 10px;border:1px solid var(--line);border-radius:99px;background:var(--bg);color:var(--ink);cursor:pointer;font:inherit;font-size:12.5px}.scr button.on{background:var(--brand);color:var(--onBrand);border-color:var(--brand)}
+.note{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;padding:12px}
+.fld label{display:block;font-size:12px;color:var(--mut);margin-bottom:2px}.fld input,.fld select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+.acts{display:flex;gap:8px;flex-wrap:wrap;padding:0 12px 12px;align-items:center}
+.res{margin:0 12px 12px}.k-ok{color:var(--ok);font-weight:600}.k-bad{color:var(--err);font-weight:600}.k-warn{color:var(--warn);font-weight:600}
+.mwrap{margin:0 16px 16px}.ctab th{cursor:default}.ctab tr.row{cursor:pointer}.ctab tr.row:hover td{background:var(--goldSoft)}
+.ov{position:fixed;inset:0;background:rgba(10,15,30,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:12px}.ov.on{display:flex}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:12px;width:min(1180px,100%);height:min(780px,100%);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.mh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:10px 14px;background:var(--bar);color:#f1ede2}.mh .t{font-size:16px;font-weight:700}.mh .m{font-size:12.5px;opacity:.8}
+.mh .x{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit}
+.mb{flex:1;min-height:0;display:grid;grid-template-columns:minmax(230px,290px) minmax(0,1fr)}
+@media(max-width:820px){.mb{grid-template-columns:1fr;grid-template-rows:auto 1fr}.master{max-height:150px}}
+.master{overflow:auto;border-right:1px solid var(--line);background:var(--bg)}.master h3{margin:0;padding:8px 12px;font-size:12.5px;background:var(--th);border-bottom:1px solid var(--line)}
+.rc{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);padding:9px 12px;cursor:pointer;font:inherit}.rc.on{background:var(--goldSoft);box-shadow:inset 4px 0 0 var(--gold)}.rc b{display:block}.rc .s{font-size:12px;color:var(--mut)}
+.dt{display:flex;flex-direction:column;min-height:0}.dtt{display:flex;gap:4px;padding:6px 10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.dtt button{padding:7px 14px;border:0;border-bottom:3px solid transparent;background:none;color:var(--mut);cursor:pointer;font:inherit;font-weight:600}.dtt button.on{color:var(--ink);border-bottom-color:var(--gold)}
+.dtb{flex:1;overflow:auto;padding:10px 12px}.mf{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line);background:var(--th)}
+.sus{border:1px solid var(--warn);background:var(--warnBg);border-radius:8px;padding:8px 10px;margin:8px 0}.sus .p{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;font-size:13px}
+.sus code{background:var(--card);padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
+</style></head><body>
+<div class="note"><b>BẢN MÔ PHỎNG V3</b> — dữ liệu giả lập, bấm thử được; chưa phải mã ứng dụng.<span class="scr"><button class="on" data-s="1">Màn 1 · Nhập chủ rừng thủ công</button><button data-s="2">Màn 2 · Dữ liệu Google Sheets</button></span></div>
+<div class="top"><b>HAK · Hồ sơ gỗ keo</b><span>Chủ rừng</span><span>Lô khai thác</span><span>Vận chuyển</span><span>Báo cáo</span><span id="tnav">Dữ liệu Google Sheets</span><span>Cài đặt</span></div>
+<div id="scr1"></div><div id="scr2" style="display:none"></div>
+<div class="ov" id="ov"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt" id="md"></div></div>
+<script>
+const $=s=>document.querySelector(s),f2=n=>n.toFixed(2).replace('.',','),fold=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').toLowerCase().replace(/\s+/g,' ').trim();
+const mk=(ma,lo,ha,dm,info,gps)=>({ma,lo,ha,dm,info,gps});
+const D=[
+{hd:'HD-2026-0147',ten:'Nguyễn Văn A (giả lập)',cccd:'049000000011',ngay:'05/10/2026',dc:'Xã Phước Lộc, Tiên Phước',st:'ok',stt:'Đủ',msg:[],tol:5,app:{rung:1,phieu:4,tan:82.36},
+ rungs:[mk('R-0147-01','Lô 1 — Đồi Khe Sâu',0.65,95,[['Địa điểm khai thác','Xã Phước Lộc, huyện Tiên Phước','Xã Phước Lộc, huyện Tiên Phước',0],['Diện tích (ha)','0,65','0,65',0],['Định mức (tấn/ha)','','95',2],['Pháp lý rừng','Có giấy tờ nguồn gốc','Sổ đỏ BX 123456',1],['Điện thoại','','09xx xxx xxx',2]],[['1','15.4871','108.2310','ok'],['2','15.4880','108.2322','ok'],['3','15.4869','108.2331','ok'],['4','15.4861','108.2318','ok']]),
+  mk('R-0147-02','Lô 2 — Bãi Cây Da',0.55,95,[['Địa điểm khai thác','Xã Phước Lộc, huyện Tiên Phước','Thôn 3, xã Phước Lộc',1],['Diện tích (ha)','','0,55',2],['Định mức (tấn/ha)','','95',2],['Pháp lý rừng','','Sổ đỏ BX 123457',2]],[['1','15.4902','108.2411','ok'],['2','15.4911','108.2420','ok'],['3','15.4899','108.2428','warn']])],
+ pc:[['PC-1001','06/11/2026','43C-123.45',20.5,'new',''],['PC-1002','06/11/2026','43C-123.45',19.98,'new',''],['PC-1003','07/11/2026','43C-678.90',21.12,'chg',''],['PC-1040','07/11/2026','43C-678.90',20.76,'dsn','PC-1004'],['PC-1005','09/11/2026','43C-111.22',18.34,'new',''],['PC-1006','09/11/2026','43C-111.22',19.05,'new',''],['PC-1007','10/11/2026','43C-111.22',18.7,'new',''],['PC-1008','11/11/2026','43C-222.33',17.9,'new',''],['PC-1009','12/11/2026','43C-222.33',19.2,'new','']]},
+{hd:'HD-2026-0152',ten:'Trần Thị B (giả lập)',cccd:'049000000022',ngay:'12/10/2026',dc:'Xã Trà Kót',st:'warn',stt:'Lệch CCCD',msg:['warn|1 phiếu cân ở HoSoKeo ghi <b>CCCD khác</b> với HoSoRung (dòng 38). Dòng này không tích sẵn.'],tol:5,app:{rung:1,phieu:0,tan:0},
+ rungs:[mk('R-0152-01','Lô 3 — Gò Sim',1.2,90,[['Địa điểm khai thác','Xã Trà Kót','Xã Trà Kót',0],['Diện tích (ha)','1,20','1,20',0],['Pháp lý rừng','','Giấy xác nhận UBND xã',2]],[['1','15.3320','108.1102','ok'],['2','15.3331','108.1110','ok']])],
+ pc:[['PC-2001','12/11/2026','43C-300.01',21,'new',''],['PC-2002','12/11/2026','43C-300.01',20.5,'new',''],['PC-2003','13/11/2026','43C-300.99',19.8,'bad','']]},
+{hd:'HD-2026-0160',ten:'Lê Văn C (giả lập)',cccd:'—',ngay:'—',dc:'—',st:'err',stt:'Lỗi dữ liệu',msg:['err|Mã hợp đồng trùng ở HoSoRung với <b>2 CCCD khác nhau</b> (dòng 41 và 57). Chưa thể cập nhật cho đến khi sửa trên Sheet.'],tol:5,app:{rung:0,phieu:0,tan:0},rungs:[],pc:[]},
+{hd:'HD-2026-0171',ten:'Phạm Thị D (giả lập)',cccd:'049000000044',ngay:'15/10/2026',dc:'Xã Quế Phong',st:'ok',stt:'Đủ',msg:[],tol:5,app:{rung:1,phieu:0,tan:0},
+ rungs:[mk('R-0171-01','Lô 4 — Đồi Ông Tư',1,95,[['Địa điểm khai thác','Xã Quế Phong','Xã Quế Phong',0],['Diện tích (ha)','1,00','1,00',0]],[['1','15.6120','108.0210','ok'],['2','15.6130','108.0220','ok']])],
+ pc:[['PC-3001','15/11/2026','43C-555.66',20,'new',''],['PC-3002','15/11/2026','43C-555.66',20.3,'new','']]}
+];
+D.forEach(d=>{d.rungs.forEach(r=>{r.cap=Math.round(r.ha*r.dm*100)/100;r.on=[true,true,true];r.si=r.info.map(x=>x[3]===2);r.sg=r.gps.map(g=>g[3]==='ok');r.exp=1});d.sp=d.pc.map(p=>p[4]==='new');d.as=d.pc.map(()=>-1);d.act={};auto(d)});
+const alloc=p=>p[4]==='new'||p[4]==='chg'&&false;
+function auto(d){d.as=d.pc.map(()=>-1);if(!d.rungs.length)return;const ok=p=>p[4]==='new';
+ if(d.rungs.length===1){d.pc.forEach((p,i)=>{if(ok(p))d.as[i]=0});return}
+ let k=0,cum=0;d.pc.forEach((p,i)=>{if(!ok(p))return;while(k<d.rungs.length-1&&cum+p[3]>d.rungs[k].cap*(1+d.tol/100)+1e-9){k++;cum=0}d.as[i]=k;cum+=p[3]})}
+function used(d,k){return d.pc.reduce((t,p,i)=>t+(d.as[i]===k&&d.sp[i]?p[3]:0),0)}
+function fillOne(d,k){let cum=used(d,k),last=k===d.rungs.length-1;d.pc.forEach((p,i)=>{if(p[4]!=='new'||d.as[i]!==-1)return;if(last||cum+p[3]<=d.rungs[k].cap*(1+d.tol/100)+1e-9){d.as[i]=k;cum+=p[3]}})}
+function pend(d,k){const r=d.rungs[k];return r.si.filter(x=>x).length+r.sg.filter(x=>x).length+d.pc.filter((p,i)=>d.as[i]===k&&d.sp[i]).length}
+// ===== Màn 1
+const F={ten:'Nguyễn Văn A (giả lập)',cccd:'049000000011',hd:'HD-2026-0147',ngay:'05/10/2026',rung:2,tan:null};let cmp=null,smpSel='a';
+const SAMPLE={a:{ten:'Nguyễn Văn A (giả lập)',cccd:'049000000011',hd:'HD-2026-0147',ngay:'05/10/2026',rung:2,tan:null},b:{ten:'Nguyễn Văn An (giả lập)',cccd:'049000000099',hd:'HD-2026-0147',ngay:'06/10/2026',rung:1,tan:82.36},c:{ten:'Hoàng Văn E (giả lập)',cccd:'049000000055',hd:'HD-2026-0999',ngay:'01/11/2026',rung:1,tan:10},d:{ten:'Lê Văn C (giả lập)',cccd:'049000000033',hd:'HD-2026-0160',ngay:'20/10/2026',rung:1,tan:0}};
+function scr1(){const ready=F.cccd.trim()&&F.hd.trim();
+ $('#scr1').innerHTML=`<div class="crumb">Trang chủ › Chủ rừng › Thêm chủ rừng</div><h1>Thêm chủ rừng</h1><p class="sub">Nhập thủ công. Có CCCD và số hợp đồng thì <b>mở Dữ liệu Google Sheets</b> để tải về, hoặc <b>đối chiếu</b> với Sheet để thấy chênh lệch.</p>
+ <div class="mwrap"><div class="panel"><h2>Thông tin chủ rừng</h2><div class="fld" style="padding:10px 12px 0"><label>Nạp ví dụ (chỉ để xem thử mô phỏng)</label><select id="smp"><option value="a" ${smpSel==='a'?'selected':''}>Khớp với Sheet</option><option value="b" ${smpSel==='b'?'selected':''}>Có chênh lệch (tên, CCCD, ngày ký)</option><option value="c" ${smpSel==='c'?'selected':''}>Hợp đồng không có trên Sheet</option><option value="d" ${smpSel==='d'?'selected':''}>Hợp đồng bị lỗi dữ liệu trên Sheet</option></select></div>
+ <div class="form"><div class="fld"><label>Họ và tên</label><input data-f="ten" value="${F.ten}"></div><div class="fld"><label>CCCD</label><input data-f="cccd" value="${F.cccd}"></div><div class="fld"><label>Số hợp đồng</label><input data-f="hd" value="${F.hd}"></div><div class="fld"><label>Ngày ký hợp đồng</label><input data-f="ngay" value="${F.ngay}"></div></div>
+ <div class="acts"><button class="btn" id="open" ${ready?'':'disabled'}>Mở dữ liệu Google Sheets</button><button class="btn sec" id="cmp" ${ready?'':'disabled'}>Đối chiếu với Google Sheets</button><button class="btn sec">Lưu chủ rừng</button><span class="m" style="color:var(--mut);font-size:12.5px">${ready?'Hai nút đầu dùng mã hợp đồng làm khóa; CCCD để kiểm tra.':'Nhập CCCD và số hợp đồng để dùng hai nút này.'}</span></div>${cmp||''}</div></div>`}
+function compare(){const d=D.find(x=>x.hd.toLowerCase()===F.hd.trim().toLowerCase());
+ if(!d)return `<div class="res"><div class="alert err"><b>Không tìm thấy hợp đồng ${F.hd}</b> trên Google Sheets (đã đồng bộ lúc 14:05). Kiểm tra lại mã hợp đồng, hoặc bấm "Tải lại từ Sheet" ở màn Dữ liệu Google Sheets.</div></div>`;
+ if(d.st==='err')return `<div class="res"><div class="alert err"><b>Hợp đồng ${d.hd} có lỗi dữ liệu trên Sheet:</b> ${d.msg[0].split('|')[1]}</div></div>`;
+ const rows=[['Họ và tên',F.ten,d.ten,fold(F.ten)===fold(d.ten)],['CCCD',F.cccd,d.cccd,F.cccd.replace(/\s/g,'')===d.cccd],['Ngày ký hợp đồng',F.ngay,d.ngay,F.ngay===d.ngay]];
+ const sheetTan=d.pc.filter(p=>p[4]!=='bad').reduce((t,p)=>t+p[3],0);
+ const at=F.tan==null?sheetTan:F.tan;rows.push(['Số rừng',String(F.rung)+' (trong hồ sơ)',String(d.rungs.length)+' (trên Sheet)',F.rung===d.rungs.length]);
+ rows.push(['Tổng tấn phiếu cân',f2(at)+' t (trong hồ sơ)',f2(sheetTan)+' t',Math.abs(at-sheetTan)<0.005]);
+ const bad=rows.filter(r=>!r[3]).length;
+ return `<div class="res"><div class="alert ${bad?'warn':''}" style="${bad?'':'background:var(--okBg);border-color:var(--ok)'}">${bad?`<b>Cảnh báo: ${bad} chênh lệch</b> giữa dữ liệu nhập tay và Google Sheets.`:'<b>Khớp:</b> thông tin nhập tay trùng Google Sheets.'}</div><div class="tbwrap"><table><tr><th>Mục</th><th>Đã nhập / trong hồ sơ</th><th>Trên Google Sheets</th><th>Kết luận</th></tr>${rows.map(r=>`<tr class="${r[3]?'':'diff'}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]?'<span class="k-ok">Khớp</span>':'<span class="k-bad">Chênh lệch</span>'}</td></tr>`).join('')}</table></div><div class="acts" style="padding:8px 0 0"><button class="btn sm" id="open2">Mở hợp đồng ${d.hd} để xem và cập nhật</button><span class="m" style="color:var(--mut);font-size:12.5px">Không tự sửa dữ liệu nhập tay; người dùng quyết định.</span></div></div>`}
+// ===== Màn 2
+let flt='all',qs='',cur=0,rg=0,tab='ho',showSame=false,pcf='all',page=0,msgSum='';const PAGE=5;
+function scr2(){const L=D.map((d,i)=>[d,i]).filter(([d])=>(flt==='all'||d.st===flt)&&(!qs||fold(d.hd+' '+d.ten+' '+d.cccd).includes(fold(qs))));
+ $('#scr2').innerHTML=`<div class="crumb">Trang chủ › Dữ liệu Google Sheets</div><h1>Dữ liệu Google Sheets</h1><p class="sub">Toàn bộ hợp đồng trên Sheet. Bấm một hợp đồng để xem hồ sơ rừng, tọa độ và phiếu cân của hợp đồng đó.</p>
+ <div class="bar2"><input type="search" id="q" value="${qs}" placeholder="Tìm mã hợp đồng, chủ rừng, CCCD (không phân biệt dấu)…"><span class="chip ${flt==='all'?'on':''}" data-f="all">Tất cả</span><span class="chip ${flt==='ok'?'on':''}" data-f="ok">Đủ</span><span class="chip ${flt==='warn'?'on':''}" data-f="warn">Cần xem</span><span class="chip ${flt==='err'?'on':''}" data-f="err">Lỗi dữ liệu</span><span class="sync">Đồng bộ: 22/11/2026 14:05 · 3/3 tab hợp lệ</span><button class="btn sec" type="button">Tải lại từ Sheet</button></div>
+ <div class="mwrap"><div class="panel"><h2>Hợp đồng (${L.length}/${D.length})</h2><div class="tbwrap"><table class="ctab"><tr><th>Mã hợp đồng</th><th>Chủ rừng</th><th>CCCD</th><th>Ngày ký</th><th class="num">Rừng</th><th class="num">Phiếu</th><th class="num">Tổng tấn</th><th>Trạng thái</th></tr>${L.length?L.map(([d,i])=>`<tr class="row" data-i="${i}" tabindex="0"><td><b>${d.hd}</b></td><td>${d.ten}</td><td>${d.cccd}</td><td>${d.ngay}</td><td class="num">${d.rungs.length}</td><td class="num">${d.pc.length}</td><td class="num">${f2(d.pc.reduce((t,p)=>t+p[3],0))}</td><td><span class="st ${d.st}">${d.stt}</span></td></tr>`).join(''):'<tr><td colspan="8" class="empty">Không có hợp đồng khớp bộ lọc.</td></tr>'}</table></div></div></div>`}
+function tg(p){return {new:'<span class="tg new">Mới</span>',chg:'<span class="tg chg">Đổi</span>',dup:'<span class="tg dup">Trùng — bỏ qua</span>',bad:'<span class="tg bad">Lệch CCCD</span>',dsn:'<span class="tg chg">Nghi đổi số</span>',sn:'<span class="tg chg">Đổi số</span>'}[p[4]]}
+function modal(){const d=D[cur];let h=`<div class="mh"><div><div class="t" id="mt">${d.hd} · ${d.ten}</div><div class="m">CCCD ${d.cccd} · ký ${d.ngay} · ${d.rungs.length} rừng · ${d.pc.length} phiếu cân</div></div><span style="display:flex;gap:8px;align-items:center"><span class="st ${d.st}">${d.stt}</span><button class="x" id="cls">Đóng ✕</button></span></div>`;
+ if(!d.rungs.length){$('#md').innerHTML=h+`<div class="dtb">${d.msg.map(m=>`<div class="alert ${m.split('|')[0]}">${m.split('|')[1]}</div>`).join('')}<div class="empty">Không có dữ liệu để cập nhật.</div></div>`;return}
+ if(rg>=d.rungs.length)rg=0;const R=d.rungs[rg];
+ h+=`<div class="mb"><div class="master"><h3>Rừng của hợp đồng (${d.rungs.length}) — thứ tự nhập</h3>`+d.rungs.map((r,i)=>{const u=used(d,i),p=Math.min(100,u/r.cap*100),c=u>r.cap*(1+d.tol/100)+1e-9?'over':p>=90?'near':'';return `<button class="rc ${i===rg?'on':''}" data-r="${i}"><b>Rừng ${i+1}: ${r.ma}<span class="bdg">${pend(d,i)}</span></b><span class="s">${r.lo}</span><div class="meter"><i class="${c}" style="width:${p}%"></i></div><span class="s">${f2(u)} / ${f2(r.cap)} t dự kiến${c==='over'?' · <b style="color:var(--err)">vượt</b>':''}</span></button>`}).join('')+`</div>`;
+ h+=`<div class="dt"><div class="dtt" role="tablist"><button class="${tab==='ho'?'on':''}" data-t="ho">Hồ sơ rừng</button><button class="${tab==='gps'?'on':''}" data-t="gps">Tọa độ (${R.gps.length})</button><button class="${tab==='pc'?'on':''}" data-t="pc">Phiếu cân (${d.pc.length})</button></div><div class="dtb">`;
+ d.msg.forEach(m=>{h+=`<div class="alert ${m.split('|')[0]}">${m.split('|')[1]}</div>`});
+ if(tab==='ho'){const same=R.info.filter(x=>x[3]===0).length;h+=`<div class="bh" style="border:1px solid var(--line);border-radius:8px 8px 0 0"><b>Hồ sơ rừng ${R.ma}</b><label><input type="checkbox" data-on="0" ${R.on[0]?'checked':''}> Cập nhật khối này</label></div><div class="hid" style="border:1px solid var(--line);border-top:0">${same} trường giống nhau ${showSame?'đang hiện':'đang ẩn'} · <button id="tsame">${showSame?'Ẩn':'Hiện'}</button> · Dự kiến = ${String(R.ha).replace('.',',')} ha × ${R.dm} = <b>${f2(R.cap)} t</b> · Vào lô: <select><option>${R.lo}</option><option>＋ Tạo lô mới</option></select></div><div class="tbwrap ${R.on[0]?'':'off'}"><table><tr><th></th><th>Trường</th><th>Trong hồ sơ</th><th>Trên Sheet</th><th>Trạng thái</th></tr>`;
+  R.info.map((x,i)=>[x,i]).filter(([x])=>showSame||x[3]!==0).forEach(([x,i])=>{h+=`<tr class="${x[3]===1?'diff':''}"><td><input type="checkbox" data-si="${i}" ${R.si[i]?'checked':''} ${x[3]===0?'disabled':''}></td><td>${x[0]}</td><td class="${x[1]?'':'same'}">${x[1]||'(trống)'}</td><td>${x[2]}</td><td>${x[3]===0?'<span class="same">Giống nhau</span>':x[3]===1?'<span class="tg chg">Khác — chọn nếu muốn đổi</span>':'<span class="tg new">Điền vào ô trống</span>'}</td></tr>`});h+=`</table></div>`}
+ if(tab==='gps'){h+=`<div class="bh" style="border:1px solid var(--line);border-radius:8px 8px 0 0"><b>Tọa độ rừng ${R.ma}</b><label><input type="checkbox" data-on="1" ${R.on[1]?'checked':''}> Cập nhật khối này</label></div><div class="tbwrap ${R.on[1]?'':'off'}"><table><tr><th></th><th class="num">Điểm</th><th class="num">Vĩ độ</th><th class="num">Kinh độ</th><th>Kiểm tra</th></tr>`;R.gps.forEach((g,i)=>{h+=`<tr><td><input type="checkbox" data-sg="${i}" ${R.sg[i]?'checked':''}></td><td class="num">${g[0]}</td><td class="num">${g[1]}</td><td class="num">${g[2]}</td><td>${g[3]==='ok'?'<span class="same">Trong miền hợp lệ</span>':'<span class="tg chg">Gần ranh miền — kiểm tra lại</span>'}</td></tr>`});h+=`</table></div>`}
+ if(tab==='pc'){const multi=d.rungs.length>1,un=d.pc.filter((p,i)=>d.as[i]===-1&&p[4]==='new').length,sus=d.pc.map((p,i)=>[p,i]).filter(([p])=>p[4]==='dsn');
+  h+=`<div class="bh" style="border:1px solid var(--line);border-radius:8px 8px 0 0"><b>Phiếu cân của hợp đồng (HoSoKeo)</b><label><input type="checkbox" data-on="2" ${R.on[2]?'checked':''}> Cập nhật khối này</label></div><div class="rule" style="border:1px solid var(--line);border-top:0">${multi?'<b>Phân bổ:</b> theo ngày cân; rừng nhập trước đến hết sản lượng dự kiến (+ dung sai), phần còn lại sang rừng sau; rừng cuối nhận phần dư.':'<b>Hợp đồng 1 rừng:</b> mọi phiếu mặc định vào rừng này.'}</div>`;
+  sus.forEach(([p,i])=>{h+=`<div class="sus"><b>Nghi đổi số phiếu:</b> trên Sheet là <code>${p[0]}</code>, hồ sơ đã có <code>${p[5]}</code> — cùng ngày ${p[1]}, BKS ${p[2]}, ${f2(p[3])} t.<div class="p"><button class="btn sm" data-sn="${i}">Đổi số ${p[5]} → ${p[0]} (giữ nguyên phiếu)</button><button class="btn sm sec" data-sk="${i}">Là chuyến khác (thêm mới)</button><span class="m" style="color:var(--mut);font-size:12px">Mặc định: không ghi cho đến khi chọn.</span></div></div>`});
+  h+=`<div class="tools">${multi?`<button class="btn sm" id="aauto">Phân bổ tự động</button><button class="btn sm sec" id="aone">Phân bổ phiếu còn lại vào rừng ${rg+1}</button><button class="btn sm sec" id="aclr">Xóa phân bổ</button><label>Dung sai <input type="number" id="tol" value="${d.tol}" min="0" max="30" style="width:56px"> %</label>`:''}<span style="margin-left:auto"></span><label>Lọc <select id="pcf"><option value="all">Tất cả</option><option value="new">Mới</option><option value="chg">Đổi</option><option value="dsn">Nghi đổi số</option><option value="bad">Lệch CCCD</option></select></label></div>`;
+  if(un)h+=`<div class="alert warn" style="margin:8px 0">Còn <b>${un}</b> phiếu chưa phân bổ vào rừng nào — chưa được cập nhật.</div>`;
+  const idx=d.pc.map((p,i)=>i).filter(i=>pcf==='all'||d.pc[i][4]===pcf),pages=Math.max(1,Math.ceil(idx.length/PAGE));if(page>=pages)page=0;
+  h+=`<div class="tbwrap ${R.on[2]?'':'off'}"><table><tr><th></th><th>Số phiếu</th><th>Ngày cân</th><th>BKS</th><th class="num">KL (tấn)</th><th>Trạng thái</th><th>Vào rừng</th></tr>`;
+  idx.slice(page*PAGE,page*PAGE+PAGE).forEach(i=>{const p=d.pc[i],lock=p[4]==='dup'||p[4]==='dsn'||p[4]==='bad';h+=`<tr class="${p[4]==='dup'?'off':''}"><td><input type="checkbox" data-sp="${i}" ${d.sp[i]?'checked':''} ${lock?'disabled':''}></td><td>${p[0]}${p[4]==='sn'?` <span class="same">(trước: ${p[5]})</span>`:''}</td><td>${p[1]}</td><td>${p[2]}</td><td class="num">${f2(p[3])}</td><td>${tg(p)}</td><td>${p[4]==='dsn'||p[4]==='dup'||p[4]==='sn'||p[4]==='bad'?'<span class="same">'+(p[4]==='sn'?'giữ lô hiện có':p[4]==='dsn'?'chờ quyết định':p[4]==='bad'?'không phân bổ':'đã có trong hồ sơ')+'</span>':`<select data-as="${i}" ${multi?'':'disabled'}>${d.rungs.map((r,k)=>`<option value="${k}" ${d.as[i]===k?'selected':''}>Rừng ${k+1}</option>`).join('')}<option value="-1" ${d.as[i]===-1?'selected':''}>Chưa phân bổ</option></select>`}</td></tr>`});
+  h+=`</table></div><div class="pg"><span>${idx.length} phiếu · trang ${page+1}/${pages}</span><button class="btn sm sec" id="pp" ${page?'':'disabled'}>‹</button><button class="btn sm sec" id="pn" ${page<pages-1?'':'disabled'}>›</button></div>`}
+ h+=`<div class="sum" id="sum" style="display:${msgSum?'block':'none'}">${msgSum}</div></div></div></div>`;
+ const tot=d.rungs.map((r,i)=>`R${i+1}: ${r.si.filter(x=>x).length} trường · ${r.sg.filter(x=>x).length} điểm · ${d.pc.filter((p,j)=>d.as[j]===i&&d.sp[j]).length} phiếu`).join(' | ');
+ h+=`<div class="mf"><span class="m" style="font-size:12.5px;color:var(--mut)">${tot}</span><span><button class="btn sec" id="qall">Chọn phần mới</button> <button class="btn sec" id="cls2">Đóng</button> <button class="btn" id="apply">Cập nhật vào hồ sơ</button></span></div>`;
+ $('#md').innerHTML=h;const f=$('#pcf');if(f)f.value=pcf}
+function openM(i){cur=i;rg=0;tab='ho';page=0;msgSum='';$('#ov').classList.add('on');modal();setS(2)}
+function setS(n){$('#scr1').style.display=n===1?'':'none';$('#scr2').style.display=n===2?'':'none';document.querySelectorAll('.scr button').forEach(b=>b.classList.toggle('on',+b.dataset.s===n))}
+document.addEventListener('click',e=>{const t=e.target,d=D[cur];
+ if(t.dataset.s){setS(+t.dataset.s);$('#ov').classList.remove('on')}
+ else if(t.id==='open'){const x=D.findIndex(c=>c.hd.toLowerCase()===F.hd.trim().toLowerCase());setS(2);qs=F.hd;scr2();if(x>=0)openM(x)}
+ else if(t.id==='open2'){const x=D.findIndex(c=>c.hd.toLowerCase()===F.hd.trim().toLowerCase());qs=F.hd;setS(2);scr2();openM(x)}
+ else if(t.id==='cmp'){cmp=compare();scr1()}
+ else if(t.closest('tr.row')){openM(+t.closest('tr.row').dataset.i)}
+ else if(t.id==='cls'||t.id==='cls2'){$('#ov').classList.remove('on')}
+ else if(t.dataset.f&&t.classList.contains('chip')){flt=t.dataset.f;scr2()}
+ else if(t.closest('.rc')){rg=+t.closest('.rc').dataset.r;modal()}
+ else if(t.dataset.t){tab=t.dataset.t;modal()}
+ else if(t.id==='tsame'){showSame=!showSame;modal()}
+ else if(t.id==='aauto'){auto(d);modal()}else if(t.id==='aone'){fillOne(d,rg);modal()}else if(t.id==='aclr'){d.as=d.pc.map(()=>-1);modal()}
+ else if(t.id==='pp'){page--;modal()}else if(t.id==='pn'){page++;modal()}
+ else if(t.dataset.sn!==undefined){const i=+t.dataset.sn;d.pc[i][4]='sn';d.sp[i]=true;modal()}
+ else if(t.dataset.sk!==undefined){const i=+t.dataset.sk;d.pc[i][4]='new';d.sp[i]=true;auto(d);modal()}
+ else if(t.id==='qall'){d.rungs.forEach(r=>{r.si=r.info.map(x=>x[3]===2);r.sg=r.gps.map(g=>g[3]==='ok');r.on=[true,true,true]});d.sp=d.pc.map(p=>p[4]==='new'||p[4]==='sn');modal()}
+ else if(t.id==='apply'){const s=d.rungs.map((r,i)=>`Rừng ${i+1} (${r.lo}): ${r.on[0]?r.si.filter(x=>x).length:0} trường · ${r.on[1]?r.sg.filter(x=>x).length:0} điểm · ${r.on[2]?d.pc.filter((p,j)=>d.as[j]===i&&d.sp[j]).length:0} phiếu`).join('<br>');const sn=d.pc.filter(p=>p[4]==='sn').map(p=>`${p[5]} → ${p[0]}`).join(', ');msgSum=`<b>Đã cập nhật (mô phỏng — chưa ghi dữ liệu thật):</b><br>${s}${sn?`<br>Đổi số phiếu (ghi nhật ký): ${sn}`:''}<br>Bỏ qua: phiếu trùng, dòng không tích, phiếu chưa phân bổ hoặc chờ quyết định.`;modal();const x=$('#sum');if(x)x.scrollIntoView({block:'nearest'})}
+});
+document.addEventListener('change',e=>{const t=e.target,d=D[cur],R=d.rungs[rg];
+ if(t.id==='smp'){smpSel=t.value;Object.assign(F,SAMPLE[t.value]);cmp=null;scr1();return}
+ if(t.dataset.f&&t.tagName==='INPUT'&&t.closest('.form')){F[t.dataset.f]=t.value;cmp=null;scr1();return}
+ if(!R)return;if(t.dataset.on!==undefined)R.on[+t.dataset.on]=t.checked;else if(t.dataset.si!==undefined)R.si[+t.dataset.si]=t.checked;else if(t.dataset.sg!==undefined)R.sg[+t.dataset.sg]=t.checked;else if(t.dataset.sp!==undefined)d.sp[+t.dataset.sp]=t.checked;else if(t.dataset.as!==undefined)d.as[+t.dataset.as]=+t.value;else if(t.id==='tol'){d.tol=Math.max(0,+t.value||0);auto(d)}else if(t.id==='pcf'){pcf=t.value;page=0}else return;modal()});
+document.addEventListener('input',e=>{if(e.target.id==='q'){qs=e.target.value;const p=e.target.selectionStart;scr2();const q=$('#q');q.focus();q.setSelectionRange(p,p)}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#ov').classList.remove('on');if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('row'))openM(+e.target.dataset.i)});
+scr1();scr2();
+</script></body></html>
