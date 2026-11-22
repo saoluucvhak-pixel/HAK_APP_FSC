@@ -74,8 +74,8 @@ async function gsApply() {
         for (const r of wrows.filter(x => x.st === 'doiso')) {   // nghi đổi số đã chọn “Đổi số”: giữ nguyên phiếu, chỉ đổi số hiện hành + nhật ký
           const meta = {lyDo: 'Google Sheets đổi số, dòng ' + r.p.row, nguon: {loai: 'sheet', tab: 'HoSoKeo', row: r.p.row, set}, at};
           const ctx = {loKhoa: loKhoa(f), phieuLoKhac: db.rs ? Object.values(db.rs).flatMap(oo => Object.values(oo.forests || {}).filter(ff => ff.id !== f.id).flatMap(ff => (ff.pc || []).map(p => ({lo: ff.info.maRung, p})))) : [], xacNhanLoKhac: false};
-          let res = HAKStage.doiSoPhieu(st, r.uv.id, r.p.soPhieu, meta, ctx);
-          if (!res.ok && res.ma === 'CAN_XAC_NHAN') { const yes = await gsAsk({title: 'Số phiếu cũng có ở lô khác', html: '<ul>' + (res.canhBao || []).map(x => '<li>' + esc(x) + '</li>').join('') + '</ul><p>Vẫn đổi số ' + esc(r.uv.so) + ' → ' + esc(r.p.soPhieu) + '?</p>', yes: 'Vẫn đổi số', no: 'Không đổi'}); if (yes) res = HAKStage.doiSoPhieu(st, r.uv.id, r.p.soPhieu, meta, Object.assign(ctx, {xacNhanLoKhac: true})); else { line.pend++; continue; } }
+          let res = HAKStage.doiSoPhieu(st, r.exLot.p._id, r.p.soPhieu, meta, ctx);
+          if (!res.ok && res.ma === 'CAN_XAC_NHAN') { const yes = await gsAsk({title: 'Số phiếu cũng có ở lô khác', html: '<ul>' + (res.canhBao || []).map(x => '<li>' + esc(x) + '</li>').join('') + '</ul><p>Vẫn đổi số ' + esc(r.uv.so) + ' → ' + esc(r.p.soPhieu) + '?</p>', yes: 'Vẫn đổi số', no: 'Không đổi'}); if (yes) res = HAKStage.doiSoPhieu(st, r.exLot.p._id, r.p.soPhieu, meta, Object.assign(ctx, {xacNhanLoKhac: true})); else { line.pend++; continue; } }
           if (!res.ok) throw new Error('Đổi số ' + r.uv.so + ' → ' + r.p.soPhieu + ': ' + res.error);
           line.so++; ch++;
         }

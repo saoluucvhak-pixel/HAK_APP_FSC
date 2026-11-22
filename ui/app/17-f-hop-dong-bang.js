@@ -27,7 +27,7 @@ function gsSummary(d) {
     if (F.some(x => x.gps.some(g => !g.ok))) why.push('tọa độ cần xem');
     if (why.length) status = 'warn';
   }
-  return {status, why, ten: own.ten || '', cccd: d.cccd || '', ngay: own.ngayKyHopDong || '', nRung: F.length, nPhieu: d.phieu.length, tan};
+  return {status, why, ten: own.ten || '', cccd: d.cccd || '', ngay: own.ngayKyHopDong || '', nRung: F.length, nPhieu: d.phieu.length, tan, nCccd: (d.cccdList || []).length};
 }
 
 /* Danh sách hợp đồng từ kết quả tìm kiếm nhóm theo hợp đồng, gộp theo mã hợp đồng chuẩn hóa (cùng mã ở nhiều CCCD thành một dòng) */
@@ -66,7 +66,7 @@ function gsListInner() {
   const chip = (k, l, n) => '<button type="button" class="gsChip' + (gs.stat === k ? ' on' : '') + '" data-gsstat="' + k + '" aria-pressed="' + (gs.stat === k) + '">' + l + (n == null ? '' : ' <span class="pill">' + fmt(n) + '</span>') + '</button>';
   const rows = L.slice(gs.page * GS_PAGE, gs.page * GS_PAGE + GS_PAGE).map(g => {
     const s = gs.sum.get(g.key), st = s ? GS_ST[s.status] : null, cccd = s && s.cccd ? s.cccd : [...g.cccds][0] || '';
-    return '<tr class="gsRow" data-gsrow="' + esc(g.key) + '" tabindex="0" aria-label="Mở hợp đồng ' + esc(g.hd) + '"><td><b>' + esc(g.hd) + '</b></td><td>' + esc((s && s.ten) || g.ten) + '</td><td>' + esc(cccd) + (g.cccds.size > 1 ? ' <span class="pill err">+' + (g.cccds.size - 1) + '</span>' : '') +
+    return '<tr class="gsRow" data-gsrow="' + esc(g.key) + '" tabindex="0" aria-label="Mở hợp đồng ' + esc(g.hd) + '"><td><b>' + esc(g.hd) + '</b></td><td>' + esc((s && s.ten) || g.ten) + '</td><td>' + esc(cccd) + (s && s.nCccd > 1 ? ' <span class="pill err" title="Mã hợp đồng thuộc nhiều CCCD">+' + (s.nCccd - 1) + '</span>' : '') +
       '</td><td>' + (s ? esc(s.ngay) : '…') + '</td><td class="num">' + (s ? s.nRung : '…') + '</td><td class="num">' + (s ? s.nPhieu : '…') + '</td><td class="num">' + (s ? numTxt(s.tan) : '…') + '</td><td>' +
       (st ? '<span class="pill ' + st[1] + '">' + st[0] + '</span>' + (s.why.length ? '<div class="mut gsWhy">' + s.why.slice(0, 2).map(esc).join('; ') + (s.why.length > 2 ? '…' : '') + '</div>' : '') : '<span class="mut">đang tính…</span>') + '</td></tr>';
   }).join('');

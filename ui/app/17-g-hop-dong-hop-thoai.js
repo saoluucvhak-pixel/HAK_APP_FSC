@@ -58,7 +58,7 @@ function gsLots(eff) {
   return out;
 }
 function gsRows() {
-  const m = gs.m, d = m.d, eff = gsEff(), lots = gsLots(eff), B = HAKBks, byId = new Map(lots.map(x => [x.p._id, x]));
+  const m = gs.m, d = m.d, eff = gsEff(), lots = gsLots(eff), B = HAKBks, byId = new Map(lots.map(x => [x.loId + ':' + x.p._id, x]));   // _id của bản nháp chỉ duy nhất trong từng lô: ghép thêm mã lô
   const seen = new Set();
   const rows = d.phieu.map((p, idx) => {
     const kp = B.khoaPhieu({soPhieu: p.soPhieu, ngay: p.ngay}), raw = String(p.bienRaw || ''), bien = p.isPlate ? raw.toUpperCase() : gsAliasOf(raw);
@@ -74,7 +74,7 @@ function gsRows() {
   const cand = rows.filter(r => r.st === 'new');
   if (cand.length) {
     const sheet = cand.map(r => ({idx: r.idx, so: r.p.soPhieu, ngay: r.p.ngay, bks: r.bien, kg: r.p.klKg}));
-    const lo = lots.map(x => ({id: x.p._id, so: x.p.soPhieu, ngay: x.p.ngay, bks: x.p.bienSo, kg: typeof x.p.klKg === 'number' ? x.p.klKg : Math.round((x.p.kl || 0) * 1000), soCu: x.p.soCu, lo: x.lo}));
+    const lo = lots.map(x => ({id: x.loId + ':' + x.p._id, so: x.p.soPhieu, ngay: x.p.ngay, bks: x.p.bienSo, kg: typeof x.p.klKg === 'number' ? x.p.klKg : Math.round((x.p.kl || 0) * 1000), soCu: x.p.soCu, lo: x.lo}));
     const det = HAKDoiSo.phatHienDoiSo(sheet, lo);
     if (det.loi) m.detLoi = det.loi; else m.detLoi = '';
     (det.ketQua || []).forEach(k => {
@@ -285,7 +285,7 @@ function gsTabPc(e, eff, rows) {
     '<input type="search" data-gspcq value="' + esc(m.pcQ) + '" placeholder="Số phiếu, ngày, biển số" aria-label="Tìm phiếu cân" size="18"></div>' +
     (m.detLoi ? '<div class="msg warn gsMsg">Quá nhiều phiếu để dò nghi đổi số (tối đa 5000): bỏ qua bước dò.</div>' : '') +
     (unas ? '<div class="msg warn gsMsg" id="gsUnas">Còn <b>' + unas + '</b> phiếu mới chưa phân bổ vào rừng nào — chưa được ghi' + (tan ? '' : '') + '.</div>' : '') + warnList.join('') +
-    '<div class="wrap gsTblW' + (s.on[2] ? '' : ' gsOff') + '"><table><thead><tr><th></th><th>Số phiếu</th><th>Ngày cân</th><th>BKS</th><th class="num">KL (tấn)</th><th>Trạng thái</th><th>Vào rừng</th></tr></thead><tbody>' +
+    '<div class="wrap gsTblW' + (s.on[2] ? '' : ' gsOff') + '"><table class="gsPcT"><thead><tr><th></th><th>Số phiếu</th><th>Ngày cân</th><th>BKS</th><th class="num">KL (tấn)</th><th>Trạng thái</th><th>Vào rừng</th></tr></thead><tbody>' +
     (F.length ? F.slice(m.page * GS_PC_PAGE, m.page * GS_PC_PAGE + GS_PC_PAGE).map(r => { const st = GS_PST[r.st], lock = !(r.st === 'new' || r.st === 'upd');
       return '<tr class="' + (r.st === 'same' || r.st === 'dup' ? 'gsDim' : '') + '"><td><input type="checkbox" data-gssp="' + esc(r.key) + '" aria-label="Chọn phiếu ' + esc(r.p.soPhieu) + '"' + (m.sp[r.key] && !lock ? ' checked' : '') + (lock ? ' disabled' : '') + '></td><td>' + esc(r.p.soPhieu) + '</td><td>' + esc(r.p.ngay) + '</td><td>' + (r.st === 'alias' ? '<input data-gsalias="' + esc(foldVi(r.p.bienRaw)) + '" list="gsPlates" size="11" placeholder="Biển số cho “' + esc(r.p.bienRaw) + '”" aria-label="Biển số cho tên xe ' + esc(r.p.bienRaw) + '">' : esc(r.bien || r.p.bienRaw)) +
         '</td><td class="num">' + gsNum(r.p.kl) + '</td><td><span class="tg ' + st[1] + '">' + st[0] + '</span>' + (r.note && r.st !== 'new' && r.st !== 'dsn' ? ' <span class="gsSame">' + esc(r.note) + '</span>' : r.note && r.st === 'new' ? ' <span class="gsSame">' + esc(r.note) + '</span>' : '') + (r.st === 'new' && m.as[r.key] === -1 && m.chua[r.key] ? ' <span class="gsSame">(chưa phân bổ: ' + esc(GS_CHUA[m.chua[r.key]] || m.chua[r.key]) + ')</span>' : '') + '</td><td>' + selRung(r) + '</td></tr>'; }).join('') : '<tr><td colspan="7" class="mut">Không có phiếu nào khớp bộ lọc.</td></tr>') + '</tbody></table></div>' +
