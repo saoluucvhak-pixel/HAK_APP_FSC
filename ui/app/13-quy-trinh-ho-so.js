@@ -79,7 +79,7 @@ function qtMarkAct(codes, on) {
   codes.forEach(c => { if (!on) HAKQuyTrinh.unmark(st, c, now); else { const it = all.find(x => x.code === c); if (it && it.ready !== 'thieu') HAKQuyTrinh.mark(st, c, it.sig, now); } });
   if (loDirty.has(f.id)) persistLo(f); else persist();   // ghi nhận đã làm: ghi ngay khi lô không có thay đổi chưa lưu
 }
-/* In phiếu cân theo rừng (giống xuất hồ sơ): dùng đúng phiếu cân của rừng đang mở, bất kể phiếu đến từ file nhập ở rừng, Tra cứu Google Sheets hay cập nhật biển số */
+/* In phiếu cân theo rừng (giống xuất hồ sơ): dùng đúng phiếu cân của rừng đang mở, bất kể phiếu đến từ file nhập ở rừng, Dữ liệu Google Sheets hay cập nhật biển số */
 let pcInLoc = null, pcInDuLieu = null;
 function panelInPhieuCan() {
   const saved = HB?.loadSync()?.db?.rs?.[NAV.cur]?.forests?.[NAV.curF];
@@ -111,8 +111,8 @@ function pcPrintCard(rec) {
   if (!HB) return head + '<p class="mut" style="margin:0">Chỉ có ở bản cài đặt trên máy tính (Windows).</p></div>';
   const miss = Object.entries(g.by).map(([k, v]) => esc(k) + ' (' + v + ' phiếu)').join('; ');
   return head + '<div class="docrow"><div><b>' + (n ? n + ' phiếu cân của rừng này' : 'Rừng này chưa có phiếu cân') + '</b><div class="mut">' + (n ? (g.full === n ? 'Phiếu nào cũng đủ thông tin để in.' : g.full + ' phiếu đủ thông tin; còn thiếu: ' + miss +
-  '. Phiếu thiếu vẫn in được, phần thiếu để trống.') : 'Nhập file phiếu cân ở tab Vận chuyển, hoặc đưa từ Tra cứu Google Sheets sang rừng này.') +
-    (n && g.full < n ? ' Bổ sung bằng <b>Tra cứu Google Sheets</b> (chọn các phiếu đã có để cập nhật) hoặc nhập lại file phiếu cân của rừng.' : '') + '</div>' +
+  '. Phiếu thiếu vẫn in được, phần thiếu để trống.') : 'Nhập file phiếu cân ở tab Vận chuyển, hoặc đưa từ Dữ liệu Google Sheets sang rừng này.') +
+    (n && g.full < n ? ' Bổ sung bằng <b>Dữ liệu Google Sheets</b> (chọn các phiếu đã có để cập nhật) hoặc nhập lại file phiếu cân của rừng.' : '') + '</div>' +
     '<div class="mut">Tiêu đề phiếu lấy từ <b>Cài đặt → Công ty</b>' + (co && co.ten ? ': ' + esc(co.ten) : ' (chưa khai: dùng tiêu đề mặc định của công cụ)') + '. Địa chỉ rừng và khách hàng lấy theo hồ sơ rừng.</div></div>' +
     '<div class="d2btns"><button class="btn" style="white-space:nowrap" data-act="pcPrint"' + (n ? '' : ' disabled') + '>In phiếu cân</button>' + (n ? '' : '<button class="btn ghost sm" data-act="ktGo" data-go="' + esc(JSON.stringify({ftab: 'dx'})) + '">Mở tab Vận chuyển</button>') + '</div></div></div>';
 }

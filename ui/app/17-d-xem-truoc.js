@@ -148,6 +148,6 @@ function lkPreviewHtml() {
 
 function lkRender() {
   const body = lk.view === 'search' ? lkStatusHtml() + lkSearchHtml() : lk.view === 'cand' ? lkStatusHtml() + lkCandHtml() : lkPreviewHtml();
-  $('#lkBody').innerHTML = '<div class="gh"><h2>Tra cứu Google Sheets</h2><button class="btn ghost sm" data-act="lkClose">✕ Đóng</button></div>' + (lk.view === 'preview' && lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + body;
+  $('#lkBody').innerHTML = '<div class="gh"><div><div class="mut gsCrumb">Trang chủ › Dữ liệu Google Sheets' + (lk.view === 'search' ? '' : ' › ' + (lk.view === 'cand' ? 'Chọn rừng' : 'Xem trước')) + '</div><h2>Dữ liệu Google Sheets</h2></div><button class="btn ghost sm" data-act="lkClose">✕ Đóng</button></div>' + (lk.view === 'preview' && lk.msg ? '<div class="msg ' + lk.msg.kind + '">' + esc(lk.msg.text) + '</div>' : '') + body;
 }
 

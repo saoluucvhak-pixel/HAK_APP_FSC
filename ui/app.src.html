@@ -156,6 +156,44 @@ tr.rerr td{background:var(--errBg)}tr.rwarn td{background:var(--warnBg)}
 #guideBox p,#guideBox li{font-size:13.5px;line-height:1.6}#guideBox ul,#guideBox ol{padding-left:20px;margin:4px 0}
 #guideBox table{border-collapse:collapse;width:100%;font-size:12.5px;margin:6px 0}#guideBox th,#guideBox td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}#guideBox th{background:var(--th);position:static}
 #lkBox label,#rpBox label{font-size:12.5px}
+/* ===== Dữ liệu Google Sheets: bảng hợp đồng + hộp thoại Cha–Con (mô phỏng V3 đã duyệt) ===== */
+#hdBox,#hdAsk{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(8,20,14,.55);backdrop-filter:blur(2px)}
+#hdBox{z-index:58}#hdAsk{z-index:62}#hdBox.on,#hdAsk.on{display:flex}
+#hdBox .gsGd{max-width:1180px;max-height:calc(100vh - 28px);display:flex;flex-direction:column;padding:0;overflow:hidden}
+#hdAsk .gd{max-width:560px;max-height:calc(100vh - 28px);overflow:auto}
+#hdAsk .gsAskF{justify-content:flex-end;margin-top:12px}#hdAsk .gsAskC{flex-direction:row;align-items:center;gap:8px;color:var(--ink);margin-top:8px}
+.gsCrumb{font-size:12.5px}
+.gsBar{margin:6px 0;gap:6px}
+.gsChip{border:1px solid var(--inbd);background:var(--card);color:var(--ink);border-radius:99px;padding:3px 12px;font:inherit;font-size:13px;cursor:pointer}.gsChip.on{background:var(--acc);color:var(--accInk);border-color:var(--acc)}.gsChip.on .pill{background:rgba(255,255,255,.2);color:inherit}
+.gsWrap{max-height:50vh}.gsTbl .num,.gsGd .num{text-align:right}
+.gsRow{cursor:pointer}.gsRow:hover td{background:var(--hover,var(--accSoft))}.gsRow:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}.gsWhy{font-size:11.5px;margin-top:2px}
+.gsPg{margin:6px 0;gap:8px;justify-content:flex-end}.gsPg>span{margin-right:auto;color:var(--mut-aa);font-size:13px}
+.gsHead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;padding:14px 20px 8px;border-bottom:1px solid var(--line);flex:0 0 auto}.gsHead h2{font-size:18px;margin:0}
+.gsMb{display:grid;grid-template-columns:minmax(240px,300px) minmax(0,1fr);gap:12px;padding:10px 20px;overflow:auto;min-height:0;flex:1 1 auto;align-items:start}
+.gsMaster{position:static;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px;max-height:100%;overflow:auto}.gsMaster h3{margin:2px 4px 8px;font-size:13.5px}
+.gsRc{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--rs);padding:8px 10px;margin-bottom:6px;font:inherit;color:inherit;cursor:pointer}
+.gsRc:hover{border-color:var(--acc)}.gsRc.on{border-color:var(--acc);background:var(--accSoft);box-shadow:inset 4px 0 0 var(--acc)}.gsRc b{display:flex;justify-content:space-between;gap:6px}.gsS{font-size:12px;color:var(--mut-aa)}
+.gsBdg{background:var(--acc);color:var(--accInk);border-radius:99px;padding:0 8px;font-size:11.5px;min-width:22px;text-align:center}
+.gsMeter{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:4px 0 2px}.gsMeter i{display:block;height:100%;background:var(--ok)}.gsMeter i.near{background:#d99a00}.gsMeter i.over{background:var(--err)}.gsMeterTxt{font-size:12px;color:var(--mut-aa)}.gsMeterTxt.over{color:var(--err);font-weight:600}
+.gsDt{min-width:0;border:1px solid var(--line);border-radius:var(--r);background:var(--card);display:flex;flex-direction:column}
+.gsTabs{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.gsTab{border:1px solid var(--inbd);background:var(--bg,var(--card));color:var(--ink);border-radius:var(--rs);padding:5px 12px;font:inherit;cursor:pointer}.gsTab.on{background:var(--acc);color:var(--accInk);border-color:var(--acc)}
+.gsDtB{padding:10px 12px;min-width:0}.gsMsg{margin:6px 0}
+.gsBlk{border:1px solid var(--line);border-radius:var(--rs);overflow:hidden;margin:8px 0}.gsBlk h4{margin:10px 10px 4px}
+.gsBh{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;background:var(--th);flex-wrap:wrap}
+.gsInl{display:inline-flex;flex-direction:row;align-items:center;gap:6px;color:var(--ink);font-size:12.5px}
+.gsMa{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 10px}.gsMa label{flex-direction:row;align-items:center;gap:6px}
+.gsHid,.gsRule,.gsPad{padding:7px 10px;font-size:12.5px;color:var(--mut-aa)}.gsRule{background:var(--accSoft);color:var(--ink)}
+.gsArea{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 10px}.gsArea label{flex-direction:row;align-items:center;gap:6px}
+.gsTblW{margin:6px 10px;max-height:none;overflow:auto}.gsBlk .gsTblW{border-radius:var(--rs)}
+.gsOff{opacity:.5}.gsPcT td,.gsPcT th{padding:4px 8px}.gsPcT td:nth-child(-n+5),.gsPcT th:nth-child(-n+5){white-space:nowrap}
+.gsGd tr.diff td{background:var(--warnBg)}.gsSame{color:var(--mut-aa);font-size:12px}.gsDim td{color:var(--mut-aa)}
+.tg{font-size:11.5px;padding:1px 8px;border-radius:99px;font-weight:600;white-space:nowrap;display:inline-block}.tg.new{background:var(--accSoft);color:var(--acc)}.tg.chg{background:var(--warnBg);color:var(--warn)}.tg.dup{background:var(--line);color:var(--mut-aa)}.tg.bad{background:var(--errBg);color:var(--err)}
+.gsSus{margin:8px 10px;padding:8px 10px;border:1px solid var(--warn);background:var(--warnBg);border-radius:var(--rs);font-size:13px}.gsSus.done{border-color:var(--line);background:var(--card)}.gsSus .gsAct{margin-top:6px}
+.gsTools{gap:8px;padding:6px 10px;align-items:center}.gsGrow{flex:1}
+.gsFoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 20px;border-top:1px solid var(--line);background:var(--card);flex:0 0 auto}.gsTot{font-size:12.5px}
+.gsNotes{margin:6px 0;font-size:13px}
+@media (max-width:820px){.gsMb{grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content}.gsMaster{position:static;max-height:170px}.gsHead,.gsMb,.gsFoot{padding-left:12px;padding-right:12px}}
 #impBox label{flex-direction:row;align-items:flex-start;gap:8px;color:var(--ink);margin:6px 0}#impBox th{position:static}
 #rpBox .rpl{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:10px 0}
 #rpBox .rpc{text-align:left;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--card);color:var(--ink);cursor:pointer;font:inherit;transition:border-color .12s,background .12s}
@@ -253,7 +291,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
   <nav class="nav">
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
     <button class="nb" data-act="openDm" id="navDm">Danh mục</button>
-    <button class="nb deskOnly" data-act="lkOpen" title="Tra cứu Google Sheets" hidden>Tra cứu</button>
+    <button class="nb deskOnly" data-act="lkOpen" title="Dữ liệu Google Sheets" hidden>Dữ liệu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
@@ -266,7 +304,9 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
   <main id="main"></main>
 </div>
 
-<div id="lkBox" role="dialog" aria-modal="true"><div class="gd" id="lkBody"></div></div>
+<div id="lkBox" role="dialog" aria-modal="true" aria-label="Dữ liệu Google Sheets"><div class="gd" id="lkBody"></div></div>
+<div id="hdBox" role="dialog" aria-modal="true" aria-labelledby="hdTitle"><div class="gd gsGd" id="hdBody"></div></div>
+<div id="hdAsk" role="dialog" aria-modal="true" aria-labelledby="hdAskT"><div class="gd" id="hdAskBody"></div></div>
 <div id="rpBox" role="dialog" aria-modal="true"><div class="gd" id="rpBody"></div></div>
 <div id="impBox" role="dialog" aria-modal="true"><div class="gd" id="impBody"></div></div>
 <div id="dlgBox" role="dialog" aria-modal="true"><div class="gd" id="dlgBody"></div></div>
@@ -280,7 +320,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li><b>Hồ sơ cần hoàn thiện</b> và <b>Phiếu cân gần đây</b>: bấm một rừng để mở thẳng hồ sơ rừng đó.</li>
 <li><b>Cần chú ý ở các rừng</b>: gom theo rừng các việc cần xử lý: lao động dưới 18 tuổi, phiếu cân sai ngày, xe hết hạn hoặc sắp hết hạn giấy tờ (30 ngày), rừng chưa có tọa độ, chưa chọn địa chỉ giao hàng, chưa có phiếu cân. Bấm tên rừng để mở.</li>
 <li><b>Sản lượng theo tháng</b>: khối lượng phiếu cân 6 tháng gần nhất.</li>
-<li><b>Hệ thống</b>: bản tra cứu đang dùng (nguồn, thời điểm nạp, số dòng), lần sao lưu toàn bộ gần nhất, và lối tắt Tra cứu Google Sheets, <b>Báo cáo đối chiếu</b>, Sao lưu toàn bộ, Cài đặt.</li>
+<li><b>Hệ thống</b>: bản tra cứu đang dùng (nguồn, thời điểm nạp, số dòng), lần sao lưu toàn bộ gần nhất, và lối tắt Dữ liệu Google Sheets, <b>Báo cáo đối chiếu</b>, Sao lưu toàn bộ, Cài đặt.</li>
 </ul>
 <h3>0b. Nhập, sửa, lưu dữ liệu của lô (nhân công, xe, phiếu cân)</h3>
 <ol>
@@ -293,7 +333,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <h3>1. Quy trình 8 bước</h3>
 <ol>
 <li>Khai <b>Công ty mua hàng</b> ở <b>Cài đặt → Công ty</b> (một lần cho cả phần mềm: tên pháp lý, địa chỉ bắt buộc; thêm các địa chỉ giao hàng nếu có).</li>
-<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>Tra cứu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số điện thoại</b>, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
+<li>Tạo <b>Chủ rừng</b> (hoặc lấy từ <b>Dữ liệu Google Sheets</b>): họ tên, CCCD, địa chỉ, <b>số điện thoại</b>, <b>số hợp đồng</b> và <b>ngày ký hợp đồng</b> (ngày ký là ngày ký mặc định của biểu mẫu); không cần ngày sinh.</li>
 <li>Tạo <b>Lô rừng</b>: mã lô, địa điểm, tọa độ, diện tích, thời gian khai thác, giấy tờ pháp lý.</li>
 <li>Tab <b>Nhân công</b>: chọn hình thức hợp đồng, đơn giá theo vị trí, rồi chọn nhân công từ danh mục.</li>
 <li>Tab <b>Vận chuyển</b>: chọn xe từ danh mục, chọn cách tính cước, nạp phiếu cân và chọn <b>địa chỉ giao hàng</b>.</li>
@@ -337,10 +377,11 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <li>File nhân công có thêm cột tùy chọn <b>Đội</b> (cuối bảng): chỉ ghi khi lô có từ 2 tổ trưởng, mỗi tổ trưởng một tên đội và công nhân ghi tên đội của mình; lô 1 tổ trưởng để trống.</li>
 <li>Nạp xong, dữ liệu chỉ vào <b>bản nháp “Chưa lưu”</b>: báo thêm, cập nhật, giữ nguyên; bản ghi đã lưu mà file không có vẫn được <b>giữ</b>. Xem trước, thêm tay, sửa hoặc bỏ dòng rồi bấm <b>Lưu dữ liệu vào lô</b>.</li>
 </ul>
-<h3>6. Tra cứu Google Sheets</h3>
+<h3>6. Dữ liệu Google Sheets</h3>
 <ul>
 <li><b>Đồng bộ ngay</b> tải 3 tab <code>HoSoKeo</code> (phiếu cân), <code>HoSoRung</code> (chủ rừng, hợp đồng), <code>ToaDoRung</code> (mã rừng, tọa độ, giấy tờ) (chỉ đọc). Bảng tính giới hạn quyền thì bấm <b>Đăng nhập Google (chỉ đọc)</b>. Khi không có mạng dùng <b>Nhập bản Excel</b>. Bản tra cứu chỉ được thay khi cả 3 tab hợp lệ; lỗi thì giữ bản cũ; bản đã lưu tra cứu được khi offline.. Chấp nhận thêm tên cũ có hậu tố <code>_QC</code> và tên khác hoa/thường. Tab đặt tên khác hẳn nhưng đủ cột được <b>đề xuất để bạn xác nhận</b>; có nhiều tab phù hợp (kể cả có cả tên mới lẫn <code>_QC</code>) thì bạn chọn trong danh sách. Chỉ khi cả ba vai trò đã xác định và đọc đúng mới thay bản tra cứu</li>
-<li>Tìm theo mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã hợp đồng, địa chỉ, số phiếu cân, biển số → <b>Chọn</b> → <b>Điền vào rừng đang mở</b> hoặc <b>Tạo rừng mới</b> → xem trước, chọn từng trường và phiếu → <b>Lưu vào hồ sơ</b>.</li>
+<li><b>Màn đầu là bảng toàn bộ hợp đồng</b> (mã hợp đồng, chủ rừng, CCCD, ngày ký, số rừng, số phiếu, tổng tấn, trạng thái Đủ / Cần xem / Lỗi dữ liệu): tìm không dấu, lọc trạng thái, bấm dòng hoặc Enter để mở hộp thoại của hợp đồng. Bên trái là các rừng theo thứ tự nhập, bên phải ba thẻ <b>Hồ sơ rừng</b>, <b>Tọa độ</b>, <b>Phiếu cân</b>. Phiếu cân thuộc hợp đồng: <b>Phân bổ tự động</b> theo ngày cân và sản lượng dự kiến (có dung sai), đổi tay từng phiếu ở ô <b>Vào rừng</b>; phiếu chưa phân bổ không được ghi. <b>Nghi đổi số</b> hiện cặp số cũ → số Sheet, mặc định không ghi. Mã hợp đồng thuộc nhiều CCCD phải xác nhận 2 bước. <b>Cập nhật vào hồ sơ</b> chỉ ghi vào bản nháp.</li>
+<li>Chế độ <b>Theo dòng Sheet (nâng cao)</b>: tìm theo mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã hợp đồng, địa chỉ, số phiếu cân, biển số → <b>Chọn</b> → <b>Điền vào rừng đang mở</b> hoặc <b>Tạo rừng mới</b> → xem trước, chọn từng trường và phiếu → <b>Lưu vào hồ sơ</b>.</li>
 <li>Ô đã có dữ liệu khác phải chọn giữ hay thay. Phiếu cân có ngày không có thật bị loại và nêu lý do.</li>
 <li><b>Phiếu cân từ Google Sheets mang đủ trường để in</b> (giờ cân, cân 1/2, khối lượng, khách hàng, địa chỉ rừng, đơn giá, thành tiền). Xe đã đổi thì <b>sửa biển số ngay trong bảng xem trước</b> (ô Biển số của từng phiếu) rồi đưa qua rừng, hoặc đưa qua luôn rồi dùng <b>cập nhật biển số xe</b> sau; cả hai cho cùng dữ liệu.</li>
 </ul>
@@ -362,27 +403,27 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <p><b>In phiếu cân</b> (thẻ <b>In phiếu cân</b> ở tab Xuất hồ sơ, theo rừng): mở nguyên bản công cụ PhieuCan (giấy lỗ 240 × 279 mm, đường xé giữa, chỉnh lề, tải PDF) đã nạp sẵn phiếu cân của rừng. Tiêu đề phiếu lấy từ <b>Cài đặt → Công ty</b> (tên, địa chỉ, điện thoại, <b>Fax</b>, <b>Nơi lập chứng từ</b>). Thẻ báo phiếu còn thiếu gì (cân, giờ, khách hàng, đơn giá…); phiếu thiếu vẫn in được, phần thiếu để trống. Khách hàng trống thì lấy tên chủ rừng; thiếu đơn giá thì in 0.</p>
 <p><b>Số hợp đồng trên biểu mẫu</b>: nhập số đầy đủ (ví dụ <code>015/2025-KT</code>) thì được giữ nguyên; chỉ nhập phần số (<code>015</code>) thì phần mềm ghép năm lấy từ <b>ngày ký của chính hợp đồng đó</b>; thiếu ngày ký thì năm để trống và khung <i>Số hợp đồng đầy đủ sẽ in</i> ở tab Xuất hồ sơ nêu cần bổ sung ngày nào. BM-01, BM-14, BM-20 luôn cùng một số hợp đồng khai thác.</p>
 <p><b>Báo cáo</b>: chọn kỳ theo ngày cân và chủ rừng, xem trước rồi xuất Word hoặc Excel (9 mẫu, có bộ lọc thông minh: điều hành, sản lượng theo rừng, sổ phiếu cân, danh sách lao động, danh sách xe, <b>đối chiếu bản tra cứu</b>, phiếu cân đã cập nhật biển số xe, tiến độ FSC, cha–con). Phiếu có ngày không có thật bị <b>loại khỏi tổng kỳ</b> và liệt kê ở mục riêng kèm lý do; kết quả giống nhau ở xem trước, Word, Excel.</p>
-<p><b>Đối chiếu bản tra cứu</b> (Báo cáo → “Đối chiếu bản tra cứu: tọa độ, hồ sơ rừng, phiếu cân”): đọc bản Google Sheets/Excel đang dùng ở Tra cứu và đối chiếu ba tab theo CCCD và mã hợp đồng. Báo cáo liệt kê: <b>I.</b> rừng ở HoSoRung thiếu dòng tọa độ ở ToaDoRung hoặc tọa độ không dùng được; <b>II.</b> phiếu cân ở HoSoKeo thiếu hồ sơ rừng ở HoSoRung (gộp theo chủ rừng và hợp đồng, kèm số phiếu, khối lượng, gợi ý); <b>III.</b> dòng tọa độ thiếu hồ sơ rừng; <b>IV.</b> rừng chưa có phiếu cân. Có tìm nhanh, lọc “chỉ rừng thiếu tọa độ”, “chỉ phiếu cân thiếu hồ sơ rừng”, xuất Word và Excel. Chưa có bản tra cứu thì báo rõ; sửa dữ liệu trên bảng tính gốc rồi Đồng bộ lại.</p>
+<p><b>Đối chiếu bản tra cứu</b> (Báo cáo → “Đối chiếu bản tra cứu: tọa độ, hồ sơ rừng, phiếu cân”): đọc bản Google Sheets/Excel đang dùng ở Dữ liệu Google Sheets và đối chiếu ba tab theo CCCD và mã hợp đồng. Báo cáo liệt kê: <b>I.</b> rừng ở HoSoRung thiếu dòng tọa độ ở ToaDoRung hoặc tọa độ không dùng được; <b>II.</b> phiếu cân ở HoSoKeo thiếu hồ sơ rừng ở HoSoRung (gộp theo chủ rừng và hợp đồng, kèm số phiếu, khối lượng, gợi ý); <b>III.</b> dòng tọa độ thiếu hồ sơ rừng; <b>IV.</b> rừng chưa có phiếu cân. Có tìm nhanh, lọc “chỉ rừng thiếu tọa độ”, “chỉ phiếu cân thiếu hồ sơ rừng”, xuất Word và Excel. Chưa có bản tra cứu thì báo rõ; sửa dữ liệu trên bảng tính gốc rồi Đồng bộ lại.</p>
 <h3>8a. Đổi biển số xe của phiếu cân</h3>
 <p>Phiếu cân từ nhà máy đôi khi ghi biển cũ hoặc tên xe. Có hai thời điểm sửa, cho cùng một kết quả:</p>
 <p><b>Cách 1 – đổi biển rồi mới đưa qua rừng</b> (phiếu lấy từ Google Sheets):</p>
 <ol>
-<li>Mở rừng cần nhận phiếu (hoặc chọn <b>Xem trước để tạo rừng mới</b>). Bấm <b>Tra cứu Google Sheets</b>, chọn tab <b>HoSoKeo (phiếu cân)</b>, gõ số phiếu, CCCD hoặc tên chủ rừng, bấm <b>Tìm</b> rồi <b>Chọn</b>.</li>
+<li>Mở rừng cần nhận phiếu (hoặc chọn <b>Xem trước để tạo rừng mới</b>). Bấm <b>Dữ liệu Google Sheets</b>, chọn chế độ <b>Theo dòng Sheet (nâng cao)</b>, chọn tab <b>HoSoKeo (phiếu cân)</b>, gõ số phiếu, CCCD hoặc tên chủ rừng, bấm <b>Tìm</b> rồi <b>Chọn</b>.</li>
 <li>Bấm <b>Điền vào rừng đang mở</b>. Bảng <b>Phiếu cân</b> hiện từng phiếu với ô <b>Biển số</b> sửa được (có gợi ý biển trong đội xe của rừng).</li>
 <li>Gõ biển đúng vào ô của phiếu cần đổi; phần mềm tự viết hoa và hiện nhãn <i>đã đổi từ …</i>. Phiếu ghi bằng tên xe thì dùng khung <b>Ghép tên xe với biển số</b> (lưu một lần, lần sau tự dùng). Xóa nội dung ô để trả lại biển gốc.</li>
 <li>Bấm <b>Chọn mọi phiếu ghi được</b> (hoặc tích từng phiếu), rồi <b>Lưu vào hồ sơ</b>. Phiếu vào rừng mang biển đã đổi cùng đủ giờ cân, cân 1/2, khối lượng, khách hàng, địa chỉ, đơn giá, thành tiền.</li>
 </ol>
 <p><b>Cách 2 – đã đưa qua rồi mới đổi xe</b>:</p>
 <ol>
-<li>Khi Google Sheets (hoặc bảng tính nạp ở Tra cứu) đã có biển mới, mở rừng, bấm <b>Tra cứu Google Sheets</b> → tab HoSoKeo → tìm số phiếu → <b>Chọn</b> → <b>Điền vào rừng đang mở</b>.</li>
+<li>Khi Google Sheets (hoặc bảng tính nạp ở Dữ liệu Google Sheets) đã có biển mới, mở rừng, bấm <b>Dữ liệu Google Sheets</b> → chế độ Theo dòng Sheet → tab HoSoKeo → tìm số phiếu → <b>Chọn</b> → <b>Điền vào rừng đang mở</b>.</li>
 <li>Phiếu đã có trong hồ sơ mà bảng tính có biển khác được <b>tích sẵn</b> trong bảng Phiếu cân, dòng ghi “Biển số khác: biển cũ → biển mới”. Đổi biển ngay ở ô <b>Biển số</b> của từng dòng nếu cần, bỏ tích phiếu không đổi.</li>
 <li>Giữ ô <b>Chỉ đổi biển số</b> được tích thì ngày, khối lượng, nơi giao, tiền và các trường khác của phiếu đã có giữ nguyên. Bấm <b>Lưu vào hồ sơ</b>: phiếu vào bản nháp tab Vận chuyển, bấm <b>Lưu dữ liệu vào lô</b> để ghi; việc đổi được ghi lại.</li>
 </ol>
 <p>Xem lại các phiếu đã đổi biển: <b>Báo cáo → Phiếu cân đã cập nhật biển số xe</b>. Biển mới phải có trong đội xe của rừng (nếu chưa có, phần mềm cảnh báo: thêm xe ở tab Vận chuyển).</p>
 <h3>8b. In phiếu cân</h3>
 <ol>
-<li>Bảo đảm rừng đã có phiếu cân: nạp file Excel phiếu cân ở tab <b>Vận chuyển</b> (file mẫu đầy đủ trường) hoặc đưa từ Tra cứu Google Sheets sang rừng (mục 8a). Nên khai <b>Cài đặt → Công ty</b> đủ tên, địa chỉ, số điện thoại, Fax và Nơi lập chứng từ vì tiêu đề phiếu lấy từ đó.</li>
-<li>Vào tab <b>Xuất hồ sơ</b>, thẻ <b>In phiếu cân</b>. Thẻ cho biết số phiếu của rừng và còn thiếu gì (cân lần 1/2, giờ cân, khách hàng, đơn giá…). Phiếu thiếu vẫn in được, phần thiếu để trống; muốn đủ thì bổ sung bằng Tra cứu hoặc nạp lại file.</li>
+<li>Bảo đảm rừng đã có phiếu cân: nạp file Excel phiếu cân ở tab <b>Vận chuyển</b> (file mẫu đầy đủ trường) hoặc đưa từ Dữ liệu Google Sheets sang rừng (mục 8a). Nên khai <b>Cài đặt → Công ty</b> đủ tên, địa chỉ, số điện thoại, Fax và Nơi lập chứng từ vì tiêu đề phiếu lấy từ đó.</li>
+<li>Vào tab <b>Xuất hồ sơ</b>, thẻ <b>In phiếu cân</b>. Thẻ cho biết số phiếu của rừng và còn thiếu gì (cân lần 1/2, giờ cân, khách hàng, đơn giá…). Phiếu thiếu vẫn in được, phần thiếu để trống; muốn đủ thì bổ sung bằng Dữ liệu Google Sheets hoặc nạp lại file.</li>
 <li>Bấm <b>In phiếu cân</b>. Cửa sổ công cụ PhieuCan mở, đã nạp sẵn các phiếu của rừng. Phiếu có Trạng thái khác OK (ví dụ HỦY) không được chọn sẵn.</li>
 <li>Chọn phiếu cần in (ô tìm, <b>Chọn tất cả</b>, <b>Bỏ chọn</b>). Xem trước bên phải đúng bố cục sẽ in.</li>
 <li>Mở <b>Tuỳ chọn in</b> khi cần: <b>Khổ giấy</b> (mặc định giấy lỗ 240 × 279 mm), cách xếp (2 phiếu khác số một trang, 1 phiếu in 2 liên, hoặc 1 phiếu), dịch toàn bộ phiếu hoặc riêng liên dưới theo mm, tên người cân, ghi chú. Chỉnh lề xong bấm <b>Lưu cài đặt trên máy này</b> để lần sau giữ nguyên.</li>
