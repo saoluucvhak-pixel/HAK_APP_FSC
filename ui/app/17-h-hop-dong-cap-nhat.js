@@ -147,10 +147,11 @@ async function gsApply() {
     if (ownerCh && !touched.length) { const anc = neoLo(); if (!anc) throw new Error('chủ rừng chưa có lô nào để giữ bản nháp'); touched.push(anc.id); }
     touched.forEach(id => { const ff = Object.values(db.rs).map(oo => oo.forests && oo.forests[id]).find(Boolean); if (ff) persistLo(ff); });   // thông tin lô vào BẢN NHÁP (loDirty): KHÔNG lưu xuống cơ sở dữ liệu
     if (touched.length && m.alias && Object.keys(m.alias).length) Object.entries(m.alias).forEach(([k, v]) => {   // ánh xạ biển số nháp: chỉ ghi vào dữ liệu đã lưu cùng lô
-      db.bienAlias = db.bienAlias || {}; if (db.bienAlias[k] === v) return;
-      const ex = aliasNhap.get(k); if (ex) touched.forEach(id => ex.lots.add(id)); else aliasNhap.set(k, {had: Object.hasOwn(db.bienAlias, k), old: db.bienAlias[k], lots: new Set(touched)});
+      db.bienAlias = db.bienAlias || {}; const ex = aliasNhap.get(k); if (db.bienAlias[k] === v && !ex) return;
+ if (ex) touched.forEach(id => ex.lots.add(id)); else aliasNhap.set(k, {had: Object.hasOwn(db.bienAlias, k), old: db.bienAlias[k], lots: new Set(touched)});
       db.bienAlias[k] = v;
     });
+    if (!touched.length && m.alias && Object.keys(m.alias).length) lines.push('Ánh xạ tên xe → biển số chưa ghi: không có lô nào thay đổi để giữ bản nháp.');
     nhapTamGhi();
     m.sum = lines.length ? lines : ['Không có thay đổi nào cần ghi (đã có đủ trong hồ sơ).']; m.sumPhieu = nPhieu; m.sumLo = touched.map(id => { const oo = Object.values(db.rs).find(x => x.forests && x.forests[id]); return oo ? {o: oo.id, f: id, ma: (oo.forests[id].info || {}).maRung || ''} : null; }).filter(Boolean); m.msg = null; m.busy = false;
     note('Hợp đồng ' + d.hd + ': ' + (touched.length ? 'MỌI thay đổi (chủ rừng, rừng, tọa độ, giấy tờ' + (nPhieu ? ', ' + nPhieu + ' phiếu cân' : '') + (nXe ? ', ' + nXe + ' xe' : '') + ') đã vào BẢN NHÁP, CHƯA lưu — mở từng lô và bấm “Lưu dữ liệu vào lô” (chưa lưu thì chưa dùng để tạo hồ sơ).' : 'không có thay đổi nào cần ghi.'), touched.length ? 'warn' : undefined);

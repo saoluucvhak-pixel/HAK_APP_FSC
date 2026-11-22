@@ -272,9 +272,10 @@ function delForest() {
   const fid = f.id, k = stKeyOf(o.id, fid), coNhap = loDirty.has(fid) || (stages[k] && HAKStage.dirty(stages[k]));
   const nNc = (f.nc || []).length, nDx = (f.dx || []).length, nPc = (f.pc || []).length;
   if (!confirm('Xóa rừng "' + (f.info.tenRung || f.info.maRung) + '" (có ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân' + (coNhap ? ' và thay đổi chưa lưu' : '') + ')?')) return;
-  delete o.forests[fid];
+  if (loDirty.has(fid) || loMoi.has(fid)) loVeBanDaLuu(fid);   // lô nháp: dọn các sổ nháp (lô mới, chủ rừng mới hết lô, ánh xạ biển số) trước khi xóa
+  const o2 = db.rs[o.id]; if (o2) delete o2.forests[fid];
   delete stages[k]; if (typeof hdMoS !== 'undefined') delete hdMoS[fid];
-  loDirty.delete(fid); NAV.curF = null; nhapTamGhi(); persist();
+  loDirty.delete(fid); loMoi.delete(fid); aliasHoan(fid); NAV.curF = null; if (!db.rs[NAV.cur]) NAV.cur = null; nhapTamGhi(); persist();
   note('Đã xóa rừng.');
 }
 
@@ -288,18 +289,19 @@ function saveInfo(form) {
   };
   const errs = infoErrors(info, rec.id);
   if (errs.length) { formMsg(form, 'Chưa lưu: ' + errs.join('; ')); return; }
+  const cn = chuNhap.get(rec.id); if (cn && !cn.moi) chuNhap.delete(rec.id);   // sửa tay chủ rừng đang có nháp (Google Sheets): gộp, ghi cùng lần lưu này (không để dbGhi ghi lại bản cũ)
   rec.info = Object.assign({}, rec.info, info);   // giữ các trường cũ không còn hiển thị (ví dụ ngày sinh đã lưu)
   persist();
   const canh = infoWarns(info, rec.id).concat(infoDmCanh(info) ? [infoDmCanh(info)] : []);   // phiếu #05, #09: cảnh báo, không chặn
-  note('Đã lưu thông tin chủ rừng.' + (canh.length ? ' Lưu ý: ' + canh.join('; ') + '.' : ''), canh.length ? 'warn' : 'ok');
+  note((cn && cn.moi ? 'Chủ rừng này còn là BẢN NHÁP (tạo từ Google Sheets): thông tin vừa sửa sẽ được lưu cùng lô khi bấm “Lưu dữ liệu vào lô”.' : 'Đã lưu thông tin chủ rừng.') + (canh.length ? ' Lưu ý: ' + canh.join('; ') + '.' : ''), canh.length ? 'warn' : 'ok');
 }
 
 function delRs() {
   const rec = curOwner(); if (!rec) return;
   const fs = forestList(rec), nLo = fs.length, nNc = fs.reduce((s, f) => s + (f.nc || []).length, 0), nDx = fs.reduce((s, f) => s + (f.dx || []).length, 0), nPc = fs.reduce((s, f) => s + (f.pc || []).length, 0);
   if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?')) return;
-  fs.forEach(f => { delete stages[stKeyOf(rec.id, f.id)]; loDirty.delete(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
-  delete db.rs[rec.id];
+  fs.forEach(f => { delete stages[stKeyOf(rec.id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
+  delete db.rs[rec.id]; chuNhap.delete(rec.id);
   NAV.cur = null; NAV.curF = null; nhapTamGhi(); persist();
   note('Đã xóa hồ sơ chủ rừng.');
 }

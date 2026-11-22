@@ -27,8 +27,9 @@ function loBar() { const t = stBlockText(); return t ? '<div class="msg warn" id
 /* lưu phần thông tin lô (khi không có bảng nháp) */
 async function luuLoTT(opt) {
   const f = curForest(); if (!f) return {ok: false};
+  const sNhap = nhapChup(), o0 = curOwner(); if (o0) chuChot(o0.id);
   const had = loDirty.delete(f.id), r = await persistNow();
-  if (!r || !r.ok) { if (had) loDirty.add(f.id); pushNote('Không lưu được: ' + ((r && r.error) || 'không rõ'), 'err'); render(); return r || {ok: false}; }
+  if (!r || !r.ok) { if (had) loDirty.add(f.id); nhapKhoiPhuc(sNhap); pushNote('Không lưu được: ' + ((r && r.error) || 'không rõ'), 'err'); render(); return r || {ok: false}; }
   if (had && !(opt && opt.tuKhung)) pushNote('Đã lưu dữ liệu vào lô ' + ((f.info || {}).maRung || '') + '.', 'ok');
   nhapTamGhi(); render(); return {ok: true};
 }

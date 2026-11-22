@@ -99,15 +99,15 @@ function dbGhi() {
   const out = Object.assign({}, db, {rs: {}});
   Object.entries(db.rs || {}).forEach(([oid, o]) => {
     if (!o || typeof o !== 'object') { out.rs[oid] = o; return; }
-    const fs = {}; let giu = 0, tamO = false;
+    const fs = {}; let giu = 0;
     Object.entries(o.forests || {}).forEach(([fid, f]) => {
-      const id = f && f.id || fid, dirty = loDirty.has(id); if (dirty) tamO = true;
+      const id = f && f.id || fid, dirty = loDirty.has(id);
       if (dirty && loMoi.has(id) && !savedSnap.forests.has(id)) return;
       const b = dirty && savedSnap.forests.get(id); fs[fid] = b ? JSON.parse(b.json) : f; giu++;
     });
     const cn = chuNhap.get(oid);
     if (cn && cn.moi && !giu && !savedSnap.owners.has(oid)) return;
-    let oo = o; if (cn && !cn.moi && tamO && savedSnap.owners.has(oid)) oo = JSON.parse(savedSnap.owners.get(oid));
+    let oo = o; if (cn && !cn.moi && savedSnap.owners.has(oid)) oo = JSON.parse(savedSnap.owners.get(oid));
     out.rs[oid] = Object.assign({}, oo, {forests: fs});
   });
   if (aliasNhap.size) { const ba = Object.assign({}, db.bienAlias || {}); aliasNhap.forEach((v, k) => { if ([...v.lots].some(id => loDirty.has(id))) { if (v.had) ba[k] = v.old; else delete ba[k]; } }); out.bienAlias = ba; }
@@ -120,6 +120,12 @@ function nhapChotSo() {
   aliasNhap.forEach((v, k) => { if (![...v.lots].some(id => loDirty.has(id))) aliasNhap.delete(k); });
   [...loMoi].forEach(id => { if (!loDirty.has(id)) loMoi.delete(id); });
 }
+/* lưu một lô thì chốt luôn thông tin chủ rừng đang sửa nháp của lô đó (trả về hàm hoàn lại nếu lưu lỗi); chụp / khôi phục cả ba sổ để lưu lỗi không làm mất dấu “chưa lưu” */
+function chuChot(oid) { const cn = chuNhap.get(oid); if (!cn || cn.moi) return () => {}; chuNhap.delete(oid); return () => { if (!chuNhap.has(oid)) chuNhap.set(oid, cn); }; }
+const nhapChup = () => ({m: new Set(loMoi), c: new Map([...chuNhap].map(([k, v]) => [k, {...v}])), a: new Map([...aliasNhap].map(([k, v]) => [k, {...v, lots: new Set(v.lots)}]))});
+function nhapKhoiPhuc(x) { loMoi.clear(); x.m.forEach(i => loMoi.add(i)); chuNhap.clear(); x.c.forEach((v, k) => chuNhap.set(k, v)); aliasNhap.clear(); x.a.forEach((v, k) => aliasNhap.set(k, v)); }
+/* ánh xạ biển số nháp gắn với lô fid: lô bị bỏ / xóa mà không còn lô bẩn nào thì hoàn lại ánh xạ */
+function aliasHoan(fid) { doiDuLieu(); aliasNhap.forEach((v, k) => { v.lots.delete(fid); if (![...v.lots].some(id => loDirty.has(id))) { db.bienAlias = db.bienAlias || {}; if (v.had) db.bienAlias[k] = v.old; else delete db.bienAlias[k]; aliasNhap.delete(k); } }); }
 /* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu; lô mới chưa từng lưu thì bỏ hẳn (cùng chủ rừng mới nếu không còn lô nào) */
 function loHoan(fid) { return loDirty.has(fid) ? loVeBanDaLuu(fid) || true : false; }
 function loVeBanDaLuu(fid) {
@@ -138,7 +144,7 @@ function loVeBanDaLuu(fid) {
       chuNhap.delete(oid);
     }
   }
-  aliasNhap.forEach((v, k) => { v.lots.delete(fid); if (![...v.lots].some(id => loDirty.has(id))) { db.bienAlias = db.bienAlias || {}; if (v.had) db.bienAlias[k] = v.old; else delete db.bienAlias[k]; aliasNhap.delete(k); } });
+  aliasHoan(fid);
   return ok;
 }
 CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow()};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
@@ -208,7 +214,7 @@ function persist() {
     saveTimer = setTimeout(flushSave, 250);
     return;
   }
-  try { localStorage.setItem(KEY, JSON.stringify(dbGhi())); storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
+  try { const W = dbGhi(); localStorage.setItem(KEY, JSON.stringify(W)); try { savedSnap = HAKDelta.snapshot(W); nhapChotSo(); } catch (e2) { /* không chụp được: giữ ảnh chụp cũ */ } storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
   catch (e) { storeOk = false; showSave('Trình duyệt không lưu được', true); }
 }
 if (HB) window.addEventListener('beforeunload', () => { if (saveTimer) { clearTimeout(saveTimer); flushSave(); } });

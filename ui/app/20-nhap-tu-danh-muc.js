@@ -130,7 +130,7 @@ let nhapTamCho = false;   // đang chờ người dùng trả lời khôi phục
 function nhapTamKhoiPhuc() {
   const d = nhapTamDoc(); if (!d) return;
   const chu = d.chu || {}, moiSet = new Set(d.moi || []);   // lô / chủ rừng tạo từ bản nháp (QĐ7) chưa có trong dữ liệu đã lưu: khôi phục kèm chủ rừng
-  const coLo = (oid, fid) => db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid], coDich = k => { const [oid, fid] = k.split('|'); return coLo(oid, fid) || (moiSet.has(fid) && chu[oid] && chu[oid].o); };
+  const coLo = (oid, fid) => db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid], coDich = k => { const [oid, fid] = k.split('|'); return coLo(oid, fid) || (moiSet.has(fid) && ((chu[oid] && chu[oid].o) || db.rs[oid])); };
   const ten = []; const lots = Object.entries(d.lots || {}).filter(([k]) => coDich(k));
   const sts = Object.entries(d.stages || {}).filter(([k]) => { const [oid, fid] = k.split('|'); return coLo(oid, fid) || (lots.some(([k2]) => k2 === k)); });
   if (!lots.length && !sts.length) return nhapTamXoa();
@@ -147,7 +147,7 @@ function nhapTamKhoiPhuc() {
     else if (c && !c.moi) { Object.assign(db.rs[oid], c.o, {forests: db.rs[oid].forests}); chuNhap.set(oid, {moi: false}); }
     db.rs[oid].forests[fid] = f; loDirty.add(fid); if (moiSet.has(fid)) loMoi.add(fid);
   });
-  Object.entries(d.alias || {}).forEach(([key, v]) => { if (!v || typeof v.v !== 'string') return; db.bienAlias = db.bienAlias || {}; db.bienAlias[key] = v.v; aliasNhap.set(key, {had: !!v.had, old: v.old, lots: new Set((v.lots || []).filter(id => loDirty.has(id)))}); });
+  Object.entries(d.alias || {}).forEach(([key, v]) => { if (!v || typeof v.v !== 'string') return; db.bienAlias = db.bienAlias || {}; db.bienAlias[key] = v.v; const lots = new Set((v.lots || []).filter(id => loDirty.has(id))); if (!lots.size) { if (v.had) db.bienAlias[key] = v.old; else delete db.bienAlias[key]; return; } aliasNhap.set(key, {had: !!v.had, old: v.old, lots}); });
   sts.forEach(([k, st]) => { stages[k] = st; });
   note('Đã khôi phục thay đổi chưa lưu của lô ' + [...ma].join(', ') + ' vào bản nháp. Kiểm tra rồi bấm “Lưu dữ liệu vào lô”.', 'warn');
   render();

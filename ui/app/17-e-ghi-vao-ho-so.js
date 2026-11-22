@@ -20,7 +20,7 @@ async function lkApply() {
   const T = lkTarget(), at = new Date().toISOString(), set = lk.st && lk.st.active ? lk.st.active.loadedAt : '';
   if (lk.mode === 'fill' && T.gone) { lk.msg = {kind: 'err', text: 'Chưa ghi: lô đích không còn tồn tại (đã xóa hoặc dữ liệu vừa được khôi phục). Hồ sơ giữ nguyên.'}; return lkRender(); }
   const mark = (obj, key, src) => { obj.src = obj.src || {}; obj.src[key] = {...src, at, set}; };
-  const snapshot = JSON.stringify(db); const lkNewStages = []; let lkRep = null;
+  const snapshot = JSON.stringify(db), sNhap = nhapChup(), coNhap = !!(loDirty.size || loMoi.size || chuNhap.size || aliasNhap.size); const lkNewStages = []; let lkRep = null;
   try {
     let o = T.o, f = T.f;
     if (lk.mode === 'new') {
@@ -50,7 +50,7 @@ async function lkApply() {
     }
     if (lk.alias) { db.bienAlias = Object.assign(db.bienAlias || {}, lk.alias); }
     if (s.ref && (c.owner.ref.length || F.ref.length)) f.ref = {at, set, hd: c.hd, cccd: c.cccd, fields: c.owner.ref.concat(F.ref)};
-    const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
+    chuChot(o.id); const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
     const r = await persistNow();
     if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } nhapTamGhi();
     const veHd = NAV.curF === f.id && NAV.ftab === 'dx' && hdMo('dx');   // 3.0: tra cứu từ hợp đồng vận chuyển: lưu xong ở lại đúng hợp đồng
@@ -62,7 +62,8 @@ async function lkApply() {
     chosen.length ? 'warn' : undefined);
   } catch (e) {
     db = withDefaults(JSON.parse(snapshot));   // trả lại đúng trạng thái trước khi ghi
-    if (HB) { const back = HB.loadSync(); if (back && back.ok) db = withDefaults(back.db); }
+    if (HB && !coNhap) { const back = HB.loadSync(); if (back && back.ok) db = withDefaults(back.db); }   // còn bản nháp trong bộ nhớ (Google Sheets): không nạp lại từ đĩa (sẽ mất bản nháp)
+    nhapKhoiPhuc(sNhap);
     lkNewStages.forEach(k => { delete stages[k]; });   // hoàn lại bản nháp phiếu cân mới tạo khi lưu thất bại (lô 9a, T-20)
     lk.msg = {kind: 'err', text: 'Không lưu, hồ sơ giữ nguyên: ' + e.message}; lkRender();
   }

@@ -26,7 +26,7 @@ async function stSave(opt) {
   if (mine.size) Object.values(db.rs).forEach(ow => forestList(ow).forEach(ff => { if (ow.id === NAV.cur && ff.id === NAV.curF) return; (ff.pc || []).forEach(p => { const k = khoaSo(p); if (mine.has(k) || (!HAKBks.khoaPhieu(p) && [...mine].some(m => m.split('|')[0] === k))) dups.push(p.soPhieu + (p.ngay ? ' ngày ' + p.ngay : '') + ' (lô ' + (ff.info.maRung || '?') + ', ' + (ow.info.ten || '') + ')'); }); }));
   if (dups.length && !opt?.confirmedDup && !confirm('Có ' + dups.length + ' phiếu cân cùng số phiếu và ngày cân đang có ở lô khác:\n' + dups.slice(0,
   10).map(x => '• ' + x).join('\n') + (dups.length > 10 ? '\n• …' : '') + '\n\nHai nơi cân hoặc hai lô có thể dùng trùng số phiếu. Đối chiếu kỹ (ngày, biển số, khối lượng) rồi bấm OK để vẫn lưu vào lô này, hoặc Hủy để quay lại.')) return {ok: false, error: 'chờ đối chiếu'};
-  stSaving = true; const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, soLog: f.soLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
+  stSaving = true; const sNhap = nhapChup(); chuChot(o.id); const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, soLog: f.soLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
   try {
     const cm = HAKStage.commit(st, r => HAKPhieuCan.chuanHoaNgay2(r, null)), at = stamp(), dk = HAKStage.dirtyKinds(st);   // mọi phiếu có cột ngày cân 2 khi lưu vào hồ sơ rừng (nhập thật thì giữ, trống thì suy ra)
     const oldNcIds = (f.nc || []).map(r => r && r.id).filter(Boolean), oldDxIds = (f.dx || []).map(r => r && r.id).filter(Boolean);
@@ -48,6 +48,7 @@ async function stSave(opt) {
     pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + '). Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
+    nhapKhoiPhuc(sNhap);
     Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog; if (!snap.soLog) delete f.soLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
     pushNote('Không lưu được, dữ liệu đã lưu giữ nguyên và bản nháp vẫn còn để thử lại: ' + e.message, 'err'); render(); return {ok: false, error: e.message};
   } finally { stSaving = false; }
@@ -67,6 +68,19 @@ function stGuard(proceed) {
 }
 window.__stDirty = () => stDirtyList();
 window.__stSaveCurrent = () => stSave();
+/* Lưu và đóng (main.js): lưu MỌI lô còn nháp (không chỉ lô đang mở); lô nào lưu không được thì dừng, trả ok:false để cửa sổ KHÔNG đóng và bản tạm không bị xóa */
+async function stSaveAll() {
+  const keys = stDirtyList(), truoc = {cur: NAV.cur, curF: NAV.curF};
+  for (const k of keys) {
+    const [oid, fid] = k.split('|'); if (!db.rs[oid] || !db.rs[oid].forests[fid]) continue;
+    NAV.cur = oid; NAV.curF = fid;
+    const r = await stSave({tuKhung: true});
+    if (!r || r.ok === false) { render(); return {ok: false, error: (r && r.error) || 'lô ' + ((db.rs[oid].forests[fid].info || {}).maRung || fid) + ' chưa lưu được'}; }
+  }
+  if (db.rs[truoc.cur]) { NAV.cur = truoc.cur; NAV.curF = truoc.curF; } else { NAV.cur = null; NAV.curF = null; }
+  render(); return {ok: true, none: !keys.length};
+}
+window.__stSaveAll = stSaveAll;
 CONG_KT.checkDX = () => { const rec = curRec(); return rec ? checkDX(rec) : null; };
 CONG_KT.rpXe = () => rpData().map(x => ({maRung: x.maRung, xe: x.dxList.map(d => ({bienSo: d.bienSo, ky: d.ky}))}));
 CONG_KT.doiKT = () => { const rec = curRec(); if (!rec) return null; const B = doiOf(rec); return {loi: checkNC(rec).errs, doi: B.doi.map(d => [d.ten, d.n, d.dienTich, d.khoiLuong]), hdld: hdldList(rec).map(r => r.ten), uq: ucList(rec).map(r => r.ten), g: gate(rec)}; };   // kiểm thử đầu-cuối đọc cấu trúc đội của lô đang mở
