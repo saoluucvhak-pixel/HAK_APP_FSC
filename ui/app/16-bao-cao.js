@@ -49,7 +49,7 @@ function rpRecords(ownerFilter = rp.owner) {
 const RP_EXTRA = {
   sohoso: {fields: [{key: 'trangThai', label: 'Trạng thái', opts: () => Object.values(HAKVongDoi.TEN)}, {key: 'nam', label: 'Năm khai thác', opts: () => rpUniq(rpRecords().map(r => (String(r.tuNgay || '').match(/\/(\d{4})$/) || [])[1]))}], flags: [['onlyNoIn',
   'Chỉ lô còn mẫu chưa in hoặc chưa ký']], hint: 'mã lô, chủ rừng, địa điểm'},
-  laodong: {fields: [{key: 'chucDanh', label: 'Chức danh', opts: () => chucDanhAll()}, {key: 'vaiTro', label: 'Vai trò', opts: () => ['Tổ trưởng', 'Công nhân']}], flags: [['onlyMinors', 'Chỉ người dưới 18 tuổi'], ['onlyMissing', 'Chỉ hồ sơ cần bổ sung (thiếu ngày sinh, CCCD)']], hint: 'họ tên, CCCD, chức danh, địa chỉ, mã rừng, chủ rừng'},
+  laodong: {fields: [{key: 'chucDanh', label: 'Vị trí', opts: () => chucDanhAll()}, {key: 'vaiTro', label: 'Chức vụ', opts: () => ['Tổ trưởng', 'Công nhân']}], flags: [['onlyMinors', 'Chỉ người dưới 18 tuổi'], ['onlyMissing', 'Chỉ hồ sơ cần bổ sung (thiếu ngày sinh, CCCD)']], hint: 'họ tên, CCCD, vị trí, địa chỉ, mã rừng, chủ rừng'},
   danhsachxe: {fields: [{key: 'nguoiKy', label: 'Người ký HĐ vận chuyển', opts: () => ['Chủ xe', 'Tài xế']}], flags: [['onlyNoPhone', 'Chỉ xe chưa có số điện thoại'], ['onlyTrips', 'Chỉ xe có chuyến trong kỳ'], ['onlyNoTrips', 'Chỉ xe chưa có chuyến trong kỳ']], hint: 'biển số, chủ xe, tài xế, SĐT, loại xe, mã rừng'},
   phieucan: {fields: [], flags: [], hint: 'số phiếu, biển số, khách hàng, nơi giao, mã rừng, chủ rừng'},
   bienso: {fields: [], flags: [], hint: 'mã rừng, chủ rừng'},

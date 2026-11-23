@@ -15,7 +15,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = B.dx.map(r => ({...r, maRung: 'R-B'})); B.info.tuNgay = '01/12/2026'; B.info.denNgay = '';
   const D = seed([A, B]);   // định mức nhân công mặc định: 1 đội 8 người
   await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');
-  await w.click('#navNorm'); await w.waitForSelector('#dbVerBar');
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbVerBar');
   ok('có thanh phiên bản: chỉ bản gốc, áp dụng cho 2 lô', /Bản gốc/.test(await w.innerText('#dbVerBar')) && /2<\/b> lô|áp dụng cho 2 lô/.test(await w.innerText('#main')));
   await w.fill('#dbVerNew', '31/02/2026'); await w.click('[data-act=dbVerAdd]'); await w.waitForTimeout(300);
   ok('ngày không có thật: báo lỗi, chưa thêm', (await w.$$eval('#dbVerSel option', o => o.length)) === 1);

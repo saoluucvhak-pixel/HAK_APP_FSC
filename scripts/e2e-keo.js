@@ -18,13 +18,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const toForest = async fid => { await w.click('[data-open=own1]').catch(() => {}); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=finfo]'); await w.waitForSelector('#forestForm'); };
   // 1. khai định mức gỗ keo trong màn Định mức
-  await w.evaluate(() => document.querySelector('[data-act=openNorm]').click()); await w.waitForSelector('#keoForm');
+  await w.evaluate(() => document.querySelector('[data-act=openNorm]').click()); await w.click('#normTab_keo'); await w.waitForSelector('#keoForm');
   ok('màn Định mức có mục “Định mức gỗ keo: 1 ha = ? tấn” với ô hiệu lực từ ngày', !!(await w.$('#keoForm input[name=k_tu]')) && /1 ha = \? tấn/.test(await w.innerText('#main')));
   const fillNew = async (tu, tan) => { const r = await w.$('#keoForm tr[data-keo=new]'); await (await r.$('[name=k_tu]')).fill(tu); await (await r.$('[name=k_tan]')).fill(tan); await w.click('#keoForm button[type=submit]'); await w.waitForTimeout(500); };
-  await fillNew('01/01/2025', '80'); await w.evaluate(() => document.querySelector('[data-act=openNorm]').click()); await w.waitForSelector('#keoForm');
+  await fillNew('01/01/2025', '80'); await w.evaluate(() => document.querySelector('[data-act=openNorm]').click()); await w.click('#normTab_keo'); await w.waitForSelector('#keoForm');
   await fillNew('01/07/2026', '95,5'); let d = await db();
   ok('lưu hai định mức gỗ keo: 80 từ 01/01/2025 và 95,5 từ 01/07/2026', JSON.stringify(d.dinhMucKeo) === JSON.stringify([{tuNgay: '01/01/2025', tanHa: 80}, {tuNgay: '01/07/2026', tanHa: 95.5}]), JSON.stringify(d.dinhMucKeo));
-  await w.evaluate(() => document.querySelector('[data-act=openNorm]').click()); await w.waitForSelector('#keoForm'); await fillNew('31/02/2026', '70');
+  await w.evaluate(() => document.querySelector('[data-act=openNorm]').click()); await w.click('#normTab_keo'); await w.waitForSelector('#keoForm'); await fillNew('31/02/2026', '70');
   ok('ngày không có thật: từ chối, không ghi', /Chưa lưu định mức gỗ keo/.test(await w.innerText('#main')) && (await db()).dinhMucKeo.length === 2);
   // 2. rừng lấy định mức mặc định theo ngày bắt đầu khai thác
   await w.reload(); await w.waitForSelector('#side'); await toForest('fa');

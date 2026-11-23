@@ -20,9 +20,9 @@
     lots(db).forEach(l => (l.f.nc || []).forEach(r => { if (digits(r.cccd) !== k) return; const mine = (l.f.pc || []).filter(x => r.doiId && x.doiId === r.doiId); lo.push([l.ma, s(l.o.info && l.o.info.ten), doiTen(l.f, r.doiId), s(r.vaiTro), s(r.chucDanh), s((l.f.info || {}).tuNgay), s((l.f.info || {}).denNgay), mine.length, sumKl(mine)]); }));
     const xe = (db.dmXeVC || []).filter(r => digits(r.cccdTx) === k).map(r => [s(r.bienSo), s(r.ngayCapNhat), s(r.hanGplx), s(r.hanDangKiem)]);
     return {tieuDe: p.ten + ' · CCCD ' + p.cccd, loai: 'nguoi', muc: [
-      {ten: 'Thông tin hiện hành', cot: ['Họ và tên', 'Ngày sinh', 'Thường trú', 'Ngày cấp', 'Nơi cấp', 'SĐT', 'Vai trò'], dong: [[p.ten, p.ngaySinh, p.diaChi, p.ngayCap, p.noiCap, p.sdt, p.vaiTro.join(', ')]]},
+      {ten: 'Thông tin hiện hành', cot: ['Họ và tên', 'Ngày sinh', 'Thường trú', 'Ngày cấp', 'Nơi cấp', 'SĐT', 'Chức vụ'], dong: [[p.ten, p.ngaySinh, p.diaChi, p.ngayCap, p.noiCap, p.sdt, p.vaiTro.join(', ')]]},
       {ten: 'Lịch sử dòng danh mục lao động (mới nhất trước)', cot: ['Ngày cập nhật', 'Thường trú', 'SĐT', 'Chức vụ', 'Vị trí'], dong: ls.map(r => [s(r.ngayCapNhat), s(r.diaChi), s(r.sdt), s(r.chucVu), s(r.viTri)])},
-      {ten: 'Các lô đã tham gia', cot: ['Lô', 'Chủ rừng', 'Đội', 'Vai trò', 'Vị trí', 'Từ ngày', 'Đến ngày', 'Phiếu cân của đội', 'Khối lượng đội (tấn)'], dong: lo},
+      {ten: 'Các lô đã tham gia', cot: ['Lô', 'Chủ rừng', 'Đội', 'Chức vụ', 'Vị trí', 'Từ ngày', 'Đến ngày', 'Phiếu cân của đội', 'Khối lượng đội (tấn)'], dong: lo},
       {ten: 'Xe đứng tên tài xế', cot: ['Biển số', 'Cập nhật', 'Hạn GPLX', 'Hạn đăng kiểm'], dong: xe}], ghiChu: []};
   }
   function xe(db, bien) {

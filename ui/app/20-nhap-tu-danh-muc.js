@@ -3,7 +3,7 @@
  * - Người / xe MỚI nhập trong lô được ghi luôn vào danh mục khi lưu lô (không nhập hai nơi).
  * - Nút “Cập nhật từ danh mục”: làm mới có chủ ý bản chụp trong bản nháp của lô. */
 const dmNguonLd = () => {
-  /* 3.0: trước hết người có vai trò Nhân công trong Danh mục đối tượng (nhãn: đối tượng — người); sau đó danh mục lao động cũ và người đã có ở các lô (chưa có trong danh mục mới) */
+  /* 3.0: trước hết người có chức vụ Nhân công trong Danh mục đối tượng (nhãn: đối tượng — người); sau đó danh mục lao động cũ và người đã có ở các lô (chưa có trong danh mục mới) */
   const moi = HAKDoiTuong.nguoiTheoVaiTro(dmDT(), 'nhanCong').map(({dt, ng}) => ({ngayCapNhat: dt.ngayCapNhat || '', cccd: HAKDanhMuc.cccdSo(ng.cccd), ten: ng.hoTen, gioiTinh: ng.gioiTinh || '', ngaySinh: ng.ngaySinh || '', diaChi: ng.diaChi || '', ngayCap: ng.ngayCap || '', noiCap: ng.noiCap || '',
   sdt: ng.sdt || '',
     chucVu: '', viTri: ten30(ng.viTriId), _ngId: ng.id, _viTriId: ng.viTriId || '', _nhan: HAKDoiTuong.nhanNguoi(dt, ng)})).filter(r => trim(r.ten));
