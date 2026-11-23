@@ -54,7 +54,7 @@ function kslPaint() {
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Nhắc sau <select id="setRemind">' + [[0, 'Không nhắc'], [3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày']].map(o => '<option value="' + o[0] + '"' + (o[0] === rm.remindDays ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
     '<span class="mut">Sao lưu toàn bộ lần cuối: ' + (rm.lastBackup ? esc(new Date(rm.lastBackup).toLocaleString('vi-VN')) : 'chưa có') + '</span></div></div>';
   box.className = '';
-  box.innerHTML = '<div class="card" style="margin:10px 0" id="kslTinhTrang"><h3 style="margin:0 0 6px">Tình trạng</h3>' +
+  box.innerHTML = dungLuongHtml(st) + '<div class="card" style="margin:10px 0" id="kslTinhTrang"><h3 style="margin:0 0 6px">Tình trạng</h3>' +
     '<div>Tự sao lưu hằng ngày: ' + tuDong + (d.chuaVaoBanTuDong ? ' · <span class="pill warn" id="kslChuaVao">có thay đổi chưa vào bản hôm nay</span> <span class="mut">(tự làm mới khi đóng phần mềm, hoặc bấm “Tự sao lưu ngay”)</span>' : '') + '</div>' +
     '<div style="margin-top:4px">Sao lưu toàn bộ (.json + .sqlite, nên lưu ra ổ khác): ' + toanBo + '</div>' +
     '<div class="mut" style="margin-top:4px;word-break:break-all">Thư mục: ' + d.dirs.map(x => '<code>' + esc(x) + '</code>').join(' · ') + '</div>' +
