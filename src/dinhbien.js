@@ -1,7 +1,7 @@
 /* Định mức nhân công (định biên một đội khai thác): mỗi vị trí có SỐ NGƯỜI và NHIỆM VỤ ghi rõ. Hàm thuần, không phụ thuộc giao diện, dùng chung ở giao diện (nhúng khi build) và kiểm thử Node.
  *
  * db.dinhBien = [{chucDanh, soNguoi, kiemNhiem, nhiemVu}] (chưa lưu thì dùng MAC_DINH):
- *   - chucDanh  : tên vị trí, trùng với chức danh nhân công (Tổ trưởng, Công nhân cưa, …)
+ *   - chucDanh  : tên vị trí, trùng với vị trí nhân công (trường chucDanh) (Tổ trưởng, Công nhân cưa, …)
  *   - soNguoi   : số người của vị trí trong một đội (số nguyên 1–50)
  *   - kiemNhiem : (tùy chọn) vị trí khác mà người này kiêm. Người kiêm nhiệm là MỘT trong số người của vị trí gốc, không tính thêm người.
  *   - nhiemVu   : nhiệm vụ của vị trí

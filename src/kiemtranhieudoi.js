@@ -208,7 +208,7 @@
     /* Cơ sở tính đơn giá. Hợp đồng có 2 hình thức:
        - Giao khoán (chủ rừng ký với Tổ trưởng, công nhân ủy quyền cho Tổ trưởng): tính theo TẤN, HA hoặc NGÀY CÔNG (Tổ trưởng nhận thay cả tổ rồi chi trả từng người).
        - Trực tiếp (chủ rừng ký với tất cả nhân công): tính theo TẤN hoặc NGÀY CÔNG.
-       Đơn giá theo từng vai trò (chức danh); sản lượng (tấn, ha) hoặc số công chia đều cho mọi người. */
+       Đơn giá theo từng vị trí (trường chucDanh); sản lượng (tấn, ha) hoặc số công chia đều cho mọi người. */
     const BASIS = {sanluong: {map: 'donGiaTan', unit: 'đồng/tấn', short: 'đ/tấn', qty: 'tấn'}, ha: {map: 'donGiaHa', unit: 'đồng/ha', short: 'đ/ha', qty: 'ha'}, ngaycong: {map: 'donGiaNgay', unit: 'đồng/công', short: 'đ/công', qty: 'công'}};
     const basisOf = i => BASIS[i.hinhThucLuong] || BASIS.sanluong;
     const basisAllowed = (direct, b) => direct ? b !== 'ha' : true;   // giao khoán: tấn, ha hoặc ngày công; trực tiếp: tấn hoặc ngày công
@@ -316,7 +316,7 @@
       }
       return {ngc, basis, tu, den, cong, vol, issues};
     }
-    /* Bảng tiền theo từng người: sản lượng (tấn/ha) hoặc số công chia đều; đơn giá theo vai trò. Dùng chung cho BM-01, BM-08, BM-14. */
+    /* Bảng tiền theo từng người: sản lượng (tấn/ha) hoặc số công chia đều; đơn giá theo vị trí. Dùng chung cho BM-01, BM-08, BM-14. */
     function payRows(rec, ex) {
       const rs = rec.info, plan = payrollPlan(rec, ex), list = ncList(rec), N = list.length;
       const each = (!plan.ngc && plan.vol && N) ? plan.vol.v / N : null;

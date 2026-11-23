@@ -1,5 +1,5 @@
 /* ----- lưu bản nháp vào lô: kiểm tra lại rồi ghi trong MỘT lần lưu SQLite; lỗi thì giữ nguyên cả dữ liệu đã lưu lẫn bản nháp ----- */
-/* lỗi do CẤU HÌNH chứ không phải do dòng dữ liệu (chưa khai đơn giá của chức danh): không chặn lưu, vẫn chặn xuất hồ sơ cho đến khi khai đủ */
+/* lỗi do CẤU HÌNH chứ không phải do dòng dữ liệu (chưa khai đơn giá của vị trí): không chặn lưu, vẫn chặn xuất hồ sơ cho đến khi khai đủ */
 const CONFIG_ERR = /chưa có đơn giá/;
 let stSaving = false;
 async function stSave(opt) {
