@@ -6,6 +6,8 @@ const {_electron: electron} = require('playwright-core');
 const path = require('path'), fs = require('fs'), os = require('os'), http = require('http');
 const XLSX = require('xlsx');
 const {build} = require('../tests/fixtures/make-lookup');
+/* QĐ5: ToaDoRung giữ cột bắt buộc “Mã rừng”; DienTich_m2 không còn bắt buộc (biến thể missingCol nay được nhận). Bản thiếu cột để thử lỗi: đổi tên cột “Mã rừng”. */
+const thieuMaRung = () => { const XLSX = require('xlsx'), wb = XLSX.read(build(), {type: 'buffer', cellDates: true}), ws = wb.Sheets.ToaDoRung; Object.keys(ws).forEach(k => { if (ws[k] && ws[k].v === 'Mã rừng') ws[k].v = 'Ma rung (sai ten cot)'; }); return XLSX.write(wb, {type: 'buffer', bookType: 'xlsx', cellDates: false}); };
 const root = path.join(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-tt-')), dbFile = path.join(dir, 'tt.sqlite'), out = path.join(dir, 'out');
 let fail = 0; const ok = (n, c, x) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + n + (!c && x ? ' — ' + x : '')); if (!c) fail++; };
@@ -76,8 +78,8 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   ok('đồng bộ lại cùng bảng tính: theo lựa chọn đã nhớ, không hỏi lại', !(await w.$('#lkPend')));
 
   // 5. đồng bộ lỗi: giữ bản gần nhất và thời điểm thành công
-  const at = (await status()).active.loadedAt; body = build('missingCol'); await w.click('[data-act=lkSync]'); await done(/Chưa cập nhật bản tra cứu/);
-  ok('tab đủ tên nhưng thiếu cột: báo tên tab và cột; giữ bản gần nhất cùng thời điểm thành công', /Tab “ToaDoRung”.*DienTich_m2/.test(await txt()) && (await status()).active.loadedAt === at);
+  const at = (await status()).active.loadedAt; body = thieuMaRung(); await w.click('[data-act=lkSync]'); await done(/Chưa cập nhật bản tra cứu/);
+  ok('tab đủ tên nhưng thiếu cột: báo tên tab và cột; giữ bản gần nhất cùng thời điểm thành công', /Tab “ToaDoRung”.*Mã rừng/.test(await txt()) && (await status()).active.loadedAt === at);
   body = build();
 
   // 6. file mẫu tra cứu 3 tab chuẩn

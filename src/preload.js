@@ -64,6 +64,8 @@ contextBridge.exposeInMainWorld('hak', {
     importExcel: p => ipcRenderer.invoke('lookup:importExcel', p),
     search: (q, tab, opts) => ipcRenderer.invoke('lookup:search', q, tab, opts),
     candidates: (tab, row) => ipcRenderer.invoke('lookup:candidates', tab, row),
-    build: (cccd, hd) => ipcRenderer.invoke('lookup:build', cccd, hd)
+    build: (cccd, hd) => ipcRenderer.invoke('lookup:build', cccd, hd),
+    buildHd: hd => ipcRenderer.invoke('lookup:buildHd', hd),
+    summaryHd: list => ipcRenderer.invoke('lookup:summaryHd', list)
   }
 });

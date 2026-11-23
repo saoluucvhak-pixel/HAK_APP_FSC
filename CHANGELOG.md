@@ -1,5 +1,21 @@
 # Nhật ký thay đổi
 
+## 3.3.0 — Dữ liệu Google Sheets theo hợp đồng, phân bổ phiếu cân vào rừng, đổi số phiếu, bản nháp đầy đủ
+
+### Điểm mới
+
+- **Màn "Dữ liệu Google Sheets" (đổi tên từ "Tra cứu"):** màn đầu là bảng toàn bộ hợp đồng (mã, chủ rừng, CCCD che giữa, ngày ký, số rừng, số phiếu, tổng tấn, trạng thái Đủ/Cần xem/Lỗi dữ liệu), tìm không dấu, lọc, phân trang. Mở một hợp đồng ra hộp thoại Cha–Con: danh sách rừng theo thứ tự nhập, ba thẻ Hồ sơ rừng, Tọa độ, Phiếu cân; chân hộp thoại cố định; khung hẹp xếp Cha trên Con.
+- **Phân bổ phiếu cân vào rừng:** hợp đồng nhiều rừng phân bổ theo ngày cân, rừng nhập trước nhận đến hết sản lượng dự kiến (+ dung sai 5 %), rừng cuối nhận phần dư; có nút Phân bổ tự động, Phân bổ phiếu còn lại vào rừng N, Xóa phân bổ; cảnh báo "Vượt dự kiến"; phiếu chưa phân bổ không được ghi.
+- **Ghép mã rừng:** ghép dòng hồ sơ rừng với mã rừng theo diện tích, địa chỉ, thứ tự; ghép tạm có cờ "cần xác nhận" và ô Mã rừng để đổi tay.
+- **Nghi đổi số phiếu:** phát hiện phiếu Sheet nghi là phiếu đã có nhưng đổi số; người dùng chọn "Đổi số (giữ nguyên phiếu)" hoặc "Là chuyến khác"; mặc định không ghi; không cộng đôi khối lượng, tải lại không thêm lại. Thao tác "Đổi số phiếu" riêng ở bảng phiếu cân bắt buộc lý do, chặn trùng số và ngày, ghi nhật ký (`soLog`), giữ số cũ (`soCu`).
+- **Mã hợp đồng nhiều CCCD:** cảnh báo nặng và xác nhận hai bước trước khi cập nhật.
+- **Màn chủ rừng:** nút "Mở dữ liệu Google Sheets" và "Đối chiếu với Google Sheets" (họ tên, CCCD, ngày ký; số rừng và tổng tấn khi lô đã lưu mã hợp đồng); chênh lệch chỉ cảnh báo, không chặn lưu.
+- **"Cập nhật vào hồ sơ" ghi vào bản nháp:** toàn bộ (chủ rừng, lô, rừng, tọa độ, giấy tờ, phiếu cân) vào bản nháp; chỉ lưu khi bấm "Lưu dữ liệu vào lô". Biển số chưa có trong danh sách xe của lô được liệt kê kèm ô "Thêm xe vào lô" (mặc định tích). "Lưu và đóng" lưu mọi lô nháp; bản nháp được khôi phục sau khi mở lại ứng dụng.
+- **Nhận Sheet cũ:** mỗi tab chỉ cần cột đặc trưng bắt buộc; Sheet cũ đủ cột đọc như v3.2.0.
+- **Tốc độ tra cứu:** chỉ mục theo mã hợp đồng và bỏ sắp xếp trong SQL; 2000 hợp đồng tổng hợp trong khoảng 0,25 giây (trước đó khoảng 2,1 giây).
+- **Bảo mật:** mọi giá trị từ Sheet qua `esc()`; CCCD che giữa ở bảng và tiêu đề; `limit` truy vấn bị chặn; `npm audit --omit=dev` không có lỗ hổng.
+- **Bảo toàn bản in:** 206/206 tài liệu biểu mẫu `.docx` giống từng byte so với v3.2.0.
+
 ## 3.2.0 — Bố cục mới V10.4, bộ lọc thông minh HAK_SMART_FILTER, hoàn tất 28/28 E2E suites và cải tiến sao lưu/khôi phục
 
 ### Điểm mới

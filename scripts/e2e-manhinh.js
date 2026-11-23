@@ -36,7 +36,7 @@ const SEED = {v: 2, congTy: {c1: {id: 'c1', ten: 'CÔNG TY TNHH CHẾ BIẾN G�
   await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on'); await w.click('[data-act=lkExcel]'); await w.waitForFunction(() => /Đã cập nhật bản tra cứu/.test(document.getElementById('lkBody').innerText));
   // bàn phím trong Tra cứu: Tab di chuyển, Enter tìm, Esc đóng
   await w.focus('#lkQ'); await w.keyboard.type('nguyen van an'); await w.keyboard.press('Enter'); await w.waitForTimeout(500);
-  ok('Tra cứu: Enter trong ô tìm chạy tìm kiếm (có kết quả)', (await w.$$('[data-lkpick], [data-lkgrp], [data-lkhd]')).length > 0);
+  ok('Tra cứu: Enter trong ô tìm chạy tìm kiếm (có kết quả)', (await w.$$('[data-gsrow], [data-lkpick], [data-lkgrp], [data-lkhd]')).length > 0);
   ok('Tra cứu: sau khi tìm bằng Enter, tiêu điểm vẫn ở ô tìm (không mất vì vẽ lại)', await w.evaluate(() => document.activeElement && document.activeElement.id === 'lkQ'));
   await w.keyboard.press('Tab');
   ok('Tra cứu: Tab chuyển tiêu điểm sang điều khiển kế tiếp trong hộp', await w.evaluate(() => { const a = document.activeElement; return !!a && a !== document.body && a.id !== 'lkQ' && !!a.closest('#lkBox'); }));

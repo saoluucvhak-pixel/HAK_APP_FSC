@@ -13,7 +13,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'b.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_SHEET_URL: 'http://127.0.0.1:9/none.xlsx', ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const db = () => w.evaluate(() => window.hak.loadSync().db);
-  const find = async (q, tab = 'HoSoKeo_QC') => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lktab="' + tab + '"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250); };
+  const find = async (q, tab = 'HoSoKeo_QC') => { await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkQ'); await w.click('[data-lklayout=flat]'); await w.click('[data-lktab="' + tab + '"]'); await w.fill('#lkQ', q); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250); };
   // 1. nạp lần đầu: phiếu 1001 (92C-12345) và 1002 (ghép tên xe với 92C-99999)
   ok('nhập bảng tính', (await w.evaluate(p => window.hak.lookup.importExcel(p), wf('goc.xlsx'))).ok);
   await find('1001/2026'); await w.click('[data-lkpick]'); await w.waitForSelector('[data-act=lkModeNew]');
@@ -64,7 +64,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   const kl0 = pc1().kl, ngay0 = pc1().ngay;
   // 2. bảng tính cập nhật biển số xe mới
   ok('nhập bảng tính có biển số mới (92C-12345 → 92C-54321)', (await w.evaluate(p => window.hak.lookup.importExcel(p), wf('moi.xlsx', 'newplate'))).ok);
-  await w.click('[data-ftab=finfo]'); await w.click('#forestForm [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on');
+  await w.click('[data-ftab=finfo]'); await w.click('#forestForm [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on'); await w.click('[data-lklayout=flat]');
   await w.click('[data-lktab="HoSoKeo_QC"]'); await w.fill('#lkQ', '1001/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.waitForSelector('[data-act=lkApply]');
   const box = await w.innerText('#lkBienDoi').catch(() => '');
@@ -82,7 +82,7 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   d = await db(); const f0 = Object.values(Object.values(d.rs)[0].forests)[0], q = f0.pc.find(x => x.soPhieu === '1001/2026/NK'); for (const k of ['gioCan1', 'gioCan2', 'can1', 'can2', 'klKg', 'klTan', 'khachHang', 'maKhachHang', 'donGia', 'thanhTien']) delete q[k];
   await w.waitForTimeout(600); await w.evaluate(x => window.hak.save(x), d); await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]').catch(() => {});
   await w.evaluate(() => { const o = Object.values(window.hak.loadSync().db.rs)[0]; return o.id; }).then(async id => { await w.click('[data-open=' + id + ']'); });
-  await w.click('[data-tab=rung]'); await w.click('[data-forest]'); await w.click('[data-ftab=finfo]'); await w.click('#forestForm [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on');
+  await w.click('[data-tab=rung]'); await w.click('[data-forest]'); await w.click('[data-ftab=finfo]'); await w.click('#forestForm [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on'); await w.click('[data-lklayout=flat]');
   await w.click('[data-lktab="HoSoKeo_QC"]'); await w.fill('#lkQ', '1001/2026'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(250);
   await w.click('[data-lkpick]'); await w.click('[data-act=lkModeFill]'); await w.waitForSelector('[data-act=lkApply]');
   ok('phiếu đã có nhưng thiếu giờ cân/cân lần/khách hàng: hiện “Bổ sung giờ cân, cân lần 1, cân lần 2…” và cho chọn cập nhật', /Bổ sung giờ cân, cân lần 1, cân lần 2/.test(await w.innerText('#lkBody')) && !(await w.isDisabled('[data-lkpc="1001/2026/NK"]')));

@@ -92,6 +92,9 @@
     return {next, fields};
   }
   const HINT_NHAP = {nc: ['doi'], pc: ['doi'], dx: ['doiXe']};
+  /* bí danh số phiếu (soCu): dòng nhập mang số CŨ của một chuyến đã đổi số thì ghép về chính chuyến đó (cùng ngày; không so được ngày thì coi là cùng) */
+  const dayKey = n => BKS().khoaPhieu({soPhieu: 'x', ngay: n});
+  const aliasKhop = (x, r) => { const k = BKS().soPhieu(r.soPhieu); return !!k && (x.soCu || []).some(c => c && BKS().soPhieu(c.so) === k && (() => { const a = dayKey(c.ngay || x.ngay), b = dayKey(r.ngay); return !a || !b || a === b; })()); };
   function merge(st, kind, rows, opt) {
     opt = opt || {}; const list = st.cur[kind], key = KEY[kind], rep = {add: 0, upd: 0, same: 0, kept: 0, ids: [], dupInFile: [], changes: [], pending: 0, errors: 0};
     const seenInFile = new Map(), touched = new Set(); st.pending = st.pending || [];
@@ -101,7 +104,8 @@
       const dup2 = k && seenInFile.get(k) > 1;
       /* nhân công CHƯA có CCCD chỉ ghép được theo họ tên: hai người trùng tên mà ngày sinh khác nhau là hai người, không ghi đè lên nhau */
       const khacNguoi = x => kind === 'nc' && !cccd(r.cccd) && !cccd(x.cccd) && ngaySinhKhoa(x.ngaySinh) && ngaySinhKhoa(r.ngaySinh) && ngaySinhKhoa(x.ngaySinh) !== ngaySinhKhoa(r.ngaySinh);
-      const matches = k && !dup2 ? list.filter(x => key(x) === k && !khacNguoi(x)) : [];
+      const matches = k && !dup2 ? list.filter(x => (key(x) === k || (kind === 'pc' && aliasKhop(x, r))) && !khacNguoi(x)) : [];
+      const soAlias = x => kind === 'pc' && key(x) !== k;   // khớp theo số cũ: số hiện hành của dòng đã lưu được giữ, dòng nhập không đổi số phiếu
       const addNew = () => { r._id = newId(st); r._srcRow = r._row; r._row = nextRow(list); list.push(r); rep.add++; rep.ids.push(r._id); };
       if (!matches.length) return addNew();
       let target = null;
@@ -114,7 +118,7 @@
           rep.pending++; return;
         }
       } else target = matches.find(m => !identDiffs(m, r).length) || matches[0];
-      touched.add(target._id);
+      touched.add(target._id); if (soAlias(target)) delete r.soPhieu;
       /* chữ ở cột Đội (nhân công, phiếu cân) và Đội xe (xe) chỉ là GỢI Ý lúc nhập: sau khi dòng đã có đội, chữ này được bỏ (SQLite v6). Dòng đã có thì không đổi đội theo chữ,
        * nên nạp lại cùng file không được tính là “cập nhật”; dòng cũ còn giữ chữ (chưa thuộc đội, đang báo lỗi) vẫn được cập nhật. */
       (HINT_NHAP[kind] || []).forEach(h => { if (target[h] === undefined) delete r[h]; });
@@ -144,6 +148,7 @@
       const cands = p.candidates.filter(id => list.some(x => x._id === id)); const tid = opt.targetId || (cands.length === 1 ? cands[0] : null);
       if (!tid || !cands.includes(tid)) return {ok: false, error: cands.length > 1 ? 'Có nhiều bản ghi cùng số phiếu: chọn bản cần cập nhật.' : 'Bản ghi cần cập nhật không còn.'};
       const old = list.find(x => x._id === tid), {next} = applyInto(p.kind, old, p.incoming, {source: p.source, suy: p.suy, suyFn: st.suyNgay2}); next._id = tid; next._row = old._row;
+      if (p.kind === 'pc' && old.soPhieu && KEY.pc(old) !== KEY.pc(p.incoming)) next.soPhieu = old.soPhieu;   // dòng nguồn mang số cũ (bí danh): giữ số hiện hành
       if (p.kind === 'pc' && bienKey(old.bienSo) !== bienKey(next.bienSo) && next.bienSo) next._plateSrc = p.source || 'Nhập';
       list[list.findIndex(x => x._id === tid)] = next; st.pending.splice(i, 1); return {ok: true, id: tid};
     }
@@ -151,23 +156,64 @@
       /* chuyến khác: khóa phiếu = số phiếu + ngày. Cùng số phiếu nhưng KHÁC ngày là hợp lệ (giữ số phiếu của dòng nguồn); cùng số và cùng ngày (hoặc thiếu ngày) phải có số phiếu mới */
       const nhap = String(opt.soPhieu == null ? '' : opt.soPhieu).trim(), r = clone(p.incoming); if (nhap) r.soPhieu = nhap;
       const so = String(r.soPhieu == null ? '' : r.soPhieu).trim(); if (!so) return {ok: false, error: 'Chuyến khác phải có số phiếu riêng: nhập số phiếu mới.'};
-      const kp = BKS().khoaPhieu(r), trung = kp ? x => BKS().khoaPhieu(x) === kp : x => KEY.pc(x) === KEY.pc(r);
+      const kp = BKS().khoaPhieu(r), trung = kp ? x => BKS().khoaTatCa(x).includes(kp) : x => KEY.pc(x) === KEY.pc(r) || (x.soCu || []).some(c => c && BKS().soPhieu(c.so) === KEY.pc(r));
       if (list.some(trung) || (st.pending || []).some(q => q !== p && q.kind === p.kind && trung(q.incoming))) return {ok: false, error: 'Số phiếu ' + so + (kp ? ' cùng ngày ' + r.ngay : '') + ' đã có trong lô: nhập số phiếu khác' + (kp ? ' hoặc sửa ngày cân' : '') + '.'};
       r._id = newId(st); r._srcRow = r._row; r._row = nextRow(list); list.push(r); st.pending.splice(i, 1); return {ok: true, id: r._id};
     }
     return {ok: false, error: 'Lựa chọn không hợp lệ.'};
+  }
+  /* ĐỔI SỐ PHIẾU CÂN: cùng một chuyến, đổi số; giữ _id, id, _row, kl, bienSo, xeRowId, hdvcId. Số cũ ghi vào soCu (tối đa 20, mới nhất ở cuối).
+   * meta = {lyDo, nguon:{loai:'tay'|'sheet', tab?, row?, set?}, at, nguoi?}; ctx = {loKhoa, phieuLoKhac:[{lo,p}], xacNhanLoKhac}.
+   * Trả {ok, ma?, error?, canhBao?, entry?}; ma ∈ LO_KHOA | KHONG_CO | THIEU | KHONG_HOP_LE | KHONG_DOI | TRUNG | CAN_XAC_NHAN. Thất bại thì KHÔNG ghi gì. */
+  /* chỉ giữ whitelist {loai, tab, row, set}: chuỗi ≤ 64 ký tự, row số nguyên; không đọc/sao chép thuộc tính khác nên đối tượng vòng tròn hay kiểu lạ không gây lỗi */
+  function nguonSach(n) {
+    if (!n || typeof n !== 'object' || Array.isArray(n)) return {loai: 'tay'};
+    const o = {}, str = v => typeof v === 'string' ? v.slice(0, 64) : undefined;
+    ['loai', 'tab', 'set'].forEach(f => { let v; try { v = str(n[f]); } catch (e) { v = undefined; } if (v !== undefined) o[f] = v; });
+    let r; try { r = n.row; } catch (e) { r = undefined; } if (Number.isSafeInteger(r)) o.row = r;
+    return o;
+  }
+  function doiSoPhieu(st, id, soMoi, meta, ctx) {
+    meta = meta || {}; ctx = ctx || {};
+    const loi = (ma, error, extra) => Object.assign({ok: false, ma, error}, extra || {});
+    if (ctx.loKhoa) return loi('LO_KHOA', 'Lô đã chốt/dừng: mở khóa trước.');
+    const i = st.cur.pc.findIndex(x => x._id === id); if (i < 0) return loi('KHONG_CO', 'Không tìm thấy phiếu cân.');
+    /* soMoi và lyDo bắt buộc là chuỗi (không gọi toString của đối tượng lạ); lyDo cắt còn 500 ký tự; soMoi dài hơn 64 ký tự bị TỪ CHỐI (KHONG_HOP_LE), không cắt vì cắt sẽ đổi nghĩa số phiếu */
+    if (typeof soMoi !== 'string') return loi('THIEU', 'Nhập số phiếu mới.'); if (typeof meta.lyDo !== 'string') return loi('THIEU', 'Nhập lý do đổi số (ít nhất 3 ký tự).');
+    const d = st.cur.pc[i], moi = soMoi.trim(), lyDo = meta.lyDo.trim().slice(0, 500);
+    if (!moi) return loi('THIEU', 'Nhập số phiếu mới.'); if (lyDo.length < 3) return loi('THIEU', 'Nhập lý do đổi số (ít nhất 3 ký tự).');
+    if (moi.length > 64) return loi('KHONG_HOP_LE', 'Số phiếu mới quá dài (tối đa 64 ký tự).');
+    const B = BKS(); if (B.soPhieu(moi) === B.soPhieu(d.soPhieu)) return loi('KHONG_DOI', 'Số phiếu mới trùng số hiện tại.');
+    const khoaMoi = B.khoaPhieu({soPhieu: moi, ngay: d.ngay}), soMoiKey = B.soPhieu(moi);
+    /* thiếu ngày thì so theo số phiếu */
+    const khop = x => khoaMoi ? B.khoaTatCa(x).includes(khoaMoi) : (B.soPhieu(x.soPhieu) === soMoiKey || (x.soCu || []).some(c => c && B.soPhieu(c.so) === soMoiKey));
+    if (st.cur.pc.some(x => x !== d && khop(x))) return loi('TRUNG', 'Số phiếu ' + moi + (khoaMoi ? ' cùng ngày ' + d.ngay : '') + ' đã có trong lô.');
+    /* dòng đang chờ đối chiếu mang cùng khóa (số + ngày); thiếu ngày thì so theo số phiếu (thiết kế §3.5 bước 5) */
+    if ((st.pending || []).some(q => q.kind === 'pc' && q.incoming && (khoaMoi ? B.khoaPhieu(q.incoming) === khoaMoi : B.soPhieu(q.incoming.soPhieu) === soMoiKey))) return loi('TRUNG', 'Số phiếu ' + moi + ' đang chờ đối chiếu: xử lý dòng đó trước.');
+    const khac = (ctx.phieuLoKhac || []).filter(o => o && o.p && khop(o.p));
+    if (khac.length && !ctx.xacNhanLoKhac) return loi('CAN_XAC_NHAN', 'Số phiếu ' + moi + ' cũng có ở lô khác: cần xác nhận.', {canhBao: khac.map(o => 'Số phiếu ' + moi + (khoaMoi ? ' ngày ' + d.ngay : '') + ' đã có ở lô ' + (o.lo || '?'))});
+    const entry = {so: d.soPhieu}; if (d.ngay) entry.ngay = d.ngay; Object.assign(entry, {lyDo, nguon: nguonSach(meta.nguon), at: typeof meta.at === 'string' && meta.at ? meta.at.slice(0, 64) : new Date().toISOString()}); if (typeof meta.nguoi === 'string' && meta.nguoi) entry.nguoi = meta.nguoi.slice(0, 64);
+    const next = clone(d); next.soCu = (d.soCu ? clone(d.soCu) : []).concat(entry).slice(-20); next.soPhieu = moi;
+    next._tay = [...new Set((d._tay || []).concat('soPhieu'))]; st.cur.pc[i] = next;
+    return {ok: true, entry: clone(entry)};
   }
   function addRow(st, kind, row) { const r = clone(row); r._id = newId(st); r._row = nextRow(st.cur[kind]); st.cur[kind].push(r); return r._id; }
   function updateRow(st, kind, id, row) {
     const i = st.cur[kind].findIndex(x => x._id === id); if (i < 0) return {ok: false, error: 'Không tìm thấy dòng.'};
     const old = st.cur[kind][i], next = Object.assign({}, clone(row), {_id: id}); if (old._row != null && next._row == null) next._row = old._row;
     if (old.doiId !== undefined && next.doiId === undefined) next.doiId = old.doiId;   // nhân công: sửa một người không làm người đó rời đội (cấu trúc 2.0)
+    if (old.soCu !== undefined && next.soCu === undefined) next.soCu = clone(old.soCu);   // sửa một ô khác của phiếu đã đổi số không làm mất vết đổi số (biểu mẫu không mang soCu)
     const tay = new Set(old._tay || []); Object.keys(next).forEach(f => { if (f[0] !== '_' && f !== 'giaLoi' && !same(old[f], next[f])) tay.add(f); }); if (tay.size) next._tay = [...tay];   // trường sửa tay: nhập file sau đó không ghi đè
     if (kind === 'dx' && bienKey(old.bienSo) !== bienKey(next.bienSo)) {   // đổi biển số xe: các phiếu cân liên kết đổi theo, số chuyến và khối lượng không đổi
       const linked = linkedPc(st, old.bienSo); linked.forEach(p => { p.bienSo = next.bienSo; p._plateSrc = 'Sửa biển số xe'; });
       next._renamedFrom = old._renamedFrom || old.bienSo; st.cur.dx[i] = next; return {ok: true, linked: linked.map(p => p.soPhieu)};
     }
     if (kind === 'pc' && bienKey(old.bienSo) !== bienKey(next.bienSo)) next._plateSrc = 'Sửa tay';
+    /* Q9 mặc định: đổi số phiếu của dòng ĐÃ LƯU qua sửa tay vẫn để lại vết soCu (đường chính là doiSoPhieu); dòng mới chưa lưu sửa tự do */
+    if (kind === 'pc' && old.soPhieu && KEY.pc(old) !== KEY.pc(next) && st.base.pc.some(b => b._id === id)) {
+      const e = {so: old.soPhieu}; if (old.ngay) e.ngay = old.ngay; Object.assign(e, {lyDo: 'Sửa tay (không có lý do)', nguon: {loai: 'tay'}, at: new Date().toISOString()});
+      next.soCu = (next.soCu || old.soCu || []).concat(e).slice(-20);
+    }
     st.cur[kind][i] = next; return {ok: true, linked: []};
   }
   /* các phiếu cân (bản nháp) đang dùng biển số này */
@@ -193,8 +239,12 @@
     const out = {}, bienLog = [], at = new Date().toISOString(), baseById = new Map(st.base.pc.map(r => [r._id, r]));
     KINDS.forEach(k => { out[k] = st.cur[k].map(r => { const c = clone(r); if (k === 'pc' && fixPc) fixPc(c); delete c._plateSrc; delete c._renamedFrom; delete c._nguon; delete c._tay; return c; }); });
     st.cur.pc.forEach(r => { const b = baseById.get(r._id); if (b && bienKey(b.bienSo) !== bienKey(r.bienSo)) bienLog.push({soPhieu: r.soPhieu, ngay: r.ngay, kl: typeof r.kl === 'number' ? r.kl : 0, cu: b.bienSo || '', moi: r.bienSo, at, nguon: r._plateSrc || 'Sửa tay'}); });
-    return {lists: out, bienLog};
+    /* nhật ký đổi số: mục soCu của dòng ĐÃ LƯU mà bản đã lưu chưa có (so theo so + at, nên vẫn đúng khi soCu bị cắt ở 20 mục) */
+    const soLog = [], eKey = e => (e && e.so) + '|' + (e && e.at);
+    st.cur.pc.forEach(r => { const b = baseById.get(r._id); if (!b || !(r.soCu || []).length) return; const had = new Set((b.soCu || []).map(eKey));
+      r.soCu.forEach((e, j) => { if (had.has(eKey(e))) return; const m = {pid: r.id || r._id, soCu: e.so, soMoi: j + 1 < r.soCu.length ? r.soCu[j + 1].so : r.soPhieu, ngay: e.ngay, kl: typeof r.kl === 'number' ? r.kl : 0, lyDo: e.lyDo, nguon: clone(e.nguon || {}), at: e.at}; if (e.nguoi) m.nguoi = e.nguoi; soLog.push(m); }); });
+    return {lists: out, bienLog, soLog};
   }
-  const api = {KEY, KINDS, create, merge, addRow, updateRow, removeRow, restoreRow, linkedPc, diff, counts, dirty, dirtyKinds, commit, sig, bienKey, idConflicts, pendingOf, resolve, isBlank, labelOf};
+  const api = {KEY, KINDS, create, merge, doiSoPhieu, addRow, updateRow, removeRow, restoreRow, linkedPc, diff, counts, dirty, dirtyKinds, commit, sig, bienKey, idConflicts, pendingOf, resolve, isBlank, labelOf};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKStage = api;
 })(typeof window !== 'undefined' ? window : globalThis);

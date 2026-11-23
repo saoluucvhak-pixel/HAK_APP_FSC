@@ -6,6 +6,10 @@ const {Lookup, parseCoord, isPlate, dedupe} = require('../src/lookup');
 const {build} = require('./fixtures/make-lookup');
 
 const fresh = () => { const s = new Store(':memory:'); const L = new Lookup(s); return {s, L}; };
+/* QĐ5: DienTich_m2 không còn là cột bắt buộc; ca “thiếu cột” dùng một cột bắt buộc tối thiểu của ToaDoRung (Latitude_Vĩ độ): đổi tên tiêu đề ngay trong bản dựng chuẩn */
+const missingReqCol = () => { const XLSX = require('xlsx'), wb = XLSX.read(build(), {type: 'buffer'}), ws = wb.Sheets['ToaDoRung'];
+  Object.keys(ws).forEach(k => { if (k[0] !== '!' && ws[k].v === 'Latitude_Vĩ độ') ws[k].v = 'Latitude'; });
+  return XLSX.write(wb, {type: 'buffer', bookType: 'xlsx'}); };
 
 test('nạp Excel đủ 3 tab, giữ CCCD/mã hợp đồng/số phiếu dạng văn bản, ngày dd/mm/yyyy', () => {
   const {L} = fresh(); const r = L.load(build(), 'excel', 'gia_lap.xlsx');
@@ -18,8 +22,8 @@ test('nạp Excel đủ 3 tab, giữ CCCD/mã hợp đồng/số phiếu dạng 
 
 test('thiếu cột hoặc thiếu tab: báo rõ tab/cột và GIỮ bản tra cứu cũ', () => {
   const {L} = fresh(); L.load(build(), 'excel', 'a.xlsx');
-  const r1 = L.load(build('missingCol'), 'excel', 'b.xlsx');
-  assert.strictEqual(r1.ok, false); assert.match(r1.errors[0], /Tab “ToaDoRung”.*thiếu cột.*DienTich_m2/);
+  const r1 = L.load(missingReqCol(), 'excel', 'b.xlsx');
+  assert.strictEqual(r1.ok, false); assert.match(r1.errors[0], /Tab “ToaDoRung”.*thiếu cột.*Latitude_Vĩ độ/);
   const r2 = L.load(build('missingTab'), 'google', 'sheet'); assert.match(r2.errors[0], /Thiếu tab “ToaDoRung”/);
   const st = L.status(); assert.strictEqual(st.active.detail, 'a.xlsx'); assert.strictEqual(st.last.ok, false);
   assert.strictEqual(L.search('', '').total, 20);
@@ -272,9 +276,11 @@ test('đổi tên tab sau khi đã ánh xạ: nhận diện lại theo cấu tr�
 });
 test('thiếu cột bắt buộc khi tên tab đúng chuẩn: báo tên tab và tên cột, giữ bản cũ', () => {
   const {L} = fresh(); L.load(build(), 'excel', 'a.xlsx');
-  const r = L.load(build('missingCol'), 'excel', 'b.xlsx');
-  assert.strictEqual(r.ok, false); assert.match(r.errors[0], /Tab “ToaDoRung” \(vai trò “ToaDoRung”\) thiếu cột: “DienTich_m2”/);
+  const r = L.load(missingReqCol(), 'excel', 'b.xlsx');
+  assert.strictEqual(r.ok, false); assert.match(r.errors[0], /Tab “ToaDoRung” \(vai trò “ToaDoRung”\) thiếu cột: “Latitude_Vĩ độ”/);
+
   assert.strictEqual(L.status().active.detail, 'a.xlsx');
+  assert.strictEqual(L.load(build('missingCol'), 'excel', 'c.xlsx').ok, true, 'QĐ5: thiếu DienTich_m2 (không còn bắt buộc) vẫn nạp được');
 });
 test('thiếu tab thật sự: báo rõ file đang có những tab nào', () => {
   const r = fresh().L.load(build('missingTab'), 'google', 'x');

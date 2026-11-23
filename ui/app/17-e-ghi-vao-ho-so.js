@@ -1,4 +1,14 @@
 /* ----- Ghi vào hồ sơ: kiểm tra đủ lựa chọn, áp dụng một lần, lưu trong một giao dịch ----- */
+/* Tạo chủ rừng / lô mới: MỘT nơi duy nhất ghi db.rs mới, dùng chung cho lkApply (từng rừng) và hộp thoại hợp đồng (gsApply). Lô mới có thời điểm tạo `taoLuc` (QĐ8: thứ tự nhập của rừng mới; không điền ngược cho lô cũ). */
+function lkNewOwner(ma, src, mark) {
+  const id = newId('rs'), o = db.rs[id] = {id, info: {ma, danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
+  mark(o, 'ma', src); return o;
+}
+function lkNewForest(o, at) {
+  const fid = newId('f'), n = forestList(o).length + 1;
+  return o.forests[fid] = {id: fid, info: {maRung: '', tenRung: 'Rừng ' + n, diaDiem: '', lat: null, lng: null, dienTich: null, dinhMucTanHa: null, dinhMucNgayHa: null, cuLy: null, tuNgay: '', denNgay: '', donGia: null, giayTo: []},
+    nc: [], dx: [], pc: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: '', taoLuc: at};
+}
 async function lkApply() {
   const c = lk.cand, F = c.forests[lk.fi], s = lk.sel, errs = [];
   { const T0 = lk.mode === 'fill' ? lkTarget() : null;
@@ -10,20 +20,14 @@ async function lkApply() {
   const T = lkTarget(), at = new Date().toISOString(), set = lk.st && lk.st.active ? lk.st.active.loadedAt : '';
   if (lk.mode === 'fill' && T.gone) { lk.msg = {kind: 'err', text: 'Chưa ghi: lô đích không còn tồn tại (đã xóa hoặc dữ liệu vừa được khôi phục). Hồ sơ giữ nguyên.'}; return lkRender(); }
   const mark = (obj, key, src) => { obj.src = obj.src || {}; obj.src[key] = {...src, at, set}; };
-  const snapshot = JSON.stringify(db); const lkNewStages = []; let lkRep = null;
+  const snapshot = JSON.stringify(db), sNhap = nhapChup(), coNhap = !!(loDirty.size || loMoi.size || chuNhap.size || aliasNhap.size); const lkNewStages = []; let lkRep = null;
   try {
     let o = T.o, f = T.f;
     if (lk.mode === 'new') {
       const fv = F.fields.find(x => x.key === 'maRung');
       if (fv && findForestByMa(fv.value)) throw new Error('Mã rừng ' + fv.value + ' đã có');
-      if (!o) {
-        const id = newId('rs');
-        o = db.rs[id] = {id, info: {ma: c.cccd, danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
-        mark(o, 'ma', (c.owner.fields.find(x => x.key === 'cccd') || c.owner.fields[0] || {}).src || {tab: 'HoSoRung_QC', row: 0, col: 'Mã KH_CCCD'});
-      }
-      const fid = newId('f'), n = forestList(o).length + 1;
-      f = o.forests[fid] = {id: fid, info: {maRung: '', tenRung: 'Rừng ' + n, diaDiem: '', lat: null, lng: null, dienTich: null, dinhMucTanHa: null, dinhMucNgayHa: null, cuLy: null, tuNgay: '', denNgay: '', donGia: null, giayTo: []},
-        nc: [], dx: [], pc: [], exp: {}, ncFile: '', ncAt: '', dxFile: '', dxAt: ''};
+      if (!o) o = lkNewOwner(c.cccd, (c.owner.fields.find(x => x.key === 'cccd') || c.owner.fields[0] || {}).src || {tab: 'HoSoRung_QC', row: 0, col: 'Mã KH_CCCD'}, mark);
+      f = lkNewForest(o, at); const n = forestList(o).length;
       if (!fv) { let k = n, code = (o.info.ma || 'CR') + '-R' + k; while (findForestByMa(code)) code = (o.info.ma || 'CR') + '-R' + (++k); f.info.maRung = code; }
     }
     c.owner.fields.forEach(x => { if (s.owner[x.key] === 'new') { o.info[x.key] = x.value; mark(o, x.key, x.src); } });
@@ -44,9 +48,9 @@ async function lkApply() {
       if (NAV.curF === f.id) ganPhieuHopDong(stages[k0], lkRep.ids, f);   // 3.0: phiếu mới vào hợp đồng vận chuyển đang mở
       if (plateRows.length) { const pr = HAKStage.merge(stages[k0], 'pc', plateRows, {source: 'Google Sheets (đổi biển số)', plateSource: 'Google Sheets', sameTrip: true}); lkRep.upd += pr.upd; lkRep.same += pr.same; lkRep.pending += pr.pending; }
     }
-    if (lk.alias) { db.bienAlias = Object.assign(db.bienAlias || {}, lk.alias); }
+    if (lk.alias) { Object.keys(lk.alias).forEach(k => aliasNhap.delete(k)); db.bienAlias = Object.assign(db.bienAlias || {}, lk.alias); }   // ánh xạ ghi cùng lần lưu này: gộp, không để dbGhi hoàn về giá trị cũ
     if (s.ref && (c.owner.ref.length || F.ref.length)) f.ref = {at, set, hd: c.hd, cccd: c.cccd, fields: c.owner.ref.concat(F.ref)};
-    const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
+    chuChot(o.id); const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
     const r = await persistNow();
     if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } nhapTamGhi();
     const veHd = NAV.curF === f.id && NAV.ftab === 'dx' && hdMo('dx');   // 3.0: tra cứu từ hợp đồng vận chuyển: lưu xong ở lại đúng hợp đồng
@@ -58,7 +62,8 @@ async function lkApply() {
     chosen.length ? 'warn' : undefined);
   } catch (e) {
     db = withDefaults(JSON.parse(snapshot));   // trả lại đúng trạng thái trước khi ghi
-    if (HB) { const back = HB.loadSync(); if (back && back.ok) db = withDefaults(back.db); }
+    if (HB && !coNhap) { const back = HB.loadSync(); if (back && back.ok) db = withDefaults(back.db); }   // còn bản nháp trong bộ nhớ (Google Sheets): không nạp lại từ đĩa (sẽ mất bản nháp)
+    nhapKhoiPhuc(sNhap);
     lkNewStages.forEach(k => { delete stages[k]; });   // hoàn lại bản nháp phiếu cân mới tạo khi lưu thất bại (lô 9a, T-20)
     lk.msg = {kind: 'err', text: 'Không lưu, hồ sơ giữ nguyên: ' + e.message}; lkRender();
   }
@@ -169,7 +174,7 @@ document.addEventListener('keydown', async e => {
   }
   /* phiếu #10 & lô 9c (T-23): hộp thoại đang mở giữ tiêu điểm bên trong — Tab / Shift+Tab đi vòng trong hộp, không ra trang bên dưới */
   if (e.key === 'Tab') {
-    const hop = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'tkBox', 'thBox'].map(id => document.getElementById(id)).filter(b => b && (b.classList.contains('on') || b.id === 'tkBox' || b.id === 'thBox')).pop();
+    const hop = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'hdBox', 'hdAsk', 'tkBox', 'thBox'].map(id => document.getElementById(id)).filter(b => b && (b.classList.contains('on') || b.id === 'tkBox' || b.id === 'thBox')).pop();
     if (hop) {
       const ds = [...hop.querySelectorAll('button, input:not([type=hidden]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent);
       if (ds.length) { const i = ds.indexOf(document.activeElement), j = i < 0 ? 0 : (i + (e.shiftKey ? -1 : 1) + ds.length) % ds.length; if (i < 0 || (e.shiftKey ? i === 0 : i === ds.length - 1)) { ds[j].focus(); e.preventDefault(); return; } }
@@ -178,6 +183,7 @@ document.addEventListener('keydown', async e => {
   if (e.key === 'Escape' && !e.defaultPrevented) {   // Esc đóng hộp thoại trên cùng (hộp nhập/khôi phục → báo cáo → tra cứu → hướng dẫn); hộp nhập/khôi phục = Hủy, không ghi gì
     const open = id => { const b = document.getElementById(id); return b && b.classList.contains('on') ? b : null; };
     { const sb = open('stBox'), nut = sb && (sb.querySelector('#stGBack') || sb.querySelector('[data-act=stClose]')); if (nut) { nut.click(); e.preventDefault(); return; } }   // phiếu #10: hộp Lưu / Bỏ / Quay lại → Quay lại; hộp có nút Đóng → Đóng
+    { const ak = open('hdAsk'); if (ak) { const no = ak.querySelector('[data-act=gsAskNo]'); if (no) no.click(); e.preventDefault(); return; } if (open('hdBox')) { gsClose(); e.preventDefault(); return; } }   // hộp xác nhận trên cùng → hộp thoại hợp đồng
     if (open('impBox')) { window.__imp = null; $('#impBox').classList.remove('on'); e.preventDefault(); return; }
     if (open('rpBox')) { rpClose(); e.preventDefault(); return; }
     if (open('lkBox')) { lkClose(); e.preventDefault(); return; }

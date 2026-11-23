@@ -8,7 +8,7 @@ const kslNgay = iso => { const d = new Date(iso), n = Math.round((new Date(new D
 /* dữ liệu vừa bị THAY từ nơi khác (khôi phục toàn bộ, khôi phục lô, khôi phục từ kho): bản nháp và dấu “chưa lưu” cũ không còn đích; bản đã lưu = đúng dữ liệu vừa nạp.
  * Không làm bước này thì một lô đang “chưa lưu” sẽ bị ghi lại bằng bản TRƯỚC khi khôi phục ở lần lưu kế tiếp (dbGhi dùng savedSnap cũ). */
 function dbThayToanBo(moi) {
-  db = withDefaults(moi); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear();   // saveCache giữ nguyên: phiên bản (rev) đã cũ nên lần lưu kế bị từ chối STALE và tự lưu toàn bộ
+  db = withDefaults(moi); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear();   // saveCache giữ nguyên: phiên bản (rev) đã cũ nên lần lưu kế bị từ chối STALE và tự lưu toàn bộ
   try { savedSnap = HAKDelta.snapshot(db); } catch (e) { savedSnap = null; }
   doiDuLieu();
 }

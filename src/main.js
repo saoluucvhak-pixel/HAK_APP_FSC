@@ -3,7 +3,7 @@ const {app, BrowserWindow, ipcMain, dialog, Menu, shell, net, safeStorage, sessi
 const path = require('path');
 const fs = require('fs');
 const {Store, SCHEMA_VERSION} = require('./store');
-const {Lookup} = require('./lookup');
+const {Lookup, checkQuery, cleanSearchOpts} = require('./lookup');
 const LoRung = require('./lorung');
 const Settings = require('./settings');
 const DM = require('./datamove');
@@ -282,9 +282,11 @@ function registerIpc() {
   ipcMain.handle('google:status', () => gauth.status());
   ipcMain.handle('google:login', async () => { try { return {ok: true, status: await gauth.login()}; } catch (e) { log('ERROR', 'google login: ' + e.code); return {ok: false, code: e.code, error: e.message, status: gauth.status()}; } });
   ipcMain.handle('google:logout', () => ({ok: true, status: gauth.logout()}));
-  ipcMain.handle('lookup:search', (e, q, tab, opts) => wrap(() => lookup.search(q || '', tab || '', opts || {}))());
+  ipcMain.handle('lookup:search', (e, q, tab, opts) => checkQuery(q) || wrap(() => lookup.search(q || '', tab || '', cleanSearchOpts(opts)))());
   ipcMain.handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
+  ipcMain.handle('lookup:summaryHd', (e, list) => wrap(() => lookup.summaryHd(list))());
+  ipcMain.handle('lookup:buildHd', (e, hd) => wrap(() => { if (typeof hd !== 'string' || !hd.trim() || hd.length > 64) return {ok: false, error: 'Mã hợp đồng không hợp lệ.'}; return lookup.build(hd); })());
   /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
   const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
   const dbInfo = () => { try { const st = fs.statSync(loc.dbFile); return {size: st.size, mtime: st.mtime.toISOString(), version: store ? store.db.pragma('user_version', {simple: true}) : null, open: !!store}; } catch (e) { return {size: 0, mtime: null, version: null, open: !!store}; } };
@@ -733,7 +735,7 @@ function createWindow() {
     if (n > 0) {
       const auto = {save: 0, discard: 1, back: 2}[process.env.HAKQN_CLOSE];
       pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Lô đang mở có nhân công, xe hoặc phiếu cân chưa lưu. Dữ liệu chưa lưu sẽ mất nếu đóng ngay.', buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
-      if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true}'), new Promise(res => setTimeout(() => res(null), 15000))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
+      if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveAll ? window.__stSaveAll() : (window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true})'), new Promise(res => setTimeout(() => res(null), Math.min(120000, 15000 + 10000 * n)))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
     }
     if (pick === 2) return;
     if (n > 0) { try { await ask('window.__nhapTamXoa ? window.__nhapTamXoa() : 0', 0); } catch (err) { /* không xóa được bản tạm: bỏ qua */ } }

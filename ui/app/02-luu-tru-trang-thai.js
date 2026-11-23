@@ -87,22 +87,68 @@ function persistLo(f) {
     if (!el && h) { const tb = document.querySelector('#main .tabs'); if (tb) tb.insertAdjacentHTML('beforebegin', h); }
   }
 }
-/* nội dung sẽ ghi: lô còn thay đổi chưa lưu giữ bản đã lưu (chưa có bản đã lưu — lô mới — thì ghi như hiện tại) */
+/* BẢN NHÁP CỦA CHỦ RỪNG / LÔ MỚI VÀ ÁNH XẠ BIỂN SỐ (màn Dữ liệu Google Sheets, QĐ7): các đối tượng này nằm trong bộ nhớ (db) nhưng CHƯA vào dữ liệu đã lưu.
+ *  - loMoi: id lô tạo từ bản nháp, chưa từng lưu; lô còn trong loDirty và chưa có trong ảnh chụp đã lưu thì dbGhi bỏ ra ngoài (không bao giờ ghi vì lần lưu khác).
+ *  - chuNhap: id chủ rừng → {moi}; moi = chủ rừng tạo mới (bỏ ra ngoài cho đến khi có lô được lưu); không moi = thông tin chủ rừng đang sửa nháp (ghi theo bản đã lưu).
+ *  - aliasNhap: khóa ánh xạ biển số → {had, old, lots}: ánh xạ mới / đổi, ghi theo bản đã lưu cho đến khi lô liên quan được lưu.
+ * Chủ rừng / ánh xạ coi là “chưa lưu” khi còn ít nhất một lô của chủ rừng (của ánh xạ) trong loDirty; lưu hoặc bỏ lô cuối cùng thì chốt hoặc hoàn lại (loVeBanDaLuu). */
+const loMoi = new Set(), chuNhap = new Map(), aliasNhap = new Map();
+/* nội dung sẽ ghi: lô còn thay đổi chưa lưu giữ bản đã lưu (lô mới chưa lưu thì bỏ ra ngoài); chủ rừng mới chưa lưu bỏ ra ngoài; ánh xạ biển số chưa lưu về bản đã lưu */
 function dbGhi() {
-  if (!loDirty.size || !savedSnap) return db;
+  if ((!loDirty.size && !chuNhap.size && !aliasNhap.size && !loMoi.size) || !savedSnap) return db;
   const out = Object.assign({}, db, {rs: {}});
-  Object.entries(db.rs || {}).forEach(([oid, o]) => { if (!o || typeof o !== 'object') { out.rs[oid] = o; return; } const fs = {}; Object.entries(o.forests || {}).forEach(([fid, f]) => { const b = loDirty.has(f && f.id || fid) && savedSnap.forests.get(f && f.id || fid);
-  fs[fid] = b ? JSON.parse(b.json) : f; }); out.rs[oid] = Object.assign({}, o, {forests: fs}); });
+  Object.entries(db.rs || {}).forEach(([oid, o]) => {
+    if (!o || typeof o !== 'object') { out.rs[oid] = o; return; }
+    const fs = {}; let giu = 0;
+    Object.entries(o.forests || {}).forEach(([fid, f]) => {
+      const id = f && f.id || fid, dirty = loDirty.has(id);
+      if (dirty && loMoi.has(id) && !savedSnap.forests.has(id)) return;
+      const b = dirty && savedSnap.forests.get(id); fs[fid] = b ? JSON.parse(b.json) : f; giu++;
+    });
+    const cn = chuNhap.get(oid);
+    if (cn && cn.moi && !giu && !savedSnap.owners.has(oid)) return;
+    let oo = o; if (cn && !cn.moi && savedSnap.owners.has(oid)) oo = JSON.parse(savedSnap.owners.get(oid));
+    out.rs[oid] = Object.assign({}, oo, {forests: fs});
+  });
+  if (aliasNhap.size) { const ba = Object.assign({}, db.bienAlias || {}); aliasNhap.forEach((v, k) => { if ([...v.lots].some(id => loDirty.has(id))) { if (v.had) ba[k] = v.old; else delete ba[k]; } }); out.bienAlias = ba; }
   return out;
 }
-/* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu */
+/* chủ rừng / lô / ánh xạ nháp: lô nào cũng đã lưu hoặc bỏ thì dọn sổ (chốt) — gọi sau mỗi lần lưu thành công */
+function nhapChotSo() {
+  const dirtyOf = o => Object.values((o && o.forests) || {}).some(f => loDirty.has(f.id));
+  chuNhap.forEach((cn, oid) => { if (!dirtyOf(db.rs[oid])) chuNhap.delete(oid); });
+  aliasNhap.forEach((v, k) => { if (![...v.lots].some(id => loDirty.has(id))) aliasNhap.delete(k); });
+  [...loMoi].forEach(id => { if (!loDirty.has(id)) loMoi.delete(id); });
+}
+/* lưu một lô thì chốt luôn thông tin chủ rừng đang sửa nháp của lô đó (trả về hàm hoàn lại nếu lưu lỗi); chụp / khôi phục cả ba sổ để lưu lỗi không làm mất dấu “chưa lưu” */
+function chuChot(oid) { const cn = chuNhap.get(oid); if (!cn || cn.moi) return () => {}; chuNhap.delete(oid); const un = () => { if (!chuNhap.has(oid)) chuNhap.set(oid, cn); }; un.chot = true; return un; }
+const nhapChup = () => ({m: new Set(loMoi), c: new Map([...chuNhap].map(([k, v]) => [k, {...v}])), a: new Map([...aliasNhap].map(([k, v]) => [k, {...v, lots: new Set(v.lots)}]))});
+/* chỉ HOÀN LẠI phần lần lưu này đã bỏ (thêm lại khóa có trong bản chụp mà nay không còn); KHÔNG xóa khóa mới do thao tác khác tạo ra trong lúc chờ */
+function nhapKhoiPhuc(x) { x.m.forEach(i => loMoi.add(i)); x.c.forEach((v, k) => { if (!chuNhap.has(k)) chuNhap.set(k, v); }); x.a.forEach((v, k) => { const e = aliasNhap.get(k); if (e) v.lots.forEach(id => e.lots.add(id)); else aliasNhap.set(k, v); }); }
+/* ánh xạ biển số nháp gắn với lô fid: lô bị bỏ / xóa mà không còn lô bẩn nào thì hoàn lại ánh xạ */
+function aliasHoan(fid) { doiDuLieu(); aliasNhap.forEach((v, k) => { v.lots.delete(fid); if (![...v.lots].some(id => loDirty.has(id))) { db.bienAlias = db.bienAlias || {}; if (v.had) db.bienAlias[k] = v.old; else delete db.bienAlias[k]; aliasNhap.delete(k); } }); }
+/* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu; lô mới chưa từng lưu thì bỏ hẳn (cùng chủ rừng mới nếu không còn lô nào) */
 function loHoan(fid) { return loDirty.has(fid) ? loVeBanDaLuu(fid) || true : false; }
 function loVeBanDaLuu(fid) {
   doiDuLieu(); loDirty.delete(fid);
-  const b = savedSnap && savedSnap.forests.get(fid); if (!b) return false;
-  Object.values(db.rs || {}).forEach(o => { const k = Object.keys(o.forests || {}).find(x => (o.forests[x].id || x) === fid); if (k) { const f = o.forests[k], v = JSON.parse(b.json); Object.keys(f).forEach(x => { delete f[x]; }); Object.assign(f, v); } });
-  return true;
+  const b = savedSnap && savedSnap.forests.get(fid); let oid = null, ok = false;
+  Object.entries(db.rs || {}).forEach(([id, o]) => { const k = Object.keys((o && o.forests) || {}).find(x => (o.forests[x].id || x) === fid); if (k) oid = id; });
+  if (!b) {
+    if (loMoi.has(fid) && oid) { const o = db.rs[oid], k = Object.keys(o.forests).find(x => (o.forests[x].id || x) === fid); delete o.forests[k]; ok = true; }
+    loMoi.delete(fid);
+  } else if (oid) { const o = db.rs[oid], k = Object.keys(o.forests).find(x => (o.forests[x].id || x) === fid), f = o.forests[k], v = JSON.parse(b.json); Object.keys(f).forEach(x => { delete f[x]; }); Object.assign(f, v); ok = true; }
+  if (oid && db.rs[oid]) {   // chủ rừng và ánh xạ biển số nháp: không còn lô nháp nào thì hoàn lại (chủ rừng mới → bỏ; thông tin sửa nháp → về bản đã lưu)
+    const o = db.rs[oid], cn = chuNhap.get(oid);
+    if (cn && !Object.values(o.forests || {}).some(f => loDirty.has(f.id))) {
+      if (cn.moi && !Object.keys(o.forests || {}).length) delete db.rs[oid];
+      else if (!cn.moi && savedSnap && savedSnap.owners.has(oid)) { const ov = JSON.parse(savedSnap.owners.get(oid)); Object.keys(o).forEach(x => { if (x !== 'forests') delete o[x]; }); Object.assign(o, ov); }
+      chuNhap.delete(oid);
+    }
+  }
+  aliasHoan(fid);
+  return ok;
 }
+CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow(), chup: () => (window.__nhapChup = nhapChup()), khoiPhuc: () => nhapKhoiPhuc(window.__nhapChup), themMoi: id => loMoi.add(id), boMoi: id => loMoi.delete(id)};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
 CONG_KT.saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
 /* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
 function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); if (HAKLienKet.canChuan(o.forests[k])) HAKLienKet.chuanLo(o.forests[k]); }));
@@ -147,7 +193,7 @@ async function saveOnce() {
   }
   CONG_KT.saveStats.last = r && r.ok ? r.mode || 'full' : 'error';
   saveCache = r && r.ok && r.rev && !snap.dup ? {rev: r.rev, snap} : null;
-  if (r && r.ok && !snap.dup) savedSnap = snap;
+  if (r && r.ok && !snap.dup) { savedSnap = snap; nhapChotSo(); }
   return r;
 }
 function storeSave() { const p = saveChain.then(saveOnce, saveOnce); saveChain = p.catch(() => {}); return p; }
@@ -169,7 +215,8 @@ function persist() {
     saveTimer = setTimeout(flushSave, 250);
     return;
   }
-  try { localStorage.setItem(KEY, JSON.stringify(dbGhi())); storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
+  try { const W = dbGhi(); let sn = null; try { sn = HAKDelta.snapshot(W); } catch (e2) { if (loDirty.size || chuNhap.size || loMoi.size || aliasNhap.size) { storeOk = false; showSave('Chưa ghi: không chụp được bản đã lưu, bản nháp được giữ nguyên', true); if (typeof pushNote === 'function') pushNote('Không ghi được vào trình duyệt vì không chụp được bản đã lưu; các lô nháp giữ nguyên trong bộ nhớ, bấm “Lưu dữ liệu vào lô” sau.', 'warn'); return; } }
+    localStorage.setItem(KEY, JSON.stringify(W)); if (sn) { savedSnap = sn; nhapChotSo(); } storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
   catch (e) { storeOk = false; showSave('Trình duyệt không lưu được', true); }
 }
 if (HB) window.addEventListener('beforeunload', () => { if (saveTimer) { clearTimeout(saveTimer); flushSave(); } });

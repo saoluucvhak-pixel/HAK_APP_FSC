@@ -45,10 +45,10 @@ function panelSetGs() {
   if (!HB) return '<div class="card"><div class="msg warn">Địa chỉ Google Sheets chỉ có ở bản cài trên Windows.</div></div>';
   const st = setgs.st || {};
   return '<div class="card"><h3 style="margin-top:0">Địa chỉ bảng tính Google Sheets</h3>' +
-    '<p class="mut" style="margin-top:0">Bảng tính (chỉ đọc) dùng cho màn <b>Tra cứu Google Sheets</b>: tab HoSoKeo (phiếu cân), HoSoRung, ToaDoRung. Bảng tính để chế độ “Ai có liên kết đều xem được”; nếu bị giới hạn quyền, đăng nhập Google ở màn Tra cứu.</p>' +
+    '<p class="mut" style="margin-top:0">Bảng tính (chỉ đọc) dùng cho màn <b>Dữ liệu Google Sheets</b>: tab HoSoKeo (phiếu cân), HoSoRung, ToaDoRung. Bảng tính để chế độ “Ai có liên kết đều xem được”; nếu bị giới hạn quyền, đăng nhập Google ở màn Tra cứu.</p>' +
     (setgs.msg ? '<div class="msg ' + setgs.msg.kind + '" id="setGsMsg">' + esc(setgs.msg.text) + '</div>' : '') +
     '<div class="row"><input id="setGsLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '" placeholder="https://docs.google.com/spreadsheets/d/…"><button class="btn" data-act="setGsSave">Lưu địa chỉ</button></div>' +
-    '<p class="mut" style="margin-bottom:0">Việc đồng bộ dữ liệu làm ở màn Tra cứu Google Sheets.</p></div>';
+    '<p class="mut" style="margin-bottom:0">Việc đồng bộ dữ liệu làm ở màn Dữ liệu Google Sheets.</p></div>';
 }
 function panelSetFmt() {
   const row = (v, label, ex) => '<label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink)"><input type="radio" name="numStyle" value="' + v + '"' + ((db.dinhDangSo === 'en' ? 'en' : 'vi') === v ? ' checked' : '') + ' data-act="setNumStyle"> <span><b>' + label + '</b> · ví dụ ' +
@@ -196,7 +196,7 @@ async function restoreAll(file) {
     const o2 = k.v1 ? migrateV1(o) : Object.assign({}, o, {v: 2});
     if (HB) return importWithPreview(withDefaults(o2));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
-    db = withDefaults(o2); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
+    db = withDefaults(o2); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
     note('Đã khôi phục ' + Object.keys(db.rs).length + ' hồ sơ chủ rừng.');
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
 }

@@ -21,7 +21,7 @@ function lkBarHtml() {
   const core = HAKCore.sf, st = lkSf(), conds = core.conditions(LK_SF, st), names = lkPresets().list(LK_SF.screenId);
   lk.conds = conds;
   return '<div class="row" style="margin:6px 0;justify-content:space-between"><div class="row"><b>Hiển thị:</b>' +
-    [['flat', 'Bảng phẳng'], ['tree', 'Cha–con (hợp đồng → rừng → phiếu cân)']].map(([k, l]) => '<button class="btn sm ' + (lk.layout === k ? '' : 'ghost') + '" data-lklayout="' + k + '">' + l + '</button>').join('') + '</div>' +
+    [['hd', 'Theo hợp đồng'], ['flat', 'Theo dòng Sheet (nâng cao)'], ['tree', 'Xem nhanh cha–con']].map(([k, l]) => '<button class="btn sm ' + (lk.layout === k ? '' : 'ghost') + '" data-lklayout="' + k + '">' + l + '</button>').join('') + '</div>' +
     '<div class="row"><select id="lkPreset" aria-label="Bộ lọc đã lưu"><option value="">Bộ lọc đã lưu…</option>' + names.map(n => '<option' + (n === lk.presetSel ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>' +
     '<input id="lkPresetName" size="14" placeholder="Tên bộ lọc mới"><button class="btn ghost sm" data-act="lkPresetSave">Lưu bộ lọc</button><button class="btn ghost sm" data-act="lkPresetDel">Xóa bộ lọc đã chọn</button></div></div>' +
     (conds.length ? '<div class="row" style="margin:4px 0">' + conds.map((c, i) => '<span class="pill">' + esc(c.text) + ' <button class="chipx" data-lkrm="' + i + '" aria-label="Bỏ điều kiện: ' + esc(c.text) + '">×</button></span>').join('') +
@@ -99,13 +99,14 @@ function lkSearchHtml() {
   const sum = lk.layout === 'tree' ? fmt(r.groupTotal || 0) + ' hợp đồng / chủ rừng (từ ' + fmt(r.total) + ' dòng). Bấm một dòng để xem rừng và phiếu cân ở khung bên phải.' : r.total > r.rows.length ? 'Hiển thị ' + fmt(r.rows.length) + ' / ' + fmt(r.total) +
   ' dòng — gõ thêm từ khóa hoặc dùng bộ lọc để thu hẹp.' : fmt(r.total) + ' dòng.';
   const tot = st.phieu ? ' · <b>' + fmt(st.phieu) + '</b> phiếu cân, tổng <b>' + numTxt(st.tan) + '</b> tấn' : '';
-  return tabs +
+ const hdL = lk.layout === 'hd';
+  return (hdL ? '' : tabs) +
     '<div class="row"><input id="lkQ" style="flex:1" placeholder="Mã rừng, tên chủ rừng (có dấu hoặc không), CCCD, mã/số hợp đồng, địa chỉ rừng, số phiếu cân, biển số" value="' + esc(lk.q) + '"><button class="btn" data-act="lkFind">Tìm</button></div>' +
     '<p class="mut" style="margin:4px 0">' + esc(LK_HINT) + '</p>' + lkBarHtml() + adv +
-    (statuses.length && lk.tab !== 'HoSoKeo_QC' && lk.tab !== 'ToaDoRung_QC' ? '<div class="row" style="margin:4px 0">' + statuses.map(([k, c]) => '<button class="btn ' + (lk.f.status === k ? '' : 'ghost') + ' sm" data-lkstatus="' + esc(k) + '">' + esc(k) + ' · ' + c + '</button>').join('') +
+    (!hdL && statuses.length && lk.tab !== 'HoSoKeo_QC' && lk.tab !== 'ToaDoRung_QC' ? '<div class="row" style="margin:4px 0">' + statuses.map(([k, c]) => '<button class="btn ' + (lk.f.status === k ? '' : 'ghost') + ' sm" data-lkstatus="' + esc(k) + '">' + esc(k) + ' · ' + c + '</button>').join('') +
     '</div>' : '') +
-    (r.warns || []).map(w => '<div class="msg warn">' + esc(w) + '</div>').join('') + relax + '<p class="mut">' + sum + tot + '</p>' +
-    (lk.layout === 'tree' ? lkTreeHtml(r) : '<div class="wrap" style="max-height:48vh"><table><tr><th>Tab</th><th>Dòng</th><th>Chủ rừng</th><th>CCCD</th><th>Hợp đồng</th><th>Mã rừng</th><th>Địa chỉ rừng</th><th>Chi tiết</th><th>Kiểm tra</th><th></th></tr>' +
+    (r.warns || []).map(w => '<div class="msg warn">' + esc(w) + '</div>').join('') + relax + (hdL ? '' : '<p class="mut">' + sum + tot + '</p>') +
+    (hdL ? gsListHtml() : lk.layout === 'tree' ? lkTreeHtml(r) : '<div class="wrap" style="max-height:48vh"><table><tr><th>Tab</th><th>Dòng</th><th>Chủ rừng</th><th>CCCD</th><th>Hợp đồng</th><th>Mã rừng</th><th>Địa chỉ rừng</th><th>Chi tiết</th><th>Kiểm tra</th><th></th></tr>' +
     r.rows.map(x => '<tr><td>' + esc(TL(x.tab)) + '</td><td>' + x.row + '</td><td>' + esc(x.ten) + '</td><td>' + esc(x.cccd) + '</td><td>' + esc(x.hd) + '</td><td>' + esc(x.maRung) + '</td><td>' + esc(x.diaChi) + '</td><td>' + cell(x) + '</td>' +
       '<td>' + (x.flags || []).map(f => '<span class="pill err" style="margin:1px">' + esc(f) + '</span>').join('') + '</td>' +
       '<td><button class="btn sm" data-lkpick="' + esc(x.tab) + '|' + x.row + '">Chọn</button></td></tr>').join('') + '</table></div>');

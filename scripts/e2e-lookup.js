@@ -4,10 +4,12 @@ const {_electron: electron} = require('playwright-core');
 const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os'), http = require('http');
 const {build} = require('../tests/fixtures/make-lookup');
+/* QĐ5: ToaDoRung giữ cột bắt buộc “Mã rừng”; DienTich_m2 không còn bắt buộc (biến thể missingCol nay được nhận). Bản thiếu cột để thử lỗi: đổi tên cột “Mã rừng”. */
+const thieuMaRung = () => { const XLSX = require('xlsx'), wb = XLSX.read(build(), {type: 'buffer', cellDates: true}), ws = wb.Sheets.ToaDoRung; Object.keys(ws).forEach(k => { if (ws[k] && ws[k].v === 'Mã rừng') ws[k].v = 'Ma rung (sai ten cot)'; }); return XLSX.write(wb, {type: 'buffer', bookType: 'xlsx', cellDates: false}); };
 const root = path.join(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-lk-')), dbFile = path.join(dir, 'lk.sqlite');
 const good = path.join(dir, 'gia_lap.xlsx'), bad = path.join(dir, 'thieu_cot.xlsx');
-fs.writeFileSync(good, build()); fs.writeFileSync(bad, build('missingCol'));
+fs.writeFileSync(good, build()); fs.writeFileSync(bad, thieuMaRung());
 let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + n); if (!c) fail++; };
 let serverOn = true;
 const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); return r.end('down'); } r.writeHead(200, {'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}); r.end(build()); });
@@ -21,14 +23,14 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   w.on('dialog', d => d.accept());
   await w.waitForSelector('#side');
   ok('menu Tra cứu Google Sheets hiện trên thanh điều hướng', await w.isVisible('header [data-act=lkOpen]'));
-  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on');
+  await w.click('header [data-act=lkOpen]'); await w.waitForSelector('#lkBox.on'); await w.click('[data-lklayout=flat]'); await w.waitForSelector('[data-lktab=""]');
   ok('chưa có bản tra cứu thì báo rõ', (await w.innerText('#lkBody')).includes('chưa có'));
   // Nhập bản Excel
   await pick(app, good); await w.click('[data-act=lkExcel]'); await w.waitForFunction(() => /Đã cập nhật bản tra cứu/.test(document.getElementById('lkBody').innerText));
   ok('nhập Excel: hiện nguồn file + số dòng từng tab', /File Excel “gia_lap.xlsx”/.test(await w.innerText('#lkBody')) && /HoSoKeo: 8/.test(await w.innerText('#lkBody')));
   // Excel sai cột: giữ bản cũ
   await pick(app, bad); await w.click('[data-act=lkExcel]'); await w.waitForFunction(() => /Chưa cập nhật bản tra cứu/.test(document.getElementById('lkBody').innerText));
-  ok('Excel thiếu cột: báo tab + cột, vẫn dùng bản cũ', /ToaDoRung.*DienTich_m2/.test(await w.innerText('#lkBody')) && /gia_lap.xlsx/.test(await w.innerText('#lkBody')));
+  ok('Excel thiếu cột: báo tab + cột, vẫn dùng bản cũ', /ToaDoRung.*Mã rừng/.test(await w.innerText('#lkBody')) && /gia_lap.xlsx/.test(await w.innerText('#lkBody')));
   // Tìm không dấu, lọc tab
   await w.click('[data-lktab=HoSoRung_QC]'); await w.fill('#lkQ', 'nguyen van an'); await w.click('[data-act=lkFind]'); await w.waitForTimeout(200);
   ok('tìm không dấu theo tên trong tab HoSoRung_QC: 3 dòng', (await w.$$('[data-lkpick]')).length === 3);
@@ -104,7 +106,7 @@ const srv = http.createServer((q, r) => { if (!serverOn) { r.writeHead(503); ret
   srv.close();
   app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   ok('mở lại: hồ sơ 2 chủ rừng còn nguyên', (await w.$$('[data-open]')).length === 2);
-  await w.click('header [data-act=lkOpen]'); await w.waitForTimeout(300);
+  await w.click('header [data-act=lkOpen]'); await w.waitForTimeout(300); await w.click('[data-lklayout=flat]'); await w.waitForTimeout(300);
   ok('mở lại khi mất kết nối: vẫn tra cứu được bản đã lưu', (await w.$$('[data-lkpick]')).length > 0 && /Google Sheets/.test(await w.innerText('#lkBody')));
   ok('không có lỗi JavaScript sau khi mở lại', errs.length === 0);
   await app.close();
