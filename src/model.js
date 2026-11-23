@@ -211,7 +211,7 @@
       const lb = 'Đội ' + (d.ten ? '“' + d.ten + '”' : (k + 1));
       if (multi && !trim(d.ten)) errs.push({row: tts[0] && tts[0]._row, text: lb + (tts[0] ? ' (Tổ trưởng “' + tts[0].ten + '”) chưa ghi tên đội' : ' chưa có tên') + ': lô có nhiều đội thì mỗi đội một tên'});
       const nk = tenKey(d.ten); if (multi && nk) { if (names.has(nk)) errs.push({text: 'Tên đội “' + d.ten + '” trùng với đội khác'}); else names.set(nk, true); }
-      if (!direct && m.length && !tts.length) errs.push({text: lb + ' chưa có Tổ trưởng'});
+      if (m.length && !tts.length) errs.push({text: lb + ' chưa có Tổ trưởng'});
       if (!direct && tts.length > 1) errs.push({text: lb + ' có ' + tts.length + ' Tổ trưởng: mỗi đội giao khoán chỉ một Tổ trưởng (tách thành đội riêng)'});
     });
     return errs;
