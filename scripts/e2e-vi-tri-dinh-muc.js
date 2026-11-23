@@ -41,15 +41,15 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm');
   ok('bấm tab Nhân công: chỉ #dbForm hiện, tab được đánh dấu', JSON.stringify(await hien()) === '["nhancong"]' && await w.evaluate(() => document.getElementById('normTab_nhancong').getAttribute('aria-current') === 'page' && !document.getElementById('normTab_bhld').hasAttribute('aria-current')));
 
-  // 3. thêm dòng nhân công chọn vị trí từ danh mục: tự điền nhiệm vụ
+  // 3. thêm dòng nhân công chọn vị trí từ danh mục: tự điền nhiệm vụ. Tự điền chỉ chạy ở sự kiện change (rời ô hoặc chọn từ danh sách, soát độc lập P2-3: không điền ở mỗi phím gõ), nên sau mỗi lần gõ phải phát change như người dùng rời ô
   const opts = await w.$$eval('#dbPosVt option', o => o.map(x => x.value));
   ok('ô Vị trí có danh sách chọn từ danh mục vị trí (không có vị trí ngừng sử dụng)', opts.includes('Thợ lái máy') && opts.includes('Khác'), JSON.stringify(opts));
   const moi = '#dbForm tr[data-db=new]';
-  await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.waitForTimeout(100);
+  await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.dispatchEvent(moi + ' [name=b_cd]', 'change'); await w.waitForTimeout(100);
   ok('chọn vị trí từ danh mục: Nhiệm vụ tự điền từ danh mục', (await w.inputValue(moi + ' [name=b_nv]')) === 'Lái máy xúc, máy kéo gỗ', await w.inputValue(moi + ' [name=b_nv]'));
-  await w.fill(moi + ' [name=b_nv]', 'Tôi tự gõ nhiệm vụ'); await w.fill(moi + ' [name=b_cd]', ''); await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.waitForTimeout(100);
+  await w.fill(moi + ' [name=b_nv]', 'Tôi tự gõ nhiệm vụ'); await w.fill(moi + ' [name=b_cd]', ''); await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.dispatchEvent(moi + ' [name=b_cd]', 'change'); await w.waitForTimeout(100);
   ok('nhiệm vụ đã gõ không bị ghi đè khi chọn lại vị trí', (await w.inputValue(moi + ' [name=b_nv]')) === 'Tôi tự gõ nhiệm vụ');
-  await w.fill(moi + ' [name=b_nv]', ''); await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.waitForTimeout(100);
+  await w.fill(moi + ' [name=b_nv]', ''); await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.dispatchEvent(moi + ' [name=b_cd]', 'change'); await w.waitForTimeout(100);
 
   // 4. tiêu đề tổng đội đổi ngay khi gõ, chưa lưu
   const tong = () => w.evaluate(() => +(/= (\d+) người/.exec(document.querySelector('#normPane_nhancong h2').textContent) || [])[1]);
