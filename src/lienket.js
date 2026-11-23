@@ -73,10 +73,18 @@
     });
     return n;
   }
+  function ghiIdDaCap(f, nhom, cu, rows) {
+    const con = new Set((rows || []).map(r => r && r.id).filter(Boolean)), mat = cu.filter(id => id && !con.has(id)); if (!mat.length) return;
+    f.idDaCap = f.idDaCap && typeof f.idDaCap === 'object' ? f.idDaCap : {};
+    const l = Array.isArray(f.idDaCap[nhom]) ? f.idDaCap[nhom] : []; mat.forEach(id => { if (!l.includes(id)) l.push(id); }); f.idDaCap[nhom] = l;
+  }
   function chuanLo(f, o) {
     if (!f || typeof f !== 'object' || (khoa(f) && !(o && o.batKe))) return 0;
-    const ccIds = Object.values(f.cc || {}).flatMap(m => Object.keys(m || {}).filter(k => /^tv\d+$/.test(k))).concat((o && o.daXoaNc) || []);
-    const xeIds = (f.pc || []).map(p => p && p.xeRowId).filter(k => /^xr\d+$/.test(k)).concat((o && o.daXoaDx) || []);
+    /* DATA-05: ID dòng đã xóa được ghi bền ở f.idDaCap = {nc: [..], dx: [..]} (cùng kiểu f.sttDaCap) để phiên sau không cấp lại. Chỉ ghi khi THỰC SỰ có dòng bị xóa (lô không xóa dòng: JSON y hệt cũ). */
+    ghiIdDaCap(f, 'nc', (o && o.daXoaNc) || [], f.nc); ghiIdDaCap(f, 'dx', (o && o.daXoaDx) || [], f.dx);
+    const daCap = k => (f.idDaCap && Array.isArray(f.idDaCap[k]) ? f.idDaCap[k] : []);
+    const ccIds = Object.values(f.cc || {}).flatMap(m => Object.keys(m || {}).filter(k => /^tv\d+$/.test(k))).concat((o && o.daXoaNc) || [], daCap('nc'));
+    const xeIds = (f.pc || []).map(p => p && p.xeRowId).filter(k => /^xr\d+$/.test(k)).concat((o && o.daXoaDx) || [], daCap('dx'));
     const n = ganIdBang(f.nc, 'tv', ccIds) + ganIdBang(f.dx, 'xr', xeIds) + ganIdBang(f.pc, 'pc') + doiKhoaChamCong(f);
     return n + dongBoPhieu(f);
   }
