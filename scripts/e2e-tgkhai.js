@@ -27,7 +27,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('định mức 0 ngày/ha bị từ chối, nêu lý do, không ghi', /lớn hơn 0/.test(await w.innerText('#main')) && !((await db()).dinhMucNgay || []).length);
   await w.fill('#tgForm tr[data-tg=new] [name=t_tu]', '01/01/2025'); await w.fill('#tgForm tr[data-tg=new] [name=t_ngay]', '5'); await w.click('#tgForm button[type=submit]'); await w.waitForTimeout(300);
   ok('lưu 1 ha = 5 ngày (hiệu lực từ 01/01/2025) vào SQLite', JSON.stringify((await db()).dinhMucNgay) === JSON.stringify([{tuNgay: '01/01/2025', ngayHa: 5}]));
-  await w.fill('#keoForm tr[data-keo=new] [name=k_tu]', '01/01/2025'); await w.fill('#keoForm tr[data-keo=new] [name=k_tan]', '80'); await w.click('#keoForm button[type=submit]'); await w.waitForTimeout(300);
+  await w.click('#normTab_keo'); await w.fill('#keoForm tr[data-keo=new] [name=k_tu]', '01/01/2025'); await w.fill('#keoForm tr[data-keo=new] [name=k_tan]', '80'); await w.click('#keoForm button[type=submit]'); await w.waitForTimeout(300);
   await w.click('#navNorm'); await w.click('#normTab_tg'); await w.waitForSelector('#tgForm');
   ok('cột năng suất: 1 ngày ≈ 16 tấn (80 tấn/ha ÷ 5 ngày/ha)', /1 ngày ≈ 16 tấn/.test(await w.innerText('#tgForm')), (await w.innerText('#tgForm')).slice(-200));
   // 3. thông tin rừng: 2,5 ha × 5 = 12,5 → 13 ngày; chưa có ngày bắt đầu
