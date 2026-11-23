@@ -182,10 +182,12 @@ function registerIpc() {
       if (t === 'sqlite') hooks.beforeSqlite = () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); };
       if (t === 'space') hooks.freeBytes = 1024;
       const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();   // phiếu #11: bản .json mang đủ lịch sử bản chụp chốt (mọi phiên bản), như bản .sqlite
-      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, dbBytes: sizeWithWal(store.file), hooks});
+      let outDir2 = ''; try { outDir2 = Settings.load(app.getPath('userData')).backupDir2 || ''; } catch (er) { /* không có cài đặt */ }   // BK-01: thư mục sao lưu thứ hai (USB/ổ ngoài)
+      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, outDir2, dbBytes: sizeWithWal(store.file), hooks});
       if (res.ok) { try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); } }   // chỉ khi cả hai file đã ghi và qua kiểm tra
       else log('ERROR', 'Sao lưu không đầy đủ: ' + res.message);
-      return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite};
+      if (res.copy2 && !res.copy2.skipped && !res.copy2.ok) log('WARN', 'Chưa chép được bản sao lưu sang thư mục thứ hai: ' + res.copy2.error);
+      return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite, copy2: res.copy2};
     } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
     finally { backingUp = false; }
   }));
@@ -291,7 +293,9 @@ function registerIpc() {
   const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
   const dbInfo = () => { try { const st = fs.statSync(loc.dbFile); return {size: st.size, mtime: st.mtime.toISOString(), version: store ? store.db.pragma('user_version', {simple: true}) : null, open: !!store}; } catch (e) { return {size: 0, mtime: null, version: null, open: !!store}; } };
   const autoView = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } const ls = AutoBackup.list(loc.backupDir, st.autoChuKy); return {chuKy: st.autoChuKy, keep: st.autoKeep, dir2: st.backupDir2 || '', count: ls.length, last: ls[0] ? {name: ls[0].name, day: ls[0].day, size: ls[0].size} : null, result: autoBk}; };
-  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), auto: autoView(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, backupDirJson: loc.backupDirJson, customBackupJson: loc.customBackupJson, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
+  /* BK-04: ổ chứa dữ liệu / thư mục sao lưu còn dưới 500 MB trống → cảnh báo vàng (không chặn). Tính khi giao diện đọc cài đặt (mở app, mở tab), không lặp theo giờ. */
+  const dungLuongThap = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } return Settings.kiemDungLuong([['Thư mục dữ liệu', loc.dataDir], ['Thư mục sao lưu SQLite', loc.backupDir], ['Thư mục sao lưu JSON', loc.backupDirJson], ['Thư mục sao lưu thứ hai', st.backupDir2]], Settings.NGUONG_DUNG_LUONG_MB); };
+  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), auto: autoView(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, backupDirJson: loc.backupDirJson, customBackupJson: loc.customBackupJson, lockedByEnv: loc.lockedByEnv, missing: loc.missing, dungLuong: dungLuongThap()});
   const pickFolder = async title => {
     if (process.env.HAKQN_PICK_DIR) return process.env.HAKQN_PICK_DIR;
     const r = await dialog.showOpenDialog(win, {title, properties: ['openDirectory', 'createDirectory']});

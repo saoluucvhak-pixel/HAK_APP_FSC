@@ -64,6 +64,11 @@ function panelSettings() {
   return '<div class="card"><h2 style="margin-top:0">Cài đặt hệ thống</h2>' + (setg.msg ? '<div class="msg ' + setg.msg[1] + '" id="setMsg">' + esc(setg.msg[0]) + '</div>' : '') +
     '<div id="setBox" class="mut">Đang đọc cài đặt…</div></div>';
 }
+/* BK-04: dải cảnh báo vàng khi ổ chứa dữ liệu / thư mục sao lưu còn dưới 500 MB trống (số liệu s.dungLuong do tiến trình chính tính khi đọc cài đặt; không chặn thao tác). Tab khác dùng lại được. */
+function dungLuongHtml(s) {
+  const ds = s && s.dungLuong; if (!ds || !ds.length) return '';
+  return '<div class="msg warn" data-dung-luong>Dung lượng trống sắp hết (dưới 500 MB): ' + ds.map(d => esc(d.nhan.join(', ')) + ' (<code>' + esc(d.dir) + '</code>): còn ' + d.freeMB + ' MB').join('; ') + '. Giải phóng dung lượng hoặc chọn ổ khác để tránh sao lưu thất bại.</div>';
+}
 function settingsPaint() {
   const s = setg.s, box = document.getElementById('setBox'); if (!s || !box) return;
   const row = (title, desc, path, custom, def, act, actDef, extra) => '<div class="card" style="margin:10px 0"><h3 style="margin:0 0 4px">' + title + '</h3><p class="mut" style="margin:0 0 8px">' + desc + '</p>' +
@@ -73,7 +78,7 @@ function settingsPaint() {
     '<div class="mut" style="margin-top:6px;font-size:12px">Mặc định: ' + esc(def) + '</div></div>';
   const di = s.dbInfo || {}, nowCard = '<div class="card" style="margin:10px 0" id="dbNow"><h3 style="margin:0 0 4px">Cơ sở dữ liệu đang dùng</h3><div style="word-break:break-all"><code data-db-now>' + esc(s.dbFile) + '</code></div><div class="mut" style="margin-top:4px">' + (di.size != null ?
   'Dung lượng ' + (di.size / 1048576 >= 1 ? (di.size / 1048576).toFixed(1) + ' MB' : Math.ceil(di.size / 1024) + ' KB') : '') + (di.mtime ? ' · sửa lần cuối ' + esc(new Date(di.mtime).toLocaleString('vi-VN')) : '') + (di.version ? ' · cấu trúc v' + di.version : '') + '</div></div>';
-  box.className = ''; box.innerHTML = nowCard +
+  box.className = ''; box.innerHTML = dungLuongHtml(s) + nowCard +
     (s.missing.length ? '<div class="msg warn">Thư mục đã chọn trước đây không còn: ' + s.missing.map(esc).join('; ') + '. Ứng dụng đang dùng vị trí mặc định.</div>' : '') +
     (s.lockedByEnv ? '<div class="msg warn">Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB nên không đổi được ở đây.</div>' : '') +
     row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).',

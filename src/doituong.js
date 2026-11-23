@@ -183,7 +183,7 @@
   function docExcel(rows, dm, vt) {
     const nhom = new Map(), loiChung = [];
     (rows || []).forEach((r0, i) => {
-      const r = {}; Object.entries(r0 || {}).forEach(([h, v]) => { const k = COT[s(h)]; if (k) r[k] = s(v); });
+      const r = {}; Object.entries(r0 || {}).forEach(([h, v]) => { const k = COT[s(h)]; if (k) r[k] = k === 'mst' ? s(NL().mstTuSo(typeof v === 'string' ? s(v) : v)) : s(v); });   // MST: ô số Excel/Sheets mất số 0 đầu (9 → 10, 12 → 13 số)
       if (!Object.values(r).some(Boolean)) return;
       const dong = i + 2, loai = /phap/.test(fold(r.loai)) ? 'phapnhan' : 'thenhan';
       const khoa = r.ma ? 'ma:' + r.ma.toUpperCase() : loai === 'phapnhan' ? (so(r.mst) ? 'mst:' + so(r.mst) : 'ten:' + fold(r.ten)) : 'ten:' + fold(r.ten || r.hoTen) + '|' + so(r.cccd);

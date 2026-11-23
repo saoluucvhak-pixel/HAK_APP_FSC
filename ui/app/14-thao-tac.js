@@ -382,7 +382,8 @@ async function backupAll() {
       const r = await HB.backupTo();
       if (r.canceled) return;
       // chỉ báo thành công khi cả hai file (JSON và SQLite) đã ghi và qua kiểm tra; ngược lại nêu rõ file nào dùng được
-      return note(r.ok ? 'Đã sao lưu và kiểm tra xong: ' + r.jsonFile + ' và ' + r.sqlFile + '.' : 'Sao lưu chưa đầy đủ: ' + (r.message || r.error || 'lỗi không rõ'), r.ok ? 'ok' : 'err');
+      const c2 = r.ok && r.copy2 && !r.copy2.skipped ? r.copy2 : null;   // BK-01: kết quả chép sang thư mục sao lưu thứ hai (nếu đã đặt)
+      return note(r.ok ? 'Đã sao lưu và kiểm tra xong: ' + r.jsonFile + ' và ' + r.sqlFile + '.' + (c2 ? (c2.ok ? ' Đã chép thêm sang thư mục thứ hai.' : ' CẢNH BÁO: chưa chép được sang thư mục thứ hai (' + (c2.error || 'lỗi không rõ') + ').') : '') : 'Sao lưu chưa đầy đủ: ' + (r.message || r.error || 'lỗi không rõ'), r.ok ? (c2 && !c2.ok ? 'warn' : 'ok') : 'err');
     } finally { backupBusy = false; }
   }
   const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});

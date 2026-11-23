@@ -29,7 +29,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('SQLite: lô có 2 hợp đồng vận chuyển, mỗi xe mang hdvcId; cước để trống = cước chung', f.hdvc.length === 2 && f.dx.every(r => f.hdvc.some(h => h.id === r.hdvcId)) && f.hdvc.every(h => h.cuoc === null), JSON.stringify(f.hdvc));
   // danh mục: thêm pháp nhân (3.0: ở Cài đặt → Danh mục đối tượng, mở từ hợp đồng rồi quay lại)
   await w.click('[data-act=chonHd][data-hd="' + f.hdvc[0].id + '"]'); await w.waitForSelector('#hdForm');
-  await w.click('#hdvcKT [data-act=openSetDt][data-quaylai]'); await w.waitForSelector('#dtThem'); await w.click('#dtThem'); await w.selectOption('#dtLoai', 'phapnhan'); await w.waitForTimeout(150);
+  await w.click('#hdvcKT [data-act=openSetDt][data-quaylai]'); await w.waitForSelector('#dnThem'); await w.click('#dnThem'); await w.waitForSelector('#dtForm');
   await w.fill('#dtForm [name=ten]', 'CÔNG TY TNHH VẬN TẢI HÒA PHÁT'); await w.fill('#dtForm [name=mst]', '123'); await w.selectOption('#dtForm [name=kyHD]', 'vc');
   await w.fill('#dtForm [name=daiDien]', 'NGUYỄN VĂN ĐẠI'); await w.fill('#dtForm [name=chucVuDaiDien]', 'Giám đốc'); await w.click('#dtLuu'); await w.waitForTimeout(200);
   ok('mã số thuế sai: không lưu, nêu rõ', /mã số thuế/i.test(await w.innerText('#dtLoi').catch(() => '')), await w.innerText('#dtLoi').catch(() => ''));

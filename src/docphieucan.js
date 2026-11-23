@@ -80,7 +80,8 @@
       let klKg = S ? S.toDec(o.klKg, {don: 'kg'}) : ctx.toDec(o.klKg);
       if (klKg == null && typeof c1 === 'number' && typeof c2 === 'number' && c1 > c2) klKg = c1 - c2;   // KL để trống: KL = Cân 1 − Cân 2 (như file mẫu in phiếu cân)
       let kl = typeof o.kl === 'number' ? (isFinite(o.kl) ? o.kl : 'x') : (S ? S.toDec(o.kl, {don: 'tan'}) : ctx.toDec(o.kl));
-      if (kl == null && typeof klKg === 'number' && klKg > 0) kl = Math.round(klKg) / 1000;   // chỉ điền kg: tấn = kg ÷ 1000
+      if (kl === 0) kl = 0;   // -0 → +0 (===: -0 bằng 0)
+      if (kl == null && typeof klKg === 'number' && isFinite(klKg) && klKg > 0) kl = Math.round(klKg) / 1000;   // chỉ điền kg: tấn = kg ÷ 1000
       if (typeof kl === 'number' && isFinite(kl) && kl > 0) kl = Math.round(kl * 1000) / 1000;   // khối lượng lưu chính xác đến kg: mọi nơi cộng ra cùng một số
       const lbl = 'Phiếu ' + (ctx.trim(o.soPhieu) || '(không số)'), giaLoi = [['donGia', 'cột ĐG_AD / Đơn giá'], ['donGiaTC', 'cột Đơn giá_TC'], ['thanhTien', 'cột Thành tiền']].map(([k, n]) => ctx.HAKMoney.problem(lbl + ', ' + n, o[k])).filter(Boolean);
       let donGia = moneyCell(o.donGia); if (donGia == null) donGia = moneyCell(o.donGiaTC);   // ĐG_AD; trống thì dùng Đơn giá_TC

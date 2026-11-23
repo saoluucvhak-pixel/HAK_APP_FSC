@@ -77,3 +77,17 @@ test("kho bộ lọc hỏng hoặc khác phiên bản: không ghi đè; discardC
   assert.equal(map.get(d.backupKey), "{hỏng", "bản cũ được sao lưu nguyên văn");
   assert.equal(p.save("man-hinh", "ten", {}).ok, true);
 });
+
+test("FLT-05: ô tìm nhanh tách từ, mỗi từ phải khớp (AND) dù nằm ở cột khác nhau", () => {
+  const cfg = { screenId: "t", fields: [], matchQ: (r, q) => core.hay([r.bks, r.tai]).includes(q) };
+  const data = [{ bks: "43C-xe 01", tai: "Lê Văn An" }, { bks: "43C-xe 02", tai: "Lê Bình" }, { bks: "92H-001", tai: "Nguyễn An" }];
+  const f = createFilter(cfg);
+  f.setState({ q: "xe an" });
+  assert.deepEqual(f.filter(data).rows.map(r => r.bks), ["43C-xe 01"], "xe ở cột bks, an ở cột tài");
+  f.setState({ q: "an" });
+  assert.equal(f.filter(data).kept, 2, "một từ: giữ hành vi cũ");
+  f.setState({ q: "   " });
+  assert.equal(f.filter(data).kept, 3, "khoảng trắng không lọc");
+  f.setState({ q: "" });
+  assert.equal(f.filter(data).kept, 3);
+});

@@ -59,23 +59,35 @@ const kyTu = v => ({vanChuyen: v === 'vc' || v === 'ca', nhanCong: v === 'nc' ||
 const selKy = (name, v) => '<select name="' + name + '">' + [['', 'Không'], ['vc', 'Vận chuyển'], ['nc', 'Nhân công'], ['ca', 'Cả hai']].map(([k, t]) => '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>';
 const fld30 = (name, label, v, o) => { o = o || {};
 return '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span' + (o.req ? ' class="req"' : '') + '>' + label + '</span><input name="' + name + '" value="' + esc(v == null ? '' : v) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + ' autocomplete="off"></label>'; };
-banNhapUI.push({ten: 'Hồ sơ đối tượng đang sửa', dirty: () => !!cd.sua && JSON.stringify(dtDocForm()) !== cd.goc, luu: () => dtLuu(), bo: () => { cd.sua = null; cd.loi = []; }});
+banNhapUI.push({ten: 'Hồ sơ đối tượng đang sửa', dirty: () => !!cd.sua && !!document.getElementById('dtForm') && JSON.stringify(dtDocForm()) !== cd.goc, luu: () => dtLuu(), bo: () => { cd.sua = null; cd.loi = []; }});
+/* thể nhân MỘT lớp: tối đa một người → form "Thêm cá nhân" gom thông tin người ngay trong form; nhiều hơn một người (dữ liệu cũ) → giữ bảng con để sửa đủ mọi người */
+const dtMot = x => !!x && x.loai !== 'phapnhan' && (x.nguoi || []).length <= 1;
+const cb30 = (k, t, o) => '<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="' + k + '"' + (o ? ' checked' : '') + '> ' + t + '</label>';
 function dtDocForm() {
   const fm = document.getElementById('dtForm'); if (!fm || !cd.sua) return cd.sua;
-  const g = n => (fm.elements[n] ? fm.elements[n].value : ''), x = Object.assign({}, cd.sua);
+  const g = n => (fm.elements[n] ? fm.elements[n].value : ''), c = n => !!(fm.elements[n] && fm.elements[n].checked), x = Object.assign({}, cd.sua);
   ['ma', 'ten', 'mst', 'diaChi', 'sdt', 'daiDien', 'chucVuDaiDien'].forEach(k => { if (fm.elements[k]) x[k] = trim(g(k)); });
-  if (fm.elements.loai) x.loai = g('loai'); if (fm.elements.kyHD) x.kyHD = kyTu(g('kyHD'));
+  if (fm.elements.kyHD) x.kyHD = kyTu(g('kyHD'));
+  if (fm.elements.hoTen) {   // thể nhân một lớp: người duy nhất đọc từ chính form; tên đối tượng mặc định là họ tên; địa chỉ, SĐT dùng chung đối tượng và người
+    const cu = (cd.sua.nguoi || [])[0] || {}, p = Object.assign({}, cu, {hoTen: g('hoTen'), cccd: g('cccd'), ngayCap: g('ngayCap'), noiCap: g('noiCap'), hanCccd: g('hanCccd'), gioiTinh: g('gioiTinh'), ngaySinh: g('ngaySinh'), gplx: g('gplx'), hanGplx: g('hanGplx'), viTriId: g('viTriId'), chucDanhKy: g('chucDanhKy'),
+      diaChi: x.diaChi, sdt: x.sdt, vaiTro: {nhanCong: c('vtNhanCong'), taiXe: c('vtTaiXe'), chuXe: c('vtChuXe')}, kyHD: {vanChuyen: c('kyVC'), nhanCong: c('kyNC')}});
+    ['hoTen', 'cccd', 'ngayCap', 'noiCap', 'hanCccd', 'ngaySinh', 'gplx', 'hanGplx', 'chucDanhKy'].forEach(k => { p[k] = trim(p[k]); });
+    x.nguoi = [p]; x.ten = x.ten || p.hoTen; x.loai = 'thenhan';
+  }
   return x;
 }
-function panelSetDt() {
-  const SF = HAKCore.sf, baseDs = HAKDoiTuong.loc(dmDT(), cd.nhom, cd.q);
-  const sfCfg = {
+/* cấu hình Smart Filter của Danh mục đối tượng (tách riêng để kiểm bằng unit): "Nhóm" là trường chọn nhanh, kết quả GIỐNG HỆT HAKDoiTuong.loc;
+ * chữ tìm khớp theo từng từ (mọi từ phải có) trên cùng các cột như HAKDoiTuong.loc. */
+function dtSfCfg() {
+  const SF = HAKCore.sf;
+  return {
     screenId: 'dm_doi_tuong', title: 'Danh mục đối tượng',
-    searchPlaceholder: 'Lọc theo tên, mã, CCCD, MST, địa chỉ…',
-    quickFields: ['loai', 'thieuCccd'],
-    advancedFields: ['q', 'loai', 'vaiTro', 'kyHd', 'thieuCccd', 'ngung'],
-    matchQ: (o, q) => SF.hay([o.ma, o.ten, o.mst, o.diaChi, o.sdt, o.daiDien].concat((o.nguoi || []).map(p => p.hoTen + ' ' + p.cccd + ' ' + p.sdt))).includes(q),
+    searchPlaceholder: 'Tìm theo tên, mã, MST, CCCD, SĐT…',
+    quickFields: ['nhom', 'q', 'loai', 'thieuCccd'],
+    advancedFields: ['q', 'nhom', 'loai', 'vaiTro', 'kyHd', 'thieuCccd', 'ngung'],
+    matchQ: (o, q) => { const h = SF.hay([o.ma, o.ten, o.mst, o.sdt, o.diaChi].concat((o.nguoi || []).flatMap(p => [p.hoTen, p.cccd, p.sdt, p.gplx]))); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); },
     fields: [
+      {key: 'nhom', label: 'Nhóm', type: 'enum', options: NHOM_DT.filter(([k]) => k !== 'tatca').map(([k, t]) => ({value: k, label: t})), match: (o, v) => HAKDoiTuong.loc([o], v, '').length === 1},
       {key: 'loai', label: 'Loại', type: 'enum', options: [{value: 'thenhan', label: 'Thể nhân'}, {value: 'phapnhan', label: 'Pháp nhân'}], match: (o, v) => o.loai === v},
       {key: 'vaiTro', label: 'Vai trò', type: 'multi', options: [{value: 'nhanCong', label: 'Nhân công'}, {value: 'taiXe', label: 'Tài xế'}, {value: 'chuXe', label: 'Chủ xe'}], match: (o, vals) => (o.nguoi || []).some(p => p.vaiTro && vals.some(k => p.vaiTro[k]))},
       {key: 'kyHd', label: 'Quyền ký HĐ', type: 'multi', options: [{value: 'nhanCong', label: 'Ký Nhân công'}, {value: 'vanChuyen', label: 'Ký Vận chuyển'}], match: (o, vals) => vals.some(k => (o.kyHD && o.kyHD[k]) || (o.nguoi || []).some(p => p.kyHD && p.kyHD[k]))},
@@ -83,35 +95,56 @@ function panelSetDt() {
       {key: 'ngung', label: 'Đang ngừng sử dụng', type: 'bool', match: o => !!o.ngung}
     ]
   };
+}
+/* dòng gốc trước Smart Filter: đối tượng đang dùng, hoặc đã ngừng khi chọn nhóm “Ngừng sử dụng” (như HAKDoiTuong.loc) */
+const dtGoc = st => HAKDoiTuong.loc(dmDT(), st.one.nhom || (st.flag.ngung ? 'ngung' : 'tatca'), '');
+/* nhận chữ tìm / nhóm do tìm kiếm chung (Ctrl+K) đặt vào cd rồi chuyển sang bộ lọc (một lần) */
+function dtNhanTuTim(screenId, cfg, giu) {
+  if (!giu.q) return;
+  const inst = hakSfGet(screenId, cfg); inst.filter.reset();
+  inst.filter.setState(HAKCore.sf.normalize(Object.assign({}, inst.filter.getState(), {q: giu.q}), cfg)); giu.q = '';
+}
+function panelSetDt() {
+  const SF = HAKCore.sf, sfCfg = dtSfCfg();
+  dtNhanTuTim('dm_doi_tuong', sfCfg, cd);
+  const baseDs = dtGoc(hakSfGet('dm_doi_tuong', sfCfg).filter.getState());
   const sfRes = hakSfApply('dm_doi_tuong', sfCfg, baseDs);
   const sfOn = SF.activeCount(hakSfGet('dm_doi_tuong', sfCfg).filter.getState()) > 0;
   const ds = sfRes.rows, x = cd.sua;
   const bang = '<div class="wrap" id="dtWrap" style="max-height:min(60vh,520px)"><table id="dtBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Mã</th><th>Tên đối tượng</th><th>Loại</th><th>MST</th><th>Địa chỉ</th><th>SĐT</th><th>Ký hợp đồng</th><th>Người · vai trò</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(o => '<tr data-dt="' + esc(o.id) + '"><td>' + esc(o.ma) + '</td><td><b>' + esc(o.ten) + '</b></td><td>' + HAKDoiTuong.LOAI[o.loai] + '</td><td>' + esc(o.mst) + '</td><td>' + esc(o.diaChi) + '</td><td>' + esc(o.sdt) + '</td><td>' +
       esc(o.loai === 'phapnhan' ? HAKDoiTuong.kyText(o.kyHD) : HAKDoiTuong.kyText({vanChuyen: (o.nguoi || []).some(p => p.kyHD && p.kyHD.vanChuyen), nhanCong: (o.nguoi || []).some(p => p.kyHD && p.kyHD.nhanCong)})) + '</td><td>' +
-      (o.nguoi || []).map(p => esc(p.hoTen) + (HAKDoiTuong.vaiText(p.vaiTro) ? ' <small class="mut">(' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + ')</small>' : '')).join('<br>') + '</td>' +
+      (o.nguoi || []).map(p => esc(p.hoTen) + Object.keys(HAKDoiTuong.VAI_TRO).filter(k => p.vaiTro && p.vaiTro[k]).map(k => ' <span class="pill" data-vai="' + k + '">' + esc(HAKDoiTuong.VAI_TRO[k]) + '</span>').join('')).join('<br>') + '</td>' +
       '<td style="white-space:nowrap"><button class="btn ghost sm" data-dtsua="' + esc(o.id) + '">Sửa</button> <button class="btn ghost sm" data-dtngung="' + esc(o.id) + '">' + (o.ngung ? 'Dùng lại' : 'Ngừng') + '</button></td></tr>').join('')
-      : '<tr><td colspan="9" class="mut" id="dtTrong">Không có đối tượng nào' + (cd.q || cd.nhom !== 'tatca' || sfOn ? ' khớp bộ lọc' : '') + '.</td></tr>') + '</tbody></table></div>';
-  const form = !x ? '' : '<form id="dtForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa đối tượng ' + esc(x.ma) : 'Thêm đối tượng') + '</h3>' +
+      : '<tr><td colspan="9" class="mut" id="dtTrong">Không có đối tượng nào' + (sfOn ? ' khớp bộ lọc' : '') + '.</td></tr>') + '</tbody></table></div>';
+  const mot = dtMot(x), p0 = mot ? ((x.nguoi || [])[0] || {hoTen: '', vaiTro: {}, kyHD: {}}) : null, pn = !!x && x.loai === 'phapnhan';
+  const tieuDe = !x ? '' : x.id ? 'Sửa ' + (pn ? 'doanh nghiệp ' : mot ? 'cá nhân ' : 'đối tượng ') + esc(x.ma) : pn ? 'Thêm doanh nghiệp' : 'Thêm cá nhân';
+  const khoiMot = !mot ? '' : fld30('hoTen', 'Họ tên', p0.hoTen, {req: true}) + fld30('cccd', 'Số CCCD', p0.cccd) + fld30('ngayCap', 'Ngày cấp (dd/mm/yyyy)', p0.ngayCap) + fld30('noiCap', 'Nơi cấp', p0.noiCap) + fld30('hanCccd', 'Hạn CCCD', p0.hanCccd) +
+    fld30('ngaySinh', 'Ngày sinh', p0.ngaySinh) + '<label><span>Giới tính</span><select name="gioiTinh"><option></option><option' + (p0.gioiTinh === 'Nam' ? ' selected' : '') + '>Nam</option><option' + (p0.gioiTinh === 'Nữ' ? ' selected' : '') + '>Nữ</option></select></label>' +
+    fld30('diaChi', 'Địa chỉ thường trú', p0.diaChi || x.diaChi) + fld30('sdt', 'Số điện thoại', p0.sdt || x.sdt) + fld30('gplx', 'Số giấy phép lái xe', p0.gplx) + fld30('hanGplx', 'Hạn GPLX', p0.hanGplx) +
+    '<label><span>Vị trí mặc định</span><select name="viTriId"><option value="">—</option>' + dmVT().filter(v => !v.ngung || v.id === p0.viTriId).map(v => '<option value="' + esc(v.id) + '"' + (v.id === p0.viTriId ? ' selected' : '') + '>' + esc(v.ten) + '</option>').join('') + '</select></label>' +
+    fld30('chucDanhKy', 'Chức danh khi ký (nếu có)', p0.chucDanhKy);
+  const form = !x ? '' : '<form id="dtForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + tieuDe + '</h3>' +
     (cd.loi.length ? '<div class="msg err" id="dtLoi">' + cd.loi.map(esc).join('<br>') + '</div>' : '') +
-    '<div class="grid">' + fld30('ma', 'Mã đối tượng (trống: tự cấp)', x.ma) + fld30('ten', 'Tên đối tượng', x.ten, {req: true}) +
-    '<label><span>Loại</span><select name="loai" id="dtLoai"><option value="thenhan"' + (x.loai !== 'phapnhan' ? ' selected' : '') + '>Thể nhân</option><option value="phapnhan"' + (x.loai === 'phapnhan' ? ' selected' : '') + '>Pháp nhân</option></select></label>' +
-    fld30('mst', 'Mã số thuế', x.mst) + fld30('diaChi', x.loai === 'phapnhan' ? 'Địa chỉ trụ sở' : 'Địa chỉ thường trú', x.diaChi) + fld30('sdt', 'Số điện thoại', x.sdt) +
-    (x.loai === 'phapnhan' ? '<label><span>Ký hợp đồng</span>' + selKy('kyHD', kyChon(x.kyHD || {})) + '</label>' + fld30('daiDien', 'Người đại diện', x.daiDien) + fld30('chucVuDaiDien', 'Chức danh người đại diện', x.chucVuDaiDien) : '') + '</div>' +
-    (x.loai !== 'phapnhan' ? '<h4 style="margin:12px 0 6px">Thông tin cá nhân</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Vai trò</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
-      ((x.nguoi || []).length ? x.nguoi.map((p, i) => '<tr><td><b>' + esc(p.hoTen) + '</b></td><td>' + esc(p.cccd) + '</td><td>' + esc(p.sdt) + '</td><td>' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + '</td><td>' + esc(HAKDoiTuong.kyText(p.kyHD || {})) + '</td><td>' + esc(ten30(p.viTriId)) + '</td>' +
-        '<td style="white-space:nowrap"><button type="button" class="btn ghost sm" data-ngsua="' + i + '">Sửa</button> <button type="button" class="btn ghost sm" data-ngbo="' + i + '">Bỏ</button></td></tr>').join('') : '<tr><td colspan="7" class="mut">Chưa có người nào: bấm “Thêm người”.</td></tr>') +
+    '<div class="grid">' + (mot ? khoiMot : '') + fld30('ma', 'Mã đối tượng (trống: tự cấp)', x.ma) + fld30('ten', mot ? 'Tên đối tượng (trống: lấy theo họ tên; điền nếu là hộ kinh doanh, tổ…)' : pn ? 'Tên doanh nghiệp' : 'Tên đối tượng', mot && trim(x.ten) === trim(p0.hoTen) ? '' : x.ten, {req: !mot}) +
+    fld30('mst', 'Mã số thuế', x.mst) + (mot ? '' : fld30('diaChi', pn ? 'Địa chỉ trụ sở' : 'Địa chỉ thường trú', x.diaChi) + fld30('sdt', 'Số điện thoại', x.sdt)) +
+    (pn ? '<label><span>Ký hợp đồng</span>' + selKy('kyHD', kyChon(x.kyHD || {})) + '</label>' + fld30('daiDien', 'Người đại diện', x.daiDien) + fld30('chucVuDaiDien', 'Chức danh người đại diện', x.chucVuDaiDien) : '') + '</div>' +
+    (mot ? '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Vai trò:</b>' + cb30('vtNhanCong', 'Nhân công', p0.vaiTro && p0.vaiTro.nhanCong) + cb30('vtTaiXe', 'Tài xế', p0.vaiTro && p0.vaiTro.taiXe) + cb30('vtChuXe', 'Chủ xe', p0.vaiTro && p0.vaiTro.chuXe) + '</div>' +
+      '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px"><b>Quyền ký hợp đồng:</b>' + cb30('kyVC', 'Vận chuyển', p0.kyHD && p0.kyHD.vanChuyen) + cb30('kyNC', 'Nhân công', p0.kyHD && p0.kyHD.nhanCong) + '</div>' : '') +
+    (!pn && !mot ? '<h4 style="margin:12px 0 6px">Thông tin cá nhân (đối tượng có nhiều người)</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Vai trò</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
+      x.nguoi.map((p, i) => '<tr><td><b>' + esc(p.hoTen) + '</b></td><td>' + esc(p.cccd) + '</td><td>' + esc(p.sdt) + '</td><td>' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + '</td><td>' + esc(HAKDoiTuong.kyText(p.kyHD || {})) + '</td><td>' + esc(ten30(p.viTriId)) + '</td>' +
+        '<td style="white-space:nowrap"><button type="button" class="btn ghost sm" data-ngsua="' + i + '">Sửa</button> <button type="button" class="btn ghost sm" data-ngbo="' + i + '">Bỏ</button></td></tr>').join('') +
       '</tbody></table></div><div class="row" style="margin-top:6px"><button type="button" class="btn ghost sm" data-act="ngThem" id="ngThem">+ Thêm người</button></div>' : '') +
     '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="dtLuu">Lưu</button><button class="btn ghost" type="button" data-act="dtHuy" id="dtHuy">Hủy</button></div></form>';
   return '<div class="card"><h3 style="margin-top:0">Danh mục đối tượng</h3>' + (cd.msg ? '<div class="msg ' + cd.msg[1] + '" id="dtMsg">' + esc(cd.msg[0]) + '</div>' : '') +
-    '<p class="mut" style="margin-top:0">Khai báo <b>một lần</b>: pháp nhân (công ty, ký qua người đại diện) hoặc thể nhân (một người, khai ở phần Thông tin cá nhân). Một người có thể vừa là Nhân công, Tài xế, Chủ xe; quyền ký hợp đồng khai riêng. Hợp đồng chỉ hiện đối tượng phù hợp. Khi chọn vào lô, thông tin được chụp lại: sửa danh mục không đổi lô đã lập.</p>' +
-    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label>Lọc theo<select id="dtNhom">' + NHOM_DT.map(([k, t]) => '<option value="' + k + '"' + (cd.nhom === k ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>' +
-    '<label style="flex:1;min-width:200px">Tìm<input id="dtQ" value="' + esc(cd.q) + '" placeholder="tên, mã, MST, CCCD, SĐT"></label>' +
-    '<button class="btn" data-act="dtThem" id="dtThem">+ Thêm đối tượng</button><label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-dtfile="1" hidden></label><button class="btn ghost" data-act="dtMau">Tải file mẫu</button></div>' +
+    '<p class="mut" style="margin-top:0">Khai báo <b>một lần</b>: cá nhân (một người, khai ngay trong một form) hoặc doanh nghiệp (công ty, ký qua người đại diện). Một người có thể vừa là Nhân công, Tài xế, Chủ xe; quyền ký hợp đồng khai riêng. Hợp đồng chỉ hiện đối tượng phù hợp. Khi chọn vào lô, thông tin được chụp lại: sửa danh mục không đổi lô đã lập.</p>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">' +
+    '<button class="btn" data-act="cnThem" id="cnThem">+ Thêm cá nhân</button><button class="btn ghost" data-act="dnThem" id="dnThem">+ Thêm doanh nghiệp</button><label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-dtfile="1" hidden></label><button class="btn ghost" data-act="dtMau">Tải file mẫu</button></div>' +
     hakSfBarHtml('dm_doi_tuong', sfRes.total, sfRes.kept) + form + '<div style="margin-top:10px">' + bang + '</div><p class="mut" style="margin:6px 0 0" id="dtDem">' + ds.length + ' đối tượng</p></div>';
 }
-function dtMo(id) { const o = id ? HAKDoiTuong.tim(dmDT(), id) : null; cd.sua = o ? JSON.parse(JSON.stringify(o)) : {id: '', ma: '', ten: '', loai: 'thenhan', kyHD: {}, nguoi: []}; cd.goc = JSON.stringify(cd.sua); cd.loi = []; cd.msg = null; render();
-const f = document.querySelector('#dtForm [name=ten]'); if (f) f.focus(); }
+function dtMo(id, loai) { const o = id ? HAKDoiTuong.tim(dmDT(), id) : null; cd.sua = o ? JSON.parse(JSON.stringify(o)) : {id: '', ma: '', ten: '', loai: loai === 'phapnhan' ? 'phapnhan' : 'thenhan', kyHD: {}, nguoi: []}; cd.loi = []; cd.msg = null; render();
+cd.goc = JSON.stringify(dtDocForm());   // mốc "chưa đổi" lấy từ chính form đã vẽ (cùng cách đọc với lúc kiểm thay đổi)
+const f = document.querySelector('#dtForm [name=hoTen]') || document.querySelector('#dtForm [name=ten]'); if (f) f.focus(); }
 async function dtLuu() {
   const x = dtDocForm(), r = HAKDoiTuong.luu(dmDT(), x, todayStr());
   if (!r.ok) { cd.sua = x; cd.loi = r.errs; render(); return false; }
@@ -119,7 +152,7 @@ async function dtLuu() {
 }
 function ngMo(i) {
   const p = i == null ? {hoTen: '', vaiTro: {}, kyHD: {}} : (cd.sua.nguoi || [])[i]; cd.ngSua = i == null ? -1 : i;
-  const cb = (k, t, o) => '<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="' + k + '"' + (o ? ' checked' : '') + '> ' + t + '</label>';
+  const cb = cb30;
   dlgMo('<form id="ngForm"><h3 style="margin-top:0">' + (i == null ? 'Thêm người' : 'Sửa ' + esc(p.hoTen)) + ' — ' + esc(cd.sua.ten || 'đối tượng mới') + '</h3><div id="ngLoi"></div><div class="grid">' +
     fld30('hoTen', 'Họ tên', p.hoTen, {req: true}) + fld30('cccd', 'Số CCCD', p.cccd) + fld30('ngayCap', 'Ngày cấp (dd/mm/yyyy)', p.ngayCap) + fld30('noiCap', 'Nơi cấp', p.noiCap) + fld30('hanCccd', 'Hạn CCCD', p.hanCccd) +
     fld30('diaChi', 'Địa chỉ thường trú', p.diaChi) + '<label><span>Giới tính</span><select name="gioiTinh"><option></option><option' + (p.gioiTinh === 'Nam' ? ' selected' : '') + '>Nam</option><option' + (p.gioiTinh === 'Nữ' ? ' selected' : '') + '>Nữ</option></select></label>' +
@@ -210,21 +243,22 @@ return x; }
 const chonChuXeHtml = (v, name) => '<select name="' + (name || 'chuXeId') + '"><option value="">— chưa chọn —</option>' + HAKXeDM.chonChuXe(dmDT()).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
 const chonTaiXeHtml = v => '<select name="taiXeId"><option value="">— chưa chọn —</option>' + HAKXeDM.chonTaiXe(dmDT()).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
 function panelSetXe() {
-  const C = cd.xe, SF = HAKCore.sf, w = foldVi(C.q).split(/\s+/).filter(Boolean), baseDs = dmXE().filter(x => { if (!w.length) return true; const c = HAKXeDM.chuXe(dmDT(), x.chuXeId), tx = HAKXeDM.taiXe(dmDT(), x.taiXeId); const t = foldVi([x.bks, x.loaiXe, c && c.nhan, tx && tx.nhan].join(' ')); return w.every(k => t.includes(k)); });
+  const C = cd.xe, SF = HAKCore.sf;
   const hom = todayStr();
   const loaiOpts = [...new Set(dmXE().map(v => trim(v.loaiXe)).filter(Boolean))].sort();
   const sfCfg = {
     screenId: 'dm_xe', title: 'Danh mục xe vận chuyển',
     searchPlaceholder: 'Lọc theo BKS, loại xe, chủ xe, tài xế…',
-    quickFields: ['hanGt'],
+    quickFields: ['q', 'hanGt'],
     advancedFields: ['q', 'loaiXe', 'hanGt'],
-    matchQ: (v, q) => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId), tx = HAKXeDM.taiXe(dmDT(), v.taiXeId); return SF.hay([v.bks, v.loaiXe, c && c.nhan, tx && tx.nhan]).includes(q); },
+    matchQ: (v, q) => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId), tx = HAKXeDM.taiXe(dmDT(), v.taiXeId), h = SF.hay([v.bks, v.loaiXe, c && c.nhan, tx && tx.nhan]); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); },
     fields: [
       {key: 'loaiXe', label: 'Loại xe', type: 'multi', withNone: true, options: loaiOpts, match: (v, vals) => SF.inSet(vals, v.loaiXe)},
       {key: 'hanGt', label: 'Giấy tờ xe', type: 'enum', options: [{value: 'het', label: 'Có giấy tờ hết hạn'}, {value: 'con', label: 'Còn hạn'}], match: (v, val) => { const h = HAKXeDM.hetHan(v, hom).length > 0; return val === 'het' ? h : !h; }}
     ]
   };
-  const sfRes = hakSfApply('dm_xe', sfCfg, baseDs), ds = sfRes.rows;
+  dtNhanTuTim('dm_xe', sfCfg, C);
+  const sfRes = hakSfApply('dm_xe', sfCfg, dmXE()), ds = sfRes.rows;
   const sfXeOn = SF.activeCount(hakSfGet('dm_xe', sfCfg).filter.getState()) > 0;
   const x = C.sua;
   const form = !x ? '' : '<form id="xeForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa xe ' + esc(x.bks) : 'Thêm xe') + '</h3>' + (C.loi.length ? '<div class="msg err" id="xeLoi">' + C.loi.map(esc).join('<br>') + '</div>' : '') +
@@ -236,14 +270,14 @@ function panelSetXe() {
     '<p class="mut" style="margin:6px 0 0">Chưa có chủ xe hoặc tài xế trong danh sách? <button type="button" class="btn ghost sm" data-act="openSetDt" data-quaylai="setxe">Mở Danh mục đối tượng</button> (bản đang nhập được giữ để quay lại).</p>' +
     '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="xeLuu">Lưu</button><button class="btn ghost" type="button" data-act="xeHuy">Hủy</button></div></form>';
   return '<div class="card"><h3 style="margin-top:0">Danh mục xe</h3>' + (cd.msg ? '<div class="msg ' + cd.msg[1] + '" id="xeMsg">' + esc(cd.msg[0]) + '</div>' : '') +
-    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label style="flex:1;min-width:200px">Tìm<input id="xeQ" value="' + esc(C.q) + '" placeholder="BKS, loại xe, chủ xe, tài xế"></label><button class="btn" data-act="xeThem" id="xeThem">+ Thêm xe</button>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><button class="btn" data-act="xeThem" id="xeThem">+ Thêm xe</button>' +
     '<label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-xefile="1" hidden></label><button class="btn ghost" data-act="xeMau">Tải file mẫu</button></div>' +
     hakSfBarHtml('dm_xe', sfRes.total, sfRes.kept) + form +
     '<div class="wrap" style="max-height:min(60vh,520px);margin-top:10px"><table id="xeBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Ngày cập nhật</th><th>Số BKS</th><th>Hạn kiểm định</th><th>Hạn bảo hiểm</th><th>Loại xe</th><th>Chủ xe</th><th>Tài xế</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(v => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId), tx = HAKXeDM.taiXe(dmDT(), v.taiXeId), het = HAKXeDM.hetHan(v, hom);
       return '<tr data-xe="' + esc(v.id) + '"><td>' + esc(v.ngayCapNhat) + '</td><td><b>' + esc(v.bks) + '</b></td><td>' + esc(v.hanKiemDinh) + (het.includes('kiểm định') ? ' <span class="pill err">hết hạn</span>' : '') + '</td><td>' + esc(v.hanBaoHiem) + (het.includes('bảo hiểm') ?
       ' <span class="pill err">hết hạn</span>' : '') + '</td><td>' + esc(v.loaiXe) + '</td><td>' + (c ? esc(c.nhan) : '<span class="mut">chưa chọn</span>') + '</td><td>' + (tx ? esc(tx.nhan) : '<span class="mut">chưa chọn</span>') + '</td>' +
-        '<td><button class="btn ghost sm" data-xesua="' + esc(v.id) + '">Sửa</button></td></tr>'; }).join('') : '<tr><td colspan="8" class="mut" id="xeTrong">' + (C.q || sfXeOn ? 'Không có xe nào khớp bộ lọc.' : 'Chưa có xe nào.') + '</td></tr>') + '</tbody></table></div><p class="mut" style="margin:6px 0 0">' + ds.length + ' xe</p></div>';
+        '<td><button class="btn ghost sm" data-xesua="' + esc(v.id) + '">Sửa</button></td></tr>'; }).join('') : '<tr><td colspan="8" class="mut" id="xeTrong">' + (sfXeOn ? 'Không có xe nào khớp bộ lọc.' : 'Chưa có xe nào.') + '</td></tr>') + '</tbody></table></div><p class="mut" style="margin:6px 0 0">' + ds.length + ' xe</p></div>';
 }
 function xeMo(id) { const v = id ? HAKXeDM.tim(dmXE(), id) : null; cd.xe.sua = v ? Object.assign({}, v) : {id: '', bks: '', ngayCapNhat: todayStr(), hanKiemDinh: '', hanBaoHiem: '', loaiXe: '', chuXeId: '', taiXeId: ''}; cd.xe.goc = JSON.stringify(cd.xe.sua); cd.xe.loi = []; cd.msg = null; render(); }
 async function xeLuu() {
@@ -289,12 +323,25 @@ function xeMau() {
 }
 
 /* ---------- VỊ TRÍ (ID ổn định; đổi tên giữ liên kết định mức) ---------- */
+/* Smart Filter của Vị trí: chỉ lọc dòng HIỂN THỊ (tên/mã), không đổi danh mục */
+function vtSfCfg() {
+  const SF = HAKCore.sf;
+  return {
+    screenId: 'dm_vi_tri', title: 'Vị trí công việc',
+    searchPlaceholder: 'Tìm theo tên hoặc mã vị trí…',
+    quickFields: ['q'], advancedFields: ['q'], fields: [],
+    matchQ: (v, q) => { const h = SF.hay([v.ten, v.id]); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); }
+  };
+}
 function panelSetVt() {
+  const sfCfg = vtSfCfg(), sfRes = hakSfApply('dm_vi_tri', sfCfg, dmVT()), ds = sfRes.rows, sfOn = HAKCore.sf.activeCount(hakSfGet('dm_vi_tri', sfCfg).filter.getState()) > 0;
   const dung = id => { let n = 0; Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => (f.nc || []).forEach(r => { if (r && (r.viTriId === id)) n++; }))); return n; };
   return '<div class="card"><h3 style="margin-top:0">Vị trí công việc</h3>' + (cd.vtMsg ? '<div class="msg ' + cd.vtMsg[1] + '" id="vtMsg">' + esc(cd.vtMsg[0]) + '</div>' : '') +
     '<p class="mut" style="margin-top:0">Vị trí dùng trong Định mức nhân công, định mức bảo hộ lao động, đơn giá theo vị trí và dòng nhân công. Đổi tên ở đây cập nhật mọi bảng đang dùng; hồ sơ đã chốt giữ tên đã áp dụng để in lại đúng.</p>' +
+    hakSfBarHtml('dm_vi_tri', sfRes.total, sfRes.kept) +
     '<div class="wrap" style="max-height:min(60vh,520px)"><table id="vtBang"><thead><tr><th>Mã</th><th>Tên vị trí</th><th>Đang dùng (dòng nhân công)</th><th></th></tr></thead><tbody>' +
-    dmVT().map(v => '<tr><td>' + esc(v.id) + '</td><td><input data-vtten="' + esc(v.id) + '" value="' + esc(v.ten) + '" style="width:100%"></td><td>' + dung(v.id) + '</td><td><button class="btn ghost sm" data-vtdoi="' + esc(v.id) + '">Đổi tên</button></td></tr>').join('') +
+    (ds.length ? '' : '<tr><td colspan="4" class="mut" id="vtTrong">' + (sfOn ? 'Không có vị trí nào khớp bộ lọc.' : 'Chưa có vị trí nào.') + '</td></tr>') +
+    ds.map(v => '<tr><td>' + esc(v.id) + '</td><td><input data-vtten="' + esc(v.id) + '" value="' + esc(v.ten) + '" style="width:100%"></td><td>' + dung(v.id) + '</td><td><button class="btn ghost sm" data-vtdoi="' + esc(v.id) + '">Đổi tên</button></td></tr>').join('') +
     '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px"><input id="vtMoi" placeholder="Tên vị trí mới"><button class="btn ghost" data-act="vtThem">Thêm vị trí</button></div></div>';
 }
 
@@ -326,7 +373,7 @@ document.addEventListener('click', e => {
   const a = el.dataset.act;
   if (a === 'roiLuu') return roiXuLy('luu'); if (a === 'roiBo') return roiXuLy('bo'); if (a === 'roiTiep') return roiXuLy('tiep');
   if (a === 'dlgDong') return dlgDong();
-  if (a === 'dtThem') return dtMo(null); if (a === 'dtHuy') { cd.sua = null; cd.loi = []; return render(); } if (a === 'dtMau') return dtMau();
+  if (a === 'cnThem') return dtMo(null, 'thenhan'); if (a === 'dnThem') return dtMo(null, 'phapnhan'); if (a === 'dtHuy') { cd.sua = null; cd.loi = []; return render(); } if (a === 'dtMau') return dtMau();
   if (a === 'dtExcelLuu') return dtExcelLuu(); if (a === 'xeExcelLuu') return xeExcelLuu();
   if (a === 'ngThem') { cd.sua = dtDocForm(); return ngMo(null); }
   if (a === 'xeThem') return xeMo(null); if (a === 'xeHuy') { cd.xe.sua = null; cd.xe.loi = []; return render(); } if (a === 'xeMau') return xeMau();
@@ -351,17 +398,10 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!t) return;
-  if (t.id === 'dtNhom') { cd.nhom = t.value; return render(); }
-  if (t.id === 'dtLoai') { cd.sua = Object.assign(dtDocForm(), {loai: t.value}); return render(); }
   if (t.dataset && t.dataset.dtfile && t.files && t.files[0]) { const f = t.files[0]; t.value = ''; return dtExcel(f); }
   if (t.dataset && t.dataset.xefile && t.files && t.files[0]) { const f = t.files[0]; t.value = ''; return xeExcel(f); }
   if (t.dataset && t.dataset.dtxem != null) { cd.dtXem[+t.dataset.dtxem].chon = t.checked; return; }
   if (t.dataset && t.dataset.xechon != null) { cd.xe.xem[+t.dataset.xechon].chon = t.checked; return; }
   if (t.dataset && t.dataset.xex != null) { const i = +t.dataset.xex; cd.xe.xem[i].xe[t.dataset.k] = trim(t.value); xeXemKiemLai(i); return xemExcelXe(); }
-});
-document.addEventListener('input', e => {
-  const t = e.target; if (!t) return;
-  if (t.id === 'dtQ') { cd.q = t.value; clearTimeout(cd._tq); cd._tq = setTimeout(() => { render(); const q = document.getElementById('dtQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 250); }
-  if (t.id === 'xeQ') { cd.xe.q = t.value; clearTimeout(cd._tx); cd._tx = setTimeout(() => { render(); const q = document.getElementById('xeQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 250); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { const b = document.getElementById('dlgBox'); if (b && b.classList.contains('on')) { e.preventDefault(); if (roiCho) roiXuLy('tiep'); else dlgDong(); } } });

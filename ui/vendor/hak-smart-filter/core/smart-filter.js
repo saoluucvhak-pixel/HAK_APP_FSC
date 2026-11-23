@@ -127,7 +127,12 @@
    *  @returns { rows, total, kept, unsupported:[key] } */
   function filterRows(rows, cfg, state, ctx) {
     var s = normalize(state), src = rows || [], tests = [], unsupported = [], q = fold(s.q);
-    if (q) { if (cfg.matchQ) tests.push(function (r) { return cfg.matchQ(r, q, ctx); }); else unsupported.push("q"); }
+    if (q) {
+      if (cfg.matchQ) { // từ ghép: tách theo khoảng trắng, MỖI từ phải khớp (AND) — từ khóa có thể nằm ở các cột khác nhau
+        var words = q.split(/\s+/).filter(Boolean);
+        tests.push(function (r) { for (var i = 0; i < words.length; i++) if (!cfg.matchQ(r, words[i], ctx)) return false; return true; });
+      } else unsupported.push("q");
+    }
     if (s.tu || s.den) { if (cfg.matchDate) tests.push(function (r) { return cfg.matchDate(r, s.tu, s.den, ctx); }); else unsupported.push("date"); }
     (cfg.fields || []).forEach(function (f) {
       var val = f.type === "multi" ? s.sel[f.key] : f.type === "enum" ? s.one[f.key] : f.type === "bool" ? (s.flag[f.key] || undefined) : undefined;

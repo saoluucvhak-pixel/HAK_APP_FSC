@@ -13,6 +13,7 @@
     if (v === null || v === undefined) return {ok: true, blank: true, moHo: false, value: null, reason: '', error: '', raw: v};
     if (typeof v === 'number') {
       if (!isFinite(v)) return fail(v, 'không phải số hữu hạn');
+      if (Object.is(v, -0)) v = 0;   // -0 dạng số: chuẩn hóa về 0
       if (v < 0) return fail(v, 'khối lượng không được là số âm');
       return {ok: true, blank: false, moHo: false, value: v, reason: '', error: '', raw: v};
     }
@@ -44,15 +45,15 @@
       return r.blank ? null : r.ok ? r.value : 'x';
     }
     if (v === null || v === undefined) return null;
-    if (typeof v === 'number') return isFinite(v) ? v : 'x';
+    if (typeof v === 'number') return isFinite(v) ? (Object.is(v, -0) ? 0 : v) : 'x';
     const t = trim(v);
     if (t === '') return null;
     if (/^0[xXobOB]/.test(t) || /[eE]/.test(t)) return 'x';
-    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) { const n = Number(t.replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 'x'; }
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) { const n = Number(t.replace(/\./g, '').replace(',', '.')); return isFinite(n) ? (Object.is(n, -0) ? 0 : n) : 'x'; }
     const s = t.replace(',', '.');
     if (!/^-?\d+(\.\d+)?$/.test(s)) return 'x';
     const n = Number(s);
-    return isFinite(n) ? n : 'x';
+    return isFinite(n) ? (Object.is(n, -0) ? 0 : n) : 'x';
   }
 
   function parseDonGia(v) {

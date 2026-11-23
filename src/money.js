@@ -15,6 +15,7 @@
     if (v === null || v === undefined) return {ok: true, blank: true, value: null, reason: '', raw: v};
     if (typeof v === 'number') {
       if (!isFinite(v)) return fail(v, 'không phải số hữu hạn');
+      if (Object.is(v, -0)) v = 0;   // -0 dạng số không phải số âm và không được hiện ra -0
       if (v < 0) return fail(v, 'là số âm');
       if (v > MAX) return fail(v, 'vượt phạm vi cho phép (tối đa 1.000 tỷ)');
       return {ok: true, blank: false, value: v, reason: '', raw: v};

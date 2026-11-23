@@ -40,7 +40,27 @@ function writeFileVerified(file, text, io, verify) {
   }
 }
 
-/* Sao lưu toàn bộ. o = {db (better-sqlite3), data (đối tượng JSON), outDir, dbBytes, now, io, hooks}
+/* BK-01: chép file đã sao lưu sang thư mục thứ hai qua tệp tạm .tmp-<pid> rồi đổi tên (không ghi đè). Trả {skipped} | {ok, dir, files, error}. Không bao giờ ném lỗi. */
+function chepSangOThuHai(dir2, parts, io) {
+  const list = (parts || []).filter(p => p && p.ok && p.file);
+  if (!dir2 || !list.length) return {ok: true, skipped: true, dir: dir2 || '', files: [], error: ''};
+  const out = {ok: true, skipped: false, dir: dir2, files: [], error: ''};
+  try { (io.mkdirSync || fs.mkdirSync)(dir2, {recursive: true}); } catch (e) { return {ok: false, skipped: false, dir: dir2, files: [], error: Settings.describeError(e, dir2)}; }
+  for (const p of list) {
+    if (path.resolve(path.dirname(p.file)) === path.resolve(dir2)) continue;   // ổ thứ hai trùng thư mục chính: bản đã nằm sẵn ở đó
+    const to = path.join(dir2, path.basename(p.file)), tmp = to + '.tmp-' + process.pid;
+    try {
+      if (io.existsSync(to)) throw new Error('file đã tồn tại ở thư mục thứ hai (không ghi đè)');
+      (io.copyFileSync || fs.copyFileSync)(p.file, tmp); io.renameSync(tmp, to); out.files.push(to);
+    } catch (e) {
+      try { io.unlinkSync(tmp); } catch (er) { /* chưa tạo */ }
+      out.ok = false; out.error += (out.error ? '; ' : '') + path.basename(p.file) + ': ' + Settings.describeError(e, to);
+    }
+  }
+  return out;
+}
+
+/* Sao lưu toàn bộ. o = {db (better-sqlite3), data (đối tượng JSON), outDir, outDir2 (thư mục thứ hai, tùy chọn), dbBytes, now, io, hooks}
  * Trả {ok, json: {ok, file, error}, sqlite: {ok, file, error}, message}. ok=true chỉ khi cả hai file dùng được. */
 async function backupAll(o) {
   const io = o.io || fs, hooks = o.hooks || {}, now = (o.now || (() => new Date()))();
@@ -95,7 +115,9 @@ async function backupAll(o) {
     res.sqlite = {ok: false, file: sqlFile, error: Settings.describeError(e, sqlFile)};
   }
   res.ok = res.json.ok && res.sqlite.ok;
-  if (res.ok) res.message = 'Đã sao lưu: ' + jsonFile + ' và ' + sqlFile;
+  /* BK-01: có thư mục sao lưu thứ hai (USB/ổ ngoài) thì chép các file đã qua kiểm tra sang đó. Lỗi ổ thứ hai KHÔNG làm hỏng kết quả chính, chỉ báo riêng. */
+  res.copy2 = chepSangOThuHai(o.outDir2, [res.json, res.sqlite], io);
+  if (res.ok) res.message = 'Đã sao lưu: ' + jsonFile + ' và ' + sqlFile + (res.copy2.skipped ? '' : res.copy2.ok ? '. Đã chép thêm sang thư mục thứ hai: ' + res.copy2.dir : '. CẢNH BÁO: chưa chép được sang thư mục thứ hai (' + res.copy2.error + '); bản sao lưu chính vẫn đầy đủ.');
   else {
     const usable = [res.json.ok ? 'JSON (' + jsonFile + ')' : '', res.sqlite.ok ? 'SQLite (' + sqlFile + ')' : ''].filter(Boolean);
     res.message = 'Sao lưu KHÔNG đầy đủ. ' + (res.json.ok ? '' : 'Lỗi file JSON: ' + res.json.error + '. ') + (res.sqlite.ok ? '' : 'Lỗi file SQLite: ' + res.sqlite.error + '. ') +
