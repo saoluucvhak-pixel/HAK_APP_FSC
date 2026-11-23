@@ -158,3 +158,14 @@ Chạy nền để không bị ngắt: bọc trong `( … ; echo done > <tệp>.
 - PR #86 (v3.3.0 Google Sheets), #87 (v3.4.0), #88 (Danh mục một lớp, bộ lọc, sao lưu): https://github.com/saoluucvhak-pixel/HAK_APP_FSC/pulls?q=is%3Apr+is%3Amerged
 - Release v3.3.0 và v3.4.0: https://github.com/saoluucvhak-pixel/HAK_APP_FSC/releases
 - Tài liệu nền: `docs/NGHIEM_THU_DU_LIEU_GOOGLE_SHEETS.md`, `docs/GHI_CHU_PHAT_HANH_3.4.0.md`.
+
+## 10. BỔ SUNG VÀ ĐÍNH CHÍNH (cập nhật đêm 23/11/2026, sau khi lập mục 1–9)
+
+1. **Có thêm một việc: PR D — an toàn bản nháp** (cơ chế nháp của v3.3.0, "Cập nhật vào hồ sơ" ghi toàn bộ vào bản nháp) và kiểm với dữ liệu Google Sheets thật. Toàn bộ nội dung, bản đồ mã, 6 bất biến, 4 bước và điều kiện hoàn thành nằm ở **`docs/BAN_GIAO_BO_SUNG_PR_D_AN_TOAN_BAN_NHAP.md`** — đọc tài liệu đó cùng hai bản bàn giao này. Thứ tự tổng thể: **PR A → (PR D làm song song hoặc ngay sau PR A, nhánh riêng từ `main`) → PR C → PR B → Bước 3 (hộp thoại thay `confirm()`) → phát hành 3.5.0**. PR D không đụng cùng tệp với PR A; PR C và PR B vẫn chờ PR A gộp.
+2. **Quyết định mới của CHỦ (đã chốt, không hỏi lại):**
+   - Trang "Chỉ xem" HTML đổi theo thuật ngữ mới (Chức vụ, Vị trí) — đã nêu ở mục 3.
+   - Cột "Vai trò" của báo cáo Vận chuyển theo đội xe đổi thành "Chức vụ" — đã nêu ở mục 3.
+   - **Đồng ý thêm "báo cáo chất lượng Google Sheet chỉ số đếm"** (chỉ đọc, chỉ số đếm, không thông tin cá nhân, test bảo mật bắt buộc; làm ở Bước 3 của PR D, sau Bước 1 và 2, PR riêng nhỏ).
+3. **Đính chính số liệu kiểm trong mục 3:** lượt e2e đầy đủ trên `6ce3341` mới chạy được **43/139 bộ (43 đạt, 0 lỗi)** rồi bị dừng do phiên bị khởi động lại; `e2e-cai-de` chưa chạy; chưa có CI Windows. Mọi số liệu "đã kiểm" khác (unit 862/860 đạt/2 bỏ qua, bản in 206/206, soát độc lập không P0/P1) là số thật đã chạy. Đừng coi PR A là "đã xanh toàn bộ" cho đến khi chạy xong mục 5.1.
+4. **Nhánh `wip/pr-a-chuc-vu-vi-tri` hiện chứa thêm ba commit tài liệu** (bàn giao PHIEN2, bàn giao bổ sung PR D, ghi quyết định CHỦ). Khi mở PR A, các tệp `docs/BAN_GIAO_*` này đi cùng PR; điều đó chấp nhận được. Nếu CHỦ muốn PR A chỉ có mã, tách ba tệp này sang một PR docs riêng.
+5. **Việc ngoài PR vẫn thuộc CHỦ, agent không làm thay:** kiểm tay trên Windows thật và màn 150% cho v3.3.0, v3.4.0; dọn nhánh cũ trên GitHub (chỉ khi CHỦ ra lệnh theo danh sách); cập nhật `docs/DAC_TA_GOOGLE_SHEETS_THEO_HOP_DONG.md` theo QĐ7 mới (CHỦ đã hủy việc này ở phiên trước; chỉ làm nếu CHỦ giao lại).
