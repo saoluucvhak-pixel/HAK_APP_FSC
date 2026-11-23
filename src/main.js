@@ -182,10 +182,12 @@ function registerIpc() {
       if (t === 'sqlite') hooks.beforeSqlite = () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); };
       if (t === 'space') hooks.freeBytes = 1024;
       const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();   // phiếu #11: bản .json mang đủ lịch sử bản chụp chốt (mọi phiên bản), như bản .sqlite
-      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, dbBytes: sizeWithWal(store.file), hooks});
+      let outDir2 = ''; try { outDir2 = Settings.load(app.getPath('userData')).backupDir2 || ''; } catch (er) { /* không có cài đặt */ }   // BK-01: thư mục sao lưu thứ hai (USB/ổ ngoài)
+      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, outDir2, dbBytes: sizeWithWal(store.file), hooks});
       if (res.ok) { try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); } }   // chỉ khi cả hai file đã ghi và qua kiểm tra
       else log('ERROR', 'Sao lưu không đầy đủ: ' + res.message);
-      return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite};
+      if (res.copy2 && !res.copy2.skipped && !res.copy2.ok) log('WARN', 'Chưa chép được bản sao lưu sang thư mục thứ hai: ' + res.copy2.error);
+      return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite, copy2: res.copy2};
     } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
     finally { backingUp = false; }
   }));
