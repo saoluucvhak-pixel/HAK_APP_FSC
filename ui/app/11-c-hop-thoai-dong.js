@@ -62,7 +62,7 @@ function stRender() {
     })() : '') +
     (kind === 'nc' && !stm.id ? (() => { const dId = (curTeam() || {}).id, daCo = new Set(st.cur.nc.filter(r => !rec.doi || rec.doi.length < 2 || r.doiId === dId).map(r => HAKModel.cccdSo(r.cccd))), L = dmNguonLd().filter(r => !daCo.has(HAKModel.cccdSo(r.cccd)));   // 3.0: không trùng trong cùng đội; người ở đội khác vẫn chọn được, có ghi chú
       const doiKhac = c => { const x = st.cur.nc.find(r => HAKModel.cccdSo(r.cccd) === c); const d = x && (rec.doi || []).find(y => y.id === x.doiId); return d ? ' — đang ở ' + (d.ten || 'đội khác') : ''; };
-      return L.length ? '<label style="display:block;margin-bottom:8px"><span>Chọn người từ Danh mục lao động (theo CCCD, thông tin mới nhất)</span><select id="ncDm"><option value="">— nhập người mới (tự vào Danh mục khi lưu lô) —</option>' + L.map(r => '<option value="' +
+      return L.length ? '<label style="display:block;margin-bottom:8px"><span>Chọn người từ Danh mục đối tượng (theo CCCD, thông tin mới nhất)</span><select id="ncDm"><option value="">— nhập người mới (tự vào Danh mục khi lưu lô) —</option>' + L.map(r => '<option value="' +
       esc(HAKModel.cccdSo(r.cccd)) + '">' + esc((r._nhan || r.ten) + ' · CCCD ' + HAKModel.cccdSo(r.cccd) + doiKhac(HAKModel.cccdSo(r.cccd))) + '</option>').join('') +
       '</select><small class="mut">Điền sẵn họ tên, ngày sinh, CCCD, ngày cấp, nơi cấp, địa chỉ; vai trò, chức danh và đội chọn cho lô này. Thông tin được chụp lại trong lô, sửa ở lô này không đổi lô khác.</small></label>' : '';
       })() : '') +

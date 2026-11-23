@@ -153,7 +153,7 @@ function panelDoiKT(rec, phan) {   // phan: 'tt' = chọn đội và thông tin 
   const t = curTeam(f), n = d => (rec.nc || []).filter(r => r.doiId === d.id).length, multi = rec.doi.length > 1, chua = (rec.nc || []).filter(r => !rec.doi.some(d => d.id === r.doiId)).length;
   const tt = d => { const x = (rec.nc || []).find(r => r.doiId === d.id && isTT(r)); return x ? x.ten : '—'; };
   const row = (d,
-  k) => '<tr class="' + (d.id === t.id ? 'sel' : '') + '" data-act="chonDoi" data-doi="' + esc(d.id) + '" style="cursor:pointer' + (d.id === t.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(d.ten || ('Đội ' + (k + 1))) + '</b>' + (d.id === t.id ?
+  k) => '<tr class="' + (d.id === t.id ? 'sel' : '') + '" data-act="chonDoi" data-doi="' + esc(d.id) + '" style="cursor:pointer"><td><b>' + esc(d.ten || ('Đội ' + (k + 1))) + '</b>' + (d.id === t.id ?
   ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + esc(tt(d)) + '</td><td style="text-align:center">' + n(d) + '</td><td>' + esc(hinhThucNgan(infoTeam(rec,
   d))) + '</td><td style="text-align:right">' + (typeof d.dienTich === 'number' ? formatNumber(d.dienTich, 3) : multi ? '<span class="mut">theo số người</span>' : '<span class="mut">cả lô</span>') + '</td></tr>';
   if (hdMo('nc')) return '<div class="card" id="doiKT"><h3 class="sro">Thông tin hợp đồng</h3>' + (chua ? '<div class="msg warn" style="margin-top:6px">' + chua + ' người chưa thuộc đội nào: chọn đội ở cột Đội của bảng nhân công.</div>' : '') +   // 3.0 trang chi tiết: danh sách đội ở trang danh sách

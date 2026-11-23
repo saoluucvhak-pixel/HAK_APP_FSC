@@ -1,5 +1,20 @@
 # Nhật ký thay đổi
 
+## 3.4.0 — Tài xế theo xe, làm rõ Danh mục đối tượng, sửa khối lượng phiếu và giao diện
+
+### Điểm mới
+
+- **Tài xế thường chạy theo xe:** Danh mục xe có ô chọn tài xế (người có vai trò Tài xế trong Danh mục đối tượng) và cột Tài xế; thêm xe vào lô thì tên, CCCD, giấy phép lái xe của tài xế được điền sẵn (không ghi đè dữ liệu đã có); gói danh mục chuyển giữa các máy mang theo tài xế. Xe chưa gắn tài xế giữ dữ liệu y hệt cũ.
+- **Danh mục đối tượng rõ hơn (chỉ đổi chữ):** thống nhất tên "Danh mục đối tượng"; "Đối tác (người)" thành "Thông tin cá nhân"; ô lọc "Có quyền ký hợp đồng"; có giải thích thông tin được chụp vào lô khi chọn.
+
+### Sửa lỗi
+
+- **Khối lượng phiếu cân:** chuỗi nhiều dấu phẩy như `1,250,000` không còn bị đọc thành 1,25 tấn (nay tính 0 kg, không đoán); `1.250,5` đọc đúng 1250,5 tấn; `1,250` vẫn là 1,25 tấn như cũ.
+- **Mã dòng đã xóa:** ID dòng nhân công/xe đã xóa được lưu bền (`idDaCap`), phiên sau không cấp lại; lô chưa xóa dòng nào giữ dữ liệu y hệt cũ.
+- **Sao lưu:** dọn thêm tệp tạm mồ côi dạng `.tmp-<pid>-<thời gian>` trong thư mục sao lưu.
+- **Giao diện:** biến `--sel` cho hàng được chọn (sáng/tối); chữ phụ đạt tương phản AA; bảng nhân công và xe gọn như bảng phiếu cân (dòng thấp hơn gần một nửa ở khung nhỏ); 5 hộp thoại có nhãn truy cập (`aria-labelledby`).
+- **Bảo toàn bản in:** 206/206 tài liệu biểu mẫu `.docx` giống từng byte so với v3.3.0.
+
 ## 3.3.0 — Dữ liệu Google Sheets theo hợp đồng, phân bổ phiếu cân vào rừng, đổi số phiếu, bản nháp đầy đủ
 
 ### Điểm mới

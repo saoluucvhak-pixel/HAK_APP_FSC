@@ -26,7 +26,7 @@ async function issueAct(kind) {
 }
 
 /* ===== Danh mục dùng chung (tách riêng khỏi Cài đặt theo chuẩn V10.4) & Cài đặt hệ thống ===== */
-const DM_TABS = [['setdt', 'Đối tượng (Nhân công / Đối tác)', 'openSetDt'], ['setxe', 'Xe vận chuyển', 'openSetXe'], ['setvt', 'Vị trí công việc', 'openSetVt'], ['cty', 'Công ty mua hàng', 'openCty']];
+const DM_TABS = [['setdt', 'Đối tượng (người và pháp nhân)', 'openSetDt'], ['setxe', 'Xe vận chuyển', 'openSetXe'], ['setvt', 'Vị trí công việc', 'openSetVt'], ['cty', 'Công ty mua hàng', 'openCty']];
 const DM_VIEWS = ['setdt', 'setxe', 'setvt', 'cty'];
 const SET_TABS = [['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets',
 'openSetGs'], ['setfmt', 'Hiển thị số', 'openSetFmt'], ['setgd', 'Giao diện', 'openSetGd'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];

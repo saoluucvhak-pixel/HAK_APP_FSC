@@ -1,6 +1,7 @@
 /* DANH MỤC XE (bản 3.0). Hàm thuần.
- * db.dmXe = [{id: 'xe<N>', bks, ngayCapNhat, hanKiemDinh, hanBaoHiem, loaiXe, chuXeId, ngung}]
+ * db.dmXe = [{id: 'xe<N>', bks, ngayCapNhat, hanKiemDinh, hanBaoHiem, loaiXe, chuXeId, taiXeId?, ngung}]
  *  - chuXeId: id NGƯỜI có vai trò Chủ xe (bảng con của thể nhân) hoặc id PHÁP NHÂN đứng tên xe (src/doituong.js). Lưu liên kết bằng ID.
+ *  - taiXeId (TÙY CHỌN, bản 3.3.1): id NGƯỜI có vai trò Tài xế, tài xế thường chạy của xe. CHỈ ghi khóa này khi có giá trị: xe chưa gắn tài xế cho JSON y hệt bản cũ. Khi thêm xe vào lô, thông tin tài xế được CHỤP vào dòng lô (sửa ở lô không đổi danh mục).
  *  - BKS so khớp theo khóa chuẩn hóa (src/bks.js): mỗi xe một dòng; BKS nguồn giữ nguyên cách viết.
  *  - Nhập Excel: Chọn file → Xem trước (mới / trùng / thay đổi / lỗi; thay đổi chủ xe hiện cả hai) → Sửa hoặc bỏ dòng → Lưu danh mục. */
 (function (root) {
@@ -14,7 +15,7 @@
   const clone = x => JSON.parse(JSON.stringify(x));
   const ngayOk = v => !s(v) || !!D().parse(s(v));
   const TRUONG = ['bks', 'ngayCapNhat', 'hanKiemDinh', 'hanBaoHiem', 'loaiXe', 'chuXeId'];
-  const chuan = x => { const o = {id: s(x && x.id)}; TRUONG.forEach(k => { o[k] = s(x && x[k]); }); o.bks = o.bks.toUpperCase(); o.ngung = !!(x && x.ngung); return o; };
+  const chuan = x => { const o = {id: s(x && x.id)}; TRUONG.forEach(k => { o[k] = s(x && x[k]); }); o.bks = o.bks.toUpperCase(); if (s(x && x.taiXeId)) o.taiXeId = s(x.taiXeId); o.ngung = !!(x && x.ngung); return o; };
   const tim = (dm, id) => (dm || []).find(x => x.id === id) || null;
   const timBks = (dm, bks) => { const k = B().khoa(bks); return k ? (dm || []).find(x => B().khoa(x.bks) === k) || null : null; };
   const idMoi = dm => { const used = new Set((dm || []).map(x => x.id)); let k = used.size + 1; while (used.has('xe' + k)) k++; return 'xe' + k; };
@@ -22,6 +23,21 @@
   function chuXe(dmDT, id) {
     if (!id) return null; const a = DT().timNguoi(dmDT, id); if (a) return {loai: 'nguoi', ten: a.ng.hoTen, cccd: a.ng.cccd, dt: a.dt, ng: a.ng, nhan: DT().nhanNguoi(a.dt, a.ng)};
     const p = DT().tim(dmDT, id); return p ? {loai: 'phapnhan', ten: p.ten, mst: p.mst, dt: p, ng: null, nhan: p.ten} : null;
+  }
+  /* tài xế thường chạy: {ten, cccd, gplx, hanGplx, ..., dt, ng, nhan} hoặc null (chỉ người, không có pháp nhân) */
+  function taiXe(dmDT, id) {
+    if (!id) return null; const a = DT().timNguoi(dmDT, id); if (!a) return null;
+    return {loai: 'nguoi', ten: a.ng.hoTen, cccd: a.ng.cccd, gplx: a.ng.gplx, hanGplx: a.ng.hanGplx, dt: a.dt, ng: a.ng, nhan: DT().nhanNguoi(a.dt, a.ng)};
+  }
+  /* các lựa chọn tài xế: người (đang dùng) có vai trò Tài xế */
+  const chonTaiXe = dmDT => DT().nguoiTheoVaiTro(dmDT, 'taiXe').map(x => ({id: x.ng.id, nhan: x.nhan, loai: 'nguoi'}));
+  /* điền tài xế vào dòng xe của lô: ng = hồ sơ người (taiXe(...).ng), vals = giá trị hiện có của dòng lô. Trả các khóa dòng lô cần điền (rỗng nếu dòng đã có tài xế: tên hoặc CCCD tài xế khác rỗng, không ghi đè nửa chừng).
+   * Thuần: chỉ chép từ hồ sơ người vào dòng lô (lô chụp lại), không đổi danh mục. */
+  function dienTaiXeLo(ng, vals, taiXeId) {
+    if (!ng) return {}; const v = vals || {}; if (s(v.taiXe) || s(v.cccdTx)) return {};
+    const o = {taiXe: s(ng.hoTen), cccdTx: s(ng.cccd), diaChiTx: s(ng.diaChi), ngayCapTx: s(ng.ngayCap), noiCapTx: s(ng.noiCap), gplx: s(ng.gplx), hanGplx: s(ng.hanGplx)};
+    const r = {}; Object.keys(o).forEach(k => { if (o[k] && !s(v[k])) r[k] = o[k]; });
+    if (taiXeId && Object.keys(r).length) r.taiXeId = taiXeId; return r;
   }
   /* các lựa chọn chủ xe: người có vai trò Chủ xe và pháp nhân (đang dùng) */
   const chonChuXe = dmDT => DT().nguoiTheoVaiTro(dmDT, 'chuXe').map(x => ({id: x.ng.id, nhan: x.nhan, loai: 'nguoi'}))
@@ -32,6 +48,7 @@
     const t = timBks(dm, o.bks); if (t && t.id !== o.id) e.push('BKS ' + o.bks + ' đã có trong danh mục (' + t.bks + ')');
     [['ngayCapNhat', 'ngày cập nhật'], ['hanKiemDinh', 'hạn kiểm định'], ['hanBaoHiem', 'hạn bảo hiểm']].forEach(([k, n]) => { if (!ngayOk(o[k])) e.push(n + ' “' + o[k] + '” không phải ngày có thật (dd/mm/yyyy)'); });
     if (o.chuXeId) { const c = chuXe(dmDT, o.chuXeId); if (!c) e.push('Chủ xe không còn trong Danh mục đối tượng'); else if (c.loai === 'nguoi' && !(c.ng.vaiTro && c.ng.vaiTro.chuXe)) e.push(c.ten + ' chưa có vai trò Chủ xe'); }
+    if (o.taiXeId) { const c = taiXe(dmDT, o.taiXeId); if (!c) e.push('Tài xế không còn trong Danh mục đối tượng'); else if (!(c.ng.vaiTro && c.ng.vaiTro.taiXe)) e.push(c.ten + ' chưa có vai trò Tài xế'); }
     return e;
   }
   function luu(dm, x, dmDT) {
@@ -65,7 +82,7 @@
       const r = {}; Object.entries(r0 || {}).forEach(([h, v]) => { const k = COT[s(h)]; if (k) r[k] = s(v); });
       if (!Object.values(r).some(Boolean)) return;
       const loi = [], c = timChuXe(dmDT, r.chuXe, r.chuXeSo); if (c.loi) loi.push(c.loi);
-      const cu = timBks(dm, r.bks), x = chuan({id: cu ? cu.id : '', bks: r.bks, ngayCapNhat: r.ngayCapNhat, hanKiemDinh: r.hanKiemDinh, hanBaoHiem: r.hanBaoHiem, loaiXe: r.loaiXe, chuXeId: c.id || (cu && !s(r.chuXe) && !s(r.chuXeSo) ? cu.chuXeId : '')});
+      const cu = timBks(dm, r.bks), x = chuan({id: cu ? cu.id : '', bks: r.bks, ngayCapNhat: r.ngayCapNhat, hanKiemDinh: r.hanKiemDinh, hanBaoHiem: r.hanBaoHiem, loaiXe: r.loaiXe, chuXeId: c.id || (cu && !s(r.chuXe) && !s(r.chuXeSo) ? cu.chuXeId : ''), taiXeId: cu ? cu.taiXeId : ''});   // Excel không có cột tài xế: giữ tài xế đã gắn trong danh mục
       kiem((dm || []).filter(y => !cu || y.id !== cu.id), x, dmDT).filter(e => !/Chủ xe/.test(e) || !c.loi).forEach(e => loi.push(e));
       const kb = B().khoa(x.bks); if (kb && daThay.has(kb)) loi.push('BKS trùng với dòng ' + daThay.get(kb) + ' trong cùng file'); if (kb) daThay.set(kb, i + 2);
       const tt = loi.length ? 'loi' : !cu ? 'moi' : JSON.stringify(chuan(cu)) === JSON.stringify(x) ? 'trung' : 'doi';
@@ -95,6 +112,6 @@
     });
     return {dm, canDoiChieu: can};
   }
-  const api = {COT, chuan, tim, timBks, idMoi, chuXe, chonChuXe, kiem, luu, hetHan, timChuXe, docExcel, apDungExcel, tuDanhMucCu};
+  const api = {COT, chuan, tim, timBks, idMoi, chuXe, chonChuXe, taiXe, chonTaiXe, dienTaiXeLo, kiem, luu, hetHan, timChuXe, docExcel, apDungExcel, tuDanhMucCu};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKXeDM = api;
 })(typeof self !== 'undefined' ? self : this);
