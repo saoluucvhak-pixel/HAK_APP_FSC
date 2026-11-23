@@ -53,7 +53,7 @@ function timLai(el) {
 }
 
 /* ---------- DANH MỤC ĐỐI TƯỢNG ---------- */
-const NHOM_DT = [['tatca', 'Tất cả'], ['doitac', 'Đối tác (ký hợp đồng)'], ['nhancong', 'Nhân công'], ['taixe', 'Tài xế'], ['chuxe', 'Chủ xe'], ['ngung', 'Ngừng sử dụng']];
+const NHOM_DT = [['tatca', 'Tất cả'], ['doitac', 'Có quyền ký hợp đồng'], ['nhancong', 'Nhân công'], ['taixe', 'Tài xế'], ['chuxe', 'Chủ xe'], ['ngung', 'Ngừng sử dụng']];
 const kyChon = k => k.vanChuyen && k.nhanCong ? 'ca' : k.vanChuyen ? 'vc' : k.nhanCong ? 'nc' : '';
 const kyTu = v => ({vanChuyen: v === 'vc' || v === 'ca', nhanCong: v === 'nc' || v === 'ca'});
 const selKy = (name, v) => '<select name="' + name + '">' + [['', 'Không'], ['vc', 'Vận chuyển'], ['nc', 'Nhân công'], ['ca', 'Cả hai']].map(([k, t]) => '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>';
@@ -98,13 +98,13 @@ function panelSetDt() {
     '<label><span>Loại</span><select name="loai" id="dtLoai"><option value="thenhan"' + (x.loai !== 'phapnhan' ? ' selected' : '') + '>Thể nhân</option><option value="phapnhan"' + (x.loai === 'phapnhan' ? ' selected' : '') + '>Pháp nhân</option></select></label>' +
     fld30('mst', 'Mã số thuế', x.mst) + fld30('diaChi', x.loai === 'phapnhan' ? 'Địa chỉ trụ sở' : 'Địa chỉ thường trú', x.diaChi) + fld30('sdt', 'Số điện thoại', x.sdt) +
     (x.loai === 'phapnhan' ? '<label><span>Ký hợp đồng</span>' + selKy('kyHD', kyChon(x.kyHD || {})) + '</label>' + fld30('daiDien', 'Người đại diện', x.daiDien) + fld30('chucVuDaiDien', 'Chức danh người đại diện', x.chucVuDaiDien) : '') + '</div>' +
-    (x.loai !== 'phapnhan' ? '<h4 style="margin:12px 0 6px">Đối tác (người)</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Vai trò</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
+    (x.loai !== 'phapnhan' ? '<h4 style="margin:12px 0 6px">Thông tin cá nhân</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Vai trò</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
       ((x.nguoi || []).length ? x.nguoi.map((p, i) => '<tr><td><b>' + esc(p.hoTen) + '</b></td><td>' + esc(p.cccd) + '</td><td>' + esc(p.sdt) + '</td><td>' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + '</td><td>' + esc(HAKDoiTuong.kyText(p.kyHD || {})) + '</td><td>' + esc(ten30(p.viTriId)) + '</td>' +
         '<td style="white-space:nowrap"><button type="button" class="btn ghost sm" data-ngsua="' + i + '">Sửa</button> <button type="button" class="btn ghost sm" data-ngbo="' + i + '">Bỏ</button></td></tr>').join('') : '<tr><td colspan="7" class="mut">Chưa có người nào: bấm “Thêm người”.</td></tr>') +
       '</tbody></table></div><div class="row" style="margin-top:6px"><button type="button" class="btn ghost sm" data-act="ngThem" id="ngThem">+ Thêm người</button></div>' : '') +
     '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="dtLuu">Lưu</button><button class="btn ghost" type="button" data-act="dtHuy" id="dtHuy">Hủy</button></div></form>';
   return '<div class="card"><h3 style="margin-top:0">Danh mục đối tượng</h3>' + (cd.msg ? '<div class="msg ' + cd.msg[1] + '" id="dtMsg">' + esc(cd.msg[0]) + '</div>' : '') +
-    '<p class="mut" style="margin-top:0">Khai báo <b>một lần</b>: pháp nhân (công ty, ký qua người đại diện) hoặc thể nhân (từng người trong bảng Đối tác). Một người có thể vừa là Nhân công, Tài xế, Chủ xe; quyền ký hợp đồng khai riêng. Hợp đồng chỉ hiện đối tượng phù hợp.</p>' +
+    '<p class="mut" style="margin-top:0">Khai báo <b>một lần</b>: pháp nhân (công ty, ký qua người đại diện) hoặc thể nhân (một người, khai ở phần Thông tin cá nhân). Một người có thể vừa là Nhân công, Tài xế, Chủ xe; quyền ký hợp đồng khai riêng. Hợp đồng chỉ hiện đối tượng phù hợp. Khi chọn vào lô, thông tin được chụp lại: sửa danh mục không đổi lô đã lập.</p>' +
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label>Lọc theo<select id="dtNhom">' + NHOM_DT.map(([k, t]) => '<option value="' + k + '"' + (cd.nhom === k ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>' +
     '<label style="flex:1;min-width:200px">Tìm<input id="dtQ" value="' + esc(cd.q) + '" placeholder="tên, mã, MST, CCCD, SĐT"></label>' +
     '<button class="btn" data-act="dtThem" id="dtThem">+ Thêm đối tượng</button><label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-dtfile="1" hidden></label><button class="btn ghost" data-act="dtMau">Tải file mẫu</button></div>' +

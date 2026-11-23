@@ -89,7 +89,7 @@
     if (x.mst && khac.some(o => so(o.mst) && so(o.mst) === so(x.mst))) e.push('Mã số thuế ' + x.mst + ' đã có ở hồ sơ khác');
     if (x.mst && !/^\d{10}(-?\d{3})?$/.test(x.mst.replace(/\s/g, ''))) e.push('Mã số thuế phải có 10 hoặc 13 chữ số');
     if (x.loai === 'phapnhan' && (x.kyHD.vanChuyen || x.kyHD.nhanCong) && !x.daiDien) e.push('Pháp nhân có quyền ký hợp đồng phải khai người đại diện');
-    if (x.loai === 'thenhan' && !x.nguoi.length) e.push('Thể nhân phải có ít nhất một người trong bảng Đối tác');
+    if (x.loai === 'thenhan' && !x.nguoi.length) e.push('Thể nhân phải có ít nhất một người trong phần Thông tin cá nhân');
     const cccdLo = new Map();
     x.nguoi.forEach((p, i) => {
       const lb = 'Người ' + (i + 1) + (p.hoTen ? ' (' + p.hoTen + ')' : '');

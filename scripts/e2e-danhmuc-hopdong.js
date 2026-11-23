@@ -23,7 +23,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 1. nhân công: chọn từ danh mục
   await open('nc'); await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
   const opts = await w.$$eval('#ncDm option', o => o.map(x => x.textContent.trim()));
-  ok('ô chọn người lấy từ Danh mục lao động', opts.some(x => /LÊ THỢ CƯA/.test(x)) && !opts.some(x => /TỔ TRƯỞNG B/.test(x)), opts.join('|'));
+  ok('ô chọn người lấy từ Danh mục đối tượng', opts.some(x => /LÊ THỢ CƯA/.test(x)) && !opts.some(x => /TỔ TRƯỞNG B/.test(x)), opts.join('|'));
   await w.selectOption('#ncDm', '049085007002'); await w.waitForTimeout(300);
   const v = await w.$eval('#stForm', f => ({ten: f.ten.value, cccd: f.cccd.value, diaChi: f.diaChi.value, noiCap: f.noiCap.value, vaiTro: f.vaiTro.value, chucDanh: f.chucDanh.value, danhXung: f.danhXung.value}));
   ok('chọn người: điền sẵn thông tin, chức vụ → vai trò, vị trí → chức danh, giới tính → danh xưng', v.ten === 'LÊ THỢ CƯA' && v.diaChi === 'Quế Sơn' && v.noiCap === 'CA QN' && v.vaiTro === 'Công nhân' && v.chucDanh === 'Công nhân khai thác' && v.danhXung === 'Ông', JSON.stringify(v));
