@@ -24,7 +24,7 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   ok('Cài đặt và Danh mục nằm trên thanh chính, không còn menu “⋯ Thêm”', await w.isVisible('#navSet') && await w.isVisible('#navDm') && !(await w.$('#moreMenu')));
   await w.click('#navSet'); await w.waitForSelector('#setTab_setbk');
   const setTabs = await w.$$eval('[id^=setTab_]', e => e.map(x => x.id.slice(7)));
-  ok('Cài đặt có Giao diện, Hướng dẫn, Sao lưu và khôi phục', ['setgd', 'sethd', 'setbk'].every(k => setTabs.includes(k)), setTabs.join());
+  ok('Cài đặt có Hiển thị (gồm Giao diện, PR C), Hướng dẫn, Sao lưu và khôi phục', ['setfmt', 'sethd', 'setbk'].every(k => setTabs.includes(k)), setTabs.join());
   await w.click('#navDm'); await w.click('#setTab_setdt'); await w.waitForSelector('#dtBang');
   const dmTabs = await w.$$eval('[id^=setTab_]', e => e.map(x => x.id.slice(7)));
   ok('Danh mục có Đối tượng, Xe vận chuyển, Vị trí, Công ty mua hàng', ['setdt', 'setxe', 'setvt', 'cty'].every(k => dmTabs.includes(k)), dmTabs.join());

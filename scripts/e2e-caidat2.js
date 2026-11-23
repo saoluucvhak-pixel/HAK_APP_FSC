@@ -17,7 +17,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('menu ngang có “Cài đặt”, không còn “Công ty mua hàng”', !!(await w.$('header.top .nav #navSet')) && !(await w.$('header.top .nav [data-act=openCty]')) && !/Công ty mua hàng/.test(await w.innerText('header.top .nav')));
   await w.click('#navSet'); await w.waitForSelector('#setBox');
   const muc = await w.$$eval('[id^=setTab_]', b => b.map(x => x.textContent));   // 3.0: thêm Danh mục đối tượng, Danh mục xe, Vị trí, Giao diện, Hướng dẫn, Cần đối chiếu
-  ok('Cài đặt có các mục: Hệ thống, Sao lưu và khôi phục, Google Sheets, Hiển thị số (và các mục 3.0)', ['Hệ thống', 'Sao lưu và khôi phục', 'Google Sheets', 'Hiển thị số'].every(x => muc.includes(x)), muc.join('|'));
+  ok('Cài đặt có các mục (tab ngang, PR C): Dữ liệu, Sao lưu và khôi phục, Google Sheets, Hiển thị (và các mục 3.0)', ['Dữ liệu', 'Sao lưu và khôi phục', 'Google Sheets', 'Hiển thị'].every(x => muc.includes(x)), muc.join('|'));
   // 2. Google Sheets: địa chỉ nằm trong Cài đặt
   await w.click('#setTab_setgs'); await w.waitForSelector('#setGsLink');
   const url = 'https://docs.google.com/spreadsheets/d/ABCDEFG1234567890/edit?usp=sharing';

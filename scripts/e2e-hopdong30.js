@@ -124,7 +124,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
       await w.setViewportSize({width, height: 768});
       for (const theme of ['light', 'dark']) {
         await w.click('#navSet');
-        await w.click('#setTab_setgd');
+        await w.click('#setTab_setfmt'); await w.click('#setTab_setgd');
         if (await w.evaluate(() => document.documentElement.dataset.theme) !== theme) await w.click('#themeBtn2');
         const shot = name => w.screenshot({path: path.join(process.env.SHOTS, width + '-' + theme + '-' + name + '.png')});
         await shot('cai-dat');

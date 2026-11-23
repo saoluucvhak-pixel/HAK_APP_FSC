@@ -2,7 +2,8 @@
  * Một nơi xem mọi bản sao lưu trên máy (tự động hằng ngày, sao lưu toàn bộ, bản tự tạo trước khi nâng cấp / khôi phục / xóa): thời điểm, loại, dung lượng;
  * kiểm tra từng bản có dùng được không; khôi phục toàn bộ từ bản .sqlite (có xem trước số liệu, phần mềm sao lưu dữ liệu hiện tại trước khi ghi) hoặc bản .json
  * (qua màn xem trước sẵn có); xóa bản cũ để giải phóng ổ đĩa. Nhãn trạng thái sao lưu ở thanh ngữ cảnh mở thẳng màn này. */
-const ksl = {d: null, msg: null, loc: '', kiem: {}, busy: false, st: null};
+const ksl = {d: null, msg: null, loc: '', kiem: {}, busy: false, st: null, tab: 'thaotac'};   // tab: tab con đang mở của “Sao lưu và khôi phục” (PR C), nhớ trong phiên
+const SB_TABS = [['thaotac', 'Thao tác'], ['thumuc', 'Thư mục và lịch'], ['ban', 'Các bản sao lưu']];
 const kslMB = b => b >= 1073741824 ? (b / 1073741824).toFixed(2).replace('.', ',') + ' GB' : b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.ceil(b / 1024)) + ' KB';
 const kslNgay = iso => { const d = new Date(iso), n = Math.round((new Date(new Date().toDateString()) - new Date(d.toDateString())) / 86400000); return n <= 0 ? 'hôm nay' : n === 1 ? 'hôm qua' : n + ' ngày trước'; };
 /* dữ liệu vừa bị THAY từ nơi khác (khôi phục toàn bộ, khôi phục lô, khôi phục từ kho): bản nháp và dấu “chưa lưu” cũ không còn đích; bản đã lưu = đúng dữ liệu vừa nạp.
@@ -22,7 +23,11 @@ function panelKhoSaoLuu() {
   if (!HB) return kslNut() + '<div class="card"><div class="msg warn">Kho sao lưu (các bản .sqlite tự động) chỉ có ở bản cài trên Windows.</div></div>';
   const m = ksl.msg || setg.msg;
   const msgHtml = m ? '<div class="msg ' + m[1] + '" id="kslMsg"><span id="setMsg">' + esc(m[0]) + '</span></div>' : '';
-  return kslNut() + '<div class="card"><h2 style="margin-top:0">Kho sao lưu và cài đặt sao lưu</h2>' + msgHtml + '<div id="kslBox" class="mut">Đang đọc thư mục sao lưu…</div></div>';
+  if (!SB_TABS.some(t => t[0] === ksl.tab)) ksl.tab = 'thaotac';
+  const pane = (k, inner) => '<section data-sbpane="' + k + '" id="sbPane_' + k + '"' + (ksl.tab === k ? '' : ' hidden') + '>' + inner + '</section>';   // ẩn bằng hidden: phần tử vẫn có trong trang, chữ gõ dở không mất khi đổi tab
+  return msgHtml + '<nav class="hak-catalog-tabs sub" id="sbTabs" aria-label="Sao lưu và khôi phục">' + SB_TABS.map(([k, l]) => '<button type="button" data-sbtab="' + k + '" id="sbTab_' + k + '"' + (ksl.tab === k ? ' aria-current="page"' : '') + '>' + l + '</button>').join('') + '</nav>' +
+    pane('thaotac', kslNut() + '<div class="card"><h2 style="margin-top:0">Kho sao lưu và cài đặt sao lưu</h2><div id="kslBox" class="mut">Đang đọc thư mục sao lưu…</div></div>') +
+    pane('thumuc', '<div id="kslBoxB" class="mut">Đang đọc cài đặt sao lưu…</div>') + pane('ban', '<div id="kslBoxC" class="mut">Đang đọc thư mục sao lưu…</div>');
 }
 function kslPaint() {
   const box = document.getElementById('kslBox'), d = ksl.d; if (!box || !d) return;
@@ -61,7 +66,10 @@ function kslPaint() {
     (d.loi && d.loi.length ? '<div class="msg warn" style="margin-top:6px">Không đọc được: ' + d.loi.map(x => esc(x.dir) + ' (' + esc(x.error) + ')').join('; ') + '</div>' : '') +
     '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn" data-act="backup" id="kslToanBo">Sao lưu toàn bộ ngay</button><button class="btn ghost" data-act="kslAuto" id="kslAutoBtn"' + (au.keep ? '' : ' disabled') + '>Tự sao lưu ngay</button>' +
     '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button><button class="btn ghost" data-act="kslTai">Tải lại danh sách</button></div></div>' +
-    sqlCard + jsonCard + remindCard +
+    remindCard;
+  const boxB = document.getElementById('kslBoxB'), boxC = document.getElementById('kslBoxC');
+  if (boxB) { boxB.className = ''; boxB.innerHTML = sqlCard + jsonCard; }
+  if (boxC) { boxC.className = ''; boxC.innerHTML =
     '<div class="card" style="margin:10px 0"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Các bản sao lưu trên máy</h3>' +
     '<span class="mut" id="kslTong">' + d.tong.soBan + ' bản · ' + kslMB(d.tong.bytes) + '</span></div>' +
     (d.items.length ? '<div class="row" style="margin:8px 0;gap:8px;align-items:center"><label style="flex-direction:row;gap:6px;align-items:center">Loại <select id="kslLoc"><option value="">Tất cả (' + d.items.length + ')</option>' + loai.map(([m, t]) => '<option value="' + esc(m) + '"' +
@@ -75,7 +83,7 @@ function kslPaint() {
           '<td style="white-space:nowrap"><button class="btn ghost sm" data-act="kslKiem" data-i="' + i + '">Kiểm tra</button> <button class="btn ghost sm" data-act="kslKhoiPhuc" data-i="' + i + '">Khôi phục…</button> <button class="btn danger sm" data-act="kslXoa" data-i="' + i + '">Xóa</button></td></tr>';
           }).join('') + '</table></div>' +
       '<p class="mut" style="margin:8px 0 0">Khôi phục từ bản .sqlite thay <b>toàn bộ</b> hồ sơ trên máy bằng bản đó (có xem trước; dữ liệu hiện tại được sao lưu trước khi ghi nên hoàn tác được bằng chính màn này). Bản .json mở màn xem trước cho phép chọn giữ / ghi đè / giữ cả hai. Bản “Trước khi…” do phần mềm tự tạo trước mỗi thao tác lớn; loại “Trước khi khôi phục”, “Trước khi khôi phục lô”, “Trước khi xóa” tự giữ 20 bản gần nhất.</p>'
-      : '<p class="mut" id="kslTrong">Chưa có bản sao lưu nào trong thư mục sao lưu.</p>') + '</div>';
+      : '<p class="mut" id="kslTrong">Chưa có bản sao lưu nào trong thư mục sao lưu.</p>') + '</div>'; }
   ksl.hien = items;
   const sel = document.getElementById('kslLoc'); if (sel) sel.addEventListener('change', () => { ksl.loc = sel.value; kslPaint(); });
   const ckEl = document.getElementById('setAutoChuKy');
@@ -178,4 +186,11 @@ document.addEventListener('keydown', e => {
     const r = await window.__stSaveCurrent();
     if (r && r.ok === false && r.error) note('Chưa lưu được: ' + r.error, 'err');
   }, 0);
+});
+/* PR C: đổi tab con của Sao lưu và khôi phục (không vẽ lại: chỉ hiện / ẩn khung, nhớ tab trong phiên) */
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest && e.target.closest('[data-sbtab]'); if (!b) return;
+  ksl.tab = b.dataset.sbtab;
+  document.querySelectorAll('[data-sbpane]').forEach(x => { x.hidden = x.dataset.sbpane !== ksl.tab; });
+  document.querySelectorAll('[data-sbtab]').forEach(x => { if (x.dataset.sbtab === ksl.tab) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
 });
