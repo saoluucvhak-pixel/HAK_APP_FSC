@@ -24,14 +24,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 
   // 1. người có vai trò Tài xế (và một người chỉ Nhân công để thử lọc)
   await w.click('#navDm'); await w.click('#setTab_setdt'); await w.waitForSelector('#dtBang');
-  await w.click('#dtThem'); await w.waitForSelector('#dtForm');
-  await set('#dtForm', {ten: 'NGUYỄN VĂN LÁI', diaChi: 'Quế Sơn', sdt: '0905111222'});
-  await w.click('#ngThem'); await w.waitForSelector('#ngForm');
-  await set('#ngForm', {hoTen: 'NGUYỄN VĂN LÁI', cccd: '049085001234', ngayCap: '01/01/2021', noiCap: 'Cục CS QLHC', diaChi: 'Quế Sơn', gioiTinh: 'Nam', vtTaiXe: true, gplx: 'GP-777', hanGplx: '01/01/2030'});
-  await w.click('#ngLuu'); await w.waitForTimeout(200); await w.click('#dtLuu'); await w.waitForTimeout(400);
-  await w.click('#dtThem'); await w.waitForSelector('#dtForm'); await set('#dtForm', {ten: 'TỔ CƯA TRẦN SƠN'});
-  await w.click('#ngThem'); await w.waitForSelector('#ngForm'); await set('#ngForm', {hoTen: 'TRẦN SƠN', cccd: '049085000001', vtNhanCong: true});
-  await w.click('#ngLuu'); await w.waitForTimeout(200); await w.click('#dtLuu'); await w.waitForTimeout(400);
+  await w.click('#cnThem'); await w.waitForSelector('#dtForm');
+  await set('#dtForm', {ten: 'NGUYỄN VĂN LÁI', diaChi: 'Quế Sơn', sdt: '0905111222', hoTen: 'NGUYỄN VĂN LÁI', cccd: '049085001234', ngayCap: '01/01/2021', noiCap: 'Cục CS QLHC', gioiTinh: 'Nam', vtTaiXe: true, gplx: 'GP-777', hanGplx: '01/01/2030'});
+  await w.click('#dtLuu'); await w.waitForTimeout(400);
+  await w.click('#cnThem'); await w.waitForSelector('#dtForm'); await set('#dtForm', {ten: 'TỔ CƯA TRẦN SƠN', hoTen: 'TRẦN SƠN', cccd: '049085000001', vtNhanCong: true});
+  await w.click('#dtLuu'); await w.waitForTimeout(400);
   let D1 = await dbAll(), ng = ((D1.dmDoiTuong || []).find(o => o.ten === 'NGUYỄN VĂN LÁI') || {nguoi: [{}]}).nguoi[0];
   ok('có người vai trò Tài xế trong Danh mục đối tượng', !!ng.id && ng.vaiTro && ng.vaiTro.taiXe, JSON.stringify(ng));
 

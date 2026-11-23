@@ -30,15 +30,13 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   ok('Danh mục có Đối tượng, Xe vận chuyển, Vị trí, Công ty mua hàng', ['setdt', 'setxe', 'setvt', 'cty'].every(k => dmTabs.includes(k)), dmTabs.join());
 
   // 2. thể nhân, một người vừa Tài xế vừa Chủ xe
-  await w.click('#dtThem'); await w.waitForSelector('#dtForm');
-  await set('#dtForm', {ten: 'HỘ KINH DOANH LÊ VĂN XE', diaChi: 'Quế Sơn', sdt: '0905111222'});
-  await w.click('#ngThem'); await w.waitForSelector('#ngForm');
-  await set('#ngForm', {hoTen: 'LÊ VĂN XE', cccd: '049085000077', ngayCap: '01/01/2021', noiCap: 'Cục CS QLHC', diaChi: 'Quế Sơn', gioiTinh: 'Nam', vtTaiXe: true, vtChuXe: true, kyVC: true});
-  await w.click('#ngLuu'); await w.waitForTimeout(200);
-  ok('tài xế thiếu GPLX: hộp thoại báo lỗi, chưa thêm', await w.isVisible('#ngForm') && /giấy phép|GPLX/i.test(await w.innerText('#ngLoi')), await w.innerText('#ngLoi').catch(() => ''));
-  await set('#ngForm', {gplx: 'GP-777', hanGplx: '01/01/2030'}); await w.click('#ngLuu'); await w.waitForTimeout(200);
-  const ngT = await w.innerText('#dtNguoiTbl'); ok('thêm người: bảng Thông tin cá nhân hiện người với vai trò Tài xế, Chủ xe', !(await w.isVisible('#ngForm')) && /LÊ VĂN XE/.test(ngT) && /Tài xế/.test(ngT) && /Chủ xe/.test(ngT), ngT);
-  await w.click('#dtLuu'); await w.waitForTimeout(500);
+  await w.click('#cnThem'); await w.waitForSelector('#dtForm');   // giao diện mới: cá nhân MỘT form (không còn bước thêm người vào bảng con)
+  ok('form cá nhân một lớp: không có bảng con #dtNguoiTbl và nút “Thêm người”', !(await w.$('#dtNguoiTbl')) && !(await w.$('#ngThem')));
+  await set('#dtForm', {ten: 'HỘ KINH DOANH LÊ VĂN XE', diaChi: 'Quế Sơn', sdt: '0905111222', hoTen: 'LÊ VĂN XE', cccd: '049085000077', ngayCap: '01/01/2021', noiCap: 'Cục CS QLHC', gioiTinh: 'Nam', vtTaiXe: true, vtChuXe: true, kyVC: true});
+  await w.click('#dtLuu'); await w.waitForTimeout(200);
+  ok('tài xế thiếu GPLX: báo lỗi trong form, chưa lưu', await w.isVisible('#dtForm') && /giấy phép|GPLX/i.test(await w.innerText('#dtLoi')), await w.innerText('#dtLoi').catch(() => ''));
+  await set('#dtForm', {gplx: 'GP-777', hanGplx: '01/01/2030'}); await w.click('#dtLuu'); await w.waitForTimeout(500);
+  const ngT = await w.innerText('#dtBang'); ok('lưu cá nhân: danh sách hiện người với vai trò Tài xế, Chủ xe', !(await w.isVisible('#dtForm')) && /LÊ VĂN XE/.test(ngT) && /Tài xế/.test(ngT) && /Chủ xe/.test(ngT), ngT);
   let D = await dbAll(), o1 = (D.dmDoiTuong || []).find(o => o.ten === 'HỘ KINH DOANH LÊ VĂN XE');
   ok('lưu vào SQLite: thể nhân có mã tự cấp, người có ID, vai trò Tài xế + Chủ xe, ký Vận chuyển', !!o1 && /^DT\d{4}$/.test(o1.ma) && o1.loai === 'thenhan' && o1.nguoi.length === 1 && !!o1.nguoi[0].id && o1.nguoi[0].vaiTro.taiXe && o1.nguoi[0].vaiTro.chuXe && o1.nguoi[0].kyHD.vanChuyen, JSON.stringify(o1));
   ok('CCCD lưu dạng văn bản, giữ số 0 đầu', !!o1 && o1.nguoi[0].cccd === '049085000077');
@@ -48,13 +46,13 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   await loc('tatca');
 
   // 3. CCCD trùng ở đối tượng khác bị chặn
-  await w.click('#dtThem'); await set('#dtForm', {ten: 'TỔ CƯA TRẦN SƠN'}); await w.click('#ngThem'); await w.waitForSelector('#ngForm');
-  await set('#ngForm', {hoTen: 'TRẦN SƠN', cccd: '049085000077', vtNhanCong: true}); await w.click('#ngLuu'); await w.waitForTimeout(200);
-  ok('CCCD đã có ở đối tượng khác: báo trùng, không thêm', await w.isVisible('#ngForm') && /trùng|đã có/i.test(await w.innerText('#ngLoi')), await w.innerText('#ngLoi').catch(() => ''));
-  await set('#ngForm', {cccd: '049085000001'}); await w.click('#ngLuu'); await w.waitForTimeout(200); await w.click('#dtLuu'); await w.waitForTimeout(400);
+  await w.click('#cnThem'); await w.waitForSelector('#dtForm');
+  await set('#dtForm', {ten: 'TỔ CƯA TRẦN SƠN', hoTen: 'TRẦN SƠN', cccd: '049085000077', vtNhanCong: true}); await w.click('#dtLuu'); await w.waitForTimeout(200);
+  ok('CCCD đã có ở đối tượng khác: báo trùng, không lưu', await w.isVisible('#dtForm') && /trùng|đã có/i.test(await w.innerText('#dtLoi')), await w.innerText('#dtLoi').catch(() => ''));
+  await set('#dtForm', {cccd: '049085000001'}); await w.click('#dtLuu'); await w.waitForTimeout(400);
 
   // 4. pháp nhân có quyền ký phải khai người đại diện
-  await w.click('#dtThem'); await w.selectOption('#dtLoai', 'phapnhan'); await w.waitForTimeout(200);
+  await w.click('#dnThem'); await w.waitForSelector('#dtForm');
   await set('#dtForm', {ten: 'CÔNG TY TNHH VẬN TẢI A', mst: '0401234567', diaChi: 'Đà Nẵng', kyHD: 'vc'}); await w.click('#dtLuu'); await w.waitForTimeout(300);
   ok('pháp nhân ký Vận chuyển thiếu người đại diện: báo lỗi, giữ nguyên dữ liệu đang nhập', await w.isVisible('#dtLoi') && /đại diện/.test(await w.innerText('#dtLoi')) && (await w.inputValue('#dtForm [name=mst]')) === '0401234567');
   await set('#dtForm', {daiDien: 'NGUYỄN VĂN B', chucVuDaiDien: 'Giám đốc'}); await w.click('#dtLuu'); await w.waitForTimeout(400);

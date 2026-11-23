@@ -88,10 +88,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await muc('chung'); await w.waitForSelector('#hdForm');
   await w.click('#hdForm [data-act=openSetDt][data-quaylai]'); await w.waitForSelector('#veLaiBar');
   ok('mở Danh mục đối tượng từ hợp đồng: có thanh “Quay lại”, không hỏi lưu / bỏ', await w.isVisible('#veLaiBtn') && !(await w.isVisible('#roiLuu').catch(() => false)));
-  await w.click('#dtThem'); await w.fill('#dtForm [name=ten]', 'HỘ KINH DOANH VẬN TẢI CHÍN');
-  await w.click('#ngThem'); await w.waitForSelector('#ngForm');
-  await w.evaluate(() => { const f = document.getElementById('ngForm'); f.elements.hoTen.value = 'PHẠM VĂN CHÍN'; f.elements.cccd.value = '049085000099'; f.elements.vtChuXe.checked = true; f.elements.kyVC.checked = true; });
-  await w.click('#ngLuu'); await w.waitForTimeout(150); await w.click('#dtLuu'); await w.waitForTimeout(400);
+  await w.click('#cnThem'); await w.waitForSelector('#dtForm'); await w.fill('#dtForm [name=ten]', 'HỘ KINH DOANH VẬN TẢI CHÍN');
+  await w.evaluate(() => { const f = document.getElementById('dtForm'); f.elements.hoTen.value = 'PHẠM VĂN CHÍN'; f.elements.cccd.value = '049085000099'; f.elements.vtChuXe.checked = true; f.elements.kyVC.checked = true; });
+  await w.click('#dtLuu'); await w.waitForTimeout(400);
   await w.click('#veLaiBtn'); await w.waitForSelector('#hdDau');
   ok('“Quay lại”: về đúng hợp đồng vận chuyển đang mở', !!(await w.$('#hdForm')) && /R-A/.test(await w.innerText('#loCrumb')));
   const ky = await w.$$eval('#hdForm [name=ky] option', o => o.map(x => x.textContent));
@@ -104,10 +103,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lưu xong vẫn ở hợp đồng đang mở', !!(await w.$('#hdDau')));
 
   // 4. hợp đồng nhân công giao khoán: bên nhận khoán chọn từ Danh mục đối tượng (quyền ký Nhân công), lưu theo ID
-  await (async () => { if (await w.$('#navDm')) await w.click('#navDm'); else await w.click('#navSet'); })(); await w.click('#setTab_setdt'); await w.click('#dtThem'); await w.fill('#dtForm [name=ten]', 'TỔ KHAI THÁC TRẦN SƠN');
-  await w.click('#ngThem'); await w.waitForSelector('#ngForm');
-  await w.evaluate(() => { const f = document.getElementById('ngForm'); f.elements.hoTen.value = 'TRẦN SƠN'; f.elements.cccd.value = '049085000123'; f.elements.vtNhanCong.checked = true; f.elements.kyNC.checked = true; });
-  await w.click('#ngLuu'); await w.waitForTimeout(150); await w.click('#dtLuu'); await w.waitForTimeout(400);
+  await (async () => { if (await w.$('#navDm')) await w.click('#navDm'); else await w.click('#navSet'); })(); await w.click('#setTab_setdt'); await w.click('#cnThem'); await w.waitForSelector('#dtForm'); await w.fill('#dtForm [name=ten]', 'TỔ KHAI THÁC TRẦN SƠN');
+  await w.evaluate(() => { const f = document.getElementById('dtForm'); f.elements.hoTen.value = 'TRẦN SƠN'; f.elements.cccd.value = '049085000123'; f.elements.vtNhanCong.checked = true; f.elements.kyNC.checked = true; });
+  await w.click('#dtLuu'); await w.waitForTimeout(400);
   await moRung(); await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
   if (!(await w.$('#hdDau'))) { await w.click('#dsHdNcTbl tbody tr[data-act]'); await w.waitForTimeout(200); }
   await muc('chung');

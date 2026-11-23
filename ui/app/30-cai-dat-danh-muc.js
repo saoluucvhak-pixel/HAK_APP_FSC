@@ -60,11 +60,20 @@ const selKy = (name, v) => '<select name="' + name + '">' + [['', 'Không'], ['v
 const fld30 = (name, label, v, o) => { o = o || {};
 return '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span' + (o.req ? ' class="req"' : '') + '>' + label + '</span><input name="' + name + '" value="' + esc(v == null ? '' : v) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + ' autocomplete="off"></label>'; };
 banNhapUI.push({ten: 'Hồ sơ đối tượng đang sửa', dirty: () => !!cd.sua && JSON.stringify(dtDocForm()) !== cd.goc, luu: () => dtLuu(), bo: () => { cd.sua = null; cd.loi = []; }});
+/* thể nhân MỘT lớp: tối đa một người → form "Thêm cá nhân" gom thông tin người ngay trong form; nhiều hơn một người (dữ liệu cũ) → giữ bảng con để sửa đủ mọi người */
+const dtMot = x => !!x && x.loai !== 'phapnhan' && (x.nguoi || []).length <= 1;
+const cb30 = (k, t, o) => '<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="' + k + '"' + (o ? ' checked' : '') + '> ' + t + '</label>';
 function dtDocForm() {
   const fm = document.getElementById('dtForm'); if (!fm || !cd.sua) return cd.sua;
-  const g = n => (fm.elements[n] ? fm.elements[n].value : ''), x = Object.assign({}, cd.sua);
+  const g = n => (fm.elements[n] ? fm.elements[n].value : ''), c = n => !!(fm.elements[n] && fm.elements[n].checked), x = Object.assign({}, cd.sua);
   ['ma', 'ten', 'mst', 'diaChi', 'sdt', 'daiDien', 'chucVuDaiDien'].forEach(k => { if (fm.elements[k]) x[k] = trim(g(k)); });
-  if (fm.elements.loai) x.loai = g('loai'); if (fm.elements.kyHD) x.kyHD = kyTu(g('kyHD'));
+  if (fm.elements.kyHD) x.kyHD = kyTu(g('kyHD'));
+  if (fm.elements.hoTen) {   // thể nhân một lớp: người duy nhất đọc từ chính form; tên đối tượng mặc định là họ tên; địa chỉ, SĐT dùng chung đối tượng và người
+    const cu = (cd.sua.nguoi || [])[0] || {}, p = Object.assign({}, cu, {hoTen: g('hoTen'), cccd: g('cccd'), ngayCap: g('ngayCap'), noiCap: g('noiCap'), hanCccd: g('hanCccd'), gioiTinh: g('gioiTinh'), ngaySinh: g('ngaySinh'), gplx: g('gplx'), hanGplx: g('hanGplx'), viTriId: g('viTriId'), chucDanhKy: g('chucDanhKy'),
+      diaChi: x.diaChi, sdt: x.sdt, vaiTro: {nhanCong: c('vtNhanCong'), taiXe: c('vtTaiXe'), chuXe: c('vtChuXe')}, kyHD: {vanChuyen: c('kyVC'), nhanCong: c('kyNC')}});
+    ['hoTen', 'cccd', 'ngayCap', 'noiCap', 'hanCccd', 'ngaySinh', 'gplx', 'hanGplx', 'chucDanhKy'].forEach(k => { p[k] = trim(p[k]); });
+    x.nguoi = [p]; x.ten = x.ten || p.hoTen; x.loai = 'thenhan';
+  }
   return x;
 }
 /* cấu hình Smart Filter của Danh mục đối tượng (tách riêng để kiểm bằng unit): "Nhóm" là trường chọn nhanh, kết quả GIỐNG HỆT HAKDoiTuong.loc;
@@ -105,28 +114,37 @@ function panelSetDt() {
   const bang = '<div class="wrap" id="dtWrap" style="max-height:min(60vh,520px)"><table id="dtBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Mã</th><th>Tên đối tượng</th><th>Loại</th><th>MST</th><th>Địa chỉ</th><th>SĐT</th><th>Ký hợp đồng</th><th>Người · vai trò</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(o => '<tr data-dt="' + esc(o.id) + '"><td>' + esc(o.ma) + '</td><td><b>' + esc(o.ten) + '</b></td><td>' + HAKDoiTuong.LOAI[o.loai] + '</td><td>' + esc(o.mst) + '</td><td>' + esc(o.diaChi) + '</td><td>' + esc(o.sdt) + '</td><td>' +
       esc(o.loai === 'phapnhan' ? HAKDoiTuong.kyText(o.kyHD) : HAKDoiTuong.kyText({vanChuyen: (o.nguoi || []).some(p => p.kyHD && p.kyHD.vanChuyen), nhanCong: (o.nguoi || []).some(p => p.kyHD && p.kyHD.nhanCong)})) + '</td><td>' +
-      (o.nguoi || []).map(p => esc(p.hoTen) + (HAKDoiTuong.vaiText(p.vaiTro) ? ' <small class="mut">(' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + ')</small>' : '')).join('<br>') + '</td>' +
+      (o.nguoi || []).map(p => esc(p.hoTen) + Object.keys(HAKDoiTuong.VAI_TRO).filter(k => p.vaiTro && p.vaiTro[k]).map(k => ' <span class="pill" data-vai="' + k + '">' + esc(HAKDoiTuong.VAI_TRO[k]) + '</span>').join('')).join('<br>') + '</td>' +
       '<td style="white-space:nowrap"><button class="btn ghost sm" data-dtsua="' + esc(o.id) + '">Sửa</button> <button class="btn ghost sm" data-dtngung="' + esc(o.id) + '">' + (o.ngung ? 'Dùng lại' : 'Ngừng') + '</button></td></tr>').join('')
       : '<tr><td colspan="9" class="mut" id="dtTrong">Không có đối tượng nào' + (sfOn ? ' khớp bộ lọc' : '') + '.</td></tr>') + '</tbody></table></div>';
-  const form = !x ? '' : '<form id="dtForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa đối tượng ' + esc(x.ma) : 'Thêm đối tượng') + '</h3>' +
+  const mot = dtMot(x), p0 = mot ? ((x.nguoi || [])[0] || {hoTen: '', vaiTro: {}, kyHD: {}}) : null, pn = !!x && x.loai === 'phapnhan';
+  const tieuDe = !x ? '' : x.id ? 'Sửa ' + (pn ? 'doanh nghiệp ' : mot ? 'cá nhân ' : 'đối tượng ') + esc(x.ma) : pn ? 'Thêm doanh nghiệp' : 'Thêm cá nhân';
+  const khoiMot = !mot ? '' : fld30('hoTen', 'Họ tên', p0.hoTen, {req: true}) + fld30('cccd', 'Số CCCD', p0.cccd) + fld30('ngayCap', 'Ngày cấp (dd/mm/yyyy)', p0.ngayCap) + fld30('noiCap', 'Nơi cấp', p0.noiCap) + fld30('hanCccd', 'Hạn CCCD', p0.hanCccd) +
+    fld30('ngaySinh', 'Ngày sinh', p0.ngaySinh) + '<label><span>Giới tính</span><select name="gioiTinh"><option></option><option' + (p0.gioiTinh === 'Nam' ? ' selected' : '') + '>Nam</option><option' + (p0.gioiTinh === 'Nữ' ? ' selected' : '') + '>Nữ</option></select></label>' +
+    fld30('diaChi', 'Địa chỉ thường trú', p0.diaChi || x.diaChi) + fld30('sdt', 'Số điện thoại', p0.sdt || x.sdt) + fld30('gplx', 'Số giấy phép lái xe', p0.gplx) + fld30('hanGplx', 'Hạn GPLX', p0.hanGplx) +
+    '<label><span>Vị trí mặc định</span><select name="viTriId"><option value="">—</option>' + dmVT().filter(v => !v.ngung || v.id === p0.viTriId).map(v => '<option value="' + esc(v.id) + '"' + (v.id === p0.viTriId ? ' selected' : '') + '>' + esc(v.ten) + '</option>').join('') + '</select></label>' +
+    fld30('chucDanhKy', 'Chức danh khi ký (nếu có)', p0.chucDanhKy);
+  const form = !x ? '' : '<form id="dtForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + tieuDe + '</h3>' +
     (cd.loi.length ? '<div class="msg err" id="dtLoi">' + cd.loi.map(esc).join('<br>') + '</div>' : '') +
-    '<div class="grid">' + fld30('ma', 'Mã đối tượng (trống: tự cấp)', x.ma) + fld30('ten', 'Tên đối tượng', x.ten, {req: true}) +
-    '<label><span>Loại</span><select name="loai" id="dtLoai"><option value="thenhan"' + (x.loai !== 'phapnhan' ? ' selected' : '') + '>Thể nhân</option><option value="phapnhan"' + (x.loai === 'phapnhan' ? ' selected' : '') + '>Pháp nhân</option></select></label>' +
-    fld30('mst', 'Mã số thuế', x.mst) + fld30('diaChi', x.loai === 'phapnhan' ? 'Địa chỉ trụ sở' : 'Địa chỉ thường trú', x.diaChi) + fld30('sdt', 'Số điện thoại', x.sdt) +
-    (x.loai === 'phapnhan' ? '<label><span>Ký hợp đồng</span>' + selKy('kyHD', kyChon(x.kyHD || {})) + '</label>' + fld30('daiDien', 'Người đại diện', x.daiDien) + fld30('chucVuDaiDien', 'Chức danh người đại diện', x.chucVuDaiDien) : '') + '</div>' +
-    (x.loai !== 'phapnhan' ? '<h4 style="margin:12px 0 6px">Thông tin cá nhân</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Vai trò</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
-      ((x.nguoi || []).length ? x.nguoi.map((p, i) => '<tr><td><b>' + esc(p.hoTen) + '</b></td><td>' + esc(p.cccd) + '</td><td>' + esc(p.sdt) + '</td><td>' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + '</td><td>' + esc(HAKDoiTuong.kyText(p.kyHD || {})) + '</td><td>' + esc(ten30(p.viTriId)) + '</td>' +
-        '<td style="white-space:nowrap"><button type="button" class="btn ghost sm" data-ngsua="' + i + '">Sửa</button> <button type="button" class="btn ghost sm" data-ngbo="' + i + '">Bỏ</button></td></tr>').join('') : '<tr><td colspan="7" class="mut">Chưa có người nào: bấm “Thêm người”.</td></tr>') +
+    '<div class="grid">' + (mot ? khoiMot : '') + fld30('ma', 'Mã đối tượng (trống: tự cấp)', x.ma) + fld30('ten', mot ? 'Tên đối tượng (trống: lấy theo họ tên; điền nếu là hộ kinh doanh, tổ…)' : pn ? 'Tên doanh nghiệp' : 'Tên đối tượng', mot && trim(x.ten) === trim(p0.hoTen) ? '' : x.ten, {req: !mot}) +
+    fld30('mst', 'Mã số thuế', x.mst) + (mot ? '' : fld30('diaChi', pn ? 'Địa chỉ trụ sở' : 'Địa chỉ thường trú', x.diaChi) + fld30('sdt', 'Số điện thoại', x.sdt)) +
+    (pn ? '<label><span>Ký hợp đồng</span>' + selKy('kyHD', kyChon(x.kyHD || {})) + '</label>' + fld30('daiDien', 'Người đại diện', x.daiDien) + fld30('chucVuDaiDien', 'Chức danh người đại diện', x.chucVuDaiDien) : '') + '</div>' +
+    (mot ? '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Vai trò:</b>' + cb30('vtNhanCong', 'Nhân công', p0.vaiTro && p0.vaiTro.nhanCong) + cb30('vtTaiXe', 'Tài xế', p0.vaiTro && p0.vaiTro.taiXe) + cb30('vtChuXe', 'Chủ xe', p0.vaiTro && p0.vaiTro.chuXe) + '</div>' +
+      '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px"><b>Quyền ký hợp đồng:</b>' + cb30('kyVC', 'Vận chuyển', p0.kyHD && p0.kyHD.vanChuyen) + cb30('kyNC', 'Nhân công', p0.kyHD && p0.kyHD.nhanCong) + '</div>' : '') +
+    (!pn && !mot ? '<h4 style="margin:12px 0 6px">Thông tin cá nhân (đối tượng có nhiều người)</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Vai trò</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
+      x.nguoi.map((p, i) => '<tr><td><b>' + esc(p.hoTen) + '</b></td><td>' + esc(p.cccd) + '</td><td>' + esc(p.sdt) + '</td><td>' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + '</td><td>' + esc(HAKDoiTuong.kyText(p.kyHD || {})) + '</td><td>' + esc(ten30(p.viTriId)) + '</td>' +
+        '<td style="white-space:nowrap"><button type="button" class="btn ghost sm" data-ngsua="' + i + '">Sửa</button> <button type="button" class="btn ghost sm" data-ngbo="' + i + '">Bỏ</button></td></tr>').join('') +
       '</tbody></table></div><div class="row" style="margin-top:6px"><button type="button" class="btn ghost sm" data-act="ngThem" id="ngThem">+ Thêm người</button></div>' : '') +
     '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="dtLuu">Lưu</button><button class="btn ghost" type="button" data-act="dtHuy" id="dtHuy">Hủy</button></div></form>';
   return '<div class="card"><h3 style="margin-top:0">Danh mục đối tượng</h3>' + (cd.msg ? '<div class="msg ' + cd.msg[1] + '" id="dtMsg">' + esc(cd.msg[0]) + '</div>' : '') +
-    '<p class="mut" style="margin-top:0">Khai báo <b>một lần</b>: pháp nhân (công ty, ký qua người đại diện) hoặc thể nhân (một người, khai ở phần Thông tin cá nhân). Một người có thể vừa là Nhân công, Tài xế, Chủ xe; quyền ký hợp đồng khai riêng. Hợp đồng chỉ hiện đối tượng phù hợp. Khi chọn vào lô, thông tin được chụp lại: sửa danh mục không đổi lô đã lập.</p>' +
+    '<p class="mut" style="margin-top:0">Khai báo <b>một lần</b>: cá nhân (một người, khai ngay trong một form) hoặc doanh nghiệp (công ty, ký qua người đại diện). Một người có thể vừa là Nhân công, Tài xế, Chủ xe; quyền ký hợp đồng khai riêng. Hợp đồng chỉ hiện đối tượng phù hợp. Khi chọn vào lô, thông tin được chụp lại: sửa danh mục không đổi lô đã lập.</p>' +
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">' +
-    '<button class="btn" data-act="dtThem" id="dtThem">+ Thêm đối tượng</button><label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-dtfile="1" hidden></label><button class="btn ghost" data-act="dtMau">Tải file mẫu</button></div>' +
+    '<button class="btn" data-act="cnThem" id="cnThem">+ Thêm cá nhân</button><button class="btn ghost" data-act="dnThem" id="dnThem">+ Thêm doanh nghiệp</button><label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-dtfile="1" hidden></label><button class="btn ghost" data-act="dtMau">Tải file mẫu</button></div>' +
     hakSfBarHtml('dm_doi_tuong', sfRes.total, sfRes.kept) + form + '<div style="margin-top:10px">' + bang + '</div><p class="mut" style="margin:6px 0 0" id="dtDem">' + ds.length + ' đối tượng</p></div>';
 }
-function dtMo(id) { const o = id ? HAKDoiTuong.tim(dmDT(), id) : null; cd.sua = o ? JSON.parse(JSON.stringify(o)) : {id: '', ma: '', ten: '', loai: 'thenhan', kyHD: {}, nguoi: []}; cd.goc = JSON.stringify(cd.sua); cd.loi = []; cd.msg = null; render();
-const f = document.querySelector('#dtForm [name=ten]'); if (f) f.focus(); }
+function dtMo(id, loai) { const o = id ? HAKDoiTuong.tim(dmDT(), id) : null; cd.sua = o ? JSON.parse(JSON.stringify(o)) : {id: '', ma: '', ten: '', loai: loai === 'phapnhan' ? 'phapnhan' : 'thenhan', kyHD: {}, nguoi: []}; cd.loi = []; cd.msg = null; render();
+cd.goc = JSON.stringify(dtDocForm());   // mốc "chưa đổi" lấy từ chính form đã vẽ (cùng cách đọc với lúc kiểm thay đổi)
+const f = document.querySelector('#dtForm [name=hoTen]') || document.querySelector('#dtForm [name=ten]'); if (f) f.focus(); }
 async function dtLuu() {
   const x = dtDocForm(), r = HAKDoiTuong.luu(dmDT(), x, todayStr());
   if (!r.ok) { cd.sua = x; cd.loi = r.errs; render(); return false; }
@@ -134,7 +152,7 @@ async function dtLuu() {
 }
 function ngMo(i) {
   const p = i == null ? {hoTen: '', vaiTro: {}, kyHD: {}} : (cd.sua.nguoi || [])[i]; cd.ngSua = i == null ? -1 : i;
-  const cb = (k, t, o) => '<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="' + k + '"' + (o ? ' checked' : '') + '> ' + t + '</label>';
+  const cb = cb30;
   dlgMo('<form id="ngForm"><h3 style="margin-top:0">' + (i == null ? 'Thêm người' : 'Sửa ' + esc(p.hoTen)) + ' — ' + esc(cd.sua.ten || 'đối tượng mới') + '</h3><div id="ngLoi"></div><div class="grid">' +
     fld30('hoTen', 'Họ tên', p.hoTen, {req: true}) + fld30('cccd', 'Số CCCD', p.cccd) + fld30('ngayCap', 'Ngày cấp (dd/mm/yyyy)', p.ngayCap) + fld30('noiCap', 'Nơi cấp', p.noiCap) + fld30('hanCccd', 'Hạn CCCD', p.hanCccd) +
     fld30('diaChi', 'Địa chỉ thường trú', p.diaChi) + '<label><span>Giới tính</span><select name="gioiTinh"><option></option><option' + (p.gioiTinh === 'Nam' ? ' selected' : '') + '>Nam</option><option' + (p.gioiTinh === 'Nữ' ? ' selected' : '') + '>Nữ</option></select></label>' +
@@ -355,7 +373,7 @@ document.addEventListener('click', e => {
   const a = el.dataset.act;
   if (a === 'roiLuu') return roiXuLy('luu'); if (a === 'roiBo') return roiXuLy('bo'); if (a === 'roiTiep') return roiXuLy('tiep');
   if (a === 'dlgDong') return dlgDong();
-  if (a === 'dtThem') return dtMo(null); if (a === 'dtHuy') { cd.sua = null; cd.loi = []; return render(); } if (a === 'dtMau') return dtMau();
+  if (a === 'cnThem') return dtMo(null, 'thenhan'); if (a === 'dnThem') return dtMo(null, 'phapnhan'); if (a === 'dtHuy') { cd.sua = null; cd.loi = []; return render(); } if (a === 'dtMau') return dtMau();
   if (a === 'dtExcelLuu') return dtExcelLuu(); if (a === 'xeExcelLuu') return xeExcelLuu();
   if (a === 'ngThem') { cd.sua = dtDocForm(); return ngMo(null); }
   if (a === 'xeThem') return xeMo(null); if (a === 'xeHuy') { cd.xe.sua = null; cd.xe.loi = []; return render(); } if (a === 'xeMau') return xeMau();
@@ -380,7 +398,6 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!t) return;
-  if (t.id === 'dtLoai') { cd.sua = Object.assign(dtDocForm(), {loai: t.value}); return render(); }
   if (t.dataset && t.dataset.dtfile && t.files && t.files[0]) { const f = t.files[0]; t.value = ''; return dtExcel(f); }
   if (t.dataset && t.dataset.xefile && t.files && t.files[0]) { const f = t.files[0]; t.value = ''; return xeExcel(f); }
   if (t.dataset && t.dataset.dtxem != null) { cd.dtXem[+t.dataset.dtxem].chon = t.checked; return; }
