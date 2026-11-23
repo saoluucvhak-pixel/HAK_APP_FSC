@@ -38,7 +38,10 @@ function boc(w) {
     if (dangMo) await veMuc(dangMo, oNhap);
     return false;
   };
+  /* PR C: “Sao lưu và khôi phục” chia tab con (Thao tác / Thư mục và lịch / Các bản sao lưu): phần tử nằm ở khung đang ẩn thì mở tab con chứa nó (chỉ đổi thao tác mở tab, như người dùng bấm tab) */
+  const moTabCon = async sel => { if (typeof sel !== 'string') return; const k = await w.evaluate(s => { let e; try { e = document.querySelector(s); } catch (x) { return null; } const p = e && e.closest && e.closest('[data-sbpane][hidden]'); return p ? p.dataset.sbpane : null; }, sel).catch(() => null); if (k) { await goc.click('[data-sbtab="' + k + '"]'); await w.waitForTimeout(80); } };
   const truoc = async sel => {   // phần tử cần thao tác chưa có trên trang chi tiết: quay lại danh sách
+    await moTabCon(sel);
     if (typeof sel !== 'string' || TAB.test(sel)) return;
     try { if (await goc.$(sel)) return; } catch (e) { return; }
     if (await timMuc(sel)) return;
@@ -94,7 +97,9 @@ function boc(w) {
     if (typeof sel !== 'string' || o.state === 'hidden' || o.state === 'detached') return goc.waitForSelector(sel, o);
     const t = o.timeout == null ? 30000 : o.timeout;
     const r = await goc.waitForSelector(sel, {...o, timeout: Math.min(t, 1500)}).catch(() => null); if (r) return r;
-    await timMuc(sel); return goc.waitForSelector(sel, o);
+    await timMuc(sel);
+    let dung = false; const poll = (async () => { const dl = Date.now() + t; while (!dung && Date.now() < dl) { await moTabCon(sel); await w.waitForTimeout(200); } })();   // PR C: phần tử vẽ chậm, nằm ở tab con đang ẩn của Sao lưu và khôi phục: mở tab con chứa nó
+    try { return await goc.waitForSelector(sel, o); } finally { dung = true; await poll.catch(() => {}); }
   };
   return w;
 }

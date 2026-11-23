@@ -343,13 +343,13 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 | Cước | Chỉ hai cách: cố định (đồng/tấn) hoặc tấn/km; tính theo tấn giao tại nhà máy |
 | Tiền công | Tổng theo từng vị trí (phần chia đều × đơn giá vị trí), gồm cả Tổ trưởng |
 
-## Cài đặt: Hệ thống, Google Sheets, Công ty, Hiển thị số
-Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
-- **Hệ thống**: thư mục dữ liệu.
-- **Sao lưu và khôi phục**: bốn thao tác (Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô), thư mục và tự sao lưu SQLite (gộp thư mục thứ hai, chu kỳ, số bản giữ, nút Sao lưu ngay), thư mục sao lưu JSON, nhắc sao lưu và kho sao lưu (mục 10).
+## Cài đặt: Dữ liệu, Sao lưu và khôi phục, Google Sheets, Hiển thị, Hướng dẫn, Cần đối chiếu
+Nút **Cài đặt** ở menu ngang trên cùng mở một hàng **tab ngang** (cùng kiểu Danh mục dùng chung):
+- **Dữ liệu** (trước đây tên “Hệ thống”): thư mục dữ liệu.
+- **Sao lưu và khôi phục**, chia ba tab con: **Thao tác** (bốn nút Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô; tình trạng sao lưu; nhắc sao lưu; cảnh báo ổ đĩa sắp hết), **Thư mục và lịch** (thư mục và tự sao lưu SQLite gồm thư mục thứ hai, chu kỳ, số bản giữ, nút Sao lưu ngay; thư mục sao lưu JSON) và **Các bản sao lưu** (danh sách các bản trên máy: kiểm tra, khôi phục; mục 10). Tab con đang mở được nhớ trong lần làm việc.
 - **Google Sheets**: **địa chỉ bảng tính** dùng cho màn Tra cứu (chỉ đọc). Màn Tra cứu không còn ô nhập địa chỉ; chỉ ghi địa chỉ đang dùng và nút “Đổi trong Cài đặt”.
 - **Công ty**: thông tin **Công ty mua hàng** (một hồ sơ cho cả phần mềm, các địa chỉ giao hàng). Nút Công ty mua hàng không còn ở menu ngang.
-- **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
+- **Hiển thị**: gộp hai tab con **Hiển thị số** và **Giao diện** (chế độ sáng / tối, bảng màu). **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
 
 ## Định mức gỗ keo (1 ha = ? tấn) và nút điền nhanh ở Thông tin rừng
 - **Định mức gỗ keo**: ở màn **Định mức**, mục “Định mức gỗ keo: 1 ha = ? tấn”, mỗi dòng có **hiệu lực từ ngày**. Dòng cuối để thêm định mức mới; ngày phải có thật và không trùng.
@@ -404,7 +404,7 @@ Tab **Xuất hồ sơ** có bảng **Quy trình hồ sơ theo đợt** ở đầ
 
 
 ## Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu
-Mở **Cài đặt → Hệ thống**.
+Mở **Cài đặt → Dữ liệu**.
 - **Thư mục dữ liệu**: nơi lưu cơ sở dữ liệu (`hakqn.sqlite`). Bấm *Chọn thư mục…* để đổi: phần mềm sao chép toàn bộ dữ liệu sang thư mục mới rồi dùng từ đó; **bản cũ không bị xóa** (xóa tay khi chắc chắn không cần). Nếu thư mục mới đã có dữ liệu HAKQN, phần mềm hỏi: dùng dữ liệu có sẵn đó, ghi đè bằng dữ liệu đang dùng (bản có sẵn được lưu lại trước), hoặc hủy. *Về mặc định* đưa dữ liệu về thư mục của ứng dụng.
 - **Thư mục sao lưu**: bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu hằng ngày, **Sao lưu toàn bộ dữ liệu** (lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc USB.
 - Thư mục phải có sẵn và ghi được, nếu không phần mềm báo lỗi và giữ cài đặt cũ. Nếu thư mục đã chọn bị xóa hoặc ổ không còn, phần mềm dùng vị trí mặc định và nêu rõ trong màn Cài đặt.
@@ -416,7 +416,7 @@ Mở **Cài đặt → Hệ thống**.
 
 
 ## Đổi thư mục dữ liệu an toàn, ổ dữ liệu không truy cập được, sao lưu đáng tin cậy
-**Đổi thư mục dữ liệu** (Cài đặt → Hệ thống). Phần mềm làm theo thứ tự và chỉ chuyển khi mọi bước đã qua kiểm tra:
+**Đổi thư mục dữ liệu** (Cài đặt → Dữ liệu). Phần mềm làm theo thứ tự và chỉ chuyển khi mọi bước đã qua kiểm tra:
 1. Tạo bản sao dữ liệu đang dùng thành **file tạm** ở thư mục đích, kiểm tra toàn vẹn, phiên bản cấu trúc và số bản ghi từng bảng.
 2. Mở thử cơ sở dữ liệu mới và đọc thử; **chỉ sau đó mới lưu đường dẫn mới**. Lỗi ở bất kỳ bước nào: hoàn tác, vẫn làm việc ở vị trí cũ, dữ liệu cũ không bị đổi.
 3. Thư mục đích đã có dữ liệu: hộp thoại nêu số chủ rừng, số lô, ngày sửa của cả hai bên và cho chọn **Dùng dữ liệu có sẵn**, **Ghi đè bằng dữ liệu đang dùng** hoặc **Hủy**. *Dùng dữ liệu có sẵn* kiểm tra đúng cơ sở dữ liệu HAKQN, không hỏng, phiên bản cấu trúc được hỗ trợ. *Ghi đè* trước hết tạo **bản dự phòng nhất quán của đích** (gồm cả giao dịch đã commit còn trong nhật ký WAL) vào thư mục sao lưu và **kiểm tra mở được** rồi mới thay; đích đang được chương trình khác dùng thì dừng và báo; đích hỏng hoặc không phải HAKQN thì không ghi đè.

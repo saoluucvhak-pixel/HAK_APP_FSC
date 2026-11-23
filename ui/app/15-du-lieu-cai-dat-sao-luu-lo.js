@@ -28,8 +28,9 @@ async function issueAct(kind) {
 /* ===== Danh mục dùng chung (tách riêng khỏi Cài đặt theo chuẩn V10.4) & Cài đặt hệ thống ===== */
 const DM_TABS = [['setdt', 'Đối tượng (người và pháp nhân)', 'openSetDt'], ['setxe', 'Xe vận chuyển', 'openSetXe'], ['setvt', 'Vị trí công việc', 'openSetVt'], ['cty', 'Công ty mua hàng', 'openCty']];
 const DM_VIEWS = ['setdt', 'setxe', 'setvt', 'cty'];
-const SET_TABS = [['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets',
-'openSetGs'], ['setfmt', 'Hiển thị số', 'openSetFmt'], ['setgd', 'Giao diện', 'openSetGd'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
+/* Cài đặt: tab NGANG cùng kiểu Danh mục (hak-catalog-tabs). “Hiển thị” gộp Hiển thị số và Giao diện (hai màn giữ nguyên, chuyển bằng tab con); “Hệ thống” đổi tên “Dữ liệu”. Giữ nguyên mã màn (NAV.view) và id nút setTab_<màn>. */
+const SET_TABS = [['settings', 'Dữ liệu', 'openSettings'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị', 'openSetFmt'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
+const SET_HIEN_THI = [['setfmt', 'Hiển thị số', 'openSetFmt', 'setSub_setfmt'], ['setgd', 'Giao diện', 'openSetGd', 'setTab_setgd']];
 const SET_VIEWS = ['settings', 'setbk', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
 function danhMucFrame(active, inner) {
   return '<div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">Danh mục dùng chung</h2><div class="mut" style="font-size:12.5px">Khai báo một lần cho đối tượng, xe vận chuyển, vị trí công việc và công ty mua hàng để dùng lại cho mọi lô rừng.</div></div></div>' +
@@ -37,8 +38,10 @@ function danhMucFrame(active, inner) {
     '</nav><section class="mucNoiDung" aria-label="' + esc((DM_TABS.find(t => t[0] === active) || [, 'Danh mục'])[1]) + '">' + inner + '</section>';
 }
 function settingsFrame(active, inner) {
-  return '<h2>Cài đặt</h2>' + veLaiThanh() + '<div class="mucLayout"><nav class="mucNav" aria-label="Các mục cài đặt">' + SET_TABS.map(([v, l, a]) => '<button' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') +
-  '</nav><section class="mucNoiDung">' + inner + '</section></div>';
+  const nhomHT = SET_HIEN_THI.some(t => t[0] === active), top = nhomHT ? 'setfmt' : active;
+  return '<h2>Cài đặt</h2>' + veLaiThanh() + '<nav class="hak-catalog-tabs" aria-label="Các mục cài đặt">' + SET_TABS.map(([v, l, a]) => '<button type="button"' + (top === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') + '</nav>' +
+    (nhomHT ? '<nav class="hak-catalog-tabs sub" id="setSubTabs" aria-label="Nhóm hiển thị">' + SET_HIEN_THI.map(([v, l, a, id]) => '<button type="button"' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="' + id + '">' + l + '</button>').join('') + '</nav>' : '') +
+    '<section class="mucNoiDung">' + inner + '</section>';
 }
 const setgs = {st: null, msg: null};
 function panelSetGs() {
