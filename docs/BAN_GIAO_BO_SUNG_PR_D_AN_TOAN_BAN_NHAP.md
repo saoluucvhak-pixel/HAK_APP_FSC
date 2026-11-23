@@ -67,7 +67,7 @@ Hiện còn 3 điểm **chưa có test tái hiện chạy ra đỏ trước khi 
 3. **Hộp thoại khi đóng còn nháp:** liệt kê **cụ thể** những gì sẽ lưu hay mất (tên lô, chủ rừng mới, số phiếu mới), không chỉ hỏi chung. Giữ nguyên ba lựa chọn Lưu và đóng / Bỏ thay đổi và đóng / Quay lại chỉnh sửa. e2e chạy với `HAKQN_CLOSE` không bị ảnh hưởng.
 4. Mỗi mục kèm e2e (thêm vào `scripts/e2e-sheets-nhap-nhap.js` hoặc bộ mới đăng ký trong `SUITES` của `scripts/e2e-all.js`) và không sửa e2e cũ.
 
-### 4.3 Bước 3 — báo cáo chất lượng Google Sheet, **chỉ số đếm** (cần CHỦ đồng ý trước khi làm; hỏi CHỦ ở đầu việc)
+### 4.3 Bước 3 — báo cáo chất lượng Google Sheet, **chỉ số đếm** (**CHỦ ĐÃ ĐỒNG Ý thêm, đêm 23/11/2026**; làm SAU Bước 1 và 2, PR riêng nhỏ; không cần hỏi lại CHỦ)
 Chức năng **chỉ đọc** ở màn Dữ liệu Google Sheets (hoặc Cài đặt → Google Sheets): bấm một nút, hiện và cho sao chép/xuất **bảng số đếm không chứa thông tin cá nhân**, để CHỦ gửi lại cho agent biết dữ liệu thật khác dữ liệu giả lập ở đâu: số hợp đồng; số hợp đồng theo trạng thái Đủ / Cần xem / Lỗi dữ liệu; số hợp đồng nhiều CCCD; số rừng; số rừng thiếu mã rừng; số rừng ghép tạm; số phiếu; số phiếu ngày không đọc được; số phiếu thiếu biển số; số phiếu nghi đổi số; số cặp trùng khóa; thời gian tổng hợp (ms); số dòng mỗi tab. **Tuyệt đối không xuất** CCCD, họ tên, địa chỉ, số hợp đồng, số phiếu, biển số, mã rừng, địa chỉ Sheet, khóa. Có test đơn vị kiểm bảng xuất không chứa chuỗi giả lập đã đưa vào (CCCD `0490000000xx`, tên "giả lập", mã hợp đồng) — **đây là test bảo mật bắt buộc**. Hàm thuần ở `src/` (dùng `lookup.js` hiện có, cùng cách tính `summaryHd`), IPC mới chỉ nhận không tham số hoặc tham số kiểm kiểu chặt, và qua cơ chế `wrap()` hiện có.
 
 ### 4.4 Bước 4 — danh sách kiểm với dữ liệu thật cho CHỦ (viết thành tài liệu `docs/KIEM_TAY_BAN_NHAP_DU_LIEU_THAT.md`)
@@ -84,14 +84,14 @@ Agent **không** xem được dữ liệu thật và **không** nên xin. Viết
 2. Bước 1 (tách thuần; commit riêng "refactor không đổi hành vi" xanh e2e liệt kê) → test mô hình đỏ → sửa lỗi → xanh.
 3. Cho một agent khác **soát độc lập (chỉ đọc)** toàn diff (trọng tâm: hàm thuần có đúng I1–I6; lớp nối có bỏ sót đường ghi nào; hành vi nhìn thấy được có đổi không).
 4. Chạy toàn bộ e2e ở 1024×768 + `e2e-cai-de` với mã v1.4.33; unit; `so-ban-in` 206/206; mở PR; CI Windows xanh; **hỏi CHỦ** trước khi gộp.
-5. Bước 2 (lưới an toàn) và Bước 3 (báo cáo chất lượng, sau khi CHỦ đồng ý) có thể tách thành PR riêng để PR sửa lõi nhỏ và dễ soát. Bước 4 (tài liệu) đi cùng PR nào cũng được.
+5. Bước 2 (lưới an toàn) và Bước 3 (báo cáo chất lượng; CHỦ đã đồng ý ngày 23/11/2026) có thể tách thành PR riêng để PR sửa lõi nhỏ và dễ soát. Bước 4 (tài liệu) đi cùng PR nào cũng được.
 6. Phát hành: gộp vào kế hoạch 3.5.0 hoặc bản vá 3.5.1 **theo lệnh CHỦ**; không tự quyết.
 
 ## 6. ĐIỀU KIỆN HOÀN THÀNH
 - Test mô hình ngẫu nhiên chạy ≥ 5.000 chuỗi, 0 vi phạm I1–I6; mọi lỗi tìm ra có test cố định (seed) tái hiện đỏ→xanh.
 - Unit 0 lỗi; bản in 206/206; toàn bộ e2e xanh (kể cả cai-de); CI Windows xanh; không sửa e2e cũ; JSON/băm/delta lô cũ y hệt.
 - Có soát độc lập (chỉ đọc) không còn P0/P1.
-- Báo cáo chất lượng Sheet (nếu CHỦ đồng ý) có test bảo mật không rò dữ liệu cá nhân.
+- Báo cáo chất lượng Sheet (CHỦ đã đồng ý) có test bảo mật không rò dữ liệu cá nhân; chức năng chỉ đọc, không ghi, không gửi gì ra ngoài; CHỦ là người bấm nút và quyết định có gửi bảng số đếm cho ai không.
 - Tài liệu kiểm tay với dữ liệu thật giao cho CHỦ.
 - Mô tả PR nêu thật đã/chưa kiểm; không gộp khi CHỦ chưa ra lệnh.
 
