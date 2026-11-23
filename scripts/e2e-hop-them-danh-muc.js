@@ -9,6 +9,7 @@ const path = require('path'), fs = require('fs'), os = require('os');
 const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
 const {lot, seed} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed};')();
 const root = path.join(__dirname, '..');
+process.env.HAKQN_E2E_TAY_HOP = '1';   // bộ này tự thao tác hộp thoại: tắt bộ tự bấm của _hd30
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const CC1 = '049090000123', CC2 = '049090000456', BKS = '92C-777.88';
 

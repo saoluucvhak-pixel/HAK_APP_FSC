@@ -8,6 +8,12 @@ const TAB = /\[data-ftab=["']?(nc|dx)["']?\]/;
 const DS = {nc: '#dsHdNcTbl tbody tr[data-act=chonDoi]', dx: '#dsHdVcTbl tbody tr[data-act=chonHd]'};
 function boc(w) {
   if (!w || w.__hd30) return w; w.__hd30 = true;
+  /* Bước 3 Danh mục: hộp “Thêm vào danh mục để dùng lại?” thay confirm() của trình duyệt. Các bộ e2e cũ từng tự đồng ý confirm → tự bấm “Thêm vào danh mục” (cùng kết quả);
+   * bộ kiểm chính hộp thoại (e2e-hop-them-danh-muc) đặt HAKQN_E2E_TAY_HOP=1 để tự thao tác. */
+  if (!process.env.HAKQN_E2E_TAY_HOP) {
+    const tuBam = () => { if (window.__hakHopTu) return; window.__hakHopTu = setInterval(() => { const n = document.querySelector('#dmHopDlg [data-act=dmHopThem]'); if (n && !n.disabled) n.click(); }, 40); };
+    w.addInitScript(tuBam).catch(() => {}); w.evaluate(tuBam).catch(() => {});
+  }
   const nho = {nc: null, dx: null};
   const goc = {click: w.click.bind(w), fill: w.fill.bind(w), check: w.check.bind(w), uncheck: w.uncheck.bind(w), selectOption: w.selectOption.bind(w), setInputFiles: w.setInputFiles.bind(w), $eval: w.$eval.bind(w), $$eval: w.$$eval.bind(w), waitForSelector: w.waitForSelector.bind(w), $: w.$.bind(w), $$: w.$$.bind(w), innerText: w.innerText.bind(w), inputValue: w.inputValue.bind(w), textContent: w.textContent.bind(w), getAttribute: w.getAttribute.bind(w), isChecked: w.isChecked.bind(w), isVisible: w.isVisible.bind(w), dispatchEvent: w.dispatchEvent.bind(w), focus: w.focus.bind(w), press: w.press.bind(w), type: w.type.bind(w), isDisabled: w.isDisabled.bind(w), isEnabled: w.isEnabled.bind(w), isEditable: w.isEditable.bind(w), hover: w.hover.bind(w), dblclick: w.dblclick.bind(w)};   // waitForSelector không bọc: phần tử chờ xuất hiện
   const moChiTiet = async k => {
