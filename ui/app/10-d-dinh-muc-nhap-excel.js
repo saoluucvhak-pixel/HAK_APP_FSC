@@ -9,16 +9,31 @@ function panelNorm() {
       BHLD_ITEMS.map(([key]) => '<td><input name="n_' + k + '_' + key + '" value="' + esc(n[key] || '') + '"></td>').join('') + '</tr>';
   }).join('');
   const label = v => (v.tuNgay ? 'Hiệu lực từ ' + v.tuNgay : 'Bản gốc (chưa đặt ngày hiệu lực)');
-  return '<h2>Định mức</h2><div class="card"><h3 style="margin-top:0">Định mức BHLĐ theo vị trí</h3>' +
+  const bhld = '<div class="card"><h3 style="margin-top:0">Định mức BHLĐ theo vị trí</h3>' +
     '<p class="mut" style="margin-top:0">Mỗi bản định mức có <b>hiệu lực từ ngày</b>. Biểu mẫu dùng bản có ngày hiệu lực lớn nhất không vượt quá ngày của biểu mẫu: danh sách cấp phát BHLĐ (BM-02) theo <b>ngày cấp phát</b> (không nhập thì theo ngày bắt đầu khai thác), hợp đồng lao động theo ngày bắt đầu hợp đồng hoặc ngày ký. Ghi số lượng kèm đơn vị, ví dụ “1 bộ”; để trống nếu vị trí không được cấp mục đó.</p>' +
     '<div class="row" style="gap:12px;align-items:flex-end;flex-wrap:wrap"><label style="min-width:260px"><span>Bản định mức</span><select id="normVer">' + vs.map(v => '<option value="' + v.id + '"' + (v.id === normSel ? ' selected' : '') + '>' + esc(label(v)) + '</option>').join('') + '</select></label>' +
     '<button class="btn ghost sm" type="button" data-act="normDelVer"' + (cur.base ? ' disabled' : '') + '>Xóa bản này</button></div>' +
     '<form id="normForm" style="margin-top:12px"><label style="max-width:320px"><span class="req">Hiệu lực từ ngày (dd/mm/yyyy)</span><input name="tuNgay" value="' + esc(cur.tuNgay) + '" placeholder="' + (cur.base ? 'để trống = áp dụng từ trước đến nay' : 'dd/mm/yyyy') + '"></label>' +
-    '<div class="wrap" style="margin-top:8px"><table class="normTbl"><thead><tr><th>Vị trí (chức danh)</th>' + BHLD_ITEMS.map(x => '<th>' + x[1] + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<div class="wrap" style="margin-top:8px"><table class="normTbl"><thead><tr><th>Vị trí</th>' + BHLD_ITEMS.map(x => '<th>' + x[1] + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu bản định mức này</button></div></form>' +
     '<div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm bản mới, hiệu lực từ ngày</span><input id="normNewDate" placeholder="dd/mm/yyyy" style="width:160px"></label><button class="btn ghost" type="button" data-act="normAddVer">Thêm bản mới (sao chép bản đang chọn)</button></div>' +
-    '<p class="mut" style="margin-top:12px">Danh sách vị trí lấy từ <b>Định mức nhân công</b> (bên dưới): thêm, đổi tên hoặc xóa vị trí ở đó; vị trí số người 0 là vị trí ngoài định biên chuẩn (vẫn có định mức BHLĐ và đơn giá).</p></div>' + dbCard() + keoCard() + tgCard();
+    '<p class="mut" style="margin-top:12px">Danh sách vị trí lấy từ <b>Định mức nhân công</b> (bên dưới): thêm, đổi tên hoặc xóa vị trí ở đó; vị trí số người 0 là vị trí ngoài định biên chuẩn (vẫn có định mức BHLĐ và đơn giá).</p></div>';
+  return normKhung({bhld, keo: keoCard(), nhancong: dbCard(), tg: tgCard()});
 }
+/* màn Định mức chia 4 tab như màn Danh mục; cả bốn biểu mẫu nằm trong trang, mỗi lúc chỉ HIỆN một tab (ẩn bằng hidden nên chữ đang gõ dở ở tab khác không mất khi chuyển tab) */
+let normTab = 'bhld';   // tab đang mở, nhớ trong phiên
+const NORM_TABS = [['bhld', () => 'Định mức BHLĐ theo vị trí'], ['keo', () => 'Gỗ keo: 1 ha = ? tấn'], ['nhancong', () => 'Nhân công: 1 đội = <span data-dbtong>' + dbTongHienThi() + '</span> người'], ['tg', () => 'Thời gian khai thác: 1 ha = ? ngày']];
+function normKhung(pane) {
+  if (!NORM_TABS.some(x => x[0] === normTab)) normTab = 'bhld';
+  return '<h2>Định mức</h2><nav class="hak-catalog-tabs" id="normTabs" aria-label="Các nhóm định mức">' + NORM_TABS.map(([k, l]) => '<button type="button" id="normTab_' + k + '" data-normtab="' + k + '"' + (normTab === k ? ' aria-current="page"' : '') + '>' + l() + '</button>').join('') + '</nav>' +
+    NORM_TABS.map(([k, l]) => '<section class="normPane" id="normPane_' + k + '" data-normpane="' + k + '" aria-label="' + esc(l().replace(/<[^>]+>/g, '')) + '"' + (normTab === k ? '' : ' hidden') + '>' + pane[k] + '</section>').join('');
+}
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest && e.target.closest('[data-normtab]'); if (!b) return;
+  normTab = b.dataset.normtab;
+  document.querySelectorAll('[data-normpane]').forEach(s => { s.hidden = s.dataset.normpane !== normTab; });
+  document.querySelectorAll('[data-normtab]').forEach(x => { if (x.dataset.normtab === normTab) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
+});
 /* Định mức gỗ keo: 1 ha = ? tấn, có hiệu lực từ ngày. Rừng lấy làm mặc định theo ngày bắt đầu khai thác; rừng tự điền số khác thì dùng số riêng */
 function keoCard() {
   const items = HAKDinhMuc.keoItems(db);
@@ -44,21 +59,26 @@ function dbVerBar() {
     ' lô vì ngày bắt đầu khai thác không có thật: ' + esc(ahc.ngayLoi.slice(0,
     6).map(l => (l.maRung || '(chưa mã)') + ' (' + l.tuNgay + ')').join(', ')) + ' — sửa ngày ở Thông tin rừng.</b>' : '') + '</p>';
 }
-function dbCard() {
+function dbDuLieu() {
   const vsAll = HAKDinhBien.versions(db), curV = vsAll.find(v => v.id === dbVer) || vsAll[vsAll.length - 1];
-  const g = {rows: vsAll.length > 1 ? viTriRowsTai('', curV.rows) : viTriRows(), saved: HAKDinhBien.get(db).saved}, tong = HAKDinhBien.tong(g.rows);   // hiện ĐỦ danh mục vị trí (kể cả vị trí 0 người đang được dùng)
-  const row = (r, n) => '<tr data-db="' + n + '"><td><input name="b_cd" value="' + esc(r.chucDanh) + '" placeholder="VD: Công nhân bóc vỏ" style="width:190px"' + (r.chucDanh === HAKDinhBien.TO_TRUONG ? ' readonly title="Vị trí Tổ trưởng cố định: 1 người"' : '') + '></td>' +
+  return {rows: vsAll.length > 1 ? viTriRowsTai('', curV.rows) : viTriRows(), saved: HAKDinhBien.get(db).saved};
+}
+const dbTongHienThi = () => HAKDinhBien.tong(dbDuLieu().rows);
+function dbCard() {
+  const g = dbDuLieu(), tong = HAKDinhBien.tong(g.rows);   // hiện ĐỦ danh mục vị trí (kể cả vị trí 0 người đang được dùng)
+  const row = (r, n) => '<tr data-db="' + n + '"><td><input name="b_cd" value="' + esc(r.chucDanh) + '" placeholder="VD: Công nhân bóc vỏ" list="dbPosVt" style="width:190px"' + (r.chucDanh === HAKDinhBien.TO_TRUONG ? ' readonly title="Vị trí Tổ trưởng cố định: 1 người"' : '') + '></td>' +
     '<td><input name="b_so" value="' + esc(r.soNguoi == null ? '' : r.soNguoi) + '" placeholder="VD: 3" style="width:70px;text-align:right"' + (r.chucDanh === HAKDinhBien.TO_TRUONG ? ' readonly' : '') + '></td>' +
     '<td><input name="b_km" value="' + esc(r.kiemNhiem || '') + '" placeholder="(không)" style="width:170px" list="dbPos"></td>' +
     '<td><textarea name="b_nv" rows="4" placeholder="Nhiệm vụ của vị trí" style="width:100%;min-width:320px">' + esc(r.nhiemVu || '') + '</textarea></td>' +
     '<td>' + (r.chucDanh && r.chucDanh !== HAKDinhBien.TO_TRUONG ? '<button class="btn ghost sm" type="button" data-act="dbDel">Xóa</button>' : '') + '</td></tr>';
-  return '<h2 style="margin-top:24px">Định mức nhân công: 1 đội = ' + tong + ' người</h2><div class="card">' + dbVerBar() + '<form id="dbForm">' +
+  return '<h2 style="margin-top:24px">Định mức nhân công: 1 đội = <span data-dbtong>' + tong + '</span> người</h2><div class="card">' + dbVerBar() + '<form id="dbForm">' +
     '<p class="mut" style="margin-top:0">Định biên một đội khai thác và <b>nhiệm vụ từng vị trí</b>. Người <b>kiêm nhiệm</b> là một trong số người của vị trí gốc (ví dụ Tổ trưởng kiêm bốc xếp thì tổ bốc xếp có ' + (g.rows.find(r => r.chucDanh === 'Công nhân bốc xếp') ?
     g.rows.find(r => r.chucDanh === 'Công nhân bốc xếp').soNguoi + 1 : 'thêm 1') +
-    ' người gồm cả Tổ trưởng). Vị trí mới được tự thêm vào danh sách chức danh ở tab Nhân công; <b>định mức BHLĐ và đơn giá của vị trí mới cần khai</b> ở các mục tương ứng. Tab Nhân công so sánh số người thực tế với định mức này (thiếu, thừa chỉ cảnh báo).' + (g.saved ? '' :
+    ' người gồm cả Tổ trưởng). Vị trí mới được tự thêm vào danh sách vị trí ở tab Nhân công; <b>định mức BHLĐ và đơn giá của vị trí mới cần khai</b> ở các mục tương ứng. Tab Nhân công so sánh số người thực tế với định mức này (thiếu, thừa chỉ cảnh báo).' + (g.saved ? '' :
     ' <b>Đang hiển thị định mức mặc định, bấm Lưu để dùng.</b>') + '</p>' +
     '<div class="wrap"><table class="normTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí</th><th>Số người</th><th>Kiêm nhiệm</th><th>Nhiệm vụ</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' + g.rows.map(row).join('') + row({chucDanh: '', soNguoi: null,
     kiemNhiem: '', nhiemVu: ''}, 'new') + '</tbody></table></div>' +
+    '<datalist id="dbPosVt">' + dmVT().filter(v => !v.ngung).map(v => '<option value="' + esc(v.ten) + '">' + (v.nhiemVu ? esc(v.nhiemVu) : '') + '</option>').join('') + '</datalist>' +
     '<datalist id="dbPos">' + HAKDinhMuc.allPositions(db).map(x => '<option value="' + esc(x) + '">').join('') + '</datalist>' +
     '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn" type="submit">Lưu định mức nhân công</button><button class="btn ghost" type="button" data-act="dbReset">Dùng định mức mặc định</button><span class="mut">Dòng cuối để thêm vị trí mới.</span></div></form></div>';
 }
@@ -68,8 +88,22 @@ function saveDb(form) {
   const bo = dung.filter(n => !giu.has(n.toLowerCase()) && normUsed(n));
   if (bo.length) { note('Chưa lưu định mức nhân công: còn nhân công giữ vị trí ' + bo.map(x => '“' + x + '”').join(', ') + ' — chuyển họ sang vị trí khác trước khi xóa vị trí.', 'err'); return; }
   const r = HAKDinhBien.setVersion(db, (HAKDinhBien.versions(db).find(v => v.id === dbVer) || HAKDinhBien.versions(db).slice(-1)[0]).id, rows, HAKDinhMuc); if (!r.ok) { note('Chưa lưu định mức nhân công: ' + r.error, 'err'); return; }
-  persist(); note('Đã lưu định mức nhân công: 1 đội ' + HAKDinhBien.tong(db.dinhBien) + ' người.' + (r.them.length ? ' Đã thêm vị trí vào danh sách chức danh: ' + r.them.join(', ') + '. Khai định mức BHLĐ và đơn giá cho các vị trí này.' : ''), r.them.length ? 'warn' : 'ok');
+  persist(); note('Đã lưu định mức nhân công: 1 đội ' + HAKDinhBien.tong(db.dinhBien) + ' người.' + (r.them.length ? ' Đã thêm vị trí vào danh sách vị trí: ' + r.them.join(', ') + '. Khai định mức BHLĐ và đơn giá cho các vị trí này.' : ''), r.them.length ? 'warn' : 'ok');
 }
+/* tiêu đề “1 đội = N người” tính lại NGAY khi gõ số người hoặc xóa dòng (chỉ hiển thị, không ghi dữ liệu) */
+function dbTongTuForm() {
+  const fm = document.getElementById('dbForm'); if (!fm) return;
+  let n = 0; fm.querySelectorAll('tr[data-db]').forEach(tr => { if (tr.style.display === 'none') return; const ten = trim(tr.querySelector('[name=b_cd]').value), so = Number(trim(tr.querySelector('[name=b_so]').value).replace(',', '.')); if (ten && Number.isFinite(so) && so > 0) n += so; });
+  document.querySelectorAll('[data-dbtong]').forEach(el => { el.textContent = String(n); });
+}
+/* chọn vị trí từ danh mục (chỉ ở sự kiện change: rời ô hoặc chọn datalist, không chạy mỗi phím gõ): tự điền Nhiệm vụ nếu ô nhiệm vụ còn trống (không ghi đè chữ đã gõ); gõ vị trí mới vẫn được */
+function dbChonViTri(inp) {
+  const tr = inp.closest('tr[data-db]'), nv = tr && tr.querySelector('[name=b_nv]'); if (!nv || nv.value.trim() || inp.readOnly) return;
+  const vt = HAKViTri.tim(dmVT().filter(v => !v.ngung), inp.value); if (vt && vt.nhiemVu) nv.value = vt.nhiemVu;
+}
+document.addEventListener('input', e => { const t = e.target; if (!t || !t.name) return; if (t.name === 'b_so' || t.name === 'b_cd') dbTongTuForm(); });
+document.addEventListener('change', e => { const t = e.target; if (t && t.name === 'b_cd') { dbChonViTri(t); dbTongTuForm(); } });
+document.addEventListener('click', e => { if (e.target && e.target.closest && e.target.closest('[data-act=dbDel]')) setTimeout(dbTongTuForm, 0); });
 /* Định mức thời gian khai thác: 1 ha = ? ngày, hiệu lực từ ngày; kèm năng suất 1 ngày = ? tấn suy ra từ định mức gỗ keo */
 function tgCard() {
   const items = HAKDinhMuc.tgItems(db);

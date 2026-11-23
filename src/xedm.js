@@ -1,7 +1,7 @@
 /* DANH MỤC XE (bản 3.0). Hàm thuần.
  * db.dmXe = [{id: 'xe<N>', bks, ngayCapNhat, hanKiemDinh, hanBaoHiem, loaiXe, chuXeId, taiXeId?, ngung}]
- *  - chuXeId: id NGƯỜI có vai trò Chủ xe (bảng con của thể nhân) hoặc id PHÁP NHÂN đứng tên xe (src/doituong.js). Lưu liên kết bằng ID.
- *  - taiXeId (TÙY CHỌN, bản 3.3.1): id NGƯỜI có vai trò Tài xế, tài xế thường chạy của xe. CHỈ ghi khóa này khi có giá trị: xe chưa gắn tài xế cho JSON y hệt bản cũ. Khi thêm xe vào lô, thông tin tài xế được CHỤP vào dòng lô (sửa ở lô không đổi danh mục).
+ *  - chuXeId: id NGƯỜI có chức vụ Chủ xe (bảng con của thể nhân) hoặc id PHÁP NHÂN đứng tên xe (src/doituong.js). Lưu liên kết bằng ID.
+ *  - taiXeId (TÙY CHỌN, bản 3.3.1): id NGƯỜI có chức vụ Tài xế, tài xế thường chạy của xe. CHỈ ghi khóa này khi có giá trị: xe chưa gắn tài xế cho JSON y hệt bản cũ. Khi thêm xe vào lô, thông tin tài xế được CHỤP vào dòng lô (sửa ở lô không đổi danh mục).
  *  - BKS so khớp theo khóa chuẩn hóa (src/bks.js): mỗi xe một dòng; BKS nguồn giữ nguyên cách viết.
  *  - Nhập Excel: Chọn file → Xem trước (mới / trùng / thay đổi / lỗi; thay đổi chủ xe hiện cả hai) → Sửa hoặc bỏ dòng → Lưu danh mục. */
 (function (root) {
@@ -29,7 +29,7 @@
     if (!id) return null; const a = DT().timNguoi(dmDT, id); if (!a) return null;
     return {loai: 'nguoi', ten: a.ng.hoTen, cccd: a.ng.cccd, gplx: a.ng.gplx, hanGplx: a.ng.hanGplx, dt: a.dt, ng: a.ng, nhan: DT().nhanNguoi(a.dt, a.ng)};
   }
-  /* các lựa chọn tài xế: người (đang dùng) có vai trò Tài xế */
+  /* các lựa chọn tài xế: người (đang dùng) có chức vụ Tài xế */
   const chonTaiXe = dmDT => DT().nguoiTheoVaiTro(dmDT, 'taiXe').map(x => ({id: x.ng.id, nhan: x.nhan, loai: 'nguoi'}));
   /* điền tài xế vào dòng xe của lô: ng = hồ sơ người (taiXe(...).ng), vals = giá trị hiện có của dòng lô. Trả các khóa dòng lô cần điền (rỗng nếu dòng đã có tài xế: tên hoặc CCCD tài xế khác rỗng, không ghi đè nửa chừng).
    * Thuần: chỉ chép từ hồ sơ người vào dòng lô (lô chụp lại), không đổi danh mục. */
@@ -39,7 +39,7 @@
     const r = {}; Object.keys(o).forEach(k => { if (o[k] && !s(v[k])) r[k] = o[k]; });
     if (taiXeId && Object.keys(r).length) r.taiXeId = taiXeId; return r;
   }
-  /* các lựa chọn chủ xe: người có vai trò Chủ xe và pháp nhân (đang dùng) */
+  /* các lựa chọn chủ xe: người có chức vụ Chủ xe và pháp nhân (đang dùng) */
   const chonChuXe = dmDT => DT().nguoiTheoVaiTro(dmDT, 'chuXe').map(x => ({id: x.ng.id, nhan: x.nhan, loai: 'nguoi'}))
     .concat((dmDT || []).filter(o => o.loai === 'phapnhan' && !o.ngung).map(o => ({id: o.id, nhan: o.ten + ' (pháp nhân)', loai: 'phapnhan'})));
   function kiem(dm, x, dmDT) {
@@ -47,8 +47,8 @@
     if (!o.bks) e.push('Thiếu BKS');
     const t = timBks(dm, o.bks); if (t && t.id !== o.id) e.push('BKS ' + o.bks + ' đã có trong danh mục (' + t.bks + ')');
     [['ngayCapNhat', 'ngày cập nhật'], ['hanKiemDinh', 'hạn kiểm định'], ['hanBaoHiem', 'hạn bảo hiểm']].forEach(([k, n]) => { if (!ngayOk(o[k])) e.push(n + ' “' + o[k] + '” không phải ngày có thật (dd/mm/yyyy)'); });
-    if (o.chuXeId) { const c = chuXe(dmDT, o.chuXeId); if (!c) e.push('Chủ xe không còn trong Danh mục đối tượng'); else if (c.loai === 'nguoi' && !(c.ng.vaiTro && c.ng.vaiTro.chuXe)) e.push(c.ten + ' chưa có vai trò Chủ xe'); }
-    if (o.taiXeId) { const c = taiXe(dmDT, o.taiXeId); if (!c) e.push('Tài xế không còn trong Danh mục đối tượng'); else if (!(c.ng.vaiTro && c.ng.vaiTro.taiXe)) e.push(c.ten + ' chưa có vai trò Tài xế'); }
+    if (o.chuXeId) { const c = chuXe(dmDT, o.chuXeId); if (!c) e.push('Chủ xe không còn trong Danh mục đối tượng'); else if (c.loai === 'nguoi' && !(c.ng.vaiTro && c.ng.vaiTro.chuXe)) e.push(c.ten + ' chưa có chức vụ Chủ xe'); }
+    if (o.taiXeId) { const c = taiXe(dmDT, o.taiXeId); if (!c) e.push('Tài xế không còn trong Danh mục đối tượng'); else if (!(c.ng.vaiTro && c.ng.vaiTro.taiXe)) e.push(c.ten + ' chưa có chức vụ Tài xế'); }
     return e;
   }
   function luu(dm, x, dmDT) {
@@ -63,18 +63,18 @@
   /* ---------- nhập Excel ---------- */
   const COT = {'Ngày cập nhật': 'ngayCapNhat', 'Số BKS': 'bks', 'BKS': 'bks', 'Biển số xe': 'bks', 'Ngày hết hạn kiểm định': 'hanKiemDinh', 'Hạn kiểm định': 'hanKiemDinh',
     'Ngày hết hạn bảo hiểm': 'hanBaoHiem', 'Hạn bảo hiểm': 'hanBaoHiem', 'Loại xe': 'loaiXe', 'Chủ xe': 'chuXe', 'CCCD / MST chủ xe': 'chuXeSo'};
-  /* chủ xe từ ô Excel: theo CCCD (người có vai trò Chủ xe) hoặc MST (pháp nhân); không có số thì theo tên, chỉ khi DUY NHẤT */
+  /* chủ xe từ ô Excel: theo CCCD (người có chức vụ Chủ xe) hoặc MST (pháp nhân); không có số thì theo tên, chỉ khi DUY NHẤT */
   function timChuXe(dmDT, ten, soDinhDanh) {
     const k = so(soDinhDanh), ds = chonChuXe(dmDT);
     if (k) {
-      const kc = NL().cccdTuSo(k), a = DT().timCccd(dmDT, k) || (kc !== k ? DT().timCccd(dmDT, kc) : null); if (a) return a.ng.vaiTro && a.ng.vaiTro.chuXe ? {id: a.ng.id} : {loi: a.ng.hoTen + ' (CCCD ' + k + ') chưa có vai trò Chủ xe trong Danh mục đối tượng'};
+      const kc = NL().cccdTuSo(k), a = DT().timCccd(dmDT, k) || (kc !== k ? DT().timCccd(dmDT, kc) : null); if (a) return a.ng.vaiTro && a.ng.vaiTro.chuXe ? {id: a.ng.id} : {loi: a.ng.hoTen + ' (CCCD ' + k + ') chưa có chức vụ Chủ xe trong Danh mục đối tượng'};
       const k0 = k.length === 9 || k.length === 12 ? '0' + k : '';   // MST bị Excel ép thành số mất số 0 đầu (9 → 10, 12 → 13 chữ số)
       const p = (dmDT || []).find(o => o.loai === 'phapnhan' && (so(o.mst) === k || (k0 && so(o.mst) === k0))); if (p) return {id: p.id};
       return {loi: 'Không có chủ xe mang số ' + k + ' trong Danh mục đối tượng'};
     }
     if (!s(ten)) return {id: ''};
     const f = DT().fold, m = ds.filter(x => f(x.nhan.replace(/ \(pháp nhân\)$/, '').replace(/^.* — /, '')) === f(ten));
-    return m.length === 1 ? {id: m[0].id} : {loi: m.length ? 'Có ' + m.length + ' chủ xe tên “' + s(ten) + '”: ghi CCCD / MST để chọn đúng' : 'Chủ xe “' + s(ten) + '” chưa có trong Danh mục đối tượng (vai trò Chủ xe hoặc pháp nhân)'};
+    return m.length === 1 ? {id: m[0].id} : {loi: m.length ? 'Có ' + m.length + ' chủ xe tên “' + s(ten) + '”: ghi CCCD / MST để chọn đúng' : 'Chủ xe “' + s(ten) + '” chưa có trong Danh mục đối tượng (chức vụ Chủ xe hoặc pháp nhân)'};
   }
   /* rows: [{tiêu đề: giá trị}] → {dong: [{so, xe, trangThai: 'moi'|'trung'|'doi'|'loi', loi: [], cu, chuXeCu, chuXeMoi}]} */
   function docExcel(rows, dm, dmDT) {
@@ -100,7 +100,7 @@
   }
 
   /* ---------- chuyển từ danh mục xe cũ (dmXeVC, nhiều dòng theo ngày) ---------- */
-  /* mỗi BKS một xe theo dòng mới nhất; chủ xe nối theo CCCD chủ xe (người có vai trò Chủ xe), không có thì Cần đối chiếu. Trả {dm, canDoiChieu}. */
+  /* mỗi BKS một xe theo dòng mới nhất; chủ xe nối theo CCCD chủ xe (người có chức vụ Chủ xe), không có thì Cần đối chiếu. Trả {dm, canDoiChieu}. */
   function tuDanhMucCu(dmXeVC, dmDT, hienCo) {
     const dm = clone(hienCo || []), can = [], dates = D(), nk = v => { const p = dates.parse(s(v)); return p ? p.key : 0; };
     const by = new Map(); (dmXeVC || []).forEach((r, i) => { if (!r) return; const k = B().khoa(r.bienSo); if (!k) return; const c = by.get(k); if (!c || nk(r.ngayCapNhat) >= nk(c.ngayCapNhat)) by.set(k, r); });

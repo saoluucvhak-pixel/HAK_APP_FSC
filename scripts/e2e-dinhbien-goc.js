@@ -26,7 +26,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await open('fc', 'finfo'); ok('ngày trống: không báo lỗi', !(await w.$('#tuNgayLoi')));
   await open('fd', 'finfo'); ok('29/02/2028 (năm nhuận): hợp lệ', !(await w.$('#tuNgayLoi')));
   await open('fe', 'finfo'); ok('29/02/2027 (năm thường): báo lỗi', !!(await w.$('#tuNgayLoi')));
-  await w.click('#navNorm'); await w.waitForSelector('#dbVerBar'); const t = await w.innerText('#main');
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbVerBar'); const t = await w.innerText('#main');
   ok('màn Định mức nhân công: nêu riêng các lô có ngày sai (R-B và R-E)', /R-B/.test(t) && /R-E/.test(t) && /Chưa xác định được phiên bản của 2 lô/.test(t), t.slice(0, 500));
   await open('fb', 'finfo'); await w.fill('#forestForm [name=tuNgay]', '30/11/2026'); await w.evaluate(() => document.getElementById('forestForm').requestSubmit()); await w.waitForTimeout(400);
   await w.click('button[data-act=stSave]').catch(() => {}); await w.waitForTimeout(600);

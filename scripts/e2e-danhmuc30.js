@@ -1,6 +1,6 @@
 'use strict';
 /* Bản 3.0 — Cài đặt → Danh mục đối tượng / Danh mục xe / Vị trí (Electron thật, SQLite thật):
- *  - Cài đặt nằm trên thanh chính; Danh mục đối tượng lọc theo vai trò (Có quyền ký hợp đồng, Nhân công, Tài xế, Chủ xe);
+ *  - Cài đặt nằm trên thanh chính; Danh mục đối tượng lọc theo chức vụ (Có quyền ký hợp đồng, Nhân công, Tài xế, Chủ xe);
  *  - thể nhân có phần Thông tin cá nhân (người) sửa qua hộp thoại; một người vừa Tài xế vừa Chủ xe; CCCD trùng bị chặn; tài xế thiếu GPLX bị chặn;
  *  - pháp nhân có quyền ký phải khai người đại diện; ngừng sử dụng / dùng lại;
  *  - Danh mục xe chọn chủ xe theo ID; nạp Excel: xem trước mới / thay đổi / lỗi, BKS đã có mà khác chủ xe hiện cả hai, sửa dòng ngay trong bảng rồi lưu;
@@ -36,9 +36,9 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   await w.click('#dtLuu'); await w.waitForTimeout(200);
   ok('tài xế thiếu GPLX: báo lỗi trong form, chưa lưu', await w.isVisible('#dtForm') && /giấy phép|GPLX/i.test(await w.innerText('#dtLoi')), await w.innerText('#dtLoi').catch(() => ''));
   await set('#dtForm', {gplx: 'GP-777', hanGplx: '01/01/2030'}); await w.click('#dtLuu'); await w.waitForTimeout(500);
-  const ngT = await w.innerText('#dtBang'); ok('lưu cá nhân: danh sách hiện người với vai trò Tài xế, Chủ xe', !(await w.isVisible('#dtForm')) && /LÊ VĂN XE/.test(ngT) && /Tài xế/.test(ngT) && /Chủ xe/.test(ngT), ngT);
+  const ngT = await w.innerText('#dtBang'); ok('lưu cá nhân: danh sách hiện người với chức vụ Tài xế, Chủ xe', !(await w.isVisible('#dtForm')) && /LÊ VĂN XE/.test(ngT) && /Tài xế/.test(ngT) && /Chủ xe/.test(ngT), ngT);
   let D = await dbAll(), o1 = (D.dmDoiTuong || []).find(o => o.ten === 'HỘ KINH DOANH LÊ VĂN XE');
-  ok('lưu vào SQLite: thể nhân có mã tự cấp, người có ID, vai trò Tài xế + Chủ xe, ký Vận chuyển', !!o1 && /^DT\d{4}$/.test(o1.ma) && o1.loai === 'thenhan' && o1.nguoi.length === 1 && !!o1.nguoi[0].id && o1.nguoi[0].vaiTro.taiXe && o1.nguoi[0].vaiTro.chuXe && o1.nguoi[0].kyHD.vanChuyen, JSON.stringify(o1));
+  ok('lưu vào SQLite: thể nhân có mã tự cấp, người có ID, chức vụ Tài xế + Chủ xe, ký Vận chuyển', !!o1 && /^DT\d{4}$/.test(o1.ma) && o1.loai === 'thenhan' && o1.nguoi.length === 1 && !!o1.nguoi[0].id && o1.nguoi[0].vaiTro.taiXe && o1.nguoi[0].vaiTro.chuXe && o1.nguoi[0].kyHD.vanChuyen, JSON.stringify(o1));
   ok('CCCD lưu dạng văn bản, giữ số 0 đầu', !!o1 && o1.nguoi[0].cccd === '049085000077');
   const loc = async k => { await w.selectOption('[data-sfquick="dm_doi_tuong"][data-sfkey=nhom]', k === 'tatca' ? '' : k); await w.waitForTimeout(200); return w.innerText('#dtBang'); };
   ok('lọc Tài xế và lọc Chủ xe đều thấy người này; lọc Nhân công thì không', /LÊ VĂN XE/.test(await loc('taixe')) && /LÊ VĂN XE/.test(await loc('chuxe')) && !/LÊ VĂN XE/.test(await loc('nhancong')));
@@ -71,7 +71,7 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   // 6. Danh mục xe: chủ xe theo ID
   await w.click('#setTab_setxe'); await w.waitForSelector('#xeBang'); await w.click('#xeThem'); await w.waitForSelector('#xeForm');
   const chu = await w.$$eval('#xeForm [name=chuXeId] option', e => e.map(x => x.textContent));
-  ok('ô Chủ xe hiện người có vai trò Chủ xe kèm tên đối tượng; không hiện người chỉ là Nhân công', chu.some(t => /LÊ VĂN XE/.test(t)) && chu.some(t => /VẬN TẢI A/.test(t)) && !chu.some(t => /TRẦN SƠN/.test(t)), chu.join('|'));
+  ok('ô Chủ xe hiện người có chức vụ Chủ xe kèm tên đối tượng; không hiện người chỉ là Nhân công', chu.some(t => /LÊ VĂN XE/.test(t)) && chu.some(t => /VẬN TẢI A/.test(t)) && !chu.some(t => /TRẦN SƠN/.test(t)), chu.join('|'));
   const ngId = o1.nguoi[0].id, chuVal = await w.$$eval('#xeForm [name=chuXeId] option', e => (e.find(x => /LÊ VĂN XE/.test(x.textContent)) || {}).value);
   await set('#xeForm', {bks: '92c 123.45', hanKiemDinh: '31/12/2027', hanBaoHiem: '30/06/2027', loaiXe: 'Xe tải', chuXeId: chuVal}); await w.click('#xeLuu'); await w.waitForTimeout(400);
   D = await dbAll(); const xe1 = (D.dmXe || [])[0];

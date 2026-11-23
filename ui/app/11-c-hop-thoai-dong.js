@@ -1,7 +1,7 @@
 /* ----- hộp thoại thêm / sửa một dòng ----- */
 const ST_FIELDS = {
-  nc: [['vaiTro', 'Vai trò', ['Tổ trưởng', 'Công nhân']], ['stt', 'STT'], ['danhXung', 'Danh xưng', ['Ông', 'Bà']], ['ten', 'Họ và tên'], ['ngaySinh', 'Ngày sinh (dd/mm/yyyy)'], ['cccd', 'CCCD (12 số; CMND 9 số)'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Địa chỉ thường trú'],
-  ['chucDanh', 'Chức danh', () => chucDanhAll()], ['doi', 'Đội (trống: vào đội đang chọn ở bảng Nhân công khai thác; ghi đúng tên đội để vào đội đó)']],
+  nc: [['vaiTro', 'Chức vụ', ['Tổ trưởng', 'Công nhân']], ['stt', 'STT'], ['danhXung', 'Danh xưng', ['Ông', 'Bà']], ['ten', 'Họ và tên'], ['ngaySinh', 'Ngày sinh (dd/mm/yyyy)'], ['cccd', 'CCCD (12 số; CMND 9 số)'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Địa chỉ thường trú'],
+  ['chucDanh', 'Vị trí', () => chucDanhAll()], ['doi', 'Đội (trống: vào đội đang chọn ở bảng Nhân công khai thác; ghi đúng tên đội để vào đội đó)']],
   dx: [['stt', 'STT'], ['bienSo', 'Biển kiểm soát'], ['loaiXe', 'Loại xe'], ['chuXe', 'Chủ xe'], ['ngaySinh', 'Ngày sinh chủ xe'], ['cccd', 'CCCD chủ xe'], ['ngayCap', 'Ngày cấp CCCD'], ['noiCap', 'Nơi cấp'], ['diaChi', 'Thường trú chủ xe'], ['cavet', 'Ngày cấp cà vẹt'], ['sdt', 'Số điện thoại'],
   ['nguoiKy', 'Người ký HĐ vận chuyển', ['Chủ xe', 'Tài xế']],
     ['taiXe', 'Tên tài xế'], ['ngaySinhTx', 'Ngày sinh tài xế'], ['cccdTx', 'CCCD tài xế'], ['ngayCapTx', 'Ngày cấp CCCD tài xế'], ['noiCapTx', 'Nơi cấp CCCD tài xế'], ['diaChiTx', 'Thường trú tài xế'], ['gplx', 'Số GPLX'], ['hanGplx', 'Ngày đến hạn GPLX'], ['hanBH', 'Ngày đến hạn bảo hiểm'],
@@ -64,7 +64,7 @@ function stRender() {
       const doiKhac = c => { const x = st.cur.nc.find(r => HAKModel.cccdSo(r.cccd) === c); const d = x && (rec.doi || []).find(y => y.id === x.doiId); return d ? ' — đang ở ' + (d.ten || 'đội khác') : ''; };
       return L.length ? '<label style="display:block;margin-bottom:8px"><span>Chọn người từ Danh mục đối tượng (theo CCCD, thông tin mới nhất)</span><select id="ncDm"><option value="">— nhập người mới (tự vào Danh mục khi lưu lô) —</option>' + L.map(r => '<option value="' +
       esc(HAKModel.cccdSo(r.cccd)) + '">' + esc((r._nhan || r.ten) + ' · CCCD ' + HAKModel.cccdSo(r.cccd) + doiKhac(HAKModel.cccdSo(r.cccd))) + '</option>').join('') +
-      '</select><small class="mut">Điền sẵn họ tên, ngày sinh, CCCD, ngày cấp, nơi cấp, địa chỉ; vai trò, chức danh và đội chọn cho lô này. Thông tin được chụp lại trong lô, sửa ở lô này không đổi lô khác.</small></label>' : '';
+      '</select><small class="mut">Điền sẵn họ tên, ngày sinh, CCCD, ngày cấp, nơi cấp, địa chỉ; chức vụ, vị trí và đội chọn cho lô này. Thông tin được chụp lại trong lô, sửa ở lô này không đổi lô khác.</small></label>' : '';
       })() : '') +
     '<form id="stForm" class="grid">' + ST_FIELDS[kind].map(fld).join('') + '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">' + (stm.id ? 'Cập nhật vào bản nháp' : 'Thêm vào bản nháp') + '</button><button class="btn ghost" type="button" data-act="stClose">Hủy</button></div></form>';
   $('#stBox').classList.add('on');

@@ -3,7 +3,7 @@
  * danh mục cũ (lao động nhiều ngày, xe kèm tài xế, đối tác doanh nghiệp + cá nhân), lô hai đội có chấm công theo CCCD và hợp đồng vận chuyển ký với doanh nghiệp,
  * một người tài xế chỉ có tên (không CCCD), một lô đã chốt. So trước / sau:
  *  - sao lưu file trước khi chuyển (truoc-nang-cap-v14-len-v15), chạy một lần, mở lại không chạy lại, không đổi dữ liệu;
- *  - Danh mục đối tượng / xe / vị trí dựng từ danh mục cũ (một CCCD = một người, gộp vai trò); doanh nghiệp → pháp nhân ký Vận chuyển;
+ *  - Danh mục đối tượng / xe / vị trí dựng từ danh mục cũ (một CCCD = một người, gộp chức vụ); doanh nghiệp → pháp nhân ký Vận chuyển;
  *  - lô đang lập: dòng có ID, chấm công chuyển sang ID dòng (giữ đủ số công), hợp đồng vận chuyển nối bên ký; phần dữ liệu gốc không đổi (bỏ ID / liên kết);
  *  - không tự nối khi không duy nhất (tài xế không CCCD) → “Cần đối chiếu”, dữ liệu gốc giữ nguyên;
  *  - lô đã chốt: không đổi một byte, vẫn nguyên vẹn, vẫn chỉ đọc.
@@ -49,7 +49,7 @@ const doc = q => { const s = new Store(file, {migrations: MIGRATIONS}); try { re
   ok('sao lưu file trước khi chuyển đổi (truoc-nang-cap-v14-len-v' + MIGRATIONS.length + ')', bk.length === 1, JSON.stringify(fs.existsSync(bkDir) ? fs.readdirSync(bkDir) : []));
   const db = await w.evaluate(() => window.hak.loadSync().db), fa = db.rs.own1.forests.fa, fb = db.rs.own1.forests.fb;
   const ng = (db.dmDoiTuong || []).flatMap(o => (o.nguoi || []).map(x => ({o, x})));
-  ok('Danh mục đối tượng: một CCCD một người, gộp vai trò (LÊ VĂN AN: Nhân công + Tài xế + Chủ xe), thông tin dòng mới nhất', ng.filter(a => a.x.cccd === '049000000077').length === 1 && (a => a && a.x.vaiTro.nhanCong && a.x.vaiTro.taiXe && a.x.vaiTro.chuXe)(ng.find(a => a.x.cccd === '049000000077')) && (ng.find(a => a.x.cccd === '049085007001') || {x: {}}).x.diaChi === 'Đại Lộc', JSON.stringify(ng.map(a => [a.x.cccd, a.x.vaiTro, a.x.diaChi])));
+  ok('Danh mục đối tượng: một CCCD một người, gộp chức vụ (LÊ VĂN AN: Nhân công + Tài xế + Chủ xe), thông tin dòng mới nhất', ng.filter(a => a.x.cccd === '049000000077').length === 1 && (a => a && a.x.vaiTro.nhanCong && a.x.vaiTro.taiXe && a.x.vaiTro.chuXe)(ng.find(a => a.x.cccd === '049000000077')) && (ng.find(a => a.x.cccd === '049085007001') || {x: {}}).x.diaChi === 'Đại Lộc', JSON.stringify(ng.map(a => [a.x.cccd, a.x.vaiTro, a.x.diaChi])));
   const pn = (db.dmDoiTuong || []).find(o => o.loai === 'phapnhan');
   ok('doanh nghiệp cũ → pháp nhân ký Vận chuyển (đại diện, chức vụ), giữ id cũ để nối', !!pn && pn.mst === '0401234567' && pn.kyHD.vanChuyen && pn.daiDien === 'NGUYỄN ĐẠI' && pn.nguonCu === 'dn:dv1', JSON.stringify(pn));
   ok('Danh mục xe: 2 xe theo BKS, chủ xe theo ID; Vị trí có mã ổn định', (db.dmXe || []).length === 2 && (db.dmXe.find(x => /12345/.test(x.bks)) || {}).chuXeId && (db.dmViTri || []).every(v => /^vt\d+$/.test(v.id)), JSON.stringify(db.dmXe));

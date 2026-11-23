@@ -1,6 +1,6 @@
 'use strict';
 /* Danh mục xe: chọn tài xế thường chạy theo xe (Electron thật, SQLite thật):
- *  - tạo người có vai trò Tài xế → thêm xe chọn tài xế → lưu → mở lại vẫn thấy tài xế (ô chọn, cột Tài xế, lọc theo tên tài xế);
+ *  - tạo người có chức vụ Tài xế → thêm xe chọn tài xế → lưu → mở lại vẫn thấy tài xế (ô chọn, cột Tài xế, lọc theo tên tài xế);
  *  - xe không gắn tài xế: bản ghi không có khóa taiXeId;
  *  - thêm xe vào lô: tên / CCCD / GPLX tài xế điền sẵn; xe có dòng cũ đã có tài xế thì KHÔNG bị ghi đè.
  * Chạy: xvfb-run -a node scripts/e2e-xe-taixe.js */
@@ -22,7 +22,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const dbAll = () => w.evaluate(() => window.hak.loadSync().db);
   const set = (sel, o) => w.evaluate(([sel, o]) => { const f = document.querySelector(sel); Object.entries(o).forEach(([k, v]) => { const e = f.elements[k]; if (e.type === 'checkbox') e.checked = !!v; else e.value = v; }); }, [sel, o]);
 
-  // 1. người có vai trò Tài xế (và một người chỉ Nhân công để thử lọc)
+  // 1. người có chức vụ Tài xế (và một người chỉ Nhân công để thử lọc)
   await w.click('#navDm'); await w.click('#setTab_setdt'); await w.waitForSelector('#dtBang');
   await w.click('#cnThem'); await w.waitForSelector('#dtForm');
   await set('#dtForm', {ten: 'NGUYỄN VĂN LÁI', diaChi: 'Quế Sơn', sdt: '0905111222', hoTen: 'NGUYỄN VĂN LÁI', cccd: '049085001234', ngayCap: '01/01/2021', noiCap: 'Cục CS QLHC', gioiTinh: 'Nam', vtTaiXe: true, gplx: 'GP-777', hanGplx: '01/01/2030'});
@@ -30,13 +30,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('#cnThem'); await w.waitForSelector('#dtForm'); await set('#dtForm', {ten: 'TỔ CƯA TRẦN SƠN', hoTen: 'TRẦN SƠN', cccd: '049085000001', vtNhanCong: true});
   await w.click('#dtLuu'); await w.waitForTimeout(400);
   let D1 = await dbAll(), ng = ((D1.dmDoiTuong || []).find(o => o.ten === 'NGUYỄN VĂN LÁI') || {nguoi: [{}]}).nguoi[0];
-  ok('có người vai trò Tài xế trong Danh mục đối tượng', !!ng.id && ng.vaiTro && ng.vaiTro.taiXe, JSON.stringify(ng));
+  ok('có người chức vụ Tài xế trong Danh mục đối tượng', !!ng.id && ng.vaiTro && ng.vaiTro.taiXe, JSON.stringify(ng));
 
   // 2. thêm xe chọn tài xế
   await w.click('#setTab_setxe'); await w.waitForSelector('#xeBang'); await w.click('#xeThem'); await w.waitForSelector('#xeForm');
   const optsTx = await w.$$eval('#xeForm [name=taiXeId] option', e => e.map(x => x.textContent));
-  ok('ô Tài xế chỉ liệt kê người có vai trò Tài xế', optsTx.some(x => /NGUYỄN VĂN LÁI/.test(x)) && !optsTx.some(x => /TRẦN SƠN/.test(x)), optsTx.join('|'));
-  ok('có dòng hướng dẫn: tài xế là vai trò của người trong Danh mục đối tượng', /Tài xế là vai trò của người trong Danh mục đối tượng/.test(await w.innerText('#xeForm')));
+  ok('ô Tài xế chỉ liệt kê người có chức vụ Tài xế', optsTx.some(x => /NGUYỄN VĂN LÁI/.test(x)) && !optsTx.some(x => /TRẦN SƠN/.test(x)), optsTx.join('|'));
+  ok('có dòng hướng dẫn: tài xế là chức vụ của người trong Danh mục đối tượng', /Tài xế là chức vụ của người trong Danh mục đối tượng/.test(await w.innerText('#xeForm')));
   await set('#xeForm', {bks: '92C-456.78', loaiXe: 'Xe tải', taiXeId: ng.id}); await w.click('#xeLuu'); await w.waitForTimeout(400);
   const xCu = (await dbAll()).dmXe.find(x => x.bks === '92C-777.88');   // xe từ danh mục cũ (đã chuyển sang Danh mục xe): sửa để gắn tài xế
   await w.click('#xeBang [data-xesua=' + xCu.id + ']'); await w.waitForSelector('#xeForm'); await set('#xeForm', {taiXeId: ng.id}); await w.click('#xeLuu'); await w.waitForTimeout(400);

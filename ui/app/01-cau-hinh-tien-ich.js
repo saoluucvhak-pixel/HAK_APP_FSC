@@ -25,8 +25,10 @@ function viTriRowsTai(ref, rowsVer) {
 }
 const viTriRows = () => { if (!_cdNho) { _cdNho = HAKDinhBien.danhMuc(db, viTriDangDung()).rows; setTimeout(() => { _cdNho = null; }, 0); } return _cdNho.map(r => Object.assign({}, r)); };
 const chucDanhAll = () => viTriRows().map(r => r.chucDanh);
-const H_NC = {'Vai trò':'vaiTro','STT':'stt','Danh xưng':'danhXung','Họ và tên':'ten','Ngày sinh':'ngaySinh','CCCD':'cccd','Ngày cấp CCCD':'ngayCap','Nơi cấp CCCD':'noiCap','Địa chỉ thường trú':'diaChi','Chức danh':'chucDanh','Đội':'doi'};
-const NC_REQ = ['Vai trò','Họ và tên','CCCD','Chức danh'];
+const H_NC = {'Chức vụ':'vaiTro','STT':'stt','Danh xưng':'danhXung','Họ và tên':'ten','Ngày sinh':'ngaySinh','CCCD':'cccd','Ngày cấp CCCD':'ngayCap','Nơi cấp CCCD':'noiCap','Địa chỉ thường trú':'diaChi','Vị trí':'chucDanh','Đội':'doi'};
+/* file Excel cũ (trước khi đổi tên cột) vẫn nhập được: tiêu đề cũ ánh xạ vào cùng trường lưu (vaiTro, chucDanh) */
+const NC_ALIAS = {'Vai trò':'vaiTro','Chức danh':'chucDanh'};
+const NC_REQ = ['Chức vụ','Họ và tên','CCCD','Vị trí'];
 const H_DX = {'STT':'stt','Chủ xe (bên vận chuyển)':'chuXe','Ngày sinh chủ xe':'ngaySinh','CCCD chủ xe':'cccd','Ngày cấp CCCD chủ xe':'ngayCap','Nơi cấp CCCD chủ xe':'noiCap','Thường trú chủ xe':'diaChi',
   'Biển kiểm soát':'bienSo','Ngày cấp đăng ký xe (cà vẹt)':'cavet','Loại xe':'loaiXe','Người ký HĐ vận chuyển':'nguoiKy',
   'Tên tài xế':'taiXe','Ngày sinh tài xế':'ngaySinhTx','CCCD tài xế':'cccdTx','Ngày cấp CCCD tài xế':'ngayCapTx','Nơi cấp CCCD tài xế':'noiCapTx','Thường trú tài xế':'diaChiTx',
@@ -39,6 +41,7 @@ const PC_ALIAS = {'Số phiếu cân':'soPhieu','Ngày cân':'ngay','Biển ki�
 const PC_REQ = ['Số phiếu','Ngày cân 1','Biển số 1'];   // khối lượng: một trong KL (kg), tấn hoặc Cân 1 và Cân 2 (kiểm ở từng dòng)
 /* Cột “Mã rừng” KHÔNG còn trong file mẫu và không bắt buộc: dữ liệu luôn nạp vào lô đang mở. File cũ vẫn có thể có cột này (nếu điền thì phải khớp lô, dùng để chặn nạp nhầm file của lô khác; để trống thì tự lấy mã lô đang mở). */
 const H_LEGACY = {'Mã rừng': 'maRung'};
+Object.assign(H_LEGACY, NC_ALIAS);   // bộ đọc Excel dùng chung H_LEGACY: file nhân công cũ (tiêu đề “Vai trò”, “Chức danh”) vẫn nhập được
 const PC_HEAD = Object.keys(H_PC);
 const NC_HEAD = Object.keys(H_NC);
 const DX_HEAD = Object.keys(H_DX);

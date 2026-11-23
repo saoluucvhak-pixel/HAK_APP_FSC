@@ -52,7 +52,7 @@
   const timCccd = (dm, cccd) => { const k = so(cccd); return k ? tatCaNguoi(dm).find(x => so(x.ng.cccd) === k) || null : null; };
   /* nhãn một người cho bộ chọn: tên đối tượng và họ tên khi khác nhau (một đối tượng nhiều người) */
   const nhanNguoi = (dt, ng) => (dt.nguoi || []).length > 1 || fold(dt.ten) !== fold(ng.hoTen) ? dt.ten + ' — ' + ng.hoTen : ng.hoTen;
-  /* mọi người đang dùng có vai trò `vai` (nhanCong | taiXe | chuXe): [{dt, ng, nhan}] */
+  /* mọi người đang dùng có chức vụ `vai` (nhanCong | taiXe | chuXe): [{dt, ng, nhan}] */
   const nguoiTheoVaiTro = (dm, vai) => tatCaNguoi(dm).filter(x => !x.dt.ngung && !x.ng.ngung && x.ng.vaiTro && x.ng.vaiTro[vai]).map(x => Object.assign(x, {nhan: nhanNguoi(x.dt, x.ng)}))
     .sort((a, b) => a.nhan.localeCompare(b.nhan, 'vi'));
   /* bên ký được loại hợp đồng `loai` (vanChuyen | nhanCong): pháp nhân có quyền ký (qua người đại diện) và người (thể nhân) có quyền ký. [{dt, ng|null, nhan, daiDien, chucVu}] */
@@ -95,7 +95,7 @@
       const lb = 'Người ' + (i + 1) + (p.hoTen ? ' (' + p.hoTen + ')' : '');
       if (!p.hoTen) e.push(lb + ': thiếu họ tên');
       if (p.cccd && !NL().cccdHopLe(p.cccd)) e.push(lb + ': CCCD phải gồm 9 hoặc 12 chữ số');
-      if (p.cccd) { if (cccdLo.has(p.cccd)) e.push(lb + ': trùng CCCD với người khác trong cùng hồ sơ'); cccdLo.set(p.cccd, 1); const o = timCccd(khac, p.cccd); if (o) e.push(lb + ': CCCD ' + p.cccd + ' đã có ở hồ sơ “' + o.dt.ten + '” (một người một hồ sơ: thêm vai trò ở hồ sơ đó)'); }
+      if (p.cccd) { if (cccdLo.has(p.cccd)) e.push(lb + ': trùng CCCD với người khác trong cùng hồ sơ'); cccdLo.set(p.cccd, 1); const o = timCccd(khac, p.cccd); if (o) e.push(lb + ': CCCD ' + p.cccd + ' đã có ở hồ sơ “' + o.dt.ten + '” (một người một hồ sơ: thêm chức vụ ở hồ sơ đó)'); }
       [['ngayCap', 'ngày cấp'], ['hanCccd', 'hạn CCCD'], ['ngaySinh', 'ngày sinh'], ['hanGplx', 'hạn GPLX']].forEach(([k, t]) => { if (!ngayOk(p[k])) e.push(lb + ': ' + t + ' “' + p[k] + '” không phải ngày có thật (dd/mm/yyyy)'); });
       if (p.vaiTro.taiXe && !p.gplx) e.push(lb + ': tài xế phải có số giấy phép lái xe');
     });
@@ -103,7 +103,7 @@
   }
   /* CẢNH BÁO (không chặn lưu) — phiếu #05:
    *  - ND-06: thể nhân chưa có CCCD / pháp nhân chưa có MST mà trùng tên (không phân biệt hoa thường, dấu) với hồ sơ cùng loại khác;
-   *  - ND-09: người có vai trò Nhân công / Tài xế thiếu ngày sinh, ngày cấp, nơi cấp, địa chỉ thường trú (lô sẽ đòi khi chọn vào đội / xe). Trả [chuỗi]. */
+   *  - ND-09: người có chức vụ Nhân công / Tài xế thiếu ngày sinh, ngày cấp, nơi cấp, địa chỉ thường trú (lô sẽ đòi khi chọn vào đội / xe). Trả [chuỗi]. */
   function canhBao(dm, dt) {
     const w = [], x = chuan(dt), khac = (dm || []).filter(o => o && o.id !== x.id && o.loai === x.loai && fold(o.ten) && fold(o.ten) === fold(x.ten));
     const coKhoa = x.loai === 'phapnhan' ? !!so(x.mst) : x.nguoi.some(p => p.cccd);
@@ -151,7 +151,7 @@
       if (k.ok) { dt = k.dm; nguoi.push({r, id: k.dt.nguoi[0].id}); } else loi.push(s(r.ten) + ': ' + k.errs.join('; '));
     });
     ((moi && moi.xe) || []).forEach(r => {
-      const a = so(r.cccd) ? timCccd(dt, r.cccd) : null, chu = a && a.ng.vaiTro && a.ng.vaiTro.chuXe ? a.ng.id : '';   // chủ xe chỉ nối khi đã có hồ sơ người mang vai trò Chủ xe
+      const a = so(r.cccd) ? timCccd(dt, r.cccd) : null, chu = a && a.ng.vaiTro && a.ng.vaiTro.chuXe ? a.ng.id : '';   // chủ xe chỉ nối khi đã có hồ sơ người mang chức vụ Chủ xe
       const k = XEDM().luu(dx, {bks: s(r.bienSo), ngayCapNhat: s(homNay), hanKiemDinh: s(r.kdDen), hanBaoHiem: s(r.hanBH), loaiXe: s(r.loaiXe), chuXeId: chu}, dt);
       if (k.ok) { dx = k.dm; xe.push({r, id: k.xe.id}); } else loi.push('Xe ' + s(r.bienSo) + ': ' + k.errs.join('; '));
     });
@@ -166,7 +166,7 @@
   const COT = {'Mã đối tượng': 'ma', 'Tên đối tượng': 'ten', 'Loại': 'loai', 'Mã số thuế': 'mst', 'Địa chỉ': 'diaChi', 'Số điện thoại': 'sdt', 'Ký hợp đồng': 'kyHD',
     'Người đại diện': 'daiDien', 'Chức vụ người đại diện': 'chucVuDaiDien', 'Họ tên': 'hoTen', 'CCCD': 'cccd', 'Ngày cấp': 'ngayCap', 'Nơi cấp': 'noiCap', 'Hạn CCCD': 'hanCccd',
     'Thường trú': 'diaChiNg', 'Giới tính': 'gioiTinh', 'Ngày sinh': 'ngaySinh', 'SĐT người': 'sdtNg', 'Số GPLX': 'gplx', 'Hạn GPLX': 'hanGplx', 'Vị trí mặc định': 'viTri',
-    'Chức danh khi ký': 'chucDanhKy', 'Vai trò': 'vaiTro', 'Người ký': 'nguoiKy'};
+    'Chức danh khi ký': 'chucDanhKy', 'Vai trò': 'vaiTro', 'Chức vụ': 'vaiTro', 'Người ký': 'nguoiKy'};
   const yesKy = v => {
     const t = fold(v);
     if (/^(khong|khong co|no|0|false|-+)$/.test(t)) return {vanChuyen: false, nhanCong: false};
@@ -253,7 +253,7 @@
 
   /* ---------- chuyển từ danh mục cũ (bản 2.x) ---------- */
   /* Dựng danh mục đối tượng từ dmLaoDong (người lao động, nhiều dòng theo ngày), dmXeVC (tài xế, chủ xe) và dmDoiTac (doanh nghiệp, cá nhân ký) — “Người chung” theo CCCD.
-   * Mỗi CCCD (9 hoặc 12 số, phiếu #14) = một thể nhân một người, gộp vai trò; thông tin lấy dòng mới nhất, chỗ trống bù từ nguồn khác. Doanh nghiệp = pháp nhân có quyền ký Vận chuyển.
+   * Mỗi CCCD (9 hoặc 12 số, phiếu #14) = một thể nhân một người, gộp chức vụ; thông tin lấy dòng mới nhất, chỗ trống bù từ nguồn khác. Doanh nghiệp = pháp nhân có quyền ký Vận chuyển.
    * Người không có CCCD hợp lệ (tài xế / chủ xe chỉ có tên) KHÔNG tự tạo: ghi Cần đối chiếu. hienCo: danh mục mới đã có (chạy lại không thêm trùng).
    * Trả {dm, canDoiChieu: [{loai, ref, lyDo, goc}], so: {nguoi, phapNhan}}. vt: danh mục vị trí để nối viTriId. */
   function tuDanhMucCu(db, vt, hienCo) {

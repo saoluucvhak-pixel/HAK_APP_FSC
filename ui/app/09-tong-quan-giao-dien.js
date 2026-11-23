@@ -140,7 +140,7 @@ function checklistRung(job) {
   add(!!(i.tuNgay && i.denNgay), 'Thời gian khai thác', 'Thiếu từ ngày/đến ngày');
   add(job.nc.length > 0 && !g.nc.errs.length, 'Nhân công hợp lệ', job.nc.length ? g.nc.errs.length + ' lỗi' : 'Chưa nạp file nhân công');
   add(!pay.issues.length, 'Hình thức, đơn giá lương', pay.issues.join('; '), true);
-  add(job.nc.length > 0 && !g.normErrs.length, 'Định mức BHLĐ theo chức danh', g.normErrs.join('; ') || 'Chưa có nhân công');
+  add(job.nc.length > 0 && !g.normErrs.length, 'Định mức BHLĐ theo vị trí', g.normErrs.join('; ') || 'Chưa có nhân công');
   add(!job.nc.length || !minorsOf(job).length, 'Người lao động đủ 18 tuổi', 'Có ' + minorsOf(job).length + ' người dưới 18 tuổi: ' + minorsOf(job).map(r => r.ten).join(', '));
   add(job.dx.length > 0 && !g.dx.errs.length, 'Vận chuyển hợp lệ', job.dx.length ? g.dx.errs.length + ' lỗi' : 'Chưa nạp file vận chuyển');
   add(job.dx.length > 0 && !g.dx.warns.length, 'Giấy tờ xe, GPLX còn hạn', job.dx.length ? g.dx.warns.length + ' dòng cần lưu ý' : 'Chưa có vận chuyển', true);

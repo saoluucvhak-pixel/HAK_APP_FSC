@@ -89,7 +89,7 @@ function dtSfCfg() {
     fields: [
       {key: 'nhom', label: 'Nhóm', type: 'enum', options: NHOM_DT.filter(([k]) => k !== 'tatca').map(([k, t]) => ({value: k, label: t})), match: (o, v) => HAKDoiTuong.loc([o], v, '').length === 1},
       {key: 'loai', label: 'Loại', type: 'enum', options: [{value: 'thenhan', label: 'Thể nhân'}, {value: 'phapnhan', label: 'Pháp nhân'}], match: (o, v) => o.loai === v},
-      {key: 'vaiTro', label: 'Vai trò', type: 'multi', options: [{value: 'nhanCong', label: 'Nhân công'}, {value: 'taiXe', label: 'Tài xế'}, {value: 'chuXe', label: 'Chủ xe'}], match: (o, vals) => (o.nguoi || []).some(p => p.vaiTro && vals.some(k => p.vaiTro[k]))},
+      {key: 'vaiTro', label: 'Chức vụ', type: 'multi', options: [{value: 'nhanCong', label: 'Nhân công'}, {value: 'taiXe', label: 'Tài xế'}, {value: 'chuXe', label: 'Chủ xe'}], match: (o, vals) => (o.nguoi || []).some(p => p.vaiTro && vals.some(k => p.vaiTro[k]))},
       {key: 'kyHd', label: 'Quyền ký HĐ', type: 'multi', options: [{value: 'nhanCong', label: 'Ký Nhân công'}, {value: 'vanChuyen', label: 'Ký Vận chuyển'}], match: (o, vals) => vals.some(k => (o.kyHD && o.kyHD[k]) || (o.nguoi || []).some(p => p.kyHD && p.kyHD[k]))},
       {key: 'thieuCccd', label: 'Chưa có CCCD', type: 'bool', match: o => o.loai !== 'phapnhan' && (o.nguoi || []).some(p => !trim(p.cccd))},
       {key: 'ngung', label: 'Đang ngừng sử dụng', type: 'bool', match: o => !!o.ngung}
@@ -111,7 +111,7 @@ function panelSetDt() {
   const sfRes = hakSfApply('dm_doi_tuong', sfCfg, baseDs);
   const sfOn = SF.activeCount(hakSfGet('dm_doi_tuong', sfCfg).filter.getState()) > 0;
   const ds = sfRes.rows, x = cd.sua;
-  const bang = '<div class="wrap" id="dtWrap" style="max-height:min(60vh,520px)"><table id="dtBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Mã</th><th>Tên đối tượng</th><th>Loại</th><th>MST</th><th>Địa chỉ</th><th>SĐT</th><th>Ký hợp đồng</th><th>Người · vai trò</th><th></th></tr></thead><tbody>' +
+  const bang = '<div class="wrap" id="dtWrap" style="max-height:min(60vh,520px)"><table id="dtBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Mã</th><th>Tên đối tượng</th><th>Loại</th><th>MST</th><th>Địa chỉ</th><th>SĐT</th><th>Ký hợp đồng</th><th>Người · chức vụ</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(o => '<tr data-dt="' + esc(o.id) + '"><td>' + esc(o.ma) + '</td><td><b>' + esc(o.ten) + '</b></td><td>' + HAKDoiTuong.LOAI[o.loai] + '</td><td>' + esc(o.mst) + '</td><td>' + esc(o.diaChi) + '</td><td>' + esc(o.sdt) + '</td><td>' +
       esc(o.loai === 'phapnhan' ? HAKDoiTuong.kyText(o.kyHD) : HAKDoiTuong.kyText({vanChuyen: (o.nguoi || []).some(p => p.kyHD && p.kyHD.vanChuyen), nhanCong: (o.nguoi || []).some(p => p.kyHD && p.kyHD.nhanCong)})) + '</td><td>' +
       (o.nguoi || []).map(p => esc(p.hoTen) + Object.keys(HAKDoiTuong.VAI_TRO).filter(k => p.vaiTro && p.vaiTro[k]).map(k => ' <span class="pill" data-vai="' + k + '">' + esc(HAKDoiTuong.VAI_TRO[k]) + '</span>').join('')).join('<br>') + '</td>' +
@@ -129,9 +129,9 @@ function panelSetDt() {
     '<div class="grid">' + (mot ? khoiMot : '') + fld30('ma', 'Mã đối tượng (trống: tự cấp)', x.ma) + fld30('ten', mot ? 'Tên đối tượng (trống: lấy theo họ tên; điền nếu là hộ kinh doanh, tổ…)' : pn ? 'Tên doanh nghiệp' : 'Tên đối tượng', mot && trim(x.ten) === trim(p0.hoTen) ? '' : x.ten, {req: !mot}) +
     fld30('mst', 'Mã số thuế', x.mst) + (mot ? '' : fld30('diaChi', pn ? 'Địa chỉ trụ sở' : 'Địa chỉ thường trú', x.diaChi) + fld30('sdt', 'Số điện thoại', x.sdt)) +
     (pn ? '<label><span>Ký hợp đồng</span>' + selKy('kyHD', kyChon(x.kyHD || {})) + '</label>' + fld30('daiDien', 'Người đại diện', x.daiDien) + fld30('chucVuDaiDien', 'Chức danh người đại diện', x.chucVuDaiDien) : '') + '</div>' +
-    (mot ? '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Vai trò:</b>' + cb30('vtNhanCong', 'Nhân công', p0.vaiTro && p0.vaiTro.nhanCong) + cb30('vtTaiXe', 'Tài xế', p0.vaiTro && p0.vaiTro.taiXe) + cb30('vtChuXe', 'Chủ xe', p0.vaiTro && p0.vaiTro.chuXe) + '</div>' +
+    (mot ? '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Chức vụ:</b>' + cb30('vtNhanCong', 'Nhân công', p0.vaiTro && p0.vaiTro.nhanCong) + cb30('vtTaiXe', 'Tài xế', p0.vaiTro && p0.vaiTro.taiXe) + cb30('vtChuXe', 'Chủ xe', p0.vaiTro && p0.vaiTro.chuXe) + '</div>' +
       '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px"><b>Quyền ký hợp đồng:</b>' + cb30('kyVC', 'Vận chuyển', p0.kyHD && p0.kyHD.vanChuyen) + cb30('kyNC', 'Nhân công', p0.kyHD && p0.kyHD.nhanCong) + '</div>' : '') +
-    (!pn && !mot ? '<h4 style="margin:12px 0 6px">Thông tin cá nhân (đối tượng có nhiều người)</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Vai trò</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
+    (!pn && !mot ? '<h4 style="margin:12px 0 6px">Thông tin cá nhân (đối tượng có nhiều người)</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Chức vụ</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
       x.nguoi.map((p, i) => '<tr><td><b>' + esc(p.hoTen) + '</b></td><td>' + esc(p.cccd) + '</td><td>' + esc(p.sdt) + '</td><td>' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + '</td><td>' + esc(HAKDoiTuong.kyText(p.kyHD || {})) + '</td><td>' + esc(ten30(p.viTriId)) + '</td>' +
         '<td style="white-space:nowrap"><button type="button" class="btn ghost sm" data-ngsua="' + i + '">Sửa</button> <button type="button" class="btn ghost sm" data-ngbo="' + i + '">Bỏ</button></td></tr>').join('') +
       '</tbody></table></div><div class="row" style="margin-top:6px"><button type="button" class="btn ghost sm" data-act="ngThem" id="ngThem">+ Thêm người</button></div>' : '') +
@@ -157,9 +157,9 @@ function ngMo(i) {
     fld30('hoTen', 'Họ tên', p.hoTen, {req: true}) + fld30('cccd', 'Số CCCD', p.cccd) + fld30('ngayCap', 'Ngày cấp (dd/mm/yyyy)', p.ngayCap) + fld30('noiCap', 'Nơi cấp', p.noiCap) + fld30('hanCccd', 'Hạn CCCD', p.hanCccd) +
     fld30('diaChi', 'Địa chỉ thường trú', p.diaChi) + '<label><span>Giới tính</span><select name="gioiTinh"><option></option><option' + (p.gioiTinh === 'Nam' ? ' selected' : '') + '>Nam</option><option' + (p.gioiTinh === 'Nữ' ? ' selected' : '') + '>Nữ</option></select></label>' +
     fld30('ngaySinh', 'Ngày sinh', p.ngaySinh) + fld30('sdt', 'Số điện thoại', p.sdt) + fld30('gplx', 'Số giấy phép lái xe', p.gplx) + fld30('hanGplx', 'Hạn GPLX', p.hanGplx) +
-    '<label><span>Vị trí mặc định</span><select name="viTriId"><option value="">—</option>' + dmVT().filter(v => !v.ngung).map(v => '<option value="' + esc(v.id) + '"' + (v.id === p.viTriId ? ' selected' : '') + '>' + esc(v.ten) + '</option>').join('') + '</select></label>' +
+    '<label><span>Vị trí mặc định</span><select name="viTriId"><option value="">—</option>' + dmVT().filter(v => !v.ngung || v.id === p.viTriId).map(v => '<option value="' + esc(v.id) + '"' + (v.id === p.viTriId ? ' selected' : '') + '>' + esc(v.ten) + '</option>').join('') + '</select></label>' +
     fld30('chucDanhKy', 'Chức danh khi ký (nếu có)', p.chucDanhKy) + '</div>' +
-    '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Vai trò:</b>' + cb('vtNhanCong', 'Nhân công', p.vaiTro && p.vaiTro.nhanCong) + cb('vtTaiXe', 'Tài xế', p.vaiTro && p.vaiTro.taiXe) + cb('vtChuXe', 'Chủ xe', p.vaiTro && p.vaiTro.chuXe) + '</div>' +
+    '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Chức vụ:</b>' + cb('vtNhanCong', 'Nhân công', p.vaiTro && p.vaiTro.nhanCong) + cb('vtTaiXe', 'Tài xế', p.vaiTro && p.vaiTro.taiXe) + cb('vtChuXe', 'Chủ xe', p.vaiTro && p.vaiTro.chuXe) + '</div>' +
     '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px"><b>Ký hợp đồng:</b>' + cb('kyVC', 'Vận chuyển', p.kyHD && p.kyHD.vanChuyen) + cb('kyNC', 'Nhân công', p.kyHD && p.kyHD.nhanCong) + '</div>' +
     '<div class="row" style="gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" type="submit" id="ngLuu">Lưu người</button><button class="btn ghost" type="button" data-act="dlgDong">Hủy</button></div></form>');
 }
@@ -222,20 +222,26 @@ banNhapUI.push({
   luu: () => ctySave(),
   bo: () => { cty.edit = null; cty.goc = ''; }
 });
+/* ô đang sửa của một dòng vị trí: tên, nhiệm vụ, ghi chú (cột Vị trí / Nhiệm vụ / Ghi chú) */
+const vtDocDong = inp => { const id = inp.dataset.vtten, tr = inp.closest('tr'), g = k => { const e = tr && tr.querySelector('[' + k + '="' + id + '"]'); return e ? trim(e.value) : null; }; return {id, ten: trim(inp.value), nhiemVu: g('data-vtnv'), ghiChu: g('data-vtgc')}; };
+const vtKhac = (d, v) => !!v && ((d.ten && d.ten !== trim(v.ten)) || (d.nhiemVu != null && d.nhiemVu !== trim(v.nhiemVu)) || (d.ghiChu != null && d.ghiChu !== trim(v.ghiChu)));
+/* lưu một dòng: đổi tên (một lần cho mọi bảng) rồi nhiệm vụ / ghi chú; trả {ok, error, doiTen} */
+function vtLuuDong(d) {
+  const v = HAKViTri.timId(dmVT(), d.id); if (!v) return {ok: false, error: 'Không có vị trí này'};
+  let rt = null; if (d.ten && d.ten !== trim(v.ten)) { rt = HAKViTri.doiTen(db, d.id, d.ten); if (!rt.ok) return rt; }
+  HAKViTri.sua(dmVT(), d.id, {nhiemVu: d.nhiemVu == null ? v.nhiemVu : d.nhiemVu, ghiChu: d.ghiChu == null ? v.ghiChu : d.ghiChu}); return {ok: true, doiTen: rt};
+}
 banNhapUI.push({
-  ten: 'Tên vị trí đang sửa',
-  dirty: () => NAV.view === 'setvt' && [...document.querySelectorAll('#vtBang [data-vtten]')].some(inp => { const v = dmVT().find(x => x.id === inp.dataset.vtten); return v && trim(inp.value) && trim(inp.value) !== trim(v.ten); }),
+  ten: 'Vị trí đang sửa',
+  dirty: () => NAV.view === 'setvt' && [...document.querySelectorAll('#vtBang [data-vtten]')].some(inp => vtKhac(vtDocDong(inp), dmVT().find(x => x.id === inp.dataset.vtten))),
   luu: () => {
     for (const inp of document.querySelectorAll('#vtBang [data-vtten]')) {
-      const v = dmVT().find(x => x.id === inp.dataset.vtten);
-      if (v && trim(inp.value) && trim(inp.value) !== trim(v.ten)) {
-        const r = HAKViTri.doiTen(db, v.id, inp.value);
-        if (!r.ok) { cd.vtMsg = [r.error, 'err']; render(); return false; }
-      }
+      const d = vtDocDong(inp), v = dmVT().find(x => x.id === d.id);
+      if (vtKhac(d, v)) { const r = vtLuuDong(d); if (!r.ok) { cd.vtMsg = [r.error, 'err']; render(); return false; } }
     }
     persist(); return true;
   },
-  bo: () => { document.querySelectorAll('#vtBang [data-vtten]').forEach(inp => { const v = dmVT().find(x => x.id === inp.dataset.vtten); if (v) inp.value = v.ten; }); }
+  bo: () => { document.querySelectorAll('#vtBang [data-vtten]').forEach(inp => { const v = dmVT().find(x => x.id === inp.dataset.vtten); if (v) { inp.value = v.ten; const tr = inp.closest('tr'), n = tr.querySelector('[data-vtnv]'), g = tr.querySelector('[data-vtgc]'); if (n) n.value = v.nhiemVu || ''; if (g) g.value = v.ghiChu || ''; } }); }
 });
 function xeDocForm() { const fm = document.getElementById('xeForm'); if (!fm || !cd.xe.sua) return cd.xe.sua; const x = Object.assign({}, cd.xe.sua); ['bks', 'ngayCapNhat', 'hanKiemDinh', 'hanBaoHiem', 'loaiXe', 'chuXeId', 'taiXeId'].forEach(k => { if (fm.elements[k]) x[k] = trim(fm.elements[k].value); });
 if (!x.taiXeId && !('taiXeId' in cd.xe.sua)) delete x.taiXeId;   // xe chưa có tài xế: không thêm khóa rỗng (không làm “đang sửa dở” giả)
@@ -264,9 +270,9 @@ function panelSetXe() {
   const form = !x ? '' : '<form id="xeForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa xe ' + esc(x.bks) : 'Thêm xe') + '</h3>' + (C.loi.length ? '<div class="msg err" id="xeLoi">' + C.loi.map(esc).join('<br>') + '</div>' : '') +
     '<div class="grid">' + fld30('ngayCapNhat', 'Ngày cập nhật', x.ngayCapNhat || hom) + fld30('bks', 'Số BKS', x.bks, {req: true, ph: '92C-123.45'}) + fld30('hanKiemDinh', 'Ngày hết hạn kiểm định', x.hanKiemDinh) + fld30('hanBaoHiem', 'Ngày hết hạn bảo hiểm', x.hanBaoHiem) + fld30('loaiXe',
     'Loại xe', x.loaiXe) +
-    '<label><span>Chủ xe (người có vai trò Chủ xe hoặc pháp nhân)</span>' + chonChuXeHtml(x.chuXeId) + '</label>' +
-    '<label><span>Tài xế thường chạy (người có vai trò Tài xế)</span>' + chonTaiXeHtml(x.taiXeId) + '</label></div>' +
-    '<p class="mut" style="margin:6px 0 0">Tài xế là vai trò của người trong Danh mục đối tượng.</p>' +
+    '<label><span>Chủ xe (người có chức vụ Chủ xe hoặc pháp nhân)</span>' + chonChuXeHtml(x.chuXeId) + '</label>' +
+    '<label><span>Tài xế thường chạy (người có chức vụ Tài xế)</span>' + chonTaiXeHtml(x.taiXeId) + '</label></div>' +
+    '<p class="mut" style="margin:6px 0 0">Tài xế là chức vụ của người trong Danh mục đối tượng.</p>' +
     '<p class="mut" style="margin:6px 0 0">Chưa có chủ xe hoặc tài xế trong danh sách? <button type="button" class="btn ghost sm" data-act="openSetDt" data-quaylai="setxe">Mở Danh mục đối tượng</button> (bản đang nhập được giữ để quay lại).</p>' +
     '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="xeLuu">Lưu</button><button class="btn ghost" type="button" data-act="xeHuy">Hủy</button></div></form>';
   return '<div class="card"><h3 style="margin-top:0">Danh mục xe</h3>' + (cd.msg ? '<div class="msg ' + cd.msg[1] + '" id="xeMsg">' + esc(cd.msg[0]) + '</div>' : '') +
@@ -328,21 +334,28 @@ function vtSfCfg() {
   const SF = HAKCore.sf;
   return {
     screenId: 'dm_vi_tri', title: 'Vị trí công việc',
-    searchPlaceholder: 'Tìm theo tên hoặc mã vị trí…',
+    searchPlaceholder: 'Tìm theo tên, nhiệm vụ hoặc ghi chú…',
     quickFields: ['q'], advancedFields: ['q'], fields: [],
-    matchQ: (v, q) => { const h = SF.hay([v.ten, v.id]); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); }
+    matchQ: (v, q) => { const h = SF.hay([v.ten, v.id, v.nhiemVu, v.ghiChu]); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); }
   };
 }
+/* danh mục trống hoàn toàn (cài mới): gieo sẵn vài vị trí để chọn, một lần mỗi phiên (xóa hết rồi thì không gieo lại trong phiên này) */
+let vtDaGieo = false;
+function vtGieoSan() { if (vtDaGieo) return; vtDaGieo = true; if (Array.isArray(db.dmViTri) && !db.dmViTri.length && HAKViTri.gieoSan(db.dmViTri)) persist(); }
 function panelSetVt() {
+  vtGieoSan();
   const sfCfg = vtSfCfg(), sfRes = hakSfApply('dm_vi_tri', sfCfg, dmVT()), ds = sfRes.rows, sfOn = HAKCore.sf.activeCount(hakSfGet('dm_vi_tri', sfCfg).filter.getState()) > 0;
-  const dung = id => { let n = 0; Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => (f.nc || []).forEach(r => { if (r && (r.viTriId === id)) n++; }))); return n; };
   return '<div class="card"><h3 style="margin-top:0">Vị trí công việc</h3>' + (cd.vtMsg ? '<div class="msg ' + cd.vtMsg[1] + '" id="vtMsg">' + esc(cd.vtMsg[0]) + '</div>' : '') +
-    '<p class="mut" style="margin-top:0">Vị trí dùng trong Định mức nhân công, định mức bảo hộ lao động, đơn giá theo vị trí và dòng nhân công. Đổi tên ở đây cập nhật mọi bảng đang dùng; hồ sơ đã chốt giữ tên đã áp dụng để in lại đúng.</p>' +
+    '<p class="mut" style="margin-top:0">Danh mục thêm, sửa, xóa được. Vị trí dùng trong Định mức nhân công, định mức bảo hộ lao động, đơn giá theo vị trí và dòng nhân công. Đổi tên ở đây cập nhật mọi bảng đang dùng; hồ sơ đã chốt giữ tên đã áp dụng để in lại đúng. Vị trí <b>đang được dùng</b> không xóa hẳn mà chuyển sang “Ngừng sử dụng”; vị trí mặc định (Tổ trưởng, Công nhân khai thác, Công nhân cưa) không xóa được.</p>' +
     hakSfBarHtml('dm_vi_tri', sfRes.total, sfRes.kept) +
-    '<div class="wrap" style="max-height:min(60vh,520px)"><table id="vtBang"><thead><tr><th>Mã</th><th>Tên vị trí</th><th>Đang dùng (dòng nhân công)</th><th></th></tr></thead><tbody>' +
-    (ds.length ? '' : '<tr><td colspan="4" class="mut" id="vtTrong">' + (sfOn ? 'Không có vị trí nào khớp bộ lọc.' : 'Chưa có vị trí nào.') + '</td></tr>') +
-    ds.map(v => '<tr><td>' + esc(v.id) + '</td><td><input data-vtten="' + esc(v.id) + '" value="' + esc(v.ten) + '" style="width:100%"></td><td>' + dung(v.id) + '</td><td><button class="btn ghost sm" data-vtdoi="' + esc(v.id) + '">Đổi tên</button></td></tr>').join('') +
-    '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px"><input id="vtMoi" placeholder="Tên vị trí mới"><button class="btn ghost" data-act="vtThem">Thêm vị trí</button></div></div>';
+    '<div class="wrap" style="max-height:min(60vh,520px)"><table id="vtBang"><thead><tr><th>Vị trí</th><th>Nhiệm vụ</th><th>Ghi chú</th><th>Đang dùng</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' +
+    (ds.length ? '' : '<tr><td colspan="5" class="mut" id="vtTrong">' + (sfOn ? 'Không có vị trí nào khớp bộ lọc.' : 'Chưa có vị trí nào.') + '</td></tr>') +
+    ds.map(v => { const d = HAKViTri.dangDung(db, v.id), mac = HAKViTri.MAC_DINH.some(m => HAKViTri.fold(m) === HAKViTri.fold(v.ten));
+      return '<tr data-vtrow="' + esc(v.id) + '"' + (v.ngung ? ' class="mut"' : '') + '><td><input data-vtten="' + esc(v.id) + '" value="' + esc(v.ten) + '" style="width:100%" aria-label="Tên vị trí">' + (v.ngung ? '<span class="pill">Ngừng sử dụng</span>' : '') + '</td>' +
+      '<td><input data-vtnv="' + esc(v.id) + '" value="' + esc(v.nhiemVu || '') + '" style="width:100%" aria-label="Nhiệm vụ"></td><td><input data-vtgc="' + esc(v.id) + '" value="' + esc(v.ghiChu || '') + '" style="width:100%" aria-label="Ghi chú"></td>' +
+      '<td title="' + esc(d.nhanCong + ' dòng nhân công, ' + d.dinhBien + ' bảng định biên, ' + d.dinhMuc + ' bản định mức BHLĐ, ' + d.donGia + ' bảng đơn giá') + '">' + (d.tong ? d.tong : 'Chưa dùng') + '</td>' +
+      '<td style="white-space:nowrap"><button class="btn ghost sm" data-vtdoi="' + esc(v.id) + '">Lưu</button> ' + (v.ngung ? '<button class="btn ghost sm" data-vtdung="' + esc(v.id) + '">Dùng lại</button> ' : '') + (mac ? '' : '<button class="btn ghost sm" data-vtxoa="' + esc(v.id) + '">Xóa</button>') + '</td></tr>'; }).join('') +
+    '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Tên vị trí mới</span><input id="vtMoi" placeholder="Tên vị trí mới"></label><label style="flex:1;min-width:200px"><span>Nhiệm vụ</span><input id="vtMoiNv" placeholder="Nhiệm vụ (không bắt buộc)"></label><label style="flex:1;min-width:160px"><span>Ghi chú</span><input id="vtMoiGc" placeholder="Ghi chú (không bắt buộc)"></label><button class="btn ghost" data-act="vtThem">Thêm vị trí</button></div></div>';
 }
 
 /* ---------- GIAO DIỆN, HƯỚNG DẪN ---------- */
@@ -369,7 +382,7 @@ function panelSetCan() {
 
 /* ---------- sự kiện ---------- */
 document.addEventListener('click', e => {
-  const t = e.target, el = t.closest && t.closest('[data-act],[data-dtsua],[data-dtngung],[data-ngsua],[data-ngbo],[data-xesua],[data-vtdoi],[data-canmo],[data-canxong]'); if (!el) return;
+  const t = e.target, el = t.closest && t.closest('[data-act],[data-dtsua],[data-dtngung],[data-ngsua],[data-ngbo],[data-xesua],[data-vtdoi],[data-vtxoa],[data-vtdung],[data-canmo],[data-canxong]'); if (!el) return;
   const a = el.dataset.act;
   if (a === 'roiLuu') return roiXuLy('luu'); if (a === 'roiBo') return roiXuLy('bo'); if (a === 'roiTiep') return roiXuLy('tiep');
   if (a === 'dlgDong') return dlgDong();
@@ -377,17 +390,19 @@ document.addEventListener('click', e => {
   if (a === 'dtExcelLuu') return dtExcelLuu(); if (a === 'xeExcelLuu') return xeExcelLuu();
   if (a === 'ngThem') { cd.sua = dtDocForm(); return ngMo(null); }
   if (a === 'xeThem') return xeMo(null); if (a === 'xeHuy') { cd.xe.sua = null; cd.xe.loi = []; return render(); } if (a === 'xeMau') return xeMau();
-  if (a === 'vtThem') { const v = trim(($('#vtMoi') || {}).value || ''); if (!v) { cd.vtMsg = ['Nhập tên vị trí.', 'warn']; return render(); } if (HAKViTri.tim(dmVT(), v)) { cd.vtMsg = ['Đã có vị trí “' + v + '”.', 'warn']; return render(); } if (!Array.isArray(db.dmViTri)) db.dmViTri = []; HAKViTri.them(db.dmViTri, v);
+  if (a === 'vtThem') { const v = trim(($('#vtMoi') || {}).value || ''), nv = trim(($('#vtMoiNv') || {}).value || ''), gc = trim(($('#vtMoiGc') || {}).value || ''); if (!v) { cd.vtMsg = ['Nhập tên vị trí.', 'warn']; return render(); } if (HAKViTri.tim(dmVT(), v)) { cd.vtMsg = ['Đã có vị trí “' + v + '”.', 'warn']; return render(); } if (!Array.isArray(db.dmViTri)) db.dmViTri = []; HAKViTri.them(db.dmViTri, v, nv, gc);
   cd.vtMsg = ['Đã thêm vị trí “' + v + '”.', 'ok']; persist(); return render(); }
+  if (el.dataset.vtxoa) { const id = el.dataset.vtxoa, v = HAKViTri.timId(dmVT(), id); if (!v) return; if (!HAKViTri.dangDung(db, id).tong && !confirm('Xóa hẳn vị trí “' + v.ten + '”? Vị trí chưa được dùng ở đâu.')) return;
+    const r = HAKViTri.xoa(db, id); cd.vtMsg = [r.ok ? r.thongBao : r.error, r.ok ? (r.kieu === 'ngung' ? 'warn' : 'ok') : 'err']; if (r.ok) persist(); return render(); }
+  if (el.dataset.vtdung) { const v = HAKViTri.timId(dmVT(), el.dataset.vtdung); if (v) { v.ngung = false; persist(); cd.vtMsg = ['Dùng lại vị trí “' + v.ten + '”.', 'ok']; } return render(); }
   if (el.dataset.dtsua) return dtMo(el.dataset.dtsua);
   if (el.dataset.dtngung) { const o = HAKDoiTuong.tim(dmDT(), el.dataset.dtngung); const r = HAKDoiTuong.ngung(dmDT(), o.id, !o.ngung); if (r.ok) { db.dmDoiTuong = r.dm; persist(); cd.msg = [(o.ngung ? 'Dùng lại ' : 'Ngừng sử dụng ') + o.ten + '.', 'ok']; } return render(); }
   if (el.dataset.ngsua) { cd.sua = dtDocForm(); return ngMo(+el.dataset.ngsua); }
   if (el.dataset.ngbo) { cd.sua = dtDocForm(); const p = cd.sua.nguoi[+el.dataset.ngbo]; if (!confirm('Bỏ ' + p.hoTen + ' khỏi đối tượng này? (Hồ sơ rừng đã chụp thông tin người này không đổi.)')) return; cd.sua.nguoi = cd.sua.nguoi.filter((_, i) => i !== +el.dataset.ngbo); return render(); }
   if (el.dataset.xesua) return xeMo(el.dataset.xesua);
-  if (el.dataset.vtdoi) { const id = el.dataset.vtdoi, inp = document.querySelector('[data-vtten="' + id + '"]'), r = HAKViTri.doiTen(db, id, inp ? inp.value : '');
-  cd.vtMsg = r.ok ? ['Đã đổi tên vị trí: cập nhật ' + r.so.dinhBien + ' dòng định biên, ' + r.so.dinhMuc + ' định mức BHLĐ, ' + r.so.donGia + ' đơn giá, ' + r.so.nhanCong + ' dòng nhân công' + (r.so.loKhoa ? '; ' + r.so.loKhoa +
-  ' lô đã chốt giữ tên cũ (định biên, định mức BHLĐ giữ thêm mục tên cũ để in lại đúng)' : '') + '.',
-  'ok'] : [r.error, 'err']; if (r.ok) persist(); return render(); }
+  if (el.dataset.vtdoi) { const id = el.dataset.vtdoi, inp = document.querySelector('[data-vtten="' + id + '"]'), r = inp ? vtLuuDong(vtDocDong(inp)) : {ok: false, error: 'Không có vị trí này'}, so = r.doiTen && r.doiTen.so;
+  cd.vtMsg = r.ok ? (so ? ['Đã lưu vị trí; đổi tên: cập nhật ' + so.dinhBien + ' dòng định biên, ' + so.dinhMuc + ' định mức BHLĐ, ' + so.donGia + ' đơn giá, ' + so.nhanCong + ' dòng nhân công' + (so.loKhoa ? '; ' + so.loKhoa +
+  ' lô đã chốt giữ tên cũ (định biên, định mức BHLĐ giữ thêm mục tên cũ để in lại đúng)' : '') + '.', 'ok'] : ['Đã lưu vị trí.', 'ok']) : [r.error, 'err']; if (r.ok) persist(); return render(); }
   if (el.dataset.canmo) { const [oid, fid, ft] = el.dataset.canmo.split('|'); NAV.cur = oid; NAV.curF = fid; NAV.view = 'owner'; NAV.tab = 'rung'; NAV.ftab = ft; return render(); }
   if (el.dataset.canxong) { const [fid, loai, ref] = el.dataset.canxong.split('|'), bo = l => (l || []).filter(c => !(c.loai === loai && c.ref === ref));
     if (fid) { Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => { if (f.id === fid) { if (loKhoa(f)) { note('Chưa đánh dấu Đã xử lý: lô ' + ((f.info || {}).maRung || f.id) + ' đã ' + (f.dung ? 'dừng' : 'chốt') + ' (chỉ đọc).', 'err'); return; } f.canDoiChieu = bo(f.canDoiChieu); persistLo(f); } })); } else { db.canDoiChieu = bo(db.canDoiChieu); persist(); } return render(); }
