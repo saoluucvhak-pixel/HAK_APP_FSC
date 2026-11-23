@@ -62,6 +62,40 @@
     return e;
   }
 
-  const api = {KT, VC, NGANH_MAC_DINH, CHUC_VU_MAC_DINH, dsNganh, dsChucVu, gieo, nganhNguoi, nganhDoiTuong, thuocNganh, vaiTroTuChucVu, chucVuNhan, tenNganh, kiemNguoi};
+  /* ---- quản lý danh mục (thêm / sửa / xóa; đang dùng thì “Ngừng sử dụng”) ---- */
+  const fold = x => s(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().replace(/\s+/g, ' ');
+  const taoId = (pre, ds_) => { let i = ds_.length + 1, id; do { id = pre + (i++).toString(36) + Math.random().toString(36).slice(2, 5); } while (ds_.some(x => x.id === id)); return id; };
+  const tatCaNguoi = db => (Array.isArray(db && db.dmDoiTuong) ? db.dmDoiTuong : []).reduce((a, o) => a.concat(o.nguoi || []), []);
+  /* số nơi đang dùng: ngành → chức vụ mặc định + người + pháp nhân; chức vụ → người */
+  function dangDungNganh(db, id) { return dsChucVu(db).filter(c => c.nganh === id).length + tatCaNguoi(db).filter(p => mang(p.nganh).includes(id)).length + (Array.isArray(db && db.dmDoiTuong) ? db.dmDoiTuong : []).filter(o => o.loai === 'phapnhan' && mang(o.nganh).includes(id)).length; }
+  const dangDungChucVu = (db, id) => tatCaNguoi(db).filter(p => mang(p.chucVu).includes(id)).length;
+  function dmGhi(db, k, mac) { if (!Array.isArray(db[k]) || !db[k].length) db[k] = clone(mac); return db[k]; }
+  function themNganh(db, ten) {
+    const t = s(ten); if (!t) return {ok: false, error: 'Nhập tên ngành nghề.'};
+    const ds_ = dmGhi(db, 'dmNganh', NGANH_MAC_DINH); if (ds_.some(x => fold(x.ten) === fold(t))) return {ok: false, error: 'Đã có ngành nghề “' + t + '”.'};
+    ds_.push({id: taoId('ng', ds_), ten: t}); return {ok: true};
+  }
+  function themChucVu(db, ten, nganh) {
+    const t = s(ten); if (!t) return {ok: false, error: 'Nhập tên chức vụ.'};
+    const ds_ = dmGhi(db, 'dmChucVu', CHUC_VU_MAC_DINH); if (ds_.some(x => fold(x.ten) === fold(t))) return {ok: false, error: 'Đã có chức vụ “' + t + '”.'};
+    ds_.push({id: taoId('cv', ds_), ten: t, nganh: s(nganh), vaiTro: ''}); return {ok: true};
+  }
+  function doi(db, k, id, ten, nganh) {
+    const mac = k === 'dmNganh' ? NGANH_MAC_DINH : CHUC_VU_MAC_DINH, ds_ = dmGhi(db, k, mac), x = ds_.find(y => y.id === id); if (!x) return {ok: false, error: 'Không có mục này.'};
+    const t = s(ten); if (!t) return {ok: false, error: 'Tên không được để trống.'};
+    if (ds_.some(y => y.id !== id && fold(y.ten) === fold(t))) return {ok: false, error: 'Đã có mục tên “' + t + '”.'};
+    x.ten = t; if (k === 'dmChucVu' && nganh !== undefined) x.nganh = s(nganh); return {ok: true};
+  }
+  function dung(db, k, id, ngung) { const x = (db[k] || []).find(y => y.id === id); if (!x) return {ok: false, error: 'Không có mục này.'}; if (ngung) x.ngung = true; else delete x.ngung; return {ok: true}; }
+  /* xóa: mục gieo sẵn không xóa; đang dùng thì chỉ “Ngừng sử dụng”; chưa dùng thì xóa hẳn */
+  function xoa(db, k, id) {
+    const mac = k === 'dmNganh' ? NGANH_MAC_DINH : CHUC_VU_MAC_DINH, ds_ = dmGhi(db, k, mac), x = ds_.find(y => y.id === id); if (!x) return {ok: false, error: 'Không có mục này.'};
+    if (mac.some(m => m.id === id)) return {ok: false, error: '“' + x.ten + '” là mục gieo sẵn, không xóa được (có thể Ngừng sử dụng).'};
+    const n = k === 'dmNganh' ? dangDungNganh(db, id) : dangDungChucVu(db, id);
+    if (n) { x.ngung = true; return {ok: true, kieu: 'ngung', thongBao: '“' + x.ten + '” đang được dùng ' + n + ' nơi nên chuyển sang Ngừng sử dụng.'}; }
+    db[k] = ds_.filter(y => y.id !== id); return {ok: true, kieu: 'xoa', thongBao: 'Đã xóa “' + x.ten + '”.'};
+  }
+
+  const api = {dangDungNganh, dangDungChucVu, themNganh, themChucVu, doi, dung, xoa, KT, VC, NGANH_MAC_DINH, CHUC_VU_MAC_DINH, dsNganh, dsChucVu, gieo, nganhNguoi, nganhDoiTuong, thuocNganh, vaiTroTuChucVu, chucVuNhan, tenNganh, kiemNguoi};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNganh = api;
 })(typeof self !== 'undefined' ? self : this);

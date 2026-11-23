@@ -68,9 +68,11 @@ function dtDocForm() {
   const g = n => (fm.elements[n] ? fm.elements[n].value : ''), c = n => !!(fm.elements[n] && fm.elements[n].checked), x = Object.assign({}, cd.sua);
   ['ma', 'ten', 'mst', 'diaChi', 'sdt', 'daiDien', 'chucVuDaiDien'].forEach(k => { if (fm.elements[k]) x[k] = trim(g(k)); });
   if (fm.elements.kyHD) x.kyHD = kyTu(g('kyHD'));
+  if (document.getElementById('nganhPn')) { const a = HAKNganh.dsNganh(db).filter(n => c('ngpn_' + n.id)).map(n => n.id); if (a.length) x.nganh = a; else delete x.nganh; }
   if (fm.elements.hoTen) {   // thể nhân một lớp: người duy nhất đọc từ chính form; tên đối tượng mặc định là họ tên; địa chỉ, SĐT dùng chung đối tượng và người
     const cu = (cd.sua.nguoi || [])[0] || {}, p = Object.assign({}, cu, {hoTen: g('hoTen'), cccd: g('cccd'), ngayCap: g('ngayCap'), noiCap: g('noiCap'), hanCccd: g('hanCccd'), gioiTinh: g('gioiTinh'), ngaySinh: g('ngaySinh'), gplx: g('gplx'), hanGplx: g('hanGplx'), viTriId: g('viTriId'), chucDanhKy: g('chucDanhKy'),
       diaChi: x.diaChi, sdt: x.sdt, vaiTro: {nhanCong: c('vtNhanCong'), taiXe: c('vtTaiXe'), chuXe: c('vtChuXe')}, kyHD: {vanChuyen: c('kyVC'), nhanCong: c('kyNC')}});
+    cvDocForm(fm, p);
     ['hoTen', 'cccd', 'ngayCap', 'noiCap', 'hanCccd', 'ngaySinh', 'gplx', 'hanGplx', 'chucDanhKy'].forEach(k => { p[k] = trim(p[k]); });
     x.nguoi = [p]; x.ten = x.ten || p.hoTen; x.loai = 'thenhan';
   }
@@ -128,8 +130,8 @@ function panelSetDt() {
     (cd.loi.length ? '<div class="msg err" id="dtLoi">' + cd.loi.map(esc).join('<br>') + '</div>' : '') +
     '<div class="grid">' + (mot ? khoiMot : '') + fld30('ma', 'Mã đối tượng (trống: tự cấp)', x.ma) + fld30('ten', mot ? 'Tên đối tượng (trống: lấy theo họ tên; điền nếu là hộ kinh doanh, tổ…)' : pn ? 'Tên doanh nghiệp' : 'Tên đối tượng', mot && trim(x.ten) === trim(p0.hoTen) ? '' : x.ten, {req: !mot}) +
     fld30('mst', 'Mã số thuế', x.mst) + (mot ? '' : fld30('diaChi', pn ? 'Địa chỉ trụ sở' : 'Địa chỉ thường trú', x.diaChi) + fld30('sdt', 'Số điện thoại', x.sdt)) +
-    (pn ? '<label><span>Ký hợp đồng</span>' + selKy('kyHD', kyChon(x.kyHD || {})) + '</label>' + fld30('daiDien', 'Người đại diện', x.daiDien) + fld30('chucVuDaiDien', 'Chức danh người đại diện', x.chucVuDaiDien) : '') + '</div>' +
-    (mot ? '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Chức vụ:</b>' + cb30('vtNhanCong', 'Nhân công', p0.vaiTro && p0.vaiTro.nhanCong) + cb30('vtTaiXe', 'Tài xế', p0.vaiTro && p0.vaiTro.taiXe) + cb30('vtChuXe', 'Chủ xe', p0.vaiTro && p0.vaiTro.chuXe) + '</div>' +
+    (pn ? '<label><span>Ký hợp đồng</span>' + selKy('kyHD', kyChon(x.kyHD || {})) + '</label>' + fld30('daiDien', 'Người đại diện', x.daiDien) + fld30('chucVuDaiDien', 'Chức danh người đại diện', x.chucVuDaiDien) : '') + '</div>' + (pn ? ngPnFormHtml(x) : '') +
+    (mot ? '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Chức vụ:</b>' + cb30('vtNhanCong', 'Nhân công', p0.vaiTro && p0.vaiTro.nhanCong) + cb30('vtTaiXe', 'Tài xế', p0.vaiTro && p0.vaiTro.taiXe) + cb30('vtChuXe', 'Chủ xe', p0.vaiTro && p0.vaiTro.chuXe) + '</div>' + cvFormHtml(p0) +
       '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px"><b>Quyền ký hợp đồng:</b>' + cb30('kyVC', 'Vận chuyển', p0.kyHD && p0.kyHD.vanChuyen) + cb30('kyNC', 'Nhân công', p0.kyHD && p0.kyHD.nhanCong) + '</div>' : '') +
     (!pn && !mot ? '<h4 style="margin:12px 0 6px">Thông tin cá nhân (đối tượng có nhiều người)</h4><div class="wrap" style="max-height:260px"><table id="dtNguoiTbl" style="min-width:720px"><thead><tr><th>Họ tên</th><th>CCCD</th><th>SĐT</th><th>Chức vụ</th><th>Ký hợp đồng</th><th>Vị trí mặc định</th><th></th></tr></thead><tbody>' +
       x.nguoi.map((p, i) => '<tr><td><b>' + esc(p.hoTen) + '</b></td><td>' + esc(p.cccd) + '</td><td>' + esc(p.sdt) + '</td><td>' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + '</td><td>' + esc(HAKDoiTuong.kyText(p.kyHD || {})) + '</td><td>' + esc(ten30(p.viTriId)) + '</td>' +
@@ -146,7 +148,9 @@ function dtMo(id, loai) { const o = id ? HAKDoiTuong.tim(dmDT(), id) : null; cd.
 cd.goc = JSON.stringify(dtDocForm());   // mốc "chưa đổi" lấy từ chính form đã vẽ (cùng cách đọc với lúc kiểm thay đổi)
 const f = document.querySelector('#dtForm [name=hoTen]') || document.querySelector('#dtForm [name=ten]'); if (f) f.focus(); }
 async function dtLuu() {
-  const x = dtDocForm(), r = HAKDoiTuong.luu(dmDT(), x, todayStr());
+  const x = dtDocForm(), le = (x.nguoi || []).reduce((a, p) => a.concat(HAKNganh.kiemNguoi(db, p)), []);
+  if (le.length) { cd.sua = x; cd.loi = le; render(); return false; }
+  const r = HAKDoiTuong.luu(dmDT(), x, todayStr());
   if (!r.ok) { cd.sua = x; cd.loi = r.errs; render(); return false; }
   db.dmDoiTuong = r.dm; cd.sua = null; cd.loi = []; cd.msg = ['Đã lưu “' + r.dt.ten + '” (mã ' + r.dt.ma + ').' + (r.canhBao.length ? ' Lưu ý: ' + r.canhBao.join('; ') + '.' : ''), r.canhBao.length ? 'warn' : 'ok']; persist(); render(); return true;   // phiếu #05: cảnh báo, không chặn lưu
 }
@@ -159,7 +163,7 @@ function ngMo(i) {
     fld30('ngaySinh', 'Ngày sinh', p.ngaySinh) + fld30('sdt', 'Số điện thoại', p.sdt) + fld30('gplx', 'Số giấy phép lái xe', p.gplx) + fld30('hanGplx', 'Hạn GPLX', p.hanGplx) +
     '<label><span>Vị trí mặc định</span><select name="viTriId"><option value="">—</option>' + dmVT().filter(v => !v.ngung || v.id === p.viTriId).map(v => '<option value="' + esc(v.id) + '"' + (v.id === p.viTriId ? ' selected' : '') + '>' + esc(v.ten) + '</option>').join('') + '</select></label>' +
     fld30('chucDanhKy', 'Chức danh khi ký (nếu có)', p.chucDanhKy) + '</div>' +
-    '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Chức vụ:</b>' + cb('vtNhanCong', 'Nhân công', p.vaiTro && p.vaiTro.nhanCong) + cb('vtTaiXe', 'Tài xế', p.vaiTro && p.vaiTro.taiXe) + cb('vtChuXe', 'Chủ xe', p.vaiTro && p.vaiTro.chuXe) + '</div>' +
+    '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:8px"><b>Chức vụ:</b>' + cb('vtNhanCong', 'Nhân công', p.vaiTro && p.vaiTro.nhanCong) + cb('vtTaiXe', 'Tài xế', p.vaiTro && p.vaiTro.taiXe) + cb('vtChuXe', 'Chủ xe', p.vaiTro && p.vaiTro.chuXe) + '</div>' + cvFormHtml(p) +
     '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px"><b>Ký hợp đồng:</b>' + cb('kyVC', 'Vận chuyển', p.kyHD && p.kyHD.vanChuyen) + cb('kyNC', 'Nhân công', p.kyHD && p.kyHD.nhanCong) + '</div>' +
     '<div class="row" style="gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" type="submit" id="ngLuu">Lưu người</button><button class="btn ghost" type="button" data-act="dlgDong">Hủy</button></div></form>');
 }
@@ -167,6 +171,7 @@ function ngLuu(fm) {
   const g = n => trim((fm.elements[n] || {}).value || ''), c = n => !!(fm.elements[n] && fm.elements[n].checked), cu = cd.ngSua >= 0 ? cd.sua.nguoi[cd.ngSua] : {};
   const p = Object.assign({}, cu, {hoTen: g('hoTen'), cccd: g('cccd'), ngayCap: g('ngayCap'), noiCap: g('noiCap'), hanCccd: g('hanCccd'), diaChi: g('diaChi'), gioiTinh: g('gioiTinh'), ngaySinh: g('ngaySinh'), sdt: g('sdt'), gplx: g('gplx'), hanGplx: g('hanGplx'), viTriId: g('viTriId'), chucDanhKy: g('chucDanhKy'),
     vaiTro: {nhanCong: c('vtNhanCong'), taiXe: c('vtTaiXe'), chuXe: c('vtChuXe')}, kyHD: {vanChuyen: c('kyVC'), nhanCong: c('kyNC')}});
+  cvDocForm(fm, p); { const le = HAKNganh.kiemNguoi(db, p); if (le.length) { document.getElementById('ngLoi').innerHTML = '<div class="msg err">' + le.map(esc).join('<br>') + '</div>'; return; } }
   const thu = Object.assign({}, dtDocForm(), {nguoi: (cd.sua.nguoi || []).map((q, i) => i === cd.ngSua ? p : q).concat(cd.ngSua < 0 ? [p] : [])});
   const so = cd.ngSua < 0 ? thu.nguoi.length : cd.ngSua + 1, cuaNguoi = HAKDoiTuong.kiem(dmDT(), thu).filter(x => new RegExp('^Người ' + so + '[ :]').test(x));
   if (cuaNguoi.length) { document.getElementById('ngLoi').innerHTML = '<div class="msg err">' + cuaNguoi.map(esc).join('<br>') + '</div>'; return; }
@@ -342,6 +347,50 @@ function vtSfCfg() {
 /* danh mục trống hoàn toàn (cài mới): gieo sẵn vài vị trí để chọn, một lần mỗi phiên (xóa hết rồi thì không gieo lại trong phiên này) */
 let vtDaGieo = false;
 function vtGieoSan() { if (vtDaGieo) return; vtDaGieo = true; if (Array.isArray(db.dmViTri) && !db.dmViTri.length && HAKViTri.gieoSan(db.dmViTri)) persist(); }
+/* ---------- Ngành nghề và chức vụ (PR B) ---------- */
+const nvDS = k => (k === 'dmNganh' ? HAKNganh.dsNganh(db) : HAKNganh.dsChucVu(db));
+function nvGhiSan() { ['dmNganh', 'dmChucVu'].forEach(k => { if (!Array.isArray(db[k]) || !db[k].length) db[k] = nvDS(k).map(x => Object.assign({}, x)); }); }
+function panelSetNv() {
+  const ng = nvDS('dmNganh'), cv = nvDS('dmChucVu'), nut = (a, k, id, t) => '<button class="btn ghost sm" data-act="' + a + '" data-nv="' + k + '|' + esc(id) + '">' + t + '</button> ';
+  const optNg = (cur, ro) => '<option value="">— chọn khi nhập người —</option>' + ng.filter(n => !n.ngung || n.id === cur).map(n => '<option value="' + esc(n.id) + '"' + (n.id === cur ? ' selected' : '') + '>' + esc(n.ten) + '</option>').join('');
+  return '<div class="card"><h3 style="margin-top:0">Ngành nghề</h3>' + (cd.nvMsg ? '<div class="msg ' + cd.nvMsg[1] + '" id="nvMsg">' + esc(cd.nvMsg[0]) + '</div>' : '') +
+    '<p class="mut" style="margin-top:0">Ngành nghề dùng để lọc Bên nhận khoán, nhân công, bên vận chuyển và tài xế. Một doanh nghiệp được chọn cả hai ngành. Mục đang được dùng không xóa hẳn mà chuyển sang “Ngừng sử dụng”.</p>' +
+    '<div class="wrap"><table id="nvNganh"><thead><tr><th>Ngành nghề</th><th>Đang dùng</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' +
+    ng.map(n => '<tr data-nvrow="' + esc(n.id) + '"' + (n.ngung ? ' class="mut"' : '') + '><td><input data-nvten="dmNganh|' + esc(n.id) + '" value="' + esc(n.ten) + '" style="width:100%" aria-label="Tên ngành nghề">' + (n.ngung ? '<span class="pill">Ngừng sử dụng</span>' : '') + '</td><td>' + (HAKNganh.dangDungNganh(db, n.id) || 'Chưa dùng') + '</td><td style="white-space:nowrap">' +
+      nut('nvDoi', 'dmNganh', n.id, 'Lưu') + (n.ngung ? nut('nvDung', 'dmNganh', n.id, 'Dùng lại') : '') + nut('nvXoa', 'dmNganh', n.id, n.ngung ? 'Xóa' : 'Xóa / Ngừng') + '</td></tr>').join('') +
+    '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px;align-items:flex-end;flex-wrap:wrap"><label><span>Tên ngành nghề mới</span><input id="nvMoiNg" placeholder="Tên ngành nghề mới"></label><button class="btn" data-act="nvThemNg" id="nvThemNg">Thêm ngành nghề</button></div></div>' +
+    '<div class="card"><h3 style="margin-top:0">Chức vụ</h3><p class="mut" style="margin-top:0">Chức vụ gắn với ngành mặc định. Chức vụ không có ngành (như “Khác”) thì khi nhập người phải chọn ngành. “Tổ trưởng” trong lô vẫn là chữ ở cột Chức vụ của dòng nhân công.</p>' +
+    '<div class="wrap"><table id="nvChucVu"><thead><tr><th>Chức vụ</th><th>Ngành mặc định</th><th>Đang dùng</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' +
+    cv.map(c => '<tr data-nvrow="' + esc(c.id) + '"' + (c.ngung ? ' class="mut"' : '') + '><td><input data-nvten="dmChucVu|' + esc(c.id) + '" value="' + esc(c.ten) + '" style="width:100%" aria-label="Tên chức vụ">' + (c.ngung ? '<span class="pill">Ngừng sử dụng</span>' : '') + '</td><td><select data-nvng="dmChucVu|' + esc(c.id) + '" aria-label="Ngành mặc định">' + optNg(c.nganh) + '</select></td><td>' + (HAKNganh.dangDungChucVu(db, c.id) || 'Chưa dùng') + '</td><td style="white-space:nowrap">' +
+      nut('nvDoi', 'dmChucVu', c.id, 'Lưu') + (c.ngung ? nut('nvDung', 'dmChucVu', c.id, 'Dùng lại') : '') + nut('nvXoa', 'dmChucVu', c.id, c.ngung ? 'Xóa' : 'Xóa / Ngừng') + '</td></tr>').join('') +
+    '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px;align-items:flex-end;flex-wrap:wrap"><label><span>Tên chức vụ mới</span><input id="nvMoiCv" placeholder="Tên chức vụ mới"></label><label><span>Ngành mặc định</span><select id="nvMoiCvNg">' + optNg('') + '</select></label><button class="btn" data-act="nvThemCv" id="nvThemCv">Thêm chức vụ</button></div></div>';
+}
+function nvXuLy(a, el) {
+  nvGhiSan(); const kid = el && el.dataset.nv ? el.dataset.nv.split('|') : [], k = kid[0], id = kid[1];
+  let r;
+  if (a === 'nvThemNg') r = HAKNganh.themNganh(db, ($('#nvMoiNg') || {}).value);
+  else if (a === 'nvThemCv') r = HAKNganh.themChucVu(db, ($('#nvMoiCv') || {}).value, ($('#nvMoiCvNg') || {}).value);
+  else if (a === 'nvDoi') { const t = document.querySelector('[data-nvten="' + k + '|' + id + '"]'), n = document.querySelector('[data-nvng="' + k + '|' + id + '"]'); r = HAKNganh.doi(db, k, id, t ? t.value : '', n ? n.value : undefined); if (r.ok) r.thongBao = 'Đã lưu.'; }
+  else if (a === 'nvDung') { r = HAKNganh.dung(db, k, id, false); if (r.ok) r.thongBao = 'Đã dùng lại.'; }
+  else if (a === 'nvXoa') r = HAKNganh.xoa(db, k, id);
+  cd.nvMsg = r.ok ? [r.thongBao || 'Đã thêm.', r.kieu === 'ngung' ? 'warn' : 'ok'] : [r.error, 'err']; if (r.ok) persist(); return render();
+}
+/* chức vụ và ngành trong form người (PR B): giữ ba ô vai trò cũ (mã cũ và e2e cũ vẫn chạy); chức vụ chi tiết cộng thêm, đồng bộ vai trò cũ */
+function cvFormHtml(p) {
+  const cvs = HAKNganh.dsChucVu(db).filter(c => !c.ngung || (p.chucVu || []).includes(c.id)), ng = HAKNganh.dsNganh(db).filter(n => !n.ngung || (p.nganh || []).includes(n.id));
+  return '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px" id="cvChiTiet"><b>Chức vụ chi tiết:</b>' + cvs.map(c => cb30('cv_' + c.id, esc(c.ten), (p.chucVu || []).includes(c.id))).join('') + '</div>' +
+    '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px" id="nganhNguoi"><b>Ngành nghề (bắt buộc khi chọn chức vụ “Khác”):</b>' + ng.map(n => cb30('ng_' + n.id, esc(n.ten), (p.nganh || []).includes(n.id))).join('') + '</div>';
+}
+function cvDocForm(fm, p) {   // ghi chucVu/nganh vào p (chỉ khi không rỗng) và cộng vai trò cũ suy từ chức vụ
+  const c = n => !!(fm.elements[n] && fm.elements[n].checked), cvs = HAKNganh.dsChucVu(db).filter(x => c('cv_' + x.id)).map(x => x.id);
+  const kc = cvs.some(id => !(HAKNganh.dsChucVu(db).find(x => x.id === id) || {}).nganh), ng = kc ? HAKNganh.dsNganh(db).filter(n => c('ng_' + n.id)).map(n => n.id) : [];
+  if (cvs.length) p.chucVu = cvs; else delete p.chucVu; if (ng.length) p.nganh = ng; else delete p.nganh;
+  const v = HAKNganh.vaiTroTuChucVu(db, cvs); p.vaiTro = {nhanCong: !!(p.vaiTro && p.vaiTro.nhanCong) || v.nhanCong, taiXe: !!(p.vaiTro && p.vaiTro.taiXe) || v.taiXe, chuXe: !!(p.vaiTro && p.vaiTro.chuXe) || v.chuXe};
+  return p;
+}
+function ngPnFormHtml(x) {
+  return '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:6px" id="nganhPn"><b>Ngành nghề của doanh nghiệp:</b>' + HAKNganh.dsNganh(db).filter(n => !n.ngung || (x.nganh || []).includes(n.id)).map(n => cb30('ngpn_' + n.id, esc(n.ten), (x.nganh || []).includes(n.id))).join('') + '</div>';
+}
 function panelSetVt() {
   vtGieoSan();
   const sfCfg = vtSfCfg(), sfRes = hakSfApply('dm_vi_tri', sfCfg, dmVT()), ds = sfRes.rows, sfOn = HAKCore.sf.activeCount(hakSfGet('dm_vi_tri', sfCfg).filter.getState()) > 0;
@@ -386,6 +435,7 @@ document.addEventListener('click', e => {
   const a = el.dataset.act;
   if (a === 'roiLuu') return roiXuLy('luu'); if (a === 'roiBo') return roiXuLy('bo'); if (a === 'roiTiep') return roiXuLy('tiep');
   if (a === 'dlgDong') return dlgDong();
+  if (/^nv(ThemNg|ThemCv|Doi|Dung|Xoa)$/.test(a || '')) return nvXuLy(a, el);
   if (a === 'cnThem') return dtMo(null, 'thenhan'); if (a === 'dnThem') return dtMo(null, 'phapnhan'); if (a === 'dtHuy') { cd.sua = null; cd.loi = []; return render(); } if (a === 'dtMau') return dtMau();
   if (a === 'dtExcelLuu') return dtExcelLuu(); if (a === 'xeExcelLuu') return xeExcelLuu();
   if (a === 'ngThem') { cd.sua = dtDocForm(); return ngMo(null); }

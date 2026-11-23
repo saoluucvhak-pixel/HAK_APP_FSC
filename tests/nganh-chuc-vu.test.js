@@ -44,3 +44,26 @@ test('chucVuNhan: chữ chức vụ (cũ suy từ vaiTro); thuocNganh', () => {
   assert.equal(N.chucVuNhan(db, ng({vaiTro: {nhanCong: true, taiXe: true}})), 'Công nhân, Tài xế');
   assert.ok(N.thuocNganh([N.KT], N.KT) && !N.thuocNganh([N.VC], N.KT) && N.thuocNganh([], ''));
 });
+
+test('quản lý danh mục: thêm, trùng tên, đổi tên, xóa/ngừng', () => {
+  const N = require('../src/nganh'), db = {dmDoiTuong: [{id: 'a', loai: 'thenhan', ten: 'A', nguoi: [{id: 'p1', hoTen: 'Người giả lập', chucVu: ['cvToTruong']}]}]};
+  assert.equal(N.themNganh(db, '  ').ok, false);
+  assert.equal(N.themNganh(db, 'vận CHUYỂN').ok, false, 'trùng tên không phân biệt dấu/hoa thường');
+  assert.equal(N.themNganh(db, 'Chế biến').ok, true);
+  const ng = db.dmNganh.find(x => x.ten === 'Chế biến');
+  assert.equal(N.themChucVu(db, 'Thợ máy', ng.id).ok, true);
+  const cv = db.dmChucVu.find(x => x.ten === 'Thợ máy');
+  assert.equal(N.xoa(db, 'dmNganh', ng.id).kieu, 'ngung', 'ngành đang là mặc định của chức vụ → ngừng');
+  assert.equal(N.xoa(db, 'dmChucVu', cv.id).kieu, 'xoa');
+  assert.equal(N.xoa(db, 'dmChucVu', 'cvToTruong').ok, false, 'mục gieo sẵn không xóa');
+  assert.equal(N.dangDungChucVu(db, 'cvToTruong'), 1);
+  assert.equal(N.doi(db, 'dmChucVu', 'cvKhac', 'Công nhân', '').ok, false, 'đổi sang tên trùng bị chặn');
+});
+
+test('chuẩn hóa đối tượng giữ chucVu/nganh khi có, không thêm khóa khi rỗng (JSON cũ y hệt)', () => {
+  const D = require('../src/doituong');
+  const cu = D.chuan({id: 'x', ten: 'A', loai: 'thenhan', nguoi: [{id: 'p', hoTen: 'Người giả lập'}]});
+  assert.equal('chucVu' in cu.nguoi[0], false); assert.equal('nganh' in cu.nguoi[0], false); assert.equal('nganh' in cu, false);
+  const moi = D.chuan({id: 'x', ten: 'A', loai: 'phapnhan', nganh: ['khaiThac', 'vanChuyen', ''], nguoi: [{id: 'p', hoTen: 'B', chucVu: ['cvKhac', 'cvKhac'], nganh: ['vanChuyen']}]});
+  assert.deepEqual(moi.nganh, ['khaiThac', 'vanChuyen']); assert.deepEqual(moi.nguoi[0].chucVu, ['cvKhac']); assert.deepEqual(moi.nguoi[0].nganh, ['vanChuyen']);
+});
