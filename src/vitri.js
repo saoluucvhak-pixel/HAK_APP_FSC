@@ -4,7 +4,8 @@
  * biểu mẫu in như trước. ID là liên kết ổn định: đổi tên vị trí (doiTen) đổi MỘT LẦN mọi bảng đang dùng tên cũ, nên định mức, đơn giá vẫn đúng vị trí.
  * Lô đã chốt / đã dừng KHÔNG bị đổi (giữ tên và giá trị đã áp dụng để in lại đúng); dòng nhân công nối bằng nc.viTriId.
  *  - dung(db, tenDangDung): dựng / bổ sung danh mục từ mọi tên đang có (giữ id cũ, thêm id mới); không sửa db, trả danh mục mới.
- *  - tim(dm, ten) / timId(dm, id); doiTen(db, id, tenMoi): {ok, error, so: {...}} sửa trực tiếp db; them(dm, ten). */
+ *  - tim(dm, ten) / timId(dm, id); doiTen(db, id, tenMoi): {ok, error, so: {...}} sửa trực tiếp db; them(dm, ten, nhiemVu?, ghiChu?); sua(dm, id, {nhiemVu, ghiChu});
+ *    dangDung(db, id); xoa(db, id): đang dùng → “Ngừng sử dụng”, chưa dùng → xóa hẳn, vị trí mặc định không xóa. */
 (function (root) {
   'use strict';
   const s = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -13,7 +14,12 @@
   const tim = (dm, ten) => { const k = fold(ten); return k ? (dm || []).find(x => fold(x.ten) === k) || null : null; };
   const timId = (dm, id) => (dm || []).find(x => x.id === id) || null;
   const idMoi = dm => { const used = new Set((dm || []).map(x => x.id)); let k = used.size + 1; while (used.has('vt' + k)) k++; return 'vt' + k; };
-  function them(dm, ten) { const t = s(ten); if (!t) return null; const c = tim(dm, t); if (c) return c; const x = {id: idMoi(dm), ten: t, ngung: false}; dm.push(x); return x; }
+  const MAC_DINH = ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa'];   // trùng BASE của src/dinhmuc.js (có test): ba vị trí mặc định, không xóa được
+  const GIEO = ['Công nhân cưa', 'Công nhân lột vỏ và bốc xếp', 'Quản lý chung', 'Khác'];   // chỉ gieo khi danh mục hoàn toàn trống
+  /* nhiemVu / ghiChu là tùy chọn: chỉ ghi khóa khi khác rỗng, bản ghi không dùng chúng cho JSON y hệt bản cũ */
+  const datTuyChon = (x, o) => { ['nhiemVu', 'ghiChu'].forEach(k => { if (!o || !(k in o)) return; const v = s(o[k]); if (v) x[k] = v; else delete x[k]; }); };
+  function them(dm, ten, nhiemVu, ghiChu) { const t = s(ten); if (!t) return null; const c = tim(dm, t); if (c) return c; const x = {id: idMoi(dm), ten: t, ngung: false}; datTuyChon(x, {nhiemVu, ghiChu}); dm.push(x); return x; }
+  function sua(dm, id, o) { const x = timId(dm, id); if (!x) return {ok: false, error: 'Không có vị trí này'}; datTuyChon(x, o); return {ok: true}; }
   /* mọi tên vị trí đang có trong db (theo thứ tự xuất hiện, không trùng): định biên (gốc + phiên bản), định mức BHLĐ (gốc + bản), đơn giá của đội, chức danh nhân công, danh mục lao động cũ */
   function tenDangCo(db) {
     const out = [], add = t => { t = s(t); if (t && !out.some(x => fold(x) === fold(t))) out.push(t); };
@@ -66,6 +72,28 @@
     vt.ten = moi;
     return {ok: true, so};
   }
-  const api = {tim, timId, them, dung, tenDangCo, doiTen, fold};
+  /* gieo sẵn vài vị trí để chọn, CHỈ khi danh mục hoàn toàn trống (không thêm vào danh mục đã có dữ liệu); sửa dm tại chỗ, trả số vị trí đã gieo */
+  function gieoSan(dm) { if (!Array.isArray(dm) || dm.length) return 0; GIEO.forEach(t => them(dm, t)); return dm.length; }
+  /* vị trí đang được dùng ở đâu (theo tên, không phân biệt hoa thường): dòng nhân công của mọi lô, định biên (gồm phiên bản), định mức BHLĐ (gồm bản), đơn giá của lô và đội */
+  function dangDung(db, id) {
+    const vt = timId((db || {}).dmViTri, id), r = {nhanCong: 0, dinhBien: 0, dinhMuc: 0, donGia: 0, tong: 0}; if (!vt) return r;
+    const k = fold(vt.ten), eq = t => fold(t) === k, co = o => Object.keys(o || {}).some(eq);
+    Object.values(db.rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => {
+      (f.nc || []).forEach(n => { if (n && (n.viTriId === id || eq(n.chucDanh))) r.nhanCong++; });
+      [f.info || {}, ...(f.doi || []).map(d => (d && d.hinhThuc) || {})].forEach(i => DG.forEach(m => { if (co(i[m])) r.donGia++; }));
+    }));
+    r.dinhBien = [db.dinhBien].concat((db.dinhBienVer || []).map(v => v && v.rows)).reduce((n, rows) => n + (Array.isArray(rows) && rows.some(x => x && eq(x.chucDanh)) ? 1 : 0), 0);
+    r.dinhMuc = (co(db.dinhMuc) ? 1 : 0) + (db.dinhMucBan || []).filter(v => v && co(v.dm)).length;
+    r.tong = r.nhanCong + r.dinhBien + r.dinhMuc + r.donGia; return r;
+  }
+  /* xóa vị trí: đang dùng thì chuyển “Ngừng sử dụng” (giữ mọi liên kết), chưa dùng thì xóa hẳn; ba vị trí mặc định không xóa */
+  function xoa(db, id) {
+    const dm = db.dmViTri || [], vt = timId(dm, id); if (!vt) return {ok: false, error: 'Không có vị trí này'};
+    if (MAC_DINH.some(m => fold(m) === fold(vt.ten))) return {ok: false, error: 'Vị trí “' + vt.ten + '” là vị trí mặc định của phần mềm, không xóa được'};
+    const d = dangDung(db, id);
+    if (d.tong > 0) { vt.ngung = true; return {ok: true, kieu: 'ngung', dung: d, thongBao: 'Vị trí “' + vt.ten + '” đang được dùng (' + [d.nhanCong && d.nhanCong + ' dòng nhân công', d.dinhBien && d.dinhBien + ' bảng định biên', d.dinhMuc && d.dinhMuc + ' bản định mức BHLĐ', d.donGia && d.donGia + ' bảng đơn giá'].filter(Boolean).join(', ') + ') nên chuyển sang “Ngừng sử dụng”, không xóa hẳn.'}; }
+    db.dmViTri = dm.filter(x => x.id !== id); return {ok: true, kieu: 'xoa', dung: d, thongBao: 'Đã xóa vị trí “' + vt.ten + '”.'};
+  }
+  const api = {tim, timId, them, sua, dung, tenDangCo, doiTen, dangDung, xoa, fold, MAC_DINH, GIEO, gieoSan};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKViTri = api;
 })(typeof self !== 'undefined' ? self : this);
