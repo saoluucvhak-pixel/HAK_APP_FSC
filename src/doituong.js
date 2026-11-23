@@ -27,15 +27,18 @@
 
   /* ---------- chuẩn hóa ---------- */
   const NGUOI_TRUONG = ['hoTen', 'cccd', 'ngayCap', 'noiCap', 'hanCccd', 'diaChi', 'gioiTinh', 'ngaySinh', 'sdt', 'gplx', 'hanGplx', 'viTriId', 'chucDanhKy'];
+  /* PR B: chucVu / nganh (mảng id) là trường TÙY CHỌN — chỉ ghi khi khác rỗng để JSON, dấu vân tay và delta của dữ liệu cũ giữ y hệt */
+  function tuyChon(o, src) { ['chucVu', 'nganh'].forEach(k => { const a = Array.isArray(src && src[k]) ? src[k].map(s).filter(Boolean) : []; if (a.length) o[k] = [...new Set(a)]; }); }
   function chuanNguoi(p) {
     const o = {id: s(p && p.id)}; NGUOI_TRUONG.forEach(k => { o[k] = s(p && p[k]); });
-    o.cccd = so(o.cccd) || o.cccd; o.vaiTro = vaiCo(p && p.vaiTro); o.kyHD = coCo(p && p.kyHD); o.ngung = !!(p && p.ngung); return o;
+    o.cccd = so(o.cccd) || o.cccd; o.vaiTro = vaiCo(p && p.vaiTro); o.kyHD = coCo(p && p.kyHD); o.ngung = !!(p && p.ngung); tuyChon(o, p); return o;
   }
   function chuan(dt) {
     const mstRaw = s(dt && dt.mst).replace(/\s/g, ''), mst = /^\d{13}$/.test(mstRaw) ? mstRaw.slice(0, 10) + '-' + mstRaw.slice(10) : mstRaw;
     const o = {id: s(dt && dt.id), ma: s(dt && dt.ma), ten: s(dt && dt.ten), loai: dt && dt.loai === 'phapnhan' ? 'phapnhan' : 'thenhan', mst, diaChi: s(dt && dt.diaChi), sdt: s(dt && dt.sdt),
       kyHD: coCo(dt && dt.kyHD), daiDien: s(dt && dt.daiDien), chucVuDaiDien: s(dt && dt.chucVuDaiDien), ngung: !!(dt && dt.ngung), ngayCapNhat: s(dt && dt.ngayCapNhat), nguonCu: s(dt && dt.nguonCu),
       nguoi: ((dt && dt.nguoi) || []).map(chuanNguoi)};
+    tuyChon(o, dt);
     if (o.loai === 'phapnhan') o.nguoi = o.nguoi.filter(p => s(p.hoTen));   // pháp nhân: không dùng bảng con người (đại diện khai ở đối tượng); giữ người đã có (tài xế của công ty)
     return o;
   }

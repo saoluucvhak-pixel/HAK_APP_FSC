@@ -470,6 +470,14 @@ Một lô có thể giao khoán cho **nhiều đội**, mỗi tổ trưởng là
 - **Danh mục vị trí**: các vị trí của Định mức nhân công (kể cả mặc định: Công nhân bóc vỏ, Công nhân bốc xếp) có sẵn trong danh sách vị trí, bảng đơn giá và định mức BHLĐ.
 - **Cự ly tấn/km**: cự ly tự tính là đường chim bay, thường ngắn hơn quãng đường xe chạy nên BM-04, BM-09, BM-10 là bản nháp cho đến khi nhập quãng đường thực tế ở Thông tin rừng → Cự ly vận chuyển (km).
 
+## Ngành nghề và chức vụ (Danh mục → tab “Ngành nghề và chức vụ”)
+- **Ngành nghề** gieo sẵn: Khai thác gỗ keo, Vận chuyển. Thêm, đổi tên được; mục đang dùng không xóa hẳn mà chuyển **Ngừng sử dụng** (bấm “Dùng lại” để bật lại).
+- **Chức vụ** gieo sẵn: Chủ xe, Tổ trưởng, Công nhân, Tài xế, Khác; mỗi chức vụ có ngành mặc định (Khác thì không có). Thêm chức vụ mới được kèm ngành mặc định.
+- **Người** (cá nhân hoặc người trong đối tượng): chọn một hay nhiều chức vụ ở hàng **Chức vụ chi tiết**; chọn “Khác” thì **phải chọn ngành nghề** ngay bên dưới. Ba ô vai trò cũ (Nhân công, Tài xế, Chủ xe) vẫn giữ và tự bật theo chức vụ đã chọn.
+- **Doanh nghiệp**: tích ngành nghề (được tích cả hai).
+- Danh sách chọn **Bên nhận khoán**, **nhân công**, **bên vận chuyển**, **tài xế** lọc theo ngành khi người/doanh nghiệp đã khai ngành; dữ liệu cũ chưa khai thì vẫn hiện như trước (ngành suy từ vai trò, không bắt nhập lại).
+- “Tổ trưởng” trong lô vẫn là chữ ở cột Chức vụ của dòng nhân công, không đổi.
+
 ## Danh mục vị trí (từ bản 2.0 giai đoạn 2)
 - **Định mức → Định mức nhân công** là danh mục vị trí duy nhất: vị trí nhân công, định mức BHLĐ, bảng đơn giá theo vị trí và hợp đồng đều lấy vị trí từ đây.
 - Thêm vị trí: ghi ở dòng cuối của Định mức nhân công. **Số người 0** nghĩa là vị trí ngoài định biên chuẩn của một đội (ví dụ Công nhân khai thác của hồ sơ cũ, lái máy): vẫn chọn được, có định mức BHLĐ và đơn giá, không tính vào “1 đội = N người”.

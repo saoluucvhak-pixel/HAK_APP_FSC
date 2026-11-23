@@ -170,7 +170,7 @@ const MIGRATIONS = [
 
 const sha = s => crypto.createHash('sha1').update(s).digest('hex');
 const LK = require('./lienket');
-const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac', 'dmDoiTuong', 'dmXe', 'dmViTri'];
+const DM_BANG = ['dmLaoDong', 'dmXeVC', 'dmDoiTac', 'dmDoiTuong', 'dmXe', 'dmViTri', 'dmNganh', 'dmChucVu'];
 /* B5: tách gói đóng băng khỏi JSON của lô đã chốt. f = lô (đối tượng). Trả {f: lô không còn chot.goi, goi: {phienBan, hash, at, data} | null}. Không sửa f đầu vào. */
 function tachGoi(f) {
   if (!f || !f.chot || typeof f.chot.goi !== 'string') return {f, goi: null};

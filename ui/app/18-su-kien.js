@@ -77,6 +77,7 @@ document.addEventListener('click', async e => {
   if (act === 'openDm' || act === 'openSetDt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setdt'; cd.msg = null; return render(); }
   if (act === 'openSetXe') { NAV.cur = null; NAV.curF = null; NAV.view = 'setxe'; cd.msg = null; return render(); }
   if (act === 'openSetVt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setvt'; cd.vtMsg = null; return render(); }
+  if (act === 'openSetNv') { NAV.cur = null; NAV.curF = null; NAV.view = 'setnv'; cd.nvMsg = null; return render(); }
   if (act === 'openSetGd') { NAV.cur = null; NAV.curF = null; NAV.view = 'setgd'; return render(); }
   if (act === 'openSetHd') { NAV.cur = null; NAV.curF = null; NAV.view = 'sethd'; return render(); }
   if (act === 'openSetCan') { NAV.cur = null; NAV.curF = null; NAV.view = 'setcan'; return render(); }
