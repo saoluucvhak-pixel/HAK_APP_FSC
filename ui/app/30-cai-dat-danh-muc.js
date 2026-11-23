@@ -305,12 +305,25 @@ function xeMau() {
 }
 
 /* ---------- VỊ TRÍ (ID ổn định; đổi tên giữ liên kết định mức) ---------- */
+/* Smart Filter của Vị trí: chỉ lọc dòng HIỂN THỊ (tên/mã), không đổi danh mục */
+function vtSfCfg() {
+  const SF = HAKCore.sf;
+  return {
+    screenId: 'dm_vi_tri', title: 'Vị trí công việc',
+    searchPlaceholder: 'Tìm theo tên hoặc mã vị trí…',
+    quickFields: ['q'], advancedFields: ['q'], fields: [],
+    matchQ: (v, q) => { const h = SF.hay([v.ten, v.id]); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); }
+  };
+}
 function panelSetVt() {
+  const sfCfg = vtSfCfg(), sfRes = hakSfApply('dm_vi_tri', sfCfg, dmVT()), ds = sfRes.rows, sfOn = HAKCore.sf.activeCount(hakSfGet('dm_vi_tri', sfCfg).filter.getState()) > 0;
   const dung = id => { let n = 0; Object.values(db.rs || {}).forEach(o => Object.values(o.forests || {}).forEach(f => (f.nc || []).forEach(r => { if (r && (r.viTriId === id)) n++; }))); return n; };
   return '<div class="card"><h3 style="margin-top:0">Vị trí công việc</h3>' + (cd.vtMsg ? '<div class="msg ' + cd.vtMsg[1] + '" id="vtMsg">' + esc(cd.vtMsg[0]) + '</div>' : '') +
     '<p class="mut" style="margin-top:0">Vị trí dùng trong Định mức nhân công, định mức bảo hộ lao động, đơn giá theo vị trí và dòng nhân công. Đổi tên ở đây cập nhật mọi bảng đang dùng; hồ sơ đã chốt giữ tên đã áp dụng để in lại đúng.</p>' +
+    hakSfBarHtml('dm_vi_tri', sfRes.total, sfRes.kept) +
     '<div class="wrap" style="max-height:min(60vh,520px)"><table id="vtBang"><thead><tr><th>Mã</th><th>Tên vị trí</th><th>Đang dùng (dòng nhân công)</th><th></th></tr></thead><tbody>' +
-    dmVT().map(v => '<tr><td>' + esc(v.id) + '</td><td><input data-vtten="' + esc(v.id) + '" value="' + esc(v.ten) + '" style="width:100%"></td><td>' + dung(v.id) + '</td><td><button class="btn ghost sm" data-vtdoi="' + esc(v.id) + '">Đổi tên</button></td></tr>').join('') +
+    (ds.length ? '' : '<tr><td colspan="4" class="mut" id="vtTrong">' + (sfOn ? 'Không có vị trí nào khớp bộ lọc.' : 'Chưa có vị trí nào.') + '</td></tr>') +
+    ds.map(v => '<tr><td>' + esc(v.id) + '</td><td><input data-vtten="' + esc(v.id) + '" value="' + esc(v.ten) + '" style="width:100%"></td><td>' + dung(v.id) + '</td><td><button class="btn ghost sm" data-vtdoi="' + esc(v.id) + '">Đổi tên</button></td></tr>').join('') +
     '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px"><input id="vtMoi" placeholder="Tên vị trí mới"><button class="btn ghost" data-act="vtThem">Thêm vị trí</button></div></div>';
 }
 
