@@ -164,6 +164,22 @@ document.addEventListener('change', e => {
 });
 function lkPhieuDefaultsKeep() { lkPhieuRows().forEach(p => { if (!(p._lkKey in lk.sel.phieu) || (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn) && lk.sel.phieu[p._lkKey] === false && p.bien)) lk.sel.phieu[p._lkKey] = p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn);
 }); }
+/* UI-05: nhớ phần tử đang giữ tiêu điểm TRƯỚC khi một hộp thoại mở, đóng hộp thì trả tiêu điểm về đó (hộp hợp đồng tự trả bằng gs.opener) */
+const HOP_TRA_FOCUS = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'hdAsk', 'tkBox', 'thBox'];
+(() => {
+  const trongHop = el => !!(el && el.closest && el.closest(HOP_TRA_FOCUS.map(i => '#' + i).join(',')));
+  let ngoai = null; const nho = new Map();
+  document.addEventListener('focusin', e => { if (!trongHop(e.target) && !(e.target.closest && e.target.closest('#hdBox'))) ngoai = e.target; });
+  new MutationObserver(ms => ms.forEach(m => {
+    const b = m.target; if (!b.id || !HOP_TRA_FOCUS.includes(b.id) || b.id === 'tkBox' || b.id === 'thBox') return;
+    const on = b.classList.contains('on'), was = nho.has(b.id);
+    if (on && !was) nho.set(b.id, ngoai);
+    else if (!on && was) {
+      const el = nho.get(b.id); nho.delete(b.id);
+      if (el && el.isConnected && (!document.activeElement || document.activeElement === document.body || b.contains(document.activeElement))) { try { el.focus(); } catch (er) { /* phần tử không nhận tiêu điểm */ } }
+    }
+  })).observe(document.body, {attributes: true, attributeFilter: ['class'], subtree: true});
+})();
 document.addEventListener('keydown', async e => {
   if (e.key === 'Enter' && e.target.id === 'lkPcFilter') { e.preventDefault(); lk.pcFilter = e.target.value.trim(); lkRender(); const n = document.getElementById('lkPcFilter'); if (n) { n.focus(); try { const L = n.value.length; n.setSelectionRange(L, L);
   } catch (er) { /* ô không có vùng chọn */ } } return; }
@@ -176,7 +192,7 @@ document.addEventListener('keydown', async e => {
   if (e.key === 'Tab') {
     const hop = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'hdBox', 'hdAsk', 'tkBox', 'thBox'].map(id => document.getElementById(id)).filter(b => b && (b.classList.contains('on') || b.id === 'tkBox' || b.id === 'thBox')).pop();
     if (hop) {
-      const ds = [...hop.querySelectorAll('button, input:not([type=hidden]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent);
+      const ds = [...hop.querySelectorAll('button, input:not([type=hidden]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && (x.checkVisibility ? x.checkVisibility() : x.offsetWidth > 0));
       if (ds.length) { const i = ds.indexOf(document.activeElement), j = i < 0 ? 0 : (i + (e.shiftKey ? -1 : 1) + ds.length) % ds.length; if (i < 0 || (e.shiftKey ? i === 0 : i === ds.length - 1)) { ds[j].focus(); e.preventDefault(); return; } }
     }
   }
