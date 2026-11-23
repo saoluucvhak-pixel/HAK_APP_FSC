@@ -96,12 +96,12 @@ function dbTongTuForm() {
   let n = 0; fm.querySelectorAll('tr[data-db]').forEach(tr => { if (tr.style.display === 'none') return; const ten = trim(tr.querySelector('[name=b_cd]').value), so = Number(trim(tr.querySelector('[name=b_so]').value).replace(',', '.')); if (ten && Number.isFinite(so) && so > 0) n += so; });
   document.querySelectorAll('[data-dbtong]').forEach(el => { el.textContent = String(n); });
 }
-/* chọn vị trí từ danh mục: tự điền Nhiệm vụ nếu ô nhiệm vụ còn trống (không ghi đè chữ đã gõ); gõ vị trí mới vẫn được */
+/* chọn vị trí từ danh mục (chỉ ở sự kiện change: rời ô hoặc chọn datalist, không chạy mỗi phím gõ): tự điền Nhiệm vụ nếu ô nhiệm vụ còn trống (không ghi đè chữ đã gõ); gõ vị trí mới vẫn được */
 function dbChonViTri(inp) {
   const tr = inp.closest('tr[data-db]'), nv = tr && tr.querySelector('[name=b_nv]'); if (!nv || nv.value.trim() || inp.readOnly) return;
   const vt = HAKViTri.tim(dmVT().filter(v => !v.ngung), inp.value); if (vt && vt.nhiemVu) nv.value = vt.nhiemVu;
 }
-document.addEventListener('input', e => { const t = e.target; if (!t || !t.name) return; if (t.name === 'b_so' || t.name === 'b_cd') dbTongTuForm(); if (t.name === 'b_cd') dbChonViTri(t); });
+document.addEventListener('input', e => { const t = e.target; if (!t || !t.name) return; if (t.name === 'b_so' || t.name === 'b_cd') dbTongTuForm(); });
 document.addEventListener('change', e => { const t = e.target; if (t && t.name === 'b_cd') { dbChonViTri(t); dbTongTuForm(); } });
 document.addEventListener('click', e => { if (e.target && e.target.closest && e.target.closest('[data-act=dbDel]')) setTimeout(dbTongTuForm, 0); });
 /* Định mức thời gian khai thác: 1 ha = ? ngày, hiệu lực từ ngày; kèm năng suất 1 ngày = ? tấn suy ra từ định mức gỗ keo */

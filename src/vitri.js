@@ -84,14 +84,17 @@
     }));
     r.dinhBien = [db.dinhBien].concat((db.dinhBienVer || []).map(v => v && v.rows)).reduce((n, rows) => n + (Array.isArray(rows) && rows.some(x => x && eq(x.chucDanh)) ? 1 : 0), 0);
     r.dinhMuc = (co(db.dinhMuc) ? 1 : 0) + (db.dinhMucBan || []).filter(v => v && co(v.dm)).length;
-    r.tong = r.nhanCong + r.dinhBien + r.dinhMuc + r.donGia; return r;
+    /* vị trí mặc định của người trong đối tượng (viTriId) và danh mục lao động cũ (tên, so khớp fold) cũng là nơi đang dùng */
+    r.nguoi = 0; (db.dmDoiTuong || []).forEach(o => ((o && o.nguoi) || []).forEach(p => { if (p && p.viTriId === id) r.nguoi++; }));
+    r.laoDong = (db.dmLaoDong || []).filter(x => x && eq(x.viTri)).length;
+    r.tong = r.nhanCong + r.dinhBien + r.dinhMuc + r.donGia + r.nguoi + r.laoDong; return r;
   }
   /* xóa vị trí: đang dùng thì chuyển “Ngừng sử dụng” (giữ mọi liên kết), chưa dùng thì xóa hẳn; ba vị trí mặc định không xóa */
   function xoa(db, id) {
     const dm = db.dmViTri || [], vt = timId(dm, id); if (!vt) return {ok: false, error: 'Không có vị trí này'};
     if (MAC_DINH.some(m => fold(m) === fold(vt.ten))) return {ok: false, error: 'Vị trí “' + vt.ten + '” là vị trí mặc định của phần mềm, không xóa được'};
     const d = dangDung(db, id);
-    if (d.tong > 0) { vt.ngung = true; return {ok: true, kieu: 'ngung', dung: d, thongBao: 'Vị trí “' + vt.ten + '” đang được dùng (' + [d.nhanCong && d.nhanCong + ' dòng nhân công', d.dinhBien && d.dinhBien + ' bảng định biên', d.dinhMuc && d.dinhMuc + ' bản định mức BHLĐ', d.donGia && d.donGia + ' bảng đơn giá'].filter(Boolean).join(', ') + ') nên chuyển sang “Ngừng sử dụng”, không xóa hẳn.'}; }
+    if (d.tong > 0) { vt.ngung = true; return {ok: true, kieu: 'ngung', dung: d, thongBao: 'Vị trí “' + vt.ten + '” đang được dùng (' + [d.nhanCong && d.nhanCong + ' dòng nhân công', d.dinhBien && d.dinhBien + ' bảng định biên', d.dinhMuc && d.dinhMuc + ' bản định mức BHLĐ', d.donGia && d.donGia + ' bảng đơn giá', d.nguoi && d.nguoi + ' người đặt làm vị trí mặc định', d.laoDong && d.laoDong + ' dòng danh mục lao động'].filter(Boolean).join(', ') + ') nên chuyển sang “Ngừng sử dụng”, không xóa hẳn.'}; }
     db.dmViTri = dm.filter(x => x.id !== id); return {ok: true, kieu: 'xoa', dung: d, thongBao: 'Đã xóa vị trí “' + vt.ten + '”.'};
   }
   const api = {tim, timId, them, sua, dung, tenDangCo, doiTen, dangDung, xoa, fold, MAC_DINH, GIEO, gieoSan};

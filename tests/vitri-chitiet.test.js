@@ -51,3 +51,16 @@ test('doiTen giữ nhiemVu/ghiChu của vị trí', () => {
   assert.equal(VT.doiTen(db, 'vt1', 'Thợ A2').ok, true);
   assert.deepEqual(clone(db.dmViTri[0]), {id: 'vt1', ten: 'Thợ A2', ngung: false, nhiemVu: 'Cưa', ghiChu: 'g'});
 });
+
+test('P2-1 dangDung đếm viTriId mặc định của người và dmLaoDong; xoa không xóa hẳn', () => {
+  const mk = () => { const db = {dmViTri: [], rs: {}}; VT.them(db.dmViTri, 'Thợ Lạ'); return db; };
+  const a = mk(); a.dmDoiTuong = [{id: 'd1', nguoi: [{hoTen: 'A', viTriId: 'vt1'}]}];
+  assert.equal(VT.dangDung(a, 'vt1').tong, 1);
+  const rA = VT.xoa(a, 'vt1'); assert.equal(rA.kieu, 'ngung'); assert.equal(a.dmViTri.length, 1); assert.equal(a.dmViTri[0].ngung, true);
+  const b = mk(); b.dmLaoDong = [{viTri: ' thợ lạ '}];
+  assert.equal(VT.dangDung(b, 'vt1').tong, 1);
+  assert.equal(VT.xoa(b, 'vt1').kieu, 'ngung');
+  const c = mk(); c.dmDoiTuong = [{nguoi: [{viTriId: 'vt9'}, {}]}]; c.dmLaoDong = [{viTri: 'Khác'}];
+  assert.equal(VT.dangDung(c, 'vt1').tong, 0);
+  assert.equal(VT.xoa(c, 'vt1').kieu, 'xoa');
+});
