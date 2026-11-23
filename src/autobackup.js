@@ -51,7 +51,7 @@ function prune(dir, keep, chuKy) {
 function cleanStaleTmp(dir, nowMs) {
   let names = []; try { names = fs.readdirSync(dir); } catch (e) { return 0; }
   let n = 0; const cut = (nowMs || Date.now()) - 86400000;
-  names.filter(x => /\.tmp-\d+(-wal|-shm|-journal)?$/.test(x)).forEach(x => {
+  names.filter(x => /\.tmp-\d+(-\d+)?(-wal|-shm|-journal)?$/.test(x)).forEach(x => {
     const p = path.join(dir, x);
     try { if (fs.statSync(p).mtimeMs < cut) { fs.unlinkSync(p); n++; } } catch (e) { /* bỏ qua */ }
   });
