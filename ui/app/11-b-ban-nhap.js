@@ -119,3 +119,20 @@ function stTable(kind, rec, heads, cells, c, align, only) {
       'Chưa có dữ liệu. Bấm <b>+ Chọn từ Danh mục</b> hoặc <b>+ Thêm ' + ST_LABEL[kind] + ' mới</b> ở thanh công cụ phía trên.') + '</td></tr>') +
     '</tbody></table></div>';
 }
+/* UI-04: nhãn đọc cho các hộp thoại do JS đổ nội dung (stBox, dlgBox, impBox, rpBox): tiêu đề đầu tiên trong thân hộp (h2/h3) nhận id cố định
+   (stBoxTitle…; giữ id sẵn có nếu có) và aria-labelledby của hộp trỏ tới đó mỗi lần nội dung đổi. Không có tiêu đề thì dùng aria-label dự phòng. */
+(function hopThoaiNhanDe() {
+  if (typeof MutationObserver === 'undefined') return;
+  const ds = [['stBox', 'stBody', 'stBoxTitle', 'Hộp thoại'], ['dlgBox', 'dlgBody', 'dlgBoxTitle', 'Hộp thoại'], ['impBox', 'impBody', 'impBoxTitle', 'Nhập dữ liệu'], ['rpBox', 'rpBody', 'rpBoxTitle', 'Báo cáo']];
+  for (const [boxId, bodyId, titleId, du] of ds) {
+    const box = document.getElementById(boxId), body = document.getElementById(bodyId);
+    if (!box || !body) continue;
+    const gan = () => {
+      const h = body.querySelector('h2,h3');
+      if (h) { if (!h.id) h.id = titleId; box.setAttribute('aria-labelledby', h.id); box.removeAttribute('aria-label'); }
+      else { box.removeAttribute('aria-labelledby'); box.setAttribute('aria-label', du); }
+    };
+    new MutationObserver(gan).observe(body, {childList: true});
+    gan();
+  }
+})();
