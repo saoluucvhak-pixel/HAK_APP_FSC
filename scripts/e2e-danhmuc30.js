@@ -42,7 +42,7 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   let D = await dbAll(), o1 = (D.dmDoiTuong || []).find(o => o.ten === 'HỘ KINH DOANH LÊ VĂN XE');
   ok('lưu vào SQLite: thể nhân có mã tự cấp, người có ID, vai trò Tài xế + Chủ xe, ký Vận chuyển', !!o1 && /^DT\d{4}$/.test(o1.ma) && o1.loai === 'thenhan' && o1.nguoi.length === 1 && !!o1.nguoi[0].id && o1.nguoi[0].vaiTro.taiXe && o1.nguoi[0].vaiTro.chuXe && o1.nguoi[0].kyHD.vanChuyen, JSON.stringify(o1));
   ok('CCCD lưu dạng văn bản, giữ số 0 đầu', !!o1 && o1.nguoi[0].cccd === '049085000077');
-  const loc = async k => { await w.selectOption('#dtNhom', k); await w.waitForTimeout(200); return w.innerText('#dtBang'); };
+  const loc = async k => { await w.selectOption('[data-sfquick="dm_doi_tuong"][data-sfkey=nhom]', k === 'tatca' ? '' : k); await w.waitForTimeout(200); return w.innerText('#dtBang'); };
   ok('lọc Tài xế và lọc Chủ xe đều thấy người này; lọc Nhân công thì không', /LÊ VĂN XE/.test(await loc('taixe')) && /LÊ VĂN XE/.test(await loc('chuxe')) && !/LÊ VĂN XE/.test(await loc('nhancong')));
   ok('lọc Có quyền ký hợp đồng thấy đối tượng có người ký Vận chuyển', /LÊ VĂN XE/.test(await loc('doitac')));
   await loc('tatca');
@@ -66,9 +66,9 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   ok('ngừng sử dụng: đối tượng ẩn khỏi “Tất cả”, hiện ở “Ngừng sử dụng”', !/VẬN TẢI A/.test(await w.innerText('#dtBang')) && /VẬN TẢI A/.test(await loc('ngung')));
   await w.click('[data-dtngung="' + pn.id + '"]'); await w.waitForTimeout(300); await loc('tatca');
   ok('dùng lại: đối tượng trở lại danh sách', /VẬN TẢI A/.test(await w.innerText('#dtBang')));
-  await w.fill('#dtQ', '0401234567'); await w.waitForTimeout(500);
+  await w.fill('[data-sfq=dm_doi_tuong]', '0401234567'); await w.waitForTimeout(500);
   ok('tìm theo MST', /VẬN TẢI A/.test(await w.innerText('#dtBang')) && !/LÊ VĂN XE/.test(await w.innerText('#dtBang')));
-  await w.fill('#dtQ', ''); await w.waitForTimeout(400);
+  await w.fill('[data-sfq=dm_doi_tuong]', ''); await w.waitForTimeout(400);
 
   // 6. Danh mục xe: chủ xe theo ID
   await w.click('#setTab_setxe'); await w.waitForSelector('#xeBang'); await w.click('#xeThem'); await w.waitForSelector('#xeForm');

@@ -48,10 +48,10 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lưu: xe có taiXeId; xe không gắn tài xế không có khóa taiXeId', !!x1 && x1.taiXeId === ng.id && !!x3 && !('taiXeId' in x3), JSON.stringify([x1, x3]));
   const bang = await w.innerText('#xeBang');
   ok('bảng có cột Tài xế và hiện tên tài xế', /Tài xế/.test(bang) && /NGUYỄN VĂN LÁI/.test(bang), bang);
-  await w.fill('#xeQ', 'văn lái'); await w.waitForTimeout(700);
+  await w.fill('[data-sfq=dm_xe]', 'văn lái'); await w.waitForTimeout(700);
   const nLoc = (await w.$$('#xeBang tbody tr[data-xe]')).length;
   ok('lọc theo tên tài xế ra đúng xe đã gắn', nLoc === 2, 'số dòng ' + nLoc);
-  await w.fill('#xeQ', '');
+  await w.fill('[data-sfq=dm_xe]', '');
 
   // 3. mở lại: ô chọn còn tài xế
   await w.reload(); await w.waitForSelector('#side'); await w.click('#navDm'); await w.click('#setTab_setxe'); await w.waitForSelector('#xeBang');

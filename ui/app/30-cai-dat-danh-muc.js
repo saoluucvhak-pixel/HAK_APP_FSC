@@ -67,15 +67,18 @@ function dtDocForm() {
   if (fm.elements.loai) x.loai = g('loai'); if (fm.elements.kyHD) x.kyHD = kyTu(g('kyHD'));
   return x;
 }
-function panelSetDt() {
-  const SF = HAKCore.sf, baseDs = HAKDoiTuong.loc(dmDT(), cd.nhom, cd.q);
-  const sfCfg = {
+/* cấu hình Smart Filter của Danh mục đối tượng (tách riêng để kiểm bằng unit): "Nhóm" là trường chọn nhanh, kết quả GIỐNG HỆT HAKDoiTuong.loc;
+ * chữ tìm khớp theo từng từ (mọi từ phải có) trên cùng các cột như HAKDoiTuong.loc. */
+function dtSfCfg() {
+  const SF = HAKCore.sf;
+  return {
     screenId: 'dm_doi_tuong', title: 'Danh mục đối tượng',
-    searchPlaceholder: 'Lọc theo tên, mã, CCCD, MST, địa chỉ…',
-    quickFields: ['loai', 'thieuCccd'],
-    advancedFields: ['q', 'loai', 'vaiTro', 'kyHd', 'thieuCccd', 'ngung'],
-    matchQ: (o, q) => SF.hay([o.ma, o.ten, o.mst, o.diaChi, o.sdt, o.daiDien].concat((o.nguoi || []).map(p => p.hoTen + ' ' + p.cccd + ' ' + p.sdt))).includes(q),
+    searchPlaceholder: 'Tìm theo tên, mã, MST, CCCD, SĐT…',
+    quickFields: ['nhom', 'q', 'loai', 'thieuCccd'],
+    advancedFields: ['q', 'nhom', 'loai', 'vaiTro', 'kyHd', 'thieuCccd', 'ngung'],
+    matchQ: (o, q) => { const h = SF.hay([o.ma, o.ten, o.mst, o.sdt, o.diaChi].concat((o.nguoi || []).flatMap(p => [p.hoTen, p.cccd, p.sdt, p.gplx]))); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); },
     fields: [
+      {key: 'nhom', label: 'Nhóm', type: 'enum', options: NHOM_DT.filter(([k]) => k !== 'tatca').map(([k, t]) => ({value: k, label: t})), match: (o, v) => HAKDoiTuong.loc([o], v, '').length === 1},
       {key: 'loai', label: 'Loại', type: 'enum', options: [{value: 'thenhan', label: 'Thể nhân'}, {value: 'phapnhan', label: 'Pháp nhân'}], match: (o, v) => o.loai === v},
       {key: 'vaiTro', label: 'Vai trò', type: 'multi', options: [{value: 'nhanCong', label: 'Nhân công'}, {value: 'taiXe', label: 'Tài xế'}, {value: 'chuXe', label: 'Chủ xe'}], match: (o, vals) => (o.nguoi || []).some(p => p.vaiTro && vals.some(k => p.vaiTro[k]))},
       {key: 'kyHd', label: 'Quyền ký HĐ', type: 'multi', options: [{value: 'nhanCong', label: 'Ký Nhân công'}, {value: 'vanChuyen', label: 'Ký Vận chuyển'}], match: (o, vals) => vals.some(k => (o.kyHD && o.kyHD[k]) || (o.nguoi || []).some(p => p.kyHD && p.kyHD[k]))},
@@ -83,6 +86,19 @@ function panelSetDt() {
       {key: 'ngung', label: 'Đang ngừng sử dụng', type: 'bool', match: o => !!o.ngung}
     ]
   };
+}
+/* dòng gốc trước Smart Filter: đối tượng đang dùng, hoặc đã ngừng khi chọn nhóm “Ngừng sử dụng” (như HAKDoiTuong.loc) */
+const dtGoc = st => HAKDoiTuong.loc(dmDT(), st.one.nhom || (st.flag.ngung ? 'ngung' : 'tatca'), '');
+/* nhận chữ tìm / nhóm do tìm kiếm chung (Ctrl+K) đặt vào cd rồi chuyển sang bộ lọc (một lần) */
+function dtNhanTuTim(screenId, cfg, giu) {
+  if (!giu.q) return;
+  const inst = hakSfGet(screenId, cfg); inst.filter.reset();
+  inst.filter.setState(HAKCore.sf.normalize(Object.assign({}, inst.filter.getState(), {q: giu.q}), cfg)); giu.q = '';
+}
+function panelSetDt() {
+  const SF = HAKCore.sf, sfCfg = dtSfCfg();
+  dtNhanTuTim('dm_doi_tuong', sfCfg, cd);
+  const baseDs = dtGoc(hakSfGet('dm_doi_tuong', sfCfg).filter.getState());
   const sfRes = hakSfApply('dm_doi_tuong', sfCfg, baseDs);
   const sfOn = SF.activeCount(hakSfGet('dm_doi_tuong', sfCfg).filter.getState()) > 0;
   const ds = sfRes.rows, x = cd.sua;
@@ -91,7 +107,7 @@ function panelSetDt() {
       esc(o.loai === 'phapnhan' ? HAKDoiTuong.kyText(o.kyHD) : HAKDoiTuong.kyText({vanChuyen: (o.nguoi || []).some(p => p.kyHD && p.kyHD.vanChuyen), nhanCong: (o.nguoi || []).some(p => p.kyHD && p.kyHD.nhanCong)})) + '</td><td>' +
       (o.nguoi || []).map(p => esc(p.hoTen) + (HAKDoiTuong.vaiText(p.vaiTro) ? ' <small class="mut">(' + esc(HAKDoiTuong.vaiText(p.vaiTro)) + ')</small>' : '')).join('<br>') + '</td>' +
       '<td style="white-space:nowrap"><button class="btn ghost sm" data-dtsua="' + esc(o.id) + '">Sửa</button> <button class="btn ghost sm" data-dtngung="' + esc(o.id) + '">' + (o.ngung ? 'Dùng lại' : 'Ngừng') + '</button></td></tr>').join('')
-      : '<tr><td colspan="9" class="mut" id="dtTrong">Không có đối tượng nào' + (cd.q || cd.nhom !== 'tatca' || sfOn ? ' khớp bộ lọc' : '') + '.</td></tr>') + '</tbody></table></div>';
+      : '<tr><td colspan="9" class="mut" id="dtTrong">Không có đối tượng nào' + (sfOn ? ' khớp bộ lọc' : '') + '.</td></tr>') + '</tbody></table></div>';
   const form = !x ? '' : '<form id="dtForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa đối tượng ' + esc(x.ma) : 'Thêm đối tượng') + '</h3>' +
     (cd.loi.length ? '<div class="msg err" id="dtLoi">' + cd.loi.map(esc).join('<br>') + '</div>' : '') +
     '<div class="grid">' + fld30('ma', 'Mã đối tượng (trống: tự cấp)', x.ma) + fld30('ten', 'Tên đối tượng', x.ten, {req: true}) +
@@ -105,8 +121,7 @@ function panelSetDt() {
     '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="dtLuu">Lưu</button><button class="btn ghost" type="button" data-act="dtHuy" id="dtHuy">Hủy</button></div></form>';
   return '<div class="card"><h3 style="margin-top:0">Danh mục đối tượng</h3>' + (cd.msg ? '<div class="msg ' + cd.msg[1] + '" id="dtMsg">' + esc(cd.msg[0]) + '</div>' : '') +
     '<p class="mut" style="margin-top:0">Khai báo <b>một lần</b>: pháp nhân (công ty, ký qua người đại diện) hoặc thể nhân (một người, khai ở phần Thông tin cá nhân). Một người có thể vừa là Nhân công, Tài xế, Chủ xe; quyền ký hợp đồng khai riêng. Hợp đồng chỉ hiện đối tượng phù hợp. Khi chọn vào lô, thông tin được chụp lại: sửa danh mục không đổi lô đã lập.</p>' +
-    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label>Lọc theo<select id="dtNhom">' + NHOM_DT.map(([k, t]) => '<option value="' + k + '"' + (cd.nhom === k ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>' +
-    '<label style="flex:1;min-width:200px">Tìm<input id="dtQ" value="' + esc(cd.q) + '" placeholder="tên, mã, MST, CCCD, SĐT"></label>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">' +
     '<button class="btn" data-act="dtThem" id="dtThem">+ Thêm đối tượng</button><label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-dtfile="1" hidden></label><button class="btn ghost" data-act="dtMau">Tải file mẫu</button></div>' +
     hakSfBarHtml('dm_doi_tuong', sfRes.total, sfRes.kept) + form + '<div style="margin-top:10px">' + bang + '</div><p class="mut" style="margin:6px 0 0" id="dtDem">' + ds.length + ' đối tượng</p></div>';
 }
@@ -210,21 +225,22 @@ return x; }
 const chonChuXeHtml = (v, name) => '<select name="' + (name || 'chuXeId') + '"><option value="">— chưa chọn —</option>' + HAKXeDM.chonChuXe(dmDT()).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
 const chonTaiXeHtml = v => '<select name="taiXeId"><option value="">— chưa chọn —</option>' + HAKXeDM.chonTaiXe(dmDT()).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
 function panelSetXe() {
-  const C = cd.xe, SF = HAKCore.sf, w = foldVi(C.q).split(/\s+/).filter(Boolean), baseDs = dmXE().filter(x => { if (!w.length) return true; const c = HAKXeDM.chuXe(dmDT(), x.chuXeId), tx = HAKXeDM.taiXe(dmDT(), x.taiXeId); const t = foldVi([x.bks, x.loaiXe, c && c.nhan, tx && tx.nhan].join(' ')); return w.every(k => t.includes(k)); });
+  const C = cd.xe, SF = HAKCore.sf;
   const hom = todayStr();
   const loaiOpts = [...new Set(dmXE().map(v => trim(v.loaiXe)).filter(Boolean))].sort();
   const sfCfg = {
     screenId: 'dm_xe', title: 'Danh mục xe vận chuyển',
     searchPlaceholder: 'Lọc theo BKS, loại xe, chủ xe, tài xế…',
-    quickFields: ['hanGt'],
+    quickFields: ['q', 'hanGt'],
     advancedFields: ['q', 'loaiXe', 'hanGt'],
-    matchQ: (v, q) => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId), tx = HAKXeDM.taiXe(dmDT(), v.taiXeId); return SF.hay([v.bks, v.loaiXe, c && c.nhan, tx && tx.nhan]).includes(q); },
+    matchQ: (v, q) => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId), tx = HAKXeDM.taiXe(dmDT(), v.taiXeId), h = SF.hay([v.bks, v.loaiXe, c && c.nhan, tx && tx.nhan]); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); },
     fields: [
       {key: 'loaiXe', label: 'Loại xe', type: 'multi', withNone: true, options: loaiOpts, match: (v, vals) => SF.inSet(vals, v.loaiXe)},
       {key: 'hanGt', label: 'Giấy tờ xe', type: 'enum', options: [{value: 'het', label: 'Có giấy tờ hết hạn'}, {value: 'con', label: 'Còn hạn'}], match: (v, val) => { const h = HAKXeDM.hetHan(v, hom).length > 0; return val === 'het' ? h : !h; }}
     ]
   };
-  const sfRes = hakSfApply('dm_xe', sfCfg, baseDs), ds = sfRes.rows;
+  dtNhanTuTim('dm_xe', sfCfg, C);
+  const sfRes = hakSfApply('dm_xe', sfCfg, dmXE()), ds = sfRes.rows;
   const sfXeOn = SF.activeCount(hakSfGet('dm_xe', sfCfg).filter.getState()) > 0;
   const x = C.sua;
   const form = !x ? '' : '<form id="xeForm" class="card" style="margin:10px 0"><h3 style="margin:0 0 8px">' + (x.id ? 'Sửa xe ' + esc(x.bks) : 'Thêm xe') + '</h3>' + (C.loi.length ? '<div class="msg err" id="xeLoi">' + C.loi.map(esc).join('<br>') + '</div>' : '') +
@@ -236,14 +252,14 @@ function panelSetXe() {
     '<p class="mut" style="margin:6px 0 0">Chưa có chủ xe hoặc tài xế trong danh sách? <button type="button" class="btn ghost sm" data-act="openSetDt" data-quaylai="setxe">Mở Danh mục đối tượng</button> (bản đang nhập được giữ để quay lại).</p>' +
     '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="xeLuu">Lưu</button><button class="btn ghost" type="button" data-act="xeHuy">Hủy</button></div></form>';
   return '<div class="card"><h3 style="margin-top:0">Danh mục xe</h3>' + (cd.msg ? '<div class="msg ' + cd.msg[1] + '" id="xeMsg">' + esc(cd.msg[0]) + '</div>' : '') +
-    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label style="flex:1;min-width:200px">Tìm<input id="xeQ" value="' + esc(C.q) + '" placeholder="BKS, loại xe, chủ xe, tài xế"></label><button class="btn" data-act="xeThem" id="xeThem">+ Thêm xe</button>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><button class="btn" data-act="xeThem" id="xeThem">+ Thêm xe</button>' +
     '<label class="btn ghost" style="cursor:pointer">Nhập Excel<input type="file" accept=".xlsx,.xls" data-xefile="1" hidden></label><button class="btn ghost" data-act="xeMau">Tải file mẫu</button></div>' +
     hakSfBarHtml('dm_xe', sfRes.total, sfRes.kept) + form +
     '<div class="wrap" style="max-height:min(60vh,520px);margin-top:10px"><table id="xeBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Ngày cập nhật</th><th>Số BKS</th><th>Hạn kiểm định</th><th>Hạn bảo hiểm</th><th>Loại xe</th><th>Chủ xe</th><th>Tài xế</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(v => { const c = HAKXeDM.chuXe(dmDT(), v.chuXeId), tx = HAKXeDM.taiXe(dmDT(), v.taiXeId), het = HAKXeDM.hetHan(v, hom);
       return '<tr data-xe="' + esc(v.id) + '"><td>' + esc(v.ngayCapNhat) + '</td><td><b>' + esc(v.bks) + '</b></td><td>' + esc(v.hanKiemDinh) + (het.includes('kiểm định') ? ' <span class="pill err">hết hạn</span>' : '') + '</td><td>' + esc(v.hanBaoHiem) + (het.includes('bảo hiểm') ?
       ' <span class="pill err">hết hạn</span>' : '') + '</td><td>' + esc(v.loaiXe) + '</td><td>' + (c ? esc(c.nhan) : '<span class="mut">chưa chọn</span>') + '</td><td>' + (tx ? esc(tx.nhan) : '<span class="mut">chưa chọn</span>') + '</td>' +
-        '<td><button class="btn ghost sm" data-xesua="' + esc(v.id) + '">Sửa</button></td></tr>'; }).join('') : '<tr><td colspan="8" class="mut" id="xeTrong">' + (C.q || sfXeOn ? 'Không có xe nào khớp bộ lọc.' : 'Chưa có xe nào.') + '</td></tr>') + '</tbody></table></div><p class="mut" style="margin:6px 0 0">' + ds.length + ' xe</p></div>';
+        '<td><button class="btn ghost sm" data-xesua="' + esc(v.id) + '">Sửa</button></td></tr>'; }).join('') : '<tr><td colspan="8" class="mut" id="xeTrong">' + (sfXeOn ? 'Không có xe nào khớp bộ lọc.' : 'Chưa có xe nào.') + '</td></tr>') + '</tbody></table></div><p class="mut" style="margin:6px 0 0">' + ds.length + ' xe</p></div>';
 }
 function xeMo(id) { const v = id ? HAKXeDM.tim(dmXE(), id) : null; cd.xe.sua = v ? Object.assign({}, v) : {id: '', bks: '', ngayCapNhat: todayStr(), hanKiemDinh: '', hanBaoHiem: '', loaiXe: '', chuXeId: '', taiXeId: ''}; cd.xe.goc = JSON.stringify(cd.xe.sua); cd.xe.loi = []; cd.msg = null; render(); }
 async function xeLuu() {
@@ -351,17 +367,11 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!t) return;
-  if (t.id === 'dtNhom') { cd.nhom = t.value; return render(); }
   if (t.id === 'dtLoai') { cd.sua = Object.assign(dtDocForm(), {loai: t.value}); return render(); }
   if (t.dataset && t.dataset.dtfile && t.files && t.files[0]) { const f = t.files[0]; t.value = ''; return dtExcel(f); }
   if (t.dataset && t.dataset.xefile && t.files && t.files[0]) { const f = t.files[0]; t.value = ''; return xeExcel(f); }
   if (t.dataset && t.dataset.dtxem != null) { cd.dtXem[+t.dataset.dtxem].chon = t.checked; return; }
   if (t.dataset && t.dataset.xechon != null) { cd.xe.xem[+t.dataset.xechon].chon = t.checked; return; }
   if (t.dataset && t.dataset.xex != null) { const i = +t.dataset.xex; cd.xe.xem[i].xe[t.dataset.k] = trim(t.value); xeXemKiemLai(i); return xemExcelXe(); }
-});
-document.addEventListener('input', e => {
-  const t = e.target; if (!t) return;
-  if (t.id === 'dtQ') { cd.q = t.value; clearTimeout(cd._tq); cd._tq = setTimeout(() => { render(); const q = document.getElementById('dtQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 250); }
-  if (t.id === 'xeQ') { cd.xe.q = t.value; clearTimeout(cd._tx); cd._tx = setTimeout(() => { render(); const q = document.getElementById('xeQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 250); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { const b = document.getElementById('dlgBox'); if (b && b.classList.contains('on')) { e.preventDefault(); if (roiCho) roiXuLy('tiep'); else dlgDong(); } } });
