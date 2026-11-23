@@ -63,6 +63,23 @@ function checkFree(dir, needBytes, free, label) {
   if (f < need) throw new Error((label || 'Ổ') + ' không đủ chỗ trống: còn ' + Math.floor(f / 1048576) + ' MB, cần khoảng ' + Math.ceil(need / 1048576) + ' MB (' + dir + '). Giải phóng dung lượng hoặc chọn ổ khác.');
   return true;
 }
+/* BK-04: cảnh báo sớm dung lượng trống. Hàm thuần: free = số byte trống (bỏ trống thì đọc ổ chứa dir). Không đọc được → không cảnh báo (không báo oan). Không chặn thao tác. */
+const NGUONG_DUNG_LUONG_MB = 500;
+function canhBaoDungLuong(dir, free, nguong) {
+  let f = free; if (f === undefined || f === null) { try { const st = fs.statfsSync(dir); f = st.bavail * st.bsize; } catch (e) { f = NaN; } }
+  if (typeof f !== 'number' || !isFinite(f) || f < 0) return {dir, thap: false, freeMB: null};
+  return {dir, thap: f < (nguong == null ? NGUONG_DUNG_LUONG_MB : nguong) * 1048576, freeMB: Math.floor(f / 1048576)};
+}
+/* mục = [[nhãn, thư mục]]: gộp theo thư mục, bỏ mục trống, chỉ trả các thư mục thấp: [{dir, freeMB, nhan: [nhãn…]}]. freeOf(dir) → byte (kiểm thử); không bao giờ ném lỗi. */
+function kiemDungLuong(muc, nguong, freeOf) {
+  const by = new Map();
+  for (const [nhan, dir] of muc || []) { if (!dir) continue; const e = by.get(dir) || {dir, nhan: []}; e.nhan.push(nhan); by.set(dir, e); }
+  const out = [];
+  for (const e of by.values()) {
+    try { const r = canhBaoDungLuong(e.dir, freeOf ? freeOf(e.dir) : undefined, nguong); if (r.thap) out.push({dir: e.dir, freeMB: r.freeMB, nhan: e.nhan}); } catch (er) { /* bỏ qua */ }
+  }
+  return out;
+}
 /* Nguyên nhân lỗi hệ thống bằng tiếng Việt, kèm đường dẫn. */
 function describeError(e, p) {
   const c = e && e.code, at = p ? ' “' + p + '”' : '';
@@ -117,4 +134,4 @@ function resolve(userDir, env = {}) {
     customData: !env.HAKQN_DB && dataDir !== defData, customBackup: backupDir !== defBackup, customBackupJson: backupDirJson !== defBackup, lockedByEnv: !!env.HAKQN_DB,
     missing: [s.backupDirSql && !fs.existsSync(s.backupDirSql) ? s.backupDirSql : '', s.backupDirJson && s.backupDirJson !== s.backupDirSql && !fs.existsSync(s.backupDirJson) ? s.backupDirJson : ''].filter(Boolean)};
 }
-module.exports = {DB_NAME, CHU_KY, load, save, backupDue, checkFolder, checkSpace, checkFree, describeError, checkConfigured, resolve, file};
+module.exports = {DB_NAME, CHU_KY, load, save, backupDue, checkFolder, checkSpace, checkFree, canhBaoDungLuong, kiemDungLuong, NGUONG_DUNG_LUONG_MB, describeError, checkConfigured, resolve, file};
