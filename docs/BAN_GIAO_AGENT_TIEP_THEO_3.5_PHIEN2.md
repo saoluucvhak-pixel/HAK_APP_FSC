@@ -57,9 +57,9 @@ Chi tiết từng việc nằm ở `docs/BAN_GIAO_AGENT_TIEP_THEO_3.5.md` mục 
 - **Soát độc lập (chỉ đọc) toàn bộ diff `origin/main..HEAD`:** không có P0/P1; 3 lỗi P2 đã sửa ở `6ce3341`; P3 còn lại ghi ở mục 6.
 - **e2e đầy đủ: CHƯA XONG.** Lượt chạy trên `6ce3341` dừng ở **43/139 bộ (43 đạt, 0 lỗi)** khi phiên làm việc bị khởi động lại; tiến trình e2e bị chết theo. **Phải chạy lại từ đầu.** `e2e-cai-de` với v1.4.33 **chưa chạy** trên nhánh này. **CHƯA có CI Windows** cho nhánh này (chưa mở PR).
 
-**Quyết định chờ CHỦ (ghi vào mô tả PR A để CHỦ thấy):**
-1. Chữ trong gói "Chỉ xem" xuất HTML (`src/tienich.js:123`) cũng đổi theo thuật ngữ mới ("Vai trò" → "Chức vụ", "Chức danh" → "Vị trí"). Đây không phải `.docx` nên `so-ban-in` không bắt được; cần CHỦ chấp nhận.
-2. Cột "Vai trò" (Chủ xe/Tài xế) của báo cáo Vận chuyển theo đội xe (`ui/reports.js:403`) đổi thành "Chức vụ".
+**Quyết định về chữ (mô tả PR A phải nêu cả hai):**
+1. ~~Chữ trong gói "Chỉ xem" xuất HTML (`src/tienich.js:123`)~~ — **CHỦ ĐÃ CHỐT (đêm 23/11/2026): chọn đổi theo thuật ngữ mới** ("Vai trò" → "Chức vụ", "Chức danh" → "Vị trí"), thống nhất toàn phần mềm; giữ nguyên như commit `f81332d`, không cần làm gì thêm; chỉ ghi vào mô tả PR A là đã được CHỦ chấp nhận.
+2. Cột "Vai trò" (Chủ xe/Tài xế) của báo cáo Vận chuyển theo đội xe (`ui/reports.js:403`) đổi thành "Chức vụ" — **vẫn CHỜ CHỦ xác nhận** (hỏi cùng lúc với lệnh gộp PR A nếu CHỦ chưa nói).
 
 ## 4. KIỂM HIỆN TRẠNG TRƯỚC KHI LÀM (ngay đầu phiên; môi trường mới có thể mất mọi thư mục `/tmp` và worktree cũ)
 
