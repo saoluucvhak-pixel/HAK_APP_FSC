@@ -55,7 +55,9 @@ h4{font-size:13.5px}
 .napCard{padding:8px 12px;margin-bottom:6px}.napThanh{gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}.napTinhTrang{font-size:12px;margin-left:auto}
 .pcHdDau{gap:8px;flex-wrap:wrap;align-items:baseline}
 .mucNav .pill{white-space:nowrap}.mucNav button{white-space:nowrap}   /* phiếu #06 (D-08): nhãn mục một dòng ở 150% */
-#stTbl_pc td{white-space:nowrap}#stTbl_pc th,#stTbl_pc td{padding:4px 7px;font-size:12.5px}#stTbl_pc select{padding:2px 5px;font-size:12.5px}.pcXeHd .pcXe,.pcXeHd .pcHdCua{display:inline-flex;align-items:center;gap:4px}
+#stTbl_pc td{white-space:nowrap}#stTbl_pc th,#stTbl_pc td{padding:4px 7px;font-size:12.5px}#stTbl_pc select{padding:2px 5px;font-size:12.5px}
+/* UI-03: bảng thành viên và bảng xe gọn như bảng phiếu cân (trước: padding 8px 9px nên ở khung 910×512 px CSS chỉ thấy vài dòng) */
+#stTbl_nc td,#stTbl_dx td{white-space:nowrap}#stTbl_nc th,#stTbl_nc td{padding:4px 7px;font-size:12.5px}#stTbl_nc select,#stTbl_nc input{padding:2px 5px;font-size:12.5px}#stTbl_dx th,#stTbl_dx td{padding:4px 7px;font-size:12.5px}#stTbl_dx select,#stTbl_dx input{padding:2px 5px;font-size:12.5px}.pcXeHd .pcXe,.pcXeHd .pcHdCua{display:inline-flex;align-items:center;gap:4px}
 .card>h3:first-child{margin-top:0}
 /* Nút */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--acc);background:var(--acc);color:var(--accInk);border-radius:var(--rs);padding:7px 14px;font:inherit;font-weight:550;cursor:pointer;text-decoration:none;transition:background .12s,box-shadow .12s}
@@ -226,6 +228,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 #stTbl_pc{min-width:1100px}
 .wrap:has(> #stTbl_pc){max-height:55vh;overflow:auto}
 #stTbl_pc thead th{position:sticky;top:0;z-index:1}
+.wrap:has(> #stTbl_nc){max-height:55vh;overflow:auto}.wrap:has(> #stTbl_dx){max-height:55vh;overflow:auto}
+#stTbl_nc thead th{position:sticky;top:0;z-index:1}#stTbl_dx thead th{position:sticky;top:0;z-index:1}
 .pcInLoc{flex-wrap:wrap;gap:10px}
 .importActions{flex-wrap:wrap;gap:6px}
 .pcInFrame{display:block;width:100%;height:70vh;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
