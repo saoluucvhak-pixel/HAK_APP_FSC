@@ -73,7 +73,7 @@
   function khoiPhuc(st, x) {
     x.m.forEach(i => st.loMoi.add(i));
     x.c.forEach((v, k) => { if (!st.chuNhap.has(k)) st.chuNhap.set(k, v); });
-    x.a.forEach((v, k) => { const e = st.aliasNhap.get(k); if (e) v.lots.forEach(id => e.lots.add(id)); else st.aliasNhap.set(k, v); });
+    x.a.forEach((v, k) => { const e = st.aliasNhap.get(k); if (e) { v.lots.forEach(id => e.lots.add(id)); if (v.coLuu) e.coLuu = true; else delete e.coLuu; } else st.aliasNhap.set(k, v); });   // hoàn cả coLuu: chot() chen giữa lúc lưu tay đang bay có thể bật nhầm
   }
 
   /* ánh xạ biển số nháp gắn với lô fid: lô bị bỏ / xóa mà không còn lô bẩn nào thì hoàn lại ánh xạ (sửa db.bienAlias và st) */

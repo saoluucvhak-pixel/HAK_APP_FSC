@@ -96,6 +96,15 @@ function opLuu(W, M, R, loi) {   // stSave
   if (loi) { if (hadLo) W.st.loDirty.add(fid); Nhap.khoiPhuc(W.st, sNhap); return 'loi'; }
   ghi(W); mhLuu(M, fid); return true;
 }
+function opRace(W, M, R) {   // F5/F1: lưu hẹn giờ (đang bay) hoàn tất GIỮA lúc bấm lưu tay; lưu tay thành công hoặc LỖI (hai lần lưu xen kẽ)
+  const ds = dirtyL(W); if (!ds.length) return false; const fid = ds[Math.floor(R() * ds.length)], lc = loCua(W, fid); if (!lc) return false; const oid = lc[0];
+  const w1 = clone(ghiRa(W));                                              // lưu hẹn giờ chụp nội dung (lô fid còn nháp nên bị bỏ ra)
+  const sNhap = Nhap.chup(W.st); Nhap.chuChot(W.st, oid); const hadLo = W.st.loDirty.delete(fid);   // bấm lưu tay: fid tạm không còn nháp
+  W.dia = w1; W.st.snap = Delta.snapshot(w1); Nhap.chot(W.db, W.st);       // lưu hẹn giờ hoàn tất giữa chừng
+  if (R() < 0.5) { if (hadLo) W.st.loDirty.add(fid); Nhap.khoiPhuc(W.st, sNhap); }   // lưu tay LỖI
+  else { ghi(W); mhLuu(M, fid); }                                          // lưu tay thành công
+  return true;
+}
 function opBo(W, M, R) {   // stDiscard → loHoan
   const ds = dirtyL(W); if (!ds.length) return false; const fid = ds[Math.floor(R() * ds.length)];
   Nhap.veBanDaLuu(W.db, W.st, fid); mhBo(M, fid); if (W.st.canGhi) { W.st.canGhi = false; ghi(W); } return true;   // như loVeBanDaLuu: ánh xạ vừa chốt thì persist
@@ -134,7 +143,7 @@ function opDongDot(W, M) {   // nhapTamGhi → mở lại → nhapTamKhoiPhuc (h
   Nhap.tamPhucHoiAlias(W.db, W.st, d.alias); if (W.st.canGhi) { W.st.canGhi = false; ghi(W); }
   return 'dongdot';
 }
-const OPS = [[opGop, 5], [opLuu, 4], [(W, M, R) => opLuu(W, M, R, true), 1], [opBo, 2], [opXoaLo, 1], [opXoaRung, 0.5], [opSuaTay, 1], [opGhiTuDo, 1.5], [opKhoiPhucToanBo, 0.4], [opDongDot, 1.2]];
+const OPS = [[opGop, 5], [opLuu, 4], [(W, M, R) => opLuu(W, M, R, true), 1], [opRace, 1.5], [opBo, 2], [opXoaLo, 1], [opXoaRung, 0.5], [opSuaTay, 1], [opGhiTuDo, 1.5], [opKhoiPhucToanBo, 0.4], [opDongDot, 1.2]];
 function chonOp(R) { const t = OPS.reduce((a, [, w]) => a + w, 0); let x = R() * t; for (const [f, w] of OPS) { if ((x -= w) < 0) return f; } return OPS[0][0]; }
 
 /* ===== kiểm bất biến ===== */
@@ -163,6 +172,6 @@ function chayChuoi(seed) {
 }
 
 test('mô hình ngẫu nhiên: ' + SO_CHUOI + ' chuỗi thao tác giữ bất biến I1–I5, I7 của bản nháp', () => {
-  const hat = process.env.NHAP_HAT ? HAT_GOC : HAT_GOC, so = SO_CHUOI;
+  const hat = HAT_GOC, so = SO_CHUOI;
   for (let i = 0; i < so; i++) chayChuoi(hat + i * 7919);
 });

@@ -123,3 +123,24 @@ test('bản tạm cũ (không có coLuu) vẫn khôi phục như trước', () =
   assert.equal(V.db.bienAlias.x, 'MOI'); assert.equal(V.st.aliasNhap.get('x').coLuu, undefined);
   Nhap.veBanDaLuu(V.db, V.st, 'B'); assert.equal(V.db.bienAlias.x, 'CU', 'không có lô nào đã lưu: hoàn về giá trị cũ');
 });
+
+/* Lỗi 4 (soát độc lập F1): lưu tay lô A đang bay (A tạm không còn trong loDirty), lưu hẹn giờ cũ hoàn tất và chốt sổ: chot() bật coLuu nhầm cho ánh xạ
+ * (lô A chưa thật sự lưu). Lưu tay LỖI rồi bỏ cả hai lô: ánh xạ phải hoàn về giá trị cũ, không được ghi xuống đĩa. khoiPhuc phải hoàn cả coLuu. */
+test('race + lưu tay lỗi: khoiPhuc hoàn cả cờ coLuu; bỏ hết các lô thì ánh xạ về giá trị cũ, không ghi xuống đĩa', () => {
+  const W = dung();
+  const sN = Nhap.chup(W.st); Nhap.chuChot(W.st, 'o1'); const had = W.st.loDirty.delete('A');   // bấm Lưu lô A, đang bay
+  Nhap.chot(W.db, W.st);                                                                          // lưu hẹn giờ cũ hoàn tất chen giữa
+  assert.equal(W.st.aliasNhap.get('x').coLuu, true, 'chot đánh dấu tạm (A chưa lưu thật)');
+  if (had) W.st.loDirty.add('A'); Nhap.khoiPhuc(W.st, sN);                                        // lưu tay lỗi: hoàn
+  assert.ok(!W.st.aliasNhap.get('x').coLuu, 'khoiPhuc hoàn cả coLuu về giá trị trước khi lưu');
+  assert.deepEqual([...W.st.aliasNhap.get('x').lots].sort(), ['A', 'B']);
+  Nhap.veBanDaLuu(W.db, W.st, 'A'); Nhap.veBanDaLuu(W.db, W.st, 'B');
+  assert.equal(W.db.bienAlias.x, 'CU', 'không lô nào được lưu: ánh xạ về giá trị cũ'); assert.ok(!W.st.canGhi, 'không có gì cần ghi xuống đĩa');
+  assert.equal(Nhap.dbGhi(W.db, W.st).bienAlias.x, 'CU');
+});
+test('lưu tay lỗi khi coLuu đã bật từ lần lưu thật trước đó: khoiPhuc giữ coLuu', () => {
+  const W = dung(); luu(W, 'A');                                       // A đã lưu thật: coLuu = true, sổ còn lô B
+  assert.equal(W.st.aliasNhap.get('x').coLuu, true);
+  const sN = Nhap.chup(W.st); Nhap.chuChot(W.st, 'o1'); const had = W.st.loDirty.delete('B'); if (had) W.st.loDirty.add('B'); Nhap.khoiPhuc(W.st, sN);
+  assert.equal(W.st.aliasNhap.get('x').coLuu, true);
+});
