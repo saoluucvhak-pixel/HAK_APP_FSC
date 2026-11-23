@@ -2,6 +2,7 @@
  * Trước đây nằm trong ui/app/02-luu-tru-trang-thai.js và đọc biến toàn cục; nay nhận trạng thái TƯỜNG MINH nên test được bằng hàm thật:
  *   st = {loDirty: Set<id lô>, loMoi: Set<id lô>, chuNhap: Map<id chủ rừng, {moi}>, aliasNhap: Map<khóa, {had, old, lots:Set}>, snap}
  *   snap = HAKDelta.snapshot(...) của bản ĐÃ LƯU gần nhất ({owners: Map id→json, forests: Map id→{owner, json}}), hoặc null.
+ * st.canGhi (tùy chọn): hàm đặt true khi một ánh xạ biển số vừa được CHỐT mà không có lần ghi kèm theo; người gọi phải persist() rồi xóa cờ.
  * Các hàm KHÔNG đọc biến toàn cục. Hàm có chữ "sửa" bên dưới sửa trực tiếp db và các sổ trong st (giữ đúng hành vi cũ); dbGhi không sửa gì.
  * Bất biến (docs/BAN_GIAO_BO_SUNG_PR_D_AN_TOAN_BAN_NHAP.md mục 3): I1 ghi xuống đĩa = bản đã lưu + phần đã bấm lưu; I2 bỏ thay đổi về đúng bản đã lưu;
  * I4 dữ liệu đã lưu không bao giờ bị dbGhi bỏ ra; I5 lưu lỗi chỉ hoàn phần đã bỏ, không xóa mục mới. */
@@ -46,7 +47,11 @@
   function chot(db, st) {
     const dirtyOf = o => Object.values((o && o.forests) || {}).some(f => st.loDirty.has(f.id));
     st.chuNhap.forEach((cn, oid) => { if (!dirtyOf(db.rs[oid])) st.chuNhap.delete(oid); });
-    st.aliasNhap.forEach((v, k) => { if (![...v.lots].some(id => st.loDirty.has(id))) st.aliasNhap.delete(k); });
+    st.aliasNhap.forEach((v, k) => {
+      const daLuu = [...v.lots].filter(id => !st.loDirty.has(id));
+      if (daLuu.length) { v.coLuu = true; daLuu.forEach(id => v.lots.delete(id)); }   // lô liên quan đã lưu: ghi nhớ bằng coLuu (bỏ các lô còn lại không được hoàn ánh xạ, kể cả sau đóng đột ngột) và thôi giữ trong sổ: sổ chỉ giữ các lô còn nháp
+      if (!v.lots.size) st.aliasNhap.delete(k);
+    });
     [...st.loMoi].forEach(id => { if (!st.loDirty.has(id)) st.loMoi.delete(id); });
   }
 
@@ -75,11 +80,11 @@
   function aliasHoan(db, st, fid) {
     st.aliasNhap.forEach((v, k) => {
       v.lots.delete(fid);
-      if (![...v.lots].some(id => st.loDirty.has(id))) {
-        db.bienAlias = db.bienAlias || {};
-        if (v.had) db.bienAlias[k] = v.old; else delete db.bienAlias[k];
-        st.aliasNhap.delete(k);
-      }
+      if ([...v.lots].some(id => st.loDirty.has(id))) return;   // còn lô nháp liên quan: giữ sổ
+      if (v.coLuu) { st.aliasNhap.delete(k); st.canGhi = true; return; }   // (canGhi: ánh xạ vừa được chốt, người gọi phải persist để xuống đĩa) đã có lô liên quan ĐƯỢC LƯU: ánh xạ đi cùng lô đã lưu (giữ giá trị mới, chốt sổ); không phụ thuộc thứ tự lưu / bỏ / đóng đột ngột
+      db.bienAlias = db.bienAlias || {};                        // mọi lô liên quan đều bị bỏ: hoàn về giá trị cũ
+      if (v.had) db.bienAlias[k] = v.old; else delete db.bienAlias[k];
+      st.aliasNhap.delete(k);
     });
   }
 
@@ -99,7 +104,7 @@
     if (oid && db.rs[oid]) {   // chủ rừng và ánh xạ biển số nháp: không còn lô nháp nào thì hoàn lại (chủ rừng mới → bỏ; thông tin sửa nháp → về bản đã lưu)
       const o = db.rs[oid], cn = st.chuNhap.get(oid);
       if (cn && !Object.values(o.forests || {}).some(f => st.loDirty.has(f.id))) {
-        if (cn.moi && !Object.keys(o.forests || {}).length) delete db.rs[oid];
+        if (cn.moi && !Object.keys(o.forests || {}).length && !(snap && snap.owners.has(oid))) delete db.rs[oid];   // sổ còn ghi 'mới' nhưng chủ rừng đã xuống đĩa cùng một lô đã lưu: không xóa
         else if (!cn.moi && snap && snap.owners.has(oid)) { const ov = parse(snap.owners.get(oid)); Object.keys(o).forEach(x => { if (x !== 'forests') delete o[x]; }); Object.assign(o, ov); }
         st.chuNhap.delete(oid);
       }
@@ -108,6 +113,38 @@
     return ok;
   }
 
-  const api = {tao, conNhap, dbGhi, chot, chuChot, chup, khoiPhuc, aliasHoan, veBanDaLuu};
+  /* ===== TỰ LƯU TẠM (đóng đột ngột): chụp các lô nháp, chủ rừng nháp, ánh xạ nháp thành đối tượng JSON thuần; phục hồi vào db + sổ sau khi mở lại ===== */
+  /* ks: danh sách khóa 'oid|fid' của các lô có thay đổi chưa lưu (giao diện lấy từ stDirtyList). Không sửa gì. */
+  function tamChup(db, st, ks) {
+    const lots = {}, chu = {}, moi = [], alias = {};
+    (ks || []).forEach(k => {
+      const [oid, fid] = k.split('|'), f = db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; if (!f) return;
+      if (st.loDirty.has(fid)) {
+        lots[k] = f; if (st.loMoi.has(fid)) moi.push(fid);
+        if (st.chuNhap.has(oid) && !chu[oid]) { const {forests: _f, ...o} = db.rs[oid]; chu[oid] = {moi: !!st.chuNhap.get(oid).moi, o}; }
+      }
+    });
+    st.aliasNhap.forEach((v, key) => { if (db.bienAlias && key in db.bienAlias) alias[key] = Object.assign({v: db.bienAlias[key], had: v.had, old: v.old, lots: [...v.lots]}, v.coLuu ? {coLuu: true} : {}); });
+    return {lots, moi, chu, alias};
+  }
+  /* phục hồi MỘT lô nháp (k = 'oid|fid', f = nội dung lô, c = chu[oid], moiSet = Set id lô tạo từ nháp) */
+  function tamPhucHoiLo(db, st, k, f, c, moiSet) {
+    const [oid, fid] = k.split('|');
+    if (!db.rs[oid]) { const {id, ...o} = c.o; db.rs[oid] = Object.assign({}, o, {id: oid, forests: {}}); st.chuNhap.set(oid, {moi: true}); }
+    else if (c && !c.moi) { Object.assign(db.rs[oid], c.o, {forests: db.rs[oid].forests}); st.chuNhap.set(oid, {moi: false}); }
+    db.rs[oid].forests[fid] = f; st.loDirty.add(fid); if (moiSet.has(fid)) st.loMoi.add(fid);
+  }
+  /* phục hồi các ánh xạ nháp (gọi SAU khi mọi lô đã phục hồi): chỉ giữ các lô liên quan còn nháp */
+  function tamPhucHoiAlias(db, st, alias) {
+    Object.entries(alias || {}).forEach(([key, v]) => {
+      if (!v || typeof v.v !== 'string') return;
+      db.bienAlias = db.bienAlias || {}; db.bienAlias[key] = v.v;
+      const lots = new Set((v.lots || []).filter(id => st.loDirty.has(id)));
+      if (!lots.size) { if (v.coLuu) { st.canGhi = true; return; } if (v.had) db.bienAlias[key] = v.old; else delete db.bienAlias[key]; return; }   // không còn lô nháp: đã có lô được lưu thì giữ giá trị mới, không thì hoàn
+      st.aliasNhap.set(key, Object.assign({had: !!v.had, old: v.old, lots}, v.coLuu ? {coLuu: true} : {}));
+    });
+  }
+
+  const api = {tao, conNhap, dbGhi, chot, chuChot, chup, khoiPhuc, aliasHoan, veBanDaLuu, tamChup, tamPhucHoiLo, tamPhucHoiAlias};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNhap = api;
 })(typeof self !== 'undefined' ? self : this);

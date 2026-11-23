@@ -110,7 +110,9 @@ function aliasHoan(fid) { doiDuLieu(); HAKNhap.aliasHoan(db, nhapTT(), fid); }
 function loHoan(fid) { return loDirty.has(fid) ? loVeBanDaLuu(fid) || true : false; }
 function loVeBanDaLuu(fid) {
   doiDuLieu();   // phiên bản dữ liệu tăng ở mọi đường đổi dữ liệu (tests/datacver.test.js quét mã)
-  return HAKNhap.veBanDaLuu(db, nhapTT(), fid);
+  const tt = nhapTT(), ok = HAKNhap.veBanDaLuu(db, tt, fid);
+  if (tt.canGhi) persist();   // ánh xạ biển số vừa được chốt (đã có lô liên quan được lưu): phải xuống đĩa, không để chỉ nằm trong bộ nhớ
+  return ok;
 }
 CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow(), chup: () => (window.__nhapChup = nhapChup()), khoiPhuc: () => nhapKhoiPhuc(window.__nhapChup), themMoi: id => loMoi.add(id), boMoi: id => loMoi.delete(id)};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
 CONG_KT.saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
