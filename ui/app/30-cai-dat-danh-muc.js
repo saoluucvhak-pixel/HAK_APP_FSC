@@ -59,7 +59,7 @@ const kyTu = v => ({vanChuyen: v === 'vc' || v === 'ca', nhanCong: v === 'nc' ||
 const selKy = (name, v) => '<select name="' + name + '">' + [['', 'Không'], ['vc', 'Vận chuyển'], ['nc', 'Nhân công'], ['ca', 'Cả hai']].map(([k, t]) => '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>';
 const fld30 = (name, label, v, o) => { o = o || {};
 return '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span' + (o.req ? ' class="req"' : '') + '>' + label + '</span><input name="' + name + '" value="' + esc(v == null ? '' : v) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + ' autocomplete="off"></label>'; };
-banNhapUI.push({ten: 'Hồ sơ đối tượng đang sửa', dirty: () => !!cd.sua && JSON.stringify(dtDocForm()) !== cd.goc, luu: () => dtLuu(), bo: () => { cd.sua = null; cd.loi = []; }});
+banNhapUI.push({ten: 'Hồ sơ đối tượng đang sửa', dirty: () => !!cd.sua && !!document.getElementById('dtForm') && JSON.stringify(dtDocForm()) !== cd.goc, luu: () => dtLuu(), bo: () => { cd.sua = null; cd.loi = []; }});
 /* thể nhân MỘT lớp: tối đa một người → form "Thêm cá nhân" gom thông tin người ngay trong form; nhiều hơn một người (dữ liệu cũ) → giữ bảng con để sửa đủ mọi người */
 const dtMot = x => !!x && x.loai !== 'phapnhan' && (x.nguoi || []).length <= 1;
 const cb30 = (k, t, o) => '<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="' + k + '"' + (o ? ' checked' : '') + '> ' + t + '</label>';

@@ -49,11 +49,11 @@
     const t = trim(v);
     if (t === '') return null;
     if (/^0[xXobOB]/.test(t) || /[eE]/.test(t)) return 'x';
-    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) { const n = Number(t.replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 'x'; }
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) { const n = Number(t.replace(/\./g, '').replace(',', '.')); return isFinite(n) ? (Object.is(n, -0) ? 0 : n) : 'x'; }
     const s = t.replace(',', '.');
     if (!/^-?\d+(\.\d+)?$/.test(s)) return 'x';
     const n = Number(s);
-    return isFinite(n) ? n : 'x';
+    return isFinite(n) ? (Object.is(n, -0) ? 0 : n) : 'x';
   }
 
   function parseDonGia(v) {

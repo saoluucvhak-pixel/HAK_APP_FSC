@@ -43,6 +43,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('FLT-02: sau khi vẽ, ô tìm vẫn giữ tiêu điểm và đủ 6 ký tự', await w.evaluate(q => document.activeElement === document.querySelector(q) && document.querySelector(q).value.length >= 1, Q));
   await w.fill(Q, 'khongcophieunay'); await w.press(Q, 'Enter');
   ok('FLT-02: Enter ép cập nhật ngay (không phải chờ hẹn giờ)', (await w.$$eval('#stTbl_pc [data-bang-trong]', l => l.length)) >= 1 || (await dong()).length === 0);
+  await w.fill(Q, ''); await w.focus(Q); await w.keyboard.type('ab ', {delay: 20}); await w.waitForTimeout(500); await w.keyboard.type('cd', {delay: 20}); await w.waitForTimeout(500);
+  ok('FLT-02: gõ "ab ", dừng quá 250 ms rồi gõ "cd" thì ô vẫn là "ab cd" (dấu cách không bị mất khi vẽ lại)', (await w.inputValue(Q)) === 'ab cd', await w.inputValue(Q));
+  await w.fill(Q, ''); await w.press(Q, 'Enter'); await w.waitForTimeout(150);
   await w.evaluate(() => { const b = document.querySelector('#stTbl_pc [data-sfreset]'); if (b) b.click(); }); await w.waitForTimeout(150);
 
   // FLT-03 + UI-05

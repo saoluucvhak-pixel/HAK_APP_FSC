@@ -31,6 +31,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 1. tạo cá nhân MỘT form
   ok('có hai nút riêng “+ Thêm cá nhân” và “+ Thêm doanh nghiệp”', await w.isVisible('#cnThem') && await w.isVisible('#dnThem') && /Thêm cá nhân/.test(await w.innerText('#cnThem')) && /Thêm doanh nghiệp/.test(await w.innerText('#dnThem')));
   await w.click('#cnThem'); await w.waitForSelector('#dtForm');
+  await w.evaluate(() => document.getElementById('dtForm').remove());   // như khi nhảy sang màn khác từ Tìm kiếm chung: form không còn trên màn hình nhưng hồ sơ đang mở vẫn còn trong bộ nhớ
+  await w.click('#navHome'); await w.waitForTimeout(300);
+  const hop = await w.evaluate(() => { const b = document.getElementById('stBox'); return !!b && b.classList.contains('on') && /Còn thay đổi chưa lưu/.test(b.innerText); });
+  ok('mở form cá nhân mới, chưa gõ gì, rời màn hình khi form không còn trên màn hình: không báo giả "còn thay đổi chưa lưu"', !hop, String(hop));
+  if (hop) await w.evaluate(() => document.getElementById('stBox').classList.remove('on'));
+  await w.click('#navDm'); await w.click('#setTab_setdt'); await w.waitForSelector('#dtBang');
+  await w.click('#cnThem'); await w.waitForSelector('#dtForm');
   const cot = ['hoTen', 'cccd', 'ngayCap', 'noiCap', 'hanCccd', 'ngaySinh', 'gioiTinh', 'diaChi', 'sdt', 'gplx', 'hanGplx', 'viTriId', 'vtNhanCong', 'vtTaiXe', 'vtChuXe', 'kyVC', 'kyNC'];
   const co = await w.$eval('#dtForm', (f, ks) => ks.filter(k => !f.elements[k]), cot);
   ok('form cá nhân có đủ các ô trong MỘT form (họ tên, CCCD, ngày cấp, nơi cấp, hạn CCCD, ngày sinh, giới tính, địa chỉ, SĐT, GPLX, hạn GPLX, vai trò, quyền ký, vị trí)', co.length === 0, 'thiếu: ' + co.join(','));

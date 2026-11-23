@@ -67,8 +67,9 @@
   function timChuXe(dmDT, ten, soDinhDanh) {
     const k = so(soDinhDanh), ds = chonChuXe(dmDT);
     if (k) {
-      const a = DT().timCccd(dmDT, k); if (a) return a.ng.vaiTro && a.ng.vaiTro.chuXe ? {id: a.ng.id} : {loi: a.ng.hoTen + ' (CCCD ' + k + ') chưa có vai trò Chủ xe trong Danh mục đối tượng'};
-      const p = (dmDT || []).find(o => o.loai === 'phapnhan' && so(o.mst) === k); if (p) return {id: p.id};
+      const kc = NL().cccdTuSo(k), a = DT().timCccd(dmDT, k) || (kc !== k ? DT().timCccd(dmDT, kc) : null); if (a) return a.ng.vaiTro && a.ng.vaiTro.chuXe ? {id: a.ng.id} : {loi: a.ng.hoTen + ' (CCCD ' + k + ') chưa có vai trò Chủ xe trong Danh mục đối tượng'};
+      const k0 = k.length === 9 || k.length === 12 ? '0' + k : '';   // MST bị Excel ép thành số mất số 0 đầu (9 → 10, 12 → 13 chữ số)
+      const p = (dmDT || []).find(o => o.loai === 'phapnhan' && (so(o.mst) === k || (k0 && so(o.mst) === k0))); if (p) return {id: p.id};
       return {loi: 'Không có chủ xe mang số ' + k + ' trong Danh mục đối tượng'};
     }
     if (!s(ten)) return {id: ''};

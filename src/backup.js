@@ -47,6 +47,7 @@ function chepSangOThuHai(dir2, parts, io) {
   const out = {ok: true, skipped: false, dir: dir2, files: [], error: ''};
   try { (io.mkdirSync || fs.mkdirSync)(dir2, {recursive: true}); } catch (e) { return {ok: false, skipped: false, dir: dir2, files: [], error: Settings.describeError(e, dir2)}; }
   for (const p of list) {
+    if (path.resolve(path.dirname(p.file)) === path.resolve(dir2)) continue;   // ổ thứ hai trùng thư mục chính: bản đã nằm sẵn ở đó
     const to = path.join(dir2, path.basename(p.file)), tmp = to + '.tmp-' + process.pid;
     try {
       if (io.existsSync(to)) throw new Error('file đã tồn tại ở thư mục thứ hai (không ghi đè)');

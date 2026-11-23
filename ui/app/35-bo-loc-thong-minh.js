@@ -154,11 +154,16 @@ function hakSfQSync(sid) { // đẩy giá trị ô tìm vào trạng thái bộ 
 function hakSfQFlush(sid) { // vẽ ngay nếu đang chờ
   if (hakSfTimers[sid] == null) return;
   clearTimeout(hakSfTimers[sid]); delete hakSfTimers[sid];
-  const q = document.querySelector('[data-sfq="' + sid + '"]'), had = q && document.activeElement === q, pos = had ? q.selectionStart : null;
+  const q = document.querySelector('[data-sfq="' + sid + '"]'); if (!q) return;   // ô đã mất (đổi màn hình): không vẽ vô ích
+  const had = document.activeElement === q, pos = had ? q.selectionStart : null, raw = q.value;
   hakSfQSync(sid);
   render();
   const el = document.querySelector('[data-sfq="' + sid + '"]');
-  if (el && had) { el.focus(); if (pos != null) el.setSelectionRange(pos, pos); }
+  if (el && had) {
+    /* trạng thái lọc cắt khoảng trắng đầu/cuối; giữ nguyên chữ người dùng đang gõ (dấu cách sau từ) để gõ tiếp "nguyen van" không dính liền */
+    if (el.value !== raw && el.value.trim() === raw.trim()) el.value = raw;
+    el.focus(); if (pos != null) el.setSelectionRange(pos, pos);
+  }
 }
 function hakSfQCancel(sid) { if (hakSfTimers[sid] != null) { clearTimeout(hakSfTimers[sid]); delete hakSfTimers[sid]; } }
 document.addEventListener('input', e => {
