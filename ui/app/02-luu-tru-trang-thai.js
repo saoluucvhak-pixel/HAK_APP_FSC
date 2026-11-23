@@ -93,60 +93,24 @@ function persistLo(f) {
  *  - aliasNhap: khóa ánh xạ biển số → {had, old, lots}: ánh xạ mới / đổi, ghi theo bản đã lưu cho đến khi lô liên quan được lưu.
  * Chủ rừng / ánh xạ coi là “chưa lưu” khi còn ít nhất một lô của chủ rừng (của ánh xạ) trong loDirty; lưu hoặc bỏ lô cuối cùng thì chốt hoặc hoàn lại (loVeBanDaLuu). */
 const loMoi = new Set(), chuNhap = new Map(), aliasNhap = new Map();
+/* trạng thái bản nháp truyền tường minh cho lõi thuần HAKNhap (src/nhap.js): cùng các Set/Map ở trên, savedSnap đọc tại thời điểm gọi */
+const nhapTT = () => ({loDirty, loMoi, chuNhap, aliasNhap, snap: savedSnap});
 /* nội dung sẽ ghi: lô còn thay đổi chưa lưu giữ bản đã lưu (lô mới chưa lưu thì bỏ ra ngoài); chủ rừng mới chưa lưu bỏ ra ngoài; ánh xạ biển số chưa lưu về bản đã lưu */
-function dbGhi() {
-  if ((!loDirty.size && !chuNhap.size && !aliasNhap.size && !loMoi.size) || !savedSnap) return db;
-  const out = Object.assign({}, db, {rs: {}});
-  Object.entries(db.rs || {}).forEach(([oid, o]) => {
-    if (!o || typeof o !== 'object') { out.rs[oid] = o; return; }
-    const fs = {}; let giu = 0;
-    Object.entries(o.forests || {}).forEach(([fid, f]) => {
-      const id = f && f.id || fid, dirty = loDirty.has(id);
-      if (dirty && loMoi.has(id) && !savedSnap.forests.has(id)) return;
-      const b = dirty && savedSnap.forests.get(id); fs[fid] = b ? JSON.parse(b.json) : f; giu++;
-    });
-    const cn = chuNhap.get(oid);
-    if (cn && cn.moi && !giu && !savedSnap.owners.has(oid)) return;
-    let oo = o; if (cn && !cn.moi && savedSnap.owners.has(oid)) oo = JSON.parse(savedSnap.owners.get(oid));
-    out.rs[oid] = Object.assign({}, oo, {forests: fs});
-  });
-  if (aliasNhap.size) { const ba = Object.assign({}, db.bienAlias || {}); aliasNhap.forEach((v, k) => { if ([...v.lots].some(id => loDirty.has(id))) { if (v.had) ba[k] = v.old; else delete ba[k]; } }); out.bienAlias = ba; }
-  return out;
-}
+function dbGhi() { return HAKNhap.dbGhi(db, nhapTT()); }   // lõi thuần ở src/nhap.js (test mô hình tests/nhap-mo-hinh.test.js)
 /* chủ rừng / lô / ánh xạ nháp: lô nào cũng đã lưu hoặc bỏ thì dọn sổ (chốt) — gọi sau mỗi lần lưu thành công */
-function nhapChotSo() {
-  const dirtyOf = o => Object.values((o && o.forests) || {}).some(f => loDirty.has(f.id));
-  chuNhap.forEach((cn, oid) => { if (!dirtyOf(db.rs[oid])) chuNhap.delete(oid); });
-  aliasNhap.forEach((v, k) => { if (![...v.lots].some(id => loDirty.has(id))) aliasNhap.delete(k); });
-  [...loMoi].forEach(id => { if (!loDirty.has(id)) loMoi.delete(id); });
-}
+function nhapChotSo() { HAKNhap.chot(db, nhapTT()); }
 /* lưu một lô thì chốt luôn thông tin chủ rừng đang sửa nháp của lô đó (trả về hàm hoàn lại nếu lưu lỗi); chụp / khôi phục cả ba sổ để lưu lỗi không làm mất dấu “chưa lưu” */
-function chuChot(oid) { const cn = chuNhap.get(oid); if (!cn || cn.moi) return () => {}; chuNhap.delete(oid); const un = () => { if (!chuNhap.has(oid)) chuNhap.set(oid, cn); }; un.chot = true; return un; }
-const nhapChup = () => ({m: new Set(loMoi), c: new Map([...chuNhap].map(([k, v]) => [k, {...v}])), a: new Map([...aliasNhap].map(([k, v]) => [k, {...v, lots: new Set(v.lots)}]))});
+function chuChot(oid) { return HAKNhap.chuChot(nhapTT(), oid); }
+const nhapChup = () => HAKNhap.chup(nhapTT());
 /* chỉ HOÀN LẠI phần lần lưu này đã bỏ (thêm lại khóa có trong bản chụp mà nay không còn); KHÔNG xóa khóa mới do thao tác khác tạo ra trong lúc chờ */
-function nhapKhoiPhuc(x) { x.m.forEach(i => loMoi.add(i)); x.c.forEach((v, k) => { if (!chuNhap.has(k)) chuNhap.set(k, v); }); x.a.forEach((v, k) => { const e = aliasNhap.get(k); if (e) v.lots.forEach(id => e.lots.add(id)); else aliasNhap.set(k, v); }); }
+function nhapKhoiPhuc(x) { HAKNhap.khoiPhuc(nhapTT(), x); }
 /* ánh xạ biển số nháp gắn với lô fid: lô bị bỏ / xóa mà không còn lô bẩn nào thì hoàn lại ánh xạ */
-function aliasHoan(fid) { doiDuLieu(); aliasNhap.forEach((v, k) => { v.lots.delete(fid); if (![...v.lots].some(id => loDirty.has(id))) { db.bienAlias = db.bienAlias || {}; if (v.had) db.bienAlias[k] = v.old; else delete db.bienAlias[k]; aliasNhap.delete(k); } }); }
+function aliasHoan(fid) { doiDuLieu(); HAKNhap.aliasHoan(db, nhapTT(), fid); }
 /* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu; lô mới chưa từng lưu thì bỏ hẳn (cùng chủ rừng mới nếu không còn lô nào) */
 function loHoan(fid) { return loDirty.has(fid) ? loVeBanDaLuu(fid) || true : false; }
 function loVeBanDaLuu(fid) {
-  doiDuLieu(); loDirty.delete(fid);
-  const b = savedSnap && savedSnap.forests.get(fid); let oid = null, ok = false;
-  Object.entries(db.rs || {}).forEach(([id, o]) => { const k = Object.keys((o && o.forests) || {}).find(x => (o.forests[x].id || x) === fid); if (k) oid = id; });
-  if (!b) {
-    if (loMoi.has(fid) && oid) { const o = db.rs[oid], k = Object.keys(o.forests).find(x => (o.forests[x].id || x) === fid); delete o.forests[k]; ok = true; }
-    loMoi.delete(fid);
-  } else if (oid) { const o = db.rs[oid], k = Object.keys(o.forests).find(x => (o.forests[x].id || x) === fid), f = o.forests[k], v = JSON.parse(b.json); Object.keys(f).forEach(x => { delete f[x]; }); Object.assign(f, v); ok = true; }
-  if (oid && db.rs[oid]) {   // chủ rừng và ánh xạ biển số nháp: không còn lô nháp nào thì hoàn lại (chủ rừng mới → bỏ; thông tin sửa nháp → về bản đã lưu)
-    const o = db.rs[oid], cn = chuNhap.get(oid);
-    if (cn && !Object.values(o.forests || {}).some(f => loDirty.has(f.id))) {
-      if (cn.moi && !Object.keys(o.forests || {}).length) delete db.rs[oid];
-      else if (!cn.moi && savedSnap && savedSnap.owners.has(oid)) { const ov = JSON.parse(savedSnap.owners.get(oid)); Object.keys(o).forEach(x => { if (x !== 'forests') delete o[x]; }); Object.assign(o, ov); }
-      chuNhap.delete(oid);
-    }
-  }
-  aliasHoan(fid);
-  return ok;
+  doiDuLieu();   // phiên bản dữ liệu tăng ở mọi đường đổi dữ liệu (tests/datacver.test.js quét mã)
+  return HAKNhap.veBanDaLuu(db, nhapTT(), fid);
 }
 CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow(), chup: () => (window.__nhapChup = nhapChup()), khoiPhuc: () => nhapKhoiPhuc(window.__nhapChup), themMoi: id => loMoi.add(id), boMoi: id => loMoi.delete(id)};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
 CONG_KT.saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
