@@ -7,6 +7,7 @@ test('chuỗi nhiều dấu phẩy mơ hồ tính 0 kg', () => {
 });
 test('các dạng hợp lệ vẫn đúng', () => {
   assert.strictEqual(DM.kgPhieu({kl: '1,5'}), 1500);
+  assert.strictEqual(DM.kgPhieu({kl: '1,250'}), 1250);   // kiểu Việt: 1,25 tấn, giữ như trước (khớp HAKSo.parseKl)
   assert.strictEqual(DM.kgPhieu({kl: '12.5'}), 12500);
   assert.strictEqual(DM.kgPhieu({kl: '1.250,5'}), 1250500);
   assert.strictEqual(DM.kgPhieu({kl: 2.3}), 2300);

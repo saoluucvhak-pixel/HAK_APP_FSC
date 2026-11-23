@@ -102,11 +102,10 @@
   /* MỘT cách tính khối lượng phiếu cân cho mọi màn, báo cáo, phân bổ, biểu mẫu: làm tròn TỪNG phiếu đến kg (số nguyên) rồi cộng.
    * kgPhieu: kg của một phiếu (kl là tấn, nhận số hoặc chuỗi số có dấu phẩy; không hợp lệ hoặc ≤ 0 tính 0). tongPhieuKg / tongPhieuTan: tổng của danh sách phiếu. */
   /* Đọc chuỗi tấn theo quy tắc của HAKSo.parseKl (đơn vị tấn), viết lại tại chỗ để lõi in không phụ thuộc thứ tự nạp tệp:
-   * chỉ nhận 1234 · 1,5 · 1.5 · 1.250,5 (kiểu Việt); '1,250,000', '1,250' (mơ hồ), chữ lạ, số âm → không hợp lệ (0 kg, không đoán). */
+   * chỉ nhận 1234 · 1,5 · 1.5 · 1.250,5 (kiểu Việt); '1,250,000' (nhiều dấu phẩy), chữ lạ, số âm → không hợp lệ (0 kg, không đoán). */
   const tanTuChuoi = t => {
     t = t.replace(/[   ]/g, ' ').trim();
     if (/^\d+$/.test(t)) return Number(t);
-    if (/^\d{1,3},\d{3}$/.test(t)) return NaN;
     if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) return /^\d{1,3}\.\d{3}$/.test(t) ? Number(t) : Number(t.replace(/\./g, '').replace(',', '.'));
     if (/^\d+,\d+$/.test(t)) return Number(t.replace(',', '.'));
     if (/^\d+\.\d+$/.test(t)) return Number(t);
