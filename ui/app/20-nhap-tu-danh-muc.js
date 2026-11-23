@@ -15,9 +15,9 @@ const dmNguonLd = () => {
 };
 const dmNguonXe = () => {
   /* 3.0: trước hết xe của Danh mục xe (chủ xe theo ID); sau đó danh mục xe cũ và xe đã có ở các lô */
-  const xeId = b => (HAKXeDM.timBks(dmXE(), b) || {}).id || '';
-  const cu = HAKDanhMuc.xeHieuLuc(db.dmXeVC || []).map(x => Object.assign({}, x, {_xeId: xeId(x.bienSo)})), coCu = new Set(cu.map(r => HAKDanhMuc.bienKey(r.bienSo)));   // dòng cũ đầy đủ hơn (tài xế, cà vẹt): giữ, nối ID xe mới
-  const moi = dmCu().dmXeVC.filter(x => x.bienSo && !coCu.has(HAKDanhMuc.bienKey(x.bienSo))).map(x => Object.assign(x, {_xeId: xeId(x.bienSo)}));
+  const xeId = b => (HAKXeDM.timBks(dmXE(), b) || {}).id || '', taiId = b => (HAKXeDM.timBks(dmXE(), b) || {}).taiXeId || '';   // taiId: tài xế thường chạy gắn ở Danh mục xe
+  const cu = HAKDanhMuc.xeHieuLuc(db.dmXeVC || []).map(x => Object.assign({}, x, {_xeId: xeId(x.bienSo), _taiXeId: taiId(x.bienSo)})), coCu = new Set(cu.map(r => HAKDanhMuc.bienKey(r.bienSo)));   // dòng cũ đầy đủ hơn (tài xế, cà vẹt): giữ, nối ID xe mới
+  const moi = dmCu().dmXeVC.filter(x => x.bienSo && !coCu.has(HAKDanhMuc.bienKey(x.bienSo))).map(x => Object.assign(x, {_xeId: xeId(x.bienSo), _taiXeId: taiId(x.bienSo)}));
   const dm = cu.concat(moi), co = new Set(dm.map(r => HAKDanhMuc.bienKey(r.bienSo)));
   const them = xeDanhMuc().filter(r => !co.has(HAKDanhMuc.bienKey(r.bienSo))).map(r => ({ngayCapNhat: '', bienSo: r.bienSo, chuXe: r.chuXe || '', taiXe: r.taiXe || '', cccdTx: r.cccdTx || '', diaChiTx: r.diaChiTx || '', ngayCapTx: r.ngayCapTx || '', noiCapTx: r.noiCapTx || '', gplx: r.gplx || '',
   hanGplx: r.hanGplx || '', hanDangKiem: r.kdDen || '', hanBaoHiem: r.hanBH || '', loaiXe: r.loaiXe || '', cccd: r.cccd || '', ngaySinh: r.ngaySinh || '', ngayCap: r.ngayCap || '', noiCap: r.noiCap || '', diaChi: r.diaChi || '', sdt: r.sdt || '', cavet: r.cavet || '', nguoiKy: r.nguoiKy || '',
@@ -37,6 +37,10 @@ function dmDienXe(d) {
   if (d._goc) ST_FIELDS.dx.forEach(([k]) => { if (k !== 'stt' && d._goc[k] != null && d._goc[k] !== '') stm.vals[k] = stStr(d._goc[k]); });
   if (d._xeId) stm.vals.xeId = d._xeId;   // 3.0: dòng xe nối xe của Danh mục xe
   ['bienSo', 'chuXe', 'taiXe', 'cccdTx', 'diaChiTx', 'ngayCapTx', 'noiCapTx', 'gplx', 'hanGplx', 'kdDen', 'hanBH'].concat(HAKDanhMuc.CHU_XE).forEach(k => { if (r[k] != null && r[k] !== '') stm.vals[k] = stStr(r[k]); });
+  if (d._taiXeId) {   // tài xế thường chạy của xe (Danh mục xe): chỉ điền khi dòng chưa có tài xế (từ dòng xe cũ / lô cũ), lô chụp lại — không đổi danh mục
+    const tx = HAKXeDM.taiXe(dmDT(), d._taiXeId), dien = HAKXeDM.dienTaiXeLo(tx && tx.ng, Object.assign({}, d._goc || {}, HAKDanhMuc.chupXe(d, {})), d._taiXeId);   // “đã có” tính theo nguồn của dòng vừa chọn, không theo ô còn lại của xe chọn trước đó
+    Object.keys(dien).forEach(k => { stm.vals[k] = stStr(dien[k]); });
+  }
   stm.vals._dmNgay = trim(d.ngayCapNhat);
 }
 /* phiếu #05 (ND-05, A-06): người / xe MỚI của lô vừa lưu (chưa nối, chưa có trong Danh mục đối tượng / Danh mục xe) → HỎI rồi mới thêm vào danh mục 3.0.
