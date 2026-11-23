@@ -78,6 +78,12 @@
     return n === 9 || n === 12;
   };
   function cccdTuSo(n) { const d = String(Math.round(+n)); return d.length === 8 ? '0' + d : d.length === 10 || d.length === 11 ? d.padStart(12, '0') : d; }
-  const api = {kiemTra, chuanHoaNgay, chuanHoaCccd, cccdSo, cccdHopLe, cccdTuSo, NGAY_EXP, NGAY_INFO};
+  /* MST Việt Nam (10 hoặc 13 chữ số, nhiều tỉnh bắt đầu bằng 0) bị Excel/Sheets ép thành số nên mất số 0 đầu: 9 số → 10 số; 12 số → 13 số; mọi trường hợp khác (kể cả có dấu '-') giữ nguyên để báo lỗi. */
+  function mstTuSo(n) {
+    if (typeof n === 'number') { if (!Number.isInteger(n) || n < 0) return n; n = String(n); }
+    else if (typeof n !== 'string' || !/^\d+$/.test(n)) return n;
+    return n.length === 9 || n.length === 12 ? '0' + n : n;
+  }
+  const api = {kiemTra, chuanHoaNgay, chuanHoaCccd, cccdSo, cccdHopLe, cccdTuSo, mstTuSo, NGAY_EXP, NGAY_INFO};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNhapLieu = api;
 })(typeof self !== 'undefined' ? self : this);
