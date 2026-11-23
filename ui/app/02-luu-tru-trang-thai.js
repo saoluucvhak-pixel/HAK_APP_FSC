@@ -121,9 +121,10 @@ function nhapChotSo() {
   [...loMoi].forEach(id => { if (!loDirty.has(id)) loMoi.delete(id); });
 }
 /* lưu một lô thì chốt luôn thông tin chủ rừng đang sửa nháp của lô đó (trả về hàm hoàn lại nếu lưu lỗi); chụp / khôi phục cả ba sổ để lưu lỗi không làm mất dấu “chưa lưu” */
-function chuChot(oid) { const cn = chuNhap.get(oid); if (!cn || cn.moi) return () => {}; chuNhap.delete(oid); return () => { if (!chuNhap.has(oid)) chuNhap.set(oid, cn); }; }
+function chuChot(oid) { const cn = chuNhap.get(oid); if (!cn || cn.moi) return () => {}; chuNhap.delete(oid); const un = () => { if (!chuNhap.has(oid)) chuNhap.set(oid, cn); }; un.chot = true; return un; }
 const nhapChup = () => ({m: new Set(loMoi), c: new Map([...chuNhap].map(([k, v]) => [k, {...v}])), a: new Map([...aliasNhap].map(([k, v]) => [k, {...v, lots: new Set(v.lots)}]))});
-function nhapKhoiPhuc(x) { loMoi.clear(); x.m.forEach(i => loMoi.add(i)); chuNhap.clear(); x.c.forEach((v, k) => chuNhap.set(k, v)); aliasNhap.clear(); x.a.forEach((v, k) => aliasNhap.set(k, v)); }
+/* chỉ HOÀN LẠI phần lần lưu này đã bỏ (thêm lại khóa có trong bản chụp mà nay không còn); KHÔNG xóa khóa mới do thao tác khác tạo ra trong lúc chờ */
+function nhapKhoiPhuc(x) { x.m.forEach(i => loMoi.add(i)); x.c.forEach((v, k) => { if (!chuNhap.has(k)) chuNhap.set(k, v); }); x.a.forEach((v, k) => { const e = aliasNhap.get(k); if (e) v.lots.forEach(id => e.lots.add(id)); else aliasNhap.set(k, v); }); }
 /* ánh xạ biển số nháp gắn với lô fid: lô bị bỏ / xóa mà không còn lô bẩn nào thì hoàn lại ánh xạ */
 function aliasHoan(fid) { doiDuLieu(); aliasNhap.forEach((v, k) => { v.lots.delete(fid); if (![...v.lots].some(id => loDirty.has(id))) { db.bienAlias = db.bienAlias || {}; if (v.had) db.bienAlias[k] = v.old; else delete db.bienAlias[k]; aliasNhap.delete(k); } }); }
 /* bỏ thay đổi chưa lưu của một lô: về đúng bản đã lưu; lô mới chưa từng lưu thì bỏ hẳn (cùng chủ rừng mới nếu không còn lô nào) */
@@ -147,7 +148,7 @@ function loVeBanDaLuu(fid) {
   aliasHoan(fid);
   return ok;
 }
-CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow()};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
+CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow(), chup: () => (window.__nhapChup = nhapChup()), khoiPhuc: () => nhapKhoiPhuc(window.__nhapChup), themMoi: id => loMoi.add(id), boMoi: id => loMoi.delete(id)};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
 CONG_KT.saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
 /* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
 function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); if (HAKLienKet.canChuan(o.forests[k])) HAKLienKet.chuanLo(o.forests[k]); }));
@@ -214,7 +215,8 @@ function persist() {
     saveTimer = setTimeout(flushSave, 250);
     return;
   }
-  try { const W = dbGhi(); localStorage.setItem(KEY, JSON.stringify(W)); try { savedSnap = HAKDelta.snapshot(W); nhapChotSo(); } catch (e2) { /* không chụp được: giữ ảnh chụp cũ */ } storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
+  try { const W = dbGhi(); let sn = null; try { sn = HAKDelta.snapshot(W); } catch (e2) { if (loDirty.size || chuNhap.size || loMoi.size || aliasNhap.size) { storeOk = false; showSave('Chưa ghi: không chụp được bản đã lưu, bản nháp được giữ nguyên', true); if (typeof pushNote === 'function') pushNote('Không ghi được vào trình duyệt vì không chụp được bản đã lưu; các lô nháp giữ nguyên trong bộ nhớ, bấm “Lưu dữ liệu vào lô” sau.', 'warn'); return; } }
+    localStorage.setItem(KEY, JSON.stringify(W)); if (sn) { savedSnap = sn; nhapChotSo(); } storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
   catch (e) { storeOk = false; showSave('Trình duyệt không lưu được', true); }
 }
 if (HB) window.addEventListener('beforeunload', () => { if (saveTimer) { clearTimeout(saveTimer); flushSave(); } });

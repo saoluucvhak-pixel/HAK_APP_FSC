@@ -151,6 +151,7 @@ async function gsApply() {
  if (ex) touched.forEach(id => ex.lots.add(id)); else aliasNhap.set(k, {had: Object.hasOwn(db.bienAlias, k), old: db.bienAlias[k], lots: new Set(touched)});
       db.bienAlias[k] = v;
     });
+    if (touched.length && aliasNhap.size) lines.push('Ánh xạ tên xe → biển số đang ở bản nháp: chỉ lên đĩa khi đã lưu hết các lô liên quan (' + touched.length + ' lô).');
     if (!touched.length && m.alias && Object.keys(m.alias).length) lines.push('Ánh xạ tên xe → biển số chưa ghi: không có lô nào thay đổi để giữ bản nháp.');
     nhapTamGhi();
     m.sum = lines.length ? lines : ['Không có thay đổi nào cần ghi (đã có đủ trong hồ sơ).']; m.sumPhieu = nPhieu; m.sumLo = touched.map(id => { const oo = Object.values(db.rs).find(x => x.forests && x.forests[id]); return oo ? {o: oo.id, f: id, ma: (oo.forests[id].info || {}).maRung || ''} : null; }).filter(Boolean); m.msg = null; m.busy = false;

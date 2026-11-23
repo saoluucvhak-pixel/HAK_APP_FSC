@@ -133,6 +133,9 @@ const seed = {v: 2, dmXeVC: [xeDm], rs: {oc: own('oc', 'CR-C', NC, C(14), lotX),
     ok('5. sửa tay thông tin chủ rừng đang nháp: ĐÃ lưu xuống đĩa thật (không bị ghi bản cũ)', ((await dbOf(w)).rs[m.id].info.sdt) === '0905000111');
     ok('5. sổ chủ rừng nháp được gộp (không còn hoàn tác sửa tay)', !(await mem(w, C(20))).chu.includes(m.id));
   } else ok('5. có form thông tin chủ rừng', false);
+  /* P2-1: nhapKhoiPhuc (lưu lỗi) chỉ hoàn lại phần đã bỏ, KHÔNG xóa mục nháp mới tạo trong lúc chờ (chưa chạy: Queen chạy sau) */
+  const r21 = await w.evaluate(() => { const T = window.__hak.nhapTest; T.themMoi('p21-cu'); T.chup(); T.boMoi('p21-cu'); T.themMoi('p21-moi'); T.khoiPhuc(); const x = T.loMoi(); T.boMoi('p21-cu'); T.boMoi('p21-moi'); return x; });
+  ok('P2-1: khôi phục sau lưu lỗi thêm lại mục cũ và GIỮ mục mới tạo trong lúc chờ', r21.includes('p21-cu') && r21.includes('p21-moi'), JSON.stringify(r21));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join(' | '));
   await app.close().catch(() => {});
   console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
