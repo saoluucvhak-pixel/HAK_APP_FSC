@@ -135,16 +135,40 @@ function hakSfRenderDrawer(focusInfo) {
     if (focusInfo.sel) { const fel = document.querySelector(focusInfo.sel); if (fel) fel.focus(); }
   }
 }
+/* Ô tìm nhanh: gõ liên tiếp chỉ cập nhật bộ lọc + vẽ lại bảng MỘT lần sau HAK_SF_DEBOUNCE ms (FLT-02).
+ * Enter / rời ô: cập nhật trạng thái ngay (nút bấm kế tiếp thấy đúng bộ lọc) nhưng việc vẽ vẫn do hẹn giờ lo. */
+const HAK_SF_DEBOUNCE = 250;
+const hakSfTimers = {};
+function hakSfQSync(sid) { // đẩy giá trị ô tìm vào trạng thái bộ lọc (không vẽ)
+  const inst = hakSfInstances[sid], q = document.querySelector('[data-sfq="' + sid + '"]'); if (!inst || !q) return false;
+  const cur = inst.filter.getState(); if (cur.q === q.value) return false;
+  inst.filter.setState(HAKCore.sf.normalize(Object.assign({}, cur, {q: q.value}), inst.cfg));
+  return true;
+}
+function hakSfQFlush(sid) { // vẽ ngay nếu đang chờ
+  if (hakSfTimers[sid] == null) return;
+  clearTimeout(hakSfTimers[sid]); delete hakSfTimers[sid];
+  const q = document.querySelector('[data-sfq="' + sid + '"]'), had = q && document.activeElement === q, pos = had ? q.selectionStart : null;
+  hakSfQSync(sid);
+  render();
+  const el = document.querySelector('[data-sfq="' + sid + '"]');
+  if (el && had) { el.focus(); if (pos != null) el.setSelectionRange(pos, pos); }
+}
+function hakSfQCancel(sid) { if (hakSfTimers[sid] != null) { clearTimeout(hakSfTimers[sid]); delete hakSfTimers[sid]; } }
 document.addEventListener('input', e => {
   const q = e.target && e.target.closest && e.target.closest('[data-sfq]');
   if (!q) return;
-  const sid = q.dataset.sfq, inst = hakSfInstances[sid]; if (!inst) return;
-  const pos = q.selectionStart;
-  const next = HAKCore.sf.normalize(Object.assign({}, inst.filter.getState(), {q: q.value}), inst.cfg);
-  inst.filter.setState(next);
-  render();
-  const el = document.querySelector('[data-sfq="' + sid + '"]');
-  if (el) { el.focus(); if (pos != null) el.setSelectionRange(pos, pos); }
+  const sid = q.dataset.sfq; if (!hakSfInstances[sid]) return;
+  hakSfQCancel(sid);
+  hakSfTimers[sid] = setTimeout(() => hakSfQFlush(sid), HAK_SF_DEBOUNCE);
+});
+document.addEventListener('keydown', e => {
+  const q = e.key === 'Enter' && e.target && e.target.closest && e.target.closest('[data-sfq]');
+  if (q) hakSfQFlush(q.dataset.sfq);
+});
+document.addEventListener('focusout', e => {
+  const q = e.target && e.target.closest && e.target.closest('[data-sfq]');
+  if (q && hakSfTimers[q.dataset.sfq] != null) hakSfQSync(q.dataset.sfq);
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!t) return;
@@ -186,12 +210,13 @@ document.addEventListener('click', e => {
   const rm = t.closest('[data-sfrm]');
   if (rm) {
     const inst = hakSfInstances[rm.dataset.sfrm]; if (!inst) return;
+    hakSfQCancel(rm.dataset.sfrm);
     const conds = HAKCore.sf.conditions(inst.cfg, inst.filter.getState()), c = conds[+rm.dataset.sfidx];
     if (c) { inst.filter.setState(HAKCore.sf.remove(inst.filter.getState(), c)); render(); }
     return;
   }
   const rs = t.closest('[data-sfreset]');
-  if (rs) { const inst = hakSfInstances[rs.dataset.sfreset]; if (inst) { inst.filter.reset(); render(); } return; }
+  if (rs) { hakSfQCancel(rs.dataset.sfreset); const inst = hakSfInstances[rs.dataset.sfreset]; if (inst) { inst.filter.reset(); render(); } return; }
   if (!hakSfDraft || !t.closest('#dlgBox')) return;
   const inst = hakSfInstances[hakSfDraft.screenId]; if (!inst) return;
   const SF = HAKCore.sf;
