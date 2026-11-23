@@ -12,7 +12,7 @@ function panelHdvc(rec) {
   const sel = list.find(h => h.id === NAV.curHd) || null;
   const tenDoi = (h, k) => trim(h.ten) || 'Đội xe ' + (k + 1);
   const ky = h => { if (h.donViId) return esc((h.ben || {}).ten || '(đơn vị)') + ' <span class="mut">(' + esc(vaiTroDV(h.ben)) + ')</span>'; const g = gOf(h); return g ? esc(g.ten || '') + ' <span class="mut">(' + esc(g.vaiTro) + ')</span>' : '<span class="mut">chưa có xe</span>'; };
-  const row = (h, k) => '<tr data-act="chonHd" data-hd="' + esc(h.id) + '" style="cursor:pointer' + (sel && sel.id === h.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(tenDoi(h,
+  const row = (h, k) => '<tr class="' + (sel && sel.id === h.id ? 'sel' : '') + '" data-act="chonHd" data-hd="' + esc(h.id) + '" style="cursor:pointer"><td><b>' + esc(tenDoi(h,
   k)) + '</b>' + (sel && sel.id === h.id ? ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + ky(h) + '</td><td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td><td>' + cuocText(rec, h) + '</td><td>' + esc((h.exp || {}).soVC || '') + (h.exp && h.exp.soVC ? '' :
   ' <span class="mut">(số chung)</span>') + '</td></tr>';
   const dv = dmVC();

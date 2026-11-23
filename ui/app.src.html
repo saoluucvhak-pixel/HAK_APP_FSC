@@ -11,7 +11,9 @@
 /* ===== Ánh xạ token của ứng dụng sang HAK Enterprise Design System (chủ đề luxe: navy + champagne; sáng/tối theo data-theme) =====
    Tên token dùng chung (--brand, --bg, --card, --ink, --mut, --line, --th, --r…) lấy nguyên từ thư viện; phần dưới chỉ đặt tên phụ của ứng dụng. */
 :root{--acc:var(--brand);--accHi:var(--brandH);--accSoft:var(--brandSoft);--accInk:var(--onBrand);--inbd:var(--ctl);--bar:var(--deep);--barInk:#f1ede2;
---err:var(--red);--errBg:var(--redBg);--rs:8px;--ring:0 0 0 3px var(--focus)}
+--err:var(--red);--errBg:var(--redBg);--rs:8px;--ring:0 0 0 3px var(--focus);--sel:var(--accSoft,#eef5ee)}
+:root[data-theme=dark]{--sel:var(--hover,#1e3550)}   /* UI-01: nền hàng đang chọn có token chính thức (trước đây --sel không định nghĩa nên giao diện tối rơi về #eef5ee) */
+tr.sel,tr.sel td{background:var(--sel)}
 /* Màu trạng thái (xanh = đạt) giữ riêng, độ ưu tiên cao hơn token chủ đề */
 :root[data-skin]{--ok:#1e7a3c;--okBg:#e4f4e8;--err:#b23a0b}   /* phiếu #10: đỏ báo lỗi đậm hơn một chút để chữ trên nền --errBg đạt 4,5:1 (trước 4,4:1); giao diện tối giữ --red của thư viện */
 :root[data-skin][data-theme=dark]{--err:var(--red)}
