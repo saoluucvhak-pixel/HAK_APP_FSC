@@ -3,6 +3,29 @@
 Nhánh: `wave-e/nghiem-thu` (nền: `df0c2ba`). Phạm vi so với nền `baa866e`. Ngày lập: 22/11/2026. Người lập: agent `hak-release-verifier` (hồ sơ do Queen kiểm, CHỦ duyệt).
 Mọi dữ liệu trong hồ sơ này là **giả lập** (CCCD dãy `0490000000xx`, tên có chữ "giả lập"). Số liệu ở mục 2 do Queen chạy; mục 3, 4 do người lập chạy trong phiên này; chỗ nào chưa kiểm được thì ghi rõ "chưa kiểm".
 
+## 0. Cập nhật ngày 23/11/2026 (bản cuối `7305237`, theo quyết định của CHỦ)
+
+Quyết định của CHỦ ngày 23/11/2026, đã cài:
+1. **QĐ7 nghĩa đen:** "Cập nhật vào hồ sơ" ghi TOÀN BỘ (chủ rừng, lô, rừng, tọa độ, giấy tờ, ánh xạ biển số, phiếu cân) vào **bản nháp**; chỉ lưu khi bấm "Lưu dữ liệu vào lô". Cơ chế nháp qua một cửa ghi duy nhất `dbGhi` (`ui/app/02-luu-tru-trang-thai.js`: `loMoi`, `chuNhap`, `aliasNhap`); khôi phục bản nháp sau mở lại ứng dụng; "Lưu và đóng" lưu mọi lô nháp, lô nào lỗi thì không đóng và không xóa bản tạm.
+2. **QĐ6:** giữ nguyên, "Đối chiếu với Google Sheets" chạy khi bấm nút.
+3. **Thêm xe:** hộp xác nhận liệt kê biển số chưa có trong danh sách xe của lô kèm ô "Thêm xe vào lô" mặc định tích; bỏ tích thì "Lưu dữ liệu vào lô" bị chặn như cũ.
+
+Số liệu thật sau các thay đổi trên (Queen tự chạy):
+
+| Hạng mục | Kết quả |
+|---|---|
+| Unit (`node scripts/test.js`) | **791/793** đạt, 2 bỏ qua, 0 lỗi |
+| So bản in 206 `.docx` so với v3.2.0 (cùng ngày dựng, vì `00_Muc_luc.docx` có ngày) | **206/206 giống từng byte** |
+| `npm audit --omit=dev` | **0 lỗ hổng** |
+| e2e toàn bộ (1024×768), 132 bộ gồm `e2e-sheets-nhap-nhap` | **132/132 bộ đạt**, 2567 kiểm tra đạt, 0 lỗi, 1 phần bỏ qua (thiếu mã nguồn v1.4.33), 1626 s |
+| CI Windows | xem kết quả trên PR |
+
+Soát độc lập thay đổi QĐ7 (hai vòng, chỉ đọc): vòng 1 tìm 4 lỗi P1 (Lưu và đóng mất nháp lô khác; khôi phục bỏ lô mới của chủ rừng đã có; bản trình duyệt không chốt `savedSnap`; xóa lô/rừng không dọn sổ nháp) và các P2; **đã sửa hết**. Vòng 2: **0 P0/P1**; P2/P3 mới (khôi phục sổ ghi đè mục mới; ánh xạ biển số `lkApply`; điều hướng khi lưu hàng loạt lỗi; hạn "Lưu và đóng"; nuốt lỗi chụp `savedSnap`; thông báo) đã sửa ở `7305237`.
+
+**Điểm chưa có test tái hiện chạy ra đỏ trước khi sửa** (chỉ kiểm bằng đọc mã và các e2e hiện có): nhánh `localStorage` (không có tiến trình chính; e2e chạy Electron nên không phủ), race giữa lần lưu hẹn giờ và lưu tay, ánh xạ biển số của `lkApply` (P2-2), `delRs`. Các bộ e2e liên quan (nháp, lưu, sao lưu, chốt, đối chiếu) đều xanh.
+
+Hạn chế đã biết thêm: xe không có trong danh mục chỉ có biển số, lưu lô vẫn có thể bị chặn vì thiếu chủ xe/người ký (khai ở tab Vận chuyển); thông tin chủ rừng nháp được chốt cùng lần lưu lô đầu tiên của chủ rừng (kể cả phần đến từ lô khác); hợp đồng chỉ đổi thông tin chủ rừng mà chủ rừng chưa có lô nào bị từ chối kèm thông báo; ánh xạ biển số dùng chung nhiều lô chỉ lên đĩa khi lưu hết các lô liên quan. Số phiên bản đề xuất **3.3.0** (không có migration SQLite).
+
 ## 1. Danh sách cam kết (`git log baa866e..df0c2ba --oneline`, 18 cam kết, mới nhất ở trên)
 
 ```
