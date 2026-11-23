@@ -62,7 +62,7 @@
         const warn = m => { warns.push(at + m); if (!state[r._row]) state[r._row] = 'warn'; };
         if (r.maRung && r.maRung !== rec.info.maRung) bad('Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
         const role = /^tổ trưởng/i.test(r.vaiTro) ? 'TT' : /^công nhân/i.test(r.vaiTro) ? 'CN' : null;
-        if (!role) bad('Vai trò phải là "Tổ trưởng" hoặc "Công nhân"');
+        if (!role) bad('Chức vụ phải là "Tổ trưởng" hoặc "Công nhân"');
         if (role === 'TT') tt++;
         if (!r.ten) bad('thiếu Họ và tên');
         if (!['Ông', 'Bà'].includes(r.danhXung)) bad('Danh xưng phải là Ông hoặc Bà');
@@ -81,9 +81,9 @@
           else seen[r.cccd + '|' + (r.doiId || '')] = r._row;
           if (ctx.trim(r.ten)) (byCccd[r.cccd] = byCccd[r.cccd] || []).push({row: r._row, nm: ctx.trim(r.ten)});
         }
-        if (!ctx.chucDanhAll().includes(r.chucDanh)) bad('Chức danh không hợp lệ: "' + r.chucDanh + '"');
-        if (role === 'TT' && r.chucDanh !== 'Tổ trưởng') bad('Tổ trưởng phải có chức danh "Tổ trưởng"');
-        if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi chức danh "Tổ trưởng"');
+        if (!ctx.chucDanhAll().includes(r.chucDanh)) bad('Vị trí không hợp lệ: "' + r.chucDanh + '"');
+        if (role === 'TT' && r.chucDanh !== 'Tổ trưởng') bad('Tổ trưởng phải có vị trí "Tổ trưởng"');
+        if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi vị trí "Tổ trưởng"');
         const ngc = rec.info.hinhThucLuong === 'ngaycong';
         if (ctx.chucDanhAll().includes(r.chucDanh)) {
           const ir = infoRow(rec, r), rate = rateOf(ir, r);
@@ -348,7 +348,7 @@
     const normRefHDLD = (rec, ex) => { const e = ex || rec.exp || {}; return [rec.info.ngayBDLD, e.ngayKy, rec.info.ngayKyHopDong, rec.info.tuNgay].find(x => ctx.HAKDates.isValid(x)) || ''; };
     const normErrors = rec => { const ref = normRefCapPhat(rec), pk = ctx.HAKDinhMuc.pick(ctx.db, ref), out = [];
       if (!pk.found) return ['chưa có bản định mức BHLĐ hiệu lực tại ngày ' + ref + ' (bản sớm nhất hiệu lực từ ' + (pk.earliest.tuNgay || '…') + '): thêm bản định mức hoặc đổi ngày cấp phát'];
-      [...new Set(rec.nc.map(r => r.chucDanh))].filter(cd => ctx.chucDanhAll().includes(cd) && !ctx.BHLD_ITEMS.some(([k]) => ctx.trim(((pk.ver.dm || {})[cd] || {})[k]))).forEach(cd => out.push('chưa có định mức BHLĐ cho chức danh "' + cd + '"' + (pk.ver.tuNgay ? ' (bản hiệu lực từ ' + pk.ver.tuNgay + ')' : '')));
+      [...new Set(rec.nc.map(r => r.chucDanh))].filter(cd => ctx.chucDanhAll().includes(cd) && !ctx.BHLD_ITEMS.some(([k]) => ctx.trim(((pk.ver.dm || {})[cd] || {})[k]))).forEach(cd => out.push('chưa có định mức BHLĐ cho vị trí "' + cd + '"' + (pk.ver.tuNgay ? ' (bản hiệu lực từ ' + pk.ver.tuNgay + ')' : '')));
       return out; };
     /* Định mức của một vị trí tại ngày ref (không truyền ref: bản mới nhất) */
     function normOf(chucDanh, ref) { return ctx.HAKDinhMuc.normFor(ctx.db, chucDanh, ref).norm; }

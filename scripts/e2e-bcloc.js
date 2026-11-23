@@ -27,7 +27,7 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   // ===== Danh sách lao động =====
   await w.click('[data-rpsel=laodong]'); await w.waitForSelector('#rpSf');
   let t = await body();
-  ok('mẫu có thanh bộ lọc thông minh: tìm nhanh, lô rừng, chức danh, vai trò, ô chỉ dưới 18 tuổi / hồ sơ cần bổ sung, bộ lọc đã lưu', !!(await w.$('#rpQ')) && !!(await w.$('#rpOne_rung')) && !!(await w.$('#rpOne_chucDanh')) && !!(await w.$('#rpOne_vaiTro')) && !!(await w.$('#rpFlag_onlyMinors')) && !!(await w.$('#rpFlag_onlyMissing')) && !!(await w.$('#rpPreset')));
+  ok('mẫu có thanh bộ lọc thông minh: tìm nhanh, lô rừng, vị trí, chức vụ, ô chỉ dưới 18 tuổi / hồ sơ cần bổ sung, bộ lọc đã lưu', !!(await w.$('#rpQ')) && !!(await w.$('#rpOne_rung')) && !!(await w.$('#rpOne_chucDanh')) && !!(await w.$('#rpOne_vaiTro')) && !!(await w.$('#rpFlag_onlyMinors')) && !!(await w.$('#rpFlag_onlyMissing')) && !!(await w.$('#rpPreset')));
   ok('chưa lọc: đủ 5 lao động của 2 lô', /Tổng số lao động/.test(t) && (await rows())[1].length >= 6 && /ĐỖ TỔ B/.test(t) && /PHẠM CƯA/.test(t));
   await q('cưa');
   t = await body(); let det = (await rows())[1];
@@ -36,7 +36,7 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   await w.click('.pill:has-text("Tìm: cưa") .chipx'); await w.waitForTimeout(300);
   ok('bỏ chip: trở lại đủ lao động', /ĐỖ TỔ B/.test(await body()) && !(await w.$('#rpSf .pill:has-text("Tìm:")')));
   await w.selectOption('#rpOne_chucDanh', 'Tổ trưởng'); await w.waitForTimeout(350); t = await body();
-  ok('chức danh “Tổ trưởng”: chỉ 2 tổ trưởng (hai lô)', /TRẦN TỔ TRƯỞNG/.test(t) && /ĐỖ TỔ B/.test(t) && !/PHẠM CƯA/.test(t) && !!(await w.$('.pill:has-text("Chức danh: Tổ trưởng")')));
+  ok('vị trí “Tổ trưởng”: chỉ 2 tổ trưởng (hai lô)', /TRẦN TỔ TRƯỞNG/.test(t) && /ĐỖ TỔ B/.test(t) && !/PHẠM CƯA/.test(t) && !!(await w.$('.pill:has-text("Vị trí: Tổ trưởng")')));
   await w.click('[data-act=rpClearAll]'); await w.waitForTimeout(300);
   await w.selectOption('#rpOne_rung', 'R-B'); await w.waitForTimeout(350); t = await body();
   ok('lô rừng R-B: chỉ lao động của lô B', /ĐỖ TỔ B/.test(t) && /EM NHỎ/.test(t) && !/PHẠM CƯA/.test(t));

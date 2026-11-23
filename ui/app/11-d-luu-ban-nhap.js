@@ -203,12 +203,12 @@ function panelThanhVien(rec) {
   const SF = HAKCore.sf, cdOpts = [...new Set(baseNc.map(r => trim(r.chucDanh)).filter(Boolean))].sort();
   const sfCfg = {
     screenId: 'lo_nhan_cong', title: 'Thành viên đội khai thác',
-    searchPlaceholder: 'Tìm họ tên, CCCD, chức danh…',
+    searchPlaceholder: 'Tìm họ tên, CCCD, vị trí…',
     quickFields: ['q', 'coLoi'],
     advancedFields: ['q', 'chucDanh', 'coLoi'],
     matchQ: (r, q) => SF.hay([r.ten, r.cccd, r.chucDanh, r.vaiTro]).includes(q),
     fields: [
-      {key: 'chucDanh', label: 'Chức danh', type: 'multi', withNone: true, options: cdOpts, match: (r, vals) => SF.inSet(vals, r.chucDanh)},
+      {key: 'chucDanh', label: 'Vị trí', type: 'multi', withNone: true, options: cdOpts, match: (r, vals) => SF.inSet(vals, r.chucDanh)},
       {key: 'coLoi', label: 'Chỉ dòng có lỗi / cảnh báo', type: 'bool', match: r => c.state[r._row] === 'err' || c.state[r._row] === 'warn'}
     ]
   };
@@ -218,7 +218,7 @@ function panelThanhVien(rec) {
   const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' :
   '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';
   const hienDoi = rec.doi?.length > 1;
-  return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', ...(hienDoi ? ['Đội'] : []), 'Đơn giá'],
+  return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Chức vụ', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Vị trí', ...(hienDoi ? ['Đội'] : []), 'Đơn giá'],
     r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td>' + (hienDoi ? '<td>' + doiCell(rec, r) + '</td>' : '') + '<td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>',
     c, null, only);
 }

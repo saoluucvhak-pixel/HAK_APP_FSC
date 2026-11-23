@@ -146,17 +146,11 @@ function benNhanKhoanCanhBao(rec, t) {
   const c = t.benNhanKhoanBan, thieu = benNhanKhoanThieu(c);
   return (benNhanKhoanLech(t) ? '<div class="msg warn" id="benNKDoi" style="grid-column:1/-1">Danh mục đã sửa thông tin bên nhận khoán sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button type="button" class="btn ghost sm" data-act="benNKCapNhat">Cập nhật theo danh mục</button></div>' : '') +
     (c && thieu.length ? '<div class="msg err" id="benNKThieu" style="grid-column:1/-1">Bên nhận khoán còn thiếu ' + esc(thieu.join(', ')) + ': bổ sung ở Danh mục đối tượng rồi “Cập nhật theo danh mục” trước khi xuất bản chính thức.</div>' : '') +
-    (c ? '<div class="mut" id="benNKIn" style="grid-column:1/-1">Bản in: <b>' + esc(c.ten) + '</b>' + (c.loai === 'phapnhan' ? ' · MST ' + esc(c.mst || '…') + ' · đại diện ' + esc(c.daiDien || '…') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '') : (c.cccd ? ' · CCCD ' + esc(c.cccd) : '')) +
+    (c ? '<div class="mut" id="benNKIn" style="grid-column:1/-1">Bản in: <b>' + esc(c.ten) + '</b>' + (c.loai === 'phapnhan' ? ' · MST ' + esc(c.mst || '…') + ' · đại diện ' + esc(c.daiDien || '…') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '') : (c.cccd ? ' · CCCD ' + esc(c.cccd) : '') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '')) +
     '. Tổ trưởng vẫn đứng tên ở các mục của đội (danh sách, ủy quyền, chấm công).</div>' : '');
 }
-/* (bản cũ) bên nhận khoán là người chưa là Tổ trưởng của đội */
-function benNhanKhoanTT(rec, t) {
-  const x = benTim(t.benNhanKhoan); if (!x || !x.ng) return '';
-  const tt = (rec.nc || []).filter(r => r.doiId === t.id && isTT(r));
-  const k = HAKModel.cccdSo(x.ng.cccd || '');
-  if (tt.some(r => r.nguoiId === x.ng.id || (k && HAKModel.cccdSo(r.cccd) === k))) return '';
-  return '<div class="msg warn" id="benNKLech" style="grid-column:1/-1">Bên nhận khoán <b>' + esc(x.ng.hoTen) + '</b> chưa là Tổ trưởng của đội: biểu mẫu giao khoán in theo Tổ trưởng. Thêm người này vào đội với vai trò Tổ trưởng (chọn từ danh mục khi thêm nhân công).</div>';
-}
+/* Bên nhận khoán không nhất thiết là Tổ trưởng: ký hợp đồng khoán nhân công AI ký cũng được (quyết định của chủ). Không còn cảnh báo vàng “chưa là Tổ trưởng”;
+ * dòng trung tính #benNKIn ở trên nêu tên, chức vụ (nếu có) và nhắc Tổ trưởng vẫn đứng tên ở các mục của đội. */
 
 /* ---------- BẢN CHỤP BÊN NHẬN KHOÁN (in biểu mẫu giao khoán) ----------
  * pháp nhân: {loai:'phapnhan', ten, mst, diaChi, sdt, daiDien, chucVu}; thể nhân: {loai:'canhan', ten (họ tên), danhXung, ngaySinh, cccd, ngayCap, noiCap, diaChi, sdt, chucVu (chức danh khi ký), doiTuongTen} */

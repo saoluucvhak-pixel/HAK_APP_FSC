@@ -50,7 +50,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
   };
   const nhan1 = await themTuDanhMuc(d1), nhan2 = await themTuDanhMuc(d2);
   f = await lotDb('fa'); const hai = f.nc.filter(r => r.cccd === '049085009001');
-  ok('chọn từ Danh mục đối tượng (người có vai trò Nhân công) vào đội 1', /PHAN HAI ĐỘI/.test(nhan1) && !/đang ở/.test(nhan1), nhan1);
+  ok('chọn từ Danh mục đối tượng (người có chức vụ Nhân công) vào đội 1', /PHAN HAI ĐỘI/.test(nhan1) && !/đang ở/.test(nhan1), nhan1);
   ok('đội 2: ô chọn vẫn có người này, ghi chú “đang ở Đội 1”', /đang ở Đội 1/.test(nhan2), nhan2);
   ok('lưu: hai dòng thành viên (hai đội), ID dòng khác nhau, cùng nối người của danh mục', hai.length === 2 && new Set(hai.map(r => r.doiId)).size === 2 && hai[0].id !== hai[1].id && hai.every(r => r.nguoiId === 'ng1'), JSON.stringify(hai.map(r => [r.doiId, r.id, r.nguoiId])));
   ok('không báo trùng CCCD giữa hai đội', !/CCCD trùng/.test(await w.innerText('#main')));

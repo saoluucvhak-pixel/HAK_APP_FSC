@@ -127,14 +127,14 @@ test('Đối tượng: chuyển từ danh mục cũ — gộp vai trò theo CCCD
   assert.deepEqual(DT.tuDanhMucCu(db, vt, r.dm).dm, r.dm, 'chạy lại không đổi');
 });
 
-test('Xe: chủ xe theo ID (người có vai trò Chủ xe hoặc pháp nhân); BKS không trùng; ngày hợp lệ', () => {
+test('Xe: chủ xe theo ID (người có chức vụ Chủ xe hoặc pháp nhân); BKS không trùng; ngày hợp lệ', () => {
   let dm = DT.luu([], {ten: 'LÊ VĂN XE', loai: 'thenhan', nguoi: [nguoi({hoTen: 'LÊ VĂN XE', cccd: '049000000077', vaiTro: {chuXe: true}})]}).dm;
   dm = DT.luu(dm, {ten: 'PHẠM CÔNG', loai: 'thenhan', nguoi: [nguoi({hoTen: 'PHẠM CÔNG', cccd: '049000000005', vaiTro: {nhanCong: true}})]}).dm;
   const ng = dm[0].nguoi[0].id, kc = dm[1].nguoi[0].id;
   assert.deepEqual(XE.chonChuXe(dm).map(x => x.id), [ng]);
   let x = XE.luu([], {bks: '77c-123.45', chuXeId: ng, hanKiemDinh: '31/12/2026'}, dm); assert.ok(x.ok); assert.equal(x.xe.bks, '77C-123.45');
   assert.match(XE.luu(x.dm, {bks: '77C 12345'}, dm).errs.join(), /đã có/);
-  assert.match(XE.luu([], {bks: 'A', chuXeId: kc}, dm).errs.join(), /chưa có vai trò Chủ xe/);
+  assert.match(XE.luu([], {bks: 'A', chuXeId: kc}, dm).errs.join(), /chưa có chức vụ Chủ xe/);
   assert.match(XE.luu([], {bks: 'A', hanBaoHiem: '30/02/2026'}, dm).errs.join(), /không phải ngày có thật/);
   assert.deepEqual(XE.hetHan(x.xe, '01/01/2027'), ['kiểm định']);
 });

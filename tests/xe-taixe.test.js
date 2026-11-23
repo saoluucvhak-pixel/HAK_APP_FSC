@@ -22,13 +22,13 @@ test('gắn rồi bỏ tài xế', () => {
   assert.equal(XE.taiXe(dmDT(), ''), null);
 });
 
-test('kiểm: người không có vai trò Tài xế / không còn trong danh mục → báo lỗi', () => {
-  let r = XE.luu([], {bks: '92C-1', taiXeId: 'ng2'}, dmDT()); assert.equal(r.ok, false); assert.match(r.errs.join(), /TRẦN SƠN chưa có vai trò Tài xế/);
+test('kiểm: người không có chức vụ Tài xế / không còn trong danh mục → báo lỗi', () => {
+  let r = XE.luu([], {bks: '92C-1', taiXeId: 'ng2'}, dmDT()); assert.equal(r.ok, false); assert.match(r.errs.join(), /TRẦN SƠN chưa có chức vụ Tài xế/);
   r = XE.luu([], {bks: '92C-1', taiXeId: 'ng99'}, dmDT()); assert.equal(r.ok, false); assert.match(r.errs.join(), /Tài xế không còn trong Danh mục đối tượng/);
   r = XE.luu([], {bks: '92C-1', taiXeId: 'dt3'}, dmDT()); assert.equal(r.ok, false);   // pháp nhân không phải tài xế
 });
 
-test('chonTaiXe: chỉ người có vai trò Tài xế, bỏ người ngừng', () => {
+test('chonTaiXe: chỉ người có chức vụ Tài xế, bỏ người ngừng', () => {
   assert.deepEqual(XE.chonTaiXe(dmDT()).map(x => x.id), ['ng1']);
   const d = dmDT(); d[0].nguoi[0].ngung = true; assert.deepEqual(XE.chonTaiXe(d), []);
 });
@@ -67,7 +67,7 @@ test('gói danh mục: máy đích chưa có người → thêm người từ g�
   assert.ok(!('taiXeId' in r2.dm.dmXe[0]));
 });
 
-test('gói danh mục: người trên máy đích chưa có vai trò Tài xế → bỏ rỗng và báo', () => {
+test('gói danh mục: người trên máy đích chưa có chức vụ Tài xế → bỏ rỗng và báo', () => {
   const g = GD.dongGoi(mayA(), loA());
   const dmB = dmDT(); dmB[0].nguoi[0].vaiTro = {chuXe: true};
   const r = GD.noi({dmDoiTuong: [dmB[0]], dmXe: [], dmViTri: []}, g);

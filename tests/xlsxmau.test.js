@@ -67,7 +67,7 @@ test('mẫu không có cột Mã rừng và Mã rừng không còn là cột b�
   assert.ok(/const H_LEGACY = \{'Mã rừng': 'maRung'\}/.test(html), 'file cũ còn cột Mã rừng vẫn đọc được');
 });
 
-test('mẫu nhân công nhận danh sách vị trí của phần mềm (kể cả vị trí người dùng thêm): cột Chức danh và danh sách chọn', async () => {
+test('mẫu nhân công nhận danh sách vị trí của phần mềm (kể cả vị trí người dùng thêm): cột Vị trí và danh sách chọn', async () => {
   const bytes = await M.build('nc', JSZip, {version: '9', chucDanh: ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa', 'Công nhân phụ']});
   const z = await JSZip.loadAsync(bytes), all = (await Promise.all(Object.keys(z.files).filter(n => /sheet\d\.xml$/.test(n)).map(n => z.file(n).async('string')))).join('');
   assert.ok(/Công nhân phụ/.test(all), 'vị trí mới có trong mẫu');

@@ -125,7 +125,7 @@
     (g.xe || []).forEach(x => {
       const m = XE.find(y => bk(y.bks) && bk(y.bks) === bk(x.bks));
       const chu = s(x.chuXeId) ? (doi.ng[x.chuXeId] || doi.dt[x.chuXeId] || '') : '';
-      /* tài xế thường chạy: ánh xạ sang người trên máy đích; không có người đó, hoặc người đó chưa có vai trò Tài xế trên máy → bỏ rỗng và báo */
+      /* tài xế thường chạy: ánh xạ sang người trên máy đích; không có người đó, hoặc người đó chưa có chức vụ Tài xế trên máy → bỏ rỗng và báo */
       let tai = s(x.taiXeId) ? (doi.ng[x.taiXeId] || '') : '';
       if (tai) { const ngT = DT.reduce((a, o) => a || (o.nguoi || []).find(p => p.id === tai), null); if (!ngT || !(ngT.vaiTro && ngT.vaiTro.taiXe)) tai = ''; }
       if (m) {
@@ -140,7 +140,7 @@
         return;
       }
       const id = dungXe.has(x.id) ? idMoi(dungXe, 'xe') : (dungXe.add(x.id), x.id);
-      if (s(x.taiXeId) && !tai) khac.push('Xe ' + s(x.bks) + ': tài xế thường chạy trong gói không có (hoặc chưa có vai trò Tài xế) trên máy — để trống, chọn lại ở Danh mục xe');
+      if (s(x.taiXeId) && !tai) khac.push('Xe ' + s(x.bks) + ': tài xế thường chạy trong gói không có (hoặc chưa có chức vụ Tài xế) trên máy — để trống, chọn lại ở Danh mục xe');
       const moiXe = Object.assign(clone(x), {id, chuXeId: chu}); if (tai) moiXe.taiXeId = tai; else delete moiXe.taiXeId;
       XE.push(moiXe); doi.xe[x.id] = id; them.push('Xe ' + s(x.bks));
     });
