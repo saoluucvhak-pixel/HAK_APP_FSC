@@ -59,7 +59,7 @@ Chi tiết từng việc nằm ở `docs/BAN_GIAO_AGENT_TIEP_THEO_3.5.md` mục 
 
 **Quyết định về chữ (mô tả PR A phải nêu cả hai):**
 1. ~~Chữ trong gói "Chỉ xem" xuất HTML (`src/tienich.js:123`)~~ — **CHỦ ĐÃ CHỐT (đêm 23/11/2026): chọn đổi theo thuật ngữ mới** ("Vai trò" → "Chức vụ", "Chức danh" → "Vị trí"), thống nhất toàn phần mềm; giữ nguyên như commit `f81332d`, không cần làm gì thêm; chỉ ghi vào mô tả PR A là đã được CHỦ chấp nhận.
-2. Cột "Vai trò" (Chủ xe/Tài xế) của báo cáo Vận chuyển theo đội xe (`ui/reports.js:403`) đổi thành "Chức vụ" — **vẫn CHỜ CHỦ xác nhận** (hỏi cùng lúc với lệnh gộp PR A nếu CHỦ chưa nói).
+2. Cột "Vai trò" (Chủ xe/Tài xế) của báo cáo Vận chuyển theo đội xe (`ui/reports.js:403`) đổi thành "Chức vụ" — **CHỦ ĐÃ CHỐT (đêm 23/11/2026): "Vai trò đổi thành Chức vụ"**; giữ nguyên như `f81332d`, chỉ ghi vào mô tả PR A là đã được CHỦ chấp nhận. Không còn quyết định chữ nào chờ CHỦ.
 
 ## 4. KIỂM HIỆN TRẠNG TRƯỚC KHI LÀM (ngay đầu phiên; môi trường mới có thể mất mọi thư mục `/tmp` và worktree cũ)
 
