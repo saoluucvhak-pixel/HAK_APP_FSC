@@ -1,0 +1,206 @@
+diff --git a/scripts/e2e-all.js b/scripts/e2e-all.js
+index 46d8f31..83bf490 100644
+--- a/scripts/e2e-all.js
++++ b/scripts/e2e-all.js
+@@ -17,7 +17,7 @@ const SUITES = ['e2e', 'e2e-lookup', 'e2e-lookup2', 'e2e-export', 'e2e-reports',
+   'e2e-tongquan', 'e2e-luuvaolo', 'e2e-idtrung', 'e2e-gopdulieu', 'e2e-nguoiky', 'e2e-ngay2culy', 'e2e-dinhdang', 'e2e-tgkhai', 'e2e-dinhbien', 'e2e-dinhbien-doi', 'e2e-ngaychup', 'e2e-inkhoa-doixe', 'e2e-nhotam', 'e2e-nangcap-v14', 'e2e-toanven', 'e2e-chot-hai-lan', 'e2e-chot-sqlite', 'e2e-so-doi-xe', 'e2e-nhieu-doi-xe', 'e2e-tien-ich', 'e2e-nghiemthu-dot2', 'e2e-nhieudoi', 'e2e-doikt', 'e2e-hdvc', 'e2e-phieudoi', 'e2e-motcachluu',
+   'e2e-doisoat', 'e2e-taitoanbo', 'e2e-dongapp', 'e2e-batbien', 'e2e-nhaplieu', 'e2e-caidat', 'e2e-bm08', 'e2e-dulieu', 'e2e-mamau', 'e2e-tentab', 'e2e-bannhap',
+   'e2e-manhinh', 'e2e-chuky', 'e2e-tusaoluu', 'e2e-kho-sao-luu', 'e2e-luudelta', 'e2e-nghiepvu', 'e2e-mot-nguoi-hai-doi30', 'e2e-doichieu30', 'e2e-hangiaytoxe', 'e2e-doixe-phieu', 'e2e-excel-bangcon', 'e2e-nguoi-danhmuc', 'e2e-baocao-doi', 'e2e-danhmuc30', 'e2e-hopdong30', 'e2e-dau-lo', 'e2e-thu-tu-tab', 'e2e-tuong-phan', 'e2e-pc-hep', 'e2e-nang-cap-2111', 'e2e-mat-do-hop-dong', 'e2e-phieu30', 'e2e-phanbo30', 'e2e-phieu-chua-gan', 'e2e-bennhankhoan30', 'e2e-nghiemthu30', 'e2e-nangcap30', 'e2e-danhmuc-hopdong', 'e2e-danhmuc-trong', 'e2e-dongia-vitri', 'e2e-nhap-tam', 'e2e-saoluu2', 'e2e-lo-tu-lo-cu', 'e2e-nhatky-nap', 'e2e-dinhbien-ver', 'e2e-kieu-o', 'e2e-timkiem', 'e2e-thutu-in', 'e2e-da-ky', 'e2e-chot-ho-so', 'e2e-khoa-chi-doc', 'e2e-so-ho-so', 'e2e-cheo-lo', 'e2e-viec-can-lam', 'e2e-so-van-ban', 'e2e-stt-lich-su', 'e2e-cheo-lo-ngay', 'e2e-chan-bieu-mau', 'e2e-dinhbien-loi', 'e2e-dinhbien-goc', 'e2e-hai-doi-khac-nhau', 'e2e-hai-doi-ngay-cong', 'e2e-cai-de', 'e2e-dm-tu-lo', 'e2e-man-khac', 'e2e-hoan-thien-nhap', 'e2e-khoi-phuc-ngoai', 'e2e-khoi-phuc-json-xau',
+-  'e2e-bang-gon', 'e2e-hop-thoai-nhan', 'e2e-xe-taixe', 'e2e-sheets-hop-dong', 'e2e-sheets-nhap-nhap', 'e2e-sheets-doi-so', 'e2e-chu-rung-doi-chieu'];
++  'e2e-bang-gon', 'e2e-hop-thoai-nhan', 'e2e-xe-taixe', 'e2e-sheets-hop-dong', 'e2e-sheets-nhap-nhap', 'e2e-sheets-doi-so', 'e2e-chu-rung-doi-chieu', 'e2e-hop-them-danh-muc'];
+ const NOT_SUITES = ['e2e-all'];   // file e2e-*.js không phải bộ kiểm thử
+ 
+ const root = path.join(__dirname, '..');
+diff --git a/scripts/e2e-hop-them-danh-muc.js b/scripts/e2e-hop-them-danh-muc.js
+new file mode 100644
+index 0000000..366d5f1
+--- /dev/null
++++ b/scripts/e2e-hop-them-danh-muc.js
+@@ -0,0 +1,82 @@
++'use strict';
++/* Bước 3 Danh mục: sau khi lưu lô có người / xe MỚI (chưa có trong danh mục), ứng dụng mở HỘP THOẠI (không còn confirm của trình duyệt):
++ *  - liệt kê rõ từng người (họ tên, CCCD, vai trò) và từng xe (biển số, chủ xe / tài xế) kèm ô tích, mặc định tích hết; có tiêu đề, aria-labelledby;
++ *  - bỏ tích một người → “Thêm vào danh mục” chỉ thêm số đã tích, dòng lô nối ID người / xe vừa thêm, thông báo kết quả;
++ *  - “Chỉ lưu trong lô” (và Esc) không thêm gì vào danh mục nào, dòng vẫn nằm trong lô.
++ * Electron thật, SQLite thật. Chạy: xvfb-run -a node scripts/e2e-hop-them-danh-muc.js */
++const {_electron: electron} = require('playwright-core');
++const path = require('path'), fs = require('fs'), os = require('os');
++const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
++const {lot, seed} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed};')();
++const root = path.join(__dirname, '..');
++let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
++const CC1 = '049090000123', CC2 = '049090000456', BKS = '92C-777.88';
++
++async function chay(cach) {   // cach: 'bo1' (bỏ tích người 2 rồi Thêm), 'lo' (nút Chỉ lưu trong lô), 'esc' (nhấn Esc)
++  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-hopdm-'));
++  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
++  const w = require('./_hd30').boc(await app.firstWindow()); const errs = [], hoi = []; w.on('pageerror', e => errs.push(e.message));
++  w.on('dialog', d => { hoi.push(d.message()); d.accept(); });
++  await w.waitForSelector('#side');
++  await w.evaluate(d => window.hak.save(d), seed([lot('fa', 'R-A', {exp: {}, pc: [], kl: null})])); await w.reload(); await w.waitForSelector('#side');
++  const db0 = await w.evaluate(() => window.hak.loadSync().db), dt0 = (db0.dmDoiTuong || []).length, xe0 = (db0.dmXe || []).length;
++  await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300);
++  const them = async (ten, cccd) => {
++    await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm [name=ten]');
++    await w.selectOption('#stForm [name=vaiTro]', 'Công nhân'); await w.selectOption('#stForm [name=danhXung]', 'Ông');
++    for (const [k, v] of [['ten', ten], ['ngaySinh', '02/03/1990'], ['cccd', cccd], ['ngayCap', '01/01/2022'], ['noiCap', 'Cục CS QLHC'], ['diaChi', 'Quế Sơn, Quảng Nam']]) await w.fill('#stForm [name=' + k + ']', v);
++    await w.selectOption('#stForm [name=chucDanh]', 'Công nhân khai thác').catch(() => {});
++    await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
++  };
++  await them('NGUYỄN VĂN MỘT', CC1); await them('TRẦN VĂN HAI', CC2);
++  await w.click('[data-ftab=dx]'); await w.waitForTimeout(300); await w.click('[data-act=stAdd][data-kind=dx]'); await w.waitForSelector('#stForm [name=bienSo]');
++  const dat = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); };
++  for (const [k, v] of Object.entries({bienSo: BKS, chuXe: 'LÊ VĂN CHỦ', ngaySinh: '05/05/1980', cccd: '049080001111', ngayCap: '01/01/2022', noiCap: 'Cục CS QLHC', diaChi: 'Thăng Bình, Quảng Nam', sdt: '0905123456', nguoiKy: 'Chủ xe', loaiXe: 'Xe tải', taiXe: 'PHẠM VĂN LÁI'})) await dat(k, v);
++  await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
++  const loiForm = await w.evaluate(() => (document.querySelector('#stBox.on #stForm') ? document.getElementById('stBody').innerText.slice(0, 300) : ''));
++  if (loiForm) throw new Error('Biểu mẫu xe không lưu được: ' + loiForm);
++  await w.click('button[data-act=stSave]'); await w.waitForSelector('#dmHopDlg', {timeout: 5000}).catch(() => {});
++  const hop = await w.evaluate(() => {
++    const d = document.getElementById('dmHopDlg'), b = document.getElementById('dlgBox'); if (!d) return null;
++    const lb = b.getAttribute('aria-labelledby'), tit = lb && document.getElementById(lb);
++    return {on: b.classList.contains('on'), text: d.innerText, o: [...d.querySelectorAll('[data-dmhop]')].map(c => [c.dataset.dmhop, c.checked]), tieuDe: tit ? tit.textContent : '', role: b.getAttribute('role'), modal: b.getAttribute('aria-modal'),
++      focus: (document.activeElement && document.activeElement.dataset.act) || '', hasLo: !!d.querySelector('[data-act=dmHopLo]'), hasThem: !!d.querySelector('[data-act=dmHopThem]')};
++  });
++  let sau = null;
++  if (hop) {
++    if (cach === 'bo1') { await w.uncheck('#dmHopDlg [data-dmhop=n1]'); await w.waitForTimeout(100); sau = await w.evaluate(() => (document.getElementById('dmHopDem') || {}).textContent); await w.click('#dmHopDlg [data-act=dmHopThem]'); }
++    else if (cach === 'lo') await w.click('#dmHopDlg [data-act=dmHopLo]');
++    else await w.keyboard.press('Escape');
++    await w.waitForTimeout(900);
++  }
++  const dong = await w.evaluate(() => !document.getElementById('dmHopDlg') && !document.getElementById('dlgBox').classList.contains('on'));
++  const tb = await w.evaluate(() => (document.getElementById('app') || document.body).innerText);
++  const db = await w.evaluate(() => window.hak.loadSync().db), f = db.rs.own1.forests.fa;
++  const tim = c => (db.dmDoiTuong || []).find(o => (o.nguoi || []).some(p => p.cccd === c)), r1 = (f.nc || []).find(x => x.cccd === CC1), r2 = (f.nc || []).find(x => x.cccd === CC2), x1 = (f.dx || []).find(x => /777/.test(x.bienSo || ''));
++  const dmXe = db.dmXe || [];
++  await app.close();
++  return {hop, sau, dong, tb, dt: (db.dmDoiTuong || []).length - dt0, xe: dmXe.length - xe0, t1: tim(CC1), t2: tim(CC2), r1, r2, x1, dmXe, hoi, errs, loiForm};
++}
++
++(async () => {
++  const a = await chay('bo1');
++  ok('lưu lô: hộp thoại trong ứng dụng hiện ra (không dùng confirm của trình duyệt)', !!a.hop && a.hop.on && !a.hoi.some(m => /Danh mục đối tượng/.test(m)), JSON.stringify([!!a.hop, a.hoi]));
++  const h = a.hop || {text: '', o: []};
++  ok('hộp liệt kê đúng 2 người (họ tên, CCCD, vai trò Nhân công) và 1 xe (biển số, chủ xe / tài xế)', /NGUYỄN VĂN MỘT/.test(h.text) && /TRẦN VĂN HAI/.test(h.text) && h.text.includes(CC1) && h.text.includes(CC2) && /Nhân công/.test(h.text) && /92C-777\.88/.test(h.text) && /LÊ VĂN CHỦ/.test(h.text) && /PHẠM VĂN LÁI/.test(h.text) && h.o.length === 3, JSON.stringify(h.text));
++  ok('mặc định tích hết cả 3 dòng', h.o.length === 3 && h.o.every(x => x[1]), JSON.stringify(h.o));
++  ok('hộp có tiêu đề, role dialog, aria-modal, aria-labelledby trỏ đúng tiêu đề; tiêu điểm vào nút “Thêm vào danh mục”', /Thêm vào danh mục/.test(h.tieuDe) && h.role === 'dialog' && h.modal === 'true' && h.focus === 'dmHopThem' && h.hasLo && h.hasThem, JSON.stringify([h.tieuDe, h.role, h.modal, h.focus]));
++  ok('bỏ tích một người: bộ đếm trên nút còn 2', a.sau === '2', String(a.sau));
++  ok('“Thêm vào danh mục”: hộp đóng; danh mục có đúng số đã tích (1 người, 1 xe); người bỏ tích KHÔNG được thêm', a.dong && a.dt === 1 && a.xe === 1 && !!a.t1 && !a.t2, JSON.stringify([a.dong, a.dt, a.xe, !!a.t1, !!a.t2]));
++  ok('người được thêm: thể nhân, vai trò Nhân công, dòng lô nối ID người; người bỏ tích vẫn ở lô, không nối ID', !!a.t1 && a.t1.loai === 'thenhan' && a.t1.nguoi[0].vaiTro.nhanCong && !!a.r1 && a.r1.nguoiId === a.t1.nguoi[0].id && !!a.r2 && !a.r2.nguoiId, JSON.stringify([a.r1 && a.r1.nguoiId, a.r2 && a.r2.nguoiId]));
++  ok('xe được thêm: dòng xe nối ID xe của Danh mục xe', !!a.x1 && a.dmXe.some(x => x.id === a.x1.xeId && /777/.test(x.bks || '')), JSON.stringify(a.x1 && a.x1.xeId));
++  ok('thông báo kết quả: “Đã thêm 1 người vào Danh mục đối tượng, 1 xe vào Danh mục xe.”', /Đã thêm 1 người vào Danh mục đối tượng, 1 xe vào Danh mục xe\./.test(a.tb), a.tb.slice(0, 400));
++  for (const cach of ['lo', 'esc']) {
++    const b = await chay(cach);
++    ok('[' + cach + '] hộp hiện ra rồi đóng', !!b.hop && b.dong, JSON.stringify([!!b.hop, b.dong]));
++    ok('[' + cach + '] chỉ lưu trong lô: không thêm gì vào Danh mục đối tượng / Danh mục xe, dòng vẫn nằm trong lô, không nối ID', b.dt === 0 && b.xe === 0 && !b.t1 && !b.t2 && !!b.r1 && !!b.r2 && !!b.x1 && !b.r1.nguoiId && !b.r2.nguoiId && !b.x1.xeId, JSON.stringify([b.dt, b.xe, !!b.r1, !!b.r2, !!b.x1]));
++    ok('[' + cach + '] thông báo “Chưa thêm … vào danh mục (chỉ lưu trong lô).”', /Chưa thêm 2 người chưa có trong Danh mục đối tượng và 1 xe chưa có trong Danh mục xe vào danh mục \(chỉ lưu trong lô\)\./.test(b.tb), b.tb.slice(0, 400));
++    ok('[' + cach + '] không có lỗi script trên màn hình', b.errs.length === 0, b.errs.join(' | '));
++  }
++  ok('không có lỗi script trên màn hình (nhánh Thêm)', a.errs.length === 0, a.errs.join(' | '));
++  console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
++})().catch(e => { console.error(e); process.exit(2); });
+diff --git a/tests/danh-muc-chong-trung.test.js b/tests/danh-muc-chong-trung.test.js
+index 7c2f0ea..bda39b2 100644
+--- a/tests/danh-muc-chong-trung.test.js
++++ b/tests/danh-muc-chong-trung.test.js
+@@ -88,7 +88,7 @@ test('A-06 / ND-05: người / xe mới của lô → chỉ thêm vào Danh mụ
+   const p = k.dmDoiTuong[0].nguoi[0]; assert.deepEqual([p.hoTen, p.cccd, p.gioiTinh, p.ngaySinh, p.vaiTro.nhanCong], ['NGUYỄN VĂN MỚI', '049090000123', 'Nam', '02/03/1990', true]);
+   assert.equal(k.nguoi[0].id, p.id); assert.equal(k.dmXe[1].bks, '92C-111.11'); assert.equal(k.dmXe[1].hanKiemDinh, '01/01/2030');
+   assert.deepEqual(DT.moiTuLo(k.dmDoiTuong, k.dmXe, nc, dx), {nguoi: [], xe: []}, 'lưu lại lô: không hỏi lại');
+-  const ui = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app', '20-nhap-tu-danh-muc.js'), 'utf8'), f = ui.slice(ui.indexOf('function dmGhiTuLo'), ui.indexOf('function dmLechLo'));
++  const ui = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app', '20-nhap-tu-danh-muc.js'), 'utf8'), f = ui.slice(ui.indexOf('let dmHopCho'), ui.indexOf('function dmLechLo'));   // bước 3: hộp thoại trong ứng dụng thay confirm()
+   assert.ok(!/dmLaoDong|dmXeVC|themLaoDong|themXe\(/.test(f.replace(/\/\*[\s\S]*?\*\//g, '')), 'dmGhiTuLo không ghi danh mục cũ');
+-  assert.match(f, /confirm\(/);
++  assert.ok(!/\bconfirm\(/.test(f.replace(/\/\*[\s\S]*?\*\//g, '')), 'hỏi bằng hộp thoại trong ứng dụng, không dùng confirm()'); assert.match(f, /dlgMo\(/); assert.match(f, /data-act="dmHopThem"/); assert.match(f, /data-act="dmHopLo"/);
+ });
+diff --git a/ui/app/18-su-kien.js b/ui/app/18-su-kien.js
+index f58ca6d..dbaf0c6 100644
+--- a/ui/app/18-su-kien.js
++++ b/ui/app/18-su-kien.js
+@@ -68,6 +68,8 @@ document.addEventListener('click', async e => {
+   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
+   if (act === 'dmChonNhieu') return dmChonNhieuMo(el.dataset.kind);
+   if (act === 'dmChonNhieuLuu') return dmChonNhieuLuu();
++  if (act === 'dmHopThem') return dmHopXuLy(true);
++  if (act === 'dmHopLo') return dmHopXuLy(false);
+   if (act === 'dmPickAll') {
+     document.querySelectorAll('#dlgBox [data-dmpick]:not(:disabled)').forEach(cb => { cb.checked = true; dmPickState.sel.add(+cb.dataset.dmpick); });
+     const cnt = document.getElementById('dmPickCount'); if (cnt) cnt.textContent = String(dmPickState.sel.size);
+@@ -367,3 +369,8 @@ if (pendingNotice) { NAV.view = 'settings'; setg.msg = [pendingNotice, 'ok']; pe
+ if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind;
+ if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
+ render();
++/* hộp “Thêm vào danh mục để dùng lại?” (sau khi lưu lô có người / xe mới): Esc = Chỉ lưu trong lô (chạy trước bộ xử lý Esc chung của #dlgBox) */
++document.addEventListener('keydown', e => {
++  if (e.key !== 'Escape' || !document.querySelector('#dlgBox.on #dmHopDlg')) return;
++  e.preventDefault(); e.stopImmediatePropagation(); dmHopXuLy(false);
++}, true);
+diff --git a/ui/app/20-nhap-tu-danh-muc.js b/ui/app/20-nhap-tu-danh-muc.js
+index c72f86c..ac73a31 100644
+--- a/ui/app/20-nhap-tu-danh-muc.js
++++ b/ui/app/20-nhap-tu-danh-muc.js
+@@ -43,22 +43,53 @@ function dmDienXe(d) {
+   }
+   stm.vals._dmNgay = trim(d.ngayCapNhat);
+ }
+-/* phiếu #05 (ND-05, A-06): người / xe MỚI của lô vừa lưu (chưa nối, chưa có trong Danh mục đối tượng / Danh mục xe) → HỎI rồi mới thêm vào danh mục 3.0.
+- * Không ghi danh mục cũ dmLaoDong / dmXeVC (bản lưu trữ, màn Danh mục không hiện). Đồng ý: dòng lô nối ID người / xe vừa thêm. Trả [lời báo, loại] hoặc null. */
++/* phiếu #05 (ND-05, A-06) + bước 3 Danh mục: người / xe MỚI của lô vừa lưu (chưa nối, chưa có trong Danh mục đối tượng / Danh mục xe) → mở HỘP THOẠI trong ứng dụng
++ * liệt kê rõ từng người / xe kèm ô tích (mặc định tích hết); “Thêm vào danh mục” chỉ thêm các dòng được tích, “Chỉ lưu trong lô” không thêm gì (Esc = Chỉ lưu trong lô).
++ * Không ghi danh mục cũ dmLaoDong / dmXeVC (bản lưu trữ, màn Danh mục không hiện). Thêm xong: dòng lô nối ID người / xe vừa thêm.
++ * Hộp là bất đồng bộ nên dmGhiTuLo trả null; thông báo kết quả được xếp hàng khi người dùng chọn. */
++let dmHopCho = null;   // {nguoi, xe, cau, oid, fid}: lô vừa lưu đang chờ chọn
++function dmHopHtml(c) {
++  const hang = (kind, i, nhan, chiTiet) => '<li><label class="row" style="gap:8px;align-items:flex-start"><input type="checkbox" data-dmhop="' + kind + i + '" checked> <span>' + nhan + (chiTiet ? ' <span class="mut">' + chiTiet + '</span>' : '') + '</span></label></li>';
++  const ng = c.nguoi.map((r, i) => hang('n', i, '<b>' + esc(trim(r.ten)) + '</b>', 'CCCD ' + esc(trim(r.cccd)) + ' · Vai trò: Nhân công' + (trim(r.chucDanh) ? ' (' + esc(trim(r.chucDanh)) + ')' : '')));
++  const xe = c.xe.map((r, i) => hang('x', i, '<b>Xe ' + esc(trim(r.bienSo)) + '</b>', [trim(r.chuXe) ? 'Chủ xe: ' + esc(trim(r.chuXe)) : '', trim(r.taiXe) ? 'Tài xế: ' + esc(trim(r.taiXe)) : ''].filter(Boolean).join(' · ')));
++  return '<div class="gh"><h2>Thêm vào danh mục để dùng lại?</h2></div><div id="dmHopDlg"><p>Lô vừa lưu có ' + esc(c.cau) + '. Chọn dòng cần thêm vào danh mục để dùng lại ở lô khác (bỏ tích dòng không cần).</p>' +
++    (ng.length ? '<h3 style="margin:8px 0 4px">Người (Danh mục đối tượng)</h3><ul style="list-style:none;padding:0;margin:0">' + ng.join('') + '</ul>' : '') +
++    (xe.length ? '<h3 style="margin:8px 0 4px">Xe (Danh mục xe)</h3><ul style="list-style:none;padding:0;margin:0">' + xe.join('') + '</ul>' : '') +
++    '<p class="mut">“Chỉ lưu trong lô”: dòng vẫn nằm trong lô, không thêm vào danh mục; lần sau phải nhập lại.</p>' +
++    '<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn ghost" data-act="dmHopLo">Chỉ lưu trong lô</button><button type="button" class="btn" data-act="dmHopThem">Thêm vào danh mục (<span id="dmHopDem">' + (ng.length + xe.length) + '</span>)</button></div></div>';
++}
++function dmHopChon() {   // các dòng đang được tích: {nguoi: [chỉ số], xe: [chỉ số]}
++  const ds = [...document.querySelectorAll('#dmHopDlg [data-dmhop]')].filter(cb => cb.checked).map(cb => cb.dataset.dmhop);
++  return {nguoi: ds.filter(x => x[0] === 'n').map(x => +x.slice(1)), xe: ds.filter(x => x[0] === 'x').map(x => +x.slice(1))};
++}
++function dmHopCapNhatDem() {
++  const c = dmHopChon(), n = c.nguoi.length + c.xe.length, dem = document.getElementById('dmHopDem'), nut = document.querySelector('#dmHopDlg [data-act=dmHopThem]');
++  if (dem) dem.textContent = String(n); if (nut) nut.disabled = !n;
++}
++document.addEventListener('change', e => { if (e.target && e.target.closest && e.target.closest('#dmHopDlg') && e.target.matches('[data-dmhop]')) dmHopCapNhatDem(); });
++function dmHopXuLy(them) {
++  const c = dmHopCho; if (!c) return;
++  const chon = them ? dmHopChon() : {nguoi: [], xe: []}, tong = chon.nguoi.length + chon.xe.length;
++  if (them && !tong) return;   // chưa tích dòng nào: nút “Thêm” đang khóa
++  dmHopCho = null; dlgDong();
++  if (!tong) { pushNote('Chưa thêm ' + c.cau + ' vào danh mục (chỉ lưu trong lô).', 'warn'); return render(); }
++  const moi = {nguoi: c.nguoi.filter((_, i) => chon.nguoi.includes(i)), xe: c.xe.filter((_, i) => chon.xe.includes(i))}, bo = c.nguoi.length + c.xe.length - tong;
++  const hom = todayStr(), k = HAKDoiTuong.themTuLo(db.dmDoiTuong || [], db.dmXe || [], moi, hom), o = db.rs && db.rs[c.oid], f = o && o.forests && o.forests[c.fid];
++  db.dmDoiTuong = k.dmDoiTuong; db.dmXe = k.dmXe;
++  if (f) { k.nguoi.forEach(({r, id}) => { const x = (f.nc || []).find(y => y._id === r._id); if (x) { x.nguoiId = id; x._dmNgay = hom; } });
++    k.xe.forEach(({r, id}) => { const x = (f.dx || []).find(y => y._id === r._id); if (x) { x.xeId = id; x._dmNgay = hom; } }); }
++  persist();
++  pushNote('Đã thêm ' + k.nguoi.length + ' người vào Danh mục đối tượng, ' + k.xe.length + ' xe vào Danh mục xe.' + (k.loi.length ? ' Chưa thêm được: ' + k.loi.join('; ') + '.' : '') + (bo ? ' ' + bo + ' dòng không chọn: chỉ lưu trong lô.' : ''), k.loi.length ? 'warn' : 'ok');
++  render();
++}
+ function dmGhiTuLo(st) {
+   const bn = new Set(st.base.nc.map(b => b._id)), bx = new Set(st.base.dx.map(b => b._id));
+   const moi = HAKDoiTuong.moiTuLo(db.dmDoiTuong || [], db.dmXe || [], st.cur.nc.filter(r => !bn.has(r._id)), st.cur.dx.filter(r => !bx.has(r._id)));
+   const n = moi.nguoi.length, m = moi.xe.length; if (!n && !m) return null;
+-  const ds = moi.nguoi.map(r => '• ' + trim(r.ten) + ' (CCCD ' + trim(r.cccd) + ')').concat(moi.xe.map(r => '• Xe ' + trim(r.bienSo)));
+   const cau = (n ? n + ' người chưa có trong Danh mục đối tượng' : '') + (n && m ? ' và ' : '') + (m ? m + ' xe chưa có trong Danh mục xe' : '');
+-  if (!confirm('Lô vừa lưu có ' + cau + ':\n' + ds.slice(0, 12).join('\n') + (ds.length > 12 ? '\n• … và ' + (ds.length - 12) + ' dòng khác' : '') +
+-    '\n\nThêm vào Danh mục đối tượng / Danh mục xe để dùng lại ở lô khác?\n(Hủy: chỉ lưu trong lô, không thêm vào danh mục.)')) return ['Chưa thêm ' + cau + ' vào danh mục (chỉ lưu trong lô).', 'warn'];
+-  const hom = todayStr(), k = HAKDoiTuong.themTuLo(db.dmDoiTuong || [], db.dmXe || [], moi, hom), f = curForest();
+-  db.dmDoiTuong = k.dmDoiTuong; db.dmXe = k.dmXe;
+-  if (f) { k.nguoi.forEach(({r, id}) => { const x = (f.nc || []).find(y => y._id === r._id); if (x) { x.nguoiId = id; x._dmNgay = hom; } });
+-    k.xe.forEach(({r, id}) => { const x = (f.dx || []).find(y => y._id === r._id); if (x) { x.xeId = id; x._dmNgay = hom; } }); }
+-  persist();
+-  return ['Đã thêm ' + k.nguoi.length + ' người vào Danh mục đối tượng, ' + k.xe.length + ' xe vào Danh mục xe.' + (k.loi.length ? ' Chưa thêm được: ' + k.loi.join('; ') + '.' : ''), k.loi.length ? 'warn' : 'ok'];
++  dmHopCho = {nguoi: moi.nguoi, xe: moi.xe, cau, oid: NAV.cur, fid: NAV.curF};
++  dlgMo(dmHopHtml(dmHopCho)); const nut = document.querySelector('#dmHopDlg [data-act=dmHopThem]'); if (nut) nut.focus();
++  return null;
+ }
+ /* dòng của lô khác bản chụp so với dòng mới nhất của danh mục: [{row, d, khac}] */
+ function dmLechLo(kind, rows) {
