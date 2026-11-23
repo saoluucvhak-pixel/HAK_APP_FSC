@@ -88,7 +88,7 @@ document.addEventListener('keydown', e => {
  * Trả dạng “đối tác” mà hợp đồng vận chuyển đã dùng (hdvc.donViId + bản chụp hdvc.ben, in đúng như trước): pháp nhân = doanh nghiệp (id cũ 'dn:…' nếu chuyển
  * từ danh mục cũ, không thì 'dt:<mã đối tượng>'); người của thể nhân = người ký cá nhân (id 'ct:<CCCD>' như cũ, không có CCCD thì 'ng:<mã người>'). */
 function doiTacKyVC() {
-  return HAKDoiTuong.benKy(dmDT(), 'vanChuyen').map(({dt, ng}) => ng
+  return HAKDoiTuong.benKy(dmDT(), 'vanChuyen').filter(({dt, ng}) => HAKNganh.hopNganh(db, dt, ng, HAKNganh.VC)).map(({dt, ng}) => ng
     ? {id: ng.cccd ? 'ct:' + ng.cccd : 'ng:' + ng.id, loai: 'nguoiKyVC', ten: ng.hoTen, cccd: ng.cccd, ngaySinh: ng.ngaySinh, ngayCap: ng.ngayCap, noiCap: ng.noiCap, diaChi: ng.diaChi, sdt: ng.sdt,
       vaiTro: ng.vaiTro && ng.vaiTro.chuXe ? 'Chủ xe' : ng.vaiTro && ng.vaiTro.taiXe ? 'Tài xế' : '', chucVu: ng.chucDanhKy || '', doiTuongId: dt.id, doiTuongTen: dt.ten, nguoiId: ng.id}
     : {id: dt.nguonCu || 'dt:' + dt.id, loai: 'doanhnghiep', ten: dt.ten, mst: dt.mst, daiDien: dt.daiDien, chucVu: dt.chucVuDaiDien, diaChi: dt.diaChi, sdt: dt.sdt, doiTuongId: dt.id});
@@ -135,7 +135,7 @@ function benTuGiaTri(v) {
 }
 /* ô “Bên nhận khoán” của hợp đồng nhân công (giao khoán): đối tượng có quyền ký Nhân công */
 function benNhanKhoanHtml(t) {
-  const L = HAKDoiTuong.benKy(dmDT(), 'nhanCong'), cur = benGiaTri(t.benNhanKhoan);
+  const L = HAKDoiTuong.benKy(dmDT(), 'nhanCong').filter(({dt, ng}) => HAKNganh.hopNganh(db, dt, ng, HAKNganh.KT)), cur = benGiaTri(t.benNhanKhoan);
   return '<label><span>Bên nhận khoán (đối tượng có quyền ký Nhân công)</span><select name="benNK"><option value="">— Tổ trưởng của đội (như trước) —</option>' +
     L.map(({dt, ng, nhan}) => { const v = ng ? 'ng:' + ng.id : 'dt:' + dt.id; return '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(nhan) + '</option>'; }).join('') +
     (cur && !L.some(({dt, ng}) => (ng ? 'ng:' + ng.id : 'dt:' + dt.id) === cur) ? '<option value="' + esc(cur) + '" selected>' + esc(benTen(t.benNhanKhoan) || '(đã ngừng / không còn quyền ký)') + '</option>' : '') +

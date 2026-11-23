@@ -67,3 +67,13 @@ test('chuẩn hóa đối tượng giữ chucVu/nganh khi có, không thêm khó
   const moi = D.chuan({id: 'x', ten: 'A', loai: 'phapnhan', nganh: ['khaiThac', 'vanChuyen', ''], nguoi: [{id: 'p', hoTen: 'B', chucVu: ['cvKhac', 'cvKhac'], nganh: ['vanChuyen']}]});
   assert.deepEqual(moi.nganh, ['khaiThac', 'vanChuyen']); assert.deepEqual(moi.nguoi[0].chucVu, ['cvKhac']); assert.deepEqual(moi.nguoi[0].nganh, ['vanChuyen']);
 });
+
+test('lọc theo ngành: chỉ loại khi đã khai rõ ngành; dữ liệu cũ không ai biến mất', () => {
+  const N = require('../src/nganh'), db = {};
+  assert.equal(N.hopNganh(db, {loai: 'thenhan'}, {vaiTro: {taiXe: true}}, N.KT), true, 'cũ chưa khai: giữ');
+  assert.equal(N.hopNganh(db, {loai: 'thenhan'}, {chucVu: ['cvTaiXe']}, N.KT), false, 'khai Tài xế (Vận chuyển): không hiện ở Khai thác');
+  assert.equal(N.hopNganh(db, {loai: 'thenhan'}, {chucVu: ['cvKhac'], nganh: ['khaiThac']}, N.KT), true);
+  assert.equal(N.hopNganh(db, {loai: 'phapnhan', nganh: ['khaiThac', 'vanChuyen']}, null, N.VC), true, 'doanh nghiệp chọn cả hai ngành');
+  assert.equal(N.hopNganh(db, {loai: 'phapnhan', nganh: ['vanChuyen']}, null, N.KT), false);
+  assert.equal(N.hopNganh(db, {loai: 'phapnhan'}, null, N.KT), true);
+});

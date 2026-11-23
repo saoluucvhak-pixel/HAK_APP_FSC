@@ -38,6 +38,12 @@
     if (dt.loai === 'phapnhan') { const c = mang(dt.nganh); if (c.length) return c; const k = dt.kyHD || {}; return hop(k.nhanCong ? [KT] : [], k.vanChuyen ? [VC] : []); }
     return (dt.nguoi || []).filter(p => !p.ngung).reduce((a, p) => hop(a, nganhNguoi(db, p)), []);
   }
+  /* lọc theo ngành CHỈ khi ngành được khai rõ (chucVu/nganh của người, nganh của pháp nhân); dữ liệu cũ chưa khai → giữ nguyên, không ai biến mất khỏi danh sách */
+  function khaiRoNganh(db, dt, ng) {
+    if (ng) return mang(ng.chucVu).length || mang(ng.nganh).length ? nganhNguoi(db, ng) : null;
+    return dt && dt.loai === 'phapnhan' && mang(dt.nganh).length ? mang(dt.nganh) : null;
+  }
+  const hopNganh = (db, dt, ng, nganh) => { const k = khaiRoNganh(db, dt, ng); return !nganh || !k || k.includes(nganh); };
   const thuocNganh = (ds_, nganh) => !nganh || ds_.includes(nganh);
 
   /* khóa vaiTro cũ suy từ các chức vụ đã chọn: giữ tương thích mã dùng vaiTro.{nhanCong,taiXe,chuXe} */
@@ -96,6 +102,6 @@
     db[k] = ds_.filter(y => y.id !== id); return {ok: true, kieu: 'xoa', thongBao: 'Đã xóa “' + x.ten + '”.'};
   }
 
-  const api = {dangDungNganh, dangDungChucVu, themNganh, themChucVu, doi, dung, xoa, KT, VC, NGANH_MAC_DINH, CHUC_VU_MAC_DINH, dsNganh, dsChucVu, gieo, nganhNguoi, nganhDoiTuong, thuocNganh, vaiTroTuChucVu, chucVuNhan, tenNganh, kiemNguoi};
+  const api = {khaiRoNganh, hopNganh, dangDungNganh, dangDungChucVu, themNganh, themChucVu, doi, dung, xoa, KT, VC, NGANH_MAC_DINH, CHUC_VU_MAC_DINH, dsNganh, dsChucVu, gieo, nganhNguoi, nganhDoiTuong, thuocNganh, vaiTroTuChucVu, chucVuNhan, tenNganh, kiemNguoi};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNganh = api;
 })(typeof self !== 'undefined' ? self : this);

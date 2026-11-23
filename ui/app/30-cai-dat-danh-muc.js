@@ -252,7 +252,7 @@ function xeDocForm() { const fm = document.getElementById('xeForm'); if (!fm || 
 if (!x.taiXeId && !('taiXeId' in cd.xe.sua)) delete x.taiXeId;   // xe chưa có tài xế: không thêm khóa rỗng (không làm “đang sửa dở” giả)
 return x; }
 const chonChuXeHtml = (v, name) => '<select name="' + (name || 'chuXeId') + '"><option value="">— chưa chọn —</option>' + HAKXeDM.chonChuXe(dmDT()).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
-const chonTaiXeHtml = v => '<select name="taiXeId"><option value="">— chưa chọn —</option>' + HAKXeDM.chonTaiXe(dmDT()).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
+const chonTaiXeHtml = v => '<select name="taiXeId"><option value="">— chưa chọn —</option>' + HAKXeDM.chonTaiXe(dmDT()).filter(c => { const x = HAKDoiTuong.timNguoi(dmDT(), c.id); return !x || c.id === v || HAKNganh.hopNganh(db, x.dt, x.ng, HAKNganh.VC); }).map(c => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.nhan) + '</option>').join('') + '</select>';
 function panelSetXe() {
   const C = cd.xe, SF = HAKCore.sf;
   const hom = todayStr();
