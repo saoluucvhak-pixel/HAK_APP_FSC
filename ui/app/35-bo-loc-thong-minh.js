@@ -112,7 +112,13 @@ function hakSfRenderDrawer(focusInfo) {
     return '<label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-sfdrbool="' + esc(f.key) + '"' + (SF.getField(s, f) ? ' checked' : '') + '> ' + esc(f.label) + '</label>';
   }).join('');
   const ps = hakSfPresets(), presetNames = ps.list(hakSfDraft.screenId);
-  const presetHtml = '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">' +
+  /* kho bộ lọc đã lưu bị hỏng/khác phiên bản: không ghi đè được → báo và cho "Tạo kho mới" (hỏi xác nhận trong hộp, bản cũ được sao lưu) */
+  const khoHong = ps.isCorrupt() ? (hakSfDraft.xacNhanKho ?
+    '<div class="msg warn" role="alertdialog" aria-label="Xác nhận tạo kho bộ lọc mới" style="margin-bottom:8px"><b>Tạo kho bộ lọc mới?</b> Kho cũ được sao lưu nguyên văn sang khóa <code>hak.sf.presets.bak</code> (không mất dữ liệu); các bộ lọc đã lưu hiện không dùng được nữa.' +
+    '<div class="row" style="gap:8px;margin-top:6px"><button type="button" class="btn ghost sm" data-sfpreset="kho-huy">Không tạo</button><button type="button" class="btn sm" data-sfpreset="kho-dongy">Tạo kho mới</button></div></div>' :
+    '<div class="msg warn" id="sfKhoHong" style="margin-bottom:8px">Kho bộ lọc đã lưu bị lỗi hoặc thuộc phiên bản khác nên chưa lưu được bộ lọc mới. ' +
+    '<button type="button" class="btn ghost sm" data-sfpreset="kho-moi">Tạo kho mới</button></div>') : '';
+  const presetHtml = '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">' + khoHong +
     '<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">' +
       '<b style="font-size:12.5px">Bộ lọc đã lưu:</b>' +
       (presetNames.length ? '<select id="sfPresetSel" style="min-width:150px"><option value="">— chọn bộ lọc —</option>' + presetNames.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') + '</select>' +
@@ -246,6 +252,12 @@ document.addEventListener('click', e => {
   const pr = t.closest('[data-sfpreset]');
   if (pr) {
     const ps = hakSfPresets(), act = pr.dataset.sfpreset;
+    if (act === 'kho-moi') { syncText(); hakSfDraft.xacNhanKho = true; hakSfRenderDrawer(); return; }
+    if (act === 'kho-huy') { syncText(); hakSfDraft.xacNhanKho = false; hakSfRenderDrawer(); return; }
+    if (act === 'kho-dongy') {
+      syncText(); const r = ps.discardCorrupt(); hakSfDraft.xacNhanKho = false;
+      hakSfDraft.err = r.ok ? '' : (r.msg || 'Không tạo được kho mới.'); hakSfRenderDrawer(); return;
+    }
     if (act === 'save') {
       if (!syncText()) { hakSfRenderDrawer(); return; }
       const name = (document.getElementById('sfPresetName') || {}).value;
