@@ -43,7 +43,8 @@ contextBridge.exposeInMainWorld('hak', {
     restore: f => ipcRenderer.invoke('bk:restore', f),
     readJson: f => ipcRenderer.invoke('bk:readJson', f),
     remove: f => ipcRenderer.invoke('bk:delete', f),
-    autoNow: () => ipcRenderer.invoke('bk:autoNow')
+    autoNow: () => ipcRenderer.invoke('bk:autoNow'),
+    truocSheets: () => ipcRenderer.invoke('bk:truocSheets')   // PR D bước 2: sao lưu file hiện tại trước lần lưu đầu sau khi áp dữ liệu từ Google Sheets
   },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
   phieuCan: (rows, company) => ipcRenderer.invoke('phieucan:open', rows, company),

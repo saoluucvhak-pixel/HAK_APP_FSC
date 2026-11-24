@@ -68,9 +68,16 @@ async function lkApply() {
     lk.msg = {kind: 'err', text: 'Không lưu, hồ sơ giữ nguyên: ' + e.message}; lkRender();
   }
 }
+/* PR D bước 2: sau khi áp dữ liệu từ Google Sheets (gsApply), lần lưu ĐẦU TIÊN xuống đĩa sao lưu file hiện tại trước (truoc-cap-nhat-sheets-…): sai thì khôi phục được */
+let sheetsCanSaoLuu = false;
 async function persistNow() {
   doiDuLieu();
   if (!HB) { persist(); return {ok: storeOk}; }
+  if (sheetsCanSaoLuu && window.hak && window.hak.saoLuu && window.hak.saoLuu.truocSheets) {
+    const b = await window.hak.saoLuu.truocSheets().catch(e => ({ok: false, error: String(e && e.message || e)}));
+    if (!b || b.ok === false) { showSave('Chưa lưu: không sao lưu được trước khi lưu dữ liệu từ Google Sheets', true); return {ok: false, error: 'Không sao lưu được trước khi lưu dữ liệu từ Google Sheets nên chưa ghi: ' + ((b && b.error) || 'không rõ') + '. Bản nháp còn nguyên, thử lại sau.'}; }
+    sheetsCanSaoLuu = false;
+  }
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   showSave('… Đang lưu');
   const r = await storeSave();
