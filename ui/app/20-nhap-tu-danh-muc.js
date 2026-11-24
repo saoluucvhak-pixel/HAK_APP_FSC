@@ -72,6 +72,7 @@ function dmHopXuLy(them) {
   const chon = them ? dmHopChon() : {nguoi: [], xe: []}, tong = chon.nguoi.length + chon.xe.length;
   if (them && !tong) return;   // chưa tích dòng nào: nút “Thêm” đang khóa
   dmHopCho = null; dlgDong();
+  if (c.daLuu) pushNote(c.daLuu, 'ok');   // thông báo “Đã lưu dữ liệu vào lô…” vẫn hiện cùng kết quả chọn, như khi còn hỏi bằng confirm()
   if (!tong) { pushNote('Chưa thêm ' + c.cau + ' vào danh mục (chỉ lưu trong lô).', 'warn'); return render(); }
   const moi = {nguoi: c.nguoi.filter((_, i) => chon.nguoi.includes(i)), xe: c.xe.filter((_, i) => chon.xe.includes(i))}, bo = c.nguoi.length + c.xe.length - tong;
   const hom = todayStr(), k = HAKDoiTuong.themTuLo(db.dmDoiTuong || [], db.dmXe || [], moi, hom), o = db.rs && db.rs[c.oid], f = o && o.forests && o.forests[c.fid];
