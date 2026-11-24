@@ -106,6 +106,14 @@ function dtNhanTuTim(screenId, cfg, giu) {
   const inst = hakSfGet(screenId, cfg); inst.filter.reset();
   inst.filter.setState(HAKCore.sf.normalize(Object.assign({}, inst.filter.getState(), {q: giu.q}), cfg)); giu.q = '';
 }
+/* PR chức vụ chi tiết: hiện chức vụ chi tiết và ngành ĐÃ KHAI RÕ của người / doanh nghiệp trong bảng danh sách (dữ liệu cũ chưa khai thì không hiện thêm gì) */
+function dtChucVuChiTiet(o, p) {
+  const cv = (p.chucVu || []).map(id => ({id, ten: (HAKNganh.dsChucVu(db).find(c => c.id === id) || {}).ten})).filter(c => c.ten), kn = HAKNganh.khaiRoNganh(db, o, p) || [];
+  return cv.map(c => ' <span class="pill" data-cv="' + esc(c.id) + '">' + esc(c.ten) + '</span>').join('') + (p.chucVu && p.chucVu.length ? kn.map(n => ' <span class="pill" data-ng="' + esc(n) + '">' + esc(HAKNganh.tenNganh(db, n)) + '</span>').join('') : '');
+}
+function dtNganhDn(o) { const a = o.loai === 'phapnhan' && Array.isArray(o.nganh) ? o.nganh : []; return a.length ? '<div class="mut" data-nganh-dn>Ngành: ' + a.map(n => '<span class="pill" data-ng="' + esc(n) + '">' + esc(HAKNganh.tenNganh(db, n)) + '</span>').join(' ') + '</div>' : ''; }
+/* chỉ cho kiểm thử đầu-cuối (cổng CONG_KT): các danh sách chọn đã lọc theo ngành */
+CONG_KT.locNganh = {benNhanKhoan: () => benNhanKhoanHtml({}), benVanChuyen: () => doiTacKyVC(), taiXe: () => chonTaiXeHtml(''), nhanCong: () => dmNguonLd()};
 function panelSetDt() {
   const SF = HAKCore.sf, sfCfg = dtSfCfg();
   dtNhanTuTim('dm_doi_tuong', sfCfg, cd);
@@ -116,7 +124,7 @@ function panelSetDt() {
   const bang = '<div class="wrap" id="dtWrap" style="max-height:min(60vh,520px)"><table id="dtBang"' + (ds.length ? ' style="min-width:860px"' : '') + '><thead><tr><th>Mã</th><th>Tên đối tượng</th><th>Loại</th><th>MST</th><th>Địa chỉ</th><th>SĐT</th><th>Ký hợp đồng</th><th>Người · chức vụ</th><th></th></tr></thead><tbody>' +
     (ds.length ? ds.map(o => '<tr data-dt="' + esc(o.id) + '"><td>' + esc(o.ma) + '</td><td><b>' + esc(o.ten) + '</b></td><td>' + HAKDoiTuong.LOAI[o.loai] + '</td><td>' + esc(o.mst) + '</td><td>' + esc(o.diaChi) + '</td><td>' + esc(o.sdt) + '</td><td>' +
       esc(o.loai === 'phapnhan' ? HAKDoiTuong.kyText(o.kyHD) : HAKDoiTuong.kyText({vanChuyen: (o.nguoi || []).some(p => p.kyHD && p.kyHD.vanChuyen), nhanCong: (o.nguoi || []).some(p => p.kyHD && p.kyHD.nhanCong)})) + '</td><td>' +
-      (o.nguoi || []).map(p => esc(p.hoTen) + Object.keys(HAKDoiTuong.VAI_TRO).filter(k => p.vaiTro && p.vaiTro[k]).map(k => ' <span class="pill" data-vai="' + k + '">' + esc(HAKDoiTuong.VAI_TRO[k]) + '</span>').join('')).join('<br>') + '</td>' +
+      dtNganhDn(o) + (o.nguoi || []).map(p => esc(p.hoTen) + Object.keys(HAKDoiTuong.VAI_TRO).filter(k => p.vaiTro && p.vaiTro[k]).map(k => ' <span class="pill" data-vai="' + k + '">' + esc(HAKDoiTuong.VAI_TRO[k]) + '</span>').join('') + dtChucVuChiTiet(o, p)).join('<br>') + '</td>' +
       '<td style="white-space:nowrap"><button class="btn ghost sm" data-dtsua="' + esc(o.id) + '">Sửa</button> <button class="btn ghost sm" data-dtngung="' + esc(o.id) + '">' + (o.ngung ? 'Dùng lại' : 'Ngừng') + '</button></td></tr>').join('')
       : '<tr><td colspan="9" class="mut" id="dtTrong">Không có đối tượng nào' + (sfOn ? ' khớp bộ lọc' : '') + '.</td></tr>') + '</tbody></table></div>';
   const mot = dtMot(x), p0 = mot ? ((x.nguoi || [])[0] || {hoTen: '', vaiTro: {}, kyHD: {}}) : null, pn = !!x && x.loai === 'phapnhan';
