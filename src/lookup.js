@@ -681,13 +681,28 @@ class Lookup {
     const a = this.activeSet(); if (!a) return {ok: false, noData: true, error: 'Chưa có dữ liệu Google Sheets.'};
     const t0 = Date.now(), CL = require('./chatluong');
     const ks = this.db.prepare("SELECT DISTINCT k_hd FROM lookup_rows WHERE set_id=? AND tab=? AND k_hd<>''").all(a.id, 'HoSoRung_QC').map(r => r.k_hd);
+    /* phiếu ĐÃ CÓ trong các lô của ứng dụng, theo mã rừng của hợp đồng: dùng cho “nghi đổi số” (so với lô như màn cập nhật vào hồ sơ). Chỉ giải mã các lô có mã rừng nằm trong Sheet. */
+    const maRungSheet = new Set(); this.db.prepare("SELECT DISTINCT k_rung FROM lookup_rows WHERE set_id=? AND tab=? AND k_rung<>''").all(a.id, 'ToaDoRung_QC').forEach(r => maRungSheet.add(r.k_rung));
+    const loTheoMa = new Map(); try {
+      this.db.prepare('SELECT ma_rung, data FROM forests').all().forEach(r => {
+        if (!r.ma_rung || (maRungSheet.size && !maRungSheet.has(r.ma_rung))) return;
+        let f; try { f = JSON.parse(r.data); } catch (e) { return; }
+        const ps = (Array.isArray(f && f.pc) ? f.pc : []).map((p, i) => ({id: r.ma_rung + ':' + (p.id || p._id || i), so: p.soPhieu, ngay: p.ngay, bks: p.bienSo, kg: typeof p.klKg === 'number' ? p.klKg : Math.round((p.kl || 0) * 1000), soCu: p.soCu, lo: r.ma_rung}));
+        if (!loTheoMa.has(r.ma_rung)) loTheoMa.set(r.ma_rung, []); loTheoMa.get(r.ma_rung).push(...ps);
+      });
+    } catch (e) { /* bảng lô chưa có (Sheets dùng riêng): không có phiếu đã có để so */ }
+    const BKS = require('./bks');
     const seen = new Set(), hd = [];
     ks.forEach(k => {
       const n = normHd(k); if (seen.has(n)) return; seen.add(n);
       const d = this.buildHd(k, true);
       if (!d.ok) { hd.push({trangThai: 'err', nCccd: 0, rung: [], phieu: []}); return; }
+      /* phiếu Sheet đủ điều kiện xét nghi đổi số, đúng như màn cập nhật vào hồ sơ (gsRows): không lệch CCCD, không lỗi, có số phiếu, không trùng khóa với dòng trước, biển số đã rõ (là biển số, chưa xét ghép tên xe) */
+      const kn = new Set(), sheet = [];
+      d.phieu.forEach(p => { if (p.lechCccd || p.issue || !BKS.soPhieu(p.soPhieu)) return; const kp = BKS.khoaPhieu({soPhieu: p.soPhieu, ngay: p.ngay}); if (kp && kn.has(kp)) return; if (kp) kn.add(kp); if (p.isPlate) sheet.push({so: p.soPhieu, ngay: p.ngay, bks: String(p.bienRaw || '').toUpperCase(), kg: p.klKg}); });
+      const lo = []; d.forests.forEach(f => { if (f.maRung && loTheoMa.has(f.maRung)) lo.push(...loTheoMa.get(f.maRung)); });
       hd.push({trangThai: trangThaiHd(d).status, nCccd: d.cccdList.length, rung: d.forests.map(f => ({maRung: f.maRung, ghepTam: f.ghepTam})),
-        phieu: d.phieu.map(p => ({soPhieu: p.soPhieu, ngay: p.ngay, bienRaw: p.bienRaw, klKg: p.klKg, issue: p.issue}))});
+        phieu: d.phieu.map(p => ({soPhieu: p.soPhieu, ngay: p.ngay, bienRaw: p.bienRaw, klKg: p.klKg, issue: p.issue})), phieuSheet: sheet, phieuLo: lo});
     });
     const cnt = tab => this.db.prepare('SELECT COUNT(*) c FROM lookup_rows WHERE set_id=? AND tab=?').get(a.id, tab).c;
     const r = CL.tinh({hd, dong: {HoSoRung: cnt('HoSoRung_QC'), ToaDoRung: cnt('ToaDoRung_QC'), HoSoKeo: cnt('HoSoKeo_QC')}, ms: Date.now() - t0});

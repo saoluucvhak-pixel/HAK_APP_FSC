@@ -164,11 +164,14 @@ async function saveOnce() {
   return r;
 }
 function storeSave() { const p = saveChain.then(saveOnce, saveOnce); saveChain = p.catch(() => {}); return p; }
+/* F3: sau khi tầng lưu từ chối sửa lô chốt / dừng (LOCKED) thì lô được trả về bản đã lưu và có thể phải lưu lại ngay (ánh xạ biển số vừa chốt); lần lưu thành công kế tiếp trong vài giây
+ * KHÔNG được xóa mất dòng cảnh báo “Lô chỉ đọc” ở thanh trạng thái: giữ cảnh báo kèm giờ lưu */
+let khoaNhacDen = 0; const KHOA_NHAC_MS = 8000;
 function flushSave() {
   saveTimer = null;
   storeSave().then(r => {
-    if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); }
-    else if (r && r.code === 'LOCKED') { storeOk = true; showSave('Lô chỉ đọc: không ghi thay đổi', true); pushNote(r.error, 'err'); render(); }
+    if (r && r.ok) { storeOk = true; const nhac = Date.now() < khoaNhacDen; showSave('Đã lưu vào máy lúc ' + hhmm() + (nhac ? ' · Lô chỉ đọc: thay đổi vừa rồi đã được bỏ' : ''), nhac); }
+    else if (r && r.code === 'LOCKED') { storeOk = true; khoaNhacDen = Date.now() + KHOA_NHAC_MS; showSave('Lô chỉ đọc: không ghi thay đổi', true); pushNote(r.error, 'err'); render(); }
     else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
   }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });
 }

@@ -6,6 +6,8 @@
 const {_electron: electron} = require('playwright-core');
 const XLSX = require('xlsx');
 const path = require('path'), fs = require('fs'), os = require('os');
+const src = fs.readFileSync(path.join(__dirname, 'e2e-inan2.js'), 'utf8');
+const {lot, seed, P} = new Function(src.slice(src.indexOf('const nv ='), src.indexOf('const plain =')) + '; return {lot, seed, P};')();
 const root = path.join(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-cl-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
@@ -20,16 +22,18 @@ const xlsx = path.join(dir, 'gia_lap.xlsx'); XLSX.writeFile(wb, xlsx);
 (async () => {
   const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
+  // nghi đổi số so với phiếu ĐÃ CÓ trong lô của ứng dụng (24/11/2026): nạp sẵn lô R-GL-E2E-1 có một phiếu cùng ngày, biển số, khối lượng với PC-1 và PC-2 nhưng khác số phiếu
+  await w.evaluate(d => window.hak.save(d), seed([lot('fa', RUNG, {exp: {}, pc: [P(9, '06/11/2026', BKS, 'OLD-E2E', 20)], kl: null})])); await w.reload(); await w.waitForSelector('#side');
   const mo = async () => { await w.click('#navSet'); await w.click('#setTab_setgs'); await w.waitForSelector('#setGsChatLuong'); };
   await mo(); await w.click('#setGsChatLuong'); await w.waitForSelector('#setGsCLLoi');
   ok('chưa có dữ liệu: báo rõ, không có bảng', /Google Sheets/.test(await w.innerText('#setGsCLLoi')) && !(await w.$('#setGsCLBang')));
   ok('nhập Excel giả lập', (await w.evaluate(p => window.hak.lookup.importExcel(p), xlsx)).ok);
   await mo(); await w.click('#setGsChatLuong'); await w.waitForSelector('#setGsCLBang');
   const bang = await w.innerText('#setGsCLBang');
-  ok('bảng có nhãn và số đúng: 1 hợp đồng, 3 phiếu, 1 phiếu ngày lỗi, 1 thiếu biển số, 2 nghi đổi số', /Số hợp đồng: 1\b/.test(bang) && /Số phiếu: 3\b/.test(bang) && /ngày không đọc được: 1\b/.test(bang) && /thiếu biển số: 1\b/.test(bang) && /nghi đổi số: 2\b/.test(bang), bang);
+  ok('bảng có nhãn và số đúng: 1 hợp đồng, 3 phiếu, 1 phiếu ngày lỗi, 1 thiếu biển số, 2 nghi đổi số (so với phiếu đã có trong lô)', /Số hợp đồng: 1\b/.test(bang) && /Số phiếu: 3\b/.test(bang) && /ngày không đọc được: 1\b/.test(bang) && /thiếu biển số: 1\b/.test(bang) && /nghi đổi số \(so với phiếu đã có trong lô\): 2\b/.test(bang), bang);
   ok('mỗi dòng chỉ là “Nhãn: số”', bang.split('\n').filter(Boolean).every(l => /^[^:]+: \d+$/.test(l.trim())), bang);
   const tat = bang + '\n' + await w.innerText('#main');
-  const lo = [CC, TEN, HD, BKS, RUNG, DIA, SOP, 'giả lập'].filter(x => tat.toLowerCase().includes(x.toLowerCase()));
+  const lo = [CC, TEN, HD, BKS, RUNG, DIA, SOP, 'OLD-E2E', 'giả lập'].filter(x => tat.toLowerCase().includes(x.toLowerCase()));
   ok('BẢO MẬT: màn báo cáo không lộ CCCD, tên, mã hợp đồng, biển số, mã rừng, địa chỉ, số phiếu', lo.length === 0, lo.join(' | '));
   const rs = await w.evaluate(() => window.hak.lookup.chatLuong());
   ok('IPC chỉ trả {ok, so, bang} và toàn số nguyên', Object.keys(rs).sort().join() === 'bang,ok,so' && Object.values(rs.so).every(v => Number.isInteger(v)), JSON.stringify(Object.keys(rs)));
