@@ -42,7 +42,7 @@ async function wordTables(file) {
     const now = new Date(), pad = n => String(n).padStart(2, '0');
     return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
   });
-  ok('mặc định kỳ báo cáo từ đầu tháng đến hôm nay', await w.inputValue('#rpFrom') === today.slice(0, 8) + '01' && await w.inputValue('#rpTo') === today);
+  ok('mặc định kỳ báo cáo từ đầu tháng đến hôm nay', await w.inputValue('#rpFrom') === '01/' + today.slice(5, 7) + '/' + today.slice(0, 4) && await w.inputValue('#rpTo') === today.split('-').reverse().join('/'));
   await w.fill('#rpFrom', '2026-01-01'); await w.dispatchEvent('#rpFrom', 'change'); await w.fill('#rpTo', '2026-02-28'); await w.dispatchEvent('#rpTo', 'change');
 
   for (const id of ['dieuhanh', 'sanluong', 'phieucan', 'chacon', 'tiendo']) {

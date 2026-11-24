@@ -18,12 +18,13 @@ const HAKReports = (function () {
     const isZero = Number(i) === 0 && (!f || Number(f) === 0);
     return (v < 0 && !isZero ? '-' : '') + group(i) + (f ? ',' + f : '');
   }
-  function fmtCell(v, f) {
+  const displayDate = (v, style) => style === 'iso' ? D.toIso(v) || v : v;
+  function fmtCell(v, f, opts = {}) {
     if (v == null || v === '') return '';
-    if (typeof v !== 'number') return String(v);
-    if (f === 'pct') return fmtNum(v, 1) + '%';
+    if (typeof v !== 'number') return String(f === 'date' ? displayDate(v, opts.dateStyle) : v);
     const d = {n0: 0, n1: 1, n2: 2, n3: 3}[f];
-    return fmtNum(v, d == null ? (Number.isInteger(v) ? 0 : 3) : d);
+    const s = f === 'pct' ? fmtNum(v, 1) + '%' : fmtNum(v, d == null ? (Number.isInteger(v) ? 0 : 3) : d);
+    return opts.numStyle === 'en' ? s.replace(/[.,]/g, c => c === '.' ? ',' : '.') : s;
   }
 
   /* ---- Bộ lọc dữ liệu đầu vào ---- */
@@ -457,7 +458,7 @@ const HAKReports = (function () {
       kpis: [{label: 'Số lô', value: sorted.length, f: 'n0'}, {label: 'Diện tích (ha)', value: round(T.dt, 3), f: 'n2'}, {label: 'Sản lượng dự kiến (tấn)', value: round(T.dk, 3), f: 'n3'}, {label: 'Thực tế theo phiếu cân (tấn)', value: round(T.tt, 3), f: 'n3'},
         {label: 'Tiền nhân công (đồng)', value: T.cong, f: 'n0'}, {label: 'Tiền vận chuyển (đồng)', value: T.vc, f: 'n0'}, ...Object.entries(dem).map(([k, v]) => ({label: 'Lô ' + k.toLowerCase(), value: v, f: 'n0'}))],
       sections: [{heading: 'Sổ hồ sơ theo lô', cols: [{h: 'STT', w: 4, al: 'center', f: 'n0'}, {h: 'Mã lô', w: 10}, {h: 'Chủ rừng', w: 15}, {h: 'Địa điểm', w: 14}, {h: 'Công ty mua', w: 14}, {h: 'Diện tích (ha)', w: 8, f: 'n2'}, {h: 'Số đội', w: 5, f: 'n0'}, {h: 'Số người', w: 6, f: 'n0'}, {h: 'Số đội xe', w: 5, f: 'n0'}, {h: 'Số xe', w: 5, f: 'n0'},
-        {h: 'Bắt đầu', w: 9, al: 'center'}, {h: 'Kết thúc', w: 9, al: 'center'}, {h: 'Ngày chốt', w: 9, al: 'center'}, {h: 'Dự kiến (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế / dự kiến (%)', w: 8, f: 'n1'}, {h: 'Số phiếu', w: 6, f: 'n0'}, {h: 'Tiền nhân công', w: 11, f: 'n0'}, {h: 'Tiền vận chuyển', w: 11, f: 'n0'}, {h: 'Trạng thái', w: 12}, {h: 'Mẫu nợ in', w: 6, f: 'n0'}, {h: 'Mẫu chưa ký', w: 6, f: 'n0'}],
+        {h: 'Bắt đầu', w: 9, al: 'center', f: 'date'}, {h: 'Kết thúc', w: 9, al: 'center', f: 'date'}, {h: 'Ngày chốt', w: 9, al: 'center', f: 'date'}, {h: 'Dự kiến (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế / dự kiến (%)', w: 8, f: 'n1'}, {h: 'Số phiếu', w: 6, f: 'n0'}, {h: 'Tiền nhân công', w: 11, f: 'n0'}, {h: 'Tiền vận chuyển', w: 11, f: 'n0'}, {h: 'Trạng thái', w: 12}, {h: 'Mẫu nợ in', w: 6, f: 'n0'}, {h: 'Mẫu chưa ký', w: 6, f: 'n0'}],
         rows, foot: ['', 'TỔNG CỘNG', '', '', '', round(T.dt, 3), T.doi, T.nc, T.dx, T.xe, '', '', '', round(T.dk, 3), round(T.tt, 3), T.dk ? round(T.tt / T.dk * 100, 1) : '', T.pc, T.cong, T.vc, '', T.noIn, T.chuaKy]}], notes};
   }
 
@@ -479,7 +480,7 @@ const HAKReports = (function () {
   /* Mô hình -> bảng dữ liệu phẳng (dùng cho Excel) */
   /* Chuỗi bắt đầu bằng = + - @ (hoặc tab/CR) sẽ bị Excel hiểu là công thức: thêm dấu ' để luôn là văn bản (chống chèn công thức). */
   const safeText = v => (typeof v === 'string' && /^[=+\-@\t\r]/.test(v) && !/^-?\d+([.,]\d+)?%?$/.test(v)) ? "'" + v : v;
-  const toDate = v => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); return m ? new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])) : v; };
+  const toDate = v => { const p = D.parse(v); return p ? new Date(Date.UTC(p.y, p.m - 1, p.d)) : safeText(v); };
   /* Mô hình -> bảng phẳng cho Excel. Trả về mảng dòng; thuộc tính phụ (meta) mô tả vị trí các bảng để áp bộ lọc tự động và nhóm dòng. */
   function toAoa(m, meta) {
     meta = meta || {};
@@ -512,7 +513,7 @@ const HAKReports = (function () {
       return {wch: Math.max(12, Math.min(48, Math.round((c.w || 12) * 1.4)))};
     });
     ws['!merges'] = [0, 1, 2, 3, 4].map(r => ({s: {r, c: 0}, e: {r, c: Math.max(widest - 1, 1)}}));
-    Object.keys(ws).forEach(k => { if (k[0] !== '!' && ws[k].t === 'd') ws[k].z = 'dd/mm/yyyy'; });
+    Object.keys(ws).forEach(k => { if (k[0] !== '!' && ws[k].t === 'd') ws[k].z = meta?.dateStyle === 'iso' ? 'yyyy-mm-dd' : 'dd/mm/yyyy'; });
     if (m.kpis && m.kpis.length) {
       m.kpis.forEach((k, i) => {
         const cell = ws[XLSX.utils.encode_cell({r: 7 + i, c: 1})];
@@ -540,15 +541,15 @@ const HAKReports = (function () {
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const secs = (m.sections || []).map(s => '<h4 style="margin:12px 0 4px">' + esc(s.heading) + ' <span class="mut">(' + s.rows.length + ' dòng)</span></h4>' +
       '<table><thead><tr>' + s.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr></thead><tbody>' +
-      s.rows.map((r, ri) => '<tr' + (s.levels && s.levels[ri] === 0 ? ' style="font-weight:700"' : '') + '>' + r.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '">' + esc(fmtCell(v, s.cols[i].f)) + '</td>').join('') + '</tr>').join('') +
-      (s.foot ? '<tr>' + s.foot.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '"><b>' + esc(fmtCell(v, s.cols[i].f)) + '</b></td>').join('') + '</tr>' : '') +
+      s.rows.map((r, ri) => '<tr' + (s.levels && s.levels[ri] === 0 ? ' style="font-weight:700"' : '') + '>' + r.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '">' + esc(fmtCell(v, s.cols[i].f, meta)) + '</td>').join('') + '</tr>').join('') +
+      (s.foot ? '<tr>' + s.foot.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '"><b>' + esc(fmtCell(v, s.cols[i].f, meta)) + '</b></td>').join('') + '</tr>' : '') +
       '</tbody></table>').join('');
     return '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo</title><style>body{font:13px/1.45 "Segoe UI",Arial,sans-serif;color:#111;margin:18px}h3{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:3px 5px;text-align:left}thead{display:table-header-group}thead th{background:#eee}.kpi{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.kpi div{font-size:12px}.kpi b{display:block;font-size:15px}.mut{color:#555}tr{break-inside:avoid}</style></head><body>' +
       '<h3>' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + (meta.scope ? ' · ' + meta.scope : '')) + (m.unit ? '<br>' + esc(m.unit) : '') + '</p>' +
-      '<div class="kpi">' + (m.kpis || []).map(k => '<div><b>' + esc(fmtCell(k.value, k.f)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' +
+      '<div class="kpi">' + (m.kpis || []).map(k => '<div><b>' + esc(fmtCell(k.value, k.f, meta)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' +
       secs + ((m.notes || []).length ? '<p class="mut">' + m.notes.map(esc).join('<br>') + '</p>' : '') + '</body></html>';
   }
 
-  return {REPORTS, sanLuongDoi, vanChuyenDoiXe, chaCon, safeText, finalize, dateKey, fmtNum, fmtCell, toAoa, toSheet, toPrintHtml, sanLuong, soPhieuCan, tienDo, dieuHanh, inRange, periodText};
+  return {REPORTS, sanLuongDoi, vanChuyenDoiXe, chaCon, safeText, finalize, dateKey, fmtNum, fmtCell, displayDate, toAoa, toSheet, toPrintHtml, sanLuong, soPhieuCan, tienDo, dieuHanh, inRange, periodText};
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = HAKReports;
