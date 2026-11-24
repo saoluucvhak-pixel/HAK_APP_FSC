@@ -114,7 +114,7 @@ function loVeBanDaLuu(fid) {
   if (tt.canGhi) persist();   // ánh xạ biển số vừa được chốt (đã có lô liên quan được lưu): phải xuống đĩa, không để chỉ nằm trong bộ nhớ
   return ok;
 }
-CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow(), chup: () => (window.__nhapChup = nhapChup()), khoiPhuc: () => nhapKhoiPhuc(window.__nhapChup), themMoi: id => loMoi.add(id), boMoi: id => loMoi.delete(id)};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
+CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow(), chup: () => (window.__nhapChup = nhapChup()), khoiPhuc: () => nhapKhoiPhuc(window.__nhapChup), themMoi: id => loMoi.add(id), boMoi: id => loMoi.delete(id), datSaoLuuSheets: v => { sheetsCanSaoLuu = !!v; }};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
 CONG_KT.saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
 /* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
 function chuanHoaDb() { Object.values(db.rs || {}).forEach(o => Object.keys(o.forests || {}).forEach(k => { if (HAKModel.needsEnsure(o.forests[k])) Object.assign(o.forests[k], HAKModel.ensureForest(o.forests[k])); if (HAKLienKet.canChuan(o.forests[k])) HAKLienKet.chuanLo(o.forests[k]); }));

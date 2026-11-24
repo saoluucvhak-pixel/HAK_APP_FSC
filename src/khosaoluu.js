@@ -8,6 +8,7 @@
  *   truoc-khoi-phuc-*.sqlite             trước khi khôi phục toàn bộ
  *   truoc-khoi-phuc-lo-*.sqlite          trước khi khôi phục một lô
  *   truoc-xoa-*.sqlite                   trước lần lưu có xóa chủ rừng / lô
+ *   truoc-cap-nhat-sheets-*.sqlite       trước lần lưu đầu tiên sau khi áp dữ liệu từ Google Sheets (PR D bước 2)
  *
  * KHÔI PHỤC TỪ BẢN .sqlite (khoiPhuc): KHÔNG chép đè file cơ sở dữ liệu đang dùng. Bản sao lưu được chép ra thư mục tạm, mở bằng Store (bản cấu trúc cũ được nâng cấp
  * TRÊN BẢN CHÉP, file sao lưu gốc không bị đụng), đọc thành dữ liệu hồ sơ rồi đi qua đúng đường "Khôi phục toàn bộ → thay toàn bộ" (Store.applyImport 'replace'):
@@ -25,7 +26,8 @@ const LOAI = [
   {ma: 'nangcap', ten: 'Trước khi nâng cấp', re: /^truoc-nang-cap-[\w-]+\.sqlite$/},
   {ma: 'khoiphuclo', ten: 'Trước khi khôi phục lô', re: /^truoc-khoi-phuc-lo-[\w-]+\.sqlite$/},
   {ma: 'khoiphuc', ten: 'Trước khi khôi phục', re: /^truoc-khoi-phuc-[\w-]+\.sqlite$/},
-  {ma: 'xoa', ten: 'Trước khi xóa', re: /^truoc-xoa-[\w-]+\.sqlite$/}
+  {ma: 'xoa', ten: 'Trước khi xóa', re: /^truoc-xoa-[\w-]+\.sqlite$/},
+  {ma: 'sheets', ten: 'Trước khi lưu dữ liệu từ Google Sheets', re: /^truoc-cap-nhat-sheets-[\w-]+\.sqlite$/}
 ];
 const loaiCua = name => LOAI.find(l => l.re.test(name)) || null;
 const cungFile = (a, b) => process.platform === 'win32' ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase() : path.resolve(a) === path.resolve(b);

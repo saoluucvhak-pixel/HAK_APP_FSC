@@ -145,6 +145,18 @@
     });
   }
 
-  const api = {tao, conNhap, dbGhi, chot, chuChot, chup, khoiPhuc, aliasHoan, veBanDaLuu, tamChup, tamPhucHoiLo, tamPhucHoiAlias};
+  /* PR D bước 2: mô tả CỤ THỂ những gì đang chưa lưu. Hàm thuần.
+   *  vao = {lo: [{ten, moi?, phieuMoi?}], chu: [{ten, moi}], alias: số ánh xạ biển số}
+   *  ra  = {dong: 'Chưa lưu: N lô, X chủ rừng mới, Y ánh xạ biển số' (chỉ nêu phần có), chiTiet: [dòng], tong: số mục} */
+  function tomTat(vao) {
+    const lo = (vao && vao.lo) || [], chuMoi = ((vao && vao.chu) || []).filter(c => c && c.moi), alias = (vao && vao.alias) | 0, p = [];
+    if (lo.length) p.push(lo.length + ' lô'); if (chuMoi.length) p.push(chuMoi.length + ' chủ rừng mới'); if (alias) p.push(alias + ' ánh xạ biển số');
+    const ct = [];
+    lo.forEach(l => ct.push('Lô ' + (l.ten || '(chưa có mã)') + (l.moi ? ' (lô mới)' : '') + (l.phieuMoi ? ': ' + l.phieuMoi + ' phiếu mới' : '')));
+    chuMoi.forEach(c => ct.push('Chủ rừng mới: ' + (c.ten || '(chưa có tên)')));
+    if (alias) ct.push(alias + ' ánh xạ tên xe → biển số');
+    return {dong: p.length ? 'Chưa lưu: ' + p.join(', ') : '', chiTiet: ct, tong: lo.length + chuMoi.length + (alias ? 1 : 0)};
+  }
+  const api = {tomTat, tao, conNhap, dbGhi, chot, chuChot, chup, khoiPhuc, aliasHoan, veBanDaLuu, tamChup, tamPhucHoiLo, tamPhucHoiAlias};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKNhap = api;
 })(typeof self !== 'undefined' ? self : this);

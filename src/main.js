@@ -462,6 +462,8 @@ function registerIpc() {
   })()));
   ipcMain.handle('bk:readJson', (e, f) => wrap(() => { const it = bkFile(f); if (it.dinhDang !== 'json') throw new Error('Không phải bản sao lưu .json.'); if (it.size > 512 * 1024 * 1024) throw new Error('File quá lớn.'); return {name: it.name, text: fs.readFileSync(it.file, 'utf8')}; }, true)());
   ipcMain.handle('bk:delete', (e, f) => wrap(() => { const r = KhoSaoLuu.xoa(bkDirs(), f, loc.dbFile); log('INFO', 'Xóa bản sao lưu ' + r.name); return r; }, true)());
+  /* PR D bước 2: tái dùng snapshotFile (như truoc-xoa); không tham số; giữ 10 bản gần nhất; lỗi → renderer KHÔNG lưu */
+  ipcMain.handle('bk:truocSheets', () => wrap(() => { const f = store.snapshotFile('truoc-cap-nhat-sheets', {keep: 10}); return {file: f ? path.basename(f) : ''}; })());
   ipcMain.handle('bk:autoNow', afterReloc(async () => { if (!store) return {ok: false, error: NO_STORE(), unavailable: true}; await runAutoBackup(true); return {ok: !!(autoBk && autoBk.ok), auto: autoBk, error: autoBk && !autoBk.ok ? autoBk.error : undefined}; }));
   ipcMain.handle('phieucan:open', async (e, rows, company) => { try { await openPhieuCan(rows, company); return {ok: true}; } catch (err) { log('ERROR', 'phieucan: ' + err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('phieucan:nhung', async (e, rows, company, dark) => {
@@ -737,10 +739,12 @@ function createWindow() {
     // giao diện treo/không trả lời trong 3 giây: vẫn cho đóng (không kẹt cửa sổ), coi như không có thay đổi để hỏi
     const ask = (js, fallback) => Promise.race([win.webContents.executeJavaScript(js), new Promise(r => setTimeout(() => r(fallback), 3000))]).catch(() => fallback);
     let n = 0; try { n = (await ask('window.__stDirty ? window.__stDirty().length : 0', 0)) || 0; } catch (err) { n = 0; }
+    let tomTat = null; if (n > 0) { try { tomTat = await ask('window.__stTomTat ? window.__stTomTat() : null', null); } catch (err) { tomTat = null; } }   // PR D bước 2: nêu CỤ THỂ phần sẽ lưu / mất
+    const chiTiet = tomTat && Array.isArray(tomTat.chiTiet) && tomTat.chiTiet.length ? '\n\n' + (tomTat.dong || 'Chưa lưu:') + '\n' + tomTat.chiTiet.slice(0, 12).map(x => '• ' + String(x).slice(0, 160)).join('\n') + (tomTat.chiTiet.length > 12 ? '\n• … và ' + (tomTat.chiTiet.length - 12) + ' mục nữa' : '') : '';
     let pick = 1;   // 0 = lưu và đóng, 1 = bỏ thay đổi và đóng (không có gì để hỏi), 2 = quay lại
     if (n > 0) {
       const auto = {save: 0, discard: 1, back: 2}[process.env.HAKQN_CLOSE];
-      pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Lô đang mở có nhân công, xe hoặc phiếu cân chưa lưu. Dữ liệu chưa lưu sẽ mất nếu đóng ngay.', buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
+      pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Lô đang mở có nhân công, xe hoặc phiếu cân chưa lưu. Dữ liệu chưa lưu sẽ mất nếu đóng ngay.' + chiTiet, buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
       if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveAll ? window.__stSaveAll() : (window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true})'), new Promise(res => setTimeout(() => res(null), Math.min(120000, 15000 + 10000 * n)))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
     }
     if (pick === 2) return;
