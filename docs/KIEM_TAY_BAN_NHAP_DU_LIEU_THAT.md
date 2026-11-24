@@ -14,6 +14,7 @@ Tài liệu cho **chủ ứng dụng** tự làm, trên **bản sao** dữ liệ
 1. Mở **Dữ liệu Google Sheets**, đồng bộ (chỉ đọc).
 2. Vào **Cài đặt → Google Sheets → Báo cáo chất lượng dữ liệu Google Sheets → Tạo báo cáo chất lượng**.
 3. Bấm **Sao chép bảng** (hoặc chụp màn hình) và gửi lại. Bảng chỉ có số đếm: số hợp đồng theo trạng thái Đủ / Cần xem / Lỗi, hợp đồng nhiều CCCD, số rừng, rừng thiếu mã, rừng ghép tạm, số phiếu, phiếu ngày không đọc được, phiếu thiếu biển số, phiếu nghi đổi số, cặp trùng khóa, số dòng mỗi tab, thời gian tổng hợp. **Không có** CCCD, họ tên, địa chỉ, số hợp đồng, số phiếu, biển số, mã rừng.
+   - **"Số phiếu nghi đổi số"** dùng đúng quy tắc của màn cập nhật vào hồ sơ: phiếu trên Sheet không khớp số phiếu và ngày nào nhưng trùng ngày, biển số và khối lượng (lệch tối đa 1 kg) với một phiếu **đã có trong lô** của ứng dụng. Vì vậy trên bản sao chưa có lô nào của các rừng này thì số này là 0; muốn thấy số có ý nghĩa, hãy chạy báo cáo trên bản sao đã có sẵn các lô của dữ liệu thật.
 
 ## 3. Các ca bắt buộc (làm trên bản sao)
 Với mỗi ca: mở hợp đồng, bấm **Cập nhật vào hồ sơ**, **kiểm bản nháp** (thanh “Chưa lưu” nêu số lô, chủ rừng mới, ánh xạ biển số), rồi bấm **Lưu dữ liệu vào lô** ở từng lô.
