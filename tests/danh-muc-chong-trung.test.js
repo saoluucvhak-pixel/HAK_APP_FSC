@@ -88,7 +88,7 @@ test('A-06 / ND-05: người / xe mới của lô → chỉ thêm vào Danh mụ
   const p = k.dmDoiTuong[0].nguoi[0]; assert.deepEqual([p.hoTen, p.cccd, p.gioiTinh, p.ngaySinh, p.vaiTro.nhanCong], ['NGUYỄN VĂN MỚI', '049090000123', 'Nam', '02/03/1990', true]);
   assert.equal(k.nguoi[0].id, p.id); assert.equal(k.dmXe[1].bks, '92C-111.11'); assert.equal(k.dmXe[1].hanKiemDinh, '01/01/2030');
   assert.deepEqual(DT.moiTuLo(k.dmDoiTuong, k.dmXe, nc, dx), {nguoi: [], xe: []}, 'lưu lại lô: không hỏi lại');
-  const ui = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app', '20-nhap-tu-danh-muc.js'), 'utf8'), f = ui.slice(ui.indexOf('function dmGhiTuLo'), ui.indexOf('function dmLechLo'));
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app', '20-nhap-tu-danh-muc.js'), 'utf8'), f = ui.slice(ui.indexOf('let dmHopCho'), ui.indexOf('function dmLechLo'));   // bước 3: hộp thoại trong ứng dụng thay confirm()
   assert.ok(!/dmLaoDong|dmXeVC|themLaoDong|themXe\(/.test(f.replace(/\/\*[\s\S]*?\*\//g, '')), 'dmGhiTuLo không ghi danh mục cũ');
-  assert.match(f, /confirm\(/);
+  assert.ok(!/\bconfirm\(/.test(f.replace(/\/\*[\s\S]*?\*\//g, '')), 'hỏi bằng hộp thoại trong ứng dụng, không dùng confirm()'); assert.match(f, /dlgMo\(/); assert.match(f, /data-act="dmHopThem"/); assert.match(f, /data-act="dmHopLo"/);
 });

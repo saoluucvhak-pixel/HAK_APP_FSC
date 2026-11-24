@@ -68,6 +68,8 @@ document.addEventListener('click', async e => {
   if (act === 'dmCapNhatLo') return dmCapNhatLo(el.dataset.kind);
   if (act === 'dmChonNhieu') return dmChonNhieuMo(el.dataset.kind);
   if (act === 'dmChonNhieuLuu') return dmChonNhieuLuu();
+  if (act === 'dmHopThem') return dmHopXuLy(true);
+  if (act === 'dmHopLo') return dmHopXuLy(false);
   if (act === 'dmPickAll') {
     document.querySelectorAll('#dlgBox [data-dmpick]:not(:disabled)').forEach(cb => { cb.checked = true; dmPickState.sel.add(+cb.dataset.dmpick); });
     const cnt = document.getElementById('dmPickCount'); if (cnt) cnt.textContent = String(dmPickState.sel.size);
@@ -368,3 +370,8 @@ if (pendingNotice) { NAV.view = 'settings'; setg.msg = [pendingNotice, 'ok']; pe
 if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind;
 if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});
 render();
+/* hộp “Thêm vào danh mục để dùng lại?” (sau khi lưu lô có người / xe mới): Esc = Chỉ lưu trong lô (chạy trước bộ xử lý Esc chung của #dlgBox) */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !document.querySelector('#dlgBox.on #dmHopDlg')) return;
+  e.preventDefault(); e.stopImmediatePropagation(); dmHopXuLy(false);
+}, true);
