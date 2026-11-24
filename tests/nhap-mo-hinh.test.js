@@ -23,7 +23,7 @@ function mo() {
     o2: {id: 'o2', ten: 'Chủ 2', forests: {f3: {id: 'f3', info: {maRung: 'R3'}, n: 1}}}
   }, bienAlias: {a1: 'X1'}};
   const st = Nhap.tao(Delta.snapshot(db));
-  return {db, st, dia: clone(db), seq: 0};
+  return {db, st, dia: clone(db), seq: 0, khoa: new Set()};   // khoa: lô chốt / dừng (chỉ đọc), mô phỏng loKhoa
 }
 const ghiRa = W => Nhap.dbGhi(W.db, W.st);                      // nội dung sẽ ghi (không sửa gì)
 function ghi(W) {                                               // saveOnce thành công
@@ -67,18 +67,25 @@ function dangRam(db) { const o = {}, f = {}; Object.entries(db.rs).forEach(([oid
 
 /* ===== thao tác (mã thật + mô hình) ===== */
 function opGop(W, M, R) {
+  if (!W.st.snap) W.st.snap = Delta.snapshot(Nhap.dbGhi(W.db, W.st));   // F5: savedSnap = null → giao diện chụp trước khi tạo nháp (persistLo, gsApply, nhapTamKhoiPhuc)
   const kieu = R() < 0.35 ? 'chuMoi' : 'chuCu', oid = kieu === 'chuMoi' ? 'oN' + (++W.seq) : (R() < 0.5 ? 'o1' : 'o2');
   if (!W.db.rs[oid] && kieu === 'chuCu') return false;
-  const mois = [], sua = [];
+  const mois = [], sua = []; let suaChu = null;
   if (!W.db.rs[oid]) { W.db.rs[oid] = {id: oid, ten: 'Mới ' + oid, forests: {}}; W.st.chuNhap.set(oid, {moi: true}); M.draft.owners[oid] = {ten: 'Mới ' + oid}; M.ownerDirty.set(oid, true); }
-  else if (R() < 0.4) { W.db.rs[oid].ten = 'Sửa ' + (++W.seq); if (!W.st.chuNhap.has(oid)) W.st.chuNhap.set(oid, {moi: false}); M.draft.owners[oid].ten = W.db.rs[oid].ten; M.ownerDirty.set(oid, true); }
+  else if (R() < 0.4) { suaChu = {oid, ten0: W.db.rs[oid].ten, coCn: W.st.chuNhap.has(oid), coOd: M.ownerDirty.has(oid), tenM0: M.draft.owners[oid].ten}; W.db.rs[oid].ten = 'Sửa ' + (++W.seq); if (!W.st.chuNhap.has(oid)) W.st.chuNhap.set(oid, {moi: false}); M.draft.owners[oid].ten = W.db.rs[oid].ten; M.ownerDirty.set(oid, true); }
   const soLo = 1 + Math.floor(R() * 2);
   for (let i = 0; i < soLo; i++) {
     const co = Object.keys(W.db.rs[oid].forests);
     if (co.length && R() < 0.5) { const fid = co[Math.floor(R() * co.length)]; if (!locked(W, fid)) { W.db.rs[oid].forests[fid].n++; M.draft.forests[fid].n++; sua.push(fid); } }
     else { const fid = 'fN' + (++W.seq); W.db.rs[oid].forests[fid] = {id: fid, info: {maRung: fid}, n: 0}; M.draft.forests[fid] = {oid, n: 0}; mois.push(fid); }
   }
-  const cham = mois.concat(sua); if (!cham.length) return true;
+  const cham = mois.concat(sua);
+  if (!cham.length && suaChu) {   // như gsApply (neoLo): thông tin chủ rừng sửa nháp phải được GIỮ bằng một lô chưa khóa; không có lô nào thì từ chối ghi (hoàn lại)
+    const neo = Object.keys(W.db.rs[oid].forests).find(f => !locked(W, f));
+    if (neo) { sua.push(neo); cham.push(neo); }
+    else { W.db.rs[oid].ten = suaChu.ten0; if (!suaChu.coCn) W.st.chuNhap.delete(oid); M.draft.owners[oid].ten = suaChu.tenM0; if (!suaChu.coOd) M.ownerDirty.delete(oid); return false; }
+  }
+  if (!cham.length) return true;
   cham.forEach(id => { W.st.loDirty.add(id); M.dirtyF.add(id); }); mois.forEach(id => { W.st.loMoi.add(id); M.moiF.add(id); });
   if (R() < 0.5) {
     const k = R() < 0.5 ? 'a1' : 'aN' + (1 + Math.floor(R() * 3)), had = Object.hasOwn(W.db.bienAlias, k), old = W.db.bienAlias[k], v = 'V' + (++W.seq);
@@ -88,7 +95,7 @@ function opGop(W, M, R) {
   }
   return true;
 }
-const locked = () => false;
+const locked = (W, fid) => !!(W.khoa && W.khoa.has(fid));   // F5: lô chốt / dừng không bao giờ vào bản nháp
 const dirtyL = W => [...W.st.loDirty];
 function opLuu(W, M, R, loi) {   // stSave
   const ds = dirtyL(W); if (!ds.length) return false; const fid = ds[Math.floor(R() * ds.length)], lc = loCua(W, fid); if (!lc) return false; const oid = lc[0];
@@ -110,7 +117,7 @@ function opBo(W, M, R) {   // stDiscard → loHoan
   Nhap.veBanDaLuu(W.db, W.st, fid); mhBo(M, fid); if (W.st.canGhi) { W.st.canGhi = false; ghi(W); } return true;   // như loVeBanDaLuu: ánh xạ vừa chốt thì persist
 }
 function opXoaLo(W, M, R) {   // delForest
-  const tat = Object.entries(W.db.rs).flatMap(([oid, o]) => Object.keys(o.forests || {}).map(f => [oid, f])); if (!tat.length) return false;
+  const tat = Object.entries(W.db.rs).flatMap(([oid, o]) => Object.keys(o.forests || {}).map(f => [oid, f])).filter(([, f]) => !locked(W, f)); if (!tat.length) return false;
   const [oid, fid] = tat[Math.floor(R() * tat.length)];
   if (W.st.loDirty.has(fid) || W.st.loMoi.has(fid)) Nhap.veBanDaLuu(W.db, W.st, fid);
   W.st.loDirty.delete(fid); W.st.loMoi.delete(fid); Nhap.aliasHoan(W.db, W.st, fid);
@@ -119,6 +126,7 @@ function opXoaLo(W, M, R) {   // delForest
 }
 function opXoaRung(W, M, R) {   // delRs
   const ids = Object.keys(W.db.rs); if (!ids.length) return false; const oid = ids[Math.floor(R() * ids.length)], o = W.db.rs[oid];
+  if (Object.keys(o.forests || {}).some(f => locked(W, f))) return false;   // chủ rừng có lô chốt / dừng: không xóa
   Object.keys(o.forests || {}).forEach(fid => { W.st.loDirty.delete(fid); W.st.loMoi.delete(fid); Nhap.aliasHoan(W.db, W.st, fid); mhBo(M, fid); delete M.draft.forests[fid]; delete M.saved.forests[fid]; });
   delete W.db.rs[oid]; W.st.chuNhap.delete(oid); delete M.draft.owners[oid]; delete M.saved.owners[oid]; M.ownerDirty.delete(oid); ghi(W); return true;
 }
@@ -143,7 +151,34 @@ function opDongDot(W, M) {   // nhapTamGhi → mở lại → nhapTamKhoiPhuc (h
   Nhap.tamPhucHoiAlias(W.db, W.st, d.alias); if (W.st.canGhi) { W.st.canGhi = false; ghi(W); }
   return 'dongdot';
 }
-const OPS = [[opGop, 5], [opLuu, 4], [(W, M, R) => opLuu(W, M, R, true), 1], [opRace, 1.5], [opBo, 2], [opXoaLo, 1], [opXoaRung, 0.5], [opSuaTay, 1], [opGhiTuDo, 1.5], [opKhoiPhucToanBo, 0.4], [opDongDot, 1.2]];
+
+/* ===== F5: các đường chưa phủ trước đây ===== */
+const chupW = W => ({db: clone(W.db), d: new Set(W.st.loDirty), m: new Set(W.st.loMoi), c: new Map([...W.st.chuNhap].map(([k, v]) => [k, Object.assign({}, v)])), a: new Map([...W.st.aliasNhap].map(([k, v]) => [k, Object.assign({}, v, {lots: new Set(v.lots)})]))});
+function hoanW(W, x) { W.db = clone(x.db); W.st.loDirty = new Set(x.d); W.st.loMoi = new Set(x.m); W.st.chuNhap = new Map(x.c); W.st.aliasNhap = new Map(x.a); }
+const cloneM = M => ({saved: clone(M.saved), draft: clone(M.draft), dirtyF: new Set(M.dirtyF), moiF: new Set(M.moiF), ownerDirty: new Map(M.ownerDirty), pend: new Map([...M.pend].map(([k, v]) => [k, Object.assign({}, v, {lots: new Set(v.lots)})]))});
+function opGopLoi(W, M, R) {   // gsApply LỖI giữa chừng: db và cả ba sổ trả về đúng như trước khi áp (nhánh catch của gsApply)
+  const w0 = chupW(W), m0 = cloneM(M); const r = opGop(W, M, R); hoanW(W, w0); Object.assign(M, m0); return r === false ? false : 'gopLoi';
+}
+function opSuaLoKhoa(W, M, R) {   // gõ vào lô chốt / dừng: persistLo → loVeBanDaLuu: không bao giờ vào nháp, trả về bản đã lưu
+  if (!W.st.snap) return false; const co = [...W.khoa].filter(f => loCua(W, f)); if (!co.length) return false;
+  const fid = co[Math.floor(R() * co.length)], lc = loCua(W, fid); lc[1].forests[fid].n += 7;   // người dùng gõ
+  Nhap.veBanDaLuu(W.db, W.st, fid); if (W.st.canGhi) { W.st.canGhi = false; ghi(W); } return 'suaLoKhoa';
+}
+function opMatSnap(W) {   // mở app mà HAKDelta.snapshot lỗi (savedSnap = null), chưa có nháp nào
+  if (Nhap.conNhap(W.st)) return false; W.st.snap = null; return 'matSnap';
+}
+function opLk(W, M, R, loi) {   // lkApply (luồng cũ): lưu thẳng một lô, kèm ánh xạ biển số; lỗi thì db trả về snapshot và nhapKhoiPhuc
+  const tat = Object.entries(W.db.rs).flatMap(([oid, o]) => Object.keys(o.forests || {}).map(f => [oid, f])).filter(([, f]) => !locked(W, f)); if (!tat.length) return false;
+  const [oid, fid] = tat[Math.floor(R() * tat.length)];
+  const snapshotDb = clone(W.db), sNhap = Nhap.chup(W.st), m0 = cloneM(M);
+  W.db.rs[oid].forests[fid].n++; M.draft.forests[fid].n++;
+  let k = null, v = null;
+  if (R() < 0.5) { k = R() < 0.5 ? 'a1' : 'aN' + (1 + Math.floor(R() * 3)); v = 'L' + (++W.seq); W.st.aliasNhap.delete(k); W.db.bienAlias[k] = v; M.draft.alias[k] = v; M.pend.delete(k); }
+  Nhap.chuChot(W.st, oid); const hadLo = W.st.loDirty.delete(fid);
+  if (loi) { if (hadLo) W.st.loDirty.add(fid); W.db = clone(snapshotDb); Nhap.khoiPhuc(W.st, sNhap); Object.assign(M, m0); return 'lkLoi'; }
+  ghi(W); mhLuu(M, fid); if (k) M.saved.alias[k] = v; return 'lk';
+}
+const OPS = [[opGop, 5], [opLuu, 4], [(W, M, R) => opLuu(W, M, R, true), 1], [opRace, 1.5], [opBo, 2], [opXoaLo, 1], [opXoaRung, 0.5], [opSuaTay, 1], [opGhiTuDo, 1.5], [opKhoiPhucToanBo, 0.4], [opDongDot, 1.2], [opGopLoi, 0.8], [opSuaLoKhoa, 0.8], [opMatSnap, 0.3], [opLk, 1.5], [(W, M, R) => opLk(W, M, R, true), 0.6]];
 function chonOp(R) { const t = OPS.reduce((a, [, w]) => a + w, 0); let x = R() * t; for (const [f, w] of OPS) { if ((x -= w) < 0) return f; } return OPS[0][0]; }
 
 /* ===== kiểm bất biến ===== */
@@ -153,6 +188,8 @@ function kiem(W, M, nhat) {
   assert.deepEqual(dangRam(ghiNay), dangRam(W.dia), 'I8: không có thay đổi đã chốt mà chưa xuống đĩa (bản sẽ ghi == bản đã ghi gần nhất)\n' + nhat);
   assert.deepEqual(dangRam({rs: W.db.rs, bienAlias: W.db.bienAlias}), dangRam({rs: Object.fromEntries(Object.entries(M.draft.owners).map(([oid, o]) => [oid, {ten: o.ten, forests: Object.fromEntries(Object.entries(M.draft.forests).filter(([, f]) => f.oid === oid).map(([fid, f]) => [fid, {n: f.n}]))}])), bienAlias: M.draft.alias}), 'I2/I3: bộ nhớ phải đúng bản nháp người dùng thấy\n' + nhat);
   assert.deepEqual([...W.st.loDirty].sort(), [...M.dirtyF].sort(), 'tập lô nháp\n' + nhat);
+  /* F5: lô chốt / dừng không bao giờ vào nháp và luôn giống bản đã lưu */
+  W.khoa.forEach(fid => { assert.ok(!W.st.loDirty.has(fid), 'lô khóa không vào nháp (' + fid + ')\n' + nhat); const lc = loCua(W, fid); if (lc) assert.equal(lc[1].forests[fid].n, M.saved.forests[fid].n, 'lô khóa luôn đúng bản đã lưu (' + fid + ')\n' + nhat); });
   /* I7 sổ không mồ côi */
   W.st.loMoi.forEach(id => assert.ok(W.st.loDirty.has(id), 'I7: loMoi ⊆ loDirty (' + id + ')\n' + nhat));
   W.st.loDirty.forEach(id => assert.ok(loCua(W, id), 'I7: lô nháp còn trong db (' + id + ')\n' + nhat));
@@ -163,6 +200,7 @@ function kiem(W, M, nhat) {
 
 function chayChuoi(seed) {
   const R = rng(seed), W = mo(), M = moHinh(), nhat = [], n = DO_DAI[0] + Math.floor(R() * (DO_DAI[1] - DO_DAI[0]));
+  if (R() < 0.5) W.khoa.add(R() < 0.5 ? 'f2' : 'f3');   // F5: một lô chốt / dừng ở nửa số chuỗi
   for (let i = 0; i < n; i++) {
     const op = chonOp(R), kq = op(W, M, R); nhat.push(op.name || 'loi');
     if (kq === false) continue;
