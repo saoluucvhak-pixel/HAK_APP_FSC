@@ -112,8 +112,6 @@ function dtChucVuChiTiet(o, p) {
   return cv.map(c => ' <span class="pill" data-cv="' + esc(c.id) + '">' + esc(c.ten) + '</span>').join('') + (p.chucVu && p.chucVu.length ? kn.map(n => ' <span class="pill" data-ng="' + esc(n) + '">' + esc(HAKNganh.tenNganh(db, n)) + '</span>').join('') : '');
 }
 function dtNganhDn(o) { const a = o.loai === 'phapnhan' && Array.isArray(o.nganh) ? o.nganh : []; return a.length ? '<div class="mut" data-nganh-dn>Ngành: ' + a.map(n => '<span class="pill" data-ng="' + esc(n) + '">' + esc(HAKNganh.tenNganh(db, n)) + '</span>').join(' ') + '</div>' : ''; }
-/* chỉ cho kiểm thử đầu-cuối (cổng CONG_KT): các danh sách chọn đã lọc theo ngành */
-CONG_KT.locNganh = {benNhanKhoan: () => benNhanKhoanHtml({}), benVanChuyen: () => doiTacKyVC(), taiXe: () => chonTaiXeHtml(''), nhanCong: () => dmNguonLd()};
 function panelSetDt() {
   const SF = HAKCore.sf, sfCfg = dtSfCfg();
   dtNhanTuTim('dm_doi_tuong', sfCfg, cd);
