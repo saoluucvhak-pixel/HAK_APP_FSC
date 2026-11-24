@@ -21,9 +21,18 @@ function stBlockText() {
   return 'Lô này còn thay đổi chưa lưu ở ' + [...(lo ? ['thông tin lô (đội, đội xe, số văn bản, chấm công…)'] : []), ...ks.map(k => ST_LABEL[k])].join(', ') + '. Bấm “Lưu dữ liệu vào lô” (hoặc “Bỏ thay đổi”) rồi mới tạo, xuất, in hồ sơ.';
 }
 function stBlockNote() { const t = stBlockText(); if (t) { pushNote(t, 'err'); const st = stCur(), k = st && HAKStage.dirty(st) ? HAKStage.dirtyKinds(st)[0] : null; if (k) NAV.ftab = ST_TAB[k]; render(); } return !!t; }
+/* PR D bước 2: mô tả cụ thể phần chưa lưu (lô, chủ rừng mới, ánh xạ biển số, phiếu mới) — dùng cho thanh “Chưa lưu” và hộp thoại khi đóng */
+function nhapTomTatUI() {
+  const lo = stDirtyList().map(k => { const [oid, fid] = k.split('|'), o = db.rs && db.rs[oid], f = o && o.forests && o.forests[fid]; if (!f) return null;
+    const st = stages[k], bs = new Set(((st && st.base && st.base.pc) || []).map(r => r._id)), pm = st && st.cur && st.cur.pc ? st.cur.pc.filter(r => !bs.has(r._id)).length : 0;
+    return {ten: (f.info && f.info.maRung) || f.id, moi: loMoi.has(fid), phieuMoi: pm}; }).filter(Boolean);
+  const chu = [...chuNhap].map(([oid, v]) => ({ten: ((db.rs && db.rs[oid] && db.rs[oid].info) || {}).ten || '', moi: !!(v && v.moi)}));
+  return HAKNhap.tomTat({lo, chu, alias: aliasNhap.size});
+}
+window.__stTomTat = () => { try { return nhapTomTatUI(); } catch (e) { return null; } };
 /* thanh “Chưa lưu” của cả lô (mọi tab của lô) */
 function loBar() { const t = stBlockText(); return t ? '<div class="msg warn" id="loDirtyBar"><b>Chưa lưu</b> — ' + esc(t.replace(/ Bấm .*$/,
-'')) + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : ''; }
+'')) + (() => { const s = nhapTomTatUI(); return s.dong ? ' <span class="mut" id="loTomTat">(' + esc(s.dong.replace(/^Chưa lưu: /, 'Gồm ')) + ')</span>' : ''; })() + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : ''; }
 /* lưu phần thông tin lô (khi không có bảng nháp) */
 async function luuLoTT(opt) {
   const f = curForest(); if (!f) return {ok: false};
