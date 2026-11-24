@@ -1,5 +1,22 @@
 # Nhật ký thay đổi
 
+## 3.5.0 — Ngành nghề và Chức vụ, Cài đặt chia tab, an toàn bản nháp, báo cáo chất lượng Google Sheet
+
+### Điểm mới
+
+- **Ngành nghề và Chức vụ:** hai danh mục mới (Danh mục → "Ngành nghề và chức vụ"), thêm / đổi tên / Ngừng sử dụng được. Người chọn nhiều chức vụ, chọn "Khác" thì phải chọn ngành; doanh nghiệp được chọn cả hai ngành. Danh sách Bên nhận khoán, nhân công, bên vận chuyển, tài xế lọc theo ngành khi đã khai (dữ liệu cũ chưa khai vẫn hiện như trước).
+- **Chức vụ / Vị trí thống nhất; Danh mục Vị trí chi tiết** (nhiệm vụ, ghi chú); màn **Định mức chia 4 tab**.
+- **Cài đặt dùng tab ngang** cùng kiểu Danh mục: Dữ liệu · Sao lưu và khôi phục · Google Sheets · Hiển thị · Hướng dẫn · Cần đối chiếu; **Sao lưu và khôi phục chia ba tab con** (Thao tác · Thư mục và lịch · Các bản sao lưu).
+- **Hộp thoại trong ứng dụng thay `confirm()`** khi lưu lô có người / xe mới: liệt kê từng dòng kèm ô tích, "Thêm vào danh mục" hoặc "Chỉ lưu trong lô".
+- **Lưới an toàn bản nháp:** lần lưu đầu tiên sau khi áp dữ liệu từ Google Sheets tự sao lưu file trước ("Trước khi lưu dữ liệu từ Google Sheets", giữ 10 bản; sao lưu lỗi thì không lưu); thanh "Chưa lưu" nêu "Gồm N lô, X chủ rừng mới, Y ánh xạ biển số"; hộp khi đóng còn nháp liệt kê cụ thể.
+- **Báo cáo chất lượng Google Sheet** (Cài đặt → Google Sheets): bảng số đếm, chỉ đọc, không chứa thông tin cá nhân (CCCD, tên, địa chỉ, mã hợp đồng, số phiếu, biển số, mã rừng); có test bảo mật bắt buộc.
+
+### Sửa lỗi
+
+- **Bản nháp:** tách lõi thuần `src/nhap.js` kèm test mô hình ngẫu nhiên; sửa 4 lỗi mà test mô hình tìm ra ở ánh xạ biển số trong nháp, khôi phục bản nháp và hoàn tác về bản đã lưu (có test đỏ trước khi sửa).
+- **Thông báo:** "Đã lưu dữ liệu vào lô…" vẫn hiện cùng kết quả chọn thêm danh mục.
+- **Bảo toàn bản in:** 206/206 tài liệu biểu mẫu `.docx` giống từng byte so với v3.3.0. Không đổi cấu trúc cơ sở dữ liệu (không migration); các trường mới đều tùy chọn và chỉ ghi khi có dữ liệu.
+
 ## 3.4.0 — Tài xế theo xe, làm rõ Danh mục đối tượng, sửa khối lượng phiếu và giao diện
 
 ### Điểm mới
