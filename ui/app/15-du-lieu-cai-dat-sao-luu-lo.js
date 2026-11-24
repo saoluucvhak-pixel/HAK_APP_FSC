@@ -43,7 +43,7 @@ function settingsFrame(active, inner) {
     (nhomHT ? '<nav class="hak-catalog-tabs sub" id="setSubTabs" aria-label="Nhóm hiển thị">' + SET_HIEN_THI.map(([v, l, a, id]) => '<button type="button"' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="' + id + '">' + l + '</button>').join('') + '</nav>' : '') +
     '<section class="mucNoiDung">' + inner + '</section>';
 }
-const setgs = {st: null, msg: null};
+const setgs = {st: null, msg: null, cl: null};
 function panelSetGs() {
   if (!HB) return '<div class="card"><div class="msg warn">Địa chỉ Google Sheets chỉ có ở bản cài trên Windows.</div></div>';
   const st = setgs.st || {};
@@ -51,7 +51,11 @@ function panelSetGs() {
     '<p class="mut" style="margin-top:0">Bảng tính (chỉ đọc) dùng cho màn <b>Dữ liệu Google Sheets</b>: tab HoSoKeo (phiếu cân), HoSoRung, ToaDoRung. Bảng tính để chế độ “Ai có liên kết đều xem được”; nếu bị giới hạn quyền, đăng nhập Google ở màn Tra cứu.</p>' +
     (setgs.msg ? '<div class="msg ' + setgs.msg.kind + '" id="setGsMsg">' + esc(setgs.msg.text) + '</div>' : '') +
     '<div class="row"><input id="setGsLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '" placeholder="https://docs.google.com/spreadsheets/d/…"><button class="btn" data-act="setGsSave">Lưu địa chỉ</button></div>' +
-    '<p class="mut" style="margin-bottom:0">Việc đồng bộ dữ liệu làm ở màn Dữ liệu Google Sheets.</p></div>';
+    '<p class="mut" style="margin-bottom:0">Việc đồng bộ dữ liệu làm ở màn Dữ liệu Google Sheets.</p></div>' +
+    '<div class="card"><h3 style="margin-top:0">Báo cáo chất lượng dữ liệu Google Sheets</h3>' +
+    '<p class="mut" style="margin-top:0">Chỉ đọc. Bấm một nút để có <b>bảng số đếm</b> (số hợp đồng theo trạng thái, số rừng thiếu mã, số phiếu lỗi ngày, thiếu biển số, nghi đổi số, cặp trùng khóa, thời gian tổng hợp…). <b>Không có</b> CCCD, họ tên, địa chỉ, số hợp đồng, số phiếu, biển số hay mã rừng: có thể gửi lại để kiểm tra dữ liệu thật mà không lộ thông tin cá nhân.</p>' +
+    '<div class="row"><button class="btn" data-act="setGsChatLuong" id="setGsChatLuong">Tạo báo cáo chất lượng</button>' + (setgs.cl && setgs.cl.ok ? '<button class="btn ghost" data-act="setGsCLCopy" id="setGsCLCopy">Sao chép bảng</button>' : '') + '</div>' +
+    (setgs.cl ? (setgs.cl.ok ? '<pre id="setGsCLBang" style="white-space:pre-wrap;margin:8px 0 0">' + esc(setgs.cl.bang) + '</pre>' : '<div class="msg warn" id="setGsCLLoi">' + esc(setgs.cl.error || 'Chưa có dữ liệu Google Sheets: đồng bộ ở màn Dữ liệu Google Sheets trước.') + '</div>') : '') + '</div>';
 }
 function panelSetFmt() {
   const row = (v, label, ex) => '<label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink)"><input type="radio" name="numStyle" value="' + v + '"' + ((db.dinhDangSo === 'en' ? 'en' : 'vi') === v ? ' checked' : '') + ' data-act="setNumStyle"> <span><b>' + label + '</b> · ví dụ ' +
