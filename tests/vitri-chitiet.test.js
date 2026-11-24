@@ -18,13 +18,13 @@ test('sua: đặt và xóa nhiemVu/ghiChu (rỗng thì bỏ khóa)', () => {
   assert.deepEqual(dm[0], {id: 'vt1', ten: 'Thợ A', ngung: false, nhiemVu: 'Bốc xếp'});
   assert.equal(VT.sua(dm, 'vt9', {}).ok, false);
 });
-test('xoa: chưa dùng thì xóa hẳn; đang dùng thì chuyển Ngừng sử dụng; vị trí mặc định không xóa', () => {
+test('xoa: chưa dùng thì xóa hẳn; đang dùng thì chuyển Ngừng sử dụng; vị trí mặc định cũng theo quy tắc này (CHỦ 24/11/2026)', () => {
   const db = {dmViTri: [], rs: {}};
   VT.them(db.dmViTri, 'Thợ A'); VT.them(db.dmViTri, 'Thợ B'); VT.them(db.dmViTri, 'Tổ trưởng');
   db.rs = {o1: {forests: {f1: {nc: [{chucDanh: 'Thợ B', viTriId: 'vt2'}]}}}};
   const r1 = VT.xoa(db, 'vt1'); assert.equal(r1.ok, true); assert.equal(r1.kieu, 'xoa'); assert.equal(VT.timId(db.dmViTri, 'vt1'), null);
   const r2 = VT.xoa(db, 'vt2'); assert.equal(r2.ok, true); assert.equal(r2.kieu, 'ngung'); assert.equal(VT.timId(db.dmViTri, 'vt2').ngung, true); assert.match(r2.thongBao, /Ngừng sử dụng/);
-  const r3 = VT.xoa(db, 'vt3'); assert.equal(r3.ok, false); assert.match(r3.error, /mặc định/);
+  const r3 = VT.xoa(db, 'vt3'); assert.equal(r3.ok, true); assert.equal(r3.kieu, 'xoa'); assert.equal(VT.timId(db.dmViTri, 'vt3'), null);   // “Tổ trưởng” (mặc định) chưa dùng: xóa được
   assert.equal(VT.xoa(db, 'vt99').ok, false);
 });
 test('dangDung: tính theo nhân công, định biên, định mức BHLĐ, đơn giá của lô và đội', () => {
@@ -63,4 +63,12 @@ test('P2-1 dangDung đếm viTriId mặc định của người và dmLaoDong; x
   const c = mk(); c.dmDoiTuong = [{nguoi: [{viTriId: 'vt9'}, {}]}]; c.dmLaoDong = [{viTri: 'Khác'}];
   assert.equal(VT.dangDung(c, 'vt1').tong, 0);
   assert.equal(VT.xoa(c, 'vt1').kieu, 'xoa');
+});
+
+test('vị trí mặc định ĐANG DÙNG: không xóa hẳn, chuyển Ngừng sử dụng kèm cảnh báo nêu nơi đang dùng; xóa xong không tự mọc lại', () => {
+  const db = {dmViTri: [], dinhBien: [{chucDanh: 'Công nhân cưa', soNguoi: 2}], rs: {}};
+  VT.them(db.dmViTri, 'Công nhân cưa'); VT.them(db.dmViTri, 'Công nhân khai thác');
+  const dung = VT.xoa(db, 'vt1'); assert.equal(dung.ok, true); assert.equal(dung.kieu, 'ngung'); assert.equal(VT.timId(db.dmViTri, 'vt1').ngung, true);
+  assert.match(dung.thongBao, /đang được dùng/); assert.match(dung.thongBao, /Ngừng sử dụng/); assert.match(dung.thongBao, /định biên/);
+  const chua = VT.xoa(db, 'vt2'); assert.equal(chua.kieu, 'xoa'); assert.equal(VT.dung(db).some(v => v.ten === 'Công nhân khai thác'), false, 'vị trí mặc định chưa dùng đã xóa không tự được thêm lại');
 });

@@ -1,6 +1,6 @@
 'use strict';
 /* Danh mục Vị trí chi tiết (nhiệm vụ, ghi chú, xóa/ngừng) và màn Định mức 4 tab (Electron thật, SQLite thật):
- *  - Vị trí: gieo sẵn khi trống; thêm với nhiệm vụ + ghi chú; sửa tại chỗ; xóa chưa dùng thì mất, đang dùng thì chuyển Ngừng sử dụng; vị trí mặc định không có nút Xóa;
+ *  - Vị trí: gieo sẵn khi trống; thêm với nhiệm vụ + ghi chú; sửa tại chỗ; xóa chưa dùng thì mất, đang dùng thì chuyển Ngừng sử dụng; vị trí mặc định cũng có nút Xóa (CHỦ 24/11/2026; đang dùng thì chỉ Ngừng sử dụng, xem e2e-vi-tri-xoa-mac-dinh);
  *  - Định mức: 4 tab (một tab hiện một lúc, nhớ tab); thêm dòng nhân công chọn vị trí từ danh mục tự điền Nhiệm vụ (không ghi đè chữ đã gõ);
  *  - tiêu đề “1 đội = N người” đổi ngay khi gõ số người, không ghi dữ liệu; lưu ở tab nào chỉ ảnh hưởng tab đó.
  * Chạy: xvfb-run -a node scripts/e2e-vi-tri-dinh-muc.js */
@@ -30,7 +30,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   d = await db(); ok('sửa nhiệm vụ tại chỗ rồi Lưu', d.dmViTri.find(v => v.id === khac.id).nhiemVu === 'Việc phát sinh ngoài danh sách');
   const qly = d.dmViTri.find(v => v.ten === 'Quản lý chung'); await w.click('[data-vtxoa="' + qly.id + '"]'); await w.waitForTimeout(400);
   ok('xóa vị trí chưa dùng: mất hẳn khỏi danh mục', !(await vtTen()).includes('Quản lý chung'));
-  ok('vị trí mặc định (Công nhân cưa): không có nút Xóa', !(await w.$('[data-vtxoa="' + d.dmViTri.find(v => v.ten === 'Công nhân cưa').id + '"]')));
+  ok('vị trí mặc định (Công nhân cưa): có nút Xóa (đổi theo quyết định của CHỦ 24/11/2026)', !!(await w.$('[data-vtxoa="' + d.dmViTri.find(v => v.ten === 'Công nhân cưa').id + '"]')));
 
   // 2. màn Định mức: 4 tab, mặc định tab đầu, mỗi lúc một tab
   await w.click('#navNorm'); await w.waitForSelector('#normTabs');
