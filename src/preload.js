@@ -67,6 +67,7 @@ contextBridge.exposeInMainWorld('hak', {
     candidates: (tab, row) => ipcRenderer.invoke('lookup:candidates', tab, row),
     build: (cccd, hd) => ipcRenderer.invoke('lookup:build', cccd, hd),
     buildHd: hd => ipcRenderer.invoke('lookup:buildHd', hd),
-    summaryHd: list => ipcRenderer.invoke('lookup:summaryHd', list)
+    summaryHd: list => ipcRenderer.invoke('lookup:summaryHd', list),
+    chatLuong: () => ipcRenderer.invoke('lookup:chatLuong')   // PR D bước 3: báo cáo chất lượng (chỉ số đếm), không tham số
   }
 });

@@ -121,6 +121,8 @@ document.addEventListener('click', async e => {
   if (act === 'kslGo') return kslGo();
   if (act === 'kslHuy') { window.__ksl = null; return $('#impBox').classList.remove('on'); }
   if (act === 'openSetFmt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setfmt'; return render(); }
+  if (act === 'setGsChatLuong') { setgs.cl = HB && HB.lookup.chatLuong ? await HB.lookup.chatLuong().catch(er => ({ok: false, error: (er && er.message) || String(er)})) : {ok: false, error: 'Chỉ có ở bản cài trên Windows.'}; return render(); }
+  if (act === 'setGsCLCopy') { const t = setgs.cl && setgs.cl.ok ? setgs.cl.bang : ''; let ok = false; try { await navigator.clipboard.writeText(t); ok = true; } catch (er) { const pre = $('#setGsCLBang'); if (pre) { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); try { ok = document.execCommand('copy'); } catch (e2) { ok = false; } } } pushNote(ok ? 'Đã sao chép bảng số đếm.' : 'Không sao chép được: bôi đen bảng rồi nhấn Ctrl+C.', ok ? 'ok' : 'warn'); return render(); }
   if (act === 'setGsSave') { const r = await HB.lookup.setSheet(($('#setGsLink') || {}).value.trim()); setgs.msg = r.ok ? {kind: 'ok', text: 'Đã lưu địa chỉ bảng tính.'} : {kind: 'err', text: r.error}; setgs.st = await HB.lookup.status(); return render(); }
   if (act === 'setNumStyle') { db.dinhDangSo = el.value === 'en' ? 'en' : 'vi'; persist(); return render(); }
   if (act === 'ctyAddAddr') { const c = ctyReadForm(); c.diaChiGiao.push({id: newId('a'), nhan: '', diaChi: ''}); cty.edit = c; render(); const rows = document.querySelectorAll('.ctyAddr [name=a_nhan]'); if (rows.length) rows[rows.length - 1].focus(); return; }

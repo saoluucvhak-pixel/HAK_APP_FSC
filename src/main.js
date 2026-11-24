@@ -287,6 +287,8 @@ function registerIpc() {
   ipcMain.handle('lookup:search', (e, q, tab, opts) => checkQuery(q) || wrap(() => lookup.search(q || '', tab || '', cleanSearchOpts(opts)))());
   ipcMain.handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
   ipcMain.handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
+  /* PR D bước 3: chỉ đọc, KHÔNG nhận tham số từ giao diện (bỏ qua mọi đối số), chỉ trả số đếm theo danh sách trắng (src/chatluong.js) */
+  ipcMain.handle('lookup:chatLuong', () => wrap(() => lookup.chatLuong())());
   ipcMain.handle('lookup:summaryHd', (e, list) => wrap(() => lookup.summaryHd(list))());
   ipcMain.handle('lookup:buildHd', (e, hd) => wrap(() => { if (typeof hd !== 'string' || !hd.trim() || hd.length > 64) return {ok: false, error: 'Mã hợp đồng không hợp lệ.'}; return lookup.build(hd); })());
   /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
