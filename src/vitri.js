@@ -5,7 +5,7 @@
  * Lô đã chốt / đã dừng KHÔNG bị đổi (giữ tên và giá trị đã áp dụng để in lại đúng); dòng nhân công nối bằng nc.viTriId.
  *  - dung(db, tenDangDung): dựng / bổ sung danh mục từ mọi tên đang có (giữ id cũ, thêm id mới); không sửa db, trả danh mục mới.
  *  - tim(dm, ten) / timId(dm, id); doiTen(db, id, tenMoi): {ok, error, so: {...}} sửa trực tiếp db; them(dm, ten, nhiemVu?, ghiChu?); sua(dm, id, {nhiemVu, ghiChu});
- *    dangDung(db, id); xoa(db, id): đang dùng → “Ngừng sử dụng”, chưa dùng → xóa hẳn, vị trí mặc định không xóa. */
+ *    dangDung(db, id); xoa(db, id): đang dùng → “Ngừng sử dụng” kèm cảnh báo, chưa dùng → xóa hẳn (kể cả ba vị trí mặc định: CHỦ cho xóa ngày 24/11/2026). */
 (function (root) {
   'use strict';
   const s = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -14,7 +14,7 @@
   const tim = (dm, ten) => { const k = fold(ten); return k ? (dm || []).find(x => fold(x.ten) === k) || null : null; };
   const timId = (dm, id) => (dm || []).find(x => x.id === id) || null;
   const idMoi = dm => { const used = new Set((dm || []).map(x => x.id)); let k = used.size + 1; while (used.has('vt' + k)) k++; return 'vt' + k; };
-  const MAC_DINH = ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa'];   // trùng BASE của src/dinhmuc.js (có test): ba vị trí mặc định, không xóa được
+  const MAC_DINH = ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa'];   // trùng BASE của src/dinhmuc.js (có test): ba vị trí mặc định (xóa được nếu chưa dùng; đang dùng thì chỉ Ngừng sử dụng)
   const GIEO = ['Công nhân cưa', 'Công nhân lột vỏ và bốc xếp', 'Quản lý chung', 'Khác'];   // chỉ gieo khi danh mục hoàn toàn trống
   /* nhiemVu / ghiChu là tùy chọn: chỉ ghi khóa khi khác rỗng, bản ghi không dùng chúng cho JSON y hệt bản cũ */
   const datTuyChon = (x, o) => { ['nhiemVu', 'ghiChu'].forEach(k => { if (!o || !(k in o)) return; const v = s(o[k]); if (v) x[k] = v; else delete x[k]; }); };
@@ -89,10 +89,9 @@
     r.laoDong = (db.dmLaoDong || []).filter(x => x && eq(x.viTri)).length;
     r.tong = r.nhanCong + r.dinhBien + r.dinhMuc + r.donGia + r.nguoi + r.laoDong; return r;
   }
-  /* xóa vị trí: đang dùng thì chuyển “Ngừng sử dụng” (giữ mọi liên kết), chưa dùng thì xóa hẳn; ba vị trí mặc định không xóa */
+  /* xóa vị trí: đang dùng thì chuyển “Ngừng sử dụng” kèm cảnh báo (giữ mọi liên kết), chưa dùng thì xóa hẳn; ba vị trí mặc định cũng theo đúng quy tắc này */
   function xoa(db, id) {
     const dm = db.dmViTri || [], vt = timId(dm, id); if (!vt) return {ok: false, error: 'Không có vị trí này'};
-    if (MAC_DINH.some(m => fold(m) === fold(vt.ten))) return {ok: false, error: 'Vị trí “' + vt.ten + '” là vị trí mặc định của phần mềm, không xóa được'};
     const d = dangDung(db, id);
     if (d.tong > 0) { vt.ngung = true; return {ok: true, kieu: 'ngung', dung: d, thongBao: 'Vị trí “' + vt.ten + '” đang được dùng (' + [d.nhanCong && d.nhanCong + ' dòng nhân công', d.dinhBien && d.dinhBien + ' bảng định biên', d.dinhMuc && d.dinhMuc + ' bản định mức BHLĐ', d.donGia && d.donGia + ' bảng đơn giá', d.nguoi && d.nguoi + ' người đặt làm vị trí mặc định', d.laoDong && d.laoDong + ' dòng danh mục lao động'].filter(Boolean).join(', ') + ') nên chuyển sang “Ngừng sử dụng”, không xóa hẳn.'}; }
     db.dmViTri = dm.filter(x => x.id !== id); return {ok: true, kieu: 'xoa', dung: d, thongBao: 'Đã xóa vị trí “' + vt.ten + '”.'};

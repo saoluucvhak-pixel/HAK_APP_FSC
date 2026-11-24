@@ -405,11 +405,11 @@ function panelSetVt() {
     hakSfBarHtml('dm_vi_tri', sfRes.total, sfRes.kept) +
     '<div class="wrap" style="max-height:min(60vh,520px)"><table id="vtBang"><thead><tr><th>Vị trí</th><th>Nhiệm vụ</th><th>Ghi chú</th><th>Đang dùng</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' +
     (ds.length ? '' : '<tr><td colspan="5" class="mut" id="vtTrong">' + (sfOn ? 'Không có vị trí nào khớp bộ lọc.' : 'Chưa có vị trí nào.') + '</td></tr>') +
-    ds.map(v => { const d = HAKViTri.dangDung(db, v.id), mac = HAKViTri.MAC_DINH.some(m => HAKViTri.fold(m) === HAKViTri.fold(v.ten));
+    ds.map(v => { const d = HAKViTri.dangDung(db, v.id);
       return '<tr data-vtrow="' + esc(v.id) + '"' + (v.ngung ? ' class="mut"' : '') + '><td><input data-vtten="' + esc(v.id) + '" value="' + esc(v.ten) + '" style="width:100%" aria-label="Tên vị trí">' + (v.ngung ? '<span class="pill">Ngừng sử dụng</span>' : '') + '</td>' +
       '<td><input data-vtnv="' + esc(v.id) + '" value="' + esc(v.nhiemVu || '') + '" style="width:100%" aria-label="Nhiệm vụ"></td><td><input data-vtgc="' + esc(v.id) + '" value="' + esc(v.ghiChu || '') + '" style="width:100%" aria-label="Ghi chú"></td>' +
       '<td title="' + esc(d.nhanCong + ' dòng nhân công, ' + d.dinhBien + ' bảng định biên, ' + d.dinhMuc + ' bản định mức BHLĐ, ' + d.donGia + ' bảng đơn giá') + '">' + (d.tong ? d.tong : 'Chưa dùng') + '</td>' +
-      '<td style="white-space:nowrap"><button class="btn ghost sm" data-vtdoi="' + esc(v.id) + '">Lưu</button> ' + (v.ngung ? '<button class="btn ghost sm" data-vtdung="' + esc(v.id) + '">Dùng lại</button> ' : '') + (mac ? '' : '<button class="btn ghost sm" data-vtxoa="' + esc(v.id) + '">Xóa</button>') + '</td></tr>'; }).join('') +
+      '<td style="white-space:nowrap"><button class="btn ghost sm" data-vtdoi="' + esc(v.id) + '">Lưu</button> ' + (v.ngung ? '<button class="btn ghost sm" data-vtdung="' + esc(v.id) + '">Dùng lại</button> ' : '') + '<button class="btn ghost sm" data-vtxoa="' + esc(v.id) + '">Xóa</button>' + '</td></tr>'; }).join('') +
     '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Tên vị trí mới</span><input id="vtMoi" placeholder="Tên vị trí mới"></label><label style="flex:1;min-width:200px"><span>Nhiệm vụ</span><input id="vtMoiNv" placeholder="Nhiệm vụ (không bắt buộc)"></label><label style="flex:1;min-width:160px"><span>Ghi chú</span><input id="vtMoiGc" placeholder="Ghi chú (không bắt buộc)"></label><button class="btn ghost" data-act="vtThem">Thêm vị trí</button></div></div>';
 }
 
