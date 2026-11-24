@@ -5,7 +5,7 @@ function dmField(i) {
   const note = own ? 'Đang dùng số riêng của rừng. <button type="button" class="linkbtn" data-act="dmDefault">Dùng mặc định</button>'
     : k.found ? 'Đang dùng định mức gỗ keo mặc định <b>' + fmtTan(k.item.tanHa) + ' tấn/ha</b> (hiệu lực từ ' + (k.item.tuNgay || '…') + '). Tự điền số khác nếu rừng khác định mức.'
     : 'Chưa có định mức mặc định: khai ở <b>Định mức → Định mức gỗ keo</b>, hoặc tự điền số cho rừng.';
-  return '<label><span>Định mức (tấn/ha)</span><input name="dinhMucTanHa" value="' + esc(typeof i.dinhMucTanHa === 'number' ? String(i.dinhMucTanHa).replace('.', ',') : (i.dinhMucTanHa ?? '')) + '" placeholder="' + esc(ph) + '"><small class="mut" id="dmNote">' + note + '</small></label>';
+  return '<label><span>Định mức (tấn/ha)</span><input name="dinhMucTanHa" data-group-number inputmode="decimal" value="' + esc(displayInputNumber(i.dinhMucTanHa)) + '" placeholder="' + esc(ph) + '"><small class="mut" id="dmNote">' + note + '</small></label>';
 }
 /* Ô Định mức thời gian khai thác (ngày/ha) của rừng: để trống thì dùng định mức mặc định (hiệu lực theo ngày bắt đầu khai thác) */
 function dmTgField(i) {
@@ -13,7 +13,7 @@ function dmTgField(i) {
   const ph = k.found ? 'mặc định ' + fmtTan(k.item.ngayHa) + ' ngày/ha' : 'chưa có định mức mặc định';
   const note = own ? 'Đang dùng số riêng của rừng. <button type="button" class="linkbtn" data-act="tgDefault">Dùng mặc định</button>'
     : k.found ? 'Đang dùng định mức mặc định <b>' + fmtTan(k.item.ngayHa) + ' ngày/ha</b> (hiệu lực từ ' + (k.item.tuNgay || '…') + ').' : 'Chưa có định mức mặc định: khai ở <b>Định mức → Định mức thời gian khai thác</b>, hoặc tự điền số cho rừng.';
-  return '<label><span>Định mức thời gian khai thác (ngày/ha)</span><input name="dinhMucNgayHa" value="' + esc(typeof i.dinhMucNgayHa === 'number' ? String(i.dinhMucNgayHa).replace('.', ',') : (i.dinhMucNgayHa ?? '')) + '" placeholder="' + esc(ph) + '"><small class="mut" id="tgDmNote">' + note + '</small></label>';
+  return '<label><span>Định mức thời gian khai thác (ngày/ha)</span><input name="dinhMucNgayHa" data-group-number inputmode="decimal" value="' + esc(displayInputNumber(i.dinhMucNgayHa)) + '" placeholder="' + esc(ph) + '"><small class="mut" id="tgDmNote">' + note + '</small></label>';
 }
 /* Ô Số đội khai thác của rừng: các đội làm song song nên thời gian dự kiến chia cho số đội. Để trống thì lấy theo số Tổ trưởng ở tab Nhân công. */
 function soDoiNote(i, nc) {
@@ -56,7 +56,7 @@ function panelForest(f, muc) {
   const i = fInfo(f);
   const start = k => '<div class="mucForm" data-muc-form="' + k + '"' + (k === muc ? '' : ' hidden') + '>';
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
-    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['dienTich', 'cuLy'].includes(k) ? String(i[k]).replace('.', ',') : (i[k] ?? '')) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
+    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['dienTich', 'cuLy'].includes(k) ? displayInputNumber(i[k]) : (['tuNgay', 'denNgay'].includes(k) ? displayInputDate(i[k]) ?? '' : i[k] ?? '')) + '"' + (['dienTich', 'cuLy'].includes(k) ? ' data-group-number inputmode="decimal"' : '') + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
   return '<div class="card"><h3 style="margin-top:0">Thông tin khai thác của rừng</h3>' +
     (() => { const t = trim((i || {}).tuNgay); if (!t) return ''; const g = HAKDinhBien.get(db, t); return g.ngayLoi ? '<div class="msg err" id="tuNgayLoi" style="margin-bottom:8px"><b>Ngày bắt đầu khai thác sai:</b> ' + esc(g.ngayLoi) + '. Dữ liệu cũ được giữ nguyên để bạn sửa.</div>' : ''; })() +
@@ -90,7 +90,7 @@ function panelLuong(rec) {
   const nguoi = ((rec.nc || []).filter(r => !rec.doi || !t || r.doiId === t.id)), dem = {}; nguoi.forEach(r => { const k = trim(r.chucDanh); dem[k] = (dem[k] || 0) + 1; });
   const rate = (pre, map, unit) => {
     const ds = chucDanhAll().map((cd, k) => ({cd, k, n: dem[cd] || 0})), co = ds.filter(x => x.n), chua = ds.filter(x => !x.n);
-    const row = x => '<tr><td>' + esc(x.cd) + '</td><td style="text-align:center">' + x.n + '</td><td><input name="' + pre + x.k + '" value="' + esc(((map || {})[x.cd]) ?? '') + '" inputmode="numeric" style="text-align:right;width:140px"> <span class="mut">' + unit + '</span></td></tr>';
+    const row = x => '<tr><td>' + esc(x.cd) + '</td><td style="text-align:center">' + x.n + '</td><td><input name="' + pre + x.k + '" value="' + esc(displayInputNumber((map || {})[x.cd])) + '" inputmode="numeric" data-group-number="integer" style="text-align:right;width:140px"> <span class="mut">' + unit + '</span></td></tr>';
     return '<div class="wrap" style="grid-column:1/-1"><table class="normTbl dgTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí đang có người</th><th>Số người</th><th>Đơn giá (' + unit + ')</th></tr></thead><tbody>' +
       (co.length ? co.map(row).join('') : '<tr><td colspan="3" class="mut">Đội chưa có người: thêm nhân công để thấy các vị trí cần đơn giá.</td></tr>') + '</tbody></table>' +
       (chua.length ? '<details style="margin-top:6px"><summary class="mut">Vị trí chưa có người (' + chua.length + ')</summary><table class="normTbl" style="min-width:0;table-layout:auto"><tbody>' + chua.map(row).join('') + '</tbody></table></details>' : '') + '</div>';
@@ -105,7 +105,7 @@ function panelLuong(rec) {
     '<label style="grid-column:1/-1"><span>Cơ sở tính đơn giá</span><select name="hinhThucLuong">' + luongOptions(direct, cur) + '</select></label>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn ghost sm" type="button" data-act="luongLay">Lấy đơn giá từ đội khác hoặc lô gần nhất</button><span class="mut" id="luongLayMsg"></span></div>' +
     grp('sanluong', rate('dt_', i.donGiaTan, 'đ/tấn', true)) + grp('ha', rate('ha_', i.donGiaHa, 'đ/ha')) + grp('ngaycong', rate('dn_', i.donGiaNgay, 'đ/công')) +
-    '<label><span>Hợp đồng lao động từ ngày (dd/mm/yyyy)</span><input name="ngayBDLD" value="' + esc(i.ngayBDLD ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
+    '<label><span>Hợp đồng lao động từ ngày</span><input name="ngayBDLD" value="' + esc(displayInputDate(i.ngayBDLD) ?? '') + '" placeholder="' + esc(displayInputDate(i.tuNgay) || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></div></form></div>';
 }
 
@@ -125,7 +125,7 @@ function panelVc(rec) {
     '<label data-vcgrp="tanKm" style="' + show('tanKm') + '"><span>Đơn giá tấn/km (đồng/tấn/km)</span><input name="vcKm" value="' + esc(vc.donGiaKm ?? '') + '"></label>' +
     '<div data-vcgrp="tanKm" style="grid-column:1/-1;' + (cur === 'tanKm' ? '' : 'display:none') + '" class="mut">Cự ly vận chuyển: <b>' + (HAKCuLy.eff(i).km ? String(HAKCuLy.eff(i).km).replace('.', ',') + ' km (' + HAKCuLy.eff(i).nguon + (HAKCuLy.eff(i).nguon === 'tự tính' ? ', đường chim bay' :
     '') + ')' : 'chưa có') + '</b> · xem và sửa ở <button type="button" class="btn ghost sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;finfo&quot;,&quot;muc&quot;:&quot;toado&quot;}">tab Thông tin rừng → Tọa độ và cự ly → Cự ly vận chuyển (km)</button></div>' +
-    '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(i.tuNgay || 'để trống nếu chưa biết') + '"></label>' +
+    '<label><span>Vận chuyển từ ngày (dd/mm/yyyy)</span><input name="vcTu" value="' + esc(vc.tuNgay ?? '') + '" placeholder="' + esc(displayInputDate(i.tuNgay) || 'để trống nếu chưa biết') + '"></label>' +
     '<div style="grid-column:1/-1" class="mut">' + (tp.loi ? 'Chưa tính được đơn giá vận chuyển: ' + esc(tp.loi) : 'Đơn giá vận chuyển hiện tại: ' + fmt(tp.gia) + ' đồng/tấn (' + esc(tp.text) + ')') + '</div>' +
     '<div style="grid-column:1/-1" class="row"><button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></div></form>' +
     '<h4 style="margin:12px 0 4px">Số văn bản chung của các đội xe <span class="mut" style="font-weight:400">· đội xe đặt số riêng ở bảng Đội xe bên dưới; để trống thì in dòng chấm</span></h4>' +

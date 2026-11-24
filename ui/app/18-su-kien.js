@@ -124,7 +124,6 @@ document.addEventListener('click', async e => {
   if (act === 'setGsChatLuong') { setgs.cl = HB && HB.lookup.chatLuong ? await HB.lookup.chatLuong().catch(er => ({ok: false, error: (er && er.message) || String(er)})) : {ok: false, error: 'Chỉ có ở bản cài trên Windows.'}; return render(); }
   if (act === 'setGsCLCopy') { const t = setgs.cl && setgs.cl.ok ? setgs.cl.bang : ''; let ok = false; try { await navigator.clipboard.writeText(t); ok = true; } catch (er) { const pre = $('#setGsCLBang'); if (pre) { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); try { ok = document.execCommand('copy'); } catch (e2) { ok = false; } } } pushNote(ok ? 'Đã sao chép bảng số đếm.' : 'Không sao chép được: bôi đen bảng rồi nhấn Ctrl+C.', ok ? 'ok' : 'warn'); return render(); }
   if (act === 'setGsSave') { const r = await HB.lookup.setSheet(($('#setGsLink') || {}).value.trim()); setgs.msg = r.ok ? {kind: 'ok', text: 'Đã lưu địa chỉ bảng tính.'} : {kind: 'err', text: r.error}; setgs.st = await HB.lookup.status(); return render(); }
-  if (act === 'setReportDateStyle') { db.dinhDangNgayBaoCao = el.value === 'iso' ? 'iso' : 'vi'; persist(); return render(); }
   if (act === 'setNumStyle') { db.dinhDangSo = el.value === 'en' ? 'en' : 'vi'; persist(); return render(); }
   if (act === 'ctyAddAddr') { const c = ctyReadForm(); c.diaChiGiao.push({id: newId('a'), nhan: '', diaChi: ''}); cty.edit = c; render(); const rows = document.querySelectorAll('.ctyAddr [name=a_nhan]'); if (rows.length) rows[rows.length - 1].focus(); return; }
   if (act === 'ctyDelAddr') { el.closest('.ctyAddr').remove(); ctyShowMsg(); return; }
@@ -345,6 +344,21 @@ else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
 document.addEventListener('change', e => { if (e.target && e.target.id === 'normVer') { normSel = e.target.value; render(); } });
 document.addEventListener('input', e => {
   const t = e.target;
+  if (!e.isComposing && t.dataset?.groupNumber !== undefined) {
+    const raw = t.value, pos = t.selectionStart, separator = numStyle === 'en' ? ',' : '.';
+    // Bỏ dấu nhóm do ứng dụng chèn khi chỉnh tiếp giá trị đã định dạng.
+    const tracked = t.dataset.groupedValue;
+    const regroup = tracked !== undefined && tracked.includes(separator) && !e.inputType?.includes('Paste');
+    const source = regroup ? raw.split(separator).join('') : raw;
+    const value = HAKSo.groupInput(source, numStyle, t.dataset.groupNumber === 'integer');
+    if (raw !== value) {
+      let remaining = raw.slice(0, pos).split(separator).join('').length, caret = 0;
+      while (remaining && caret < value.length) if (value[caret++] !== separator) remaining--;
+      t.value = value;
+      t.setSelectionRange(caret, caret);
+    }
+    if (regroup || raw !== value) t.dataset.groupedValue = value;
+  }
   if (t.dataset && t.dataset.mamoi !== undefined) { impMaCheck(); return; }
   if (t.dataset && t.dataset.exp && curForest()) {   // xem trước số hợp đồng cập nhật ngay khi gõ
     const rec = curRec(), exo = Object.assign({}, rec.exp, rec.doi && rec.doi.length > 1 ? (curTeam() || {}).exp : {}, {[t.dataset.exp]: trim(t.value)});
@@ -356,8 +370,8 @@ document.addEventListener('input', e => {
     const nt = document.getElementById('tgNote'); if (nt) nt.innerHTML = tgDuKienHtml(readForest(t.form), (curForest() || {}).pc, nDoiOf(readForest(t.form), (curForest() || {}).nc));
   }
   if (t.form && t.form.id === 'forestForm' && (t.name === 'dienTich' || t.name === 'dinhMucTanHa')) {   // sản lượng dự kiến tự nhảy ngay khi gõ, không cần bấm Lưu
-    const dt = toDec(t.form.elements.dienTich.value); let dm = toDec(t.form.elements.dinhMucTanHa.value), out = document.getElementById('slDuKien');
-    if (dm == null) { const k = HAKDinhMuc.keoPick(db, trim(t.form.elements.tuNgay.value)); dm = k.found ? k.item.tanHa : null; }   // để trống: định mức mặc định
+    const dt = readInputNumber(t.form.elements.dienTich.value); let dm = readInputNumber(t.form.elements.dinhMucTanHa.value), out = document.getElementById('slDuKien');
+    if (dm == null) { const k = HAKDinhMuc.keoPick(db, readInputDate(t.form.elements.tuNgay.value)); dm = k.found ? k.item.tanHa : null; }   // để trống: định mức mặc định
     if (out) out.value = (typeof dt === 'number' && typeof dm === 'number') ? fmt(Math.round(dt * dm)) + ' tấn' : (dt === 'x' || dm === 'x') ? 'Diện tích hoặc định mức không phải là số' : '';
     return;
   }
@@ -378,3 +392,10 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !document.querySelector('#dlgBox.on #dmHopDlg')) return;
   e.preventDefault(); e.stopImmediatePropagation(); dmHopXuLy(false);
 }, true);
+
+document.addEventListener('change', e => {
+  if (e.target.dataset?.act !== 'setReportDateStyle') return;
+  db.dinhDangNgayBaoCao = e.target.value === 'iso' ? 'iso' : 'vi';
+  persist();
+  render();
+});

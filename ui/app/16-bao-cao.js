@@ -1,7 +1,7 @@
 /* ========== Báo cáo (Word + Excel) ========== */
 const rp = {id: 'dieuhanh', from: null, to: null, owner: '', detail: false, msg: null, folded: {}, q: '', one: {}, flag: {}, presetSel: '', conds: []};
 const isoToVi = v => HAKDates.fromIso(v);
-const rpFormat = () => ({numStyle, dateStyle: db.dinhDangNgayBaoCao === 'iso' ? 'iso' : 'vi'});
+const rpFormat = () => ({numStyle, dateStyle: dateStyle()});
 const rpDate = v => HAKReports.displayDate(v, rpFormat().dateStyle);
 const rpDateText = s => String(s).replace(/\b\d{2}\/\d{2}\/\d{4}\b/g, rpDate);
 const rpCell = (v, f) => HAKReports.fmtCell(v, f, rpFormat());

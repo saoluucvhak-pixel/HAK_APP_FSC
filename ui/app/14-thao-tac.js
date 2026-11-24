@@ -28,23 +28,23 @@ function readForest(form) {
   const fd = new FormData(form);
   return {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
-    lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: toDec(fd.get('dienTich')),
-    dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), dinhMucNgayHa: toDec(fd.get('dinhMucNgayHa')), cuLy: toDec(fd.get('cuLy')),
-    tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay'))
+    lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: readInputNumber(fd.get('dienTich')),
+    dinhMucTanHa: readInputNumber(fd.get('dinhMucTanHa')), dinhMucNgayHa: readInputNumber(fd.get('dinhMucNgayHa')), cuLy: readInputNumber(fd.get('cuLy')),
+    tuNgay: readInputDate(fd.get('tuNgay')), denNgay: readInputDate(fd.get('denNgay'))
   };
 }
 
 function readLuong(form) {
   const fd = new FormData(form), f = curForest(), cur = (f && fInfo(f)) || {}, cds = chucDanhAll();
-  const rHa = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('ha_' + k)]), cur.donGiaHa);
-  const rNgay = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('dn_' + k)]), cur.donGiaNgay);
-  const rTan = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('dt_' + k)]), cur.donGiaTan);
+  const rHa = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, readInputNumber(fd.get('ha_' + k), true)]), cur.donGiaHa);
+  const rNgay = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, readInputNumber(fd.get('dn_' + k), true)]), cur.donGiaNgay);
+  const rTan = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, readInputNumber(fd.get('dt_' + k), true)]), cur.donGiaTan);
   return {
     hinhThucLuong: ['ha', 'ngaycong'].includes(fd.get('hinhThucLuong')) ? fd.get('hinhThucLuong') : 'sanluong',
     donGiaHa: rHa.map,
     donGiaNgay: rNgay.map,
     donGiaTan: rTan.map,
-    ngayBDLD: trim(fd.get('ngayBDLD')),
+    ngayBDLD: readInputDate(fd.get('ngayBDLD')),
     moHinhKy: fd.get('moHinhKy') === 'tructiep' ? 'tructiep' : 'giaokhoan',
     _errs: rHa.errs.concat(rNgay.errs, rTan.errs)
   };
@@ -73,17 +73,17 @@ const clearFormMsg = form => { const m = form.querySelector('.formMsg'); if (m) 
 /* Nút điền nhanh ở form Thông tin rừng: chỉ điền vào ô (chưa lưu); người dùng vẫn tự sửa được rồi bấm Lưu */
 function forestFill(act, el) {
   const f = curForest(), form = document.getElementById('forestForm'); if (!f || !form) return;
-  const setv = (name, v) => { const inp = form.elements[name]; inp.value = v; inp.dispatchEvent(new Event('input', {bubbles: true})); };
+  const setv = (name, v) => { const inp = form.elements[name]; inp.value = ['tuNgay', 'denNgay'].includes(name) ? displayInputDate(v) : v; inp.dispatchEvent(new Event('input', {bubbles: true})); };
   const hint = t => { let h = document.getElementById('forestHint'); if (!h) { h = document.createElement('div'); h.id = 'forestHint'; h.className = 'msg warn'; h.style.gridColumn = '1/-1'; form.prepend(h); } h.textContent = t; };
   const pcs = (f.pc || []);
   if (act === 'soDoiAuto') { setv('soDoi', ''); const sn = document.getElementById('soDoiNote'); if (sn) sn.innerHTML = soDoiNote(readForest(form), (curForest() || {}).nc); const nt = document.getElementById('tgNote');
   if (nt) nt.innerHTML = tgDuKienHtml(readForest(form), (curForest() || {}).pc, nDoiOf(readForest(form), (curForest() || {}).nc)); return; }
-  if (act === 'tgDefault') { setv('dinhMucNgayHa', ''); const k = HAKDinhMuc.tgPick(db, trim(form.elements.tuNgay.value)); document.getElementById('tgDmNote').textContent = k.found ? 'Sẽ dùng định mức mặc định ' + fmtTan(k.item.ngayHa) + ' ngày/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
+  if (act === 'tgDefault') { setv('dinhMucNgayHa', ''); const k = HAKDinhMuc.tgPick(db, readInputDate(form.elements.tuNgay.value)); document.getElementById('tgDmNote').textContent = k.found ? 'Sẽ dùng định mức mặc định ' + fmtTan(k.item.ngayHa) + ' ngày/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
   return; }
   if (act === 'fillDenDk') { const ii = readForest(form), d = ngayHaEff(ii), n = d ? HAKDinhMuc.soNgay(haDoi(ii, nDoiOf(ii, (curForest() || {}).nc)), d.v) : null, kt = n && HAKDates.isValid(ii.tuNgay) ? HAKDinhMuc.ngayKetThuc(ii.tuNgay, n) : '';
   if (!kt) return hint('Chưa tính được ngày kết thúc: cần diện tích, định mức thời gian khai thác và ngày bắt đầu hợp lệ.'); setv('denNgay', kt);
   return hint('Đã điền ngày kết thúc dự kiến ' + kt + ' (' + n + ' ngày khai thác, không tính Chủ nhật). Bấm Lưu dữ liệu vào lô (hoặc Enter) để ghi nhận, hoặc sửa ngày.'); }
-  if (act === 'dmDefault') { setv('dinhMucTanHa', ''); const k = HAKDinhMuc.keoPick(db, trim(form.elements.tuNgay.value)); document.getElementById('dmNote').textContent = k.found ? 'Sẽ dùng định mức gỗ keo mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
+  if (act === 'dmDefault') { setv('dinhMucTanHa', ''); const k = HAKDinhMuc.keoPick(db, readInputDate(form.elements.tuNgay.value)); document.getElementById('dmNote').textContent = k.found ? 'Sẽ dùng định mức gỗ keo mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
   return; }
   if (act === 'boKlCu') { const f = curForest(); if (!f) return; delete f.info.klHoSoCu; (f.doi || []).forEach(d => { delete d.klHoSoCu; }); persistLo(); note('Đã bỏ số khối lượng của hồ sơ cũ: khối lượng lô lấy theo tổng phiếu cân.', 'ok'); return render(); }
   const ds = pcs.map(p => HAKDates.parse(p.ngay)).filter(Boolean); if (!ds.length) return hint('Chưa có phiếu cân có ngày hợp lệ của rừng này.');

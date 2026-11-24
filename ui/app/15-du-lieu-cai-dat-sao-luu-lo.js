@@ -64,7 +64,7 @@ function panelSetFmt() {
   return '<div class="card"><h3 style="margin-top:0">Hiển thị số</h3>' +
     '<p class="mut" style="margin-top:0">Chọn cách hiển thị số trên màn hình (tiền, khối lượng, diện tích). Báo cáo dùng kiểu số đã chọn. Excel hiển thị dấu phân cách số theo cài đặt của Excel. Biểu mẫu hồ sơ dùng kiểu Việt Nam.</p>' +
     row('vi', 'Kiểu Việt Nam', sample(1234567.5)) + row('en', 'Kiểu quốc tế', sample(1234567.5).replace(/[.,]/g, c => (c === '.' ? ',' : '.'))) +
-    '<label>Định dạng ngày báo cáo <select data-act="setReportDateStyle"><option value="vi">Ngày/tháng/năm (05/10/2026)</option><option value="iso"' +
+    '<label>Định dạng ngày khai thác, lương và báo cáo <select data-act="setReportDateStyle"><option value="vi">Ngày/tháng/năm (05/10/2026)</option><option value="iso"' +
     (db.dinhDangNgayBaoCao === 'iso' ? ' selected' : '') + '>Năm-tháng-ngày (2026-10-05)</option></select></label></div>';
 }
 const setg = {s: null, msg: null};
