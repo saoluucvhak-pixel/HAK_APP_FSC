@@ -692,14 +692,23 @@ class Lookup {
       });
     } catch (e) { /* bảng lô chưa có (Sheets dùng riêng): không có phiếu đã có để so */ }
     const BKS = require('./bks');
+    const savedAliases = this.db.prepare("SELECT value FROM meta WHERE key='bienAlias'").get();
+    const aliases = savedAliases ? JSON.parse(savedAliases.value) : null;
     const seen = new Set(), hd = [];
     ks.forEach(k => {
       const n = normHd(k); if (seen.has(n)) return; seen.add(n);
       const d = this.buildHd(k, true);
       if (!d.ok) { hd.push({trangThai: 'err', nCccd: 0, rung: [], phieu: []}); return; }
-      /* phiếu Sheet đủ điều kiện xét nghi đổi số, đúng như màn cập nhật vào hồ sơ (gsRows): không lệch CCCD, không lỗi, có số phiếu, không trùng khóa với dòng trước, biển số đã rõ (là biển số, chưa xét ghép tên xe) */
+      // Dùng ánh xạ đã lưu. Ánh xạ đang nhập trong hộp thoại chỉ có hiệu lực tại hộp thoại đó.
       const kn = new Set(), sheet = [];
-      d.phieu.forEach(p => { if (p.lechCccd || p.issue || !BKS.soPhieu(p.soPhieu)) return; const kp = BKS.khoaPhieu({soPhieu: p.soPhieu, ngay: p.ngay}); if (kp && kn.has(kp)) return; if (kp) kn.add(kp); if (p.isPlate) sheet.push({so: p.soPhieu, ngay: p.ngay, bks: String(p.bienRaw || '').toUpperCase(), kg: p.klKg}); });
+      for (const p of d.phieu) {
+        const kp = BKS.khoaPhieu(p);
+        const duplicate = kp && kn.has(kp);
+        if (kp) kn.add(kp);
+        if (p.lechCccd || p.issue || !BKS.soPhieu(p.soPhieu) || duplicate) continue;
+        const bks = BKS.bienTuSheet(p, aliases);
+        if (bks) sheet.push({so: p.soPhieu, ngay: p.ngay, bks, kg: p.klKg});
+      }
       const lo = []; d.forests.forEach(f => { if (f.maRung && loTheoMa.has(f.maRung)) lo.push(...loTheoMa.get(f.maRung)); });
       hd.push({trangThai: trangThaiHd(d).status, nCccd: d.cccdList.length, rung: d.forests.map(f => ({maRung: f.maRung, ghepTam: f.ghepTam})),
         phieu: d.phieu.map(p => ({soPhieu: p.soPhieu, ngay: p.ngay, bienRaw: p.bienRaw, klKg: p.klKg, issue: p.issue})), phieuSheet: sheet, phieuLo: lo});

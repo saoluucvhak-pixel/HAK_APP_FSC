@@ -19,14 +19,14 @@ function fresh(keo, rung, td, nap) {
 }
 const CC1 = '049000000011', CC2 = '049000000022', CC3 = '049000000033';
 const SECRETS = [CC1, CC2, CC3, 'Chủ Giả Lập Một', 'Chủ Giả Lập Hai', 'Xã Giả Lập', 'HD-GL-0001', 'HD-GL-0002', 'HD-GL-0003', 'PC-GL-001', 'PC-GL-002', 'PC-GL-003', 'OLD-001', 'OLD-002', '43C-111.11', '43C-222.22', 'R-GL-01', 'giả lập'];
-function duLieu(nap) {
+function duLieu(nap, bienDau = '43C-111.11') {
   const rung = [
     {'Mã KH_CCCD': CC1, 'Họ và tên chủ rừng': 'Chủ Giả Lập Một', 'Mã hợp đồng': 'HD-GL-0001', 'Ngày ký hợp đồng': '05/10/2026', 'ĐỊA CHỈ RỪNG': 'Xã Giả Lập', 'HECTA': 1, 'Định mức tấn/Ha': 90},
     {'Mã KH_CCCD': CC2, 'Họ và tên chủ rừng': 'Chủ Giả Lập Hai', 'Mã hợp đồng': 'HD-GL-0002', 'Ngày ký hợp đồng': '05/10/2026', 'ĐỊA CHỈ RỪNG': 'Xã Giả Lập', 'HECTA': 1, 'Định mức tấn/Ha': 90},
     {'Mã KH_CCCD': CC3, 'Họ và tên chủ rừng': 'Chủ Giả Lập Hai', 'Mã hợp đồng': 'HD-GL-0002', 'Ngày ký hợp đồng': '05/10/2026', 'ĐỊA CHỈ RỪNG': 'Xã Giả Lập', 'HECTA': 1, 'Định mức tấn/Ha': 90}];   // HD-0002 có hai CCCD
   const td = [{'Mã rừng': 'R-GL-01', 'Số hợp đồng': 'HD-GL-0001', 'HoVaTenChuRung': 'Chủ Giả Lập Một', 'SoCCCD': CC1, 'DienTich_m2': 10000, 'Latitude_Vĩ độ': 15.6, 'Longtitude_Kinh độ': 108.1}];
   const k = (c, hd, so, ngay, bks, kg) => ({'Mã khách hàng': c, 'Mã hợp đồng': hd, 'SỐ PHIẾU CÂN': so, 'Ngày nhập': ngay, 'Biển số 1': bks, 'KL hàng (KG)': kg, 'Đơn giá': 1, 'Họ và tên chủ rừng': 'Chủ Giả Lập Một'});
-  const keo = [k(CC1, 'HD-GL-0001', 'PC-GL-001', '06/11/2026', '43C-111.11', 20000), k(CC1, 'HD-GL-0001', 'PC-GL-002', '06/11/2026', '43C-111.11', 20000),   // nghi đổi số (cùng ngày, biển, kg)
+  const keo = [k(CC1, 'HD-GL-0001', 'PC-GL-001', '06/11/2026', bienDau, 20000), k(CC1, 'HD-GL-0001', 'PC-GL-002', '06/11/2026', '43C-111.11', 20000),   // nghi đổi số (cùng ngày, biển, kg)
     k(CC1, 'HD-GL-0001', 'PC-GL-003', '99/99/9999', '', 18000), k(CC1, 'HD-GL-0001', 'PC-GL-001', '06/11/2026', '43C-222.22', 17000)];   // ngày lỗi + thiếu biển (dòng 3); trùng khóa số phiếu + ngày với dòng 1 (dòng 4)
   return fresh(keo, rung, td, nap);
 }
@@ -84,4 +84,14 @@ test('cặp trùng khóa: dùng khóa chuẩn hóa của phần mềm (khác cá
   const CL2 = require('../src/chatluong');
   const r = CL2.tinh({hd: [{trangThai: 'ok', nCccd: 1, rung: [], phieu: [{soPhieu: 'ab 12', ngay: '06/11/2026', bienRaw: 'x', klKg: 1}, {soPhieu: 'AB12', ngay: '6/11/2026', bienRaw: 'x', klKg: 1}]}]});
   assert.equal(r.so.capTrungKhoa, 1);
+});
+
+test('nghi đổi số: dùng ánh xạ tên xe đã lưu nhưng giữ báo cáo chỉ gồm số đếm', () => {
+  const db = loCo([{soPhieu: 'OLD-001', ngay: '06/11/2026', bienSo: '43C-111.11', klKg: 20000}]);
+  const ten = 'Xe Giả Lập';
+  assert.equal(duLieu(db, ten).chatLuong().so.phieuNghiDoiSo, 1);
+  db.bienAlias = {'xe gia lap': '43C-111.11'};
+  const r = duLieu(db, ten).chatLuong();
+  assert.equal(r.so.phieuNghiDoiSo, 2);
+  assert.ok(!JSON.stringify(r).includes(ten));
 });

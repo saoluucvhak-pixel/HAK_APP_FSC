@@ -15,7 +15,12 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const L = lot('fa', 'R-A', {exp: {}, pc: PC, kl: 30}); L.dx[0].sdt = '0905123456';
   await w.evaluate(d => window.hak.save(d), seed([L])); await w.reload(); await w.waitForSelector('#side');
-  await w.evaluate(() => document.querySelector('[data-act=rpOpen]').click()); await w.waitForSelector('.rpl');
+  await w.evaluate(() => document.querySelector('[data-act=rpOpen]').click()); await w.waitForSelector('.rpl'); await w.evaluate(() => {
+    document.getElementById('rpFrom').value = '';
+    const end = document.getElementById('rpTo');
+    end.value = '';
+    end.dispatchEvent(new Event('change', {bubbles: true}));
+  });
   ok('Báo cáo có hai mẫu mới: Danh sách lao động và Danh sách xe', !!(await w.$('[data-rpsel=laodong]')) && !!(await w.$('[data-rpsel=danhsachxe]')));
   const exportTo = async (sel, ext) => { clearOut(); await w.click(sel); let f = null; for (let i = 0; i < 80 && !f; i++) { f = fs.readdirSync(out).find(x => x.endsWith(ext)); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(200); return path.join(out, f); };
   // lao động

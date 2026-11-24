@@ -38,6 +38,11 @@ async function wordTables(file) {
   await w.waitForSelector('#side');
   const saved = await w.evaluate(db => window.hak.save(db), SEED); ok('ghi dữ liệu thử vào SQLite', saved && saved.ok, JSON.stringify(saved));
   await w.reload(); await w.waitForSelector('#side'); await w.click('header [data-act=rpOpen]'); await w.waitForSelector('#rpBox.on');
+  const today = await w.evaluate(() => {
+    const now = new Date(), pad = n => String(n).padStart(2, '0');
+    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  });
+  ok('mặc định kỳ báo cáo từ đầu tháng đến hôm nay', await w.inputValue('#rpFrom') === today.slice(0, 8) + '01' && await w.inputValue('#rpTo') === today);
   await w.fill('#rpFrom', '2026-01-01'); await w.dispatchEvent('#rpFrom', 'change'); await w.fill('#rpTo', '2026-02-28'); await w.dispatchEvent('#rpTo', 'change');
 
   for (const id of ['dieuhanh', 'sanluong', 'phieucan', 'chacon', 'tiendo']) {

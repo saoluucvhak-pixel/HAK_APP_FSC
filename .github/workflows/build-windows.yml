@@ -11,7 +11,7 @@ on:
   push:
     tags: ['v*']
 permissions:
-  contents: write   # chỉ dùng để tạo Release khi gắn thẻ v* hoặc chạy tay có release_tag; các lượt PR không dùng
+  contents: read
 concurrency:
   group: build-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -437,13 +437,34 @@ jobs:
             dist/BUILD_INFO.txt
             dist/smoke-*.json
           if-no-files-found: error
+  release:
+    needs: [quality, e2e-pdf, build]
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131   # v7.0.0
+        with:
+          name: HAKQN-Setup-${{ github.sha }}
+          path: dist
       - name: Tạo bản phát hành (Release) kèm bộ cài
-        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release_tag != ''
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          $exe = (Get-ChildItem dist -Filter '*Setup*.exe').FullName
+          $files = @(Get-ChildItem dist -Filter '*Setup*.exe')
+          if ($files.Count -ne 1) { throw 'Artifact phải có đúng một bộ cài' }
+          $exe = $files[0].FullName
+          $info = Get-Content dist/BUILD_INFO.txt | ConvertFrom-StringData
+          if ($info.commit -ne $env:TESTED_SHA -or $info.file -ne $files[0].Name -or
+              $info.sha256 -ne (Get-FileHash $exe -Algorithm SHA256).Hash) { throw 'Bộ cài không khớp BUILD_INFO.txt' }
           $notes = "Bản dựng từ commit $env:TESTED_SHA`n`n" + (Get-Content dist/BUILD_INFO.txt -Raw) + "`nChưa ký số: Windows có thể hiện cảnh báo SmartScreen, chọn More info → Run anyway."
+          $tagRef = gh api "repos/$env:GH_REPO/git/ref/tags/$env:TAG" --jq '.ref' 2>$null
+          if ($LASTEXITCODE -eq 0 -and $tagRef) {
+            $tagCommit = gh api "repos/$env:GH_REPO/commits/$env:TAG" --jq '.sha'
+            if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $env:TESTED_SHA) { throw 'Tag không trỏ đến commit đã kiểm thử' }
+          }
           gh release create $env:TAG $exe dist/BUILD_INFO.txt --target $env:TESTED_SHA --title "HAKQN Desktop $env:TAG" --notes $notes

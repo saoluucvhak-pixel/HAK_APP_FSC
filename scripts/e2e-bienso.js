@@ -90,7 +90,12 @@ const wf = (name, v) => { const f = path.join(dir, name); fs.writeFileSync(f, bu
   const q2 = Object.values(Object.values(d.rs)[0].forests)[0].pc.find(x => x.soPhieu === '1001/2026/NK');
   ok('sau khi cập nhật: phiếu có đủ giờ cân, cân lần 1/2, khối lượng, khách hàng; biển số vẫn là biển mới nhất', q2.gioCan1 === '08:15:00' && q2.can1 === 6840 && q2.khachHang === 'NGUYỄN VĂN AN' && q2.donGia === 1500000 && q2.thanhTien === 4260000 && q2.bienSo === '92C-54321', JSON.stringify(q2));
   // 3. báo cáo theo lô
-  await w.evaluate(() => document.querySelector('[data-act=rpOpen]').click()); await w.waitForSelector('#rpBox.on, .rpl');
+  await w.evaluate(() => document.querySelector('[data-act=rpOpen]').click()); await w.waitForSelector('#rpBox.on, .rpl'); await w.evaluate(() => {
+    document.getElementById('rpFrom').value = '';
+    const end = document.getElementById('rpTo');
+    end.value = '';
+    end.dispatchEvent(new Event('change', {bubbles: true}));
+  });
   ok('Báo cáo có mẫu “Phiếu cân đã cập nhật biển số xe”', !!(await w.$('[data-rpsel=bienso]')));
   await w.click('[data-rpsel=bienso]'); await w.waitForTimeout(400);
   const rtext = await w.innerText('#rpBox');

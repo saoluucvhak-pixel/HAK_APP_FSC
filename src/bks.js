@@ -32,6 +32,15 @@
   }
   /* mọi khóa nhận diện một phiếu: khóa hiện hành rồi khóa bí danh của từng soCu[] (ngày của chính bí danh; thiếu thì lấy ngày phiếu). Dữ liệu cũ không có soCu → chỉ một khóa. */
   const khoaTatCa = p => [khoaPhieu(p)].concat(((p && p.soCu) || []).map(c => khoaPhieu({soPhieu: c && c.so, ngay: (c && c.ngay) || (p && p.ngay)})));
-  const api = {khoa, khoaPhieu, soPhieu, chonXe, phieuDaCo, khoaTatCa};
+  function bienTuSheet(p, ...maps) {
+    const raw = String(p.bienRaw || '');
+    if (p.isPlate) return raw.toUpperCase();
+    const key = raw.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().trim();
+    for (const map of maps) {
+      if (map && Object.hasOwn(map, key) && typeof map[key] === 'string' && map[key]) return map[key];
+    }
+    return '';
+  }
+  const api = {khoa, khoaPhieu, soPhieu, chonXe, phieuDaCo, khoaTatCa, bienTuSheet};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKBks = api;
 })(typeof self !== 'undefined' ? self : this);

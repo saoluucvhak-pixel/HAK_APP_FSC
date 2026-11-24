@@ -58,7 +58,7 @@ npm run dist        # tạo bộ cài .exe (chạy trên Windows hoặc GitHub A
 ```
 
 ## Bộ cài .exe
-GitHub → Actions → **Build Windows installer** → Run workflow → tải `HAKQN-HoSoKhaiThac-Setup-1.0.0.exe` trong Artifacts. Bộ cài cho chọn thư mục, tạo lối mở Start Menu + Desktop, không xóa dữ liệu khi gỡ.
+GitHub → Actions → **Build Windows installer** → Run workflow → tải `HAKQN-HoSoKhaiThac-Setup-<phiên-bản>.exe` trong Artifacts. Bộ cài cho chọn thư mục, tạo lối mở Start Menu + Desktop, không xóa dữ liệu khi gỡ.
 
 ## Thêm phiên bản cấu trúc dữ liệu
 Thêm một hàm vào cuối `MIGRATIONS` trong `src/store.js` (không sửa hàm đã phát hành). Khi mở cơ sở dữ liệu cũ, phần mềm sao lưu file vào `backups/` rồi chạy nâng cấp trong một giao dịch.

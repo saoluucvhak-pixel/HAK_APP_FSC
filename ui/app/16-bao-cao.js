@@ -1,5 +1,5 @@
 /* ========== Báo cáo (Word + Excel) ========== */
-const rp = {id: 'dieuhanh', from: '', to: '', owner: '', detail: false, msg: null, folded: {}, q: '', one: {}, flag: {}, presetSel: '', conds: []};
+const rp = {id: 'dieuhanh', from: null, to: null, owner: '', detail: false, msg: null, folded: {}, q: '', one: {}, flag: {}, presetSel: '', conds: []};
 const isoToVi = v => HAKDates.fromIso(v);
 const viToIso = v => HAKDates.toIso(v);
 /* theo đội khai thác (cấu trúc 2.0): tên đội, Tổ trưởng, số người, đơn giá bình quân đ/tấn = tổng tiền công của đội ÷ khối lượng phiếu cân của đội */
@@ -189,7 +189,12 @@ function rpRender() {
     '<div class="kpi">' + m.kpis.map(k => '<div><b>' + esc(F(k.value, k.f)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' + prev +
     (m.notes.length ? '<div class="msg warn">' + m.notes.map(esc).join('<br>') + '</div>' : '');
 }
-function rpOpen() { if (!Object.keys(db.rs).length) { note('Chưa có dữ liệu để lập báo cáo. Hãy tạo chủ rừng và nạp phiếu cân trước.', 'err'); render(); return; } rp.msg = null; $('#rpBox').classList.add('on'); rpRender(); }
+function rpOpen() { if (!Object.keys(db.rs).length) { note('Chưa có dữ liệu để lập báo cáo. Hãy tạo chủ rừng và nạp phiếu cân trước.', 'err'); render(); return; }
+  if (rp.from === null && rp.to === null) {
+    rp.to = todayStr();
+    rp.from = '01' + rp.to.slice(2);
+  }
+  rp.msg = null; $('#rpBox').classList.add('on'); rpRender(); }
 const rpClose = () => $('#rpBox').classList.remove('on');
 function rpReadParams() {
   const g = id => { const el = document.getElementById(id); return el ? el.value : null; }; const f = g('rpFrom'), t = g('rpTo'), o = g('rpOwner'), dt = document.getElementById('rpDetail');
