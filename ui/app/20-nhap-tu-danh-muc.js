@@ -43,22 +43,54 @@ function dmDienXe(d) {
   }
   stm.vals._dmNgay = trim(d.ngayCapNhat);
 }
-/* phiếu #05 (ND-05, A-06): người / xe MỚI của lô vừa lưu (chưa nối, chưa có trong Danh mục đối tượng / Danh mục xe) → HỎI rồi mới thêm vào danh mục 3.0.
- * Không ghi danh mục cũ dmLaoDong / dmXeVC (bản lưu trữ, màn Danh mục không hiện). Đồng ý: dòng lô nối ID người / xe vừa thêm. Trả [lời báo, loại] hoặc null. */
-function dmGhiTuLo(st) {
-  const bn = new Set(st.base.nc.map(b => b._id)), bx = new Set(st.base.dx.map(b => b._id));
-  const moi = HAKDoiTuong.moiTuLo(db.dmDoiTuong || [], db.dmXe || [], st.cur.nc.filter(r => !bn.has(r._id)), st.cur.dx.filter(r => !bx.has(r._id)));
-  const n = moi.nguoi.length, m = moi.xe.length; if (!n && !m) return null;
-  const ds = moi.nguoi.map(r => '• ' + trim(r.ten) + ' (CCCD ' + trim(r.cccd) + ')').concat(moi.xe.map(r => '• Xe ' + trim(r.bienSo)));
-  const cau = (n ? n + ' người chưa có trong Danh mục đối tượng' : '') + (n && m ? ' và ' : '') + (m ? m + ' xe chưa có trong Danh mục xe' : '');
-  if (!confirm('Lô vừa lưu có ' + cau + ':\n' + ds.slice(0, 12).join('\n') + (ds.length > 12 ? '\n• … và ' + (ds.length - 12) + ' dòng khác' : '') +
-    '\n\nThêm vào Danh mục đối tượng / Danh mục xe để dùng lại ở lô khác?\n(Hủy: chỉ lưu trong lô, không thêm vào danh mục.)')) return ['Chưa thêm ' + cau + ' vào danh mục (chỉ lưu trong lô).', 'warn'];
-  const hom = todayStr(), k = HAKDoiTuong.themTuLo(db.dmDoiTuong || [], db.dmXe || [], moi, hom), f = curForest();
+/* phiếu #05 (ND-05, A-06) + bước 3 Danh mục: người / xe MỚI của lô vừa lưu (chưa nối, chưa có trong Danh mục đối tượng / Danh mục xe) → mở HỘP THOẠI trong ứng dụng
+ * liệt kê rõ từng người / xe kèm ô tích (mặc định tích hết); “Thêm vào danh mục” chỉ thêm các dòng được tích, “Chỉ lưu trong lô” không thêm gì (Esc = Chỉ lưu trong lô).
+ * Không ghi danh mục cũ dmLaoDong / dmXeVC (bản lưu trữ, màn Danh mục không hiện). Thêm xong: dòng lô nối ID người / xe vừa thêm.
+ * Hộp là bất đồng bộ nên dmGhiTuLo trả null; thông báo kết quả được xếp hàng khi người dùng chọn. */
+let dmHopCho = null;   // {nguoi, xe, cau, oid, fid}: lô vừa lưu đang chờ chọn
+function dmHopHtml(c) {
+  const hang = (kind, i, nhan, chiTiet) => '<li><label class="row" style="gap:8px;align-items:flex-start"><input type="checkbox" data-dmhop="' + kind + i + '" checked> <span>' + nhan + (chiTiet ? ' <span class="mut">' + chiTiet + '</span>' : '') + '</span></label></li>';
+  const ng = c.nguoi.map((r, i) => hang('n', i, '<b>' + esc(trim(r.ten)) + '</b>', 'CCCD ' + esc(trim(r.cccd)) + ' · Vai trò: Nhân công' + (trim(r.chucDanh) ? ' (' + esc(trim(r.chucDanh)) + ')' : '')));
+  const xe = c.xe.map((r, i) => hang('x', i, '<b>Xe ' + esc(trim(r.bienSo)) + '</b>', [trim(r.chuXe) ? 'Chủ xe: ' + esc(trim(r.chuXe)) : '', trim(r.taiXe) ? 'Tài xế: ' + esc(trim(r.taiXe)) : ''].filter(Boolean).join(' · ')));
+  return '<div class="gh"><h2>Thêm vào danh mục để dùng lại?</h2></div><div id="dmHopDlg"><p>Lô vừa lưu có ' + esc(c.cau) + '. Chọn dòng cần thêm vào danh mục để dùng lại ở lô khác (bỏ tích dòng không cần).</p>' +
+    (ng.length ? '<h3 style="margin:8px 0 4px">Người (Danh mục đối tượng)</h3><ul style="list-style:none;padding:0;margin:0">' + ng.join('') + '</ul>' : '') +
+    (xe.length ? '<h3 style="margin:8px 0 4px">Xe (Danh mục xe)</h3><ul style="list-style:none;padding:0;margin:0">' + xe.join('') + '</ul>' : '') +
+    '<p class="mut">“Chỉ lưu trong lô”: dòng vẫn nằm trong lô, không thêm vào danh mục; lần sau phải nhập lại.</p>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn ghost" data-act="dmHopLo">Chỉ lưu trong lô</button><button type="button" class="btn" data-act="dmHopThem">Thêm vào danh mục (<span id="dmHopDem">' + (ng.length + xe.length) + '</span>)</button></div></div>';
+}
+function dmHopChon() {   // các dòng đang được tích: {nguoi: [chỉ số], xe: [chỉ số]}
+  const ds = [...document.querySelectorAll('#dmHopDlg [data-dmhop]')].filter(cb => cb.checked).map(cb => cb.dataset.dmhop);
+  return {nguoi: ds.filter(x => x[0] === 'n').map(x => +x.slice(1)), xe: ds.filter(x => x[0] === 'x').map(x => +x.slice(1))};
+}
+function dmHopCapNhatDem() {
+  const c = dmHopChon(), n = c.nguoi.length + c.xe.length, dem = document.getElementById('dmHopDem'), nut = document.querySelector('#dmHopDlg [data-act=dmHopThem]');
+  if (dem) dem.textContent = String(n); if (nut) nut.disabled = !n;
+}
+document.addEventListener('change', e => { if (e.target && e.target.closest && e.target.closest('#dmHopDlg') && e.target.matches('[data-dmhop]')) dmHopCapNhatDem(); });
+function dmHopXuLy(them) {
+  const c = dmHopCho; if (!c) return;
+  const chon = them ? dmHopChon() : {nguoi: [], xe: []}, tong = chon.nguoi.length + chon.xe.length;
+  if (them && !tong) return;   // chưa tích dòng nào: nút “Thêm” đang khóa
+  dmHopCho = null; dlgDong();
+  if (c.daLuu) pushNote(c.daLuu, 'ok');   // thông báo “Đã lưu dữ liệu vào lô…” vẫn hiện cùng kết quả chọn, như khi còn hỏi bằng hộp của trình duyệt
+  if (!tong) { pushNote('Chưa thêm ' + c.cau + ' vào danh mục (chỉ lưu trong lô).', 'warn'); return render(); }
+  const moi = {nguoi: c.nguoi.filter((_, i) => chon.nguoi.includes(i)), xe: c.xe.filter((_, i) => chon.xe.includes(i))}, bo = c.nguoi.length + c.xe.length - tong;
+  const hom = todayStr(), k = HAKDoiTuong.themTuLo(db.dmDoiTuong || [], db.dmXe || [], moi, hom), o = db.rs && db.rs[c.oid], f = o && o.forests && o.forests[c.fid];
   db.dmDoiTuong = k.dmDoiTuong; db.dmXe = k.dmXe;
   if (f) { k.nguoi.forEach(({r, id}) => { const x = (f.nc || []).find(y => y._id === r._id); if (x) { x.nguoiId = id; x._dmNgay = hom; } });
     k.xe.forEach(({r, id}) => { const x = (f.dx || []).find(y => y._id === r._id); if (x) { x.xeId = id; x._dmNgay = hom; } }); }
   persist();
-  return ['Đã thêm ' + k.nguoi.length + ' người vào Danh mục đối tượng, ' + k.xe.length + ' xe vào Danh mục xe.' + (k.loi.length ? ' Chưa thêm được: ' + k.loi.join('; ') + '.' : ''), k.loi.length ? 'warn' : 'ok'];
+  pushNote('Đã thêm ' + k.nguoi.length + ' người vào Danh mục đối tượng, ' + k.xe.length + ' xe vào Danh mục xe.' + (k.loi.length ? ' Chưa thêm được: ' + k.loi.join('; ') + '.' : '') + (bo ? ' ' + bo + ' dòng không chọn: chỉ lưu trong lô.' : ''), k.loi.length ? 'warn' : 'ok');
+  render();
+}
+function dmGhiTuLo(st) {
+  const bn = new Set(st.base.nc.map(b => b._id)), bx = new Set(st.base.dx.map(b => b._id));
+  const moi = HAKDoiTuong.moiTuLo(db.dmDoiTuong || [], db.dmXe || [], st.cur.nc.filter(r => !bn.has(r._id)), st.cur.dx.filter(r => !bx.has(r._id)));
+  const n = moi.nguoi.length, m = moi.xe.length; if (!n && !m) return null;
+  const cau = (n ? n + ' người chưa có trong Danh mục đối tượng' : '') + (n && m ? ' và ' : '') + (m ? m + ' xe chưa có trong Danh mục xe' : '');
+  dmHopCho = {nguoi: moi.nguoi, xe: moi.xe, cau, oid: NAV.cur, fid: NAV.curF};
+  dlgMo(dmHopHtml(dmHopCho)); const nut = document.querySelector('#dmHopDlg [data-act=dmHopThem]'); if (nut) nut.focus();
+  return null;
 }
 /* dòng của lô khác bản chụp so với dòng mới nhất của danh mục: [{row, d, khac}] */
 function dmLechLo(kind, rows) {
