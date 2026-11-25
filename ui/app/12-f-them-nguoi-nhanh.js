@@ -38,7 +38,8 @@ document.addEventListener('click', e => {
 document.addEventListener('submit', e => { if (e.target && e.target.id === 'qnForm') { e.preventDefault(); e.stopPropagation(); qnLuu(e.target); } }, true);
 /* lọc nhanh khi gõ (typeahead) cho ô Người ký: ẩn các lựa chọn không khớp, giữ lựa chọn đang chọn */
 document.addEventListener('input', e => {
-  const t = e.target; if (!t || t.id !== 'kyLoc') return; const sel = t.form && t.form.elements.ky; if (!sel) return;
+  const t = e.target; if (!t) return;
+  const sel = t.id === 'kyLoc' ? (t.form && t.form.elements.ky) : t.dataset && t.dataset.locsel ? document.getElementById(t.dataset.locsel) : null; if (!sel) return;
   const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(), q = fold(t.value).split(/\s+/).filter(Boolean);
   [...sel.options].forEach(o => { o.hidden = !!q.length && o.value !== sel.value && !q.every(w => fold(o.textContent).includes(w)); });
 });

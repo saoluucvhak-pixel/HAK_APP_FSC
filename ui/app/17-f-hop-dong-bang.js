@@ -74,7 +74,23 @@ async function gsEnrich() {
     if (run === gs.run) gsRefreshList();
   }
 }
-const gsFiltered = () => gs.stat ? gs.list.filter(g => (gs.sum.get(g.key) || {}).status === gs.stat) : gs.list;
+/* 3.5.1: Smart Filter 'gs_hop_dong' — trạng thái (chip) + khoảng ngày ký + khoảng tổng tấn; cùng bộ máy lọc HAKSmartFilter với các màn bảng */
+gs.tanMin = ''; gs.tanMax = ''; gs.tu = ''; gs.den = '';
+const gsIso = v => { const p = HAKDates.parse(v); return p ? p.y + '-' + String(p.m).padStart(2, '0') + '-' + String(p.d).padStart(2, '0') : ''; };
+const gsSfCfg = () => ({
+  screenId: 'gs_hop_dong', title: 'Hợp đồng Google Sheets', quickFields: ['status'], advancedFields: ['status'],
+  matchDate: (g, tu, den) => { const s = gs.sum.get(g.key), d = s ? gsIso(s.ngay) : ''; if (!d) return false; return (!tu || d >= tu) && (!den || d <= den); },
+  fields: [{key: 'status', label: 'Trạng thái', type: 'enum', options: [{value: 'ok', label: 'Đủ'}, {value: 'warn', label: 'Cần xem'}, {value: 'err', label: 'Lỗi dữ liệu'}], match: (g, v) => (gs.sum.get(g.key) || {}).status === v}]
+});
+let gsSfInst = null;
+function gsFiltered() {
+  const f = gsSfInst || (gsSfInst = HAKSmartFilter.createFilter(gsSfCfg())), cfg = gsSfCfg(), st = f.getState(), one = {}; if (gs.stat) one.status = gs.stat;
+  f.setState(HAKCore.sf.normalize(Object.assign({}, st, {one, tu: gs.tu, den: gs.den}), cfg));
+  let L = f.filter(gs.list).rows; const a = parseFloat(String(gs.tanMin).replace(',', '.')), b = parseFloat(String(gs.tanMax).replace(',', '.'));
+  if (!isNaN(a) || !isNaN(b)) L = L.filter(g => { const t = (gs.sum.get(g.key) || {}).tan; return t != null && (isNaN(a) || t >= a) && (isNaN(b) || t <= b); });
+  return L;
+}
+const gsDangLoc = () => !!(gs.stat || gs.tanMin !== '' || gs.tanMax !== '' || gs.tu || gs.den);
 
 function gsListInner() {
   const L = gsFiltered(), pages = Math.max(1, Math.ceil(L.length / GS_PAGE)); if (gs.page >= pages) gs.page = pages - 1; if (gs.page < 0) gs.page = 0;
@@ -88,9 +104,12 @@ function gsListInner() {
   }).join('');
   return '<div class="row gsBar"><b>Trạng thái:</b>' + chip('', 'Tất cả', gs.list.length) + chip('ok', 'Đủ', cnt.ok) + chip('warn', 'Cần xem', cnt.warn) + chip('err', 'Lỗi dữ liệu', cnt.err) +
     (gs.prog ? '<span class="mut" role="status">Đang tính trạng thái ' + fmt(gs.prog.done) + '/' + fmt(gs.prog.total) + '…</span>' : '') + '</div>' +
+    '<div class="row gsBar gsLoc" id="gsLoc"><b>Tổng tấn:</b><input data-gsf="tanMin" value="' + esc(gs.tanMin) + '" inputmode="decimal" placeholder="từ" aria-label="Tổng tấn từ" style="width:80px"> – <input data-gsf="tanMax" value="' + esc(gs.tanMax) + '" inputmode="decimal" placeholder="đến" aria-label="Tổng tấn đến" style="width:80px">' +
+    '<b style="margin-left:10px">Ngày ký:</b><input type="date" data-gsf="tu" value="' + esc(gs.tu) + '" aria-label="Ngày ký từ"> – <input type="date" data-gsf="den" value="' + esc(gs.den) + '" aria-label="Ngày ký đến">' +
+    (gsDangLoc() ? '<button type="button" class="btn ghost sm" data-gsf-reset="1">Xóa lọc</button>' : '') + '</div>' +
     '<div class="wrap gsWrap"><table class="gsTbl"><thead><tr><th>Mã hợp đồng</th><th>Chủ rừng</th><th>CCCD</th><th>Ngày ký</th><th class="num">Rừng</th><th class="num">Phiếu</th><th class="num">Tổng tấn</th><th>Trạng thái</th></tr></thead><tbody>' +
     (rows || '<tr><td colspan="8" class="empty">Không có hợp đồng nào khớp. Đổi từ khóa, bộ lọc hoặc trạng thái.</td></tr>') + '</tbody></table></div>' +
-    '<div class="row gsPg"><span>' + fmt(L.length) + ' hợp đồng' + (gs.stat ? ' (đang lọc theo trạng thái)' : '') + ' · trang ' + (gs.page + 1) + '/' + pages + '</span><button type="button" class="btn ghost sm" data-act="gsPage" data-d="-1"' + (gs.page ? '' : ' disabled') + ' aria-label="Trang trước">‹ Trước</button>' +
+    '<div class="row gsPg"><span>' + fmt(L.length) + ' hợp đồng' + (gsDangLoc() ? ' (đang lọc)' : '') + ' · trang ' + (gs.page + 1) + '/' + pages + '</span><button type="button" class="btn ghost sm" data-act="gsPage" data-d="-1"' + (gs.page ? '' : ' disabled') + ' aria-label="Trang trước">‹ Trước</button>' +
     '<button type="button" class="btn ghost sm" data-act="gsPage" data-d="1"' + (gs.page < pages - 1 ? '' : ' disabled') + ' aria-label="Trang sau">Sau ›</button></div>' +
     (gs.noHd ? '<p class="mut">' + fmt(gs.noHd) + ' dòng Sheet không có mã hợp đồng nên không nằm trong bảng này: xem ở chế độ “Theo dòng Sheet”.</p>' : '');
 }
@@ -122,6 +141,11 @@ document.addEventListener('click', e => {
   const chip = t.closest('[data-gsstat]'); if (chip) { gs.stat = gs.stat === chip.dataset.gsstat ? '' : chip.dataset.gsstat; gs.page = 0; gsRefreshList(); return; }
   const pg = t.closest('[data-act=gsPage]'); if (pg) { gs.page += +pg.dataset.d; gsRefreshList(); }
 });
+document.addEventListener('change', e => {   // ô lọc khoảng tấn / ngày ký của bảng hợp đồng
+  const t = e.target; if (!t || !t.dataset || !t.dataset.gsf || !t.closest('#lkBox')) return;
+  gs[t.dataset.gsf] = t.value.trim(); gs.page = 0; gsRefreshList();
+});
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-gsf-reset]'); if (!b || !b.closest('#lkBox')) return; gs.stat = ''; gs.tanMin = gs.tanMax = gs.tu = gs.den = ''; gs.page = 0; gsRefreshList(); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || !e.target.closest) return;
   const row = e.target.closest('tr[data-gsrow]'); if (!row || !row.closest('#lkBox')) return;

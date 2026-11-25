@@ -45,10 +45,11 @@ function rpRecords(ownerFilter = rp.owner) {
       let vd = {trangThai: '', trangThaiTen: '', noIn: 0, chuaKy: 0};   // vòng đời lô (src/vongdoi.js): trạng thái, số mẫu còn nợ in, số mẫu đã in chưa ký
       try { const q = qtEval(jr, f), tt = HAKVongDoi.trangThai(f, q.sum), a = q.sum.dot1, b = q.sum.dot2; vd = {trangThai: tt, trangThaiTen: HAKVongDoi.TEN[tt], noIn: a.chuaIn + a.doi + b.chuaIn + b.doi, chuaKy: (a.daIn - a.daKy) + (b.daIn - b.daKy)}; } catch (e) { /* không tính được: để trống */ }
       const dmLo = HAKDinhMuc.dinhMucLo(db, i);
+      const hdTen = {}; try { groupsDX(jr).forEach((g, gi) => { if (g.hd) hdTen[g.hd.id] = trim(g.hd.ten) || 'Đội xe ' + (gi + 1); }); } catch (e) { /* chưa có đội xe */ }   // 3.5.1: lọc báo cáo phiếu cân theo đội xe
       out.push({oid: o.id, fid: f.id, chuRung: o.info.ten || '(chưa đặt tên)', maChu: o.info.ma || o.id, cccd: o.info.cccd || '', maRung: i.maRung || '', tenRung: i.tenRung || '', diaDiem: i.diaDiem || '',
         dienTich: i.dienTich, dinhMuc: dmLo ? dmLo.v : i.dinhMucTanHa, khoiLuongTT: i.klHoSoCu, tuNgay: i.tuNgay || '', denNgay: i.denNgay || '',
         diemDen: destOf(jobView(o, f)),
-        pc: (f.pc || []).map(p => ({doiId: p.doiId, ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null,
+        pc: (f.pc || []).map(p => ({doiXe: hdTen[p.hdvcId] || '', doiId: p.doiId, ngay: p.ngay, bienSo: p.bienSo, soPhieu: p.soPhieu, kl: typeof p.kl === 'number' ? p.kl : 0, noiGiao: p.noiGiao, gioCan1: p.gioCan1 || '', gioCan2: p.gioCan2 || '', can1: typeof p.can1 === 'number' ? p.can1 : null,
         can2: typeof p.can2 === 'number' ? p.can2 : null, klKg: typeof p.klKg === 'number' ? p.klKg : null, khachHang: p.khachHang || ''})), bienLog: (f.bienLog || []).map(e => ({...e})),
         trangThai: vd.trangThai, trangThaiTen: vd.trangThaiTen, noIn: vd.noIn, chuaKy: vd.chuaKy, ngayChot: f.chot ? f.chot.at : '', congTy: (i.muaHang && i.muaHang.ten) || '', soDoi: (f.doi || []).length, soDoiXe: (f.hdvc || []).length,
         nc: (f.nc || []).length, dx: (f.dx || []).length, pct, thieu, doiList: rpDoiList(jr), hdList: rpHdList(jr),
@@ -64,7 +65,7 @@ const RP_EXTRA = {
   'Chỉ lô còn mẫu chưa in hoặc chưa ký']], hint: 'mã lô, chủ rừng, địa điểm'},
   laodong: {fields: [{key: 'chucDanh', label: 'Vị trí', opts: () => chucDanhAll()}, {key: 'vaiTro', label: 'Chức vụ', opts: () => ['Tổ trưởng', 'Công nhân']}], flags: [['onlyMinors', 'Chỉ người dưới 18 tuổi'], ['onlyMissing', 'Chỉ hồ sơ cần bổ sung (thiếu ngày sinh, CCCD)']], hint: 'họ tên, CCCD, vị trí, địa chỉ, mã rừng, chủ rừng'},
   danhsachxe: {fields: [{key: 'nguoiKy', label: 'Người ký HĐ vận chuyển', opts: () => ['Chủ xe', 'Tài xế']}], flags: [['onlyNoPhone', 'Chỉ xe chưa có số điện thoại'], ['onlyTrips', 'Chỉ xe có chuyến trong kỳ'], ['onlyNoTrips', 'Chỉ xe chưa có chuyến trong kỳ']], hint: 'biển số, chủ xe, tài xế, SĐT, loại xe, mã rừng'},
-  phieucan: {fields: [], flags: [], hint: 'số phiếu, biển số, khách hàng, nơi giao, mã rừng, chủ rừng'},
+  phieucan: {fields: [{key: 'doiXe', label: 'Đội xe', opts: () => rpUniq(rpRecords('').flatMap(r => r.pc.map(p => p.doiXe)))}, {key: 'noiGiao', label: 'Nhà máy tiếp nhận', opts: () => rpUniq(rpRecords('').flatMap(r => r.pc.map(p => trim(p.noiGiao))))}], flags: [], hint: 'số phiếu, biển số, khách hàng, nơi giao, mã rừng, chủ rừng'},
   bienso: {fields: [], flags: [], hint: 'mã rừng, chủ rừng'},
   doichieu: {fields: [], flags: [['onlyToaDo', 'Chỉ rừng thiếu tọa độ'], ['onlyPhieu', 'Chỉ phiếu cân thiếu hồ sơ rừng']], hint: 'tên chủ rừng, CCCD, mã hợp đồng, số phiếu'}
 };
@@ -113,6 +114,9 @@ function rpData() {
       if (active && !x.dxList.length) return;
     } else if (id === 'sohoso') {
       if ((o.trangThai && r.trangThaiTen !== o.trangThai) || (o.nam && !String(r.tuNgay || '').endsWith('/' + o.nam)) || (fl.onlyNoIn && !(r.noIn || r.chuaKy)) || (words.length && !lot)) return;
+    } else if (id === 'phieucan' && (o.doiXe || o.noiGiao)) {
+      x = {...r, pc: (r.pc || []).filter(p => (!o.doiXe || p.doiXe === o.doiXe) && (!o.noiGiao || trim(p.noiGiao) === o.noiGiao) && (!words.length || lot || hit(p.soPhieu, p.bienSo, p.khachHang, p.noiGiao)))};
+      if (!x.pc.length) return;
     } else if (words.length && !lot) {
       x = {...r, pc: (r.pc || []).filter(p => hit(p.soPhieu, p.bienSo, p.khachHang, p.noiGiao)), bienLog: (r.bienLog || []).filter(e => hit(e.soPhieu, e.cu, e.moi))};
       if (!x.pc.length && !x.bienLog.length) return;

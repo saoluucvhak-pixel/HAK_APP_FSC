@@ -9,6 +9,7 @@
 - Danh sách chủ rừng (cột trái) dùng bộ lọc thông minh: tình trạng hồ sơ, tình trạng hợp đồng, số lượng rừng.
 - Thanh tiêu đề: nút đổi nhanh Sáng / Tối và chọn nhanh bảng màu.
 - Bàn làm việc (menu mới): sơ đồ quy trình 6 bước (Đã xong / Đang làm / Chờ xử lý / Bị khóa), các trạm công việc và hàng đợi việc cần xử lý của lô đang chọn với nút “Xử lý ngay”; khối Hướng dẫn bắt đầu được gỡ khỏi Tổng quan.
+- Bảng hợp đồng Google Sheets: lọc theo khoảng tổng tấn và khoảng ngày ký (cùng chip trạng thái). Báo cáo Sổ theo dõi phiếu cân: lọc theo Đội xe và Nhà máy tiếp nhận (Word, Excel, in đều theo phần đã lọc). Các bộ chọn xe, chủ xe, tài xế có ô gõ lọc nhanh.
 - Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
 - Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
 - Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.
