@@ -399,7 +399,7 @@
         ...(direct ? partyBlock('ĐẠI DIỆN TỔ KHAI THÁC (BÊN B)', tt, ttName) : benBGiaoKhoan('BÊN KHAI THÁC (BÊN B)', rec, tt, ttName)),
         ctx.P('Hai bên cùng tiến hành nghiệm thu và thanh lý với các nội dung sau:', {keep: true}),
         ctx.P('**Điều 1: Thông tin rừng đã khai thác**', {keep: true}),
-        ctx.P('Mã rừng: ' + dot(rs.maRung, 4) + '. Địa điểm: ' + dot(rs.diaDiem, 8) + ctx.rungText(rs) + '.', {ind: 360}),
+        ctx.P('Địa điểm: ' + dot(rs.diaDiem, 8) + ctx.rungText(rs) + '.', {ind: 360}),
         ctx.P('Thời gian khai thác: ' + ctx.VP(ctx.tuDen(rs.tuNgay, rs.denNgay, ex), ctx.S_TUDEN) + '.', {ind: 360}),
         ctx.P('**Điều 2: Nghiệm thu khối lượng**', {keep: true}),
         ctx.P('2.1. Khối lượng khai thác được nghiệm thu: **' + ctx.V(vol ? ctx.fmtT(kg) : '………', 14) + ' tấn**' + (ex._mode === 'day' ? ctx.V(vol ? ' (' + vol.src + ')' : '', 0, '') : '') + '.', {ind: 360}),
