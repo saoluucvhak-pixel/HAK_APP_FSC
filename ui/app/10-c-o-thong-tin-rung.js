@@ -56,13 +56,13 @@ function panelForest(f, muc) {
   const i = fInfo(f);
   const start = k => '<div class="mucForm" data-muc-form="' + k + '"' + (k === muc ? '' : ' hidden') + '>';
   const inp = (k, label, o = {}) => '<label' + (o.wide ? ' style="grid-column:1/-1"' : '') + '><span class="' + (o.req ? 'req' : '') + '">' + label + '</span>' +
-    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['dienTich', 'cuLy'].includes(k) ? displayInputNumber(i[k]) : (['tuNgay', 'denNgay'].includes(k) ? displayInputDate(i[k]) ?? '' : i[k] ?? '')) + '"' + (['dienTich', 'cuLy'].includes(k) ? ' data-group-number inputmode="decimal"' : '') + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
+    '<input name="' + k + '" value="' + esc(typeof i[k] === 'number' && ['dienTich', 'cuLy', 'dienTichSoDo', 'dienTichGps'].includes(k) ? displayInputNumber(i[k]) : (['tuNgay', 'denNgay'].includes(k) ? displayInputDate(i[k]) ?? '' : i[k] ?? '')) + '"' + (['dienTich', 'cuLy', 'dienTichSoDo', 'dienTichGps'].includes(k) ? ' data-group-number inputmode="decimal"' : '') + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + (o.btn || '') + '</label>';
   const sl = forestYield(i);
   return '<div class="card"><h3 style="margin-top:0">Thông tin khai thác của rừng</h3>' +
     (() => { const t = trim((i || {}).tuNgay); if (!t) return ''; const g = HAKDinhBien.get(db, t); return g.ngayLoi ? '<div class="msg err" id="tuNgayLoi" style="margin-bottom:8px"><b>Ngày bắt đầu khai thác sai:</b> ' + esc(g.ngayLoi) + '. Dữ liệu cũ được giữ nguyên để bạn sửa.</div>' : ''; })() +
     '<form id="forestForm" class="grid">' +
     start('chung') + inp('maRung', 'Mã rừng', {req: true}) + inp('tenRung', 'Tên rừng / lô') + inp('diaDiem', 'Địa điểm khai thác (rừng)', {req: true, wide: true}) +
-    inp('dienTich', 'Diện tích (ha)') + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + '</div>' +
+    inp('dienTich', 'Diện tích khảo sát / theo hợp đồng (ha)') + inp('dienTichSoDo', 'Diện tích theo Sổ đỏ (ha)') + inp('dienTichGps', 'Diện tích đo GPS — ToaDoRung (ha)') + '<div id="doiSoatDT" style="grid-column:1/-1">' + doiSoatDienTichHtml(i) + '</div>' + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + '</div>' +
     start('toado') + inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +
     inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' +
     cuLyNote(i) + '</p></div>' +
@@ -152,3 +152,24 @@ function panelGiay(f) {
     '<button class="btn sro" type="submit" tabindex="-1" aria-hidden="true">Lưu</button></form></div>';
 }
 
+/* 3.5.1: Đối soát 3 nguồn diện tích đất rừng — Sổ đỏ, khảo sát / hợp đồng, đo GPS (ToaDoRung). Chỉ cảnh báo, không chặn lưu; ngưỡng chênh 0,01 ha (100 m²). */
+const DT_NGUONG = 0.01;
+function doiSoatDienTichKetQua(v) {   // v = {soDo, khaoSat, gps} (ha hoặc rỗng)
+  const nguon = [['Sổ đỏ (GCNQSDĐ)', v.soDo], ['Khảo sát / hợp đồng', v.khaoSat], ['Đo GPS (ToaDoRung)', v.gps]].map(([ten, x]) => ({ten, v: typeof x === 'number' && isFinite(x) ? x : null}));
+  const co = nguon.filter(x => x.v != null);
+  if (co.length < 2) return {nguon, tt: 'thieu', lech: null};
+  const mx = co.reduce((a, b) => (b.v > a.v ? b : a)), mn = co.reduce((a, b) => (b.v < a.v ? b : a)), lech = Math.round((mx.v - mn.v) * 10000) / 10000;
+  return {nguon, tt: lech > DT_NGUONG ? 'xungDot' : 'khop', lech, mx, mn, pct: mn.v > 0 ? Math.round(lech / mn.v * 1000) / 10 : null};
+}
+function doiSoatDienTichHtml(i) {
+  const r = doiSoatDienTichKetQua({soDo: i.dienTichSoDo, khaoSat: i.dienTich, gps: i.dienTichGps}), ha = v => (v == null ? '—' : formatNumber(v, 4) + ' ha');
+  const pill = r.tt === 'xungDot' ? '<span class="pill err">Xung đột diện tích (areaConflict)</span>' : r.tt === 'khop' ? '<span class="pill ok">Khớp giữa các nguồn</span>' : '<span class="pill">Chưa đủ nguồn để đối soát</span>';
+  return '<div class="card" style="margin:0" data-tt="' + r.tt + '"><div class="row" style="justify-content:space-between;align-items:center;gap:8px"><b>Đối soát diện tích đất rừng (3 nguồn)</b>' + pill + '</div>' +
+    '<div class="kpi" style="margin-top:6px">' + r.nguon.map(x => '<div><b>' + ha(x.v) + '</b>' + esc(x.ten) + '</div>').join('') + '</div>' +
+    (r.tt === 'xungDot' ? '<div class="msg warn" style="margin:6px 0 0">Chênh <b>' + formatNumber(r.lech, 4) + ' ha</b>' + (r.pct != null ? ' (' + String(r.pct).replace('.', ',') + '%)' : '') + ' giữa <b>' + esc(r.mx.ten) + '</b> và <b>' + esc(r.mn.ten) + '</b>. Đối chiếu giấy chứng nhận, biên bản khảo sát và tọa độ trước khi đánh giá FSC. Chỉ cảnh báo, không chặn lưu.</div>' : '') + '</div>';
+}
+document.addEventListener('input', e => {   // cập nhật thẻ khi sửa một trong ba ô diện tích
+  const t = e.target, fm = t && t.form; if (!fm || fm.id !== 'forestForm' || !['dienTich', 'dienTichSoDo', 'dienTichGps'].includes(t.name)) return;
+  const n = k => { const el = fm.elements[k]; return el && trim(el.value) ? readInputNumber(el.value) : null; }, box = document.getElementById('doiSoatDT');
+  if (box) box.innerHTML = doiSoatDienTichHtml({dienTichSoDo: n('dienTichSoDo'), dienTich: n('dienTich'), dienTichGps: n('dienTichGps')});
+});

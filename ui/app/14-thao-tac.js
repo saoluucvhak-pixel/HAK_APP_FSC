@@ -30,8 +30,15 @@ function readForest(form) {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
     lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: readInputNumber(fd.get('dienTich')),
     dinhMucTanHa: readInputNumber(fd.get('dinhMucTanHa')), dinhMucNgayHa: readInputNumber(fd.get('dinhMucNgayHa')), cuLy: readInputNumber(fd.get('cuLy')),
-    tuNgay: readInputDate(fd.get('tuNgay')), denNgay: readInputDate(fd.get('denNgay'))
+    tuNgay: readInputDate(fd.get('tuNgay')), denNgay: readInputDate(fd.get('denNgay')),
+    ...dienTichPhu(fd)
   };
+}
+/* hai ô diện tích đối soát (Sổ đỏ, đo GPS): chỉ tạo khóa khi có giá trị (hoặc để xóa giá trị cũ) — lô chưa khai không có thêm khóa mới */
+function dienTichPhu(fd) {
+  const cf = curForest(), ci = (cf && cf.info) || {}, out = {};
+  ['dienTichSoDo', 'dienTichGps'].forEach(k => { const v = readInputNumber(fd.get(k)); if (v != null) out[k] = v; else if (k in ci) out[k] = null; });
+  return out;
 }
 
 function readLuong(form) {

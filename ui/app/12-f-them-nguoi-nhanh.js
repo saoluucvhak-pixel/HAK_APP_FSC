@@ -43,3 +43,12 @@ document.addEventListener('input', e => {
   const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(), q = fold(t.value).split(/\s+/).filter(Boolean);
   [...sel.options].forEach(o => { o.hidden = !!q.length && o.value !== sel.value && !q.every(w => fold(o.textContent).includes(w)); });
 });
+/* “+ Thêm xe mới vào danh mục” trong form Thêm xe: lưu ngay xe đang nhập vào Danh mục xe (đúng quy tắc HAKXeDM.luu: BKS không trùng, ngày hợp lệ), chủ xe là người đã chọn ở khối Chủ xe */
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest && e.target.closest('[data-act=dxThemXeDm]'); if (!b) return; e.preventDefault();
+  const v = stRead(), chuSel = document.getElementById('xeChuDm'), ct = chuSel && chuSel.value ? HAKXeDM.chuXe(dmDT(), chuSel.value) : null;
+  const r = HAKXeDM.luu(dmXE(), {id: '', bks: v.bienSo, ngayCapNhat: todayStr(), hanKiemDinh: v.kdDen, hanBaoHiem: v.hanBH, loaiXe: v.loaiXe, chuXeId: ct ? chuSel.value : ''}, dmDT());
+  const hien = (kind, text) => { stRender(); const body = document.getElementById('stBody'), h = body && body.querySelector('form'); if (h) { const d = document.createElement('div'); d.className = 'msg ' + kind; d.id = 'dxDmMsg'; d.textContent = text; h.parentNode.insertBefore(d, h); } };
+  if (!r.ok) return hien('err', 'Chưa thêm vào Danh mục xe: ' + r.errs.join('; '));
+  db.dmXe = r.dm; persist(); hien('ok', 'Đã thêm xe ' + r.xe.bks + ' vào Danh mục xe.');
+});
