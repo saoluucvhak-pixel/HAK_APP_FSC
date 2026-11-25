@@ -85,7 +85,11 @@
     return whole.replace(/\B(?=(\d{3})+(?!\d))/g, group) + (fraction === undefined ? '' : decimal + fraction);
   }
   function readInput(value, style, integer = false) {
-    if (style !== 'en') return integer ? value : toDec(value);
+    if (style !== 'en') {
+      const s = trim(value);
+      if (integer && /^\d{1,3}(?:\.\d{3})+$/.test(s)) return toDec(s);
+      return integer ? value : toDec(value);
+    }
     const s = trim(value);
     if (!s) return null;
     if (!/^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(s) || (integer && s.includes('.'))) return 'x';
