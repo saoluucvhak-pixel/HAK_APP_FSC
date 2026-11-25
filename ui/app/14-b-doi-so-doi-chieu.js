@@ -157,7 +157,7 @@ async function dcChay(kind, el) {
 }
 
 /* khung ở màn chủ rừng (sau biểu mẫu thông tin) và ở hồ sơ rừng đã lưu: bọc hàm vẽ có sẵn, không đổi hàm gốc */
-{ const g = panelInfo; panelInfo = function (rec) { return g(rec) + dcKhungHtml('dcChu', {cccd: (rec.info || {}).cccd, hd: dcHd((rec.info || {}).soHopDong)}); }; }
+/* 3.5.1: màn Thông tin chủ rừng không còn thẻ “Dữ liệu Google Sheets” bị khóa ở cuối form: tra cứu bằng nút “Tra cứu Google Sheet” ở đầu form (17-i) */
 { const g = panelForest; panelForest = function (f, muc) { const o = curOwner(), hd = dcHd(dcHdLo(f) || (o && o.info.soHopDong)); return g(f, muc) + dcKhungHtml('dcRung', {cccd: o && o.info.cccd, hd}); }; }
 
 document.addEventListener('click', e => {

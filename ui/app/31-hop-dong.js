@@ -46,9 +46,9 @@ function panelDsNC(rec, opt = {}) {
       '<td style="text-align:center">' + cnt + '</td>' +
       '<td style="text-align:right;white-space:nowrap">' + kl(d) + '</td></tr>';
   };
-  return '<div id="dsHdNc"><div class="hak-pane-head"><h3>Đội / Hợp đồng (' + ds.length + ')</h3></div>' +
+  return '<div id="dsHdNc"><div class="hak-pane-head"><h3>Hợp đồng nhân công (' + ds.length + ')</h3></div>' +
     '<div class="hak-pane-body" style="padding:10px 12px"><div class="row" style="gap:6px;margin-bottom:8px"><input id="doiMoiTen" placeholder="Tên đội mới…" style="flex:1;min-width:110px"><button class="btn sm" data-act="themDoi">+ Thêm đội</button></div>' +
-    '<div class="hak-master-list"><table id="dsHdNcTbl"><thead><tr><th>#</th><th>Đội · Hợp đồng</th><th>Người</th><th style="text-align:right">KL</th></tr></thead><tbody>' +
+    '<div class="hak-master-list"><table id="dsHdNcTbl"><thead><tr><th>#</th><th>Hợp đồng nhân công</th><th>Người</th><th style="text-align:right">KL</th></tr></thead><tbody>' +
     (ds.length ? ds.map(row).join('') : '<tr><td colspan="4" class="mut">Chưa có đội nào: nhập tên rồi bấm “+ Thêm đội”.</td></tr>') + '</tbody></table></div>' +
     (chua ? '<div class="msg warn" style="margin-top:8px" id="dsHdNcChua">' + chua + ' người chưa thuộc đội nào.</div>' : '') + '</div></div>' +
     (ds.length ? '<div style="padding:0 12px 12px">' + panelPhanBo(rec) + '</div>' : '');

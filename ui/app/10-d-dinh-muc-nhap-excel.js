@@ -140,13 +140,13 @@ function normAction(act, el) {
   if (act === 'normDelVer') { const r = HAKDinhMuc.removeVersion(db, normSel); if (!r.ok) return note(r.error, 'err'); normSel = 'b'; persist(); return note('Đã xóa bản định mức.'); }
 }
 
-const INFO_FIELDS = [
+const INFO_FIELDS = [   // 3.5.1: ba ô định danh (số hợp đồng · họ tên · CCCD) đứng đầu form, kèm nút “Tra cứu Google Sheet”
+  ['soHopDong', 'Số hợp đồng mua bán gỗ (căn cứ in trong các hợp đồng)', 'text', false],
+  ['ten', 'Họ và tên', 'text', true],
+  ['cccd', 'CCCD', 'text', true],
   ['ma', 'Mã chủ rừng', 'text', true],
   ['danhXung', 'Danh xưng', 'select', true],
-  ['ten', 'Họ và tên', 'text', true],
-  ['soHopDong', 'Số hợp đồng mua bán gỗ (căn cứ in trong các hợp đồng)', 'text', false],
   ['ngayKyHopDong', 'Ngày ký hợp đồng mua bán gỗ (dd/mm/yyyy; mặc định ngày ký các hợp đồng của lô)', 'text', false],
-  ['cccd', 'CCCD', 'text', true],
   ['ngayCap', 'Ngày cấp CCCD', 'text', true],
   ['noiCap', 'Nơi cấp CCCD', 'text', true],
   ['sdt', 'Số điện thoại', 'text', false],
@@ -175,7 +175,9 @@ function panelInfo(rec) {
   };
   return '<div class="card"><h3 style="margin-top:0">Thông tin chủ rừng</h3>' +
     '<p class="mut" style="margin-top:0">Hồ sơ mở theo chủ rừng. Thông tin này in vào bên A của mọi hợp đồng.</p>' +
-    '<form id="infoForm" class="grid">' + infoChonDm(rec.info) + INFO_FIELDS.map(field).join('') +
+    '<form id="infoForm" class="grid">' + '<div class="infoTraCuu" id="infoTraCuu3" style="grid-column:1/-1"><div class="grid">' + INFO_FIELDS.slice(0, 3).map(field).join('') + '</div>' +
+    (HB ? '<div class="row" style="margin-top:8px;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn" type="button" data-act="infoTraCuu" id="infoTraCuu">🔍 Tra cứu Google Sheet</button><span class="mut">Tìm theo số hợp đồng, họ tên hoặc CCCD; chọn hợp đồng để điền sẵn vào form.</span></div>' : '') + '</div>' +
+    infoChonDm(rec.info) + INFO_FIELDS.slice(3).map(field).join('') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin</button></div></form></div>' +
     (rec.info && errs.length && rec.id ? '<div class="msg warn">Còn thiếu: ' + esc(errs.join('; ')) + '</div>' : '') +
     (rec.id && infoDmCanh(rec.info) ? '<div class="msg warn" data-info-canh>' + esc(infoDmCanh(rec.info)) + '</div>' : '') +

@@ -11,8 +11,8 @@ function khungMucLo(k, cacMuc, macDinh = 'chung', opt = {}) {
   const menu = cacMuc.map(([id, ten, , dem, ok]) =>
     '<button type="button" data-muc-lo="' + id + '" data-lo-nhom="' + k + '"' +
     (id === muc[0] ? ' aria-current="page"' : '') + '>' +
-    (ok === true ? '<span style="color:var(--ok)">✓</span> ' : ok === false ? '<span style="color:var(--warnFg,#9a6700)">!</span> ' : '') +
-    esc(ten) + (dem == null ? '' : ' <span class="pill">' + esc(dem) + '</span>') + '</button>').join('');
+    (ok === true ? '<span class="mucIc" style="color:var(--ok)">✓</span>' : ok === false ? '<span class="mucIc" style="color:var(--warnFg,#9a6700)">!</span>' : '<span class="mucIc"></span>') +
+    '<span>' + esc(ten) + '</span>' + (dem == null ? '' : '<span class="pill">' + esc(dem) + '</span>') + '</button>').join('');
   const khoa = ['finfo', 'nc', 'dx'].includes(k) && loKhoa(curForest());
   const nextLabel = nextMuc ? 'Lưu & Tiếp tục: ' + nextMuc[1] + ' →' : (nextTabMap[k] ? 'Lưu & ' + nextTabMap[k][1] : 'Lưu');
   const footer = '<div class="hak-step-footer"><span class="mut" style="font-size:12px">Bước ' + (idx + 1) + '/' + cacMuc.length + ' · ' + esc(muc[1]) + '</span>' +

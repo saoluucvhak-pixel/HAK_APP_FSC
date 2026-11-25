@@ -54,7 +54,7 @@ h4{font-size:13.5px}
 .stToolbar{gap:8px;flex-wrap:wrap;align-items:center}.stToolbar .stInfo{font-size:12px}
 .napCard{padding:8px 12px;margin-bottom:6px}.napThanh{gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}.napTinhTrang{font-size:12px;margin-left:auto}
 .pcHdDau{gap:8px;flex-wrap:wrap;align-items:baseline}
-.mucNav .pill{white-space:nowrap}.mucNav button{white-space:nowrap}   /* phiếu #06 (D-08): nhãn mục một dòng ở 150% */
+.mucNav .pill{white-space:nowrap;margin-left:auto}.mucNav .mucIc{flex:0 0 16px;width:16px;text-align:center}.mucNav button{white-space:nowrap}   /* phiếu #06 (D-08): nhãn mục một dòng ở 150% */
 #stTbl_pc td{white-space:nowrap}#stTbl_pc th,#stTbl_pc td{padding:4px 7px;font-size:12.5px}#stTbl_pc select{padding:2px 5px;font-size:12.5px}
 /* UI-03: bảng thành viên và bảng xe gọn như bảng phiếu cân (trước: padding 8px 9px nên ở khung 910×512 px CSS chỉ thấy vài dòng) */
 #stTbl_nc td,#stTbl_dx td{white-space:nowrap}#stTbl_nc th,#stTbl_nc td{padding:4px 7px;font-size:12.5px}#stTbl_nc select,#stTbl_nc input{padding:2px 5px;font-size:12.5px}#stTbl_dx th,#stTbl_dx td{padding:4px 7px;font-size:12.5px}#stTbl_dx select,#stTbl_dx input{padding:2px 5px;font-size:12.5px}.pcXeHd .pcXe,.pcXeHd .pcHdCua{display:inline-flex;align-items:center;gap:4px}
@@ -211,8 +211,19 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 @media (max-width:900px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}main{padding:14px}header.top,#ctxBar{position:static}header.top h1 small{display:none}header.top{padding:8px 12px;gap:6px}.nav .nb,.hbtn{padding:5px 10px;font-size:13px}.nav{order:3;flex:1 1 100%}}
 .mucLayout{display:grid;grid-template-columns:minmax(180px,max-content) minmax(0,1fr);gap:12px;align-items:start}
 @media (min-width:901px) and (max-width:1300px){.mucLayout{grid-template-columns:minmax(0,1fr)}.mucNav{display:flex;flex-wrap:wrap}.mucNav button{flex:0 0 auto}}
+/* 3.5.1: màn Danh mục — hộp thoại Thêm/Sửa riêng, nút chọn phân đoạn (skill crud-directory-standard) */
+.dmModalBack{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:4vh 16px;overflow:auto}
+.dmModal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;width:100%;max-width:880px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.segRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}.segNhan{min-width:130px}
+.segBar{display:inline-flex;flex-wrap:wrap;border:1px solid var(--inbd);border-radius:8px;overflow:hidden}
+.segOp{position:relative;display:flex!important;flex-direction:row!important;align-items:center;margin:0;padding:6px 14px;cursor:pointer;background:var(--card);color:var(--ink);border-right:1px solid var(--inbd);font-weight:500}
+.segOp:last-child{border-right:0}.segOp input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
+.segOp:has(input:checked){background:var(--acc);color:var(--accInk);font-weight:700}.segOp:has(input:focus-visible){outline:2px solid var(--acc);outline-offset:-2px}
+.nvNut{white-space:nowrap}
+.dmModal .grid,.infoTraCuu>.grid,.dxKhoi .grid,.dxKhoi details .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px 16px}
+.dmModal label>span,.dxKhoi label>span{display:block;margin-bottom:3px}
 .mucNav{display:grid;gap:4px;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px}
-.mucNav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;padding:8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
+.mucNav button{display:flex;justify-content:flex-start;align-items:center;gap:8px;text-align:left;padding:8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
 .mucNav button[aria-current]{border-color:var(--line);background:var(--hover);font-weight:700}
 .mucNoiDung,.mucKhoa{min-width:0}
 .mucKhoa{padding:0;margin:0;border:0}

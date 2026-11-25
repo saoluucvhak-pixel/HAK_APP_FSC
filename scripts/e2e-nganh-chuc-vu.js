@@ -16,7 +16,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 
   // 1. tab danh mục
   await w.click('#navDm'); await w.click('#setTab_setnv'); await w.waitForSelector('#nvNganh');
-  const ng0 = await w.$$eval('#nvNganh [data-nvten]', e => e.map(x => x.value)), cv0 = await w.$$eval('#nvChucVu [data-nvten]', e => e.map(x => x.value));
+  const ng0 = await w.$$eval('#nvNganh [data-nvten-txt]', e => e.map(x => x.textContent.trim())), cv0 = await w.$$eval('#nvChucVu [data-nvten-txt]', e => e.map(x => x.textContent.trim()));
   ok('gieo sẵn 2 ngành: Khai thác gỗ keo, Vận chuyển', JSON.stringify(ng0) === JSON.stringify(['Khai thác gỗ keo', 'Vận chuyển']), JSON.stringify(ng0));
   ok('gieo sẵn 5 chức vụ: Chủ xe, Tổ trưởng, Công nhân, Tài xế, Khác', JSON.stringify(cv0) === JSON.stringify(['Chủ xe', 'Tổ trưởng', 'Công nhân', 'Tài xế', 'Khác']), JSON.stringify(cv0));
   await w.fill('#nvMoiNg', 'Chế biến'); await w.click('#nvThemNg'); await w.waitForTimeout(400);

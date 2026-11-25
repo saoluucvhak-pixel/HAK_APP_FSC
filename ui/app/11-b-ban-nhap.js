@@ -54,7 +54,7 @@ function stBar(kind, rec) {
   const add = kind === 'pc' ? '' :
     '<button class="btn sm" data-act="dmChonNhieu" data-kind="' + kind + '">+ Chọn từ Danh mục' + (kind === 'dx' ? ' xe' : '') + '</button>' +
     '<button class="btn ghost sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + ' mới</button>' +
-    (window.hak?.testLegacyImport ? '' : '<button class="btn ghost sm" data-act="' + (kind === 'nc' ? 'openSetDt' : 'openSetXe') + '" data-quaylai="' + kind + '">Mở ' + (kind === 'nc' ? 'Danh mục đối tượng' : 'Danh mục xe') + ' (Excel)</button>');
+    (kind === 'dx' ? '<span class="mut" id="stHuongDanXe">Thêm xe ở tab “Xe và tài xế”: hệ thống tự đưa Chủ xe / Tài xế vào danh sách chọn người ký.</span>' : '');
   const sum = c ? ('Thêm mới <b>' + c.new + '</b> · Sửa <b>' + c.changed + '</b> · Xóa <b>' + c.removed + '</b> · Giữ nguyên <b>' + c.same + '</b>') : '';
   const bar = dk.length ? '<div class="msg warn stDirty" id="stDirty"><b>Chưa lưu</b> ' + (dk.length > 1 || dk[0] !== kind ? '(còn thay đổi ở ' + dk.map(k => ST_LABEL[k]).join(', ') + ') ' : '') + '— ' + (c && (c.new + c.changed + c.removed) ? sum + '. ' : '') + 'Hồ sơ chỉ dùng dữ liệu đã lưu.' +
     ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : '';

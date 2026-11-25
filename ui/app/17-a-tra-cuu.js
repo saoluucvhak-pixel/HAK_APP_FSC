@@ -16,7 +16,8 @@ async function lkOpen() {
   if (lk.st.active && lk.res == null) await lkSearch();
   lkRender();
 }
-const lkClose = () => $('#lkBox').classList.remove('on');
+let lkCtx = null;   // 3.5.1: 'info' = mở từ ô “Tra cứu Google Sheet” ở màn Thông tin chủ rừng (hộp chi tiết có nút “Chọn hợp đồng này & Điền vào hồ sơ”)
+const lkClose = () => { lkCtx = null; $('#lkBox').classList.remove('on'); };
 async function lkSearch() {
   const hdL = lk.layout === 'hd';   // màn đầu: bảng toàn bộ hợp đồng (nhóm theo hợp đồng, không giới hạn 300 dòng)
   const r = await HB.lookup.search(lk.q, hdL ? '' : lk.tab, Object.assign({}, lk.f, lk.layout === 'tree' || hdL ? {group: 'contract'} : {}, hdL ? {limit: 100000} : {}));

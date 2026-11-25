@@ -242,7 +242,7 @@ document.addEventListener('keydown', e => {
 });
 const KHUNG_LO = {forestForm: 'saveForest', luongForm: 'saveLuong', vcForm: 'saveVc', giayForm: 'saveGiay', doiForm: 'saveDoi', hdForm: 'saveHd', hdVbForm: 'saveHdVb'};
 document.addEventListener('change', e => {
-  const t = e.target, fm = t && t.form; if (!fm || !KHUNG_LO[fm.id] || t.id === 'xeDm' || t.id === 'ncDm') return;
+  const t = e.target, fm = t && t.form; if (!fm || !KHUNG_LO[fm.id] || t.id === 'xeDm' || t.id === 'ncDm' || t.id === 'xeChuDm' || t.id === 'xeTxDm') return;
   const fn = {saveForest, saveLuong, saveVc, saveGiay, saveDoi, saveHd, saveHdVb}[KHUNG_LO[fm.id]]; if (!fn) return;
   const f = curForest(), truoc = f ? JSON.stringify(f) : '';
   nhapKhung = {can: false};
@@ -284,6 +284,8 @@ document.addEventListener('change', e => {
     return;
   }
   if (t.id === 'ncDm' && t.value) { const x = dmNguonLd().find(z => HAKModel.cccdSo(z.cccd) === t.value); if (x) { stRead(); dmDienNguoi(x); stRender(); } return; }
+  if (t.id === 'xeChuDm' && t.value) { stRead(); dxDienChu(t.value); stRender(); return; }
+  if (t.id === 'xeTxDm' && t.value) { stRead(); dxDienTx(t.value); stm.vals.taiXeId = t.value; stRender(); return; }
   if (t.id === 'xeDm' && t.value) { const x = dmNguonXe().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); dmDienXe(x); stRender(); } return; }
   if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persistLo(); render(); return; }
   if (t.name === 'bienSo' && t.form && t.form.id === 'stForm' && t.value === '__new') { stRead(); stOpen('dx', null, null, {kind: stm.kind, id: stm.id, vals: Object.assign({}, stm.vals, {bienSo: ''})}); return; }   // thêm xe ngay trong lượt sửa phiếu: giữ nguyên các ô đã nhập

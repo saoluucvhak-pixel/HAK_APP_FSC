@@ -66,8 +66,44 @@ function stRender() {
       esc(HAKModel.cccdSo(r.cccd)) + '">' + esc((r._nhan || r.ten) + ' · CCCD ' + HAKModel.cccdSo(r.cccd) + doiKhac(HAKModel.cccdSo(r.cccd))) + '</option>').join('') +
       '</select><small class="mut">Điền sẵn họ tên, ngày sinh, CCCD, ngày cấp, nơi cấp, địa chỉ; chức vụ, vị trí và đội chọn cho lô này. Thông tin được chụp lại trong lô, sửa ở lô này không đổi lô khác.</small></label>' : '';
       })() : '') +
-    '<form id="stForm" class="grid">' + ST_FIELDS[kind].map(fld).join('') + '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">' + (stm.id ? 'Cập nhật vào bản nháp' : 'Thêm vào bản nháp') + '</button><button class="btn ghost" type="button" data-act="stClose">Hủy</button></div></form>';
+    '<form id="stForm" class="grid">' + (kind === 'dx' ? dxFormHtml(fld) : ST_FIELDS[kind].map(fld).join('')) + '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">' + (stm.id ? 'Cập nhật vào bản nháp' : 'Thêm vào bản nháp') + '</button><button class="btn ghost" type="button" data-act="stClose">Hủy</button></div></form>';
   $('#stBox').classList.add('on');
+}
+/* 3.5.1: FORM THÊM XE theo khối — Phương tiện / Chủ xe / Tài xế / Người ký. Chủ xe và tài xế CHỌN từ Danh mục đối tượng; CCCD, ngày sinh, địa chỉ, GPLX tự điền (chụp vào dòng xe của lô,
+ * không đổi danh mục). Các ô chi tiết giữ tên trường cũ để sửa tay khi người chưa có trong danh mục. */
+const dxChonChu = () => HAKXeDM.chonChuXe(dmDT()), dxChonTx = () => HAKXeDM.chonTaiXe(dmDT());
+function dxChuDangChon(v) {
+  const so = HAKModel.cccdSo(v.cccd || ''), ten = trim(v.chuXe || '');
+  const c = dxChonChu().find(x => { const h = HAKXeDM.chuXe(dmDT(), x.id); return h && ((so && HAKModel.cccdSo(h.cccd || '') === so) || (!so && ten && trim(h.ten) === ten)); });
+  return c ? c.id : '';
+}
+function dxTxDangChon(v) {
+  if (v.taiXeId && dxChonTx().some(x => x.id === v.taiXeId)) return v.taiXeId;
+  const so = HAKModel.cccdSo(v.cccdTx || ''); if (!so) return '';
+  const c = dxChonTx().find(x => { const h = HAKXeDM.taiXe(dmDT(), x.id); return h && HAKModel.cccdSo(h.cccd || '') === so; });
+  return c ? c.id : '';
+}
+function dxDienChu(id) {   // chọn chủ xe: chụp thông tin từ Danh mục đối tượng (chọn lại trống: giữ nguyên các ô để sửa tay)
+  const c = id ? HAKXeDM.chuXe(dmDT(), id) : null; if (!c) return;
+  const ng = c.ng || {}, dt = c.dt || {};
+  Object.assign(stm.vals, {chuXe: c.ten || '', ngaySinh: ng.ngaySinh || '', cccd: ng.cccd || '', ngayCap: ng.ngayCap || '', noiCap: ng.noiCap || '', diaChi: ng.diaChi || dt.diaChi || '', sdt: ng.sdt || dt.sdt || ''});
+}
+function dxDienTx(id) {
+  const c = id ? HAKXeDM.taiXe(dmDT(), id) : null; if (!c) return;
+  ['taiXe', 'ngaySinhTx', 'cccdTx', 'ngayCapTx', 'noiCapTx', 'diaChiTx', 'gplx', 'hanGplx'].forEach(k => { stm.vals[k] = ''; });
+  Object.assign(stm.vals, {ngaySinhTx: c.ng.ngaySinh || ''}, HAKXeDM.dienTaiXeLo(c.ng, {}, id));
+}
+function dxFormHtml(fld) {
+  const v = stm.vals, F = (k, label) => fld([k, label]), chu = dxChuDangChon(v), tx = dxTxDangChon(v);
+  const sel = (id, name, list, cur, ph) => '<label style="grid-column:1/-1"><span>' + name + '</span><select id="' + id + '"><option value="">' + ph + '</option>' + list.map(x => '<option value="' + esc(x.id) + '"' + (x.id === cur ? ' selected' : '') + '>' + esc(x.nhan) + '</option>').join('') + '</select></label>';
+  const blk = (ten, noi) => '<fieldset class="dxKhoi" style="grid-column:1/-1;border:1px solid var(--line);border-radius:8px;margin:0;padding:8px 10px"><legend><b>' + ten + '</b></legend><div class="grid">' + noi + '</div></fieldset>';
+  const kyOpt = ['Chủ xe', 'Tài xế'].map(x => seg30('radio', 'nguoiKy', x, (v.nguoiKy || 'Chủ xe') === x, x)).join('');
+  return blk('Phương tiện', F('bienSo', 'Biển kiểm soát (*)') + F('loaiXe', 'Loại xe') + F('kdDen', 'Kiểm định đến ngày') + F('hanBH', 'Bảo hiểm đến ngày') + F('cavet', 'Ngày cấp cà vẹt')) +
+    blk('Chủ xe', sel('xeChuDm', 'Chọn chủ xe từ Danh mục đối tượng', dxChonChu(), chu, '— nhập tay (người chưa có trong danh mục) —') +
+      '<details style="grid-column:1/-1"' + (chu ? '' : ' open') + '><summary class="mut">Thông tin chủ xe' + (chu ? ' (tự điền từ Danh mục; mở để sửa tay)' : '') + '</summary><div class="grid">' + F('chuXe', 'Chủ xe') + F('ngaySinh', 'Ngày sinh chủ xe') + F('cccd', 'CCCD chủ xe') + F('ngayCap', 'Ngày cấp CCCD') + F('noiCap', 'Nơi cấp') + F('diaChi', 'Thường trú chủ xe') + F('sdt', 'Số điện thoại') + '</div></details>') +
+    blk('Tài xế', sel('xeTxDm', 'Chọn tài xế từ Danh mục đối tượng', dxChonTx(), tx, '— nhập tay (người chưa có trong danh mục) —') +
+      '<details style="grid-column:1/-1"' + (tx ? '' : ' open') + '><summary class="mut">Thông tin tài xế' + (tx ? ' (tự điền từ Danh mục; mở để sửa tay)' : '') + '</summary><div class="grid">' + F('taiXe', 'Tên tài xế') + F('ngaySinhTx', 'Ngày sinh tài xế') + F('cccdTx', 'CCCD tài xế') + F('ngayCapTx', 'Ngày cấp CCCD tài xế') + F('noiCapTx', 'Nơi cấp CCCD tài xế') + F('diaChiTx', 'Thường trú tài xế') + F('gplx', 'Số GPLX') + F('hanGplx', 'Ngày đến hạn GPLX') + '</div></details>') +
+    '<div style="grid-column:1/-1">' + segNhom('Người ký HĐ vận chuyển', 'dxNguoiKy', kyOpt) + '</div>';
 }
 /* DANH MỤC XE: xe đã nhập ở mọi lô, gộp theo biển số (lô có ngày bắt đầu khai thác mới nhất thắng); chọn khi thêm xe để khỏi nhập lại giấy tờ */
 function xeDanhMuc() {
@@ -75,7 +111,7 @@ function xeDanhMuc() {
   Object.values(db.rs || {}).forEach(o => forestList(o).forEach(f => (f.dx || []).forEach(r => { const k = HAKStage.bienKey(r.bienSo); if (!k) return; const t = dk((f.info || {}).tuNgay), cur = by.get(k); if (!cur || t >= cur.t) by.set(k, {t, r}); })));
   return [...by.values()].map(x => x.r).sort((a, b) => String(a.bienSo).localeCompare(String(b.bienSo)));
 }
-function stRead() { const f = $('#stForm'); if (!f) return stm.vals; const fd = new FormData(f); ST_FIELDS[stm.kind].forEach(([k]) => { stm.vals[k] = (fd.get(k) ?? '').toString(); }); return stm.vals; }
+function stRead() { const f = $('#stForm'); if (!f) return stm.vals; const fd = new FormData(f); ST_FIELDS[stm.kind].forEach(([k]) => { if (fd.has(k)) stm.vals[k] = (fd.get(k) ?? '').toString(); }); return stm.vals; }
 function stFinishRow() {
   const kind = stm.kind, st = stCur(), rec = curRec(); if (!st || !rec) return;
   const vals = stRead(), o = Object.assign({}, vals, {maRung: rec.info.maRung}); if (o.bienSo === '__new') o.bienSo = '';
