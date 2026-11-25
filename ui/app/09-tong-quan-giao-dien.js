@@ -106,6 +106,9 @@ function sideSfSet(k, v) {
   f.setState(HAKCore.sf.normalize(Object.assign({}, st, {one}), sideSfCfg()));
 }
 function renderSide() {
+  /* 3.5.1: chủ rừng còn trống hoàn toàn (bấm “+ Chủ rừng mới” rồi bỏ đi, chưa nhập gì, chưa có lô) không để lại dòng “(chưa đặt tên)” ở cột trái: dọn khi không còn là chủ rừng đang mở */
+  { const rong = Object.keys(db.rs).filter(id => id !== NAV.cur && !forestList(db.rs[id]).length && !trim(db.rs[id].info.ten) && !trim(db.rs[id].info.cccd) && !trim(db.rs[id].info.ma) && !(typeof chuNhap !== 'undefined' && chuNhap.has(id)));
+    if (rong.length) { rong.forEach(id => { delete db.rs[id]; }); try { persist(); } catch (e) { /* chưa sẵn sàng lưu: lần vẽ sau sẽ dọn tiếp */ } } }
   const f = sideSfState(), st0 = f.getState(); if (st0.q !== sideQ) f.setState(HAKCore.sf.normalize(Object.assign({}, st0, {q: sideQ}), sideSfCfg()));
   const st = f.getState(), dang = HAKCore.sf.activeCount(st) > 0;
   document.querySelectorAll('#sideSf [data-sbsf]').forEach(sel => { sel.value = (st.one || {})[sel.dataset.sbsf] || ''; });

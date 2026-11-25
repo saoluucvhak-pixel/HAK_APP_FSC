@@ -140,10 +140,10 @@ function normAction(act, el) {
   if (act === 'normDelVer') { const r = HAKDinhMuc.removeVersion(db, normSel); if (!r.ok) return note(r.error, 'err'); normSel = 'b'; persist(); return note('Đã xóa bản định mức.'); }
 }
 
-const INFO_FIELDS = [   // 3.5.1: ba ô định danh (số hợp đồng · họ tên · CCCD) đứng đầu form, kèm nút “Tra cứu Google Sheet”
+const INFO_FIELDS = [   // 3.5.1: bốn ô định danh (số hợp đồng · CCCD · họ tên · mã chủ rừng) đứng đầu form, kèm nút “Tra cứu Sheets”
   ['soHopDong', 'Số hợp đồng mua bán gỗ (căn cứ in trong các hợp đồng)', 'text', false],
-  ['ten', 'Họ và tên', 'text', true],
   ['cccd', 'CCCD', 'text', true],
+  ['ten', 'Họ và tên', 'text', true],
   ['ma', 'Mã chủ rừng', 'text', true],
   ['danhXung', 'Danh xưng', 'select', true],
   ['ngayKyHopDong', 'Ngày ký hợp đồng mua bán gỗ (dd/mm/yyyy; mặc định ngày ký các hợp đồng của lô)', 'text', false],
@@ -168,16 +168,17 @@ function panelInfo(rec) {
   const field = ([k, label, type, req]) => {
     const v = rec.info[k] ?? '';
     const lab = '<span class="' + (req ? 'req' : '') + '">' + label + '</span>';
-    if (type === 'select') return '<label>' + lab + '<select name="' + k + '"><option value="">—</option>' +
-      ['Ông', 'Bà'].map(o => '<option' + (v === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></label>';
+    if (type === 'select') return '<div class="segRow" id="infoDanhXung"><b class="segNhan"><span class="' + (req ? 'req' : '') + '">' + label + '</span></b><div class="segBar" role="group" aria-label="Danh xưng">' +
+      ['Ông', 'Bà'].map(o => '<label class="segOp"><input type="radio" name="' + k + '" value="' + o + '"' + (v === o || (!v && o === 'Ông') ? ' checked' : '') + '><span>' + o + '</span></label>').join('') + '</div></div>';
     if (type === 'wide') return '<label style="grid-column:1/-1">' + lab + '<input name="' + k + '" value="' + esc(v) + '"></label>';
     return '<label>' + lab + '<input name="' + k + '" value="' + esc(v) + '"' + (type === 'number' ? ' inputmode="numeric"' : '') + '></label>';
   };
   return '<div class="card"><h3 style="margin-top:0">Thông tin chủ rừng</h3>' +
     '<p class="mut" style="margin-top:0">Hồ sơ mở theo chủ rừng. Thông tin này in vào bên A của mọi hợp đồng.</p>' +
-    '<form id="infoForm" class="grid">' + '<div class="infoTraCuu" id="infoTraCuu3" style="grid-column:1/-1"><div class="grid">' + INFO_FIELDS.slice(0, 3).map(field).join('') + '</div>' +
-    (HB ? '<div class="row" style="margin-top:8px;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn" type="button" data-act="infoTraCuu" id="infoTraCuu">🔍 Tra cứu Google Sheet</button><span class="mut">Tìm theo số hợp đồng, họ tên hoặc CCCD; chọn hợp đồng để điền sẵn vào form.</span></div>' : '') + '</div>' +
-    infoChonDm(rec.info) + INFO_FIELDS.slice(3).map(field).join('') +
+    '<form id="infoForm" class="grid">' + '<div class="infoTraCuu" id="infoTraCuu3" style="grid-column:1/-1"><div class="grid">' + INFO_FIELDS.slice(0, 4).map(field).join('') + '</div>' +
+    '<label style="flex-direction:row;align-items:center;gap:6px;margin-top:6px"><input type="checkbox" id="maTheoCccd"' + (rec.info.ma && rec.info.ma === rec.info.cccd ? ' checked' : '') + '> Dùng số CCCD làm Mã chủ rừng</label>' +
+    (HB ? '<div class="row" style="margin-top:8px;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn" type="button" data-act="infoTraCuu" id="infoTraCuu">🔍 Tra cứu Sheets</button><span class="mut">Tìm theo số hợp đồng, CCCD, họ tên hoặc mã chủ rừng (Enter ở các ô trên); chọn hợp đồng để điền sẵn và tạo lô.</span></div>' : '') + '</div>' +
+    infoChonDm(rec.info) + INFO_FIELDS.slice(4).map(field).join('') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin</button></div></form></div>' +
     (rec.info && errs.length && rec.id ? '<div class="msg warn">Còn thiếu: ' + esc(errs.join('; ')) + '</div>' : '') +
     (rec.id && infoDmCanh(rec.info) ? '<div class="msg warn" data-info-canh>' + esc(infoDmCanh(rec.info)) + '</div>' : '') +
