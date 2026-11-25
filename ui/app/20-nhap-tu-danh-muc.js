@@ -324,3 +324,14 @@ document.addEventListener('input', e => {
   const qEl = document.getElementById('dmPickQ');
   if (qEl) { qEl.focus(); if (pos != null) qEl.setSelectionRange(pos, pos); }
 });
+/* 3.5.1: một chạm — thêm mọi xe của Danh mục xe chưa có trong đội xe đang mở (xe đang ở đội khác của lô được bỏ qua), rồi lưu vào lô như “Chọn từ Danh mục” */
+async function dmThemTatCaXe() {
+  const st = stGet(true), rec = curRec(); if (!st || !rec) return;
+  dmChonNhieuMo('dx');
+  const L = dmPickState.list.map((r, i) => [r, i]).filter(([r]) => r && !r._oKhac);
+  if (!L.length) { dlgDong(); return note('Mọi xe trong Danh mục xe đã có trong đội xe này (hoặc đang thuộc đội xe khác của lô). Không còn xe nào để thêm.', 'warn'); }
+  if (!confirm('Thêm ' + L.length + ' xe từ Danh mục xe vào đội xe đang mở?\n\n' + L.slice(0, 12).map(([r]) => '• ' + r.bienSo + (r.chuXe ? ' · ' + r.chuXe : '')).join('\n') + (L.length > 12 ? '\n• … và ' + (L.length - 12) + ' xe khác' : '') + '\n\nChủ xe và tài xế thường chạy được điền theo danh mục.')) { dlgDong(); return; }
+  dmPickState.sel = new Set(L.map(([, i]) => i));
+  return dmChonNhieuLuu();
+}
+document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-act=dmThemTatCaXe]'); if (!b) return; e.preventDefault(); dmThemTatCaXe(); });

@@ -10,6 +10,9 @@
 - Thanh tiêu đề: nút đổi nhanh Sáng / Tối và chọn nhanh bảng màu.
 - Bàn làm việc (menu mới): sơ đồ quy trình 6 bước (Đã xong / Đang làm / Chờ xử lý / Bị khóa), các trạm công việc và hàng đợi việc cần xử lý của lô đang chọn với nút “Xử lý ngay”; khối Hướng dẫn bắt đầu được gỡ khỏi Tổng quan.
 - Bảng hợp đồng Google Sheets: lọc theo khoảng tổng tấn và khoảng ngày ký (cùng chip trạng thái). Báo cáo Sổ theo dõi phiếu cân: lọc theo Đội xe và Nhà máy tiếp nhận (Word, Excel, in đều theo phần đã lọc). Các bộ chọn xe, chủ xe, tài xế có ô gõ lọc nhanh.
+- Thông tin chủ rừng: bốn ô tra cứu (số hợp đồng, CCCD, họ tên, mã chủ rừng; Enter để tra cứu), ô tích “Dùng số CCCD làm Mã chủ rừng”, danh xưng chọn bằng nút và tự gợi ý theo tên (Thị → Bà, Văn → Ông); chọn hợp đồng từ Google Sheets thì tự lưu thông tin và tạo Rừng 1; chủ rừng còn trống không để lại dòng “(chưa đặt tên)”.
+- Vận chuyển: nút “Tự động gán & thêm nhanh toàn bộ xe vào đội”; thẻ Đối soát sản lượng (dự kiến so với thực tế từ phiếu cân) ở mục Phiếu cân.
+- Xuất hồ sơ: bảng Tiền kiểm soát (mục chặn xuất, mục cần đối chiếu, nút “Đi đến sửa”) và nút “Xuất trọn bộ hồ sơ FSC” dùng gói Toàn bộ hồ sơ có sẵn.
 - Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
 - Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
 - Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.

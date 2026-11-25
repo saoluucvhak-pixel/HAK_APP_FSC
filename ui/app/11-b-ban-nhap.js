@@ -54,6 +54,7 @@ function stBar(kind, rec) {
   const add = kind === 'pc' ? '' :
     '<button class="btn sm" data-act="dmChonNhieu" data-kind="' + kind + '">+ Chọn từ Danh mục' + (kind === 'dx' ? ' xe' : '') + '</button>' +
     '<button class="btn ghost sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + ' mới</button>' +
+    (kind === 'dx' ? '<button class="btn sm" data-act="dmThemTatCaXe" id="dmThemTatCaXe" title="Thêm một lần mọi xe trong Danh mục xe chưa có trong đội xe đang mở, kèm chủ xe và tài xế thường chạy">⚡ Tự động gán &amp; thêm nhanh toàn bộ xe vào đội</button>' : '') +
     (kind === 'dx' ? '<span class="mut" id="stHuongDanXe">Thêm xe ở tab “Xe và tài xế”: hệ thống tự đưa Chủ xe / Tài xế vào danh sách chọn người ký.</span>' : '');
   const sum = c ? ('Thêm mới <b>' + c.new + '</b> · Sửa <b>' + c.changed + '</b> · Xóa <b>' + c.removed + '</b> · Giữ nguyên <b>' + c.same + '</b>') : '';
   const bar = dk.length ? '<div class="msg warn stDirty" id="stDirty"><b>Chưa lưu</b> ' + (dk.length > 1 || dk[0] !== kind ? '(còn thay đổi ở ' + dk.map(k => ST_LABEL[k]).join(', ') + ') ' : '') + '— ' + (c && (c.new + c.changed + c.removed) ? sum + '. ' : '') + 'Hồ sơ chỉ dùng dữ liệu đã lưu.' +
