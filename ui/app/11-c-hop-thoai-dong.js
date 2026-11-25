@@ -137,6 +137,7 @@ function stFinishRow() {
   ['nguoiId', 'viTriId', 'xeId', 'taiXeId'].forEach(k => { const v = vals[k] != null ? vals[k] : old && old[k]; if (v) row[k] = v; });   // 3.0: liên kết danh mục (chọn từ danh mục; sửa tay giữ liên kết)
   { const dmN = vals._dmNgay != null ? vals._dmNgay : old && old._dmNgay; if (dmN != null && (kind === 'nc' || kind === 'dx')) row._dmNgay = dmN; }   // ngày chụp danh mục: giữ khi sửa tay, mới khi chọn từ danh mục
   if (!old && kind === 'dx') pgSauThemXe(st, row);   // 3.0: xe thêm ở hợp đồng đang mở vào đúng hợp đồng, có ID dòng; phiếu chờ xe nhận xe này
+  if (!old) skGhi(st, kind, 'Nhập tay', 1);
   if (old) HAKStage.updateRow(st, kind, old._id, row); else { const nid = HAKStage.addRow(st, kind, row); if (kind === 'pc' && hdMo('dx')) pcGanThem(nid); }   // 3.0: phiếu nhập tay cũng hiện ở khung xem trước (cùng quy tắc hợp đồng đích)
   st.src[kind] = st.src[kind] || 'Nhập tay';
   stErrList = null; const parent = stm.parent; stm.errs = []; $('#stBox').classList.remove('on');

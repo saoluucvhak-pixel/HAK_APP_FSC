@@ -234,6 +234,9 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 header.top .nav .nb,header.top .hbtn{padding:6px 9px}header.top{flex-wrap:nowrap}header.top .nav{flex-wrap:nowrap;white-space:nowrap}select#skinQuick{max-width:104px}@media (max-width:1560px){header.top h1 small{display:none}}
 @media (max-width:900px){.bldRay{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.bldNode::before{display:none}.bldCot{grid-template-columns:1fr}.bldPhai{position:static}}
 .nvNut{white-space:nowrap}
+.nkDong{list-style:none;margin:8px 0 0;padding:0 0 0 18px;border-left:3px solid var(--line)}.nkDong li{position:relative;padding:4px 0 10px 12px}
+.nkDong li::before{content:"";position:absolute;left:-24px;top:9px;width:11px;height:11px;border-radius:50%;background:var(--card);border:3px solid var(--acc)}
+.nkDong .nkGio{font-size:12.5px;color:var(--mut)}.nkDong li[data-loai=doiSo]::before,.nkDong li[data-loai=doiBien]::before{border-color:var(--err)}.nkDong li[data-loai=ky]::before{border-color:var(--ok)}
 .sideSf{display:grid;gap:6px;margin:6px 0 10px}.sideSf select{width:100%}
 select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);border-color:rgba(255,255,255,.28);padding:5px 8px}select#skinQuick option{color:#1b232c;background:#fff}
 .dmModal .grid,.infoTraCuu>.grid,.dxKhoi .grid,.dxKhoi details .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px 16px}
@@ -529,6 +532,7 @@ select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);bord
 <script>/*@@VIECCANLAM@@*/</script>
 <script>/*@@SOVB@@*/</script>
 <script>/*@@TIENICH@@*/</script>
+<script>/*@@SRC:nhatkytruyxuat@@*/</script>
 <script>/*@@SRC:bks@@*/</script>
 <script>/*@@SRC:vitri@@*/</script>
 <script>/*@@SRC:nganh@@*/</script>

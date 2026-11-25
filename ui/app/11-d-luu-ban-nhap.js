@@ -41,7 +41,7 @@ async function stSave(opt) {
     if (dk.includes('nc')) { f.ncAt = at; if (st.src.nc && /^Excel: /.test(st.src.nc)) f.ncFile = st.src.nc.slice(7); }
     if (dk.includes('dx')) { f.dxAt = at; if (st.src.dx && /^Excel: /.test(st.src.dx)) f.dxFile = st.src.dx.slice(7); }
     if (dk.includes('pc')) { f.pcAt = at; if (st.src.pc && /^Excel: /.test(st.src.pc)) f.pcFile = st.src.pc.slice(7); else if (st.src.pc && /Google/.test(st.src.pc) && !f.pcFile) f.pcFile = 'Tra cứu Google Sheets'; }
-    f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).slice(-50);   // ghi vào lô cùng lần lưu (không kèm ảnh chụp hoàn tác)
+    f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).concat((st.sk || []).map(x => ({at: new Date().toISOString(), kind: x.kind, nguon: x.nguon, them: x.them, capNhat: 0, giu: 0, loi: 0}))).slice(-200); st.sk = [];   // 3.5.1: thêm tay / từ Danh mục / từ phiếu cân cũng vào nhật ký truy xuất   // ghi vào lô cùng lần lưu (không kèm ảnh chụp hoàn tác)
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
     const r = await persistNow(); if (!r || !r.ok) throw new Error((r && r.error) || 'không rõ');
     const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote(nDm[0], nDm[1]);
@@ -222,4 +222,5 @@ function panelThanhVien(rec) {
     r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td>' + (hienDoi ? '<td>' + doiCell(rec, r) + '</td>' : '') + '<td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>',
     c, null, only);
 }
-
+/* 3.5.1: ghi nhận (trong bản nháp) việc thêm nhân công / xe / phiếu cân ngoài đường nạp file; lưu vào nhật ký của lô cùng lần bấm “Lưu dữ liệu vào lô” */
+function skGhi(st, kind, nguon, them) { if (!st || !them) return; (st.sk = st.sk || []).push({kind, nguon, them}); }

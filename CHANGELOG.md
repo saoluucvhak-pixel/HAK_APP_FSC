@@ -14,6 +14,7 @@
 - Vận chuyển: nút “Tự động gán & thêm nhanh toàn bộ xe vào đội”; thẻ Đối soát sản lượng (dự kiến so với thực tế từ phiếu cân) ở mục Phiếu cân.
 - Xuất hồ sơ: bảng Tiền kiểm soát (mục chặn xuất, mục cần đối chiếu, nút “Đi đến sửa”) và nút “Xuất trọn bộ hồ sơ FSC” dùng gói Toàn bộ hồ sơ có sẵn.
 - Phiếu cân: thanh cảnh báo biển số chưa có trong đội xe có nút “Tự động gán & thêm nhanh toàn bộ xe vào đội” (xe có trong Danh mục được gán đủ thông tin, xe chưa có được tạo nhanh trong Danh mục xe); thẻ Đối soát sản lượng cảnh báo khi chênh lệch trên 15%. Thông tin chủ rừng: ô tích “Dùng số CCCD làm Mã chủ rừng” mặc định bật, bấm đúp dòng hợp đồng để điền. Tra cứu Google Sheets hiện huy hiệu “Ngoại tuyến - Dùng bản đệm gần nhất” khi mất mạng hoặc đồng bộ lỗi.
+- Xuất hồ sơ: Nhật ký truy xuất nguồn gốc của lô (dòng thời gian từ các nhật ký đã lưu: tạo lô, nạp, đổi số phiếu, đổi biển số, in, ký, chốt lô); tải phụ lục .docx kẹp BM-18 hoặc in. Thêm xe, nhân công, phiếu cân bằng tay, từ Danh mục hoặc từ phiếu cân cũng được ghi vào nhật ký lô khi lưu.
 - Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
 - Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
 - Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.

@@ -305,7 +305,7 @@ async function dmChonNhieuLuu() {
     if (kind === 'dx') pgSauThemXe(st, row);
     HAKStage.addRow(st, kind, row);
   });
-  st.src[kind] = 'Danh mục';
+  st.src[kind] = 'Danh mục'; skGhi(st, kind, 'Danh mục', chon.length);
   dlgDong();
   await stSave();
 }
@@ -354,6 +354,7 @@ function stThemXeTuPhieu() {
     pgSauThemXe(st, row); HAKStage.addRow(st, 'dx', row);
   });
   if (moi) persist();
+  skGhi(st, 'dx', 'phiếu cân (gán tự động; ' + moi + ' xe tạo nhanh)', miss.length);
   st.src.dx = st.src.dx || 'Từ phiếu cân'; stErrList = null;
   note('Đã thêm ' + miss.length + ' xe vào bản nháp của lô (' + coSan + ' xe từ Danh mục, ' + moi + ' xe tạo nhanh trong Danh mục xe). Xe tạo nhanh cần bổ sung chủ xe, tài xế, giấy tờ rồi bấm “Lưu dữ liệu vào lô”.', moi ? 'warn' : 'ok');
 }
