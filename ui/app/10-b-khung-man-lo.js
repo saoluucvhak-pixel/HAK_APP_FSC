@@ -82,7 +82,7 @@ function panelRung(own, chuTab) {
   /* phiếu #10 (gọn phần đầu lô): MỘT hàng — tên lô (h2) + đường dẫn, chip “Danh sách rừng · tiến độ” (khối gập, mở thì xuống hàng dưới), nút + Rừng mới, Sao lưu lô rừng; hàng sau là lộ trình 5 bước của lô. */
   return '<div class="loDau">' + (chuTab ? '<div class="tabs loDauTab">' + chuTab + '</div>' : '') + '<h2 class="sro">' + esc(f.info.tenRung || f.info.maRung) + '</h2>' + loCrumb(job) +
     '<details class="rungTomTat"><summary>Danh sách rừng · Tiến độ ' + progressOf(job).pct + '%</summary>' + list + panelTienDo(job) + '</details>' +
-    '<span class="loDauNut">' + add + '<button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Lưu riêng lô này thành một file, dùng được khi mất mạng">Sao lưu lô rừng</button></span></div>' +
+    '<span class="loDauNut">' + add + '<button class="btn ghost sm" data-act="lotBackup" id="lotBackupBtn" title="Xuất riêng lô này thành gói .fscpkg (hoặc .json) để chuyển cho máy khác, dùng được khi mất mạng; nhập lại bằng Khôi phục lô rừng">Sao lưu lô rừng</button></span></div>' +
     loBar() + '<nav class="hak-steps rungTabs" aria-label="Quy trình nhập hồ sơ lô">' + ft.map(([k, l, st, badge], idx) =>
       '<button type="button" class="hak-step' + (NAV.ftab === k ? ' on' : '') + (st ? ' ' + st : '') + '" data-ftab="' + k + '">' +
       '<span class="hak-step-n">' + (st === 'ok' ? '✓' : idx + 1) + '</span><span>' + esc(l) + '</span>' +

@@ -11,7 +11,7 @@ const ST_FIELDS = {
   'Nơi giao (nhà máy)'], ['ghiChu', 'Ghi chú']]
 };
 const ST_NORM = {nc: normNC, dx: normDX, pc: normPC};
-const stm = {kind: '', id: null, vals: {}, parent: null, errs: []};   // trạng thái hộp thoại đang mở (parent: hộp thoại phiếu cân chờ quay lại sau khi thêm xe)
+const stm = {kind: '', id: null, vals: {}, parent: null, errs: [], kyKhac: '', kyKhacMo: false};   // trạng thái hộp thoại đang mở (parent: hộp thoại phiếu cân chờ quay lại sau khi thêm xe)
 const stStr = v => v == null ? '' : typeof v === 'number' ? String(v).replace('.', ',') : String(v);
 function stAct(act, el) {
   const kind = el.dataset.kind, i = el.dataset.i != null ? +el.dataset.i : null;
@@ -34,7 +34,7 @@ function stApplyGate() {
 function stOpen(kind, idx, vals, parent) {
   const st = stGet(true); if (!st) return;
   const row = idx != null ? st.cur[kind][idx] : null;
-  stm.kind = kind; stm.id = row ? row._id : null; stm.parent = parent || null; stm.errs = [];
+  stm.kind = kind; stm.id = row ? row._id : null; stm.parent = parent || null; stm.errs = []; stm.kyKhac = ''; stm.kyKhacMo = false;
   stm.vals = vals || Object.fromEntries(ST_FIELDS[kind].map(([k]) => [k, row ? stStr(row[k]) : (k === 'nguoiKy' ? 'Chủ xe' : k === 'vaiTro' ? 'Công nhân' : k === 'danhXung' ? 'Ông' : '')]));
   if (!row && !vals && kind === 'pc') stm.vals.trangThai = 'OK';
   stRender();
@@ -71,6 +71,18 @@ function stRender() {
 }
 /* 3.5.1: FORM THÊM XE theo khối — Phương tiện / Chủ xe / Tài xế / Người ký. Chủ xe và tài xế CHỌN từ Danh mục đối tượng; CCCD, ngày sinh, địa chỉ, GPLX tự điền (chụp vào dòng xe của lô,
  * không đổi danh mục). Các ô chi tiết giữ tên trường cũ để sửa tay khi người chưa có trong danh mục. */
+/* “Chỉ định người khác…”: người ký của CẢ ĐỘI XE (hợp đồng vận chuyển đang mở) là một người / doanh nghiệp có quyền ký Vận chuyển trong Danh mục đối tượng, không phải chủ xe hay tài xế của xe này; áp dụng khi bấm “Thêm vào bản nháp” */
+function dxKyKhacOpts() {
+  const dv = dmDoiTacAll().filter(x => x && x.loai === 'doanhnghiep');
+  return dv.map(d => ({v: 'd:' + HAKDanhMuc.chuanDoiTacId(d.id), t: d.ten + (d.daiDien ? ' (đại diện: ' + d.daiDien + ')' : '') + ' · doanh nghiệp'})).concat(dmCaNhan().map(d => ({v: 'd:' + HAKDanhMuc.chuanDoiTacId(d.id), t: (d.doiTuongTen && d.doiTuongTen !== d.ten ? d.doiTuongTen + ' — ' : '') + d.ten + (d.cccd ? ' · CCCD ' + d.cccd : '')})));
+}
+function dxKyKhacHtml() {
+  if (!stm.kyKhacMo || !hdMo('dx')) return '';
+  const L = dxKyKhacOpts();
+  return '<div id="dxKyKhacBox" class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><label style="flex:1;min-width:240px"><span>Người ký của đội xe (quyền ký Vận chuyển)</span><input type="search" class="locNhanh" data-locsel="dxKyKhac" placeholder="Gõ tên hoặc CCCD để lọc…" autocomplete="off" aria-label="Lọc người ký"><select id="dxKyKhac"><option value="">— chọn người ký —</option>' +
+    L.map(o => '<option value="' + esc(o.v) + '"' + (o.v === stm.kyKhac ? ' selected' : '') + '>' + esc(o.t) + '</option>').join('') + '</select></label><button type="button" class="btn ghost sm" data-act="kyThemNhanh">+ Thêm người ký</button></div>' +
+    '<p class="mut" style="margin:4px 0 0">Áp dụng cho cả đội xe đang mở khi bấm “Thêm vào bản nháp”. Chưa chọn thì giữ người ký hiện có.</p>';
+}
 const dxChonChu = () => HAKXeDM.chonChuXe(dmDT()), dxChonTx = () => HAKXeDM.chonTaiXe(dmDT());
 function dxChuDangChon(v) {
   const so = HAKModel.cccdSo(v.cccd || ''), ten = trim(v.chuXe || '');
@@ -104,7 +116,7 @@ function dxFormHtml(fld) {
       '<span style="grid-column:1/-1"><button type="button" class="btn ghost sm" data-act="dxThemNguoi" data-vt="chuXe">+ Thêm chủ xe mới</button></span>' + dxThe(chu, [['Họ tên', v.chuXe], ['CCCD', v.cccd], ['Ngày cấp', v.ngayCap], ['Nơi cấp', v.noiCap], ['SĐT', v.sdt]]) + '<details style="grid-column:1/-1"' + (chu ? '' : ' open') + '><summary class="mut">Thông tin chủ xe' + (chu ? ' (tự điền từ Danh mục; mở để sửa tay)' : '') + '</summary><div class="grid">' + F('chuXe', 'Chủ xe') + F('ngaySinh', 'Ngày sinh chủ xe') + F('cccd', 'CCCD chủ xe') + F('ngayCap', 'Ngày cấp CCCD') + F('noiCap', 'Nơi cấp') + F('diaChi', 'Thường trú chủ xe') + F('sdt', 'Số điện thoại') + '</div></details>') +
     blk('Tài xế', sel('xeTxDm', 'Chọn tài xế từ Danh mục đối tượng', dxChonTx(), tx, '— nhập tay (người chưa có trong danh mục) —') +
       '<span style="grid-column:1/-1"><button type="button" class="btn ghost sm" data-act="dxThemNguoi" data-vt="taiXe">+ Thêm tài xế mới</button></span>' + dxThe(tx, [['Họ tên', v.taiXe], ['CCCD', v.cccdTx], ['Ngày cấp', v.ngayCapTx], ['Nơi cấp', v.noiCapTx], ['Số GPLX', v.gplx], ['Hạn GPLX', v.hanGplx]]) + '<details style="grid-column:1/-1"' + (tx ? '' : ' open') + '><summary class="mut">Thông tin tài xế' + (tx ? ' (tự điền từ Danh mục; mở để sửa tay)' : '') + '</summary><div class="grid">' + F('taiXe', 'Tên tài xế') + F('ngaySinhTx', 'Ngày sinh tài xế') + F('cccdTx', 'CCCD tài xế') + F('ngayCapTx', 'Ngày cấp CCCD tài xế') + F('noiCapTx', 'Nơi cấp CCCD tài xế') + F('diaChiTx', 'Thường trú tài xế') + F('gplx', 'Số GPLX') + F('hanGplx', 'Ngày đến hạn GPLX') + '</div></details>') +
-    '<div style="grid-column:1/-1">' + segNhom('Người ký HĐ vận chuyển', 'dxNguoiKy', kyOpt) + '</div>';
+    '<div style="grid-column:1/-1">' + segNhom('Người ký HĐ vận chuyển', 'dxNguoiKy', kyOpt + (hdMo('dx') ? '<button type="button" class="segOp segNut' + (stm.kyKhacMo ? ' on' : '') + '" data-act="dxKyKhacToggle" id="dxKyKhacBtn" aria-pressed="' + !!stm.kyKhacMo + '">Chỉ định người khác…</button>' : '')) + dxKyKhacHtml() + '</div>';
 }
 /* DANH MỤC XE: xe đã nhập ở mọi lô, gộp theo biển số (lô có ngày bắt đầu khai thác mới nhất thắng); chọn khi thêm xe để khỏi nhập lại giấy tờ */
 function xeDanhMuc() {
@@ -140,6 +152,8 @@ function stFinishRow() {
   if (!old) skGhi(st, kind, 'Nhập tay', 1);
   if (old) HAKStage.updateRow(st, kind, old._id, row); else { const nid = HAKStage.addRow(st, kind, row); if (kind === 'pc' && hdMo('dx')) pcGanThem(nid); }   // 3.0: phiếu nhập tay cũng hiện ở khung xem trước (cùng quy tắc hợp đồng đích)
   st.src[kind] = st.src[kind] || 'Nhập tay';
+  if (kind === 'dx' && stm.kyKhac && hdMo('dx')) { const er = kyDatHd(hdMo('dx'), stm.kyKhac); if (er) pushNote('Chưa đổi được người ký của đội xe: ' + er, 'err'); }   // “Chỉ định người khác…”
+  stm.kyKhac = ''; stm.kyKhacMo = false;
   stErrList = null; const parent = stm.parent; stm.errs = []; $('#stBox').classList.remove('on');
   if (parent) { parent.vals.bienSo = row.bienSo; stOpen(parent.kind, parent.id ? st.cur[parent.kind].findIndex(r => r._id === parent.id) : null, parent.vals); return; }
   render();

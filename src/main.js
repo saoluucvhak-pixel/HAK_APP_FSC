@@ -209,7 +209,7 @@ function registerIpc() {
       const sealed = LoRung.seal(p0, sha), name = LoRung.fileName(sealed);
       let file = process.env.HAKQN_LOT_DIR ? path.join(process.env.HAKQN_LOT_DIR, name) : null;
       if (!file) {
-        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackupJson ? loc.backupDirJson : app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});
+        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackupJson ? loc.backupDirJson : app.getPath('documents'), name.replace(/\.json$/i, '.fscpkg')), filters: [{name: 'Gói hồ sơ lô rừng HAKQN (.fscpkg)', extensions: ['fscpkg']}, {name: 'Sao lưu lô rừng HAKQN (.json)', extensions: ['json']}]});   // 3.5.1: gói lô di động .fscpkg (cùng nội dung niêm phong như .json; tên mặc định của kiểm thử HAKQN_LOT_DIR giữ .json)
         if (r.canceled || !r.filePath) return {ok: true, canceled: true};
         file = r.filePath;
       }
@@ -225,7 +225,7 @@ function registerIpc() {
       if (relocating) await relocating.catch(() => {});
       let p = rendererPath(filePath) || process.env.HAKQN_LOT_FILE;
       if (!p) {
-        const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu lô rừng', filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}], properties: ['openFile']});
+        const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu lô rừng', filters: [{name: 'Gói / sao lưu lô rừng HAKQN (.fscpkg, .json)', extensions: ['fscpkg', 'json']}], properties: ['openFile']});
         if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
         p = r.filePaths[0];
       }

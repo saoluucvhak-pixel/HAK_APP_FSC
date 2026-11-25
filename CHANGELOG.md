@@ -16,6 +16,7 @@
 - Phiếu cân: thanh cảnh báo biển số chưa có trong đội xe có nút “Tự động gán & thêm nhanh toàn bộ xe vào đội” (xe có trong Danh mục được gán đủ thông tin, xe chưa có được tạo nhanh trong Danh mục xe); thẻ Đối soát sản lượng cảnh báo khi chênh lệch trên 15%. Thông tin chủ rừng: ô tích “Dùng số CCCD làm Mã chủ rừng” mặc định bật, bấm đúp dòng hợp đồng để điền. Tra cứu Google Sheets hiện huy hiệu “Ngoại tuyến - Dùng bản đệm gần nhất” khi mất mạng hoặc đồng bộ lỗi.
 - Xuất hồ sơ: Nhật ký truy xuất nguồn gốc của lô (dòng thời gian từ các nhật ký đã lưu: tạo lô, nạp, đổi số phiếu, đổi biển số, in, ký, chốt lô); tải phụ lục .docx kẹp BM-18 hoặc in. Thêm xe, nhân công, phiếu cân bằng tay, từ Danh mục hoặc từ phiếu cân cũng được ghi vào nhật ký lô khi lưu.
 - Thông tin rừng: thẻ Đối soát 3 nguồn diện tích đất rừng (Sổ đỏ, khảo sát / hợp đồng, đo GPS từ ToaDoRung), cảnh báo xung đột khi chênh trên 0,01 ha; hai ô diện tích mới chỉ tạo khóa dữ liệu khi có giá trị; cập nhật từ Google Sheets điền diện tích đo GPS. Form Thêm xe: nút “+ Thêm xe mới vào danh mục”.
+- Gói lô rừng di động: hộp lưu lô mặc định đuôi .fscpkg (cùng nội dung niêm phong như .json); hộp mở lô nhận cả .fscpkg và .json. Form Thêm xe: mục “Chỉ định người khác…” chọn người ký của cả đội xe (có ô gõ lọc và thêm nhanh người ký).
 - Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
 - Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
 - Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.

@@ -22,6 +22,11 @@ function qnLuu(fm) {
   if (!r.ok) return loi(r.errs);
   db.dmDoiTuong = r.dm; persist(); dlgDong();
   const ng = (r.dt.nguoi || [])[0] || {};
+  if (vt === 'kyVC' && document.getElementById('stForm') && stm.kyKhacMo) {   // đang ở form Thêm xe, mục “Chỉ định người khác…”: chọn ngay người vừa thêm
+    const ct = dmCaNhan().find(d => (p.cccd && HAKModel.cccdSo(d.cccd) === HAKModel.cccdSo(p.cccd)) || trim(d.ten) === p.hoTen);
+    if (ct) { stRead(); stm.kyKhac = 'd:' + HAKDanhMuc.chuanDoiTacId(ct.id); stRender(); }
+    return;
+  }
   if (vt === 'kyVC') {   // chọn ngay vào ô Người ký (không vẽ lại màn: giữ các ô đang nhập)
     const sel = document.querySelector('#hdForm [name=ky]'), ct = dmCaNhan().find(d => (p.cccd && HAKModel.cccdSo(d.cccd) === HAKModel.cccdSo(p.cccd)) || trim(d.ten) === p.hoTen);
     if (sel && ct) { const v = 'd:' + HAKDanhMuc.chuanDoiTacId(ct.id); let o = [...sel.options].find(x => x.value === v);
@@ -52,3 +57,8 @@ document.addEventListener('click', e => {
   if (!r.ok) return hien('err', 'Chưa thêm vào Danh mục xe: ' + r.errs.join('; '));
   db.dmXe = r.dm; persist(); hien('ok', 'Đã thêm xe ' + r.xe.bks + ' vào Danh mục xe.');
 });
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest && e.target.closest('[data-act=dxKyKhacToggle]'); if (!b) return; e.preventDefault();
+  stRead(); stm.kyKhacMo = !stm.kyKhacMo; stRender();
+});
+document.addEventListener('change', e => { const t = e.target; if (t && t.id === 'dxKyKhac') stm.kyKhac = t.value; });
