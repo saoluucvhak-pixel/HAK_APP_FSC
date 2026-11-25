@@ -51,6 +51,6 @@ test('optsKhoiPhuc: chỉ giữ cách xử lý và mã lô mới; bỏ lịch s�
 
 test('tiến trình chính: import:preview và import:apply chỉ nhận tùy chọn qua optsKhoiPhuc', () => {
   const m = fs.readFileSync(path.join(__dirname, '..', 'src', 'main.js'), 'utf8');
-  assert.match(m, /ipcMain\.handle\('import:preview', afterReloc\(\(e, db, opts\) => wrap\(\(\) => store\.previewImport\(db, optsKhoiPhuc\(opts\)\)\)\(\)\)\);/);
-  assert.match(m, /ipcMain\.handle\('import:apply', afterReloc\(\(e, db, strategy, opts\) => wrap\(\(\) => \(\{\.\.\.store\.applyImport\(db, strategy, optsKhoiPhuc\(opts\)\)/);
+  assert.match(m, /handle\('import:preview', afterReloc\(\(e, db, opts\) => wrap\(\(\) => store\.previewImport\(db, optsKhoiPhuc\(opts\)\)\)\(\)\)\);/);
+  assert.match(m, /handle\('import:apply', afterReloc\(\(e, db, strategy, opts\) => wrap\(\(\) => \(\{\.\.\.store\.applyImport\(db, strategy, optsKhoiPhuc\(opts\)\)/);
 });

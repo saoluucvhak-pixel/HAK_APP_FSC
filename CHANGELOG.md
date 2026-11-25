@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+## 3.5.1 — Kiểm soát phát hành và đối chiếu báo cáo
+
+- Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
+- Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.
+- Báo cáo mặc định từ đầu tháng đến hôm nay. Các kênh IPC yêu cầu nguồn gọi là frame chính của cửa sổ hồ sơ.
+
 ## 3.5.0 — Ngành nghề và Chức vụ, Cài đặt chia tab, an toàn bản nháp, báo cáo chất lượng Google Sheet
 
 ### Điểm mới

@@ -76,6 +76,11 @@ const numSwap = t => (numStyle === 'en' ? String(t).replace(/[.,]/g, c => (c ===
 const viNum = fn => { const o = numStyle; numStyle = 'vi'; try { return fn(); } finally { numStyle = o; } };
 const fmtRaw = n => (n == null || n === '' ? '' : typeof n === 'number' ? (Number.isInteger(n) ? formatVND(n) : formatNumber(n, 10)) : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));   // lô 2 (T-04): số không nguyên theo kiểu Việt Nam (1.234,5), giữ đủ chữ số lẻ
 const fmt = n => numSwap(fmtRaw(n));
+const dateStyle = () => db.dinhDangNgayBaoCao === 'iso' ? 'iso' : 'vi';
+const displayInputDate = v => dateStyle() === 'iso' ? HAKDates.toIso(v) || v : v;
+const readInputDate = v => HAKDates.fromIso(v) || trim(v);
+const displayInputNumber = v => typeof v === 'number' ? HAKSo.groupInput(numSwap(String(v).replace('.', ',')), numStyle) : (v ?? '');
+const readInputNumber = (v, integer) => HAKSo.readInput(v, numStyle, integer);
 const toNum = v => { const r = HAKSo.parseDonGia(v); return r.blank ? null : r.ok ? Math.round(r.value) : 'x'; };
 const pad2 = n => String(n).padStart(2, '0');
 const normDate = v => {

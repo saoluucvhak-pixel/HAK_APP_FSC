@@ -18,7 +18,12 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   const B = lot('fb', 'R-B', {exp: {}, pc: [], nc: [nv(1, 'Tổ trưởng', 'ĐỖ TỔ B', 'Tổ trưởng', '049085000011'), nv(2, 'Công nhân', 'EM NHỎ', 'Công nhân khai thác', '049012000012')].map(r => ({...r, maRung: 'R-B'})), dx: [{...xe('92C-55555', '049000000099', 'TRẦN CHỦ XE B'), maRung: 'R-B', sdt: ''}]});
   B.nc[1].ngaySinh = '01/06/2012';   // dưới 18 tuổi
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');
-  await w.evaluate(() => document.querySelector('[data-act=rpOpen]').click()); await w.waitForSelector('.rpl');
+  await w.evaluate(() => document.querySelector('[data-act=rpOpen]').click()); await w.waitForSelector('.rpl'); await w.evaluate(() => {
+    document.getElementById('rpFrom').value = '';
+    const end = document.getElementById('rpTo');
+    end.value = '';
+    end.dispatchEvent(new Event('change', {bubbles: true}));
+  });
   const body = () => w.innerText('#rpBody');
   const rows = async () => (await w.$$eval('#rpBody table', ts => ts.map(t => [...t.querySelectorAll('tr')].map(r => [...r.children].map(c => c.textContent.trim())))));
   const exportXlsx = async () => { clearOut(); await w.click('[data-act=rpExcel]'); let f = null; for (let i = 0; i < 80 && !f; i++) { f = fs.readdirSync(out).find(x => x.endsWith('.xlsx')); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(200); const wb = XLSX.readFile(path.join(out, f)); return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1, defval: ''}); };

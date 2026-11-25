@@ -17,7 +17,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = B.dx.map(r => ({...r, maRung: 'R-B'})); B.pc = B.pc.map(r => ({...r, maRung: 'R-B'}));
   V.chot(B, 'Người lập', '2026-11-10T01:00:00.000Z', []);
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');
-  await w.click('[data-act=rpOpen]'); await w.waitForSelector('#rpBody');
+  await w.click('[data-act=rpOpen]'); await w.waitForSelector('#rpBody'); await w.evaluate(() => {
+    document.getElementById('rpFrom').value = '';
+    const end = document.getElementById('rpTo');
+    end.value = '';
+    end.dispatchEvent(new Event('change', {bubbles: true}));
+  });
   ok('hộp Báo cáo có mẫu “Sổ hồ sơ khai thác”', !!(await w.$('[data-rpsel=sohoso]')));
   await w.click('[data-rpsel=sohoso]'); await w.waitForTimeout(500); let t = await w.innerText('#rpBody');
   ok('mỗi lô một dòng: R-A và R-B', /R-A/.test(t) && /R-B/.test(t) && /Sổ hồ sơ theo lô/.test(t), t.slice(0, 400));

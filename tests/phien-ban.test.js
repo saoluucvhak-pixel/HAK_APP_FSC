@@ -5,7 +5,7 @@ const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..'), doc = f => fs.readFileSync(path.join(root, f), 'utf8');
 const pkg = JSON.parse(doc('package.json')), lock = JSON.parse(doc('package-lock.json')), v = pkg.version;
 const so = x => x.split('.').map(Number), lon = (a, b) => { const x = so(a), y = so(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
-const CONG_KHAI = '2.2.0';   // bản phát hành công khai gần nhất (GitHub Releases)
+const CONG_KHAI = '3.5.0';   // bản phát hành công khai gần nhất (GitHub Releases)
 
 test('package.json và package-lock.json cùng một số phiên bản dạng x.y.z', () => {
   assert.match(v, /^\d+\.\d+\.\d+$/); assert.equal(lock.version, v); assert.equal(lock.packages[''].version, v);

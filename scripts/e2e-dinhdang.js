@@ -25,7 +25,7 @@ const BAD = [[/\bNaN\b/, 'NaN'], [/\bundefined\b/, 'undefined'], [/\bnull\b/, 'n
   const seen = []; let n = 0;
   const check = async (name, selector) => {
     await w.waitForTimeout(350); const text = await w.innerText(selector || 'body'); seen.push(name);
-    const hits = BAD.map(([re, label]) => { const m = re.exec(text); return m ? label + ' “' + text.slice(Math.max(0, m.index - 25), m.index + 35).replace(/\s+/g, ' ') + '”' : ''; }).filter(Boolean);
+    const hits = BAD.filter(([, label]) => name !== 'Cài đặt · setfmt' || label !== 'ngày ISO yyyy-mm-dd').map(([re, label]) => { const m = re.exec(text); return m ? label + ' “' + text.slice(Math.max(0, m.index - 25), m.index + 35).replace(/\s+/g, ' ') + '”' : ''; }).filter(Boolean);
     ok('[' + name + '] không có chữ lỗi hoặc sai định dạng', hits.length === 0, hits.join(' ‖ '));
     for (const width of [1366, 1024]) {
       await w.setViewportSize({width, height: 900}); await w.waitForTimeout(150);

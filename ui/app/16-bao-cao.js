@@ -1,6 +1,19 @@
 /* ========== Báo cáo (Word + Excel) ========== */
-const rp = {id: 'dieuhanh', from: '', to: '', owner: '', detail: false, msg: null, folded: {}, q: '', one: {}, flag: {}, presetSel: '', conds: []};
+const rp = {id: 'dieuhanh', from: null, to: null, owner: '', detail: false, msg: null, folded: {}, q: '', one: {}, flag: {}, presetSel: '', conds: []};
 const isoToVi = v => HAKDates.fromIso(v);
+const rpFormat = () => ({numStyle, dateStyle: dateStyle()});
+const rpDate = v => HAKReports.displayDate(v, rpFormat().dateStyle);
+const rpDateText = s => String(s).replace(/\b\d{2}\/\d{2}\/\d{4}\b/g, rpDate);
+const rpCell = (v, f) => HAKReports.fmtCell(v, f, rpFormat());
+function rpInputDate(value) {
+  const s = value.trim(), date = HAKDates.parse(s);
+  return date ? HAKDates.format(date) : isoToVi(s) || s;
+}
+function rpRangeProblem() {
+  const r = HAKDates.range(rp.from, rp.to);
+  if (r.from && r.to && r.from > r.to) return 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.';
+  return r.problem;
+}
 const viToIso = v => HAKDates.toIso(v);
 /* theo đội khai thác (cấu trúc 2.0): tên đội, Tổ trưởng, số người, đơn giá bình quân đ/tấn = tổng tiền công của đội ÷ khối lượng phiếu cân của đội */
 const tenDoiOf = (jr, id) => { const d = (jr.doi || []).find(x => x.id === id); return d ? (trim(d.ten) || 'Đội ' + (jr.doi.indexOf(d) + 1)) : ''; };
@@ -130,10 +143,10 @@ function rpFilterHtml() {
     '<input id="rpPresetName" size="14" placeholder="Tên bộ lọc mới"><button class="btn ghost sm" data-act="rpPresetSave">Lưu bộ lọc</button><button class="btn ghost sm" data-act="rpPresetDel">Xóa bộ lọc đã chọn</button></div></div></div>';
 }
 function rpDocx(m) {
-  const land = m.orient === 'landscape', W = land ? 15137 : 9355, F = HAKReports.fmtCell;
+  const land = m.orient === 'landscape', W = land ? 15137 : 9355, F = rpCell;
   const widths = cols => { const t = cols.reduce((a, c) => a + c.w, 0); const w = cols.map(c => Math.floor(c.w / t * W)); w[w.length - 1] += W - w.reduce((a, b) => a + b, 0); return w; };
   const B = [P('**HAK GROUP**', {al: 'left', sz: 24, after: 0}), P('Hồ sơ khai thác và vận chuyển gỗ keo · Chuẩn truy xuất nguồn gốc FSC', {al: 'left', i: true, sz: 20, after: 60, bdb: true}),
-    P('**' + m.title + '**', {al: 'center', sz: 30, before: 160, after: 40}), P(m.period + ' · ' + rpScope(), {al: 'center', i: true, sz: 22, after: 40}), P((m.unit || '') + ' · Lập lúc ' + stampStr(), {al: 'center', i: true, sz: 20, after: 160})];
+    P('**' + m.title + '**', {al: 'center', sz: 30, before: 160, after: 40}), P(rpDateText(m.period + ' · ' + rpScope()), {al: 'center', i: true, sz: 22, after: 40}), P((m.unit || '') + ' · Lập lúc ' + rpDateText(stampStr()), {al: 'center', i: true, sz: 20, after: 160})];
   if (m.kpis.length) {
     const per = land ? 5 : 3, cells = m.kpis.map(k => ['**' + F(k.value, k.f) + '**', k.label]);
     for (let i = 0; i < cells.length; i += per) {
@@ -150,14 +163,14 @@ function rpDocx(m) {
     B.push(T(widths(s.cols), rows, {head: true, sz: land ? 18 : 20, alignCols: s.cols.map(c => c.al || 'left')}));
   });
   if (m.notes.length) { B.push(P('**Ghi chú**', {al: 'left', before: 140, after: 60, keep: true})); m.notes.forEach(n => B.push(bl(n))); }
-  B.push(P('Lập ngày ' + todayStr(), {al: 'right', i: true, before: 160, after: 80}),
+  B.push(P('Lập ngày ' + rpDate(todayStr()), {al: 'right', i: true, before: 160, after: 80}),
     T([Math.floor(W / 2), W - Math.floor(W / 2)], [['**NGƯỜI LẬP BIỂU**', '**GIÁM ĐỐC**'], [{v: '(Ký, ghi rõ họ tên)', i: true}, {v: '(Ký, đóng dấu)', i: true}], ['', ''], ['', '']], {borders: false, al: 'center', keep: true}));
   return makeDocx(B, {landscape: land, footer: m.title.slice(0, 1) + m.title.slice(1).toLowerCase() + ' · HAK Group · Phiên bản 1.0'});
 }
 async function rpExport(kind) {
   const m = rpModel(), name = 'BaoCao_' + m.id + '_' + todayStr().replace(/\//g, '-');
   if (kind === 'docx') { download(await rpDocx(m), name + '.docx'); return; }
-  const ws = HAKReports.toSheet(m, {org: 'HAK GROUP', today: todayStr(), stamp: stampStr(), scope: rpScope()}, XLSX), wb = XLSX.utils.book_new();
+  const ws = HAKReports.toSheet({...m, period: rpDateText(m.period)}, {...rpFormat(), org: 'HAK GROUP', today: rpDate(todayStr()), stamp: rpDateText(stampStr()), scope: rpDateText(rpScope())}, XLSX), wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Bao cao'); XLSX.writeFile(wb, name + '.xlsx', {cellDates: true});
 }
 function rpHidden(sec, ri) {   // dòng con ẩn khi cha (cấp thấp hơn, gần nhất phía trên) đang thu gọn
@@ -166,7 +179,7 @@ function rpHidden(sec, ri) {   // dòng con ẩn khi cha (cấp thấp hơn, g�
   return false;
 }
 function rpRender() {
-  const m = rpModel(), F = HAKReports.fmtCell;
+  const m = rpModel(), F = rpCell;
   const owners = Object.values(db.rs).sort((a, b) => (a.info.ten || '').localeCompare(b.info.ten || '', 'vi'));
   const prev = m.sections.map(s => '<h4 style="margin:12px 0 4px">' + esc(s.heading) + ' <span class="mut">(' + s.rows.length + ' dòng)</span></h4><div class="wrap" style="max-height:34vh"><table><tr>' + s.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr>' +
     s.rows.slice(0, 200).map((r, ri) => { const lv = s.levels ? s.levels[ri] : null; return '<tr' + (lv != null ? ' data-rplv="' + lv + '" data-rpi="' + ri + '"' + (rpHidden(s, ri) ? ' hidden' : '') : '') + (lv === 0 ? ' style="font-weight:700"' : '') + '>' + r.map((v,
@@ -177,23 +190,28 @@ function rpRender() {
     (s.rows.length > 200 ? '<p class="mut">Xem trước 200 dòng đầu; file xuất có đủ ' + s.rows.length + ' dòng.</p>' : '')).join('');
   $('#rpBody').innerHTML = '<div class="gh"><h2>Báo cáo</h2><button class="btn ghost sm" data-act="rpClose">✕ Đóng</button></div>' +
     '<div class="rpl">' + HAKReports.REPORTS.map(r => '<button class="rpc ' + (rp.id === r.id ? 'on' : '') + '" data-rpsel="' + r.id + '"><b>' + esc(r.name) + '</b><small>' + esc(r.desc) + '</small></button>').join('') + '</div>' +
-    '<div class="row" style="align-items:flex-end;flex-wrap:wrap"><label>Từ ngày<br><input type="date" id="rpFrom" value="' + esc(viToIso(rp.from)) + '"></label><label>Đến ngày<br><input type="date" id="rpTo" value="' + esc(viToIso(rp.to)) + '"></label>' +
+    '<div class="row" style="align-items:flex-end;flex-wrap:wrap"><label>Từ ngày<br><input id="rpFrom" placeholder="' + (rpFormat().dateStyle === 'iso' ? 'yyyy-mm-dd' : 'dd/mm/yyyy') + '" value="' + esc(rpDate(rp.from) || '') + '"></label><label>Đến ngày<br><input id="rpTo" placeholder="' + (rpFormat().dateStyle === 'iso' ? 'yyyy-mm-dd' : 'dd/mm/yyyy') + '" value="' + esc(rpDate(rp.to) || '') + '"></label>' +
     '<label>Chủ rừng<br><select id="rpOwner"><option value="">Tất cả chủ rừng</option>' + owners.map(o => '<option value="' + esc(o.id) + '"' + (rp.owner === o.id ? ' selected' : '') + '>' + esc(o.info.ten || '(chưa đặt tên)') + '</option>').join('') + '</select></label>' +
     (rp.id === 'chacon' ? '<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="rpDetail"' + (rp.detail ? ' checked' : '') + '> Kèm từng phiếu cân</label>' : '') +
     '<button class="btn" data-act="rpWord">Xuất Word (.docx)</button><button class="btn ghost" data-act="rpExcel">Xuất Excel (.xlsx)</button>' + (HB ? '<button class="btn ghost" data-act="inBaoCao" id="inBaoCaoBtn">In báo cáo</button>' : '') + '</div>' +
     rpFilterHtml() +
     '<p class="mut">Khoảng ngày áp dụng cho ngày cân của phiếu cân. Báo cáo tiến độ luôn tính tại thời điểm hiện tại.</p>' +
-    ((() => { const a1 = HAKReports.dateKey(rp.from), a2 = HAKReports.dateKey(rp.to); return a1 && a2 && a1 > a2 ? '<div class="msg err" id="rpKhoangDao">Ngày bắt đầu (' + esc(rp.from) + ') sau ngày kết thúc (' + esc(rp.to) + '): không có dòng nào thỏa khoảng ngày này.</div>' : ''; })()) +
+    (rpRangeProblem() ? '<div class="msg err" id="rpKhoangDao">' + esc(rpRangeProblem()) + '</div>' : '') +
     (rp.msg ? '<div class="msg ' + rp.msg.kind + '">' + esc(rp.msg.text) + '</div>' : '') +
-    '<h3 style="margin:10px 0 0">' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + ' · ' + rpScope()) + '<br>' + esc(m.unit || '') + '</p>' +
+    '<h3 style="margin:10px 0 0">' + esc(m.title) + '</h3><p class="mut">' + esc(rpDateText(m.period + ' · ' + rpScope())) + '<br>' + esc(m.unit || '') + '</p>' +
     '<div class="kpi">' + m.kpis.map(k => '<div><b>' + esc(F(k.value, k.f)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' + prev +
     (m.notes.length ? '<div class="msg warn">' + m.notes.map(esc).join('<br>') + '</div>' : '');
 }
-function rpOpen() { if (!Object.keys(db.rs).length) { note('Chưa có dữ liệu để lập báo cáo. Hãy tạo chủ rừng và nạp phiếu cân trước.', 'err'); render(); return; } rp.msg = null; $('#rpBox').classList.add('on'); rpRender(); }
+function rpOpen() { if (!Object.keys(db.rs).length) { note('Chưa có dữ liệu để lập báo cáo. Hãy tạo chủ rừng và nạp phiếu cân trước.', 'err'); render(); return; }
+  if (rp.from === null && rp.to === null) {
+    rp.to = todayStr();
+    rp.from = '01' + rp.to.slice(2);
+  }
+  rp.msg = null; $('#rpBox').classList.add('on'); rpRender(); }
 const rpClose = () => $('#rpBox').classList.remove('on');
 function rpReadParams() {
   const g = id => { const el = document.getElementById(id); return el ? el.value : null; }; const f = g('rpFrom'), t = g('rpTo'), o = g('rpOwner'), dt = document.getElementById('rpDetail');
-  if (dt) rp.detail = dt.checked; if (f !== null) rp.from = isoToVi(f); if (t !== null) rp.to = isoToVi(t); if (o !== null) rp.owner = o;
+  if (dt) rp.detail = dt.checked; if (f !== null) rp.from = rpInputDate(f); if (t !== null) rp.to = rpInputDate(t); if (o !== null) rp.owner = o;
   const q = g('rpQ'); if (q !== null) rp.q = q.trim();
   document.querySelectorAll('#rpBox [id^=rpOne_]').forEach(el => { const k = el.id.slice(6); if (el.value) rp.one[k] = el.value; else delete rp.one[k]; });
   document.querySelectorAll('#rpBox [id^=rpFlag_]').forEach(el => { const k = el.id.slice(7); if (el.checked) rp.flag[k] = true; else delete rp.flag[k]; });
@@ -217,8 +235,8 @@ document.addEventListener('click', async e => {
   if (a === 'rpPresetDel') { const nm = rp.presetSel || (document.getElementById('rpPreset') || {}).value || ''; const cfg = rpCfg(); if (nm && rpPresets().remove(cfg.screenId, nm)) { rp.presetSel = ''; rp.msg = {kind: 'ok', text: 'Đã xóa bộ lọc “' + nm + '”.'};
   } else rp.msg = {kind: 'err', text: 'Chọn một bộ lọc đã lưu để xóa.'}; return rpRender(); }
   if (a === 'rpWord' || a === 'rpExcel') {
-    const a1 = HAKReports.dateKey(rp.from), a2 = HAKReports.dateKey(rp.to);
-    if (a1 && a2 && a1 > a2) { rp.msg = {kind: 'err', text: 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.'}; return rpRender(); }
+    const problem = rpRangeProblem();
+    if (problem) { rp.msg = {kind: 'err', text: problem}; return rpRender(); }
     try { await rpExport(a === 'rpWord' ? 'docx' : 'xlsx'); rp.msg = {kind: 'ok', text: 'Đã xuất báo cáo.'}; } catch (err) { rp.msg = {kind: 'err', text: 'Không xuất được: ' + err.message}; }
     return rpRender();
   }

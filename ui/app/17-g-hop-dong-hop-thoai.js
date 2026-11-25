@@ -64,8 +64,6 @@ function gsOwnerCheck(eff) {
     err = 'Chủ rừng “' + (o.info.ten || o.info.ma || '') + '” trong ứng dụng có CCCD ' + gsMask(o.info.cccd) + ' khác CCCD của hợp đồng ' + d.hd + ' (' + d.cccdList.map(gsMask).join(', ') + '): không ghi, không tự đổi chủ rừng.';
   return {o, err};
 }
-const gsOwnStr = (o, k) => (o && typeof o === 'object' && Object.hasOwn(o, k) && typeof o[k] === 'string') ? o[k] : '';   // 'constructor', 'toString'… không được coi là đã ghép
-const gsAliasOf = raw => { const k = foldVi(raw); return gsOwnStr(db.bienAlias, k) || gsOwnStr(gs.m && gs.m.alias, k); };
 
 /* ----- Phiếu cân của hợp đồng: trạng thái từng dòng Sheet so với lô đã có (mới / đổi / trùng / nghi đổi số / lệch CCCD / lỗi / cần ghép xe) ----- */
 function gsLots(eff) {
@@ -77,7 +75,7 @@ function gsRows() {
   const m = gs.m, d = m.d, eff = gsEff(), lots = gsLots(eff), B = HAKBks, byId = new Map(lots.map(x => [x.loId + ':' + x.p._id, x]));   // _id của bản nháp chỉ duy nhất trong từng lô: ghép thêm mã lô
   const seen = new Set();
   const rows = d.phieu.map((p, idx) => {
-    const kp = B.khoaPhieu({soPhieu: p.soPhieu, ngay: p.ngay}), raw = String(p.bienRaw || ''), bien = p.isPlate ? raw.toUpperCase() : gsAliasOf(raw);
+    const kp = B.khoaPhieu({soPhieu: p.soPhieu, ngay: p.ngay}), raw = String(p.bienRaw || ''), bien = B.bienTuSheet(p, db.bienAlias, m.alias);
     const r = {key: String(p.row), idx, p, kp, bien, st: 'new', note: '', ex: null, ung: null};
     if (p.lechCccd) { r.st = 'lech'; r.note = 'CCCD của dòng này khác CCCD hợp đồng: không phân bổ, không ghi'; }
     else if (p.issue) { r.st = 'issue'; r.note = p.issue; }
