@@ -31,7 +31,7 @@ async function chay(cach) {   // cach: 'bo1' (bỏ tích người 2 rồi Thêm)
   };
   await them('NGUYỄN VĂN MỘT', CC1); await them('TRẦN VĂN HAI', CC2);
   await w.click('[data-ftab=dx]'); await w.waitForTimeout(300); await w.click('[data-act=stAdd][data-kind=dx]'); await w.waitForSelector('#stForm [name=bienSo]');
-  const dat = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); };
+  const dat = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else if (await w.$('#stForm input[type=radio][name=' + k + ']')) await w.check('#stForm input[type=radio][name=' + k + '][value="' + v + '"]'); else await w.fill('#stForm input[name=' + k + ']', v); };
   for (const [k, v] of Object.entries({bienSo: BKS, chuXe: 'LÊ VĂN CHỦ', ngaySinh: '05/05/1980', cccd: '049080001111', ngayCap: '01/01/2022', noiCap: 'Cục CS QLHC', diaChi: 'Thăng Bình, Quảng Nam', sdt: '0905123456', nguoiKy: 'Chủ xe', loaiXe: 'Xe tải', taiXe: 'PHẠM VĂN LÁI'})) await dat(k, v);
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
   const loiForm = await w.evaluate(() => (document.querySelector('#stBox.on #stForm') ? document.getElementById('stBody').innerText.slice(0, 300) : ''));

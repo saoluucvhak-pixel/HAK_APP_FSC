@@ -13,4 +13,4 @@ function tienKiemXuatHtml(rec) {
     '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn" data-act="dl" data-kind="all" id="xuatTronBo"' + (choXuat ? '' : ' disabled title="Còn mục chặn xuất: bấm “Đi đến sửa” ở các dòng trên"') + '>📦 Xuất trọn bộ hồ sơ FSC (BM-01 → BM-20)</button>' +
     '<span class="mut">Gói .zip gồm mọi biểu mẫu đủ điều kiện; mục chưa đủ dữ liệu được nêu ngay sau khi tải.</span></div></div>';
 }
-{ const g0 = panelXuat; panelXuat = function (rec) { return tienKiemXuatHtml(rec) + g0(rec); }; }
+{ const g0 = panelXuat; panelXuat = function (rec) { return g0(rec) + tienKiemXuatHtml(rec); }; }   // cuối trang: không đẩy nút tải biểu mẫu xuống dưới màn đầu

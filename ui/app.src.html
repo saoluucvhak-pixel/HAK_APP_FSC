@@ -240,6 +240,9 @@ header.top .nav .nb,header.top .hbtn{padding:6px 9px}header.top{flex-wrap:nowrap
 .padGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.padBtn{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer;text-align:left}.padBtn:hover{background:var(--hover);border-color:var(--acc)}.padBtn span{font-size:20px}
 tr.clickRow{cursor:pointer}tr.clickRow:hover{background:var(--hover)}
 @media (max-width:1100px){.heroKpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:600px){.heroKpis{grid-template-columns:1fr}}
+.nav #navHome::before{content:"📊 "}.nav #navBld::before{content:"💼 "}.nav #navDm::before{content:"📁 "}.nav [data-act=rpOpen]::before{content:"📑 "}.nav #navNorm::before{content:"⚙️ "}.nav #navSet::before{content:"🔧 "}
+@media (max-width:1320px){.nav .nb::before{content:none!important}select#skinQuick{display:none}}
+@media (max-width:980px){#themeBtn{font-size:0;padding:6px 8px}#themeBtn::before{content:"🌓";font-size:14px}}
 .nvNut{white-space:nowrap}
 button.segNut{border:0;font:inherit;color:var(--ink)}button.segNut.on{background:var(--acc);color:var(--accInk);font-weight:700}
 .nkDong{list-style:none;margin:8px 0 0;padding:0 0 0 18px;border-left:3px solid var(--line)}.nkDong li{position:relative;padding:4px 0 10px 12px}
@@ -335,13 +338,13 @@ select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);bord
     <h1>Hồ sơ khai thác & vận chuyển gỗ keo<small>HAK Group · Bộ hồ sơ theo rừng, chuẩn truy xuất nguồn gốc FSC<span id="appVer"></span></small></h1>
   </button>
   <nav class="nav">
-    <button class="nb" data-act="goHome" id="navHome">📊 Tổng quan</button>
-    <button class="nb" data-act="openBld" id="navBld">💼 Bàn làm việc</button>
-    <button class="nb" data-act="openDm" id="navDm">📁 Danh mục</button>
+    <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
+    <button class="nb" data-act="openBld" id="navBld">Bàn làm việc</button>
+    <button class="nb" data-act="openDm" id="navDm">Danh mục</button>
     <button class="nb deskOnly" data-act="lkOpen" title="Dữ liệu Google Sheets" hidden>Dữ liệu Google Sheets</button>
-    <button class="nb" data-act="rpOpen">📑 Báo cáo</button>
-    <button class="nb" data-act="openNorm" id="navNorm">⚙️ Định mức</button>
-    <button class="nb" data-act="openSettings" id="navSet">🔧 Cài đặt</button>
+    <button class="nb" data-act="rpOpen">Báo cáo</button>
+    <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
+    <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
   <button class="hbtn" data-act="theme" id="themeBtn" title="Đổi nhanh giao diện Sáng / Tối" aria-label="Đổi giao diện Sáng hoặc Tối">🌙 Tối</button>
   <select class="hbtn" id="skinQuick" title="Chọn nhanh bảng màu" aria-label="Bảng màu"><option value="luxe">Luxe</option><option value="classic">Classic</option><option value="neutral">Neutral</option><option value="champagne">Champagne</option></select>

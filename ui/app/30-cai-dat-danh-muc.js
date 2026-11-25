@@ -76,7 +76,7 @@ function chucVuSegHtml(p, o) {
   const hai = !!(ky.vanChuyen && ky.nhanCong), v = hai ? '' : ky.vanChuyen ? 'vc' : ky.nhanCong ? 'nc' : '';
   const quyen = seg30('radio', 'kyMot', 'Không', !hai && v === '', '') + seg30('radio', 'kyMot', 'Nhân công', v === 'nc', 'nc') + seg30('radio', 'kyMot', 'Vận chuyển', v === 'vc', 'vc') +
     '<span hidden><input type="checkbox" name="kyVC"' + (ky.vanChuyen ? ' checked' : '') + '><input type="checkbox" name="kyNC"' + (ky.nhanCong ? ' checked' : '') + '></span>';
-  return segNhom('Chức vụ', 'cvChiTiet', chucVu) + segNhom('Ngành nghề', 'nganhNguoi', ngh) + segNhom('Quyền ký hợp đồng', 'kyQuyen', quyen) +
+  return segNhom('Chức vụ:', 'cvChiTiet', chucVu) + segNhom('Ngành nghề:', 'nganhNguoi', ngh) + segNhom('Quyền ký hợp đồng:', 'kyQuyen', quyen) +
     (hai ? '<p class="mut" style="margin:2px 0 0">Đối tượng này đang có cả hai quyền ký; chọn một mục ở trên để chỉ giữ một quyền.</p>' : '');
 }
 document.addEventListener('change', e => {   // nút chọn: quyền ký loại trừ nhau (ô ẩn kyVC / kyNC theo nút chọn)

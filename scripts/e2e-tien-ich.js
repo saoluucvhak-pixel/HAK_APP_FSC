@@ -50,7 +50,8 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   ok('nạp dữ liệu đã dán và lưu: lô có 3 phiếu cân PA1, PA2, PA3; khối lượng 12,5 + 9,25 + 8 = 29,75 tấn; ngày và biển số đúng', F.pc.length === 3 && F.pc.map(p => p.soPhieu).join() === 'PA1,PA2,PA3' && Math.abs(F.pc.reduce((a, p) => a + p.kl, 0) - 29.75) < 1e-9 && F.pc[0].ngay === '05/10/2026' && F.pc[1].bienSo === '92C-67890', JSON.stringify(F.pc.map(p => [p.soPhieu, p.ngay, p.bienSo, p.kl])));
   ok('nguồn dữ liệu ghi là “Dán từ Excel”', /Dán từ Excel/.test(F.pcFile || ''), F.pcFile);
   await w.reload(); await w.waitForSelector('#side');
-  ok('sau khi có phiếu cân: hướng dẫn còn một bước (xuất hồ sơ)', (await w.getAttribute('#huongDan', 'data-xong')) === '5' && (await w.getAttribute('#huongDan', 'data-tiep')) === 'xuat');
+  await w.click('#navBld'); await w.waitForSelector('#bldQuyTrinh');
+  ok('sau khi có phiếu cân: Bàn làm việc còn một bước (xuất hồ sơ)', (await w.getAttribute('#bldQuyTrinh', 'data-xong')) === '5' && (await w.getAttribute('#bldQuyTrinh', 'data-tiep')) === 'xuat');
 
   // ---------- 2. mục lục trong gói in ----------
   await open('xuat'); don(); await w.click('[data-xtab=all]').catch(() => {}); await w.click('button[data-act=dl][data-kind=all]');

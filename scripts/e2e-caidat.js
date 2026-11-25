@@ -11,7 +11,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const launch = env => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_USERDATA: ud, ...env}});
 (async () => {
   let app = await launch({HAKQN_PICK_DIR: bk}); let w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await sideSan(w);
-  await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', 'CR-CD'); await w.fill('#infoForm [name="ten"]', 'NGUYỄN CÀI ĐẶT'); for (const [k, v] of Object.entries({cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v); await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
+  await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', 'CR-CD'); await w.fill('#infoForm [name="ten"]', 'NGUYỄN CÀI ĐẶT'); for (const [k, v] of Object.entries({cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v); await w.check('#infoForm [name="danhXung"][value="Ông"]'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
   await w.click('#navSet'); await w.waitForSelector('#setBox [data-set-path]');
   let t = await w.innerText('#main');
   await w.click('#setTab_setbk'); await w.waitForSelector('#autoBk [data-set-path]');

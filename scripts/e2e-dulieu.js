@@ -16,7 +16,7 @@ async function addOwner(w, ma, ten) {
   if (!(await w.$eval('#side', e => getComputedStyle(e).display !== 'none'))) await w.click('#navHome');   // phiếu #06b (D-05): Cài đặt ẩn cột chủ rừng; về Tổng quan như người dùng
   await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', ma); await w.fill('#infoForm [name="ten"]', ten);
   for (const [k, v] of Object.entries(OWNER)) await w.fill(`#infoForm [name="${k}"]`, v);
-  await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
+  await w.check('#infoForm [name="danhXung"][value="Ông"]'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
 }
 const side = async w => (await w.innerText('#sideList').catch(() => '')) || '';
 const open = async (ud, env) => { const app = await launch(ud, env), w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForLoadState('domcontentloaded'); return {app, w}; };

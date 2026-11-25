@@ -23,7 +23,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
     if (!(await w.$eval('#side', e => getComputedStyle(e).display !== 'none').catch(() => true))) await w.click('#navHome'); /* phiếu #06b (D-05): Cài đặt ẩn cột chủ rừng; về Tổng quan như người dùng */
     await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', ma); await w.fill('#infoForm [name="ten"]', ten);
     for (const [k, v] of Object.entries({cccd: '049067005' + ma.slice(-3), ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v);
-    await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]');
+    await w.check('#infoForm [name="danhXung"][value="Ông"]'); await w.click('#infoForm button[type=submit]');
   };
   // 1. lần lưu đầu sau khi mở: toàn bộ (chưa có ảnh chụp)
   await addOwner('CR-901', 'NGUYỄN LƯU MỘT'); let s = await waitSaved(1);

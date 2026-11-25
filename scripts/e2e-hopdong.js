@@ -39,7 +39,7 @@ async function docTables(file) { const z = await JSZip.loadAsync(fs.readFileSync
   // --- Dựng hồ sơ: chủ rừng, rừng 2,5 ha × 80 tấn/ha = 200 tấn, nhân công từ file
   await w.click('text=+ Chủ rừng mới');
   for (const [k, v] of Object.entries(OWNER)) await w.fill(`#infoForm [name="${k}"]`, v);
-  await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]');
+  await w.check('#infoForm [name="danhXung"][value="Ông"]'); await w.click('#infoForm button[type=submit]');
   await w.click('[data-tab=rung]'); await w.click('text=+ Rừng mới');
   await fillForestSection(w, 'chung', {diaDiem: 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng', dienTich: '2,5', tuNgay: '01/10/2026', denNgay: '30/11/2026'});
   await fillForestSection(w, 'toado', {cuLy: '45', lat: '15.9', lng: '108.1'});

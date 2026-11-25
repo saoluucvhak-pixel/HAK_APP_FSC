@@ -37,7 +37,7 @@ exports.moInPhieuCan = async w => {
 /* Thêm một xe vào BẢN NHÁP bằng hộp thoại (đang ở tab Vận chuyển): đủ trường bắt buộc của người ký là chủ xe */
 exports.addXe = async (w, bienSo, chuXe) => {
   await w.click('[data-act=stAdd][data-kind=dx]'); await w.waitForSelector('#stForm');
-  const set = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); };
+  const set = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else if (await w.$('#stForm input[type=radio][name=' + k + ']')) await w.check('#stForm input[type=radio][name=' + k + '][value="' + v + '"]'); else await w.fill('#stForm input[name=' + k + ']', v); };
   const n = String(Math.abs([...bienSo].reduce((a, c) => a * 31 + c.charCodeAt(0), 7))).padStart(12, '0').slice(0, 12);
   for (const [k, v] of Object.entries({bienSo, chuXe: chuXe || 'CHỦ XE ' + bienSo, ngaySinh: '01/01/1980', cccd: n, ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', sdt: '0905123456', nguoiKy: 'Chủ xe', loaiXe: 'Xe tải'})) await set(k, v);
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);

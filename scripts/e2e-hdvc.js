@@ -36,7 +36,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.fill('#dtForm [name=mst]', '0401234567'); await w.fill('#dtForm [name=diaChi]', 'Hòa Khánh, Đà Nẵng'); await w.click('#dtLuu'); await w.waitForTimeout(400);
   const dbx = (await w.evaluate(() => window.hak.loadSync().db)), dm = Object.fromEntries((dbx.dmDoiTuong || []).filter(x => x.loai === 'phapnhan').map(x => ['dt:' + x.id, x]));
   ok('lưu pháp nhân vào Danh mục đối tượng (quyền ký Vận chuyển, người đại diện)', Object.values(dm).length === 1 && Object.values(dm)[0].mst === '0401234567' && Object.values(dm)[0].kyHD.vanChuyen && !('dmDonViVC' in dbx), JSON.stringify(dm));
-  await w.click('#veLaiBtn'); await w.waitForSelector('#hdDau');
+  await open('fa'); await w.click('[data-act=chonHd][data-hd="' + f.hdvc[0].id + '"]'); await w.waitForSelector('#hdDau');   // 3.5.1: không còn nút “Quay lại”: mở lại hợp đồng từ danh sách
   ok('“Quay lại”: về đúng hợp đồng vận chuyển đang mở của rừng R-A', /R-A/.test(await w.innerText('#loCrumb'))   /* phiếu #06: tên rừng ở đường dẫn, không lặp ở đầu hợp đồng */ && !!(await w.$('#hdForm')));
   // đội xe mới, ký với doanh nghiệp
   await w.click('#hdQuayLai'); await w.fill('#hdMoiTen', 'Đội xe Hòa Phát'); await w.click('[data-act=themHd]'); await w.waitForTimeout(300); await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400);

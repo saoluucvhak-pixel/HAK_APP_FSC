@@ -57,11 +57,12 @@ document.addEventListener('keydown', e => {   // Enter ở bốn ô định danh
   const t = e.target; if (e.key !== 'Enter' || !t || !t.closest || !t.closest('#infoTraCuu3') || t.tagName !== 'INPUT' || t.type === 'checkbox') return;
   e.preventDefault(); if (HB) infoTraCuuMo();
 });
-document.addEventListener('input', e => {   // ô tích “Dùng số CCCD làm Mã chủ rừng”: mã theo CCCD, khóa ô mã
+document.addEventListener('input', e => {   // ô tích “Dùng số CCCD làm Mã chủ rừng”: mã theo CCCD; gõ tay vào ô Mã thì bỏ tích (mã tự đặt)
   const t = e.target, fe = t && t.form; if (!fe || fe.id !== 'infoForm' || !fe.elements.ma) return;
   const cb = document.getElementById('maTheoCccd'); if (!cb) return;
+  if (t.name === 'ma' && cb.checked) { cb.checked = false; fe.elements.ma.readOnly = false; return; }
   if (t.id === 'maTheoCccd' || t.name === 'cccd') { if (cb.checked) fe.elements.ma.value = String(fe.elements.cccd.value).replace(/\D/g, ''); }
-  fe.elements.ma.readOnly = cb.checked;
+  fe.elements.ma.readOnly = cb.checked && !!trim(fe.elements.cccd.value);
 });
 document.addEventListener('change', e => {   // họ tên đổi → gợi ý danh xưng (Thị → Bà, Văn → Ông)
   const t = e.target, fe = t && t.form; if (!fe || fe.id !== 'infoForm' || t.name !== 'ten') return;

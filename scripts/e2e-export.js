@@ -13,7 +13,7 @@ let fail = 0; const ok = (n, c) => { console.log((c ? 'ĐẠT  ' : 'LỖI  ') + 
   await w.waitForSelector('#side');
   await w.click('text=+ Chủ rừng mới');
   for (const [k, v] of Object.entries({ma: 'CR-001', ten: 'NGUYỄN PHƯỚC TÁM', soHopDong: 'HD-001', ngayKyHopDong: '01/10/2026', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v);
-  await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]');
+  await w.check('#infoForm [name="danhXung"][value="Ông"]'); await w.click('#infoForm button[type=submit]');
   await w.click('[data-tab=rung]'); await w.click('text=+ Rừng mới');
   const muc = id => w.locator('.mucNav [data-muc-lo=' + id + ']').click();
   await w.fill('#forestForm [name=diaDiem]', 'Thôn Hòa Phú, Xã Xuân Phú, Tp Đà Nẵng'); await w.fill('#forestForm [name=dienTich]', '2,5');
