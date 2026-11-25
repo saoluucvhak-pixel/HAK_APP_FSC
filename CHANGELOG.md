@@ -1,6 +1,6 @@
 # Nhật ký thay đổi
 
-## 3.5.1 — Kiểm soát phát hành và đối chiếu báo cáo
+## 3.6.0 — Giao diện điều hành: Tổng quan, Bàn làm việc, Danh mục dạng hộp thoại, nhật ký truy xuất
 
 - Màn Danh mục: Thêm/Sửa đối tượng, xe, ngành nghề và chức vụ mở trong hộp thoại riêng (có Lưu thông tin / Hủy bỏ, Esc để hủy); Chức vụ, Ngành nghề, Quyền ký hợp đồng chọn bằng nút phân đoạn (quyền ký loại trừ nhau); bảng Ngành nghề / Chức vụ là danh sách sạch với nút Sửa, Ngừng / Xóa.
 - Thông tin chủ rừng: Số hợp đồng, Họ tên, CCCD đứng đầu form kèm nút “Tra cứu Google Sheet”; chọn hợp đồng ở bảng Cha - Con rồi “Chọn hợp đồng này & Điền vào hồ sơ” để điền sẵn form (chưa lưu). Bỏ thẻ Google Sheets bị khóa ở cuối form.
@@ -19,6 +19,9 @@
 - Gói lô rừng di động: hộp lưu lô mặc định đuôi .fscpkg (cùng nội dung niêm phong như .json); hộp mở lô nhận cả .fscpkg và .json. Form Thêm xe: mục “Chỉ định người khác…” chọn người ký của cả đội xe (có ô gõ lọc và thêm nhanh người ký).
 - Tổng quan thành bảng điều hành: 4 chỉ số chính (sản lượng đã cân, diện tích quản lý, lực lượng tác nghiệp, tỷ lệ hồ sơ FSC hợp lệ), sản lượng 6 tháng, radar cảnh báo tuân thủ FSC, 5 lô khai thác tích cực nhất (30 ngày), 5 phiếu cân mới nhất và thao tác nhanh.
 - Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
+
+## 3.5.1 — Kiểm soát phát hành và đối chiếu báo cáo
+
 - Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
 - Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.
 - Báo cáo mặc định từ đầu tháng đến hôm nay. Các kênh IPC yêu cầu nguồn gọi là frame chính của cửa sổ hồ sơ.
