@@ -327,6 +327,7 @@ function setSkin(k) {
   if (!SKINS.some(x => x[0] === k)) k = 'luxe';
   document.documentElement.dataset.skin = k;
   try { localStorage.setItem('hskt.skin', k); } catch (e) {}
+  const sq = document.getElementById('skinQuick'); if (sq) sq.value = k;
   const box = document.getElementById('skinPick');
   if (box) box.innerHTML = '<b>Bảng màu</b>' + SKINS.map(([id, label, c]) => '<button class="skinbtn' + (id === k ? ' on' : '') + '" data-skinpick="' + id + '" aria-pressed="' + (id === k) + '"><span class="sw">' + c.map(x => '<i style="background:' + x + '"></i>').join('') + '</span>' +
   esc(label) + '</button>').join('');
@@ -337,12 +338,13 @@ setSkin(savedSkin);
 function setTheme(t) {
   document.documentElement.dataset.theme = t;
   try { localStorage.setItem('hskt.theme', t); } catch (e) {}
-  ['themeBtn', 'themeBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'; });
+  ['themeBtn', 'themeBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = id === 'themeBtn' ? (t === 'dark' ? '☀ Sáng' : '🌙 Tối') : (t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'); });
 }
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('hskt.theme'); } catch (e) {}
 if (savedTheme === 'dark' || savedTheme === 'light') setTheme(savedTheme);
 else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
+document.addEventListener('change', e => { if (e.target && e.target.id === 'skinQuick') setSkin(e.target.value); });
 document.addEventListener('change', e => { if (e.target && e.target.id === 'normVer') { normSel = e.target.value; render(); } });
 document.addEventListener('input', e => {
   const t = e.target;
@@ -385,6 +387,8 @@ document.addEventListener('change', e => {
   if (t.id === 'mhAddr') { mh.addrId = t.value === '@main' ? '' : t.value; return render(); }
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
+document.getElementById('sideSf').addEventListener('change', e => { const t = e.target; if (t && t.dataset && t.dataset.sbsf) { sideSfSet(t.dataset.sbsf, t.value); renderSide(); } });
+document.getElementById('sideSfXoa').addEventListener('click', () => { sideQ = ''; document.getElementById('sideQ').value = ''; sideSfState().reset(); renderSide(); });
 if (pendingNotice) { NAV.view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
 if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind;
 if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});

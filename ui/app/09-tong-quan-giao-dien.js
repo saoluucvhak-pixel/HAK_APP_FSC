@@ -83,9 +83,35 @@ function panelHome() {
 
 /* ========== Giao diện ========== */
 let sideQ = '';
+/* 3.5.1: Smart Filter cho danh sách chủ rừng (screenId 'sidebar_chu_rung'): chữ tìm + tình trạng hồ sơ + tình trạng hợp đồng + số rừng; cùng bộ máy lọc (HAKSmartFilter) với các màn bảng */
+const sideSfCfg = () => ({
+  screenId: 'sidebar_chu_rung', title: 'Chủ rừng', searchPlaceholder: 'Lọc chủ rừng…', quickFields: ['q', 'tinhTrang', 'hopDong', 'soRung'], advancedFields: ['q', 'tinhTrang', 'hopDong', 'soRung'],
+  matchQ: (o, q) => { const h = foldVi([o.info.ten, o.info.ma, o.info.cccd, o.info.soHopDong].join(' ')); return q.split(/\s+/).filter(Boolean).every(w => h.includes(foldVi(w))); },
+  fields: [
+    {key: 'tinhTrang', label: 'Tình trạng hồ sơ', type: 'enum', options: [{value: 'du', label: 'Đủ điều kiện'}, {value: 'doi', label: 'Cần đối chiếu'}, {value: 'chan', label: 'Bị chặn xuất'}], match: (o, v) => sideTinhTrang(o) === v},
+    {key: 'hopDong', label: 'Tình trạng hợp đồng', type: 'enum', options: [{value: 'ky', label: 'Đã ký HĐ'}, {value: 'chua', label: 'Chưa ký HĐ'}], match: (o, v) => (trim(o.info.soHopDong) ? 'ky' : 'chua') === v},
+    {key: 'soRung', label: 'Số lượng rừng', type: 'enum', options: [{value: 'nhieu', label: 'Nhiều rừng (từ 2)'}, {value: 'don', label: 'Lô đơn (1 rừng)'}], match: (o, v) => (forestList(o).length >= 2 ? 'nhieu' : 'don') === v}
+  ]
+});
+/* tình trạng hồ sơ của chủ rừng: có lô bị chặn xuất → chan; còn mục cần đối chiếu hoặc chưa có rừng → doi; còn lại → du (chỉ tính khi đang lọc theo tình trạng) */
+function sideTinhTrang(o) {
+  const fs = forestList(o); if (!fs.length) return 'doi'; let doi = false;
+  for (const f of fs) { let kt; try { kt = exportCheck(jobView(o, f)); } catch (e) { continue; } if (kt.chan.length) return 'chan'; if (kt.doi.length) doi = true; }
+  return doi ? 'doi' : 'du';
+}
+let sideSfInst = null;   // tạo riêng (09 chạy trước 35 nên chưa dùng được hakSfGet)
+function sideSfState() { return sideSfInst || (sideSfInst = HAKSmartFilter.createFilter(sideSfCfg())); }
+function sideSfSet(k, v) {
+  const f = sideSfState(), st = f.getState(), one = Object.assign({}, st.one); if (v) one[k] = v; else delete one[k];
+  f.setState(HAKCore.sf.normalize(Object.assign({}, st, {one}), sideSfCfg()));
+}
 function renderSide() {
-  const qf = foldVi(sideQ);
-  const ids = Object.keys(db.rs).sort((a, b) => db.rs[a].info.ten.localeCompare(db.rs[b].info.ten, 'vi')).filter(id => { if (!qf) return true; const i = db.rs[id].info; return foldVi([i.ten, i.ma, i.cccd].join(' ')).includes(qf) || id === NAV.cur; });
+  const f = sideSfState(), st0 = f.getState(); if (st0.q !== sideQ) f.setState(HAKCore.sf.normalize(Object.assign({}, st0, {q: sideQ}), sideSfCfg()));
+  const st = f.getState(), dang = HAKCore.sf.activeCount(st) > 0;
+  document.querySelectorAll('#sideSf [data-sbsf]').forEach(sel => { sel.value = (st.one || {})[sel.dataset.sbsf] || ''; });
+  const xoa = document.getElementById('sideSfXoa'); if (xoa) xoa.hidden = !dang;
+  const kept = new Set(sideSfState().filter(Object.values(db.rs)).rows);   // hàng lọc chính là đối tượng chủ rừng trong db.rs
+  const ids = Object.keys(db.rs).sort((a, b) => db.rs[a].info.ten.localeCompare(db.rs[b].info.ten, 'vi')).filter(id => kept.has(db.rs[id]) || id === NAV.cur);
   $('#sideList').innerHTML =
     '<button class="btn" style="width:100%;margin-bottom:10px" data-act="newRs">+ Chủ rừng mới</button>' +
     (ids.length ? ids.map(id => {
@@ -93,7 +119,7 @@ function renderSide() {
       const kids = id === NAV.cur ? forestList(r).map(f => '<button class="item sub ' + (f.id === NAV.curF ? 'on' : '') + '" data-sforest="' + f.id + '"><b>' + esc(f.info.tenRung || f.info.maRung || '(rừng chưa đặt tên)') + '</b><small>' + esc(f.info.maRung || '') + '</small></button>').join('') : '';
       return '<button class="item ' + (id === NAV.cur ? 'on' : '') + '" data-open="' + id + '"><b>' + (id === NAV.cur ? '▾ ' : '▸ ') + esc(r.info.ten || '(chưa đặt tên)') +
         '</b><small>Mã ' + esc(r.info.ma) + ' · ' + forestList(r).length + ' rừng</small></button>' + (kids ? '<div class="subs">' + kids + '</div>' : '');
-    }).join('') : (sideQ ? '<p class="mut">Không có chủ rừng khớp “' + esc(sideQ) + '”.</p>' : '<p class="mut">Chưa có chủ rừng. Bấm “+ Chủ rừng mới”.</p>')) + '';
+    }).join('') : (dang ? '<p class="mut">Không có chủ rừng khớp bộ lọc.</p>' : '<p class="mut">Chưa có chủ rừng. Bấm “+ Chủ rừng mới”.</p>')) + '';
 }
 
 function renderMsgs() {

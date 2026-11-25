@@ -220,6 +220,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .segOp:last-child{border-right:0}.segOp input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
 .segOp:has(input:checked){background:var(--acc);color:var(--accInk);font-weight:700}.segOp:has(input:focus-visible){outline:2px solid var(--acc);outline-offset:-2px}
 .nvNut{white-space:nowrap}
+.sideSf{display:grid;gap:6px;margin:6px 0 10px}.sideSf select{width:100%}
+select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);border-color:rgba(255,255,255,.28);padding:5px 8px}select#skinQuick option{color:#1b232c;background:#fff}
 .dmModal .grid,.infoTraCuu>.grid,.dxKhoi .grid,.dxKhoi details .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px 16px}
 .dmModal label>span,.dxKhoi label>span{display:block;margin-bottom:3px}
 .mucNav{display:grid;gap:4px;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px}
@@ -315,11 +317,13 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
     <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
+  <button class="hbtn" data-act="theme" id="themeBtn" title="Đổi nhanh giao diện Sáng / Tối" aria-label="Đổi giao diện Sáng hoặc Tối">🌙 Tối</button>
+  <select class="hbtn" id="skinQuick" title="Chọn nhanh bảng màu" aria-label="Bảng màu"><option value="luxe">Luxe</option><option value="classic">Classic</option><option value="neutral">Neutral</option><option value="champagne">Champagne</option></select>
   <button class="hbtn" data-act="tkOpen" id="tkBtn" title="Tìm kiếm toàn cục (Ctrl+K)">🔍 Tìm</button>
 </header>
 <div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><button type="button" class="pill" id="bkChip" data-act="openSetBk" hidden></button><span class="pill" id="saveSt"></span></div>
 <div class="layout">
-  <aside id="side"><input class="sideq" id="sideQ" type="search" placeholder="Lọc chủ rừng…" aria-label="Lọc chủ rừng"><div id="sideList"></div></aside>
+  <aside id="side"><input class="sideq" id="sideQ" type="search" placeholder="Lọc chủ rừng…" aria-label="Lọc chủ rừng"><div class="sideSf" id="sideSf" role="group" aria-label="Bộ lọc chủ rừng"><select data-sbsf="tinhTrang" aria-label="Tình trạng hồ sơ"><option value="">Mọi tình trạng hồ sơ</option><option value="du">Đủ điều kiện</option><option value="doi">Cần đối chiếu</option><option value="chan">Bị chặn xuất</option></select><select data-sbsf="hopDong" aria-label="Tình trạng hợp đồng"><option value="">Mọi tình trạng hợp đồng</option><option value="ky">Đã ký HĐ</option><option value="chua">Chưa ký HĐ</option></select><select data-sbsf="soRung" aria-label="Số lượng rừng"><option value="">Mọi số lượng rừng</option><option value="nhieu">Nhiều rừng (từ 2)</option><option value="don">Lô đơn (1 rừng)</option></select><button type="button" class="btn ghost sm" id="sideSfXoa" hidden>Xóa lọc</button></div><div id="sideList"></div></aside>
   <main id="main"></main>
 </div>
 

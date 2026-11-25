@@ -5,6 +5,9 @@
 - Màn Danh mục: Thêm/Sửa đối tượng, xe, ngành nghề và chức vụ mở trong hộp thoại riêng (có Lưu thông tin / Hủy bỏ, Esc để hủy); Chức vụ, Ngành nghề, Quyền ký hợp đồng chọn bằng nút phân đoạn (quyền ký loại trừ nhau); bảng Ngành nghề / Chức vụ là danh sách sạch với nút Sửa, Ngừng / Xóa.
 - Thông tin chủ rừng: Số hợp đồng, Họ tên, CCCD đứng đầu form kèm nút “Tra cứu Google Sheet”; chọn hợp đồng ở bảng Cha - Con rồi “Chọn hợp đồng này & Điền vào hồ sơ” để điền sẵn form (chưa lưu). Bỏ thẻ Google Sheets bị khóa ở cuối form.
 - Vận chuyển: form Thêm xe chia khối Phương tiện / Chủ xe / Tài xế / Người ký (chọn chủ xe, tài xế từ Danh mục đối tượng, giấy tờ tự điền); bỏ các nút “Mở Danh mục …” gây văng màn hình, thêm hướng dẫn thêm xe ở tab “Xe và tài xế”.
+- Hợp đồng vận chuyển: ô lọc nhanh và nút “+ Thêm người ký” (hộp nhỏ tại chỗ, tự chọn người vừa thêm); form Thêm xe có thẻ tóm tắt chủ xe / tài xế và nút “+ Thêm chủ xe / tài xế mới”.
+- Danh sách chủ rừng (cột trái) dùng bộ lọc thông minh: tình trạng hồ sơ, tình trạng hợp đồng, số lượng rừng.
+- Thanh tiêu đề: nút đổi nhanh Sáng / Tối và chọn nhanh bảng màu.
 - Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
 - Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
 - Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.
