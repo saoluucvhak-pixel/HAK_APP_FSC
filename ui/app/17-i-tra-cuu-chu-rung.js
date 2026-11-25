@@ -67,3 +67,9 @@ document.addEventListener('change', e => {   // họ tên đổi → gợi ý da
   const t = e.target, fe = t && t.form; if (!fe || fe.id !== 'infoForm' || t.name !== 'ten') return;
   const dx = danhXungTuTen(t.value); if (dx) infoDatDanhXung(fe, dx);
 });
+/* bấm đúp một dòng hợp đồng (khi mở từ form Thông tin chủ rừng) = mở chi tiết rồi “Chọn hợp đồng này & Điền vào hồ sơ” */
+document.addEventListener('dblclick', async e => {
+  const row = e.target && e.target.closest && e.target.closest('#lkBox [data-gsrow]'); if (!row || lkCtx !== 'info') return;
+  for (let i = 0; i < 30 && !(gs.m && gs.m.d); i++) await new Promise(r => setTimeout(r, 50));
+  const b = document.getElementById('gsFillInfo'); if (b) b.click();
+});

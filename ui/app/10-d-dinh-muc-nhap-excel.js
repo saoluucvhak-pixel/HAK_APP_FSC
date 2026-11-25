@@ -176,7 +176,7 @@ function panelInfo(rec) {
   return '<div class="card"><h3 style="margin-top:0">Thông tin chủ rừng</h3>' +
     '<p class="mut" style="margin-top:0">Hồ sơ mở theo chủ rừng. Thông tin này in vào bên A của mọi hợp đồng.</p>' +
     '<form id="infoForm" class="grid">' + '<div class="infoTraCuu" id="infoTraCuu3" style="grid-column:1/-1"><div class="grid">' + INFO_FIELDS.slice(0, 4).map(field).join('') + '</div>' +
-    '<label style="flex-direction:row;align-items:center;gap:6px;margin-top:6px"><input type="checkbox" id="maTheoCccd"' + (rec.info.ma && rec.info.ma === rec.info.cccd ? ' checked' : '') + '> Dùng số CCCD làm Mã chủ rừng</label>' +
+    '<label style="flex-direction:row;align-items:center;gap:6px;margin-top:6px"><input type="checkbox" id="maTheoCccd"' + (!rec.info.ma || rec.info.ma === rec.info.cccd ? ' checked' : '') + '> Dùng số CCCD làm Mã chủ rừng</label>' +
     (HB ? '<div class="row" style="margin-top:8px;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn" type="button" data-act="infoTraCuu" id="infoTraCuu">🔍 Tra cứu Sheets</button><span class="mut">Tìm theo số hợp đồng, CCCD, họ tên hoặc mã chủ rừng (Enter ở các ô trên); chọn hợp đồng để điền sẵn và tạo lô.</span></div>' : '') + '</div>' +
     infoChonDm(rec.info) + INFO_FIELDS.slice(4).map(field).join('') +
     '<div style="grid-column:1/-1" class="row"><button class="btn" type="submit">Lưu thông tin</button></div></form></div>' +

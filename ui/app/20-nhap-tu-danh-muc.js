@@ -335,3 +335,26 @@ async function dmThemTatCaXe() {
   return dmChonNhieuLuu();
 }
 document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-act=dmThemTatCaXe]'); if (!b) return; e.preventDefault(); dmThemTatCaXe(); });
+/* 3.5.1: một chạm — quét biển số trong phiếu cân chưa có trong đội xe: xe đã có trong Danh mục xe thì gán đủ thông tin; xe chưa có thì tạo nhanh trong Danh mục xe (chỉ biển số) và thêm vào bản nháp để hoàn thiện sau */
+function stThemXeTuPhieu() {
+  const st = stGet(true), rec = curRec(); if (!st || !rec) return;
+  const miss = [...new Set(st.cur.pc.map(p => p.bienSo).filter(b => b && !st.cur.dx.some(x => HAKStage.bienKey(x.bienSo) === HAKStage.bienKey(b))))];
+  if (!miss.length) return note('Mọi biển số trong phiếu cân đã có trong đội xe.', 'ok');
+  const src = dmNguonXe(); let maxRow = st.cur.dx.reduce((m, r) => Math.max(m, +r._row || 0), 1), coSan = 0, moi = 0;
+  miss.forEach(b => {
+    const k = HAKStage.bienKey(b), d = src.find(x => HAKStage.bienKey(x.bienSo) === k); let vals;
+    if (d) { vals = Object.assign({}, d._goc || {}, HAKDanhMuc.chupXe(d, {}), {maRung: rec.info.maRung}); if (d._xeId) vals.xeId = d._xeId; coSan++; }
+    else {
+      vals = {bienSo: b, maRung: rec.info.maRung};
+      const r = HAKXeDM.luu(dmXE(), {id: '', bks: b, ngayCapNhat: todayStr(), hanKiemDinh: '', hanBaoHiem: '', loaiXe: '', chuXeId: ''}, dmDT());
+      if (r.ok) { db.dmXe = r.dm; vals.xeId = r.xe.id; moi++; }
+    }
+    const row = ST_NORM.dx(vals); row._row = ++maxRow; row._nguon = d ? 'Danh mục' : 'Từ phiếu cân';
+    if (vals.xeId) row.xeId = vals.xeId; if (d && d.ngayCapNhat) row._dmNgay = trim(d.ngayCapNhat);
+    pgSauThemXe(st, row); HAKStage.addRow(st, 'dx', row);
+  });
+  if (moi) persist();
+  st.src.dx = st.src.dx || 'Từ phiếu cân'; stErrList = null;
+  note('Đã thêm ' + miss.length + ' xe vào bản nháp của lô (' + coSan + ' xe từ Danh mục, ' + moi + ' xe tạo nhanh trong Danh mục xe). Xe tạo nhanh cần bổ sung chủ xe, tài xế, giấy tờ rồi bấm “Lưu dữ liệu vào lô”.', moi ? 'warn' : 'ok');
+}
+document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-act=stThemXeTuPhieu]'); if (!b) return; e.preventDefault(); stThemXeTuPhieu(); });
