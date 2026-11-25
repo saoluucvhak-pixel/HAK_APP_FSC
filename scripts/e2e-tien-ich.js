@@ -24,18 +24,14 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   const open = async ftab => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(400); };
 
   // ---------- 6. hướng dẫn lần đầu ----------
-  await w.waitForSelector('#huongDan');
-  ok('máy chưa có dữ liệu: màn đầu hiện Hướng dẫn bắt đầu, 0/6 bước, bước làm tiếp là “Tạo chủ rừng” có nút + Chủ rừng mới', (await w.getAttribute('#huongDan', 'data-xong')) === '0' && (await w.getAttribute('#huongDan', 'data-tiep')) === 'chu' && !!(await w.$('#huongDan [data-act=newRs]')) && (await w.$$('#huongDan li')).length === 6);
-  await w.click('#huongDan [data-act=hdAn]'); await w.waitForTimeout(200);
-  ok('Ẩn hướng dẫn: bảng biến mất', !(await w.$('#huongDan')));
-  await w.reload(); await w.waitForSelector('#side'); await w.waitForTimeout(300);
-  ok('mở lại trang: vẫn ẩn (ghi nhớ lựa chọn)', !(await w.$('#huongDan')));
-  await w.click('#navSet'); await w.click('#setTab_sethd'); await w.click('#hdHienBtn'); await w.waitForSelector('#huongDan');
-  ok('Cài đặt → Hướng dẫn: hiện lại bước bắt đầu', !!(await w.$('#huongDan')));
+  await w.click('#navBld'); await w.waitForSelector('#bldRay');
+  ok('máy chưa có dữ liệu: Bàn làm việc hiện sơ đồ 6 bước, 0/6 bước xong, bước làm tiếp là “Tạo chủ rừng” có nút + Chủ rừng mới', (await w.getAttribute('#bldQuyTrinh', 'data-xong')) === '0' && (await w.getAttribute('#bldQuyTrinh', 'data-tiep')) === 'chu' && !!(await w.$('[data-tram=chu] [data-act=bldDi]')) && (await w.$$('#bldRay li')).length === 6);
+  await w.click('#navHome');
+  ok('màn Tổng quan không còn khối Hướng dẫn bắt đầu', !(await w.$('#huongDan')));
   const A = M.ensureForest(lot('fa', 'R-A', {exp: EXP1, pc: [], kl: null}));
-  await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.waitForSelector('#huongDan');
-  ok('đã có chủ rừng, lô, nhân công, xe: 4/6 bước xong, bước làm tiếp là “Nhập phiếu cân”', (await w.getAttribute('#huongDan', 'data-xong')) === '4' && (await w.getAttribute('#huongDan', 'data-tiep')) === 'pc' && (await w.$$('#huongDan li[data-xong="1"]')).length === 4);
-  await w.click('#huongDan [data-act=hdDi]'); await w.waitForSelector('[data-act=danMo][data-kind=pc]');
+  await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.click('#navBld'); await w.waitForSelector('#bldRay');
+  ok('đã có chủ rừng, lô, nhân công, xe: 4/6 bước xong, bước làm tiếp là “Nhập phiếu cân”', (await w.getAttribute('#bldQuyTrinh', 'data-xong')) === '4' && (await w.getAttribute('#bldQuyTrinh', 'data-tiep')) === 'pc' && (await w.$$('#bldRay li[data-tt="Đã xong"]')).length === 4);
+  await w.click('[data-tram=pc] [data-act=bldDi]'); await w.waitForSelector('[data-act=danMo][data-kind=pc]');
   ok('nút “Mở nơi làm bước này” đưa tới đúng lô, đúng tab có khung nạp phiếu cân', !!(await w.$('[data-act=danMo][data-kind=pc]')));
 
   // ---------- 1. dán từ Excel ----------
@@ -54,7 +50,8 @@ const launch = async () => { const app = await electron.launch({executablePath: 
   ok('nạp dữ liệu đã dán và lưu: lô có 3 phiếu cân PA1, PA2, PA3; khối lượng 12,5 + 9,25 + 8 = 29,75 tấn; ngày và biển số đúng', F.pc.length === 3 && F.pc.map(p => p.soPhieu).join() === 'PA1,PA2,PA3' && Math.abs(F.pc.reduce((a, p) => a + p.kl, 0) - 29.75) < 1e-9 && F.pc[0].ngay === '05/10/2026' && F.pc[1].bienSo === '92C-67890', JSON.stringify(F.pc.map(p => [p.soPhieu, p.ngay, p.bienSo, p.kl])));
   ok('nguồn dữ liệu ghi là “Dán từ Excel”', /Dán từ Excel/.test(F.pcFile || ''), F.pcFile);
   await w.reload(); await w.waitForSelector('#side');
-  ok('sau khi có phiếu cân: hướng dẫn còn một bước (xuất hồ sơ)', (await w.getAttribute('#huongDan', 'data-xong')) === '5' && (await w.getAttribute('#huongDan', 'data-tiep')) === 'xuat');
+  await w.click('#navBld'); await w.waitForSelector('#bldQuyTrinh');
+  ok('sau khi có phiếu cân: Bàn làm việc còn một bước (xuất hồ sơ)', (await w.getAttribute('#bldQuyTrinh', 'data-xong')) === '5' && (await w.getAttribute('#bldQuyTrinh', 'data-tiep')) === 'xuat');
 
   // ---------- 2. mục lục trong gói in ----------
   await open('xuat'); don(); await w.click('[data-xtab=all]').catch(() => {}); await w.click('button[data-act=dl][data-kind=all]');

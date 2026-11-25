@@ -107,11 +107,11 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
 
   // 9. rời màn khi đang sửa dở
   await w.click('#setTab_setdt'); await w.click('[data-dtsua="' + o1.id + '"]'); await w.waitForSelector('#dtForm'); await w.fill('#dtForm [name=sdt]', '0905999888');
-  await w.click('#setTab_setxe'); await w.waitForTimeout(200);
+  await w.evaluate(() => document.getElementById('setTab_setxe').click()); await w.waitForTimeout(200);
   ok('rời màn khi đang sửa: hỏi Lưu / Bỏ thay đổi / Tiếp tục chỉnh sửa', await w.isVisible('#roiLuu') && await w.isVisible('#roiBo') && await w.isVisible('#roiTiep'));
   await w.click('#roiTiep'); await w.waitForTimeout(200);
   ok('Tiếp tục chỉnh sửa: ở lại, giữ dữ liệu đang nhập', await w.isVisible('#dtForm') && (await w.inputValue('#dtForm [name=sdt]')) === '0905999888');
-  await w.click('#setTab_setxe'); await w.click('#roiLuu'); await w.waitForTimeout(500);
+  await w.evaluate(() => document.getElementById('setTab_setxe').click()); await w.click('#roiLuu'); await w.waitForTimeout(500);
   D = await dbAll(); ok('Lưu: ghi thay đổi rồi mới rời màn', (D.dmDoiTuong.find(o => o.id === o1.id) || {}).sdt === '0905999888' && await w.isVisible('#xeBang'));
 
   // 10. đọc lại sau khởi động lại

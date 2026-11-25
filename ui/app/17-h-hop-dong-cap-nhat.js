@@ -107,6 +107,7 @@ async function gsApply() {
         const refs = d.owner.ref.concat(X.ref);
         if (s.ref && refs.length && JSON.stringify((f.ref && f.ref.fields) || []) !== JSON.stringify(refs)) { f.ref = {at, set, hd: d.hd, cccd: d.cccd, fields: refs}; ch++; }
       }
+      if (s.on[1]) { const gp = (X.area || []).find(a => /m²/.test(a.label || '')); if (gp && typeof gp.value === 'number' && !gsSame(f.info.dienTichGps, gp.value)) { f.info.dienTichGps = gp.value; mark(f, 'dienTichGps', gp.src); ch++; } }   // 3.5.1: diện tích đo từ ToaDoRung (m² ÷ 10.000) cho thẻ đối soát 3 nguồn
       if (s.on[1] && typeof s.gps === 'number') { const g = X.gps[s.gps]; if (g && g.ok && !(f.info.lat === g.lat && f.info.lng === g.lng)) { f.info.lat = g.lat; f.info.lng = g.lng; mark(f, 'latlng', {tab: 'ToaDoRung_QC', row: g.row, col: 'Latitude_Vĩ độ / Longtitude_Kinh độ' + (g.converted ? ' (đã quy đổi từ ' + g.raw + ')' : ''), gps: g.id}); ch++; line.g++; } }
       const wrows = s.on[2] ? gsWriteRows(rows, e) : [];
       if (wrows.length) {

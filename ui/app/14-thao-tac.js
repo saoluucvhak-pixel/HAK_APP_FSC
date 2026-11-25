@@ -30,8 +30,15 @@ function readForest(form) {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
     lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: readInputNumber(fd.get('dienTich')),
     dinhMucTanHa: readInputNumber(fd.get('dinhMucTanHa')), dinhMucNgayHa: readInputNumber(fd.get('dinhMucNgayHa')), cuLy: readInputNumber(fd.get('cuLy')),
-    tuNgay: readInputDate(fd.get('tuNgay')), denNgay: readInputDate(fd.get('denNgay'))
+    tuNgay: readInputDate(fd.get('tuNgay')), denNgay: readInputDate(fd.get('denNgay')),
+    ...dienTichPhu(fd)
   };
+}
+/* hai ô diện tích đối soát (Sổ đỏ, đo GPS): chỉ tạo khóa khi có giá trị (hoặc để xóa giá trị cũ) — lô chưa khai không có thêm khóa mới */
+function dienTichPhu(fd) {
+  const cf = curForest(), ci = (cf && cf.info) || {}, out = {};
+  ['dienTichSoDo', 'dienTichGps'].forEach(k => { const v = readInputNumber(fd.get(k)); if (v != null) out[k] = v; else if (k in ci) out[k] = null; });
+  return out;
 }
 
 function readLuong(form) {
@@ -466,6 +473,13 @@ async function importGo() {
   note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân' + (r.goiCu ? ', ' + r.goiCu + ' bản chụp chốt cũ' : '') + '. Bản sao lưu trước khi nhập: ' + r.backup);
   if (r.goiBoQua) pushNote('Có ' + r.goiBoQua + ' bản chụp chốt trong file bị hỏng hoặc sai dấu vân tay nên không chép (hồ sơ và các bản chụp còn lại đã nhập đủ).', 'warn');   // phiếu #11
 }
-
-
-
+/* đặt người ký (đối tượng có quyền ký Vận chuyển, giá trị 'd:<id>') cho một hợp đồng vận chuyển đã có, cùng quy tắc với biểu mẫu hợp đồng (saveHd); trả chuỗi lỗi hoặc '' */
+function kyDatHd(hdId, ky) {
+  const f = curForest(); if (!f || !hdId || !String(ky).startsWith('d:')) return 'không có hợp đồng hoặc người ký';
+  const dv = HAKDanhMuc.timDoiTac(dmDoiTacAll(), String(ky).slice(2)); if (!dv) return 'người ký không còn trong Danh mục đối tượng';
+  const cur = (f.hdvc || []).find(h => h.id === hdId); if (!cur) return 'chưa có hợp đồng vận chuyển này trong lô đã lưu';
+  if (HAKDanhMuc.chuanDoiTacId(cur.donViId) === dv.id) return '';
+  const r = HAKModel.updateHd(f, hdId, {donVi: dv}); if (r.error) return r.error;
+  const h = (r.f.hdvc || []).find(x => x.id === hdId); if (h) { if (dv.doiTuongId) h.benKy = {doiTuongId: dv.doiTuongId, nguoiId: dv.nguoiId || ''}; else delete h.benKy; }
+  f.hdvc = r.f.hdvc; persistLo(); return '';
+}

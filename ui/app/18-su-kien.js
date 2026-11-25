@@ -59,7 +59,7 @@ document.addEventListener('click', async e => {
   if (act === 'inBaoCao') return inBaoCao();
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
-  if (act === 'hdHien') { hdDat(false); NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; return render(); }   // 3.0: nút ở Cài đặt → Hướng dẫn; hướng dẫn hiện ở Tổng quan
+  if (act === 'hdHien') { hdDat(false); NAV.cur = null; NAV.curF = null; NAV.view = 'bld'; return render(); }   // 3.5.1: hướng dẫn 6 bước nằm ở Bàn làm việc
   if (act === 'hdDi') return hdDi(el.dataset.buoc);
   if (act === 'svbGiuSo') return svbGiuSo(el.dataset.hd);
   if (act === 'vclMo') { const [oid, fid, ft] = (el.dataset.vcl || '').split('|'); if (db.rs[oid]) { NAV.cur = oid; NAV.curF = fid; NAV.tab = 'rung'; NAV.ftab = ft || 'xuat'; NAV.view = 'owner'; render(); } return; }
@@ -242,7 +242,7 @@ document.addEventListener('keydown', e => {
 });
 const KHUNG_LO = {forestForm: 'saveForest', luongForm: 'saveLuong', vcForm: 'saveVc', giayForm: 'saveGiay', doiForm: 'saveDoi', hdForm: 'saveHd', hdVbForm: 'saveHdVb'};
 document.addEventListener('change', e => {
-  const t = e.target, fm = t && t.form; if (!fm || !KHUNG_LO[fm.id] || t.id === 'xeDm' || t.id === 'ncDm') return;
+  const t = e.target, fm = t && t.form; if (!fm || !KHUNG_LO[fm.id] || t.id === 'xeDm' || t.id === 'ncDm' || t.id === 'xeChuDm' || t.id === 'xeTxDm') return;
   const fn = {saveForest, saveLuong, saveVc, saveGiay, saveDoi, saveHd, saveHdVb}[KHUNG_LO[fm.id]]; if (!fn) return;
   const f = curForest(), truoc = f ? JSON.stringify(f) : '';
   nhapKhung = {can: false};
@@ -284,6 +284,8 @@ document.addEventListener('change', e => {
     return;
   }
   if (t.id === 'ncDm' && t.value) { const x = dmNguonLd().find(z => HAKModel.cccdSo(z.cccd) === t.value); if (x) { stRead(); dmDienNguoi(x); stRender(); } return; }
+  if (t.id === 'xeChuDm' && t.value) { stRead(); dxDienChu(t.value); stRender(); return; }
+  if (t.id === 'xeTxDm' && t.value) { stRead(); dxDienTx(t.value); stm.vals.taiXeId = t.value; stRender(); return; }
   if (t.id === 'xeDm' && t.value) { const x = dmNguonXe().find(z => HAKStage.bienKey(z.bienSo) === t.value); if (x) { stRead(); dmDienXe(x); stRender(); } return; }
   if (t.dataset && t.dataset.ncdoi) { const f = curForest(); if (!f) return; const i = Number(t.dataset.ncdoi); if (!(f.nc || [])[i]) return; const r = HAKModel.moveMembers(f, [i], t.value); if (r.error) return note(r.error, 'err'); f.nc = r.f.nc; persistLo(); render(); return; }
   if (t.name === 'bienSo' && t.form && t.form.id === 'stForm' && t.value === '__new') { stRead(); stOpen('dx', null, null, {kind: stm.kind, id: stm.id, vals: Object.assign({}, stm.vals, {bienSo: ''})}); return; }   // thêm xe ngay trong lượt sửa phiếu: giữ nguyên các ô đã nhập
@@ -325,6 +327,7 @@ function setSkin(k) {
   if (!SKINS.some(x => x[0] === k)) k = 'luxe';
   document.documentElement.dataset.skin = k;
   try { localStorage.setItem('hskt.skin', k); } catch (e) {}
+  const sq = document.getElementById('skinQuick'); if (sq) sq.value = k;
   const box = document.getElementById('skinPick');
   if (box) box.innerHTML = '<b>Bảng màu</b>' + SKINS.map(([id, label, c]) => '<button class="skinbtn' + (id === k ? ' on' : '') + '" data-skinpick="' + id + '" aria-pressed="' + (id === k) + '"><span class="sw">' + c.map(x => '<i style="background:' + x + '"></i>').join('') + '</span>' +
   esc(label) + '</button>').join('');
@@ -335,12 +338,13 @@ setSkin(savedSkin);
 function setTheme(t) {
   document.documentElement.dataset.theme = t;
   try { localStorage.setItem('hskt.theme', t); } catch (e) {}
-  ['themeBtn', 'themeBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'; });
+  ['themeBtn', 'themeBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = id === 'themeBtn' ? (t === 'dark' ? '☀ Sáng' : '🌙 Tối') : (t === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'); });
 }
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('hskt.theme'); } catch (e) {}
 if (savedTheme === 'dark' || savedTheme === 'light') setTheme(savedTheme);
 else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
+document.addEventListener('change', e => { if (e.target && e.target.id === 'skinQuick') setSkin(e.target.value); });
 document.addEventListener('change', e => { if (e.target && e.target.id === 'normVer') { normSel = e.target.value; render(); } });
 document.addEventListener('input', e => {
   const t = e.target;
@@ -383,6 +387,8 @@ document.addEventListener('change', e => {
   if (t.id === 'mhAddr') { mh.addrId = t.value === '@main' ? '' : t.value; return render(); }
 });
 document.getElementById('sideQ').addEventListener('input', e => { sideQ = e.target.value; renderSide(); });
+document.getElementById('sideSf').addEventListener('change', e => { const t = e.target; if (t && t.dataset && t.dataset.sbsf) { sideSfSet(t.dataset.sbsf, t.value); renderSide(); } });
+document.getElementById('sideSfXoa').addEventListener('click', () => { sideQ = ''; document.getElementById('sideQ').value = ''; sideSfState().reset(); renderSide(); });
 if (pendingNotice) { NAV.view = 'settings'; setg.msg = [pendingNotice, 'ok']; pendingNotice = null; }
 if (HB) HB.settings.get().then(r => { const m = r.ok && r.settings.remind;
 if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa sao lưu toàn bộ dữ liệu lần nào' : 'Đã ' + m.days + ' ngày chưa sao lưu toàn bộ dữ liệu') + '. Nên sao lưu: Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (đổi mức nhắc ở Cài đặt hệ thống).', 'warn'); }).catch(() => {});

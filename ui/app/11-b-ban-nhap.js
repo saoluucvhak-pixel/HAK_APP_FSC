@@ -54,13 +54,14 @@ function stBar(kind, rec) {
   const add = kind === 'pc' ? '' :
     '<button class="btn sm" data-act="dmChonNhieu" data-kind="' + kind + '">+ Chọn từ Danh mục' + (kind === 'dx' ? ' xe' : '') + '</button>' +
     '<button class="btn ghost sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + ' mới</button>' +
-    (window.hak?.testLegacyImport ? '' : '<button class="btn ghost sm" data-act="' + (kind === 'nc' ? 'openSetDt' : 'openSetXe') + '" data-quaylai="' + kind + '">Mở ' + (kind === 'nc' ? 'Danh mục đối tượng' : 'Danh mục xe') + ' (Excel)</button>');
+    (kind === 'dx' ? '<button class="btn sm" data-act="dmThemTatCaXe" id="dmThemTatCaXe" title="Thêm một lần mọi xe trong Danh mục xe chưa có trong đội xe đang mở, kèm chủ xe và tài xế thường chạy">⚡ Thêm toàn bộ xe trong Danh mục vào đội</button>' : '') +
+    (kind === 'dx' ? '<span class="mut" id="stHuongDanXe">Thêm xe ở tab “Xe và tài xế”: hệ thống tự đưa Chủ xe / Tài xế vào danh sách chọn người ký.</span>' : '');
   const sum = c ? ('Thêm mới <b>' + c.new + '</b> · Sửa <b>' + c.changed + '</b> · Xóa <b>' + c.removed + '</b> · Giữ nguyên <b>' + c.same + '</b>') : '';
   const bar = dk.length ? '<div class="msg warn stDirty" id="stDirty"><b>Chưa lưu</b> ' + (dk.length > 1 || dk[0] !== kind ? '(còn thay đổi ở ' + dk.map(k => ST_LABEL[k]).join(', ') + ') ' : '') + '— ' + (c && (c.new + c.changed + c.removed) ? sum + '. ' : '') + 'Hồ sơ chỉ dùng dữ liệu đã lưu.' +
     ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : '';
   const miss = st && (kind === 'pc' || kind === 'dx') ? [...new Set(st.cur.pc.map(p => p.bienSo).filter(b => b && !st.cur.dx.some(x => HAKStage.bienKey(x.bienSo) === HAKStage.bienKey(b))))] : [];
-  const missBar = miss.length ? '<div class="msg warn" id="stMissXe">Biển số có trong phiếu cân nhưng <b>chưa có trong danh sách xe của lô</b>: ' + miss.slice(0, 12).map(b => '<button class="btn ghost sm" data-act="stAddXe" data-bien="' + esc(b) + '">+ Thêm xe ' + esc(b) + '</button>').join(' ') +
-  (miss.length > 12 ? ' … và ' + (miss.length - 12) + ' biển khác' : '') + '</div>' : '';
+  const missBar = miss.length ? '<div class="msg warn" id="stMissXe">Biển số có trong phiếu cân nhưng <b>chưa có trong danh sách xe của lô</b>: ' + miss.slice(0, 12).map(b => '<b>' + esc(b) + '</b>').join(', ') +
+  (miss.length > 12 ? ' … và ' + (miss.length - 12) + ' biển khác' : '') + '. <button class="btn sm" data-act="stThemXeTuPhieu" id="stThemXeTuPhieu">⚡ Tự động gán &amp; thêm nhanh toàn bộ xe vào đội</button> <span class="mut">Xe đã có trong Danh mục xe được gán đủ thông tin; xe chưa có được tạo nhanh trong Danh mục để hoàn thiện sau.</span></div>' : '';
   const lech = kind === 'nc' || kind === 'dx' ? dmThanhLech(kind) : '', thanh = add || info ? '<div class="row stToolbar">' + add + info + '</div>' : '';
   return (thanh || lech || missBar || bar ? '<div class="card stBarCard">' + thanh + lech + missBar + bar + '</div>' : '') + stPendBox(kind) + stReportBox(kind) + nhatKyNapBox(kind);
 }

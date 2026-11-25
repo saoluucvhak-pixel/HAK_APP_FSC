@@ -23,7 +23,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const forest = async id => Object.values((await db()).rs.own1.forests).find(f => f.id === id);
   const openLot = async (fid, tab) => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=' + tab + ']'); };
-  const fillForm = async o => { for (const [k, v] of Object.entries(o)) { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); } };
+  const fillForm = async o => { for (const [k, v] of Object.entries(o)) { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else if (await w.$('#stForm input[type=radio][name=' + k + ']')) await w.check('#stForm input[type=radio][name=' + k + '][value="' + v + '"]'); else await w.fill('#stForm input[name=' + k + ']', v); } };
   const body = () => w.innerText('#main');
 
   // ===== 1. thêm tay một nhân công vào lô A =====

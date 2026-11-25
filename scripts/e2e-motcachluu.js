@@ -36,11 +36,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('Bỏ thay đổi: ô về số đã lưu, hết thanh “Chưa lưu”, SQLite không đổi', (await w.inputValue('#doiKTVb input[data-exp=soKT]')) === (soKT0 || '') && !(await w.$('#loDirtyBar')) && f.doi[0].exp.soKT === soKT0, await w.inputValue('#doiKTVb input[data-exp=soKT]'));
   // 5. sửa lại, lưu danh mục (3.0: Danh mục đối tượng ở Cài đặt) khi lô còn thay đổi: danh mục ghi, lô vẫn chưa ghi
   await w.fill('#doiKTVb input[data-exp=soKT]', '077'); await w.dispatchEvent('#doiKTVb input[data-exp=soKT]', 'change'); await w.waitForTimeout(300);
-  await w.click('[data-ftab=dx]'); await w.waitForTimeout(200); await w.click('#hdForm [data-act=openSetDt][data-quaylai]'); await w.waitForSelector('#dnThem');
-  await w.click('#dnThem'); await w.waitForSelector('#dtForm'); await w.fill('#dtForm [name=ten]', 'CÔNG TY VT THỬ'); await w.click('#dtLuu'); await w.waitForTimeout(500);
+  await w.click('[data-ftab=dx]'); await w.waitForTimeout(200); await w.click('#navDm'); await w.waitForTimeout(300);
+  ok('3.5.1: rời lô khi còn thay đổi chưa lưu: hỏi Lưu / Bỏ / Quay lại chỉnh sửa (không còn lối tắt sang Danh mục)', await w.isVisible('button:has-text("Quay lại chỉnh sửa")'));
+  await w.click('button:has-text("Quay lại chỉnh sửa")'); await w.waitForTimeout(200);
   let d = await db();
-  ok('lưu danh mục khi lô còn thay đổi: danh mục đã ghi, số HĐ của lô CHƯA ghi', (d.dmDoiTuong || []).some(x => x.ten === 'CÔNG TY VT THỬ') && d.rs.own1.forests.fa.doi[0].exp.soKT === soKT0, JSON.stringify(d.rs.own1.forests.fa.doi[0].exp));
-  await w.click('#veLaiBtn'); await w.waitForTimeout(200);   // quay lại hợp đồng: bản nháp của lô vẫn còn
+  ok('quay lại chỉnh sửa: số HĐ của lô CHƯA ghi, bản nháp còn nguyên', d.rs.own1.forests.fa.doi[0].exp.soKT === soKT0 && !!(await w.$('#loDirtyBar')), JSON.stringify(d.rs.own1.forests.fa.doi[0].exp));
   // 6. một nút Lưu: ghi cả lô
   await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(500); d = await db();
   ok('“Lưu dữ liệu vào lô”: ghi số 077, hết thanh “Chưa lưu”', d.rs.own1.forests.fa.doi[0].exp.soKT === '077' && !(await w.$('#loDirtyBar')));

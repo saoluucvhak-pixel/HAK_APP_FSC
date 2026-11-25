@@ -12,7 +12,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const launch = close => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: close, HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
 const draft = async (w, ten, cccd) => {
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
-  const set = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); };
+  const set = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else if (await w.$('#stForm input[type=radio][name=' + k + ']')) await w.check('#stForm input[type=radio][name=' + k + '][value="' + v + '"]'); else await w.fill('#stForm input[name=' + k + ']', v); };
   for (const [k, v] of Object.entries({vaiTro: 'Công nhân', danhXung: 'Ông', ten, ngaySinh: '01/01/1990', cccd, ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', chucDanh: 'Công nhân khai thác'})) await set(k, v);
   await w.click('#stForm [type=submit]'); await w.waitForSelector('#stDirty');
 };

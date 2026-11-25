@@ -16,7 +16,8 @@ async function lkOpen() {
   if (lk.st.active && lk.res == null) await lkSearch();
   lkRender();
 }
-const lkClose = () => $('#lkBox').classList.remove('on');
+let lkCtx = null;   // 3.5.1: 'info' = mở từ ô “Tra cứu Google Sheet” ở màn Thông tin chủ rừng (hộp chi tiết có nút “Chọn hợp đồng này & Điền vào hồ sơ”)
+const lkClose = () => { lkCtx = null; $('#lkBox').classList.remove('on'); };
 async function lkSearch() {
   const hdL = lk.layout === 'hd';   // màn đầu: bảng toàn bộ hợp đồng (nhóm theo hợp đồng, không giới hạn 300 dòng)
   const r = await HB.lookup.search(lk.q, hdL ? '' : lk.tab, Object.assign({}, lk.f, lk.layout === 'tree' || hdL ? {group: 'contract'} : {}, hdL ? {limit: 100000} : {}));
@@ -63,6 +64,7 @@ function lkStatusHtml() {
   const online = navigator.onLine;
   return '<div class="card" style="margin-bottom:10px"><div class="row" style="justify-content:space-between">' +
     '<div><b>Bản tra cứu đang dùng:</b> ' + (a ? (a.source === 'google' ? 'Google Sheets' : 'File Excel “' + esc(a.detail) + '”') + ' · cập nhật thành công lúc <b>' + fmtDT(a.loadedAt) + '</b> · ' + Object.entries(a.counts).map(([k, v]) => esc(TL(k)) + ': ' + fmt(v)).join(' · ') : '<span class="pill err">chưa có — bấm Đồng bộ ngay hoặc Nhập bản Excel</span>') +
+    ((!online || (l && !l.ok)) && a ? '<br><span class="pill warn" id="lkDem" role="status">📶 ' + (online ? 'Đồng bộ lỗi' : 'Ngoại tuyến') + ' - Dùng bản đệm gần nhất (' + fmtDT(a.loadedAt) + ')</span>' : '') +
     '<br><span class="mut">Kết nối: ' + (online ? 'có mạng' : 'đang ngoại tuyến (vẫn tra cứu được bản đã lưu)') +
     (l ? ' · Lần cập nhật gần nhất (' + fmtDT(l.at) + '): ' + (l.ok ? 'thành công' + ((l.notes || []).length ? ' <span style="color:var(--warn,#a16207)">· ' + l.notes.map(esc).join('; ') + '</span>' : '') : '<span style="color:var(--err)">lỗi — ' + esc(l.error) + '</span>') : '') + '</span></div>' +
     '<div class="row"><button class="btn sm" data-act="lkSync"' + (lk.busy ? ' disabled' : '') + '>⟳ Đồng bộ ngay</button><button class="btn ghost sm" data-act="lkExcel"' + (lk.busy ? ' disabled' : '') + '>Nhập bản Excel</button><button class="btn ghost sm" data-act="lkTemplate">Tải file mẫu (3 tab chuẩn)</button></div></div>' +
