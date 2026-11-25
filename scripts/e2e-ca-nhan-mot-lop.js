@@ -36,7 +36,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const hop = await w.evaluate(() => { const b = document.getElementById('stBox'); return !!b && b.classList.contains('on') && /Còn thay đổi chưa lưu/.test(b.innerText); });
   ok('mở form cá nhân mới, chưa gõ gì, rời màn hình khi form không còn trên màn hình: không báo giả "còn thay đổi chưa lưu"', !hop, String(hop));
   if (hop) await w.evaluate(() => document.getElementById('stBox').classList.remove('on'));
-  await w.click('#navDm'); await w.click('#setTab_setdt'); await w.waitForSelector('#dtBang');
+  await w.click('#navDm'); await w.waitForSelector('#dtForm'); await w.click('#dtHuy'); await w.waitForSelector('#dtBang');   // 3.5.1: bản đang nhập còn trong bộ nhớ nên hộp thoại hiện lại khi mở Danh mục
   await w.click('#cnThem'); await w.waitForSelector('#dtForm');
   const cot = ['hoTen', 'cccd', 'ngayCap', 'noiCap', 'hanCccd', 'ngaySinh', 'gioiTinh', 'diaChi', 'sdt', 'gplx', 'hanGplx', 'viTriId', 'vtNhanCong', 'vtTaiXe', 'vtChuXe', 'kyVC', 'kyNC'];
   const co = await w.$eval('#dtForm', (f, ks) => ks.filter(k => !f.elements[k]), cot);
