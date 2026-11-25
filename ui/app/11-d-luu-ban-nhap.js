@@ -92,7 +92,7 @@ CONG_KT.doiKT = () => { const rec = curRec(); if (!rec) return null; const B = d
 /* Chặn rời lô khi còn bản nháp: bắt sự kiện bấm ở pha bắt (trước mọi xử lý khác) với các nút đổi lô, đổi chủ rừng, sang màn hình khác */
 document.addEventListener('click', e => {
   if (stBypass || !stDirtyCur()) return; const t = e.target; if (!t.closest || t.closest('#stBox')) return;
-  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],[data-muc-lo],[data-act=hdQuayLai],[data-act=chonDoi],[data-act=chonHd],#navHome,[data-act=openDm],[data-act=openNorm],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
+  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],[data-muc-lo],[data-act=hdQuayLai],[data-act=chonDoi],[data-act=chonHd],#navHome,[data-act=openDm],[data-act=openNorm],[data-act=openBld],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
   if (nav.matches('[data-muc-lo][aria-current]')) return;
   if ((nav.dataset.sforest && nav.dataset.sforest === NAV.curF) || (nav.dataset.forest && nav.dataset.forest === NAV.curF)) return;   // bấm lại đúng lô đang mở
   e.preventDefault(); e.stopPropagation();

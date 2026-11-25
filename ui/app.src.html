@@ -219,6 +219,20 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .segOp{position:relative;display:flex!important;flex-direction:row!important;align-items:center;margin:0;padding:6px 14px;cursor:pointer;background:var(--card);color:var(--ink);border-right:1px solid var(--inbd);font-weight:500}
 .segOp:last-child{border-right:0}.segOp input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
 .segOp:has(input:checked){background:var(--acc);color:var(--accInk);font-weight:700}.segOp:has(input:focus-visible){outline:2px solid var(--acc);outline-offset:-2px}
+/* 3.5.1: Bàn làm việc — đường ray quy trình, trạm, hàng đợi */
+.bldRay{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;list-style:none;margin:0;padding:0;counter-reset:b}
+.bldNode{position:relative;padding:0 4px}.bldNode::before{content:"";position:absolute;top:26px;left:-50%;width:100%;height:3px;background:var(--line);z-index:0}.bldNode:first-child::before{display:none}
+.bldNode button{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;padding:6px 4px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--ink);font:inherit;cursor:pointer;text-align:center}
+.bldNode button:hover{background:var(--hover)}.bldNode.sel button{border-color:var(--acc);background:var(--accSoft)}
+.bldIc{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:var(--card);border:2px solid var(--line);font-size:20px}
+.bldNode[data-tt="Đã xong"] .bldIc{border-color:var(--ok)}.bldNode[data-tt="Đang làm"] .bldIc{border-color:var(--acc)}.bldNode[data-tt="Bị khóa"] .bldIc{border-color:var(--err)}
+.bldNhan{display:flex;flex-direction:column;gap:2px;font-size:12.5px}.bldNhan small{color:var(--mut)}
+.bldCot{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:14px;align-items:start;margin-top:12px}.bldTrai{display:grid;gap:10px}.bldPhai{position:sticky;top:12px}
+.bldTram.sel{outline:2px solid var(--acc);outline-offset:0}
+.bldHang{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}.bldHang li{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.bldLo select{width:100%}.bldHang .btn{white-space:nowrap;flex:0 0 auto}
+header.top .nav .nb,header.top .hbtn{padding:6px 9px}header.top{flex-wrap:nowrap}header.top .nav{flex-wrap:nowrap;white-space:nowrap}select#skinQuick{max-width:104px}@media (max-width:1560px){header.top h1 small{display:none}}
+@media (max-width:900px){.bldRay{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.bldNode::before{display:none}.bldCot{grid-template-columns:1fr}.bldPhai{position:static}}
 .nvNut{white-space:nowrap}
 .sideSf{display:grid;gap:6px;margin:6px 0 10px}.sideSf select{width:100%}
 select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);border-color:rgba(255,255,255,.28);padding:5px 8px}select#skinQuick option{color:#1b232c;background:#fff}
@@ -310,12 +324,13 @@ select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);bord
     <h1>Hồ sơ khai thác & vận chuyển gỗ keo<small>HAK Group · Bộ hồ sơ theo rừng, chuẩn truy xuất nguồn gốc FSC<span id="appVer"></span></small></h1>
   </button>
   <nav class="nav">
-    <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
-    <button class="nb" data-act="openDm" id="navDm">Danh mục</button>
+    <button class="nb" data-act="goHome" id="navHome">📊 Tổng quan</button>
+    <button class="nb" data-act="openBld" id="navBld">💼 Bàn làm việc</button>
+    <button class="nb" data-act="openDm" id="navDm">📁 Danh mục</button>
     <button class="nb deskOnly" data-act="lkOpen" title="Dữ liệu Google Sheets" hidden>Dữ liệu Google Sheets</button>
-    <button class="nb" data-act="rpOpen">Báo cáo</button>
-    <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
-    <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
+    <button class="nb" data-act="rpOpen">📑 Báo cáo</button>
+    <button class="nb" data-act="openNorm" id="navNorm">⚙️ Định mức</button>
+    <button class="nb" data-act="openSettings" id="navSet">🔧 Cài đặt</button>
   </nav>
   <button class="hbtn" data-act="theme" id="themeBtn" title="Đổi nhanh giao diện Sáng / Tối" aria-label="Đổi giao diện Sáng hoặc Tối">🌙 Tối</button>
   <select class="hbtn" id="skinQuick" title="Chọn nhanh bảng màu" aria-label="Bảng màu"><option value="luxe">Luxe</option><option value="classic">Classic</option><option value="neutral">Neutral</option><option value="champagne">Champagne</option></select>

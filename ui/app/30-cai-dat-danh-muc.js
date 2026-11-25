@@ -28,7 +28,7 @@ function dlgDong() { if (typeof hakSfDraft !== 'undefined') hakSfDraft = null; c
 const banNhapUI = [];
 const banNhapDo = () => banNhapUI.find(x => { try { return x.dirty(); } catch (e) { return false; } }) || null;
 let roiCho = null;   // thao tác điều hướng đang chờ người dùng chọn
-const DIEU_HUONG = '[data-act=goHome],[data-act=openSettings],[data-act^=openSet],[data-act=openCty],[data-act=rpOpen],[data-act=lkOpen],[data-act=openNorm],[data-open],[data-forest],[data-ftab],[data-tab],[data-muc-lo],[data-act=newRs],[data-act=hdQuayLai],[data-act=ktGo],[data-act=chonHd],[data-act=chonDoi]';
+const DIEU_HUONG = '[data-act=goHome],[data-act=openSettings],[data-act^=openSet],[data-act=openCty],[data-act=rpOpen],[data-act=lkOpen],[data-act=openNorm],[data-act=openBld],[data-open],[data-forest],[data-ftab],[data-tab],[data-muc-lo],[data-act=newRs],[data-act=hdQuayLai],[data-act=ktGo],[data-act=chonHd],[data-act=chonDoi]';
 document.addEventListener('click', e => {
   const el = e.target && e.target.closest && e.target.closest(DIEU_HUONG); if (!el || el.closest('#dlgBox')) return;
   if (el.dataset.quaylai) { if (cd.xe.sua) cd.xe.sua = xeDocForm(); if (cd.sua) cd.sua = dtDocForm(); veLaiGhi(el.dataset.quaylai); return; }   // mở danh mục rồi quay lại: giữ bản đang nhập, không hỏi

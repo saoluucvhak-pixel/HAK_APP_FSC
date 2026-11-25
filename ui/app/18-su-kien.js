@@ -59,7 +59,7 @@ document.addEventListener('click', async e => {
   if (act === 'inBaoCao') return inBaoCao();
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
-  if (act === 'hdHien') { hdDat(false); NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; return render(); }   // 3.0: nút ở Cài đặt → Hướng dẫn; hướng dẫn hiện ở Tổng quan
+  if (act === 'hdHien') { hdDat(false); NAV.cur = null; NAV.curF = null; NAV.view = 'bld'; return render(); }   // 3.5.1: hướng dẫn 6 bước nằm ở Bàn làm việc
   if (act === 'hdDi') return hdDi(el.dataset.buoc);
   if (act === 'svbGiuSo') return svbGiuSo(el.dataset.hd);
   if (act === 'vclMo') { const [oid, fid, ft] = (el.dataset.vcl || '').split('|'); if (db.rs[oid]) { NAV.cur = oid; NAV.curF = fid; NAV.tab = 'rung'; NAV.ftab = ft || 'xuat'; NAV.view = 'owner'; render(); } return; }

@@ -52,7 +52,7 @@ function panelHome() {
   const recs = rpRecords(''), F = HAKReports.fmtCell, n = Object.keys(db.rs).length;
   if (!n) {
     return '<div class="hero"><div><h2>Chào mừng đến với HAKQN</h2><p class="mut">Hồ sơ khai thác và vận chuyển gỗ keo theo từng rừng, chuẩn FSC.</p></div></div>' +
-      (huongDanBox() || '<div class="card"><p class="mut" style="margin:0 0 10px">Chưa có chủ rừng nào. Mở Cài đặt → Hướng dẫn để xem các bước.</p></div>') +
+      '<div class="card"><p class="mut" style="margin:0 0 10px">Chưa có chủ rừng nào. Mở <b>Bàn làm việc</b> để xem sơ đồ 6 bước, hoặc bấm “+ Chủ rừng mới”.</p><button class="btn ghost sm" data-act="openBld">Mở Bàn làm việc</button></div>' +
       '<div class="card"><div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Lấy dữ liệu từ Google Sheets</button>' : '') + '</div></div>';
   }
   const tot = recs.reduce((a, r) => { a.ha += typeof r.dienTich === 'number' ? r.dienTich : 0; (r.pc || []).forEach(p => { const kg = HAKDinhMuc.kgPhieu(p); if (HAKDates.isValid(p.ngay) && kg > 0) { a.t = (Math.round(a.t * 1000) + kg) / 1000; a.n++; } }); a.pct += r.pct; return a; }, {ha: 0, t: 0, n: 0, pct: 0});
@@ -66,7 +66,7 @@ function panelHome() {
   const kp = (v, l, f, acc) => '<div' + (acc ? ' class="acc"' : '') + '><b>' + esc(F(v, f)) + '</b>' + esc(l) + '</div>';
   return '<div class="hero"><div><h2>Tổng quan</h2><p class="mut">' + todayStr() + ' · dữ liệu lưu ' + (HB ? 'trong SQLite trên máy' : 'trong trình duyệt') + '</p></div>' +
     '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Dữ liệu Google Sheets</button>' : '') + '</div></div>' +
-    huongDanBox() + viecCanLamBox(recs) +
+    viecCanLamBox(recs) +
     '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(H.T.du * 10) / 10, 'Sản lượng dự kiến (tấn)', 'n1') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)',
     'n3') + kp(Math.round(H.T.tt * 1000) / 1000, 'Khối lượng thực tế nhập tay (tấn)', 'n3') + kp(H.T.du ? Math.round(tot.t / H.T.du * 1000) / 10 : 0, 'Đã cân so với dự kiến', 'pct') + kp(tot.n, 'Số chuyến', 'n0') + kp(H.T.nc, 'Lao động', 'n0') + kp(H.T.dx, 'Số xe', 'n0') + kp(avg, 'Tiến độ hồ sơ TB',
     'pct', true) + '</div>' +
@@ -136,6 +136,7 @@ function renderMain() {
   if (DM30[NAV.view]) { $('#main').innerHTML = renderMsgs() + danhMucFrame(NAV.view, DM30[NAV.view]()); return; }
   const P30 = {setgd: panelSetGd, sethd: panelSetHd, setcan: panelSetCan};
   if (P30[NAV.view]) { $('#main').innerHTML = renderMsgs() + settingsFrame(NAV.view, P30[NAV.view]()); return; }
+  if (NAV.view === 'bld') { $('#main').innerHTML = renderMsgs() + panelBanLamViec(); return; }
   if (NAV.view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
   if (NAV.view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
   if (NAV.view === 'setbk') { $('#main').innerHTML = renderMsgs() + settingsFrame('setbk', panelKhoSaoLuu()); kslLoad(); return; }

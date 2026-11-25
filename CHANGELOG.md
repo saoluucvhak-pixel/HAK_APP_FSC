@@ -8,6 +8,7 @@
 - Hợp đồng vận chuyển: ô lọc nhanh và nút “+ Thêm người ký” (hộp nhỏ tại chỗ, tự chọn người vừa thêm); form Thêm xe có thẻ tóm tắt chủ xe / tài xế và nút “+ Thêm chủ xe / tài xế mới”.
 - Danh sách chủ rừng (cột trái) dùng bộ lọc thông minh: tình trạng hồ sơ, tình trạng hợp đồng, số lượng rừng.
 - Thanh tiêu đề: nút đổi nhanh Sáng / Tối và chọn nhanh bảng màu.
+- Bàn làm việc (menu mới): sơ đồ quy trình 6 bước (Đã xong / Đang làm / Chờ xử lý / Bị khóa), các trạm công việc và hàng đợi việc cần xử lý của lô đang chọn với nút “Xử lý ngay”; khối Hướng dẫn bắt đầu được gỡ khỏi Tổng quan.
 - Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
 - Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
 - Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.
