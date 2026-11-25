@@ -63,21 +63,29 @@ function panelHome() {
   recs.forEach(r => (r.pc || []).forEach(p => recent.push(Object.assign({}, p, {rung: r.maRung, chu: r.chuRung, k: HAKReports.dateKey(p.ngay)}))));
   recent.sort((a, b) => b.k - a.k).splice(8);
   const H = homeData();
-  const kp = (v, l, f, acc) => '<div' + (acc ? ' class="acc"' : '') + '><b>' + esc(F(v, f)) + '</b>' + esc(l) + '</div>';
-  return '<div class="hero"><div><h2>Tổng quan</h2><p class="mut">' + todayStr() + ' · dữ liệu lưu ' + (HB ? 'trong SQLite trên máy' : 'trong trình duyệt') + '</p></div>' +
+  /* 3.5.1: Tổng quan dạng bảng điều hành — 4 chỉ số chính, sản lượng 6 tháng, radar tuân thủ FSC, lô đang khai thác tích cực, phiếu cân mới nhất, thao tác nhanh. Khối Hướng dẫn nằm ở Bàn làm việc. */
+  const fmtT3 = v => HAKReports.fmtCell(Math.round(v * 1000) / 1000, 'n3'), fmtHa = v => HAKReports.fmtCell(Math.round(v * 100) / 100, 'n2');
+  let chanLo = 0, tongLo = 0; const loChan = [];
+  recs.forEach(r => { tongLo++; try { const o = db.rs[r.oid], f = o && forestList(o).find(x => x.id === r.fid), kt = f ? exportCheck(jobView(o, f)) : null; if (kt && kt.chan.length) { chanLo++; loChan.push({r, n: kt.chan.length}); } } catch (e) { /* không kiểm được lô này: không tính chặn */ } });
+  const hopLe = tongLo ? Math.round((tongLo - chanLo) / tongLo * 1000) / 10 : 0, danCan = H.T.du ? Math.round(tot.t / H.T.du * 1000) / 10 : null;
+  const hom = HAKReports.dateKey(todayStr()), mocKy = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); })();
+  const tichCuc = recs.map(r => ({r, t30: (r.pc || []).reduce((a, p) => { const k = HAKReports.dateKey(p.ngay); return a + (k >= mocKy && k <= hom ? (+p.kl || 0) : 0); }, 0), tong: (r.pc || []).reduce((a, p) => a + (+p.kl || 0), 0)}))
+    .sort((a, b) => b.t30 - a.t30 || b.tong - a.tong).slice(0, 5);
+  const hk = (ic, nhan, so, don, phu, cls) => '<div class="heroKpi ' + (cls || '') + '"><span class="hkIc" aria-hidden="true">' + ic + '</span><div><small>' + esc(nhan) + '</small><b>' + esc(so) + (don ? ' <em>' + esc(don) + '</em>' : '') + '</b><span class="mut">' + esc(phu) + '</span></div></div>';
+  const pl = (ic, t, act, ex) => '<button type="button" class="padBtn" data-act="' + act + '"' + (ex || '') + '><span aria-hidden="true">' + ic + '</span>' + esc(t) + '</button>';
+  return '<div class="hero"><div><h2>📊 Tổng quan điều hành</h2><p class="mut">' + todayStr() + ' · dữ liệu lưu ' + (HB ? 'trong SQLite trên máy' : 'trong trình duyệt') + '</p></div>' +
     '<div class="row"><button class="btn" data-act="newRs">+ Chủ rừng mới</button><button class="btn ghost" data-act="rpOpen">Báo cáo</button>' + (HB ? '<button class="btn ghost" data-act="lkOpen">Dữ liệu Google Sheets</button>' : '') + '</div></div>' +
+    '<div class="heroKpis" id="heroKpis">' +
+      hk('🪵', 'Sản lượng gỗ đã cân', fmtT3(tot.t), 'tấn', tot.n + ' chuyến' + (danCan != null ? ' · ' + String(danCan).replace('.', ',') + '% so với dự kiến' : ''), 'k1') +
+      hk('🌲', 'Diện tích rừng quản lý', fmtHa(tot.ha), 'ha', recs.length + ' lô · ' + n + ' chủ rừng', 'k2') +
+      hk('👷', 'Lực lượng tác nghiệp', H.T.nc + ' nhân công · ' + H.T.dx + ' xe', '', 'theo hồ sơ các lô đã lưu', 'k3') +
+      hk('✅', 'Tỷ lệ hồ sơ FSC hợp lệ', String(hopLe).replace('.', ','), '%', (tongLo - chanLo) + '/' + tongLo + ' lô không có mục chặn xuất · tiến độ TB ' + String(avg).replace('.', ',') + '%', 'k4') + '</div>' +
     viecCanLamBox(recs) +
-    '<div class="kpi">' + kp(n, 'Chủ rừng', 'n0') + kp(recs.length, 'Số rừng', 'n0') + kp(Math.round(tot.ha * 100) / 100, 'Tổng diện tích (ha)', 'n2') + kp(Math.round(H.T.du * 10) / 10, 'Sản lượng dự kiến (tấn)', 'n1') + kp(Math.round(tot.t * 1000) / 1000, 'Khối lượng đã cân (tấn)',
-    'n3') + kp(Math.round(H.T.tt * 1000) / 1000, 'Khối lượng thực tế nhập tay (tấn)', 'n3') + kp(H.T.du ? Math.round(tot.t / H.T.du * 1000) / 10 : 0, 'Đã cân so với dự kiến', 'pct') + kp(tot.n, 'Số chuyến', 'n0') + kp(H.T.nc, 'Lao động', 'n0') + kp(H.T.dx, 'Số xe', 'n0') + kp(avg, 'Tiến độ hồ sơ TB',
-    'pct', true) + '</div>' +
-    '<div class="grid2"><div class="card"><h3>Hồ sơ cần hoàn thiện</h3>' + (todo.length ? '<div class="dlist">' + todo.map(r => '<button class="drow" data-dash="' + esc(r.oid + '|' + r.fid) + '"><span><b>' + esc(r.tenRung || r.maRung || '(rừng chưa đặt tên)') + '</b> <span class="mut">· ' +
-    esc(r.chuRung) + '</span><small>' + esc((r.thieu || []).slice(0,
-    2).map(x => x.label).join('; ') || '') + ((r.thieu || []).length > 2 ? ' và ' + ((r.thieu || []).length - 2) + ' mục khác' : '') + '</small></span><span class="ring ' + ringCls(r.pct) + '" style="--p:' + r.pct + '"><i>' + Math.round(r.pct) + '%</i></span></button>').join('') + '</div>' :
-    '<p class="mut">Tất cả hồ sơ đã đạt 100%.</p>') + '</div>' +
-    '<div class="card"><h3>Phiếu cân gần đây</h3>' + (recent.length ? '<div class="wrap" style="max-height:none"><table><tr><th>Ngày</th><th>Số phiếu</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th></tr>' + recent.map(p => '<tr><td>' + esc(p.ngay) + '</td><td>' +
-    esc(p.soPhieu) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + esc(F(+p.kl || 0,
-    'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Dữ liệu Google Sheets' : '') + '.</p>') + '</div></div>' +
-    '<div class="grid2" style="margin-top:16px"><div class="card"><h3>Cần chú ý ở các rừng</h3>' + homeAlertsHtml(H.A) + '</div><div class="card"><h3>Sản lượng theo tháng</h3>' + homeMonthsHtml(H.months) + '</div></div>' +
+    '<div class="grid2"><div class="card" id="homeThang"><h3>Sản lượng 6 tháng gần nhất</h3>' + homeMonthsHtml(H.months) + '</div>' +
+    '<div class="card" id="homeRadar"><h3>Radar cảnh báo tuân thủ FSC</h3>' + (chanLo ? '<div class="alr"><span class="pill err">' + chanLo + '</span><div><b>Lô còn mục chặn xuất</b><div class="alrN">' + loChan.slice(0, 3).map(x => '<button class="lnk" data-dash="' + esc(x.r.oid + '|' + x.r.fid) + '">' + esc((x.r.tenRung || x.r.maRung || '(rừng chưa đặt tên)') + ' · ' + x.n + ' mục') + '</button>').join('') + (loChan.length > 3 ? '<span class="mut">… và ' + (loChan.length - 3) + ' lô khác</span>' : '') + '</div></div></div>' : '') + homeAlertsHtml(H.A) + '</div></div>' +
+    '<div class="grid2" style="margin-top:16px"><div class="card" id="homeTichCuc"><h3>5 lô đang khai thác tích cực nhất <small class="mut">(30 ngày qua)</small></h3>' + (tichCuc.some(x => x.tong > 0) ? '<div class="wrap" style="max-height:none"><table><tr><th>Lô rừng</th><th>Chủ rừng</th><th style="text-align:right">30 ngày (tấn)</th><th style="text-align:right">Tổng (tấn)</th></tr>' + tichCuc.map(x => '<tr class="clickRow" data-dash="' + esc(x.r.oid + '|' + x.r.fid) + '" tabindex="0"><td><b>' + esc(x.r.tenRung || x.r.maRung || '(rừng chưa đặt tên)') + '</b> <span class="mut">' + esc(x.r.maRung) + '</span></td><td>' + esc(x.r.chuRung) + '</td><td style="text-align:right">' + esc(fmtT3(x.t30)) + '</td><td style="text-align:right">' + esc(fmtT3(x.tong)) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Dữ liệu Google Sheets' : '') + '.</p>') + '</div>' +
+    '<div class="card" id="homePhieuMoi"><h3>5 phiếu cân mới nhất</h3>' + (recent.length ? '<div class="wrap" style="max-height:none"><table><tr><th>Ngày</th><th>Số phiếu</th><th>Biển số</th><th>Rừng</th><th style="text-align:right">Tấn</th></tr>' + recent.slice(0, 5).map(p => '<tr><td>' + esc(p.ngay) + '</td><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.bienSo) + '</td><td>' + esc(p.rung) + '</td><td style="text-align:right">' + esc(F(+p.kl || 0, 'n3')) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân.</p>') + '</div></div>' +
+    '<div class="card" id="homePad" style="margin-top:16px"><h3>Thao tác nhanh</h3><div class="padGrid">' + pl('➕', 'Chủ rừng mới', 'newRs') + pl('💼', 'Bàn làm việc', 'openBld') + pl('📁', 'Danh mục', 'openDm') + pl('📑', 'Báo cáo', 'rpOpen') + pl('⚙️', 'Định mức', 'openNorm') + (HB ? pl('📡', 'Dữ liệu Google Sheets', 'lkOpen') : '') + '</div></div>' +
     '<div class="card" id="homeSys" style="margin-top:16px"><h3>Hệ thống</h3><p class="mut">' + (HB ? 'Đang kiểm tra bản tra cứu và sao lưu…' : 'Bản chạy trong trình duyệt: dữ liệu lưu trong trình duyệt, hãy sao lưu thường xuyên.') + '</p></div>' + (setTimeout(homeSysFill, 0), '');
 }
 

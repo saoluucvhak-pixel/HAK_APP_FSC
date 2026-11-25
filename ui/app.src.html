@@ -233,6 +233,13 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .bldLo select{width:100%}.bldHang .btn{white-space:nowrap;flex:0 0 auto}
 header.top .nav .nb,header.top .hbtn{padding:6px 9px}header.top{flex-wrap:nowrap}header.top .nav{flex-wrap:nowrap;white-space:nowrap}select#skinQuick{max-width:104px}@media (max-width:1560px){header.top h1 small{display:none}}
 @media (max-width:900px){.bldRay{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.bldNode::before{display:none}.bldCot{grid-template-columns:1fr}.bldPhai{position:static}}
+.heroKpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.heroKpi{display:flex;gap:12px;align-items:center;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;border-left:4px solid var(--acc)}
+.heroKpi.k2{border-left-color:var(--ok)}.heroKpi.k3{border-left-color:var(--accHi)}.heroKpi.k3 b{font-size:19px}.heroKpi.k4{border-left-color:var(--ok)}
+.hkIc{font-size:28px;line-height:1}.heroKpi small{display:block;color:var(--mut)}.heroKpi b{display:block;font-size:24px;line-height:1.2;color:var(--ink)}.heroKpi b em{font-size:14px;font-style:normal;font-weight:500;color:var(--mut)}.heroKpi .mut{font-size:12.5px}
+.padGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.padBtn{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer;text-align:left}.padBtn:hover{background:var(--hover);border-color:var(--acc)}.padBtn span{font-size:20px}
+tr.clickRow{cursor:pointer}tr.clickRow:hover{background:var(--hover)}
+@media (max-width:1100px){.heroKpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:600px){.heroKpis{grid-template-columns:1fr}}
 .nvNut{white-space:nowrap}
 button.segNut{border:0;font:inherit;color:var(--ink)}button.segNut.on{background:var(--acc);color:var(--accInk);font-weight:700}
 .nkDong{list-style:none;margin:8px 0 0;padding:0 0 0 18px;border-left:3px solid var(--line)}.nkDong li{position:relative;padding:4px 0 10px 12px}

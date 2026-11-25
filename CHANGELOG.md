@@ -17,6 +17,7 @@
 - Xuất hồ sơ: Nhật ký truy xuất nguồn gốc của lô (dòng thời gian từ các nhật ký đã lưu: tạo lô, nạp, đổi số phiếu, đổi biển số, in, ký, chốt lô); tải phụ lục .docx kẹp BM-18 hoặc in. Thêm xe, nhân công, phiếu cân bằng tay, từ Danh mục hoặc từ phiếu cân cũng được ghi vào nhật ký lô khi lưu.
 - Thông tin rừng: thẻ Đối soát 3 nguồn diện tích đất rừng (Sổ đỏ, khảo sát / hợp đồng, đo GPS từ ToaDoRung), cảnh báo xung đột khi chênh trên 0,01 ha; hai ô diện tích mới chỉ tạo khóa dữ liệu khi có giá trị; cập nhật từ Google Sheets điền diện tích đo GPS. Form Thêm xe: nút “+ Thêm xe mới vào danh mục”.
 - Gói lô rừng di động: hộp lưu lô mặc định đuôi .fscpkg (cùng nội dung niêm phong như .json); hộp mở lô nhận cả .fscpkg và .json. Form Thêm xe: mục “Chỉ định người khác…” chọn người ký của cả đội xe (có ô gõ lọc và thêm nhanh người ký).
+- Tổng quan thành bảng điều hành: 4 chỉ số chính (sản lượng đã cân, diện tích quản lý, lực lượng tác nghiệp, tỷ lệ hồ sơ FSC hợp lệ), sản lượng 6 tháng, radar cảnh báo tuân thủ FSC, 5 lô khai thác tích cực nhất (30 ngày), 5 phiếu cân mới nhất và thao tác nhanh.
 - Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
 - Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
 - Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.
