@@ -85,6 +85,8 @@ document.addEventListener('click', async e => {
   if (act === 'openSetHd') { NAV.cur = null; NAV.curF = null; NAV.view = 'sethd'; return render(); }
   if (act === 'openSetCan') { NAV.cur = null; NAV.curF = null; NAV.view = 'setcan'; return render(); }
   if (act === 'openNorm') { NAV.view = 'norm'; return render(); }
+  if (act === 'bhldSua' || (el.dataset && el.dataset.bhldsua)) { normBhldSua = el.dataset.bhldsua || el.dataset.pos; return render(); }
+  if (act === 'bhldHuyModal') { normBhldSua = null; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
@@ -268,6 +270,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'vcForm') { e.preventDefault(); saveVc(e.target); }
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
   if (e.target.id === 'normForm') { e.preventDefault(); saveNorm(e.target); }
+  if (e.target.id === 'bhldForm') { e.preventDefault(); saveBhldPos(e.target); }
   if (e.target.id === 'keoForm') { e.preventDefault(); saveKeo(e.target); }
   if (e.target.id === 'tgForm') { e.preventDefault(); saveTg(e.target); }
   if (e.target.id === 'dbForm') { e.preventDefault(); saveDb(e.target); }
@@ -275,6 +278,7 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.id === 'normVer') { normSel = t.value; normBhldSua = null; return render(); }
   if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persistLo(); render(); return; }
   if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persistLo(); render(); return; }
   if (t.id === 'dbVerSel') { dbVer = t.value; return render(); }
@@ -397,6 +401,7 @@ if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa
 render();
 /* hộp “Thêm vào danh mục để dùng lại?” (sau khi lưu lô có người / xe mới): Esc = Chỉ lưu trong lô (chạy trước bộ xử lý Esc chung của #dlgBox) */
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && normBhldSua) { e.preventDefault(); normBhldSua = null; return render(); }
   if (e.key !== 'Escape' || !document.querySelector('#dlgBox.on #dmHopDlg')) return;
   e.preventDefault(); e.stopImmediatePropagation(); dmHopXuLy(false);
 }, true);

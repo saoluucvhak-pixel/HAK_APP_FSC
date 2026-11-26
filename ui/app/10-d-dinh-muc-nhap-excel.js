@@ -1,23 +1,54 @@
 let normSel = 'b';   // bản định mức đang xem/sửa ('b' = bản gốc, 'i0', 'i1'… = các bản hiệu lực từ ngày muộn hơn)
+let normBhldSua = null; // vị trí đang mở modal sửa BHLĐ
 const normUsed = name => Object.values(db.rs || {}).some(o => Object.values(o.forests || {}).some(f => (f.nc || []).some(r => r.chucDanh === name)));
 function panelNorm() {
   const vs = HAKDinhMuc.versions(db); if (!vs.some(v => v.id === normSel)) normSel = vs[vs.length - 1].id;
   const cur = HAKDinhMuc.byId(db, normSel), pos = chucDanhAll();
+  const label = v => (v.tuNgay ? 'Hiệu lực từ ' + v.tuNgay : 'Bản gốc (chưa đặt ngày hiệu lực)');
+
   const rows = pos.map((cd, k) => {
     const n = cur.dm[cd] || {};
-    return '<tr data-pos="' + esc(cd) + '"><td><b>' + esc(cd) + '</b></td>' +
-      BHLD_ITEMS.map(([key]) => '<td><input name="n_' + k + '_' + key + '" value="' + esc(n[key] || '') + '"></td>').join('') + '</tr>';
+    return '<tr data-pos="' + esc(cd) + '">' +
+      '<td><b>' + esc(cd) + '</b></td>' +
+      BHLD_ITEMS.map(([key]) => '<td style="text-align:center">' + (n[key] ? '<span class="pill ok" style="font-weight:600">' + esc(n[key]) + '</span>' : '<span class="mut">—</span>') + '</td>').join('') +
+      '<td style="white-space:nowrap;text-align:right"><button class="btn ghost sm" type="button" data-act="bhldSua" data-bhldsua="' + esc(cd) + '" id="bhldSua_' + k + '">Sửa</button></td>' +
+      '</tr>';
   }).join('');
-  const label = v => (v.tuNgay ? 'Hiệu lực từ ' + v.tuNgay : 'Bản gốc (chưa đặt ngày hiệu lực)');
+
+  // Modal Sửa BHLĐ cho vị trí
+  const cdSua = normBhldSua;
+  const nSua = cdSua ? (cur.dm[cdSua] || {}) : {};
+  const modalSua = !cdSua ? '' :
+    '<div class="dmModalBack" id="dmModal"><div class="dmModal" role="dialog" aria-modal="true" aria-label="Định mức BHLĐ: ' + esc(cdSua) + '" style="max-width:540px">' +
+    '<form id="bhldForm" style="margin:0">' +
+    '<h3 style="margin:0 0 6px">Định mức BHLĐ: <b>' + esc(cdSua) + '</b></h3>' +
+    '<p class="mut" style="margin:0 0 12px;font-size:13px">Bản định mức: <b>' + esc(label(cur)) + '</b>. Điền số lượng kèm đơn vị (ví dụ: 1 bộ, 1 đôi, 3 đôi...). Để trống nếu vị trí không được cấp mục đó.</p>' +
+    '<div class="grid">' +
+    BHLD_ITEMS.map(([key, ten]) =>
+      '<label><span>' + esc(ten) + '</span><input name="' + esc(key) + '" value="' + esc(nSua[key] || '') + '" placeholder="VD: ' + (key === 'qa' ? '1 bộ' : key === 'giay' ? '1 đôi' : key === 'gang' ? '3 đôi' : key === 'nut' ? '2 đôi' : '1 cái') + '" autocomplete="off"></label>'
+    ).join('') +
+    '</div>' +
+    '<div class="row" style="gap:8px;margin-top:16px">' +
+    '<button class="btn" type="submit" id="bhldLuu">💾 Lưu định mức</button>' +
+    '<button class="btn ghost" type="button" data-act="bhldHuyModal" id="bhldHuy">Hủy bỏ</button>' +
+    '</div></form></div></div>';
+
   const bhld = '<div class="card"><h3 style="margin-top:0">Định mức BHLĐ theo vị trí</h3>' +
-    '<p class="mut" style="margin-top:0">Mỗi bản định mức có <b>hiệu lực từ ngày</b>. Biểu mẫu dùng bản có ngày hiệu lực lớn nhất không vượt quá ngày của biểu mẫu: danh sách cấp phát BHLĐ (BM-02) theo <b>ngày cấp phát</b> (không nhập thì theo ngày bắt đầu khai thác), hợp đồng lao động theo ngày bắt đầu hợp đồng hoặc ngày ký. Ghi số lượng kèm đơn vị, ví dụ “1 bộ”; để trống nếu vị trí không được cấp mục đó.</p>' +
-    '<div class="row" style="gap:12px;align-items:flex-end;flex-wrap:wrap"><label style="min-width:260px"><span>Bản định mức</span><select id="normVer">' + vs.map(v => '<option value="' + v.id + '"' + (v.id === normSel ? ' selected' : '') + '>' + esc(label(v)) + '</option>').join('') + '</select></label>' +
-    '<button class="btn ghost sm" type="button" data-act="normDelVer"' + (cur.base ? ' disabled' : '') + '>Xóa bản này</button></div>' +
-    '<form id="normForm" style="margin-top:12px"><label style="max-width:320px"><span class="req">Hiệu lực từ ngày (dd/mm/yyyy)</span><input name="tuNgay" value="' + esc(cur.tuNgay) + '" placeholder="' + (cur.base ? 'để trống = áp dụng từ trước đến nay' : 'dd/mm/yyyy') + '"></label>' +
-    '<div class="wrap" style="margin-top:8px"><table class="normTbl"><thead><tr><th>Vị trí</th>' + BHLD_ITEMS.map(x => '<th>' + x[1] + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div class="row" style="margin-top:12px"><button class="btn" type="submit">Lưu bản định mức này</button></div></form>' +
-    '<div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm bản mới, hiệu lực từ ngày</span><input id="normNewDate" placeholder="dd/mm/yyyy" style="width:160px"></label><button class="btn ghost" type="button" data-act="normAddVer">Thêm bản mới (sao chép bản đang chọn)</button></div>' +
-    '<p class="mut" style="margin-top:12px">Danh sách vị trí lấy từ <b>Định mức nhân công</b> (bên dưới): thêm, đổi tên hoặc xóa vị trí ở đó; vị trí số người 0 là vị trí ngoài định biên chuẩn (vẫn có định mức BHLĐ và đơn giá).</p></div>';
+    '<p class="mut" style="margin-top:0">Mỗi bản định mức có <b>hiệu lực từ ngày</b>. Biểu mẫu dùng bản có ngày hiệu lực lớn nhất không vượt quá ngày của biểu mẫu: danh sách cấp phát BHLĐ (BM-02) theo <b>ngày cấp phát</b> (không nhập thì theo ngày bắt đầu khai thác), hợp đồng lao động theo ngày bắt đầu hợp đồng hoặc ngày ký. Bấm <b>Sửa</b> trên từng vị trí để cập nhật định mức cấp phát.</p>' +
+    '<form id="normForm" style="margin-top:12px">' +
+    '<div class="row" style="gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">' +
+    '<label style="min-width:240px"><span>Bản định mức</span><select id="normVer">' + vs.map(v => '<option value="' + v.id + '"' + (v.id === normSel ? ' selected' : '') + '>' + esc(label(v)) + '</option>').join('') + '</select></label>' +
+    '<label style="min-width:220px"><span class="req">Hiệu lực từ ngày (dd/mm/yyyy)</span><input name="tuNgay" value="' + esc(cur.tuNgay) + '" placeholder="' + (cur.base ? 'để trống = áp dụng từ trước đến nay' : 'dd/mm/yyyy') + '"></label>' +
+    '<button class="btn" type="submit" id="normDateSave" title="Lưu ngày hiệu lực của bản này">💾 Lưu ngày hiệu lực</button>' +
+    '<button class="btn ghost sm" type="button" data-act="normDelVer"' + (cur.base ? ' disabled' : '') + '>Xóa bản này</button>' +
+    '</div>' +
+    '<div class="wrap" style="max-height:min(60vh,520px);margin-top:8px"><table class="normTbl" id="normTbl"><thead><tr><th style="min-width:160px">Vị trí</th>' +
+    BHLD_ITEMS.map(x => '<th style="text-align:center">' + x[1] + '</th>').join('') +
+    '<th style="text-align:right"><span class="sro">Thao tác</span></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '</form>' + modalSua +
+    '<div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm bản mới, hiệu lực từ ngày</span><input id="normNewDate" placeholder="dd/mm/yyyy" style="width:160px"></label><button class="btn ghost" type="button" data-act="normAddVer" id="normAddVerBtn">+ Thêm bản mới (sao chép bản đang chọn)</button></div>' +
+    '<p class="mut" style="margin-top:12px">Danh sách vị trí lấy từ <b>Định mức nhân công</b>: thêm, đổi tên hoặc xóa vị trí ở đó; vị trí số người 0 là vị trí ngoài định biên chuẩn (vẫn có định mức BHLĐ và đơn giá).</p></div>';
+
   return normKhung({bhld, keo: keoCard(), nhancong: dbCard(), tg: tgCard()});
 }
 /* màn Định mức chia 4 tab như màn Danh mục; cả bốn biểu mẫu nằm trong trang, mỗi lúc chỉ HIỆN một tab (ẩn bằng hidden nên chữ đang gõ dở ở tab khác không mất khi chuyển tab) */
@@ -126,18 +157,44 @@ function saveKeo(form) {
   persist(); note('Đã lưu định mức gỗ keo.');
 }
 function saveNorm(form) {
-  const dm = {};
-  chucDanhAll().forEach((cd, k) => { dm[cd] = {}; BHLD_ITEMS.forEach(([key]) => { dm[cd][key] = trim(form.querySelector('[name="n_' + k + '_' + key + '"]').value); }); });
-  const d = HAKDinhMuc.setDate(db, normSel, form.querySelector('[name="tuNgay"]').value);
+  const tuNgay = trim((form.querySelector('[name="tuNgay"]') || {}).value || '');
+  const d = HAKDinhMuc.setDate(db, normSel, tuNgay);
   if (!d.ok) { note('Chưa lưu: ' + d.error, 'err'); return; }
-  HAKDinhMuc.setNorm(db, normSel, dm);
-  // sau khi đổi ngày, bản có thể đổi thứ tự: tìm lại theo ngày
   persist();
-  note('Đã lưu định mức BHLĐ.');
+  render();
+  note('Đã lưu ngày hiệu lực định mức BHLĐ.');
+}
+function saveBhldPos(form) {
+  const cd = normBhldSua; if (!cd) return;
+  const cur = HAKDinhMuc.byId(db, normSel);
+  if (!cur.dm) cur.dm = {};
+  if (!cur.dm[cd]) cur.dm[cd] = {};
+  BHLD_ITEMS.forEach(([k]) => {
+    const v = trim((form.elements[k] || {}).value || '');
+    if (v) cur.dm[cd][k] = v;
+    else delete cur.dm[cd][k];
+  });
+  HAKDinhMuc.setNorm(db, normSel, cur.dm);
+  persist();
+  normBhldSua = null;
+  render();
+  note('Đã lưu định mức BHLĐ cho vị trí “' + cd + '”.');
 }
 function normAction(act, el) {
-  if (act === 'normAddVer') { const r = HAKDinhMuc.addVersion(db, ($('#normNewDate') || {}).value, normSel); if (!r.ok) return note(r.error, 'err'); normSel = r.id; persist(); return note('Đã thêm bản định mức mới, sao chép từ bản trước. Sửa nội dung rồi bấm Lưu.'); }
-  if (act === 'normDelVer') { const r = HAKDinhMuc.removeVersion(db, normSel); if (!r.ok) return note(r.error, 'err'); normSel = 'b'; persist(); return note('Đã xóa bản định mức.'); }
+  if (act === 'bhldSua') { normBhldSua = el.dataset.bhldsua || el.dataset.pos; return render(); }
+  if (act === 'bhldHuyModal') { normBhldSua = null; return render(); }
+  if (act === 'normAddVer') {
+    const r = HAKDinhMuc.addVersion(db, ($('#normNewDate') || {}).value, normSel);
+    if (!r.ok) return note(r.error, 'err');
+    normSel = r.id; persist(); render();
+    return note('Đã thêm bản định mức mới, sao chép từ bản trước. Bấm Sửa trên từng vị trí để điều chỉnh.');
+  }
+  if (act === 'normDelVer') {
+    const r = HAKDinhMuc.removeVersion(db, normSel);
+    if (!r.ok) return note(r.error, 'err');
+    normSel = 'b'; persist(); render();
+    return note('Đã xóa bản định mức.');
+  }
 }
 
 const INFO_FIELDS = [   // 3.5.1: bốn ô định danh (số hợp đồng · CCCD · họ tên · mã chủ rừng) đứng đầu form, kèm nút “Tra cứu Sheets”
