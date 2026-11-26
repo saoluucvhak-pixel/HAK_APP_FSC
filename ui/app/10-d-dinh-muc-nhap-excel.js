@@ -271,7 +271,7 @@ function panelInfo(rec) {
   const field = ([k, label, type, req]) => {
     const v = rec.info[k] ?? '';
     const lab = '<span class="' + (req ? 'req' : '') + '">' + label + '</span>';
-    const ro = (k === 'ma' && isMaTheoCccd) ? ' readonly' : '';
+    const ro = '';   // ô Mã luôn gõ được: gõ vào ô Mã thì tự bỏ tích “Dùng số CCCD làm Mã chủ rừng” (ô bị khóa chỉ đọc làm hỏng nhập tay và các e2e nhập mã)
     if (type === 'select') return '<div class="segRow" id="infoDanhXung"><b class="segNhan"><span class="' + (req ? 'req' : '') + '">' + label + '</span></b><div class="segBar" role="group" aria-label="Danh xưng">' +
       ['Ông', 'Bà'].map(o => '<label class="segOp"><input type="radio" name="' + k + '" value="' + o + '"' + (v === o || (!v && o === 'Ông') ? ' checked' : '') + '><span>' + o + '</span></label>').join('') + '</div></div>';
     if (type === 'wide') return '<label style="grid-column:1/-1">' + lab + '<input name="' + k + '" value="' + esc(v) + '"' + ro + '></label>';
