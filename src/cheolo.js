@@ -58,16 +58,46 @@
     const allDup = phieuTrung(db, oid, fid, f.pc, cm), dup = allDup.filter(x => !x.khacBks), dupSoft = allDup.filter(x => x.khacBks);
     if (dup.length) add('chan', 'Chéo lô: phiếu cân trùng', dup.length + ' phiếu cân giống hệt (cùng số phiếu, cùng ngày cân, cùng biển số; ngày viết khác nhau như 1/11 và 01/11 vẫn là một ngày) đã có ở lô khác: ' + dup.slice(0, 5).map(x => 'phiếu ' + x.p.soPhieu + ' (' + x.p.ngay + ', ' + s(x.p.bienSo) + ') ↔ lô ' + x.ma).join('; ') + (dup.length > 5 ? '; …' : '') + '. Một phiếu cân chỉ thuộc một lô: kiểm tra rồi xóa hoặc chuyển ở lô sai (phần mềm không tự xóa).', 'Phiếu ' + dup[0].p.soPhieu);
     if (dupSoft.length) add('doi', 'Chéo lô: phiếu cân cùng số và ngày ở lô khác', dupSoft.length + ' phiếu cân có cùng số phiếu và ngày cân với lô khác nhưng khác biển số: ' + dupSoft.slice(0, 5).map(x => 'phiếu ' + x.p.soPhieu + ' (' + x.p.ngay + ', BKS ' + (s(x.p.bienSo) || 'trống') + ' ↔ lô ' + x.ma + ' BKS ' + (x.bienKhac || 'trống') + ')').join('; ') + (dupSoft.length > 5 ? '; …' : '') + '. Kiểm tra xem có phải cùng một phiếu bị gõ khác biển số không.', 'Phiếu ' + dupSoft[0].p.soPhieu);
-    // 2. một xe ở hai lô trùng giờ cân
-    const xung = new Map();
-    (f.pc || []).forEach(p => { const x = suyRa(p), a = x.b, pl = x.pl; if (!a || !pl) return; (cm.byPlate.get(pl) || []).forEach(e => { const l = e.l, q = e.q; if (l === me || (e.k && e.k === x.k)) return; const b = e.b; if (b && a[0] < b[1] && b[0] < a[1]) { const k = pl + '|' + l.ma; if (!xung.has(k)) xung.set(k, {bien: p.bienSo, lo: l.ma, p, q, n: 0}); xung.get(k).n++; } }); });
+    // 2. một xe ở hai lô: trùng giờ cân, giờ quá sát (< 2 giờ) hoặc cùng ngày cân
+    const xung = new Map(), xungSat = new Map(), xungNgay = new Map();
+    (f.pc || []).forEach(p => {
+      const x = suyRa(p), a = x.b, pl = x.pl, dKey = Dt().key(s(p.ngay));
+      if (!pl) return;
+      (cm.byPlate.get(pl) || []).forEach(e => {
+        const l = e.l, q = e.q;
+        if (l === me || (e.k && e.k === x.k)) return;
+        const b = e.b, qKey = Dt().key(s(q.ngay));
+        if (a && b) {
+          const giao = a[0] < b[1] && b[0] < a[1];
+          if (giao) {
+            const k = pl + '|' + l.ma;
+            if (!xung.has(k)) xung.set(k, {bien: p.bienSo, lo: l.ma, p, q, n: 0});
+            xung.get(k).n++;
+          }
+        } else if (dKey && qKey && dKey === qKey) {
+          const k = pl + '|' + l.ma + '|' + dKey;
+          if (!xungNgay.has(k)) xungNgay.set(k, {bien: p.bienSo, lo: l.ma, ngay: p.ngay, p, q});
+        }
+      });
+    });
     xung.forEach(x => add('doi', 'Chéo lô: xe trùng giờ cân', 'Xe ' + x.bien + ' có ' + x.n + ' phiếu cân trùng khoảng giờ cân với lô ' + x.lo + ' (phiếu ' + x.p.soPhieu + ' ngày ' + x.p.ngay + ' và phiếu ' + x.q.soPhieu + '): một xe không thể ở hai nơi cùng lúc, đối chiếu giờ cân hoặc biển số.', x.bien));
+    xungNgay.forEach(x => add('doi', 'Chéo lô: xe cùng ngày ở hai lô', 'Xe ' + x.bien + ' có phiếu cân ngày ' + x.ngay + ' ở cả lô này (phiếu ' + x.p.soPhieu + ') và lô ' + x.lo + ' (phiếu ' + x.q.soPhieu + ') nhưng thiếu giờ cân: kiểm tra hành trình thực tế.', x.bien));
     // 3. người ở hai lô có thời gian khai thác giao nhau
     const kt = l => { const a = dmy((l.f.info || {}).tuNgay), b = dmy((l.f.info || {}).denNgay); return a ? [a.getTime(), b ? b.getTime() : Infinity] : null; }, mk = kt(me);
     if (mk) {
       const mine = new Map(); (f.nc || []).forEach(r => { const c = digits(r.cccd); if (NL().cccdHopLe(c)) mine.set(c, r); });
       const seen = new Set();
-      others.forEach(l => { const k = kt(l); if (!k || !(mk[0] <= k[1] && k[0] <= mk[1])) return; (l.f.nc || []).forEach(r => { const c = digits(r.cccd); if (mine.has(c) && !seen.has(c + '|' + l.ma)) { seen.add(c + '|' + l.ma); add('doi', 'Chéo lô: người ở hai lô', s(mine.get(c).ten) + ' (CCCD ' + c + ') cũng là nhân công của lô ' + l.ma + ' có thời gian khai thác giao với lô này. Kiểm tra có đúng một người làm ở hai lô cùng lúc không.', s(mine.get(c).ten), {ftab: 'nc'}); } }); });
+      others.forEach(l => {
+        const k = kt(l);
+        if (!k || !(mk[0] <= k[1] && k[0] <= mk[1])) return;
+        (l.f.nc || []).forEach(r => {
+          const c = digits(r.cccd);
+          if (mine.has(c) && !seen.has(c + '|' + l.ma)) {
+            seen.add(c + '|' + l.ma);
+            add('doi', 'Chéo lô: người ở hai lô', s(mine.get(c).ten) + ' (CCCD ' + c + ') cũng là nhân công của lô ' + l.ma + ' có thời gian khai thác giao với lô này. Kiểm tra có đúng một người làm ở hai lô cùng lúc không.', s(mine.get(c).ten), {ftab: 'nc'});
+          }
+        });
+      });
     }
     // 4. lệch sản lượng dự kiến
     const info = f.info || {}, dk = DM().sanLuongDuKien(db, info) || 0, tt = DM().tongPhieuTan(f.pc);   // lô dùng định mức gỗ keo mặc định cũng được kiểm; tổng làm tròn từng phiếu theo kg

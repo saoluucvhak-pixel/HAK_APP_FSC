@@ -17,6 +17,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   // Tạo chủ rừng + 2 rừng
   await win.click('text=+ Chủ rừng mới');
   const owner = {ma: 'CR-001', ten: 'NGUYỄN PHƯỚC TÁM', soHopDong: 'HD-001', ngayKyHopDong: '01/10/2026', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'};
+  if (await win.isChecked('#maTheoCccd').catch(() => false)) await win.uncheck('#maTheoCccd');
   for (const [k, v] of Object.entries(owner)) await win.fill(`#infoForm [name="${k}"]`, v);
   await win.check('#infoForm [name="danhXung"][value="Ông"]'); await win.click('#infoForm button[type=submit]');
   for (const dia of ['Thôn Hòa Phú', 'Thôn Phước Xuân']) {

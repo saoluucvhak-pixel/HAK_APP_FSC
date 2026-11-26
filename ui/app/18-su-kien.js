@@ -57,6 +57,7 @@ document.addEventListener('click', async e => {
   if (act === 'chiXemTai') return chiXemTai();
   if (act === 'inTomTat') return inTomTat();
   if (act === 'inBaoCao') return inBaoCao();
+  if (act === 'inTronBoPdf') return typeof inTronBoPdfMo === 'function' ? inTronBoPdfMo(curRec()) : note('Chức năng đang khởi tạo.', 'warn');
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
   if (act === 'hdHien') { hdDat(false); NAV.cur = null; NAV.curF = null; NAV.view = 'bld'; return render(); }   // 3.5.1: hướng dẫn 6 bước nằm ở Bàn làm việc

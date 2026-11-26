@@ -165,13 +165,15 @@ function infoDmCanh(info) {
 }
 function panelInfo(rec) {
   const errs = rec.id ? infoErrors(rec.info, rec.id) : [];
+  const isMaTheoCccd = !rec.info.ma || rec.info.ma === rec.info.cccd;
   const field = ([k, label, type, req]) => {
     const v = rec.info[k] ?? '';
     const lab = '<span class="' + (req ? 'req' : '') + '">' + label + '</span>';
+    const ro = (k === 'ma' && isMaTheoCccd) ? ' readonly' : '';
     if (type === 'select') return '<div class="segRow" id="infoDanhXung"><b class="segNhan"><span class="' + (req ? 'req' : '') + '">' + label + '</span></b><div class="segBar" role="group" aria-label="Danh xưng">' +
       ['Ông', 'Bà'].map(o => '<label class="segOp"><input type="radio" name="' + k + '" value="' + o + '"' + (v === o || (!v && o === 'Ông') ? ' checked' : '') + '><span>' + o + '</span></label>').join('') + '</div></div>';
-    if (type === 'wide') return '<label style="grid-column:1/-1">' + lab + '<input name="' + k + '" value="' + esc(v) + '"></label>';
-    return '<label>' + lab + '<input name="' + k + '" value="' + esc(v) + '"' + (type === 'number' ? ' inputmode="numeric"' : '') + '></label>';
+    if (type === 'wide') return '<label style="grid-column:1/-1">' + lab + '<input name="' + k + '" value="' + esc(v) + '"' + ro + '></label>';
+    return '<label>' + lab + '<input name="' + k + '" value="' + esc(v) + '"' + (type === 'number' ? ' inputmode="numeric"' : '') + ro + '></label>';
   };
   return '<div class="card"><h3 style="margin-top:0">Thông tin chủ rừng</h3>' +
     '<p class="mut" style="margin-top:0">Hồ sơ mở theo chủ rừng. Thông tin này in vào bên A của mọi hợp đồng.</p>' +
