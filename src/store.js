@@ -327,7 +327,7 @@ class Store {
     haveC.forEach((h, id) => { if (!keepC.has(id)) { st.delC.run(id); changed++; } });
     const dmBang = this._coBangDM(), laDM = k => dmBang && DM_BANG.includes(k) && Array.isArray(side[k]);
     if (dmBang) DM_BANG.forEach(k => { changed += this._ghiDM(k, laDM(k) ? side[k] : null); });   // danh mục theo dòng; không phải mảng thì lưu ở meta như cũ
-    const metaKeys = Object.keys(side).filter(k => k !== 'rs' && k !== 'v' && k !== 'congTy' && !laDM(k));
+    const metaKeys = Object.keys(side).filter(k => k !== 'rs' && k !== 'v' && k !== 'congTy' && !laDM(k) && side[k] !== undefined);
     this.db.prepare("DELETE FROM meta WHERE key NOT LIKE 'lk:%' AND key NOT IN (" + (metaKeys.map(() => '?').join(',') || "''") + ')').run(...metaKeys);
     metaKeys.forEach(k => st.putMeta.run(k, JSON.stringify(side[k])));
     return changed;
@@ -645,7 +645,7 @@ class Store {
       return {backup: null, counts: Store.counts(cur), goiCu: 0, goiBoQua: lsBoQua};
     }
     const backup = this.snapshotFile('truoc-khoi-phuc', {keep: 20});   // giữ 20 bản gần nhất (như truoc-xoa): mỗi bản là cả cơ sở dữ liệu, không để thư mục sao lưu lớn mãi
-    const kq = this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace', goiLichSu});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
+    const kq = this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace', preserveMissingOwners: strategy !== 'replace', goiLichSu});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
     return {backup, counts: Store.counts(this.load()), goiCu: kq.goiCu || 0, goiBoQua: lsBoQua};
   }
 

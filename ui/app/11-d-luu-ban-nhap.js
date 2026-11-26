@@ -81,6 +81,7 @@ async function stSaveDraft(opt) {
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
     const r = await persistNow(); if (!r || !r.ok) throw Object.assign(new Error(r?.error || 'không rõ'), {code: r?.code});
     const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote(nDm[0], nDm[1]);
+    if (typeof notifyWorkDone === 'function') notifyWorkDone((f.pc || []).length || 5);
     pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + ')' + (chuU.chot ? ', kèm thông tin chủ rừng đang ở bản nháp (kể cả phần đến từ lô khác của chủ rừng này)' : '') + '. Có thể tạo, xuất, in hồ sơ.', 'ok'); if (typeof dmHopCho !== 'undefined' && dmHopCho) dmHopCho.daLuu = notes[notes.length - 1].text; render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);

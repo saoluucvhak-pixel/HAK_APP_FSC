@@ -134,4 +134,38 @@ function resolve(userDir, env = {}) {
     customData: !env.HAKQN_DB && dataDir !== defData, customBackup: backupDir !== defBackup, customBackupJson: backupDirJson !== defBackup, lockedByEnv: !!env.HAKQN_DB,
     missing: [s.backupDirSql && !fs.existsSync(s.backupDirSql) ? s.backupDirSql : '', s.backupDirJson && s.backupDirJson !== s.backupDirSql && !fs.existsSync(s.backupDirJson) ? s.backupDirJson : ''].filter(Boolean)};
 }
-module.exports = {DB_NAME, CHU_KY, load, save, backupDue, checkFolder, checkSpace, checkFree, canhBaoDungLuong, kiemDungLuong, NGUONG_DUNG_LUONG_MB, describeError, checkConfigured, resolve, file};
+/* Phát hiện các vị trí có thể dùng cho thư mục sao lưu thứ hai (Cloud: Google Drive, OneDrive, Dropbox; hoặc ổ đĩa di động/USB) */
+function detectBackupTargets() {
+  const targets = [];
+  const home = process.env.USERPROFILE || process.env.HOME || '';
+  if (home) {
+    const candidates = [
+      {type: 'cloud', name: 'Google Drive', path: path.join(home, 'Google Drive')},
+      {type: 'cloud', name: 'Google Drive (My Drive)', path: path.join(home, 'Google Drive', 'My Drive')},
+      {type: 'cloud', name: 'Google Drive (G:)', path: 'G:\\My Drive'},
+      {type: 'cloud', name: 'OneDrive', path: path.join(home, 'OneDrive')},
+      {type: 'cloud', name: 'OneDrive cá nhân', path: path.join(home, 'OneDrive - Personal')},
+      {type: 'cloud', name: 'Dropbox', path: path.join(home, 'Dropbox')}
+    ];
+    for (const c of candidates) {
+      try {
+        if (fs.existsSync(c.path) && fs.statSync(c.path).isDirectory()) {
+          targets.push(c);
+        }
+      } catch (_) {}
+    }
+  }
+  if (process.platform === 'win32') {
+    for (const letter of ['D', 'E', 'F', 'G', 'H', 'U']) {
+      const root = letter + ':\\';
+      try {
+        if (fs.existsSync(root) && fs.statSync(root).isDirectory()) {
+          targets.push({type: 'drive', name: 'Ổ đĩa ' + letter + ':', path: root});
+        }
+      } catch (_) {}
+    }
+  }
+  return targets;
+}
+
+module.exports = {DB_NAME, CHU_KY, load, save, backupDue, checkFolder, checkSpace, checkFree, canhBaoDungLuong, kiemDungLuong, NGUONG_DUNG_LUONG_MB, describeError, checkConfigured, resolve, file, detectBackupTargets};

@@ -122,6 +122,20 @@ document.addEventListener('click', async e => {
   if (act === 'openSetGs') { NAV.cur = null; NAV.curF = null; NAV.view = 'setgs'; setgs.msg = null; setgs.st = HB ? await HB.lookup.status() : null; return render(); }
   if (act === 'openSetBk') { NAV.cur = null; NAV.curF = null; NAV.view = 'setbk'; ksl.msg = null; return render(); }
   if (act === 'kslTai') { ksl.msg = null; ksl.kiem = {}; return render(); }
+  if (act === 'quickBackup') return quickBackup();
+  if (act === 'kslChiTiet') return kslChiTiet(el);
+  if (act === 'kslRestoreOwner') return kslDoRestoreOwner(el.dataset.oid, el.dataset.name);
+  if (act === 'kslRestoreForest') return kslDoRestoreForest(el.dataset.oid, el.dataset.fid, el.dataset.ma);
+  if (act === 'setBk2Quick') return setBk2Quick(el.dataset.path);
+  if (act === 'kslKhoiPhucTuDetail') {
+    $('#impBox').classList.remove('on');
+    const d = window.__kslDetail;
+    if (d && ksl.hien) {
+      const idx = ksl.hien.findIndex(it => it.file === d.file);
+      if (idx >= 0) return kslKhoiPhuc({dataset: {i: String(idx)}});
+    }
+    return;
+  }
   if (act === 'kslKiem') return kslKiem(el);
   if (act === 'kslAuto') return kslAuto();
   if (act === 'kslXoa') return kslXoa(el);

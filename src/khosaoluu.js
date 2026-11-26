@@ -121,4 +121,102 @@ function xoa(dirs, file, dbFile) {
   return {name: it.name, size: it.size};
 }
 
-module.exports = {LOAI, loaiCua, lietKe, timTrongKho, kiemTra, xemTruoc, khoiPhuc, xoa, docBanSqlite};
+/* Đọc dữ liệu hồ sơ từ bản sao lưu (.sqlite hoặc .json) */
+function docDuLieuBanSao(file, supportedVersion) {
+  if (/\.json$/i.test(file)) {
+    const kt = kiemTra(file, supportedVersion);
+    if (!kt.ok) throw Object.assign(new Error('Bản sao lưu không dùng được: ' + kt.error), {code: 'BAN_HONG'});
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return {data, goi: Array.isArray(data.goiLichSu) ? data.goiLichSu : []};
+  }
+  const kt = kiemTra(file, supportedVersion);
+  if (!kt.ok) throw Object.assign(new Error('Bản sao lưu không dùng được: ' + kt.error), {code: 'BAN_HONG'});
+  return docBanSqlite(file);
+}
+
+/* Xem trước chi tiết nội dung danh sách chủ rừng & lô rừng trong bản sao lưu */
+function docChiTiet(file, supportedVersion) {
+  const {data} = docDuLieuBanSao(file, supportedVersion);
+  const owners = Object.entries(data.rs || {}).map(([oid, o]) => {
+    const info = o.info || {};
+    const forests = Object.entries(o.forests || {}).map(([fid, f]) => {
+      const fi = f.info || {};
+      const pc = Array.isArray(f.pc) ? f.pc : [];
+      const tongKg = pc.reduce((s, p) => s + (Number(p.klKg) || Math.round((Number(p.kl) || 0) * 1000) || 0), 0);
+      return {
+        id: f.id || fid,
+        maRung: fi.maRung || '',
+        tenRung: fi.tenRung || '',
+        dienTich: fi.dienTich || 0,
+        soDoi: (f.doi || []).length,
+        soXe: (f.dx || []).length,
+        soPhieu: pc.length,
+        tongKg,
+        trangThai: f.chot ? 'Đã chốt' : f.dung ? 'Đã dừng' : 'Đang làm'
+      };
+    });
+    return {
+      id: o.id || oid,
+      ma: info.ma || '',
+      ten: info.ten || '',
+      cccd: info.cccd || '',
+      danhXung: info.danhXung || '',
+      soRung: forests.length,
+      forests
+    };
+  });
+  return {
+    file: path.basename(file),
+    dinhDang: /\.json$/i.test(file) ? 'json' : 'sqlite',
+    soChuRong: owners.length,
+    soLoRung: owners.reduce((s, o) => s + o.soRung, 0),
+    owners
+  };
+}
+
+/* Khôi phục trích xuất RIÊNG MỘT chủ rừng từ bản sao lưu (không ảnh hưởng chủ rừng khác) */
+function khoiPhucChuRong(store, file, ownerId, strategy = 'overwrite', supportedVersion) {
+  const b = docDuLieuBanSao(file, supportedVersion);
+  const srcO = b.data.rs && b.data.rs[ownerId];
+  if (!srcO) throw Object.assign(new Error('Không tìm thấy chủ rừng "' + ownerId + '" trong bản sao lưu.'), {code: 'KHONG_CO'});
+  const incoming = {
+    v: 2,
+    rs: {[ownerId]: srcO},
+    congTy: b.data.congTy || {},
+    ...(b.data.dmDoiTuong != null && {dmDoiTuong: b.data.dmDoiTuong}),
+    ...(b.data.dmXe != null && {dmXe: b.data.dmXe}),
+    ...(b.data.dmViTri != null && {dmViTri: b.data.dmViTri})
+  };
+  const r = store.applyImport(incoming, strategy, {goiLichSu: b.goi, preserveMissingOwners: true});
+  return {backup: r.backup, counts: r.counts, goiCu: r.goiCu, ten: srcO.info?.ten || ownerId};
+}
+
+/* Khôi phục trích xuất RIÊNG MỘT lô rừng từ bản sao lưu (không ảnh hưởng lô khác) */
+function khoiPhucLoRungTuBanSao(store, file, ownerId, forestId, strategy = 'overwrite', supportedVersion) {
+  const b = docDuLieuBanSao(file, supportedVersion);
+  const srcO = b.data.rs && b.data.rs[ownerId];
+  if (!srcO) throw Object.assign(new Error('Không tìm thấy chủ rừng "' + ownerId + '" trong bản sao lưu.'), {code: 'KHONG_CO'});
+  const srcF = srcO.forests && srcO.forests[forestId];
+  if (!srcF) throw Object.assign(new Error('Không tìm thấy lô rừng "' + forestId + '" trong bản sao lưu.'), {code: 'KHONG_CO'});
+  const {forests: _, ...ownerInfoOnly} = srcO;
+  const incoming = {
+    v: 2,
+    rs: {
+      [ownerId]: {
+        ...ownerInfoOnly,
+        forests: {[forestId]: srcF}
+      }
+    },
+    congTy: b.data.congTy || {},
+    ...(b.data.dmDoiTuong != null && {dmDoiTuong: b.data.dmDoiTuong}),
+    ...(b.data.dmXe != null && {dmXe: b.data.dmXe}),
+    ...(b.data.dmViTri != null && {dmViTri: b.data.dmViTri})
+  };
+  const r = store.applyImport(incoming, strategy, {goiLichSu: b.goi, preserveMissingOwners: true});
+  return {backup: r.backup, counts: r.counts, goiCu: r.goiCu, maRung: srcF.info?.maRung || forestId};
+}
+
+module.exports = {
+  LOAI, loaiCua, lietKe, timTrongKho, kiemTra, xemTruoc, khoiPhuc, xoa,
+  docBanSqlite, docDuLieuBanSao, docChiTiet, khoiPhucChuRong, khoiPhucLoRungTuBanSao
+};

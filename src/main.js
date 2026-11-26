@@ -389,6 +389,17 @@ function registerIpc() {
       return {ok: true, settings: setView()};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
+  handle('settings:setBackup2Dir', async (e, targetDir) => {
+    try {
+      const dir = Settings.checkFolder(targetDir);
+      const ud = app.getPath('userData');
+      Settings.save(ud, {...Settings.load(ud), backupDir2: dir});
+      log('INFO', 'Thư mục sao lưu thứ hai: ' + dir);
+      runAutoBackup();
+      return {ok: true, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  handle('settings:detectTargets', () => wrap(() => ({targets: Settings.detectBackupTargets()}))());
   handle('settings:setBackup', async (e, reset) => {
     try {
       let dir = '';
@@ -526,6 +537,21 @@ function registerIpc() {
   })()));
   handle('bk:readJson', (e, f) => wrap(() => { const it = bkFile(f); if (it.dinhDang !== 'json') throw new Error('Không phải bản sao lưu .json.'); if (it.size > 512 * 1024 * 1024) throw new Error('File quá lớn.'); return {name: it.name, text: fs.readFileSync(it.file, 'utf8')}; }, true)());
   handle('bk:delete', (e, f) => wrap(() => { const r = KhoSaoLuu.xoa(bkDirs(), f, loc.dbFile); log('INFO', 'Xóa bản sao lưu ' + r.name); return r; }, true)());
+  handle('bk:inspectDetail', (e, f) => wrap(() => ({detail: KhoSaoLuu.docChiTiet(bkFile(f).file, SCHEMA_VERSION)}), true)());
+  handle('bk:restoreOwner', afterReloc((e, f, ownerId, strategy) => wrap(() => {
+    const it = bkFile(f);
+    const r = KhoSaoLuu.khoiPhucChuRong(store, it.file, ownerId, strategy || 'overwrite', SCHEMA_VERSION);
+    log('INFO', 'Khôi phục chủ rừng ' + r.ten + ' từ bản sao lưu ' + it.name);
+    checkModel('khoiphuc-chu');
+    return {...r, name: it.name, db: store.load()};
+  })()));
+  handle('bk:restoreForest', afterReloc((e, f, ownerId, forestId, strategy) => wrap(() => {
+    const it = bkFile(f);
+    const r = KhoSaoLuu.khoiPhucLoRungTuBanSao(store, it.file, ownerId, forestId, strategy || 'overwrite', SCHEMA_VERSION);
+    log('INFO', 'Khôi phục lô rừng ' + r.maRung + ' từ bản sao lưu ' + it.name);
+    checkModel('khoiphuc-lo');
+    return {...r, name: it.name, db: store.load()};
+  })()));
   /* PR D bước 2: tái dùng snapshotFile (như truoc-xoa); không tham số; giữ 10 bản gần nhất; lỗi → renderer KHÔNG lưu */
   handle('bk:truocSheets', () => wrap(() => { const f = store.snapshotFile('truoc-cap-nhat-sheets', {keep: 10}); return {file: f ? path.basename(f) : ''}; })());
   handle('bk:autoNow', afterReloc(async () => { if (!store) return {ok: false, error: NO_STORE(), unavailable: true}; await runAutoBackup(true); return {ok: !!(autoBk && autoBk.ok), auto: autoBk, error: autoBk && !autoBk.ok ? autoBk.error : undefined}; }));

@@ -38,7 +38,9 @@ contextBridge.exposeInMainWorld('hak', {
     setAutoChuKy: c => ipcRenderer.invoke('settings:setAutoChuKy', c),   // phiếu #13a
     setBackupJson: reset => ipcRenderer.invoke('settings:setBackupJson', !!reset),
     openBackupJson: () => ipcRenderer.invoke('settings:openBackupJson'),
-    openBackup: () => ipcRenderer.invoke('settings:openBackup')
+    openBackup: () => ipcRenderer.invoke('settings:openBackup'),
+    detectTargets: () => ipcRenderer.invoke('settings:detectTargets'),
+    setBackup2Dir: dir => ipcRenderer.invoke('settings:setBackup2Dir', dir)
   },
   data: {
     status: () => ipcRenderer.invoke('data:status'),
@@ -55,7 +57,10 @@ contextBridge.exposeInMainWorld('hak', {
     readJson: f => ipcRenderer.invoke('bk:readJson', f),
     remove: f => ipcRenderer.invoke('bk:delete', f),
     autoNow: () => ipcRenderer.invoke('bk:autoNow'),
-    truocSheets: () => ipcRenderer.invoke('bk:truocSheets')   // PR D bước 2: sao lưu file hiện tại trước lần lưu đầu sau khi áp dữ liệu từ Google Sheets
+    truocSheets: () => ipcRenderer.invoke('bk:truocSheets'),   // PR D bước 2: sao lưu file hiện tại trước lần lưu đầu sau khi áp dữ liệu từ Google Sheets
+    inspectDetail: f => ipcRenderer.invoke('bk:inspectDetail', f),
+    restoreOwner: (f, oid, s) => ipcRenderer.invoke('bk:restoreOwner', f, oid, s),
+    restoreForest: (f, oid, fid, s) => ipcRenderer.invoke('bk:restoreForest', f, oid, fid, s)
   },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
   phieuCan: (rows, company) => ipcRenderer.invoke('phieucan:open', rows, company),
