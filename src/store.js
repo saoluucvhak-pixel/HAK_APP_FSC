@@ -211,7 +211,8 @@ class Store {
   snapshotFile(tag, opts = {}) {
     if (this.file === ':memory:') return null;
     fs.mkdirSync(this.backupDir, {recursive: true});
-    this.db.pragma('wal_checkpoint(TRUNCATE)');
+    const [checkpoint] = this.db.pragma('wal_checkpoint(TRUNCATE)');
+    if (checkpoint.busy) throw new Error('SQLite đang bận. Đợi thao tác đang chạy hoàn tất rồi thử lại.');
     const re = new RegExp('^' + tag + '-\\d{4}-.*\\.sqlite$');
     if (opts.dedupByHash) {
       const srcHash = crypto.createHash('sha256').update(fs.readFileSync(this.file)).digest('hex');
@@ -393,7 +394,14 @@ class Store {
       const blockedOwners = thatO.map(id => ({name: owner.get(String(id))?.ten || '', forests: forests.get(String(id))?.total || 0}));
       throw Object.assign(new Error('Đã chặn lưu vì lần ghi sẽ xóa ' + thatO.length + ' hồ sơ chủ rừng.'), {code: 'BULK_DELETE', blockedOwners});
     }
-    if (thatO.length || (goneF && goneF.length)) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
+    if (thatO.length || (goneF && goneF.length)) this._saoLuuTruocXoa();
+  }
+  _saoLuuTruocXoa() {
+    try { this.snapshotFile('truoc-xoa', {keep: 20}); }
+    catch (e) {
+      throw Object.assign(new Error('Không sao lưu được trước khi xóa. ' + e.message +
+        ' Chọn thư mục sao lưu SQLite có quyền ghi và đủ chỗ, rồi thực hiện lại thao tác xóa.'), {code: 'BACKUP_DELETE'});
+    }
   }
   /* KHÓA CHỈ ĐỌC Ở TẦNG LƯU (mã LOCKED): lô đang chốt hoặc dừng trong cơ sở dữ liệu không nhận thay đổi dữ liệu, trừ các khóa vòng đời (chot, luuTru, dung, nhatKy: chốt, mở khóa,
    * lưu trữ, dừng, mở lại). rowsF: các lô sẽ ghi {id, data}. Gọi TRƯỚC khi ghi: có vi phạm thì không ghi gì. */
@@ -419,7 +427,7 @@ class Store {
    * trừ khi opts.allowBulkDelete (khôi phục 'replace'); lần lưu nào có xóa chủ rừng hoặc lô rừng đều sao lưu file trước khi ghi. */
   save(db, opts = {}) {
     if (!db || typeof db !== 'object' || !db.rs || typeof db.rs !== 'object' || Array.isArray(db.rs)) throw new Error('Dữ liệu lưu không hợp lệ (thiếu danh sách chủ rừng). Không ghi gì để tránh mất dữ liệu.');
-    const rows = this.explode(db);
+    const rows = this.explode(db, {kiemQuanHe: !opts.preserveMissingOwners});
     const have = new Map(this.db.prepare('SELECT id, hash FROM owners').all().map(r => [r.id, r.hash]));
     // so cả chủ của lô: chuyển lô sang chủ rừng khác mà nội dung không đổi vẫn phải cập nhật owner_id (trước đây bị bỏ qua, mở lại lô quay về chủ cũ)
     const haveF = new Map(this.db.prepare('SELECT id, hash, owner_id FROM forests').all().map(r => [r.id, r.hash + '|' + r.owner_id]));
@@ -432,6 +440,21 @@ class Store {
         const row = this.db.prepare('SELECT owner_id FROM forests WHERE id=?').get(id);
         return row && (keepO.has(row.owner_id) || explicitDel.has(String(row.owner_id)));
       });
+    }
+    if (opts.preserveMissingOwners) {
+      // Không ghi lại lô cũ có lỗi chỉ vì quá trình chuẩn hóa tạo JSON khác.
+      const QH = require('./quanhe'), docLo = this.db.prepare('SELECT data, owner_id FROM forests WHERE id=?');
+      const invalid = [];
+      rows.forests = rows.forests.filter(row => {
+        if (haveF.get(row.id) === row.hash + '|' + row.owner_id) return true;
+        const f = JSON.parse(row.data);
+        if (!QH.kiem(f).length) return true;
+        const old = docLo.get(row.id);
+        if (old?.owner_id === row.owner_id && JSON.stringify(this._chuanLo(JSON.parse(old.data))) === row.data) return false;
+        invalid.push(f);
+        return true;
+      });
+      this._kiemQuanHe(invalid);
     }
     this._guardDelete(goneO, goneF, opts);
     if (!opts.boQuaKhoa) this._kiemKhoa(rows.forests.filter(f => haveF.has(f.id) && haveF.get(f.id) !== f.hash + '|' + f.owner_id), goneF, goneO);
@@ -507,9 +530,17 @@ class Store {
     return {changed, at: t, rev: this._bump(), mode: 'delta'};
   }
 
-  /* Mã nội bộ (id) chủ rừng và lô rừng là khóa chính: trùng thì bản sau ghi đè bản trước trong SQLite → dừng và báo, không ghi gì */
-  explode(db) {
+  _chuanLo(f0) {
     const M = require('./model');
+    const f = M.needsEnsure(f0) ? M.ensureForest(f0) : f0;
+    if (!LK.canChuan(f)) return f;
+    const out = f === f0 ? JSON.parse(JSON.stringify(f0)) : f;
+    LK.chuanLo(out);
+    return out;
+  }
+
+  /* Mã nội bộ (id) chủ rừng và lô rừng là khóa chính: trùng thì bản sau ghi đè bản trước trong SQLite → dừng và báo, không ghi gì */
+  explode(db, {kiemQuanHe = true} = {}) {
     const owners = [], forests = [], seenO = new Map(), seenF = new Map(), dups = [], kiemLo = [];
     Object.entries(db.rs || {}).forEach(([id, o]) => {
       if (!o || typeof o !== 'object') throw new Error('Hồ sơ chủ rừng "' + id + '" không hợp lệ. Không ghi gì.');
@@ -518,8 +549,7 @@ class Store {
       const data = JSON.stringify(rest), info = rest.info || {};
       owners.push({id: rest.id, ma: String(info.ma || ''), ten: String(info.ten || ''), cccd: String(info.cccd || ''), data, hash: sha(data)});
       Object.entries(fs_ || {}).forEach(([fid, f0]) => {
-        let f = M.needsEnsure(f0) ? M.ensureForest(f0) : f0;   // mọi lô ghi xuống đều có đội và mọi nhân công có doiId (tiến trình chính là nơi có thẩm quyền)
-        if (LK.canChuan(f)) { if (f === f0) f = JSON.parse(JSON.stringify(f0)); LK.chuanLo(f); }   // 3.0: ID dòng, chấm công theo ID thành viên (lô chưa khóa)
+        const f = this._chuanLo(f0);
         const fd = JSON.stringify(f), fi = f.info || {}, idF = f.id || fid;
         if (seenF.has(idF)) dups.push('lô ' + idF + ' (' + (fi.maRung || '') + ') ở chủ ' + seenF.get(idF) + ' và ' + rest.id); seenF.set(idF, rest.id);
         kiemLo.push(f);
@@ -527,7 +557,7 @@ class Store {
       });
     });
     if (dups.length) throw Object.assign(new Error('Trùng mã nội bộ: ' + dups.slice(0, 5).join('; ') + (dups.length > 5 ? '…' : '') + '. Không ghi gì để tránh mất hồ sơ; hãy khôi phục lại với lựa chọn "Giữ cả hai" để cấp mã mới.'), {code: 'DUP_ID'});
-    this._kiemQuanHe(kiemLo);
+    if (kiemQuanHe) this._kiemQuanHe(kiemLo);
     return {owners, forests};
   }
 
@@ -566,25 +596,28 @@ class Store {
   /* Nhập bản sao lưu toàn bộ. strategy: 'replace' thay toàn bộ dữ liệu | 'skip' giữ bản hiện có, chỉ thêm mới | 'overwrite' thay ĐÚNG các lô trùng, giữ lô khác của chủ | 'both' giữ cả hai.
    * Hồ sơ mâu thuẫn (ID, mã lô, chủ rừng chỉ về các bản ghi khác nhau) → dừng, không ghi. Luôn sao lưu file SQLite trước; ghi trong một giao dịch nên lỗi thì dữ liệu cũ còn nguyên. */
   applyImport(incoming, strategy, opts) {
+    const rieng = opts?.khoiPhucRieng;
+    if (rieng && !['skip', 'overwrite'].includes(strategy)) throw new Error('Cách xử lý khôi phục riêng không hợp lệ.');
+    const V = require('./vongdoi');
     incoming = Store.kiemNhap(incoming);   // lô 2 (T-11): cấu trúc và phiên bản kiểm TRƯỚC khi sao lưu hay ghi
     /* phiếu #11: bản .json sao lưu toàn bộ mang LỊCH SỬ BẢN CHỤP (incoming.goiLichSu, mọi dòng chot_goi). Tách khỏi dữ liệu hồ sơ (không ghi vào meta),
      * mỗi bản chụp phải đúng dấu vân tay (hash = bam(data), JSON đọc được) mới được chép; bản hỏng bị bỏ qua và báo số lượng. */
     let lsFile = null, lsBoQua = 0;
     if (Array.isArray(incoming.goiLichSu)) {
-      const V = require('./vongdoi');
       lsFile = incoming.goiLichSu.filter(g => {
         const tot = g && typeof g === 'object' && g.forest_id != null && Number.isInteger(g.phien_ban) && typeof g.data === 'string' && typeof g.hash === 'string' &&
           V.bam(g.data) === g.hash && (() => { try { const x = JSON.parse(g.data); return !!x && typeof x === 'object' && !Array.isArray(x); } catch (e) { return false; } })();
-        if (!tot) lsBoQua++;
-        return tot;
-      });
+        const dungLo = tot && (!rieng || V.kiemGoi({hash: g.hash}, g.data, String(g.forest_id)).ok);
+        if (!dungLo) lsBoQua++;
+        return dungLo;
+      }).map(g => rieng ? {...g} : g);
       incoming = Object.assign({}, incoming); delete incoming.goiLichSu;
     }
     // hồ sơ đã chốt trong file phải toàn vẹn (gói, dấu vân tay, dữ liệu) với MỌI cách xử lý, kể cả thay toàn bộ: lỗi thì dừng trước khi sao lưu hay ghi
     const hong = []; Object.values(incoming.rs || {}).forEach(o => Object.values((o && o.forests) || {}).forEach(f => { const e = LoRung.loiToanVen(f); if (e) hong.push(e); }));
     if (hong.length) throw Object.assign(new Error(hong.slice(0, 3).map(e => e.moTa).join(' | ') + (hong.length > 3 ? ' (và ' + (hong.length - 3) + ' lô khác)' : '') + ' Dữ liệu trên máy chưa bị thay đổi.'), {code: 'GOI_HONG', lots: hong.map(e => e.toanVen)});
     const cur = this.load();
-    let next, nhan = null;   // nhan: ID lô trong file → ID lô đích, chỉ các lô THỰC SỰ lấy từ file (để chép lịch sử bản chụp đúng lô)
+    let next, dich, nhan = null;   // nhan: ID lô trong file → ID lô đích, chỉ các lô THỰC SỰ lấy từ file (để chép lịch sử bản chụp đúng lô)
     if (strategy === 'replace') {
       next = structuredClone(incoming);
       if (!('congTy' in next)) next.congTy = cur.congTy || {}; // bản sao lưu cũ chưa có danh mục công ty
@@ -593,10 +626,42 @@ class Store {
       if (!['skip', 'overwrite', 'both'].includes(strategy)) throw new Error('Cách xử lý không hợp lệ: ' + strategy);
       const mg = LoRung.mergeImport(cur, incoming, strategy, null, opts || {});     // ném lỗi nếu có hồ sơ mâu thuẫn, trước khi sao lưu hay ghi
       next = mg.next; nhan = new Map();
-      mg.plan.owners.forEach(en => en.forests.forEach(f => {
-        if (!en.existingId || f.state === 'moi') nhan.set(String(f.id), String(f.id));                  // chủ mới hoặc lô mới: giữ ID
-        else if (strategy === 'overwrite' && f.state === 'trung') nhan.set(String(f.id), String(f.existing));   // ghi đè: lô trên máy nhận nội dung (và lịch sử) của lô trong file
-      }));                                                                                            // giữ bản hiện có / giữ cả hai (lô nhân bản đổi mã): không chép lịch sử
+      for (const en of mg.plan.owners) {
+        const ownerId = en.existingId || en.id;
+        const forestIds = [];
+        for (const f of en.forests) {
+          const fid = !en.existingId || f.state === 'moi' ? f.id : strategy === 'overwrite' ? f.existing : null;
+          if (!fid) continue;
+          nhan.set(String(f.id), String(fid));
+          forestIds.push(fid);
+          if (!rieng || String(fid) === String(f.id)) continue;
+
+          // Giữ gói gốc trong tệp sao lưu. Bản nhập được xác nhận với ID lô đích và nhật ký tương ứng.
+          const forest = next.rs[ownerId].forests[fid];
+          const rebind = data => {
+            const goi = JSON.parse(data);
+            goi.id = fid;
+            return JSON.stringify(goi);
+          };
+          const hashes = new Map();
+          for (const g of lsFile || []) {
+            if (String(g.forest_id) !== String(f.id)) continue;
+            const old = g.hash;
+            g.data = rebind(g.data);
+            g.hash = V.bam(g.data);
+            hashes.set(old, g.hash);
+          }
+          if (forest.chot?.goi) {
+            const before = forest.chot.hash, goi = rebind(forest.chot.goi);
+            forest.chot = {...forest.chot, goi, hash: V.bam(goi), hashDL: V.bamDuLieu(goi)};
+            hashes.set(before, forest.chot.hash);
+          }
+          for (const entry of forest.nhatKy || []) {
+            if (hashes.has(entry.hash)) entry.hash = hashes.get(entry.hash);
+          }
+        }
+        if (rieng) dich = {ownerId, forestIds};
+      }
       // Danh mục công ty mua hàng: gộp theo id (skip: giữ bản trên máy; overwrite/both: bản trong file thay bản trùng id; công ty mới luôn được thêm)
       next.congTy = {...(cur.congTy || {})};
       const overwriteCongTy = strategy === 'overwrite' && !(opts && opts.preserveExistingCongTy);
@@ -643,11 +708,11 @@ class Store {
     let goiLichSu = opts && opts.goiLichSu;
     if (!goiLichSu && lsFile) goiLichSu = lsFile.filter(g => !nhan || nhan.has(String(g.forest_id))).map(g => Object.assign({}, g, {forest_id: nhan ? nhan.get(String(g.forest_id)) : String(g.forest_id)}));
     if (strategy !== 'replace' && (!goiLichSu || !goiLichSu.length) && JSON.stringify(next) === JSON.stringify(cur)) {
-      return {backup: null, counts: Store.counts(cur), goiCu: 0, goiBoQua: lsBoQua};
+      return {backup: null, counts: Store.counts(cur), goiCu: 0, goiBoQua: lsBoQua, ...(rieng && {dich})};
     }
     const backup = this.snapshotFile('truoc-khoi-phuc', {keep: 20});   // giữ 20 bản gần nhất (như truoc-xoa): mỗi bản là cả cơ sở dữ liệu, không để thư mục sao lưu lớn mãi
     const kq = this.save(next, {allowBulkDelete: strategy === 'replace', boQuaKhoa: strategy === 'replace', preserveMissingOwners: strategy !== 'replace', goiLichSu});   // khôi phục THAY TOÀN BỘ là thao tác chủ động; overwrite chỉ thay lô trùng nên vẫn bị khóa chỉ đọc chặn
-    return {backup, counts: Store.counts(this.load()), goiCu: kq.goiCu || 0, goiBoQua: lsBoQua};
+    return {backup, counts: Store.counts(this.load()), goiCu: kq.goiCu || 0, goiBoQua: lsBoQua, ...(rieng && {dich})};
   }
 
   /* phiếu #11: MỌI bản chụp chốt (mọi lô, mọi phiên bản) để ghi vào bản .json sao lưu toàn bộ, cùng dạng KhoSaoLuu.docBanSqlite trả cho bản .sqlite */
@@ -693,8 +758,21 @@ class Store {
     return o;
   }
 
+  xoaLoRung(ownerId, forestId) {
+    const row = this.db.prepare('SELECT owner_id FROM forests WHERE id=?').get(forestId);
+    if (!row) return {rev: this.rev};
+    if (row.owner_id !== ownerId) throw new Error('Lô đã chuyển sang chủ rừng khác. Hãy mở lại lô trước khi xóa.');
+    this._kiemKhoa([], [forestId], []);
+    this._saoLuuTruocXoa();
+    this.db.transaction(() => {
+      this.db.prepare('DELETE FROM forests WHERE id=? AND owner_id=?').run(forestId, ownerId);
+      if (this._coBangGoi()) this.db.prepare('DELETE FROM chot_goi WHERE forest_id=?').run(forestId);
+    })();
+    return {rev: this._bump()};
+  }
+
   xoaChuRong(id) {
-    this.snapshotFile('truoc-xoa', {keep: 20});
+    if (this.db.prepare('SELECT 1 FROM owners WHERE id=?').get(id) && !this._chuRong(id)) this._saoLuuTruocXoa();
     this.db.transaction(() => {
       this.db.prepare('DELETE FROM forests WHERE owner_id=?').run(id);
       this.db.prepare('DELETE FROM owners WHERE id=?').run(id);
@@ -707,7 +785,7 @@ class Store {
 
   donDepChuRong(ids) {
     if (!Array.isArray(ids) || !ids.length) return {rev: this.rev, deleted: 0};
-    this.snapshotFile('truoc-xoa', {keep: 20});
+    this._saoLuuTruocXoa();
     let deleted = 0;
     this.db.transaction(() => {
       const delF = this.db.prepare('DELETE FROM forests WHERE owner_id=?');

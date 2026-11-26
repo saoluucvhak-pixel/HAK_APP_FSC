@@ -58,7 +58,7 @@ Luồng thống nhất cho ba cách nhập (thêm tay, nạp Excel, đưa từ T
 5. **Lưu dữ liệu vào lô**: kiểm tra lại lô đích, quan hệ xe–phiếu và lỗi dữ liệu rồi ghi một lần vào SQLite. Còn lỗi thì không ghi và nêu từng lỗi; lưu thất bại thì dữ liệu đã lưu và bản nháp đều giữ nguyên để thử lại. Phiếu trùng số với lô khác cần xác nhận đối chiếu. Chưa khai đơn giá vị trí không chặn lưu nhưng vẫn chặn xuất hồ sơ.
 6. **Tạo, xuất, in hồ sơ** chỉ dùng dữ liệu đã lưu: còn bản nháp thì mọi nút tải, xuất, in (kể cả Tải toàn bộ, in đợt 2, in phiếu cân) bị khóa, nêu lý do và có nút quay lại mục đang chỉnh. Sau khi lưu, số chuyến, tổng tấn, tiền công và cước được tính lại từ dữ liệu đã lưu.
 7. **Ctrl+S** lưu lô đang mở (như bấm “Lưu dữ liệu vào lô”); ô đang gõ được ghi nhận trước khi lưu. **Ctrl+K** mở tìm kiếm.
-8. **Chuyển lô, đổi chủ rừng, đóng ứng dụng** khi còn bản nháp: hỏi **Lưu và tiếp tục**, **Bỏ thay đổi** hoặc **Quay lại chỉnh sửa**. Sao lưu lô rừng chỉ gồm dữ liệu đã lưu (có nhắc nếu còn bản nháp). Mọi bước hoạt động khi không có mạng.
+8. **Chuyển lô, đổi chủ rừng, đóng ứng dụng** khi còn bản nháp: hỏi **Lưu và tiếp tục**, **Bỏ thay đổi** hoặc **Quay lại chỉnh sửa**. Khi chuyển lô, có thể chọn **Giữ bản nháp và tiếp tục** để làm việc ở lô khác. Sao lưu lô rừng chỉ gồm dữ liệu đã lưu (có nhắc nếu còn bản nháp). Mọi bước hoạt động khi không có mạng.
 
 **Gộp dữ liệu khi nạp Excel hoặc Google Sheets vào bản nháp** (cùng một quy tắc cho hai nguồn, áp dụng cho nhân công, xe, phiếu cân):
 - **Ô nguồn trống hoặc cột vắng mặt thì giữ giá trị đang có**, không bao giờ xóa trường qua nhập file. Muốn xóa một trường được phép để trống, bấm **Sửa** và xóa trong hộp thoại rồi lưu.
@@ -291,7 +291,9 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 - **Khôi phục…** từ bản `.sqlite`: màn xem trước so số liệu đang có trên máy với số liệu trong bản sao lưu → **Thay toàn bộ bằng bản này**. Phần mềm sao lưu dữ liệu hiện tại trước khi ghi (bản “Trước khi khôi phục”, cũng nằm trong kho nên **hoàn tác được** bằng cách khôi phục lại từ bản đó), kiểm tra hồ sơ đã chốt còn toàn vẹn, rồi ghi trong một giao dịch. Bản sao lưu của phiên bản phần mềm cũ được nâng cấp trên một bản chép tạm; file sao lưu gốc không bị sửa. Bản chụp của các lần chốt trước có trong bản sao lưu được khôi phục theo. Bản tra cứu Google Sheets của máy giữ nguyên. Bản `.json` mở màn xem trước của **Khôi phục toàn bộ** (chọn giữ / ghi đè / giữ cả hai / thay toàn bộ).
 - **Xóa**: xóa một bản sao lưu để giải phóng ổ đĩa (có hỏi lại; không hoàn tác được). Các bản “Trước khi khôi phục”, “Trước khi khôi phục lô”, “Trước khi xóa” tự giữ 20 bản gần nhất mỗi loại.
 
-**Sao lưu toàn bộ**: **Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (.json)** → chọn thư mục → tạo 2 file cùng tên `.json` và `.sqlite`.
+**Sao lưu toàn bộ** tạo và kiểm tra từng tệp `.json` và `.sqlite` trong các thư mục đã chọn ở **Cài đặt → Sao lưu và khôi phục → Thư mục và lịch**. Nếu một tệp gặp lỗi, phần mềm vẫn thử tạo tệp còn lại và báo tệp nào dùng được. Kiểm tra kết nối ổ, quyền ghi và dung lượng, hoặc đổi thư mục của định dạng bị lỗi rồi thử sao lưu lại.
+
+Khi lưu bản nháp đã nhận dữ liệu theo hợp đồng Google Sheets, phần mềm tạo bản dự phòng trước khi ghi lô đó. Nếu sao lưu lỗi, bản nháp được giữ lại. Bấm **Chọn thư mục sao lưu SQLite…** ngay trong thông báo, rồi bấm **Thử lưu lại**. Bạn có thể giữ bản nháp này và tiếp tục nhập, lưu lô khác. Khi bấm **Lưu và đóng**, phần mềm vẫn lưu các lô xử lý được và giữ cửa sổ mở nếu còn lô gặp lỗi.
 
 **Khôi phục toàn bộ**: **Cài đặt → Sao lưu và khôi phục → Khôi phục toàn bộ dữ liệu (.json)** (cũng dùng để nhập bản sao lưu từ bản HTML cũ). Màn hình xem trước cho biết số liệu trong file và trên máy, và với từng chủ/lô: **THÊM** (chưa có), **TRÙNG** (đã có), **GIỮ** (có trên máy, không có trong file). Chọn cách xử lý:
 - **Giữ bản trên máy, chỉ thêm mới**.

@@ -9,67 +9,64 @@ const kslNgay = iso => { const d = new Date(iso), n = Math.round((new Date(new D
 /* dữ liệu vừa bị THAY từ nơi khác (khôi phục toàn bộ, khôi phục lô, khôi phục từ kho): bản nháp và dấu “chưa lưu” cũ không còn đích; bản đã lưu = đúng dữ liệu vừa nạp.
  * Không làm bước này thì một lô đang “chưa lưu” sẽ bị ghi lại bằng bản TRƯỚC khi khôi phục ở lần lưu kế tiếp (dbGhi dùng savedSnap cũ). */
 function dbThayToanBo(moi) {
-  db = withDefaults(moi); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear();   // saveCache giữ nguyên: phiên bản (rev) đã cũ nên lần lưu kế bị từ chối STALE và tự lưu toàn bộ
+  db = withDefaults(moi); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); loCanSaoLuuSheets.clear();   // saveCache giữ nguyên: phiên bản (rev) đã cũ nên lần lưu kế bị từ chối STALE và tự lưu toàn bộ
   try { savedSnap = HAKDelta.snapshot(db); } catch (e) { savedSnap = null; }
   doiDuLieu();
 }
 
-/* Khôi phục RIÊNG một lô hoặc một chủ rừng từ bản sao lưu:
- * CHỈ xóa bản nháp của lô/chủ rừng được khôi phục.
- * BẢO TOÀN NGUYÊN VẸN 100% bản nháp của các lô khác và các chủ rừng khác trong stages, loDirty, loMoi, chuNhap. */
-function dbCapNhatKhoiPhucRieng({oid, fid, dbMoi, rev}) {
-  if (!dbMoi || !dbMoi.rs) return;
-  if (fid) {
-    // Chỉ xóa bản nháp của đúng lô này
-    delete stages[stKeyOf(oid, fid)];
+/* SQLite trả ID đích đã dùng khi ghi. Chỉ bỏ bản nháp của các lô thực sự nhận dữ liệu. */
+function dbCapNhatKhoiPhucRieng({dich, dbMoi, dbCu, rev}) {
+  const {ownerId, forestIds} = dich;
+  const ownerMoi = dbMoi.rs[ownerId];
+  const owner = db.rs[ownerId] || (db.rs[ownerId] = {...ownerMoi, forests: {}});
+  owner.forests ||= {};
+  for (const fid of forestIds) {
+    const key = stKeyOf(ownerId, fid);
+    delete stages[key];
+    if (loSaveIssue?.key === key) loSaveIssue = null;
     loDirty.delete(fid);
     loMoi.delete(fid);
-    if (!db.rs[oid]) {
-      db.rs[oid] = JSON.parse(JSON.stringify(dbMoi.rs[oid]));
-    } else {
-      if (!db.rs[oid].forests) db.rs[oid].forests = {};
-      db.rs[oid].forests[fid] = JSON.parse(JSON.stringify(dbMoi.rs[oid].forests[fid]));
-    }
-  } else if (oid) {
-    // Chỉ xóa bản nháp của các lô thuộc chủ rừng này
-    Object.keys(stages).filter(k => k.startsWith(oid + '|')).forEach(k => delete stages[k]);
-    if (db.rs[oid] && db.rs[oid].forests) {
-      Object.keys(db.rs[oid].forests).forEach(f => { loDirty.delete(f); loMoi.delete(f); });
-    }
-    chuNhap.delete(oid);
-    db.rs[oid] = JSON.parse(JSON.stringify(dbMoi.rs[oid]));
+    loCanSaoLuuSheets.delete(fid);
+    owner.forests[fid] = ownerMoi.forests[fid];
   }
-  // Giữ nguyên các lô khác đang có bản nháp trong memory, nhưng cập nhật các lô sạch khác từ dbMoi (nếu có)
-  Object.entries(dbMoi.rs).forEach(([oId, oData]) => {
-    if (oId === oid) return;
-    if (!db.rs[oId]) {
-      db.rs[oId] = JSON.parse(JSON.stringify(oData));
-    } else {
-      Object.entries(oData.forests || {}).forEach(([fId, fData]) => {
-        const k = stKeyOf(oId, fId);
-        // Nếu lô khác đang có bản nháp hoặc đang dirty: TUYỆT ĐỐI KHÔNG GHI ĐÈ
-        if (stages[k] || loDirty.has(fId)) return;
-        if (!db.rs[oId].forests) db.rs[oId].forests = {};
-        db.rs[oId].forests[fId] = JSON.parse(JSON.stringify(fData));
-      });
-    }
-  });
-  // Bổ sung công ty mới (nếu có) mà không đè công ty hiện có
-  if (dbMoi.congTy && typeof dbMoi.congTy === 'object') {
-    db.congTy = db.congTy || {};
-    Object.entries(dbMoi.congTy).forEach(([id, c]) => {
-      if (!(id in db.congTy)) db.congTy[id] = c;
+
+  const chu = chuNhap.get(ownerId);
+  if (chu && !Object.keys(owner.forests).some(fid => loDirty.has(fid))) {
+    const {forests: _lo, ...infoDaLuu} = ownerMoi;
+    Object.keys(owner).filter(k => k !== 'forests').forEach(k => delete owner[k]);
+    Object.assign(owner, infoDaLuu);
+    chuNhap.delete(ownerId);
+  } else if (chu?.moi) chu.moi = false;
+  forestIds.forEach(aliasHoan);
+
+  // Cập nhật các mục danh mục thực sự đổi trên SQLite. Giữ chỉnh sửa khác đang chờ ghi.
+  const json = JSON.stringify;
+  const congTy = db.congTy || (db.congTy = {});
+  for (const [id, c] of Object.entries(dbMoi.congTy || {})) {
+    if (!Object.hasOwn(congTy, id) && !Object.hasOwn(dbCu.congTy || {}, id)) congTy[id] = c;
+  }
+  for (const key of ['dmDoiTuong', 'dmXe', 'dmViTri']) {
+    const cu = new Map((dbCu[key] || []).map(row => [row.id, json(row)]));
+    const moi = new Map((dbMoi[key] || []).filter(row => cu.get(row.id) !== json(row)).map(row => [row.id, row]));
+    if (!moi.size) continue;
+    const local = (db[key] || []).map(row => {
+      const next = moi.get(row.id);
+      if (!next) return row;
+      moi.delete(row.id);
+      return json(row) === cu.get(row.id) ? next : row;
     });
+    db[key] = local.concat([...moi.values()].filter(row => !cu.has(row.id)));
   }
-  // Cập nhật snapshot của dữ liệu đã lưu trên đĩa (savedSnap)
-  try {
-    const snapMoi = HAKDelta.snapshot(dbMoi);
-    savedSnap = snapMoi;
-    if (rev) saveCache = {rev, snap: snapMoi};
-  } catch (e) {
-    savedSnap = null;
+  const doiChieu = new Set((dbCu.canDoiChieu || []).map(row => json(row)));
+  for (const row of dbMoi.canDoiChieu || []) {
+    const key = json(row);
+    if (!doiChieu.has(key)) (db.canDoiChieu ||= []).push(row);
+    doiChieu.add(key);
   }
+  savedSnap = HAKDelta.snapshot(dbMoi);
+  saveCache = {rev, snap: savedSnap};
   doiDuLieu();
+  nhapTamGhi();
 }
 /* 3.0 + phiếu #13b (quyết định 7): bốn thao tác ở đầu màn (Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô) */
 function backupConfirmSaved() {
@@ -78,6 +75,7 @@ function backupConfirmSaved() {
   if (dList.length) {
     return confirm('Đang có ' + dList.length + ' lô còn bản nháp chưa bấm "Lưu dữ liệu vào lô".\n\nBản sao lưu toàn bộ sẽ chỉ gồm dữ liệu đã lưu vào máy (chưa gồm các bản nháp này).\n\n• Bấm OK: Vẫn sao lưu ngay các dữ liệu đã lưu.\n• Bấm Hủy: Quay lại để bấm "Lưu dữ liệu vào lô" trước khi sao lưu.');
   }
+  if (saveTimer) return confirm('Đang có thay đổi chờ ghi. Bấm OK để sao lưu phần đã lưu vào máy hoặc bấm Hủy và đợi ghi xong.');
   if (!storeOk) {
     return confirm('Cơ sở dữ liệu đang có lỗi ghi nhận gần nhất. Dữ liệu đã lưu an toàn trước đó vẫn có thể sao lưu.\n\n• Bấm OK: Sao lưu các dữ liệu an toàn đã lưu.\n• Bấm Hủy: Kiểm tra lại lỗi lưu trước.');
   }
@@ -93,7 +91,13 @@ const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 
 function panelKhoSaoLuu() {
   if (!HB) return kslNut() + '<div class="card"><div class="msg warn">Kho sao lưu (các bản .sqlite tự động) chỉ có ở bản cài trên Windows.</div></div>';
   const m = ksl.msg || setg.msg;
-  const msgHtml = m ? '<div class="msg ' + m[1] + '" id="kslMsg"><span id="setMsg">' + esc(m[0]) + '</span></div>' : '';
+  const loi = ksl.loiToanBo;
+  const actions = loi && m && m === ksl.msg && m[1] !== 'ok' ? '<div class="row" style="margin-top:8px;gap:8px">' +
+    (loi.sqlite ? '<button class="btn sm" data-act="setBackup">Đổi thư mục SQLite…</button>' : '') +
+    (loi.json ? '<button class="btn sm" data-act="setBackupJson">Đổi thư mục JSON…</button>' : '') +
+    (loi.copy2 ? '<button class="btn sm" data-act="setBackup2">Đổi thư mục thứ hai…</button>' : '') +
+    '<button class="btn ghost sm" data-act="backup">Thử sao lưu lại</button></div>' : '';
+  const msgHtml = m ? '<div class="msg ' + m[1] + '" id="kslMsg"><span id="setMsg">' + esc(m[0]) + '</span>' + actions + '</div>' : '';
   if (!SB_TABS.some(t => t[0] === ksl.tab)) ksl.tab = 'thaotac';
   const pane = (k, inner) => '<section data-sbpane="' + k + '" id="sbPane_' + k + '"' + (ksl.tab === k ? '' : ' hidden') + '>' + inner + '</section>';   // ẩn bằng hidden: phần tử vẫn có trong trang, chữ gõ dở không mất khi đổi tab
   return msgHtml + '<nav class="hak-catalog-tabs sub" id="sbTabs" aria-label="Sao lưu và khôi phục">' + SB_TABS.map(([k, l]) => '<button type="button" data-sbtab="' + k + '" id="sbTab_' + k + '"' + (ksl.tab === k ? ' aria-current="page"' : '') + '>' + l + '</button>').join('') + '</nav>' +
@@ -108,7 +112,7 @@ function kslPaint() {
   const tuDong = !au.keep || ck === 'tat' ? '<span class="pill warn">đang tắt</span>' : au.last ? '<b>' + esc(kslNgay(au.last.day + 'T12:00:00')) + '</b> (' + esc(au.last.day.split('-').reverse().join('/')) + ', ' + kslMB(au.last.size) + ') · giữ ' + au.keep + ' bản gần nhất' : 'chưa có bản nào';
   const toanBo = rm.lastBackup ? '<b>' + esc(kslNgay(rm.lastBackup)) + '</b> (' + esc(fmtDT(rm.lastBackup)) + ')' + (rm.due ? ' <span class="pill warn">đã đến hạn nhắc</span>' : '') : '<b>chưa có</b>' + (rm.due ? ' <span class="pill warn">nên sao lưu</span>' : '');
   const r = au.result, last = au.last;
-  const stTxt = !au.keep || ck === 'tat' ? 'Đang tắt.' : r && !r.ok ? '<span class="warnTxt">Lần chạy gần nhất không được: ' + esc(r.error || '') + '</span>' : r && r.skipped && r.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : '';
+  const stTxt = !au.keep || ck === 'tat' ? 'Đang tắt.' : r && !r.ok ? '<span class="warnTxt">Lần chạy gần nhất không được: ' + esc(r.error || '') + '. Chọn thư mục SQLite có quyền ghi và đủ chỗ rồi bấm “Sao lưu ngay”.</span>' : r && r.skipped && r.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : '';
   const sqlCard = '<div class="card" style="margin:10px 0" id="autoBk"><h3 style="margin:0 0 4px">Thư mục và tự sao lưu SQLite (Tự sao lưu hằng ngày / định kỳ)</h3>' +
     '<p class="mut" style="margin:0 0 8px">Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu định kỳ và bản .sqlite khi bấm Sao lưu toàn bộ. Khi đóng phần mềm (và định kỳ khi để máy mở), bản hiện hành được làm mới nếu dữ liệu đã đổi.</p>' +
     '<div style="word-break:break-all"><b>Đang dùng:</b> <code data-set-path>' + esc(st.backupDir || '') + '</code> <span class="pill ' + (st.customBackup ? 'ok' : '') + '">' + (st.customBackup ? 'thư mục riêng' : 'mặc định') + '</span></div>' +
@@ -120,7 +124,7 @@ function kslPaint() {
     '<button class="btn ghost sm" data-act="kslAuto">Sao lưu ngay</button>' +
     '<span class="mut" data-auto-last>' + (last ? 'Bản gần nhất: ' + esc(last.day.split('-').reverse().join('/')) + ' (' + sz(last.size) + ') · đang có ' + au.count + ' bản' : 'Chưa có bản tự sao lưu nào') + '</span>' + (stTxt ? ' <span class="mut">' + stTxt + '</span>' : '') + '</div>' +
     '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#ddd)" id="dbBk2"><h4 style="margin:0 0 4px">Thư mục sao lưu thứ hai</h4><p class="mut" style="margin:0 0 6px">Mỗi bản tự sao lưu SQLite được chép thêm sang đây (ổ ngoài, USB, thư mục đồng bộ) để phòng hỏng cả máy. Ổ không cắm thì bỏ qua, bản chính vẫn còn.</p>' +
-    (au.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(au.dir2) + '</code></div>' + ((au.result && au.result.copy2 && !au.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' + esc(au.result.copy2.error) + '</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
+    (au.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(au.dir2) + '</code></div>' + ((au.result && au.result.copy2 && !au.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' + esc(au.result.copy2.error) + '. Kết nối lại ổ hoặc chọn thư mục thứ hai khác rồi bấm “Sao lưu ngay”.</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
     '<div class="row" style="margin-top:6px;gap:8px"><button class="btn sm" data-act="setBackup2">Chọn thư mục…</button>' + (au.dir2 ? '<button class="btn ghost sm" data-act="setBackup2Off">Tắt</button>' : '') + '</div>' +
     ((ksl.targets && ksl.targets.length) ? ('<div style="margin-top:8px"><small class="mut">Gợi ý kết nối nhanh thư mục Cloud / Ổ đĩa ngoài:</small><div class="row" style="gap:6px;margin-top:4px">' + ksl.targets.map(t => '<button type="button" class="btn ghost sm" data-act="setBk2Quick" data-path="' + esc(t.path) + '" title="Gán ' + esc(t.path) + ' làm thư mục sao lưu thứ hai">' + (t.type === 'cloud' ? '☁️ ' : '💾 ') + esc(t.name) + '</button>').join('') + '</div></div>') : '') +
     '</div></div>';
@@ -172,7 +176,7 @@ async function backupSaveAs(fromSaveHelp) {
   try {
     const r = await HB.backupSaveAs();
     if (!r || r.canceled) return;
-    ksl.msg = r.ok ? ['Đã lưu bản sao lưu toàn bộ ra tệp: ' + r.file, 'ok'] : ['Không lưu được bản sao lưu: ' + (r.error || 'lỗi không rõ'), 'err'];
+    ksl.msg = r.ok ? ['Đã lưu bản sao lưu toàn bộ ra tệp: ' + r.file, 'ok'] : ['Không lưu được bản sao lưu: ' + (r.error || 'lỗi không rõ') + '. Mở Thư mục và lịch, chọn thư mục SQLite có quyền ghi và đủ chỗ rồi thử lại.', 'err'];
     if (fromSaveHelp) pushNote(...ksl.msg);
     render();
   } finally { ksl.busy = false; }
@@ -207,8 +211,16 @@ async function kslKiem(el) {
 }
 async function kslAuto() {
   if (ksl.busy) return; ksl.busy = true;
-  try { const r = await HB.saoLuu.autoNow(); ksl.msg = r.ok ? [r.auto && r.auto.skipped ? (r.auto.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : 'Bản tự sao lưu của hôm nay đã chứa dữ liệu mới nhất.') : 'Đã tự sao lưu và kiểm tra: ' + ((r.auto && r.auto.file) || ''),
-  'ok'] : ['Tự sao lưu không được: ' + (r.error || 'lỗi không rõ'), 'err']; }
+  try {
+    const r = await HB.saoLuu.autoNow();
+    const au = r.auto;
+    if (!r.ok) ksl.msg = ['Tự sao lưu không được. ' + (r.error || '') + ' Mở Thư mục và lịch, chọn thư mục SQLite có quyền ghi và đủ chỗ rồi thử lại.', 'err'];
+    else if (au?.copy2?.ok === false) ksl.msg = ['Bản tự sao lưu chính vẫn dùng được. Chép sang thư mục thứ hai gặp lỗi. ' +
+      au.copy2.error + ' Kết nối lại ổ hoặc chọn thư mục thứ hai khác rồi bấm “Sao lưu ngay”.', 'warn'];
+    else if (au?.reason === 'off') ksl.msg = ['Tự sao lưu đang tắt. Chọn chu kỳ trong Thư mục và lịch để bật lại.', 'warn'];
+    else if (au?.reason === 'empty') ksl.msg = ['Chưa có hồ sơ để tự sao lưu.', 'warn'];
+    else ksl.msg = [au?.skipped ? 'Bản tự sao lưu hiện tại đã chứa dữ liệu mới nhất.' : 'Đã tự sao lưu và kiểm tra. ' + (au?.file || ''), 'ok'];
+  }
   finally { ksl.busy = false; }
   render();
 }
@@ -323,84 +335,92 @@ async function kslChiTiet(el) {
 }
 
 async function kslDoRestoreOwner(oid, name) {
-  const d = window.__kslDetail; if (!d || ksl.busy) return;
-  if (!confirm('Khôi phục riêng chủ rừng "' + (name || oid) + '" (kèm các lô của chủ này)?\n\nCác chủ rừng và lô khác đang có trên máy sẽ được BẢO TOÀN NGUYÊN VẸN 100%.\nPhần mềm sẽ tự động sao lưu trước khi ghi.')) return;
-  ksl.busy = true;
-  try {
-    const r = await HB.saoLuu.restoreOwner(d.file, oid, 'overwrite');
-    if (!r || !r.ok) return note('Không khôi phục được chủ rừng: ' + (r?.error || 'lỗi không rõ'), 'err');
-    dbCapNhatKhoiPhucRieng({oid, dbMoi: r.db, rev: r.rev});
-    note('Đã khôi phục thành công chủ rừng "' + (name || oid) + '" vào máy. Bản sao lưu trước khi ghi: ' + r.backup, 'ok');
-    $('#impBox').classList.remove('on');
-    render();
-  } catch (e) {
-    note('Lỗi: ' + e.message, 'err');
-  } finally {
-    ksl.busy = false;
-  }
+  if (!confirm('Khôi phục các lô của chủ rừng “' + (name || oid) + '”? Ứng dụng sẽ sao lưu SQLite trước khi ghi. Bản nháp của các lô được khôi phục sẽ được thay thế.')) return;
+  return kslKhoiPhucRieng(file => HB.saoLuu.restoreOwner(file, oid, 'overwrite'), 'chủ rừng “' + (name || oid) + '”');
 }
 
 async function kslDoRestoreForest(oid, fid, maRung) {
-  const d = window.__kslDetail; if (!d || ksl.busy) return;
-  if (!confirm('Khôi phục riêng lô rừng "' + (maRung || fid) + '" vào máy?\n\nCác lô khác và chủ rừng khác đang có trên máy sẽ được BẢO TOÀN NGUYÊN VẸN 100%.\nPhần mềm sẽ tự động sao lưu trước khi ghi.')) return;
+  if (!confirm('Khôi phục lô “' + (maRung || fid) + '”? Ứng dụng sẽ sao lưu SQLite trước khi ghi. Bản nháp của lô này sẽ được thay thế.')) return;
+  return kslKhoiPhucRieng(file => HB.saoLuu.restoreForest(file, oid, fid, 'overwrite'), 'lô “' + (maRung || fid) + '”');
+}
+
+async function kslKhoiPhucRieng(restore, nhan) {
+  const d = window.__kslDetail;
+  if (!d || ksl.busy || stSaving) return;
   ksl.busy = true;
   try {
-    const r = await HB.saoLuu.restoreForest(d.file, oid, fid, 'overwrite');
-    if (!r || !r.ok) return note('Không khôi phục được lô rừng: ' + (r?.error || 'lỗi không rõ'), 'err');
-    dbCapNhatKhoiPhucRieng({oid, fid, dbMoi: r.db, rev: r.rev});
-    note('Đã khôi phục thành công lô rừng "' + (maRung || fid) + '" vào máy. Bản sao lưu trước khi ghi: ' + r.backup, 'ok');
+    const r = await storeSave(async () => {
+      const cu = HB.loadSync();
+      if (!cu?.ok) return cu;
+      const ketQua = await restore(d.file);
+      if (ketQua?.ok && (ketQua.dich.forestIds.length || !db.rs[ketQua.dich.ownerId])) {
+        dbCapNhatKhoiPhucRieng({dich: ketQua.dich, dbMoi: ketQua.db, dbCu: cu.db, rev: ketQua.rev});
+      }
+      return ketQua;
+    });
+    if (!r?.ok) return note('Không khôi phục được ' + nhan + '. ' + (r?.error || 'Hãy thử lại.'), 'err');
     $('#impBox').classList.remove('on');
-    render();
+    const boQua = r.goiBoQua ? ' Đã bỏ qua ' + r.goiBoQua + ' bản chụp chốt không hợp lệ.' : '';
+    note('Đã khôi phục ' + nhan + '.' + (r.backup ? ' Bản sao trước khi ghi nằm tại ' + r.backup + '.' : '') + boQua, boQua ? 'warn' : 'ok');
   } catch (e) {
-    note('Lỗi: ' + e.message, 'err');
+    note('Lỗi khi khôi phục ' + nhan + '. ' + e.message, 'err');
   } finally {
     ksl.busy = false;
   }
 }
 
 async function quickBackup() {
-  if (!HB || !HB.backupTo || ksl.busy) return;
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-    const rSave = await storeSave();
-    if (rSave && !rSave.ok) {
-      pushNote('Không thể sao lưu nhanh: Lần lưu dữ liệu gần nhất bị lỗi (' + (rSave.error || 'không rõ') + '). Dữ liệu vừa nhập chưa được ghi an toàn.', 'err');
-      showSave('Lỗi lưu — chưa sao lưu', true);
-      render();
-      return;
-    }
-  }
-  if (!storeOk) {
-    pushNote('Không thể sao lưu nhanh: Cơ sở dữ liệu đang có lỗi lưu (' + (saveSt.text || 'lỗi ghi đĩa') + '). Vui lòng bấm "Thử lưu lại" hoặc kiểm tra lỗi trước khi sao lưu.', 'err');
-    render();
-    return;
-  }
-  if (!backupConfirmSaved()) return;
-  showSave('… Đang sao lưu toàn bộ');
+  if (!HB || !HB.backupTo || ksl.busy || backupBusy) return;
   ksl.busy = true;
   try {
-    const r = await HB.backupTo();
-    if (!r) return;
-    if (r.ok) {
-      const dirtyCount = typeof stDirtyList === 'function' ? stDirtyList().length : 0;
-      const msg = (dirtyCount
-        ? 'Đã sao lưu bản đã ghi lúc ' + hhmm() + ' (lưu ý: còn ' + dirtyCount + ' lô chưa lưu bản nháp)'
-        : 'Đã sao lưu toàn bộ dữ liệu lúc ' + hhmm()) +
-        (r.copy2 && r.copy2.ok && !r.copy2.skipped ? ' (kèm bản sao dự phòng sang ' + (r.copy2.dir || 'ổ thứ hai') + ')' : '') + '.';
-      pushNote(msg, 'ok');
-      showSave((dirtyCount ? 'Đã sao lưu bản đã ghi lúc ' : 'Đã sao lưu lúc ') + hhmm(), false);
-      if (typeof bkChipFill === 'function') bkChipFill();
-      if (!dirtyCount) {
-        window.__hakWorkDone = 0;
-        updateBkPulse(false);
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      const rSave = await storeSave().catch(e => ({ok: false, error: e.message}));
+      storeOk = !!rSave?.ok;
+      if (!storeOk) {
+        pushNote('Chưa sao lưu nhanh vì lần ghi dữ liệu đang chờ gặp lỗi. ' +
+          (rSave?.error || '') + ' Thử lưu lại trước khi sao lưu.', 'err');
+        showSave('Lỗi lưu · chưa sao lưu', true);
+        return;
       }
-    } else {
-      pushNote('Không sao lưu được: ' + (r.error || r.message || 'lỗi không rõ'), 'err');
-      showSave('Lỗi sao lưu', true);
+    } else await saveChain;
+    if (!storeOk) {
+      pushNote('Chưa sao lưu nhanh vì lần ghi dữ liệu gần nhất gặp lỗi. ' +
+        (saveSt.text || '') + ' Thử lưu lại trước khi sao lưu.', 'err');
+      return;
+    }
+    if (!backupConfirmSaved()) return;
+    showSave('… Đang sao lưu toàn bộ');
+    const r = await HB.backupTo();
+    if (!r || r.canceled) return;
+    const copyIssue = r.copy2 && !r.copy2.skipped && !r.copy2.ok;
+    const partial = r.json?.ok || r.sqlite?.ok;
+    if (!r.ok || copyIssue) {
+      const msg = (r.message || r.error || 'Sao lưu thất bại.') +
+        (!r.ok && copyIssue ? ' Chép sang thư mục thứ hai cũng chưa hoàn tất. ' + r.copy2.error : '') +
+        (copyIssue ? ' Kết nối lại ổ hoặc đổi thư mục thứ hai rồi thử lại.' : '');
+      const kind = r.ok || partial ? 'warn' : 'err';
+      ksl.loiToanBo = {json: !r.json?.ok, sqlite: !r.sqlite?.ok, copy2: copyIssue};
+      ksl.msg = [msg, kind];
+      pushNote(msg, kind);
+      showSave('Sao lưu chưa đầy đủ · xem thông báo', true);
+      return;
+    }
+    const dirtyCount = stDirtyList().length;
+    const status = (dirtyCount ? 'Đã sao lưu phần đã ghi lúc ' : 'Đã sao lưu lúc ') + hhmm();
+    pushNote(status + (dirtyCount ? '. Còn ' + dirtyCount + ' lô chưa lưu bản nháp.' : '.'), 'ok');
+    showSave(status, false);
+    ksl.loiToanBo = null;
+    ksl.msg = [r.message || status, 'ok'];
+    if (typeof bkChipFill === 'function') bkChipFill();
+    if (!dirtyCount) {
+      window.__hakWorkDone = 0;
+      updateBkPulse(false);
     }
   } catch (e) {
-    pushNote('Lỗi sao lưu: ' + e.message, 'err');
+    pushNote('Lỗi sao lưu. ' + e.message + ' Kiểm tra thư mục sao lưu rồi thử lại.', 'err');
+    showSave('Lỗi sao lưu', true);
   } finally {
     ksl.busy = false;
     render();

@@ -39,6 +39,7 @@ function loSaveHelpHtml() {
   if (!issue) return '';
   return esc(issue.text) + (issue.bulk
     ? ' <button type="button" class="btn sm" data-act="cancelBulkDel">Hủy lệnh xóa cũ &amp; Lưu lô ngay</button> <button type="button" class="btn sm ghost" data-act="openSetDon">Dọn dẹp hồ sơ</button> <button type="button" class="btn sm ghost" data-act="saveHelpBulk">Xem hồ sơ bị chặn</button>'
+    : issue.backup ? ' <button type="button" class="btn sm" data-act="saveHelpBackupDir">Chọn thư mục sao lưu SQLite…</button> <button type="button" class="btn sm ghost" data-act="stRetrySave">Thử lưu lại</button>'
     : issue.field ? ' <button type="button" class="btn sm" data-act="saveHelpField">Mở ' + esc(issue.field.label) + '</button>' : ' <button type="button" class="btn sm" data-act="stRetrySave">Thử lưu lại</button>');
 }
 function openLoSaveField() {
@@ -65,9 +66,13 @@ function loBar() { const t = stBlockText(); return t ? '<div class="msg warn" id
 /* lưu phần thông tin lô (khi không có bảng nháp) */
 async function luuLoTT(opt) {
   const f = curForest(); if (!f) return {ok: false};
+  const backupIssue = await saoLuuTruocKhiLuuLo(f.id);
+  if (backupIssue) return backupIssue;
+  if (curForest() !== f) return {ok: false, error: 'Lô đã đổi trong lúc chuẩn bị lưu. Mở lại lô rồi thử lại.'};
   const sNhap = nhapChup(), o0 = curOwner(); if (o0) chuChot(o0.id);
   const had = loDirty.delete(f.id), r = await persistNow();
   if (!r || !r.ok) { if (had) loDirty.add(f.id); nhapKhoiPhuc(sNhap); render(); return r || {ok: false}; }
+  loCanSaoLuuSheets.delete(f.id);
   if (had && !(opt && opt.tuKhung)) pushNote('Đã lưu dữ liệu vào lô ' + ((f.info || {}).maRung || '') + '.', 'ok');
   nhapTamGhi(); render(); return {ok: true};
 }

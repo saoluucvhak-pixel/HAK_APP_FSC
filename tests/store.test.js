@@ -48,6 +48,46 @@ test('chỉ ghi dòng đã đổi; xóa rừng thì xóa dòng', () => {
   delete d.rs.r1; s.save(d); assert.strictEqual(s.isEmpty(), true);
 });
 
+test('lỗi sao lưu trước khi xóa lô không chặn lần lưu lô khác', () => {
+  const dir = tmp(), backupDir = path.join(dir, 'backups');
+  const s = new Store(path.join(dir, 'a.sqlite'), {backupDir});
+  try {
+    s.save(sample());
+    fs.writeFileSync(backupDir, '');
+    assert.throws(() => s.xoaLoRung('r1', 'f1'), {code: 'BACKUP_DELETE'});
+    const next = s.load();
+    next.rs.r1.forests.f2.info.tenRung = 'Lô vẫn lưu được';
+    s.save(next, {preserveMissingOwners: true});
+    assert.equal(s.load().rs.r1.forests.f2.info.tenRung, 'Lô vẫn lưu được');
+    assert.ok(s.load().rs.r1.forests.f1);
+    fs.unlinkSync(backupDir);
+    s.xoaLoRung('r1', 'f1');
+    assert.equal(s.load().rs.r1.forests.f1, undefined);
+    assert.match(fs.readdirSync(backupDir)[0], /^truoc-xoa-/);
+  } finally { s.close(); }
+});
+
+test('lưu toàn bộ qua giao diện giữ lô lỗi cũ và ghi được lô đã sửa', () => {
+  const s = new Store(':memory:');
+  try {
+    s.save(sample());
+    const f = s.load().rs.r1.forests.f1;
+    f.doi.push({...f.doi[0]});
+    const data = JSON.stringify(f);
+    const hash = require('crypto').createHash('sha256').update(data).digest('hex');
+    s.db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?').run(data, hash, f.id);
+
+    const next = s.load();
+    next.rs.r1.forests.f2.info.tenRung = 'Lô sửa';
+    s.save(next, {preserveMissingOwners: true});
+    assert.equal(s.load().rs.r1.forests.f2.info.tenRung, 'Lô sửa');
+    assert.equal(s.db.prepare('SELECT data FROM forests WHERE id=?').get(f.id).data, data);
+
+    next.rs.r1.forests.f1.info.tenRung = 'Sửa lô đang lỗi';
+    assert.throws(() => s.save(next, {preserveMissingOwners: true}), {code: 'QUAN_HE'});
+  } finally { s.close(); }
+});
+
 test('lỗi giữa chừng thì giao dịch hoàn tác, dữ liệu cũ còn nguyên', () => {
   const s = new Store(':memory:'); const d = sample(); s.save(d);
   const bad = sample(); bad.rs.r1.info.ten = 'ĐỔI'; bad.rs.r9 = {id: 'r9', info: {}, forests: {f9: {id: 'f9', info: {}, circular: null}}};

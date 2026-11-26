@@ -19,6 +19,11 @@ async function lkApply() {
   if (errs.length) { lk.msg = {kind: 'err', text: 'Chưa lưu: ' + errs.join('; ')}; return lkRender(); }
   const T = lkTarget(), at = new Date().toISOString(), set = lk.st && lk.st.active ? lk.st.active.loadedAt : '';
   if (lk.mode === 'fill' && T.gone) { lk.msg = {kind: 'err', text: 'Chưa ghi: lô đích không còn tồn tại (đã xóa hoặc dữ liệu vừa được khôi phục). Hồ sơ giữ nguyên.'}; return lkRender(); }
+  if (T.f && loCanSaoLuuSheets.has(T.f.id)) {
+    const issue = await saoLuuTruocKhiLuuLo(T.f.id);
+    if (issue) { lk.msg = {kind: 'err', text: issue.error}; return lkRender(); }
+    if (lkTarget().f !== T.f) { lk.msg = {kind: 'warn', text: 'Lô đích đã đổi. Hãy kiểm tra lại trước khi ghi.'}; return lkRender(); }
+  }
   const mark = (obj, key, src) => { obj.src = obj.src || {}; obj.src[key] = {...src, at, set}; };
   const snapshot = JSON.stringify(db), sNhap = nhapChup(), coNhap = !!(loDirty.size || loMoi.size || chuNhap.size || aliasNhap.size); const lkNewStages = []; let lkRep = null;
   try {
@@ -52,7 +57,7 @@ async function lkApply() {
     if (s.ref && (c.owner.ref.length || F.ref.length)) f.ref = {at, set, hd: c.hd, cccd: c.cccd, fields: c.owner.ref.concat(F.ref)};
     chuChot(o.id); const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
     const r = await persistNow();
-    if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } nhapTamGhi();
+    if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } loCanSaoLuuSheets.delete(f.id); nhapTamGhi();
     const veHd = NAV.curF === f.id && NAV.ftab === 'dx' && hdMo('dx');   // 3.0: tra cứu từ hợp đồng vận chuyển: lưu xong ở lại đúng hợp đồng
     NAV.cur = o.id; NAV.curF = f.id; NAV.tab = 'rung'; NAV.ftab = veHd ? 'dx' : 'finfo'; NAV.view = 'owner';
     lkClose(); lk.view = 'search';
@@ -68,16 +73,17 @@ async function lkApply() {
     lk.msg = {kind: 'err', text: 'Không lưu, hồ sơ giữ nguyên: ' + e.message}; lkRender();
   }
 }
-/* PR D bước 2: sau khi áp dữ liệu từ Google Sheets (gsApply), lần lưu ĐẦU TIÊN xuống đĩa sao lưu file hiện tại trước (truoc-cap-nhat-sheets-…): sai thì khôi phục được */
-let sheetsCanSaoLuu = false;
+/* Chỉ lô nhận thay đổi từ Google Sheets cần bản sao dự phòng trước khi ghi. */
+async function saoLuuTruocKhiLuuLo(fid) {
+  if (!HB || !loCanSaoLuuSheets.has(fid)) return null;
+  const r = await HB.saoLuu.truocSheets().catch(e => ({ok: false, error: e.message}));
+  if (r?.ok) return null;
+  return {ok: false, code: 'BACKUP_SHEETS', error: 'Không sao lưu được trước khi lưu dữ liệu từ Google Sheets. ' +
+    (r?.error || '') + ' Bản nháp còn nguyên. Chọn thư mục sao lưu SQLite có quyền ghi và đủ chỗ, rồi bấm “Thử lưu lại”.'};
+}
 async function persistNow() {
   doiDuLieu();
   if (!HB) { persist(); return {ok: storeOk}; }
-  if (sheetsCanSaoLuu && window.hak && window.hak.saoLuu && window.hak.saoLuu.truocSheets) {
-    const b = await window.hak.saoLuu.truocSheets().catch(e => ({ok: false, error: String(e && e.message || e)}));
-    if (!b || b.ok === false) { showSave('Chưa lưu: không sao lưu được trước khi lưu dữ liệu từ Google Sheets', true); return {ok: false, error: 'Không sao lưu được trước khi lưu dữ liệu từ Google Sheets nên chưa ghi: ' + ((b && b.error) || 'không rõ') + '. Bản nháp còn nguyên, thử lại sau.'}; }
-    sheetsCanSaoLuu = false;
-  }
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   showSave('… Đang lưu');
   const r = await storeSave();

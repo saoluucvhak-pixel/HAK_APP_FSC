@@ -189,13 +189,14 @@ function khoiPhucChuRong(store, file, ownerId, strategy = 'overwrite', supported
   const incoming = {
     v: 2,
     rs: {[ownerId]: srcO},
+    goiLichSu: b.goi.filter(g => g && Object.hasOwn(srcO.forests || {}, String(g.forest_id))),
     congTy: incomingCongTy,
     ...(b.data.dmDoiTuong != null && {dmDoiTuong: b.data.dmDoiTuong}),
     ...(b.data.dmXe != null && {dmXe: b.data.dmXe}),
     ...(b.data.dmViTri != null && {dmViTri: b.data.dmViTri})
   };
-  const r = store.applyImport(incoming, strategy, {goiLichSu: b.goi, preserveMissingOwners: true, preserveExistingCongTy: true});
-  return {backup: r.backup, counts: r.counts, goiCu: r.goiCu, ten: srcO.info?.ten || ownerId};
+  const r = store.applyImport(incoming, strategy, {khoiPhucRieng: true, preserveExistingCongTy: true});
+  return {...r, ten: srcO.info?.ten || ownerId};
 }
 
 /* Khôi phục trích xuất RIÊNG MỘT lô rừng từ bản sao lưu (không ảnh hưởng lô khác) */
@@ -219,13 +220,14 @@ function khoiPhucLoRungTuBanSao(store, file, ownerId, forestId, strategy = 'over
         forests: {[forestId]: srcF}
       }
     },
+    goiLichSu: b.goi.filter(g => g && String(g.forest_id) === String(forestId)),
     congTy: incomingCongTy,
     ...(b.data.dmDoiTuong != null && {dmDoiTuong: b.data.dmDoiTuong}),
     ...(b.data.dmXe != null && {dmXe: b.data.dmXe}),
     ...(b.data.dmViTri != null && {dmViTri: b.data.dmViTri})
   };
-  const r = store.applyImport(incoming, strategy, {goiLichSu: b.goi, preserveMissingOwners: true, preserveExistingCongTy: true});
-  return {backup: r.backup, counts: r.counts, goiCu: r.goiCu, maRung: srcF.info?.maRung || forestId};
+  const r = store.applyImport(incoming, strategy, {khoiPhucRieng: true, preserveExistingCongTy: true});
+  return {...r, maRung: srcF.info?.maRung || forestId};
 }
 
 module.exports = {

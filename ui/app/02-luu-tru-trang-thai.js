@@ -66,6 +66,7 @@ let saveCache = null, saveChain = Promise.resolve();
 /* MỘT CÁCH LƯU CHO LÔ (như chứng từ ERP): mọi thay đổi trong lô (thông tin, đội, đội xe, số văn bản, chấm công, gán phiếu cân…) vào BẢN NHÁP của lô;
  * nút “Lưu dữ liệu vào lô” (và nút Lưu của từng khung) lưu cả lô cùng các bảng nháp nhân công / xe / phiếu cân; “Bỏ thay đổi” về bản đã lưu.
  * Lưu danh mục, cài đặt, thông tin chủ rừng vẫn ghi ngay nhưng KHÔNG kéo theo thay đổi chưa lưu của lô (lô đó ghi theo bản đã lưu). */
+const loCanSaoLuuSheets = new Set();   // id lô có bản nháp nhập từ Google Sheets cần sao lưu trước khi ghi
 const loDirty = new Set();   // id lô còn thay đổi chưa lưu ngoài các bảng nháp
 let savedSnap = null;        // ảnh chụp đúng nội dung đã ghi thành công gần nhất (bản đã lưu của từng lô)
 let nhapKhung = null;   // đang áp dụng một khung vào bản nháp: chỉ đánh dấu “Chưa lưu” khi dữ liệu của lô THỰC SỰ đổi (sự kiện change có thể chạy khi ô không đổi gì)
@@ -114,11 +115,12 @@ function aliasHoan(fid) { doiDuLieu(); HAKNhap.aliasHoan(db, nhapTT(), fid); }
 function loHoan(fid) { return loDirty.has(fid) ? loVeBanDaLuu(fid) || true : false; }
 function loVeBanDaLuu(fid) {
   doiDuLieu();   // phiên bản dữ liệu tăng ở mọi đường đổi dữ liệu (tests/datacver.test.js quét mã)
+  loCanSaoLuuSheets.delete(fid);
   const tt = nhapTT(), ok = HAKNhap.veBanDaLuu(db, tt, fid);
   if (tt.canGhi) persist();   // ánh xạ biển số vừa được chốt (đã có lô liên quan được lưu): phải xuống đĩa, không để chỉ nằm trong bộ nhớ
   return ok;
 }
-CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow(), chup: () => (window.__nhapChup = nhapChup()), khoiPhuc: () => nhapKhoiPhuc(window.__nhapChup), themMoi: id => loMoi.add(id), boMoi: id => loMoi.delete(id), datSaoLuuSheets: v => { sheetsCanSaoLuu = !!v; }};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
+CONG_KT.nhapTest = {db: () => db, stages: () => stages, loDirty: () => [...loDirty], loMoi: () => [...loMoi], chuNhap: () => [...chuNhap.keys()], aliasNhap: () => [...aliasNhap.keys()], persistNow: () => persistNow(), chup: () => (window.__nhapChup = nhapChup()), khoiPhuc: () => nhapKhoiPhuc(window.__nhapChup), themMoi: id => loMoi.add(id), boMoi: id => loMoi.delete(id), datSaoLuuSheets: v => { if (v) loCanSaoLuuSheets.add(NAV.curF); else loCanSaoLuuSheets.delete(NAV.curF); }};   // chỉ cho kiểm thử đầu-cuối: đọc bản nháp trong bộ nhớ
 CONG_KT.locNganh = {benNhanKhoan: () => benNhanKhoanHtml({}), benVanChuyen: () => doiTacKyVC(), taiXe: () => chonTaiXeHtml(''), nhanCong: () => dmNguonLd()};   // chỉ cho kiểm thử đầu-cuối: các danh sách chọn đã lọc theo ngành (gọi muộn, lúc kiểm thử)
 CONG_KT.saveStats = {delta: 0, full: 0, fallback: 0, last: ''};   // kiểm thử đầu-cuối đọc để biết đường lưu đã dùng
 /* lô nào chưa có đội hoặc có dòng nhân công thiếu doiId (lô mới, dòng mới) thì chuẩn hóa ngay trong bộ nhớ, đúng như tiến trình chính sẽ lưu */
@@ -184,7 +186,7 @@ async function saveOnce() {
   if (r && r.ok && !snap.dup) { savedSnap = snap; nhapChotSo(); }
   return r;
 }
-function storeSave() { const p = saveChain.then(saveOnce, saveOnce); saveChain = p.catch(() => {}); return p; }
+function storeSave(write = saveOnce) { const p = saveChain.then(write, write); saveChain = p.catch(() => {}); return p; }
 /* F3: sau khi tầng lưu từ chối sửa lô chốt / dừng (LOCKED) thì lô được trả về bản đã lưu và có thể phải lưu lại ngay (ánh xạ biển số vừa chốt); lần lưu thành công kế tiếp trong vài giây
  * KHÔNG được xóa mất dòng cảnh báo “Lô chỉ đọc” ở thanh trạng thái: giữ cảnh báo kèm giờ lưu */
 let khoaNhacDen = 0; const KHOA_NHAC_MS = 8000;
@@ -196,7 +198,7 @@ function flushSave() {
     else if (r && r.code === 'LOCKED') { storeOk = true; khoaNhacDen = Date.now() + KHOA_NHAC_MS; showSave('Lô chỉ đọc: không ghi thay đổi', true); pushNote(r.error, 'err'); render(); }
     else { storeOk = false; showSave(r?.code === 'BULK_DELETE'
       ? 'Chưa lưu · xem hướng dẫn xử lý'
-      : 'Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
+      : 'Lỗi lưu: ' + ((r && r.error) || 'không rõ'), true); render(); }
   }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });
 }
 function persist() {

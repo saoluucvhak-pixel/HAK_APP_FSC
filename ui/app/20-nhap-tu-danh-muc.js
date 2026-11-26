@@ -149,10 +149,12 @@ function nhapTamGhi() {
     const {lots, moi, chu, alias} = HAKNhap.tamChup(db, nhapTT(), ks), sts = {};   // lõi thuần src/nhap.js (test mô hình)
     ks.forEach(k => { const [oid, fid] = k.split('|'), f = db.rs && db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid]; if (!f) return; if (stages[k] && HAKStage.dirty(stages[k])) sts[k] = nhapTamStageGon(stages[k]); });
     if (!Object.keys(lots).length && !Object.keys(sts).length) { if (nhapTamLastJson) { nhapTamLastJson = ''; nhapTamXoa(); } return; }
-    const body = JSON.stringify({lots, stages: sts, chu, moi, alias});
+    const sheets = ks.map(k => k.split('|')[1]).filter(fid => loCanSaoLuuSheets.has(fid));
+    const snapshot = {lots, stages: sts, chu, moi, alias, sheets};
+    const body = JSON.stringify(snapshot);
     if (body === nhapTamLastJson) return;   // Lô 9b (T-21): không stringify/ghi lại khi bản nháp không đổi
     nhapTamLastJson = body;
-    localStorage.setItem(NHAP_TAM_KEY, JSON.stringify({at: new Date().toISOString(), lots, stages: sts, chu, moi, alias}));
+    localStorage.setItem(NHAP_TAM_KEY, JSON.stringify({at: new Date().toISOString(), ...snapshot}));
   } catch (e) {
     if (!nhapTamLoiDaBao && typeof note === 'function') { nhapTamLoiDaBao = true; note('Không tự lưu tạm được bản nháp trên trình duyệt (đầy bộ nhớ tạm): hãy bấm “Lưu dữ liệu vào lô” để ghi trực tiếp vào cơ sở dữ liệu.', 'warn'); }
   }
@@ -175,6 +177,8 @@ function nhapTamKhoiPhuc() {
   lots.forEach(([k, f]) => HAKNhap.tamPhucHoiLo(db, nhapTT(), k, f, chu[k.split('|')[0]], moiSet));
   { const tt = nhapTT(); HAKNhap.tamPhucHoiAlias(db, tt, d.alias); if (tt.canGhi) persist(); }
   sts.forEach(([k, st]) => { stages[k] = st; });
+  const sheets = new Set(d.sheets || []);
+  [...lots, ...sts].forEach(([k]) => { const fid = k.split('|')[1]; if (sheets.has(fid)) loCanSaoLuuSheets.add(fid); });
   note('Đã khôi phục thay đổi chưa lưu của lô ' + [...ma].join(', ') + ' vào bản nháp. Kiểm tra rồi bấm “Lưu dữ liệu vào lô”.', 'warn');
   render();
 }

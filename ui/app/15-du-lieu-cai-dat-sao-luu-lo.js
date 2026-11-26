@@ -126,9 +126,10 @@ async function settingsBackup2(reset) {
   setg.msg = ksl.msg = r.ok ? [reset ? 'Đã tắt thư mục sao lưu thứ hai.' : 'Đã chọn thư mục sao lưu thứ hai: mỗi bản tự sao lưu hằng ngày được chép thêm sang đó.', 'ok'] : ['Không đổi được thư mục sao lưu thứ hai: ' + r.error, 'err'];
   setg.s = r.ok ? r.settings : setg.s; render();
 }
-async function settingsBackup(reset) {
+async function settingsBackup(reset, fromSaveHelp) {
   const r = await HB.settings.setBackup(reset);
   if (r.canceled) return;
+  if (fromSaveHelp) return note(r.ok ? 'Đã đổi thư mục sao lưu SQLite. Bấm “Thử lưu lại” để ghi lô.' : 'Không đổi được thư mục sao lưu SQLite. ' + r.error, r.ok ? 'ok' : 'err');
   setg.msg = ksl.msg = r.ok ? ['Đã ' + (reset ? 'về thư mục sao lưu mặc định' : 'đổi thư mục sao lưu') + ': ' + r.settings.backupDir, 'ok'] : ['Không đổi được thư mục sao lưu: ' + r.error, 'err'];
   setg.s = r.ok ? r.settings : setg.s; render();
 }
@@ -215,7 +216,7 @@ async function restoreAll(file) {
     const o2 = k.v1 ? migrateV1(o) : Object.assign({}, o, {v: 2});
     if (HB) return importWithPreview(withDefaults(o2));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
-    db = withDefaults(o2); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
+    db = withDefaults(o2); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); loCanSaoLuuSheets.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
     note('Đã khôi phục ' + Object.keys(db.rs).length + ' hồ sơ chủ rừng.');
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
 }

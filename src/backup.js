@@ -37,14 +37,14 @@ function uniqueBase(dir, base, exts, io) {
 }
 
 /* Ghi text vào file qua tên tạm: ghi, đọc lại so sánh, (verify tùy chọn), đổi tên. Lỗi thì xóa file tạm và ném lỗi tiếng Việt. */
-function writeFileVerified(file, text, io, verify) {
+function writeFileVerified(file, text, io, verify, replace = false) {
   const tmp = file + '.tmp-' + process.pid;
   try {
     io.writeFileSync(tmp, text);
     const back = io.readFileSync(tmp, 'utf8');
     if (back.length !== text.length || sha(back) !== sha(text)) throw new Error('nội dung ghi ra không khớp bản gốc');
     if (verify) verify(back);
-    if (io.existsSync(file)) throw new Error('file đã tồn tại (không ghi đè)');
+    if (!replace && io.existsSync(file)) throw new Error('file đã tồn tại (không ghi đè)');
     io.renameSync(tmp, file);
     return file;
   } catch (e) {
@@ -79,29 +79,37 @@ function chepSangOThuHai(dir2, parts, io) {
 async function backupAll(o) {
   const io = o.io || fs, hooks = o.hooks || {}, now = (o.now || (() => new Date()))();
   const res = {ok: false, json: {ok: false, file: '', error: ''}, sqlite: {ok: false, file: '', error: ''}, message: ''};
-  const fail = (m) => { res.message = m; return res; };
-  /* phiếu #13a: .sqlite ghi vào o.outDir (thư mục sao lưu SQLite), .json vào o.outDirJson (thư mục sao lưu JSON; trống = cùng thư mục) */
-  let outDir, outDirJson;
-  try { outDir = Settings.checkFolder(o.outDir); } catch (e) { return fail('Thư mục sao lưu SQLite không dùng được: ' + e.message); }
-  try { outDirJson = o.outDirJson ? Settings.checkFolder(o.outDirJson) : outDir; } catch (e) { return fail('Thư mục sao lưu JSON không dùng được: ' + e.message); }
-  const text = JSON.stringify(o.data, null, 2), cung = path.resolve(outDir) === path.resolve(outDirJson);
+  const folder = (dir, label) => {
+    try {
+      if (o.createDirs) fs.mkdirSync(dir, {recursive: true});
+      return Settings.checkFolder(dir);
+    } catch (e) {
+      throw new Error('Thư mục sao lưu ' + label + ' không dùng được. ' + Settings.describeError(e, dir));
+    }
+  };
+  const base = 'HoSoKhaiThac_SaoLuu_' + stampOf(now);
+  let jsonFile = '', sqlFile = '';
+  // Mỗi định dạng kiểm tra thư mục, dung lượng và dữ liệu nguồn riêng.
   try {
-    if (cung) Settings.checkFree(outDir, Buffer.byteLength(text) + (o.dbBytes || 0), hooks.freeBytes, 'Ổ chứa bản sao lưu');
-    else { Settings.checkFree(outDir, o.dbBytes || 0, hooks.freeBytes, 'Ổ chứa bản sao lưu SQLite'); Settings.checkFree(outDirJson, Buffer.byteLength(text), hooks.freeBytes, 'Ổ chứa bản sao lưu JSON'); }
-  } catch (e) { return fail(e.message + ' Chưa ghi file nào; mốc sao lưu gần nhất được giữ nguyên.'); }
-  let base = 'HoSoKhaiThac_SaoLuu_' + stampOf(now);
-  for (let n = 0; n < 1000; n++) { const b = base + (n ? '_' + (n + 1) : ''); if (!io.existsSync(path.join(outDir, b + '.sqlite')) && !io.existsSync(path.join(outDirJson, b + '.json'))) { base = b; break; } if (n === 999) throw new Error('Không tạo được tên file sao lưu duy nhất'); }
-  const jsonFile = path.join(outDirJson, base + '.json'), sqlFile = path.join(outDir, base + '.sqlite');
-  // 1. JSON
-  try {
+    const dir = folder(o.outDirJson || o.outDir, 'JSON');
+    const data = typeof o.data === 'function' ? o.data() : o.data;
+    const text = JSON.stringify(data, null, 2);
+    Settings.checkFree(dir, Buffer.byteLength(text), hooks.freeBytes, 'Ổ chứa bản sao lưu JSON');
+    jsonFile = path.join(dir, uniqueBase(dir, base, ['.json', '.sqlite'], io) + '.json');
     if (hooks.beforeJson) hooks.beforeJson();
     writeFileVerified(jsonFile, text, io, t => { const j = JSON.parse(t); if (!j || typeof j !== 'object' || !j.rs) throw new Error('JSON sao lưu thiếu dữ liệu hồ sơ');
-      if (Array.isArray(o.data.goiLichSu) && (!Array.isArray(j.goiLichSu) || j.goiLichSu.length !== o.data.goiLichSu.length)) throw new Error('JSON sao lưu thiếu bản chụp chốt'); });   // phiếu #11
+      if (Array.isArray(data.goiLichSu) && (!Array.isArray(j.goiLichSu) || j.goiLichSu.length !== data.goiLichSu.length)) throw new Error('JSON sao lưu thiếu bản chụp chốt'); });   // phiếu #11
     res.json = {ok: true, file: jsonFile, error: ''};
-  } catch (e) { res.json = {ok: false, file: jsonFile, error: e.described ? e.message : Settings.describeError(e, jsonFile)}; }
+  } catch (e) { res.json = {ok: false, file: jsonFile, error: e.described ? e.message : Settings.describeError(e, jsonFile || o.outDirJson || o.outDir)}; }
   // 2. SQLite
-  const sqlTmp = sqlFile + '.tmp-' + process.pid;
+  let sqlTmp = '';
   try {
+    const dir = folder(o.outDir, 'SQLite');
+    const dbBytes = typeof o.dbBytes === 'function' ? o.dbBytes() : o.dbBytes;
+    Settings.checkFree(dir, dbBytes || 0, hooks.freeBytes, 'Ổ chứa bản sao lưu SQLite');
+    const stem = jsonFile ? path.basename(jsonFile, '.json') : base;
+    sqlFile = path.join(dir, uniqueBase(dir, stem, ['.sqlite'], io) + '.sqlite');
+    sqlTmp = sqlFile + '.tmp-' + process.pid;
     if (hooks.beforeSqlite) hooks.beforeSqlite();
     const fp = DM.fingerprint(o.db);
     await o.db.backup(sqlTmp);
@@ -120,13 +128,12 @@ async function backupAll(o) {
       try {
         const KSL = require('./khosaoluu'), snap = KSL.docBanSqlite(sqlFile);
         const snapData = Object.assign({}, snap.data, snap.goi && snap.goi.length ? {goiLichSu: snap.goi} : {});
-        try { io.unlinkSync(jsonFile); } catch (_) {}
-        writeFileVerified(jsonFile, JSON.stringify(snapData, null, 2), io);
+        writeFileVerified(jsonFile, JSON.stringify(snapData, null, 2), io, undefined, true);
       } catch (_) { /* giữ nguyên bản JSON đã ghi */ }
     }
   } catch (e) {
-    for (const x of ['', '-wal', '-shm', '-journal']) { try { io.unlinkSync(sqlTmp + x); } catch (er) { /* không có */ } }
-    res.sqlite = {ok: false, file: sqlFile, error: Settings.describeError(e, sqlFile)};
+    if (sqlTmp) for (const x of ['', '-wal', '-shm', '-journal']) { try { io.unlinkSync(sqlTmp + x); } catch (er) { /* không có */ } }
+    res.sqlite = {ok: false, file: sqlFile, error: Settings.describeError(e, sqlFile || o.outDir)};
   }
   res.ok = res.json.ok && res.sqlite.ok;
   /* BK-01: có thư mục sao lưu thứ hai (USB/ổ ngoài) thì chép các file đã qua kiểm tra sang đó. Lỗi ổ thứ hai KHÔNG làm hỏng kết quả chính, chỉ báo riêng. */
@@ -135,7 +142,7 @@ async function backupAll(o) {
   else {
     const usable = [res.json.ok ? 'JSON (' + jsonFile + ')' : '', res.sqlite.ok ? 'SQLite (' + sqlFile + ')' : ''].filter(Boolean);
     res.message = 'Sao lưu KHÔNG đầy đủ. ' + (res.json.ok ? '' : 'Lỗi file JSON: ' + res.json.error + '. ') + (res.sqlite.ok ? '' : 'Lỗi file SQLite: ' + res.sqlite.error + '. ') +
-      (usable.length ? 'File dùng được: ' + usable.join('; ') + '. ' : 'Không có file nào dùng được. ') + 'Mốc “sao lưu toàn bộ gần nhất” được giữ nguyên; hãy sao lưu lại.';
+      (usable.length ? 'File dùng được: ' + usable.join('; ') + '. ' : 'Không có file nào dùng được. ') + 'Kiểm tra kết nối ổ, quyền ghi và dung lượng của thư mục bị lỗi, hoặc chọn thư mục khác rồi sao lưu lại.';
   }
   return res;
 }
