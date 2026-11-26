@@ -84,6 +84,44 @@ test('Granular Restore: docChiTiet, khoiPhucChuRong, khoiPhucLoRungTuBanSao', as
     assert.strictEqual(check3.rs.o2.forests.f2.info.tenRung, 'Rừng 2', 'f2 was restored to original');
     assert.ok(check3.rs.o1, 'o1 is still there');
 
+    // TEST REGRESSION BUG 2: CongTy protection during granular restore
+    // Set up live company with updated name
+    const liveWithCty = store.load();
+    liveWithCty.congTy = {
+      cty1: {id: 'cty1', ten: 'Công ty Hiện Hành Của Lô B', diaChi: 'Hà Nội'}
+    };
+    liveWithCty.rs.o2.forests.f2.info.muaHang = {congTyId: 'cty1'};
+    store.save(liveWithCty);
+
+    // Create an old backup using a separate DB that has cty1 with an old name and ctyNewForA
+    const dbFile2 = path.join(tmpDir, 'backup-source.sqlite');
+    const store2 = new Store(dbFile2, {backupDir: bkDir});
+    const oldBackupData = JSON.parse(JSON.stringify(liveWithCty));
+    oldBackupData.congTy.cty1.ten = 'Tên Cũ Bị Lỗi';
+    oldBackupData.congTy.ctyNewForA = {id: 'ctyNewForA', ten: 'Công ty Mới Của Lô A'};
+    oldBackupData.rs.o1.forests.f1.info.muaHang = {congTyId: 'ctyNewForA'};
+    store2.save(oldBackupData);
+    
+    const resOldBackup = await Backup.backupAll({
+      db: store2.db,
+      data: store2.load({kemGoi: true}),
+      outDir: bkDir,
+      outDirJson: bkDir,
+      dbBytes: 100000
+    });
+    assert.strictEqual(resOldBackup.ok, true);
+    store2.close();
+
+    // Restore ONLY lot f1 of o1
+    KhoSaoLuu.khoiPhucLoRungTuBanSao(store, resOldBackup.sqlite.file, 'o1', 'f1');
+
+    const checkCty = store.load();
+    // 1. cty1 MUST NOT be overwritten with 'Tên Cũ Bị Lỗi'
+    assert.strictEqual(checkCty.congTy.cty1.ten, 'Công ty Hiện Hành Của Lô B', 'Existing company must NOT be overwritten by granular restore!');
+    // 2. ctyNewForA (used by lot f1) was missing, so it should be added
+    assert.ok(checkCty.congTy.ctyNewForA, 'Missing company needed by restored lot must be added');
+    assert.strictEqual(checkCty.congTy.ctyNewForA.ten, 'Công ty Mới Của Lô A');
+
     store.close();
   } finally {
     try { fs.rmSync(tmpDir, {recursive: true, force: true, maxRetries: 10, retryDelay: 100}); } catch (_) {}

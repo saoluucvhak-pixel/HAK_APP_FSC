@@ -599,7 +599,8 @@ class Store {
       }));                                                                                            // giữ bản hiện có / giữ cả hai (lô nhân bản đổi mã): không chép lịch sử
       // Danh mục công ty mua hàng: gộp theo id (skip: giữ bản trên máy; overwrite/both: bản trong file thay bản trùng id; công ty mới luôn được thêm)
       next.congTy = {...(cur.congTy || {})};
-      Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || strategy === 'overwrite') next.congTy[id] = c; });
+      const overwriteCongTy = strategy === 'overwrite' && !(opts && opts.preserveExistingCongTy);
+      Object.entries(incoming.congTy || {}).forEach(([id, c]) => { if (!(id in next.congTy) || overwriteCongTy) next.congTy[id] = c; });
       Object.keys(incoming).forEach(k => { if (k !== 'rs' && k !== 'v' && k !== 'congTy' && !(k in next)) next[k] = incoming[k]; });
       /* Lô 3b (T-05): nối danh mục của tệp với danh mục máy đích theo CCCD / MST / BKS / tên vị trí rồi đổi ID trong các lô lấy từ tệp,
        * kể cả khi tệp đã qua chuyenDoi (LK.daChuyen(incoming) === true). Không để ID nội bộ ng1, xe1, vt1 của máy khác trỏ nhầm sang người/xe/vị trí của máy đích. */

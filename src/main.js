@@ -543,14 +543,14 @@ function registerIpc() {
     const r = KhoSaoLuu.khoiPhucChuRong(store, it.file, ownerId, strategy || 'overwrite', SCHEMA_VERSION);
     log('INFO', 'Khôi phục chủ rừng ' + r.ten + ' từ bản sao lưu ' + it.name);
     checkModel('khoiphuc-chu');
-    return {...r, name: it.name, db: store.load()};
+    return {...r, name: it.name, db: store.load(), rev: store.rev};
   })()));
   handle('bk:restoreForest', afterReloc((e, f, ownerId, forestId, strategy) => wrap(() => {
     const it = bkFile(f);
     const r = KhoSaoLuu.khoiPhucLoRungTuBanSao(store, it.file, ownerId, forestId, strategy || 'overwrite', SCHEMA_VERSION);
     log('INFO', 'Khôi phục lô rừng ' + r.maRung + ' từ bản sao lưu ' + it.name);
     checkModel('khoiphuc-lo');
-    return {...r, name: it.name, db: store.load()};
+    return {...r, name: it.name, db: store.load(), rev: store.rev};
   })()));
   /* PR D bước 2: tái dùng snapshotFile (như truoc-xoa); không tham số; giữ 10 bản gần nhất; lỗi → renderer KHÔNG lưu */
   handle('bk:truocSheets', () => wrap(() => { const f = store.snapshotFile('truoc-cap-nhat-sheets', {keep: 10}); return {file: f ? path.basename(f) : ''}; })());

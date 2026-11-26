@@ -179,15 +179,22 @@ function khoiPhucChuRong(store, file, ownerId, strategy = 'overwrite', supported
   const b = docDuLieuBanSao(file, supportedVersion);
   const srcO = b.data.rs && b.data.rs[ownerId];
   if (!srcO) throw Object.assign(new Error('Không tìm thấy chủ rừng "' + ownerId + '" trong bản sao lưu.'), {code: 'KHONG_CO'});
+  const usedCtyIds = new Set(Object.values(srcO.forests || {}).map(f => f.info?.muaHang?.congTyId).filter(Boolean));
+  const incomingCongTy = {};
+  if (b.data.congTy) {
+    usedCtyIds.forEach(id => {
+      if (b.data.congTy[id]) incomingCongTy[id] = b.data.congTy[id];
+    });
+  }
   const incoming = {
     v: 2,
     rs: {[ownerId]: srcO},
-    congTy: b.data.congTy || {},
+    congTy: incomingCongTy,
     ...(b.data.dmDoiTuong != null && {dmDoiTuong: b.data.dmDoiTuong}),
     ...(b.data.dmXe != null && {dmXe: b.data.dmXe}),
     ...(b.data.dmViTri != null && {dmViTri: b.data.dmViTri})
   };
-  const r = store.applyImport(incoming, strategy, {goiLichSu: b.goi, preserveMissingOwners: true});
+  const r = store.applyImport(incoming, strategy, {goiLichSu: b.goi, preserveMissingOwners: true, preserveExistingCongTy: true});
   return {backup: r.backup, counts: r.counts, goiCu: r.goiCu, ten: srcO.info?.ten || ownerId};
 }
 
@@ -199,6 +206,11 @@ function khoiPhucLoRungTuBanSao(store, file, ownerId, forestId, strategy = 'over
   const srcF = srcO.forests && srcO.forests[forestId];
   if (!srcF) throw Object.assign(new Error('Không tìm thấy lô rừng "' + forestId + '" trong bản sao lưu.'), {code: 'KHONG_CO'});
   const {forests: _, ...ownerInfoOnly} = srcO;
+  const usedCtyId = srcF.info?.muaHang?.congTyId;
+  const incomingCongTy = {};
+  if (usedCtyId && b.data.congTy && b.data.congTy[usedCtyId]) {
+    incomingCongTy[usedCtyId] = b.data.congTy[usedCtyId];
+  }
   const incoming = {
     v: 2,
     rs: {
@@ -207,12 +219,12 @@ function khoiPhucLoRungTuBanSao(store, file, ownerId, forestId, strategy = 'over
         forests: {[forestId]: srcF}
       }
     },
-    congTy: b.data.congTy || {},
+    congTy: incomingCongTy,
     ...(b.data.dmDoiTuong != null && {dmDoiTuong: b.data.dmDoiTuong}),
     ...(b.data.dmXe != null && {dmXe: b.data.dmXe}),
     ...(b.data.dmViTri != null && {dmViTri: b.data.dmViTri})
   };
-  const r = store.applyImport(incoming, strategy, {goiLichSu: b.goi, preserveMissingOwners: true});
+  const r = store.applyImport(incoming, strategy, {goiLichSu: b.goi, preserveMissingOwners: true, preserveExistingCongTy: true});
   return {backup: r.backup, counts: r.counts, goiCu: r.goiCu, maRung: srcF.info?.maRung || forestId};
 }
 

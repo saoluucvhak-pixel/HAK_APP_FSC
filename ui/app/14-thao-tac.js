@@ -419,7 +419,12 @@ async function backupAll() {
     if (typeof saveTimer !== 'undefined' && saveTimer) {
       clearTimeout(saveTimer);
       saveTimer = null;
-      if (typeof storeSave === 'function') await storeSave();
+      if (typeof storeSave === 'function') {
+        const rSave = await storeSave();
+        if (rSave && !rSave.ok) {
+          return note('Không thể sao lưu: Dữ liệu đang chờ lưu bị lỗi (' + (rSave.error || 'không rõ') + '). Vui lòng kiểm tra lỗi lưu trước.', 'err');
+        }
+      }
     }
     if (!backupConfirmSaved()) return;
     backupBusy = true; note('Đang sao lưu và kiểm tra hai file…', 'warn');
