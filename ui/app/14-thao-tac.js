@@ -309,6 +309,7 @@ function delRs() {
   const fs = forestList(rec), nLo = fs.length, nNc = fs.reduce((s, f) => s + (f.nc || []).length, 0), nDx = fs.reduce((s, f) => s + (f.dx || []).length, 0), nPc = fs.reduce((s, f) => s + (f.pc || []).length, 0);
   if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?')) return;
   fs.forEach(f => { delete stages[stKeyOf(rec.id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
+  window.__hakDelO = window.__hakDelO || new Set(); window.__hakDelO.add(rec.id);
   delete db.rs[rec.id]; chuNhap.delete(rec.id);
   NAV.cur = null; NAV.curF = null; nhapTamGhi(); persist();
   note('Đã xóa hồ sơ chủ rừng.');

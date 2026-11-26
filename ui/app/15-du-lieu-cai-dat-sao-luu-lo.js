@@ -29,9 +29,9 @@ async function issueAct(kind) {
 const DM_TABS = [['setdt', 'Đối tượng (người và pháp nhân)', 'openSetDt'], ['setxe', 'Xe vận chuyển', 'openSetXe'], ['setvt', 'Vị trí công việc', 'openSetVt'], ['setnv', 'Ngành nghề và chức vụ', 'openSetNv'], ['cty', 'Công ty mua hàng', 'openCty']];
 const DM_VIEWS = ['setdt', 'setxe', 'setvt', 'setnv', 'cty'];
 /* Cài đặt: tab NGANG cùng kiểu Danh mục (hak-catalog-tabs). “Hiển thị” gộp Hiển thị số và Giao diện (hai màn giữ nguyên, chuyển bằng tab con); “Hệ thống” đổi tên “Dữ liệu”. Giữ nguyên mã màn (NAV.view) và id nút setTab_<màn>. */
-const SET_TABS = [['settings', 'Dữ liệu', 'openSettings'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị', 'openSetFmt'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
+const SET_TABS = [['settings', 'Dữ liệu', 'openSettings'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['setdon', 'Dọn dẹp hồ sơ', 'openSetDon'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị', 'openSetFmt'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
 const SET_HIEN_THI = [['setfmt', 'Hiển thị số', 'openSetFmt', 'setSub_setfmt'], ['setgd', 'Giao diện', 'openSetGd', 'setTab_setgd']];
-const SET_VIEWS = ['settings', 'setbk', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
+const SET_VIEWS = ['settings', 'setbk', 'setdon', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
 function danhMucFrame(active, inner) {
   return '<div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">Danh mục dùng chung</h2><div class="mut" style="font-size:12.5px">Khai báo một lần cho đối tượng, xe vận chuyển, vị trí công việc và công ty mua hàng để dùng lại cho mọi lô rừng.</div></div></div>' +
     veLaiThanh() + '<nav class="hak-catalog-tabs" aria-label="Các danh mục dữ liệu gốc">' + DM_TABS.map(([v, l, a]) => '<button type="button"' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') +
@@ -218,5 +218,178 @@ async function restoreAll(file) {
     db = withDefaults(o2); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
     note('Đã khôi phục ' + Object.keys(db.rs).length + ' hồ sơ chủ rừng.');
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
+}
+
+/* ===== Quản lý và dọn dẹp hồ sơ chủ rừng (Cài đặt → Dọn dẹp hồ sơ) ===== */
+const setdon = {owners: null, loading: false, msg: null, filter: ''};
+
+function panelSetDon() {
+  if (!HB || !HB.owners) {
+    return '<div class="card"><div class="msg warn">Quản lý dọn dẹp cơ sở dữ liệu chỉ hoạt động trên phiên bản máy tính (SQLite).</div></div>';
+  }
+  const curIds = new Set(Object.keys(db.rs || {}));
+  const list = setdon.owners || [];
+  const q = trim(setdon.filter).toLowerCase();
+  const filtered = list.filter(o => {
+    if (!q) return true;
+    return (o.ten || '').toLowerCase().includes(q) ||
+           (o.ma || '').toLowerCase().includes(q) ||
+           (o.cccd || '').toLowerCase().includes(q);
+  });
+  const unlisted = list.filter(o => !curIds.has(o.id));
+
+  return '<div class="card" style="margin-bottom:12px">' +
+    '<h3 style="margin:0 0 6px">Quản lý &amp; Dọn dẹp hồ sơ chủ rừng trong cơ sở dữ liệu</h3>' +
+    '<p class="mut" style="margin:0 0 10px">Hồ sơ chủ rừng lưu trong cơ sở dữ liệu trên máy tính. Dọn dẹp các hồ sơ không còn sử dụng hoặc đưa các hồ sơ đã lưu vào danh sách làm việc chính. Việc dọn hồ sơ được tách biệt độc lập với việc lưu và cập nhật lô rừng.</p>' +
+    (setdon.msg ? '<div class="msg ' + setdon.msg[1] + '" style="margin-bottom:10px">' + esc(setdon.msg[0]) + '</div>' : '') +
+    '<div class="grid3" style="gap:10px;margin-bottom:12px">' +
+      '<div class="card" style="margin:0;padding:10px;background:var(--bg-sub, #f8f9fa)">' +
+        '<div class="mut" style="font-size:12px">Tổng hồ sơ trong CSDL</div>' +
+        '<div style="font-size:20px;font-weight:700">' + list.length + '</div>' +
+      '</div>' +
+      '<div class="card" style="margin:0;padding:10px;background:var(--bg-sub, #f8f9fa)">' +
+        '<div class="mut" style="font-size:12px">Đang mở trong phiên làm việc</div>' +
+        '<div style="font-size:20px;font-weight:700;color:var(--ok, #107c41)">' + (list.length - unlisted.length) + '</div>' +
+      '</div>' +
+      '<div class="card" style="margin:0;padding:10px;background:var(--bg-sub, #f8f9fa)">' +
+        '<div class="mut" style="font-size:12px">Lưu trên máy (chưa nạp ra màn hình)</div>' +
+        '<div style="font-size:20px;font-weight:700;color:' + (unlisted.length ? 'var(--warn, #d83b01)' : 'var(--mut)') + '">' + unlisted.length + '</div>' +
+      '</div>' +
+    '</div>' +
+    (unlisted.length ? (
+      '<div class="msg warn" style="margin-bottom:12px">' +
+        '<b>Có ' + unlisted.length + ' hồ sơ đang lưu trong CSDL nhưng chưa hiển thị trên danh sách làm việc.</b><br>' +
+        'Các hồ sơ này được giữ an toàn trong máy và không ảnh hưởng đến việc lưu lô hiện tại. Bạn có thể:' +
+        '<div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">' +
+          '<button type="button" class="btn sm" data-act="donHsLoadAll">📥 Đưa tất cả vào danh sách làm việc</button>' +
+          '<button type="button" class="btn danger sm" data-act="donHsPurgeUnlisted">🗑️ Dọn dẹp tất cả hồ sơ này khỏi CSDL</button>' +
+        '</div>' +
+      '</div>'
+    ) : '') +
+    '<div class="row" style="gap:8px;align-items:center;margin-bottom:10px">' +
+      '<input type="text" id="setDonSearch" placeholder="Lọc theo tên, mã, CCCD…" value="' + esc(setdon.filter) + '" style="max-width:280px">' +
+      '<button type="button" class="btn ghost sm" data-act="setDonRefresh">Làm mới danh sách</button>' +
+    '</div>' +
+    '<div class="wrap" style="max-height:480px">' +
+      '<table>' +
+        '<thead><tr>' +
+          '<th>Tên chủ rừng</th>' +
+          '<th>Mã</th>' +
+          '<th>CCCD</th>' +
+          '<th style="text-align:center">Số lô</th>' +
+          '<th>Trạng thái</th>' +
+          '<th style="text-align:right">Thao tác</th>' +
+        '</tr></thead>' +
+        '<tbody>' +
+          (filtered.length ? filtered.map(o => {
+            const inMem = curIds.has(o.id);
+            return '<tr>' +
+              '<td><b>' + esc(o.ten || '(chưa đặt tên)') + '</b> ' + (o.danhXung ? '<span class="mut">(' + esc(o.danhXung) + ')</span>' : '') + '</td>' +
+              '<td><code>' + esc(o.ma || '—') + '</code></td>' +
+              '<td>' + esc(o.cccd || '—') + '</td>' +
+              '<td style="text-align:center"><span class="pill ok">' + (o.soLo || 0) + ' lô</span></td>' +
+              '<td>' + (inMem ? '<span class="pill ok">Đang trong danh sách</span>' : '<span class="pill warn">Lưu trên máy (chưa nạp)</span>') + '</td>' +
+              '<td style="text-align:right;white-space:nowrap">' +
+                (!inMem ? '<button type="button" class="btn sm" data-act="donHsLoad" data-id="' + esc(o.id) + '" style="margin-right:6px">Đưa vào danh sách</button>' : '') +
+                '<button type="button" class="btn danger sm" data-act="donHsDel" data-id="' + esc(o.id) + '" data-ten="' + esc(o.ten || o.ma || o.id) + '">Xóa</button>' +
+              '</td>' +
+            '</tr>';
+          }).join('') : '<tr><td colspan="6" class="mut" style="text-align:center">Không có hồ sơ nào khớp.</td></tr>') +
+        '</tbody>' +
+      '</table>' +
+    '</div>' +
+  '</div>';
+}
+
+async function setDonLoad() {
+  if (!HB || !HB.owners || setdon.loading) return;
+  setdon.loading = true;
+  try {
+    const r = await HB.owners.list();
+    if (r && r.ok) {
+      setdon.owners = r.owners || [];
+      const curIds = new Set(Object.keys(db.rs || {}));
+      const unlisted = (setdon.owners || []).filter(o => !curIds.has(o.id));
+      if (!unlisted.length) window.__hakPreservedOwners = null;
+      render();
+    }
+  } catch (e) {
+    setdon.msg = ['Lỗi tải danh sách hồ sơ: ' + e.message, 'err'];
+    render();
+  } finally {
+    setdon.loading = false;
+  }
+}
+
+async function donHsLoad(id) {
+  if (!HB || !HB.owners) return;
+  try {
+    const r = await HB.owners.get(id);
+    if (!r || !r.ok || !r.owner) return note('Không tải được hồ sơ: ' + (r?.error || 'lỗi không rõ'), 'err');
+    db.rs[id] = r.owner;
+    doiDuLieu();
+    setdon.msg = ['Đã đưa hồ sơ "' + (r.owner.info?.ten || r.owner.info?.ma || id) + '" vào danh sách làm việc.', 'ok'];
+    renderSide();
+    setDonLoad();
+  } catch (e) {
+    note('Lỗi: ' + e.message, 'err');
+  }
+}
+
+async function donHsLoadAll() {
+  if (!HB || !HB.owners) return;
+  const curIds = new Set(Object.keys(db.rs || {}));
+  const unlisted = (setdon.owners || []).filter(o => !curIds.has(o.id));
+  if (!unlisted.length) return;
+  let count = 0;
+  for (const item of unlisted) {
+    const r = await HB.owners.get(item.id);
+    if (r && r.ok && r.owner) {
+      db.rs[item.id] = r.owner;
+      count++;
+    }
+  }
+  doiDuLieu();
+  window.__hakPreservedOwners = null;
+  setdon.msg = ['Đã đưa ' + count + ' hồ sơ vào danh sách làm việc.', 'ok'];
+  renderSide();
+  setDonLoad();
+}
+
+async function donHsDel(id, ten) {
+  if (!HB || !HB.owners) return;
+  if (!confirm('Dọn dẹp hồ sơ "' + (ten || id) + '" khỏi cơ sở dữ liệu trên máy?\n\nPhần mềm sẽ tự động sao lưu CSDL trước khi xóa. Bạn có thể khôi phục lại khi cần.')) return;
+  try {
+    const r = await HB.owners.remove(id);
+    if (!r || !r.ok) return note('Không xóa được: ' + (r?.error || 'lỗi không rõ'), 'err');
+    if (db.rs[id]) {
+      delete db.rs[id];
+      if (NAV.cur === id) { NAV.cur = null; NAV.curF = null; }
+      doiDuLieu();
+      renderSide();
+    }
+    setdon.msg = ['Đã dọn dẹp hồ sơ "' + (ten || id) + '" khỏi cơ sở dữ liệu.', 'ok'];
+    setDonLoad();
+  } catch (e) {
+    note('Lỗi: ' + e.message, 'err');
+  }
+}
+
+async function donHsPurgeUnlisted() {
+  if (!HB || !HB.owners) return;
+  const curIds = new Set(Object.keys(db.rs || {}));
+  const unlisted = (setdon.owners || []).filter(o => !curIds.has(o.id));
+  if (!unlisted.length) return;
+  if (!confirm('Xác nhận dọn dẹp vĩnh viễn ' + unlisted.length + ' hồ sơ đang lưu trên máy nhưng không dùng trong danh sách làm việc?\n\nPhần mềm sẽ sao lưu toàn bộ cơ sở dữ liệu trước khi dọn dẹp.')) return;
+  try {
+    const ids = unlisted.map(o => o.id);
+    const r = await HB.owners.purgeUnlisted(ids);
+    if (!r || !r.ok) return note('Không dọn dẹp được: ' + (r?.error || 'lỗi không rõ'), 'err');
+    window.__hakPreservedOwners = null;
+    setdon.msg = ['Đã dọn dẹp sạch sẽ ' + (r.deleted || ids.length) + ' hồ sơ khỏi cơ sở dữ liệu.', 'ok'];
+    setDonLoad();
+  } catch (e) {
+    note('Lỗi: ' + e.message, 'err');
+  }
 }
 

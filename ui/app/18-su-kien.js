@@ -37,6 +37,12 @@ document.addEventListener('click', async e => {
   if (act === 'xoaDoi') return xoaDoi();
   if (act === 'addGiay') return addGiayRow();
   if (act === 'openSettings') { NAV.cur = null; NAV.curF = null; NAV.view = 'settings'; setg.msg = null; return render(); }
+  if (act === 'openSetDon') { NAV.cur = null; NAV.curF = null; NAV.view = 'setdon'; if (typeof setdon !== 'undefined') setdon.msg = null; render(); if (typeof setDonLoad === 'function') setDonLoad(); return; }
+  if (act === 'donHsLoad') return donHsLoad(el.dataset.id);
+  if (act === 'donHsLoadAll') return donHsLoadAll();
+  if (act === 'donHsDel') return donHsDel(el.dataset.id, el.dataset.ten);
+  if (act === 'donHsPurgeUnlisted') return donHsPurgeUnlisted();
+  if (act === 'setDonRefresh') return setDonLoad();
   if (act === 'dataRetry') return issueAct('retry');
   if (act === 'dataPick') return issueAct('pick');
   if (act === 'dataDefault') return issueAct('default');
@@ -381,6 +387,13 @@ document.addEventListener('input', e => {
       t.setSelectionRange(caret, caret);
     }
     if (regroup || raw !== value) t.dataset.groupedValue = value;
+  }
+  if (t && t.id === 'setDonSearch') {
+    setdon.filter = t.value;
+    render();
+    const inp = document.getElementById('setDonSearch');
+    if (inp) { inp.focus(); inp.selectionStart = inp.selectionEnd = inp.value.length; }
+    return;
   }
   if (t.dataset && t.dataset.mamoi !== undefined) { impMaCheck(); return; }
   if (t.dataset && t.dataset.exp && curForest()) {   // xem trước số hợp đồng cập nhật ngay khi gõ

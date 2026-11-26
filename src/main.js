@@ -164,7 +164,20 @@ function registerIpc() {
     catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, error: err.message}; }
   });
   /* HAKQN_FAIL_SAVE=<đường dẫn file>: khi file đó tồn tại thì lần lưu giả lập thất bại (chỉ dùng để kiểm thử “lưu lỗi”) */
-  handle('db:save', afterReloc((e, db, opts) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.save(db, {allowBulkDelete: !!(opts && opts.allowBulkDelete)}))(); if (r.ok) checkModel('save'); return r; })()));
+  handle('db:save', afterReloc((e, db, opts) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => {
+    const r = wrap(() => store.save(db, {
+      allowBulkDelete: !!(opts && opts.allowBulkDelete),
+      preserveMissingOwners: opts && opts.preserveMissingOwners != null ? !!opts.preserveMissingOwners : true,
+      delO: opts && Array.isArray(opts.delO) ? opts.delO : undefined
+    }))();
+    if (r.ok) checkModel('save');
+    return r;
+  })()));
+  /* Quản lý và dọn dẹp hồ sơ chủ rừng trên SQLite */
+  handle('owners:list', () => wrap(() => ({ok: true, owners: store.danhSachChuRong()}))());
+  handle('owners:get', (e, id) => wrap(() => ({ok: true, owner: store.docChuRong(id)}))());
+  handle('owners:remove', (e, id) => wrap(() => ({ok: true, ...store.xoaChuRong(id)}))());
+  handle('owners:purgeUnlisted', (e, ids) => wrap(() => ({ok: true, ...store.donDepChuRong(ids)}))());
   /* Lưu theo phần thay đổi (src/delta.js, Store.saveDelta): chỉ các chủ rừng / lô đã đổi; lệch phiên bản thì giao diện tự lưu toàn bộ */
   handle('db:saveDelta', afterReloc((e, d) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.saveDelta(d))(); if (r.ok) checkModel('delta'); return r; })()));
   /* B5: đọc gói đóng băng của lô đã chốt (bảng chot_goi); phienBan bỏ trống = bản mới nhất. Gói không nạp sẵn khi mở app. */

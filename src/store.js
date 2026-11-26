@@ -424,7 +424,15 @@ class Store {
     // so cả chủ của lô: chuyển lô sang chủ rừng khác mà nội dung không đổi vẫn phải cập nhật owner_id (trước đây bị bỏ qua, mở lại lô quay về chủ cũ)
     const haveF = new Map(this.db.prepare('SELECT id, hash, owner_id FROM forests').all().map(r => [r.id, r.hash + '|' + r.owner_id]));
     const keepO = new Set(rows.owners.map(o => o.id)), keepF = new Set(rows.forests.map(f => f.id));
-    const goneO = [...have.keys()].filter(id => !keepO.has(id)), goneF = [...haveF.keys()].filter(id => !keepF.has(id));
+    let goneO = [...have.keys()].filter(id => !keepO.has(id)), goneF = [...haveF.keys()].filter(id => !keepF.has(id));
+    if (opts.preserveMissingOwners) {
+      const explicitDel = new Set(Array.isArray(opts.delO) ? opts.delO.map(String) : []);
+      goneO = goneO.filter(id => explicitDel.has(String(id)));
+      goneF = goneF.filter(id => {
+        const row = this.db.prepare('SELECT owner_id FROM forests WHERE id=?').get(id);
+        return row && (keepO.has(row.owner_id) || explicitDel.has(String(row.owner_id)));
+      });
+    }
     this._guardDelete(goneO, goneF, opts);
     if (!opts.boQuaKhoa) this._kiemKhoa(rows.forests.filter(f => haveF.has(f.id) && haveF.get(f.id) !== f.hash + '|' + f.owner_id), goneF, goneO);
     const st = this._stmts(), t = now(); let changed = 0, goiCu = 0;
@@ -442,7 +450,13 @@ class Store {
         opts.goiLichSu.forEach(g => { if (keepF.has(String(g.forest_id))) goiCu += put.run(String(g.forest_id), g.phien_ban, g.hash, g.at, g.data).changes; });
       }
     })();
-    return {changed, at: t, rev: this._bump(), mode: 'full', goiCu};
+    const preservedO = [...have.keys()].filter(id => !keepO.has(id) && !goneO.includes(id));
+    const preservedOwners = preservedO.map(id => {
+      const row = this.db.prepare('SELECT ten FROM owners WHERE id=?').get(id);
+      const cnt = this.db.prepare('SELECT COUNT(*) AS c FROM forests WHERE owner_id=?').get(id);
+      return {id, name: row?.ten || '', forests: cnt?.c || 0};
+    });
+    return {changed, at: t, rev: this._bump(), mode: 'full', goiCu, preservedOwners};
   }
 
   /* Lưu theo phần thay đổi (src/delta.js). d = {rev, upO: {id: json}, upF: {id: {owner, json}}, delO: [id], delF: [id], side, counts: {owners, forests}}.
@@ -650,6 +664,62 @@ class Store {
     const backup = this.snapshotFile('truoc-khoi-phuc-lo', {keep: 20});
     this.save(r.next);
     return {backup, plan: r.plan, doi: true, ownerId: r.ownerId, forestId: r.forestId};
+  }
+
+  /* Quản lý và dọn dẹp hồ sơ chủ rừng trên SQLite */
+  danhSachChuRong() {
+    return this.db.prepare(`
+      SELECT o.id, o.ma, o.ten, o.cccd, o.data,
+             (SELECT COUNT(*) FROM forests f WHERE f.owner_id = o.id) AS soLo,
+             o.updated_at AS updatedAt
+      FROM owners o
+      ORDER BY o.ten COLLATE NOCASE ASC
+    `).all().map(r => {
+      let dx = '';
+      try { dx = JSON.parse(r.data)?.info?.danhXung || ''; } catch (_) {}
+      return {id: r.id, ma: r.ma, ten: r.ten, cccd: r.cccd, danhXung: dx, soLo: r.soLo, updatedAt: r.updatedAt};
+    });
+  }
+
+  docChuRong(id) {
+    const row = this.db.prepare('SELECT id, data FROM owners WHERE id=?').get(id);
+    if (!row) return null;
+    const o = JSON.parse(row.data);
+    o.forests = {};
+    this.db.prepare('SELECT id, data FROM forests WHERE owner_id=?').all(id).forEach(fRow => {
+      o.forests[fRow.id] = JSON.parse(fRow.data);
+    });
+    return o;
+  }
+
+  xoaChuRong(id) {
+    this.snapshotFile('truoc-xoa', {keep: 20});
+    this.db.transaction(() => {
+      this.db.prepare('DELETE FROM forests WHERE owner_id=?').run(id);
+      this.db.prepare('DELETE FROM owners WHERE id=?').run(id);
+      if (this._coBangGoi()) {
+        this.db.prepare('DELETE FROM chot_goi WHERE forest_id NOT IN (SELECT id FROM forests)').run();
+      }
+    })();
+    return {rev: this._bump()};
+  }
+
+  donDepChuRong(ids) {
+    if (!Array.isArray(ids) || !ids.length) return {rev: this.rev, deleted: 0};
+    this.snapshotFile('truoc-xoa', {keep: 20});
+    let deleted = 0;
+    this.db.transaction(() => {
+      const delF = this.db.prepare('DELETE FROM forests WHERE owner_id=?');
+      const delO = this.db.prepare('DELETE FROM owners WHERE id=?');
+      ids.forEach(id => {
+        delF.run(id);
+        deleted += delO.run(id).changes;
+      });
+      if (this._coBangGoi()) {
+        this.db.prepare('DELETE FROM chot_goi WHERE forest_id NOT IN (SELECT id FROM forests)').run();
+      }
+    })();
+    return {rev: this._bump(), deleted};
   }
 
   close() { this.db.close(); }

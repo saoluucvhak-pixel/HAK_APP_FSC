@@ -159,8 +159,13 @@ async function saveOnce() {
   }
   if (!r) {
     const W = dbGhi(); snap = HAKDelta.snapshot(W);   // chụp lại ngay trước khi gửi: db có thể đã đổi trong lúc chờ
-    r = await HB.save(W);
-    if (r && r.ok) CONG_KT.saveStats.full++;
+    const delO = window.__hakDelO ? [...window.__hakDelO] : undefined;
+    r = await HB.save(W, {preserveMissingOwners: true, delO});
+    if (r && r.ok) {
+      if (window.__hakDelO) window.__hakDelO.clear();
+      if (Array.isArray(r.preservedOwners)) window.__hakPreservedOwners = r.preservedOwners;
+      CONG_KT.saveStats.full++;
+    }
   }
   CONG_KT.saveStats.last = r && r.ok ? r.mode || 'full' : 'error';
   saveCache = r && r.ok && r.rev && !snap.dup ? {rev: r.rev, snap} : null;

@@ -431,3 +431,50 @@ test('Lô 6 (T-10): nâng cấp lỗi lặp lại không nhân bản truoc-nang-
   assert.strictEqual(s.db.prepare('SELECT COUNT(*) c FROM chot_goi').get().c, 0, 'xóa hết chủ rừng phải dọn sạch chot_goi mồ côi');
   s.close();
 });
+
+test('tính năng 3.7.2: preserveMissingOwners không xóa chủ rừng ngoài danh sách và trả về preservedOwners; không bị chặn BULK_DELETE', () => {
+  const s = new Store(':memory:');
+  const o = (id, ten) => ({id, info: {ma: 'CR-' + id, ten, cccd: '04900000000' + id, danhXung: 'Ông'}, forests: {['f_' + id]: {id: 'f_' + id, info: {maRung: 'R-' + id}, nc: [], dx: [], pc: []}}});
+  // Khởi tạo 8 chủ rừng trong CSDL (như môi trường thực tế của người dùng: 2 chủ cũ + 6 chủ mới)
+  const full = {o1: o('o1', 'LÊ QUỐC Ý'), o2: o('o2', 'LÊ VĂN QUẢNG'), o3: o('o3', 'LƯƠNG THỊ TÂM'), o4: o('o4', 'NGUYỄN THỊ CHÂU'), o5: o('o5', 'NGUYỄN VĂN HIẾN'), o6: o('o6', 'PHẠM PHONG'), o7: o('o7', 'PHÙNG VĂN HẢI'), o8: o('o8', 'TRẦN ĐÌNH TIẾN')};
+  s.save({v: 2, rs: full});
+  assert.strictEqual(Object.keys(s.load().rs).length, 8);
+
+  // Người dùng chỉ mở 6 chủ rừng (o3..o8) và bấm "Lưu dữ liệu vào lô":
+  const subset = {o3: o('o3', 'LƯƠNG THỊ TÂM'), o4: o('o4', 'NGUYỄN THỊ CHÂU'), o5: o('o5', 'NGUYỄN VĂN HIẾN'), o6: o('o6', 'PHẠM PHONG'), o7: o('o7', 'PHÙNG VĂN HẢI'), o8: o('o8', 'TRẦN ĐÌNH TIẾN')};
+  subset.o8.forests['f_o8'].info.dinhMucTanHa = 120; // Sửa dữ liệu lô
+
+  // Nếu không có preserveMissingOwners: bị chặn BULK_DELETE
+  assert.throws(() => s.save({v: 2, rs: subset}), e => e.code === 'BULK_DELETE');
+
+  // Với preserveMissingOwners: lưu thành công, lô được cập nhật, 2 chủ cũ vẫn giữ nguyên trong CSDL
+  const res = s.save({v: 2, rs: subset}, {preserveMissingOwners: true});
+  assert.strictEqual(res.mode, 'full');
+  assert.strictEqual(res.preservedOwners.length, 2);
+  assert.deepStrictEqual(res.preservedOwners.map(x => x.name).sort(), ['LÊ QUỐC Ý', 'LÊ VĂN QUẢNG']);
+
+  // Kiểm tra CSDL vẫn giữ đủ 8 chủ rừng
+  const cur = s.load().rs;
+  assert.strictEqual(Object.keys(cur).length, 8);
+  assert.strictEqual(cur.o8.forests['f_o8'].info.dinhMucTanHa, 120);
+  assert.strictEqual(cur.o1.info.ten, 'LÊ QUỐC Ý');
+  assert.strictEqual(cur.o2.info.ten, 'LÊ VĂN QUẢNG');
+
+  // Kiểm tra các hàm quản lý dọn dẹp hồ sơ
+  const list = s.danhSachChuRong();
+  assert.strictEqual(list.length, 8);
+  assert.strictEqual(list.find(x => x.id === 'o1').soLo, 1);
+
+  // Đọc 1 chủ rừng
+  const doc = s.docChuRong('o1');
+  assert.strictEqual(doc.info.ten, 'LÊ QUỐC Ý');
+  assert.strictEqual(Object.keys(doc.forests).length, 1);
+
+  // Dọn dẹp 2 chủ rừng (o1, o2)
+  const don = s.donDepChuRong(['o1', 'o2']);
+  assert.strictEqual(don.deleted, 2);
+  assert.strictEqual(s.danhSachChuRong().length, 6);
+  assert.strictEqual(s.docChuRong('o1'), null);
+
+  s.close();
+});

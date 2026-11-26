@@ -137,15 +137,19 @@ function renderSide() {
 
 function renderMsgs() {
   const parts = [];
+  if (window.__hakPreservedOwners && window.__hakPreservedOwners.length) {
+    parts.push('<div class="msg warn" id="preservedOwnersNotice"><b>Hồ sơ lưu trên máy:</b> Phát hiện có ' + window.__hakPreservedOwners.length + ' hồ sơ khác trong cơ sở dữ liệu trên máy chưa nạp vào danh sách làm việc. Việc lưu hồ sơ hiện tại vẫn an toàn và không bị chặn. <button type="button" class="btn sm" data-act="openSetDon">Xem &amp; Dọn dẹp hồ sơ</button></div>');
+  }
   if (!storeOk && bulkSaveIssue?.epoch === dbEpoch) {
     const owners = bulkSaveIssue.owners;
     parts.push('<div class="msg err" id="bulkSaveHelp" role="alert" tabindex="-1"><b>Đã chặn lưu để bảo vệ hồ sơ chủ rừng</b>' +
       '<p>Lần ghi này sẽ xóa ' + (owners.length || 'nhiều') + ' hồ sơ đang có trong cơ sở dữ liệu. Dữ liệu đã ghi vẫn còn. Các thay đổi trong lô vẫn là bản nháp.</p>' +
       (owners.length ? '<details><summary>Xem ' + owners.length + ' hồ sơ được bảo vệ</summary><ul>' +
         owners.map(o => '<li>' + esc(o.name || '(Chủ rừng chưa có tên)') + ' · ' + o.forests + ' lô</li>').join('') + '</ul></details>' : '') +
-      '<p>Hãy sao lưu bản đã ghi và giữ bản nháp. Gửi mã lỗi BULK_DELETE, số hồ sơ và thao tác vừa thực hiện cho người hỗ trợ HAK kiểm tra. Tránh xóa hồ sơ hoặc khôi phục toàn bộ để qua bước này.</p>' +
-      (HB?.backupSaveAs ? '<button type="button" class="btn sm" data-act="saveHelpBackup">Sao lưu bản đã ghi…</button><small> Bản sao lưu này chỉ gồm dữ liệu đã ghi, chưa gồm bản nháp.</small>' : '') + '</div>');
-  } else if (!storeOk) parts.push(HB ? '<div class="msg err">Lần ghi gần nhất bị lỗi. Xem lý do ở thanh trạng thái lưu hoặc cạnh nút Lưu dữ liệu vào lô.</div>' : '<div class="msg err">Trình duyệt không lưu được dữ liệu (có thể đã đầy hoặc bị chặn). Hãy bấm “Sao lưu dữ liệu (.json)” thường xuyên.</div>');
+      '<p>Bạn có thể vào Cài đặt để kiểm tra, đưa các hồ sơ này vào danh sách làm việc hoặc xác nhận dọn dẹp.</p>' +
+      '<div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" data-act="openSetDon">Mở Dọn dẹp hồ sơ trong Cài đặt</button>' +
+      (HB?.backupSaveAs ? '<button type="button" class="btn sm ghost" data-act="saveHelpBackup">Sao lưu bản đã ghi…</button>' : '') + '</div></div>');
+  } else if (!storeOk) parts.push(HB ? '<div class="msg err">Lần ghi gần nhất bị lỗi. Xem lý do ở thanh trạng thái lưu hoặc cạnh nút Lưu dữ liệu vào lô. <button type="button" class="btn sm" data-act="openSetDon" style="margin-left:8px">Kiểm tra CSDL &amp; Dọn hồ sơ</button></div>' : '<div class="msg err">Trình duyệt không lưu được dữ liệu (có thể đã đầy hoặc bị chặn). Hãy bấm “Sao lưu dữ liệu (.json)” thường xuyên.</div>');
   notes.forEach(n => parts.push('<div class="msg ' + n.kind + '">' + esc(n.text) + '</div>'));
   notes = [];
   return parts.join('');
@@ -161,6 +165,7 @@ function renderMain() {
   if (NAV.view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }
   if (NAV.view === 'settings') { $('#main').innerHTML = renderMsgs() + settingsFrame('settings', panelSettings()); settingsLoad(); return; }
   if (NAV.view === 'setbk') { $('#main').innerHTML = renderMsgs() + settingsFrame('setbk', panelKhoSaoLuu()); kslLoad(); return; }
+  if (NAV.view === 'setdon') { $('#main').innerHTML = renderMsgs() + settingsFrame('setdon', panelSetDon()); setDonLoad(); return; }
   if (NAV.view === 'setgs') { $('#main').innerHTML = renderMsgs() + settingsFrame('setgs', panelSetGs()); return; }
   if (NAV.view === 'setfmt') { $('#main').innerHTML = renderMsgs() + settingsFrame('setfmt', panelSetFmt()); return; }
   const own = curOwner();

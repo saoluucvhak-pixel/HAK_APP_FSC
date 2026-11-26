@@ -38,7 +38,7 @@ function loSaveHelpHtml() {
   const issue = currentLoSaveIssue();
   if (!issue) return '';
   return esc(issue.text) + (issue.bulk
-    ? ' <button type="button" class="btn sm" data-act="saveHelpBulk">Xem hồ sơ được bảo vệ</button>'
+    ? ' <button type="button" class="btn sm" data-act="openSetDon">Mở Dọn dẹp hồ sơ trong Cài đặt</button> <button type="button" class="btn sm ghost" data-act="saveHelpBulk">Xem hồ sơ</button>'
     : issue.field ? ' <button type="button" class="btn sm" data-act="saveHelpField">Mở ' + esc(issue.field.label) + '</button>' : '');
 }
 function openLoSaveField() {

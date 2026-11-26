@@ -10,7 +10,17 @@ contextBridge.exposeInMainWorld('hak', {
   kiemGoiSync: fid => ipcRenderer.sendSync('db:kiemGoi', fid),
   lichSuGoiSync: fid => ipcRenderer.sendSync('db:lichSuGoi', fid),
   inHtml: (html, ten) => ipcRenderer.invoke('print:html', html, ten),
-  save: (db, opts) => ipcRenderer.invoke('db:save', db, opts && typeof opts === 'object' ? {allowBulkDelete: !!opts.allowBulkDelete} : undefined),
+  save: (db, opts) => ipcRenderer.invoke('db:save', db, opts && typeof opts === 'object' ? {
+    allowBulkDelete: !!opts.allowBulkDelete,
+    preserveMissingOwners: opts.preserveMissingOwners != null ? !!opts.preserveMissingOwners : undefined,
+    delO: Array.isArray(opts.delO) ? opts.delO : undefined
+  } : undefined),
+  owners: {
+    list: () => ipcRenderer.invoke('owners:list'),
+    get: id => ipcRenderer.invoke('owners:get', id),
+    remove: id => ipcRenderer.invoke('owners:remove', id),
+    purgeUnlisted: ids => ipcRenderer.invoke('owners:purgeUnlisted', ids)
+  },
   importPreview: (db, opts) => ipcRenderer.invoke('import:preview', db, opts),
   importApply: (db, strategy, opts) => ipcRenderer.invoke('import:apply', db, strategy, opts),
   backupTo: () => ipcRenderer.invoke('backup:to'),
