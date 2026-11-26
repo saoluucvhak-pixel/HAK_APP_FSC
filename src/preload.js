@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('hak', {
   importApply: (db, strategy, opts) => ipcRenderer.invoke('import:apply', db, strategy, opts),
   backupTo: () => ipcRenderer.invoke('backup:to'),
   backupSaveAs: () => ipcRenderer.invoke('backup:saveAs'),
+  lotRemove: (oid, fid) => ipcRenderer.invoke('lot:remove', oid, fid),
   lotSave: pkg => ipcRenderer.invoke('lot:save', pkg),
   lotOpen: p => ipcRenderer.invoke('lot:open', p),
   lotApply: (pkg, action) => ipcRenderer.invoke('lot:apply', pkg, action),

@@ -274,22 +274,31 @@ function addGiayRow() {
   list.insertAdjacentHTML('beforeend', giayRowHtml({}));
 }
 
+let deletingRecord = false;
 async function delForest() {
+  if (deletingRecord || stSaving) return;
   const o = curOwner(), f = curForest(); if (!f) return;
   const fid = f.id, k = stKeyOf(o.id, fid), coNhap = loDirty.has(fid) || (stages[k] && HAKStage.dirty(stages[k]));
   const nNc = (f.nc || []).length, nDx = (f.dx || []).length, nPc = (f.pc || []).length;
   if (!confirm('Xóa rừng "' + (f.info.tenRung || f.info.maRung) + '" (có ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân' + (coNhap ? ' và thay đổi chưa lưu' : '') + ')?')) return;
-  const cn0 = chuNhap.get(o.id);
-  if (loDirty.has(fid) || loMoi.has(fid)) loVeBanDaLuu(fid);   // lô nháp: dọn các sổ nháp (lô mới, chủ rừng mới hết lô, ánh xạ biển số) trước khi xóa
-  const o2 = db.rs[o.id]; if (o2) delete o2.forests[fid];
-  delete stages[k]; if (typeof hdMoS !== 'undefined') delete hdMoS[fid];
-  loDirty.delete(fid); loMoi.delete(fid); aliasHoan(fid); NAV.curF = null; if (cn0 && !cn0.moi && !chuNhap.has(o.id)) pushNote('Đã xóa lô nháp cuối của chủ rừng: thông tin chủ rừng đang nháp (từ Google Sheets) được hoàn lại về bản đã lưu.', 'warn'); nhapTamGhi();
-  const r = await persistNow();
-  if (r && r.ok) {
-    note('Đã xóa rừng thành công và lưu vào máy.', 'ok');
-  } else {
-    note('Không thể xóa trên máy: ' + ((r && r.error) || 'lỗi ghi cơ sở dữ liệu'), 'err');
-  }
+  const removeDraft = () => {
+    doiDuLieu();
+    const cn0 = chuNhap.get(o.id);
+    if (loDirty.has(fid) || loMoi.has(fid)) loVeBanDaLuu(fid);   // lô nháp: dọn các sổ nháp (lô mới, chủ rừng mới hết lô, ánh xạ biển số) trước khi xóa
+    const o2 = db.rs[o.id]; if (o2) delete o2.forests[fid];
+    delete stages[k]; if (typeof hdMoS !== 'undefined') delete hdMoS[fid];
+    loDirty.delete(fid); loMoi.delete(fid); loCanSaoLuuSheets.delete(fid); aliasHoan(fid); if (NAV.curF === fid) NAV.curF = null; if (cn0 && !cn0.moi && !chuNhap.has(o.id)) pushNote('Đã xóa lô nháp cuối của chủ rừng: thông tin chủ rừng đang nháp (từ Google Sheets) được hoàn lại về bản đã lưu.', 'warn'); nhapTamGhi();
+  };
+  deletingRecord = true;
+  try {
+    const r = HB ? await storeSave(async () => {
+      const result = await HB.lotRemove(o.id, fid);
+      if (result?.ok) { removeDraft(); saveCache = null; }
+      return result;
+    }) : (removeDraft(), await persistNow());
+    note(r?.ok ? 'Đã xóa rừng thành công và lưu vào máy.' : 'Không thể xóa rừng. ' + (r?.error || 'Thử lại sau.'), r?.ok ? 'ok' : 'err');
+  } catch (e) { note('Không thể xóa rừng. ' + e.message, 'err'); }
+  finally { deletingRecord = false; }
 }
 
 function saveInfo(form) {
@@ -310,40 +319,29 @@ function saveInfo(form) {
 }
 
 async function delRs() {
+  if (deletingRecord || stSaving) return;
   const rec = curOwner(); if (!rec) return;
   const fs = forestList(rec), nLo = fs.length, nNc = fs.reduce((s, f) => s + (f.nc || []).length, 0), nDx = fs.reduce((s, f) => s + (f.dx || []).length, 0), nPc = fs.reduce((s, f) => s + (f.pc || []).length, 0);
   if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?\n\nPhần mềm sẽ tự động sao lưu dữ liệu trước khi xóa.')) return;
   const id = rec.id, ten = rec.info.ten || '';
-  fs.forEach(f => { delete stages[stKeyOf(id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
-  delete db.rs[id]; chuNhap.delete(id);
-  if (window.__hakDelO) window.__hakDelO.delete(id);
-  NAV.cur = null; NAV.curF = null; nhapTamGhi();
-  if (HB && HB.owners && HB.owners.remove) {
-    try {
-      const r = await HB.owners.remove(id);
-      if (!r || !r.ok) {
-        note('Không thể xóa chủ rừng trên máy: ' + ((r && r.error) || 'lỗi không rõ'), 'err');
-        return;
-      }
-      if (saveCache) saveCache = null;
-      try { savedSnap = HAKDelta.snapshot(dbGhi()); } catch (e) { savedSnap = null; }
-      storeOk = true;
-      bulkSaveIssue = null;
-      showSave('Đã xóa chủ rừng lúc ' + hhmm());
-      note('Đã xóa hồ sơ chủ rừng "' + ten + '" trên máy thành công.', 'ok');
-      return;
-    } catch (e) {
-      note('Lỗi khi xóa chủ rừng: ' + e.message, 'err');
-      return;
-    }
-  }
-  window.__hakDelO = window.__hakDelO || new Set(); window.__hakDelO.add(id);
-  const r = await persistNow();
-  if (r && r.ok) {
-    note('Đã xóa hồ sơ chủ rừng thành công.', 'ok');
-  } else {
-    note('Không thể xóa trên máy: ' + ((r && r.error) || 'lỗi ghi cơ sở dữ liệu'), 'err');
-  }
+  const removeDraft = () => {
+    doiDuLieu();
+    fs.forEach(f => { delete stages[stKeyOf(id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); loCanSaoLuuSheets.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
+    delete db.rs[id]; chuNhap.delete(id);
+    if (window.__hakDelO) window.__hakDelO.delete(id);
+    if (NAV.cur === id) { NAV.cur = null; NAV.curF = null; }
+    nhapTamGhi();
+  };
+  deletingRecord = true;
+  try {
+    const r = HB ? await storeSave(async () => {
+      const result = await HB.owners.remove(id);
+      if (result?.ok) { removeDraft(); saveCache = null; }
+      return result;
+    }) : (removeDraft(), await persistNow());
+    note(r?.ok ? 'Đã xóa hồ sơ chủ rừng “' + ten + '”.' : 'Không thể xóa chủ rừng. ' + (r?.error || 'Thử lại sau.'), r?.ok ? 'ok' : 'err');
+  } catch (e) { note('Không thể xóa chủ rừng. ' + e.message, 'err'); }
+  finally { deletingRecord = false; }
 }
 
 // Mặc định nạp vào lô đang mở. File cũ có cột Mã rừng điền đúng một mã và lô đó tồn tại trong chủ rừng đang mở thì nạp vào lô đó; điền nhiều mã khác nhau thì nạp vào lô đang mở và báo lỗi các dòng lệch mã
@@ -416,19 +414,22 @@ let backupBusy = false;
 async function backupAll() {
   if (HB) {
     if (backupBusy) return note('Đang sao lưu, vui lòng đợi xong rồi bấm lại.', 'warn');
-    if (typeof saveTimer !== 'undefined' && saveTimer) {
-      clearTimeout(saveTimer);
-      saveTimer = null;
-      if (typeof storeSave === 'function') await storeSave();
-    }
     if (!backupConfirmSaved()) return;
     backupBusy = true; note('Đang sao lưu và kiểm tra hai file…', 'warn');
     try {
       const r = await HB.backupTo();
       if (r.canceled) return;
-      // chỉ báo thành công khi cả hai file (JSON và SQLite) đã ghi và qua kiểm tra; ngược lại nêu rõ file nào dùng được
-      const c2 = r.ok && r.copy2 && !r.copy2.skipped ? r.copy2 : null;   // BK-01: kết quả chép sang thư mục sao lưu thứ hai (nếu đã đặt)
-      return note(r.ok ? 'Đã sao lưu và kiểm tra xong: ' + r.jsonFile + ' và ' + r.sqlFile + '.' + (c2 ? (c2.ok ? ' Đã chép thêm sang thư mục thứ hai.' : ' CẢNH BÁO: chưa chép được sang thư mục thứ hai (' + (c2.error || 'lỗi không rõ') + ').') : '') : 'Sao lưu chưa đầy đủ: ' + (r.message || r.error || 'lỗi không rõ'), r.ok ? (c2 && !c2.ok ? 'warn' : 'ok') : 'err');
+      const copyIssue = r.copy2 && !r.copy2.skipped && !r.copy2.ok;
+      const partial = r.json?.ok || r.sqlite?.ok;
+      const message = (r.message || r.error || 'Sao lưu thất bại.') +
+        (!r.ok && copyIssue ? ' Chép sang thư mục thứ hai cũng chưa hoàn tất. ' + r.copy2.error : '') +
+        (copyIssue ? ' Kết nối lại ổ hoặc đổi thư mục sao lưu thứ hai rồi sao lưu lại.' : '');
+      const kind = r.ok && !copyIssue ? 'ok' : partial ? 'warn' : 'err';
+      ksl.loiToanBo = r.ok && !copyIssue ? null : {json: !r.json?.ok, sqlite: !r.sqlite?.ok, copy2: copyIssue};
+      ksl.msg = [message, kind];
+      return note(message, kind);
+    } catch (e) {
+      return note('Sao lưu thất bại. ' + e.message + ' Kiểm tra thư mục sao lưu rồi thử lại.', 'err');
     } finally { backupBusy = false; }
   }
   const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});

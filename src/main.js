@@ -115,17 +115,18 @@ let autoBkP = null;  // Promise của lần chạy đang dở (kiểm tra khói 
 let autoBkRev = null;   // phiên bản dữ liệu (store.rev) mà bản tự sao lưu của hôm nay đã chứa; khác store.rev = có thay đổi chưa vào bản tự sao lưu
 /* lamMoi (đóng ứng dụng, hẹn giờ, bấm "Tự sao lưu ngay"): nếu dữ liệu đã đổi sau bản của hôm nay thì LÀM MỚI bản đó, để bản tự sao lưu chứa cả việc làm trong ngày
  * (trước đây bản của hôm nay chỉ tạo lúc mở lần đầu nên là dữ liệu của hôm trước). Các lần chạy xếp hàng, không chạy chồng. */
-function runAutoBackup(lamMoi) {
+function runAutoBackup(lamMoi, chepLai = false) {
   let st; try { st = Settings.load(app.getPath('userData')); } catch (e) { return Promise.resolve(); }
   if (!st.autoKeep || st.autoChuKy === 'tat') { autoBk = {ok: true, skipped: true, reason: 'off'}; return Promise.resolve(); }
   const s = store, dir = loc.backupDir;
   autoBkP = (autoBkP || Promise.resolve()).then(() => {
     if (!s || store !== s) return;   // cơ sở dữ liệu đã đổi (đổi thư mục dữ liệu) trong lúc chờ
     const rev = s.rev, refresh = !!lamMoi && rev !== autoBkRev;
+    const thuChepLai = chepLai || autoBk?.copy2?.ok === false;
     return AutoBackup.tuDong(s, {keep: st.autoKeep, dir, refresh, chuKy: st.autoChuKy}).then(r => {   // phiếu #13a: chu kỳ ngày / tuần / 2 giờ
       autoBk = {...r, at: new Date().toISOString()};
       if (r.ok && (!r.skipped || autoBkRev === null)) autoBkRev = rev;   // lần đầu trong phiên: bản của hôm nay (nếu có) do lần đóng trước làm mới, coi như đã chứa dữ liệu lúc mở
-      if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep, {overwrite: !!r.refreshed, chuKy: st.autoChuKy}); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
+      if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep, {overwrite: !!r.refreshed || thuChepLai, chuKy: st.autoChuKy}); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
       if (!r.ok) log('ERROR', 'Tự sao lưu hằng ngày không được: ' + r.error);
       else if (!r.skipped) log('INFO', 'Tự sao lưu hằng ngày: ' + path.basename(r.file) + (r.refreshed ? ' (làm mới)' : '') + (r.removed.length ? ' (xóa ' + r.removed.length + ' bản cũ)' : ''));
     });
@@ -176,7 +177,8 @@ function registerIpc() {
   /* Quản lý và dọn dẹp hồ sơ chủ rừng trên SQLite */
   handle('owners:list', () => wrap(() => ({ok: true, owners: store.danhSachChuRong()}))());
   handle('owners:get', (e, id) => wrap(() => ({ok: true, owner: store.docChuRong(id)}))());
-  handle('owners:remove', (e, id) => wrap(() => ({ok: true, ...store.xoaChuRong(id)}))());
+  handle('owners:remove', afterReloc((e, id) => wrap(() => store.xoaChuRong(id))()));
+  handle('lot:remove', afterReloc((e, oid, fid) => wrap(() => store.xoaLoRung(String(oid), String(fid)))()));
   handle('owners:purgeUnlisted', (e, ids) => wrap(() => ({ok: true, ...store.donDepChuRong(ids)}))());
   /* Lưu theo phần thay đổi (src/delta.js, Store.saveDelta): chỉ các chủ rừng / lô đã đổi; lệch phiên bản thì giao diện tự lưu toàn bộ */
   handle('db:saveDelta', afterReloc((e, d) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.saveDelta(d))(); if (r.ok) checkModel('delta'); return r; })()));
@@ -196,15 +198,14 @@ function registerIpc() {
     try {
       /* phiếu #13a: .sqlite vào thư mục sao lưu SQLite, .json vào thư mục sao lưu JSON (Cài đặt → Sao lưu và khôi phục), không hỏi hộp thoại */
       const outDir = loc.backupDirSql, outDirJson = loc.backupDirJson;
-      for (const d of [outDir, outDirJson]) fs.mkdirSync(d, {recursive: true});
       const t = process.env.HAKQN_TEST_BACKUP_FAIL;   // chỉ dùng khi kiểm thử: json | sqlite | enospc | space
       const hooks = {};
       if (t === 'json' || t === 'enospc') hooks.beforeJson = () => { throw Object.assign(new Error('giả lập'), {code: t === 'enospc' ? 'ENOSPC' : 'EIO'}); };
       if (t === 'sqlite') hooks.beforeSqlite = () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); };
       if (t === 'space') hooks.freeBytes = 1024;
-      const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();   // phiếu #11: bản .json mang đủ lịch sử bản chụp chốt (mọi phiên bản), như bản .sqlite
+      const data = () => ({...store.load({kemGoi: true}), goiLichSu: store.goiTatCa()});
       let outDir2 = ''; try { outDir2 = Settings.load(app.getPath('userData')).backupDir2 || ''; } catch (er) { /* không có cài đặt */ }   // BK-01: thư mục sao lưu thứ hai (USB/ổ ngoài)
-      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, outDir2, dbBytes: sizeWithWal(store.file), hooks});
+      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, outDir2, createDirs: true, dbBytes: () => sizeWithWal(store.file), hooks});
       if (res.ok) { try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); } }   // chỉ khi cả hai file đã ghi và qua kiểm tra
       else log('ERROR', 'Sao lưu không đầy đủ: ' + res.message);
       if (res.copy2 && !res.copy2.skipped && !res.copy2.ok) log('WARN', 'Chưa chép được bản sao lưu sang thư mục thứ hai: ' + res.copy2.error);
@@ -552,9 +553,9 @@ function registerIpc() {
     checkModel('khoiphuc-lo');
     return {...r, name: it.name, db: store.load()};
   })()));
-  /* PR D bước 2: tái dùng snapshotFile (như truoc-xoa); không tham số; giữ 10 bản gần nhất; lỗi → renderer KHÔNG lưu */
-  handle('bk:truocSheets', () => wrap(() => { const f = store.snapshotFile('truoc-cap-nhat-sheets', {keep: 10}); return {file: f ? path.basename(f) : ''}; })());
-  handle('bk:autoNow', afterReloc(async () => { if (!store) return {ok: false, error: NO_STORE(), unavailable: true}; await runAutoBackup(true); return {ok: !!(autoBk && autoBk.ok), auto: autoBk, error: autoBk && !autoBk.ok ? autoBk.error : undefined}; }));
+  /* Bản dự phòng trước khi ghi lô nhận thay đổi từ Google Sheets. */
+  handle('bk:truocSheets', afterReloc(() => wrap(() => { const f = store.snapshotFile('truoc-cap-nhat-sheets', {keep: 10}); return {file: f ? path.basename(f) : ''}; })()));
+  handle('bk:autoNow', afterReloc(async () => { if (!store) return {ok: false, error: NO_STORE(), unavailable: true}; await runAutoBackup(true, true); return {ok: !!(autoBk && autoBk.ok), auto: autoBk, error: autoBk && !autoBk.ok ? autoBk.error : undefined}; }));
   handle('phieucan:open', async (e, rows, company) => { try { await openPhieuCan(rows, company); return {ok: true}; } catch (err) { log('ERROR', 'phieucan: ' + err.message); return {ok: false, error: err.message}; } });
   handle('phieucan:nhung', async (e, rows, company, dark) => {
     try {
@@ -833,7 +834,7 @@ function createWindow() {
     let pick = 1;   // 0 = lưu và đóng, 1 = bỏ thay đổi và đóng (không có gì để hỏi), 2 = quay lại
     if (n > 0) {
       const auto = {save: 0, discard: 1, back: 2}[process.env.HAKQN_CLOSE];
-      pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Lô đang mở có nhân công, xe hoặc phiếu cân chưa lưu. Dữ liệu chưa lưu sẽ mất nếu đóng ngay.' + chiTiet, buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
+      pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Có lô còn thay đổi chưa lưu. Chọn “Lưu và đóng” để lưu các lô. Nếu có lỗi, cửa sổ sẽ giữ mở để xử lý.' + chiTiet, buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
       if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveAll ? window.__stSaveAll() : (window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true})'), new Promise(res => setTimeout(() => res(null), Math.min(120000, 15000 + 10000 * n)))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
     }
     if (pick === 2) return;

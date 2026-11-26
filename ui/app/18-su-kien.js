@@ -187,6 +187,7 @@ document.addEventListener('click', async e => {
     setTheme(dark ? 'light' : 'dark'); return;
   }
   if (act === 'backup') return backupAll();
+  if (act === 'saveHelpBackupDir') return settingsBackup(false, true);
   if (act === 'saveHelpBackup') return backupSaveAs(true);
   if (act === 'stRetrySave') {
     const f = curForest();

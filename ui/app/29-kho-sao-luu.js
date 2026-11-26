@@ -9,7 +9,7 @@ const kslNgay = iso => { const d = new Date(iso), n = Math.round((new Date(new D
 /* dữ liệu vừa bị THAY từ nơi khác (khôi phục toàn bộ, khôi phục lô, khôi phục từ kho): bản nháp và dấu “chưa lưu” cũ không còn đích; bản đã lưu = đúng dữ liệu vừa nạp.
  * Không làm bước này thì một lô đang “chưa lưu” sẽ bị ghi lại bằng bản TRƯỚC khi khôi phục ở lần lưu kế tiếp (dbGhi dùng savedSnap cũ). */
 function dbThayToanBo(moi) {
-  db = withDefaults(moi); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear();   // saveCache giữ nguyên: phiên bản (rev) đã cũ nên lần lưu kế bị từ chối STALE và tự lưu toàn bộ
+  db = withDefaults(moi); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); loCanSaoLuuSheets.clear();   // saveCache giữ nguyên: phiên bản (rev) đã cũ nên lần lưu kế bị từ chối STALE và tự lưu toàn bộ
   try { savedSnap = HAKDelta.snapshot(db); } catch (e) { savedSnap = null; }
   doiDuLieu();
 }
@@ -20,6 +20,7 @@ function backupConfirmSaved() {
   if (dList.length) {
     return confirm('Đang có ' + dList.length + ' lô còn bản nháp chưa bấm "Lưu dữ liệu vào lô".\n\nBản sao lưu toàn bộ sẽ chỉ gồm dữ liệu đã lưu vào máy (chưa gồm các bản nháp này).\n\n• Bấm OK: Vẫn sao lưu ngay các dữ liệu đã lưu.\n• Bấm Hủy: Quay lại để bấm "Lưu dữ liệu vào lô" trước khi sao lưu.');
   }
+  if (saveTimer) return confirm('Đang có thay đổi chờ ghi. Bấm OK để sao lưu phần đã lưu vào máy hoặc bấm Hủy và đợi ghi xong.');
   if (!storeOk) {
     return confirm('Cơ sở dữ liệu đang có lỗi ghi nhận gần nhất. Dữ liệu đã lưu an toàn trước đó vẫn có thể sao lưu.\n\n• Bấm OK: Sao lưu các dữ liệu an toàn đã lưu.\n• Bấm Hủy: Kiểm tra lại lỗi lưu trước.');
   }
@@ -35,7 +36,13 @@ const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 
 function panelKhoSaoLuu() {
   if (!HB) return kslNut() + '<div class="card"><div class="msg warn">Kho sao lưu (các bản .sqlite tự động) chỉ có ở bản cài trên Windows.</div></div>';
   const m = ksl.msg || setg.msg;
-  const msgHtml = m ? '<div class="msg ' + m[1] + '" id="kslMsg"><span id="setMsg">' + esc(m[0]) + '</span></div>' : '';
+  const loi = ksl.loiToanBo;
+  const actions = loi && m && m === ksl.msg && m[1] !== 'ok' ? '<div class="row" style="margin-top:8px;gap:8px">' +
+    (loi.sqlite ? '<button class="btn sm" data-act="setBackup">Đổi thư mục SQLite…</button>' : '') +
+    (loi.json ? '<button class="btn sm" data-act="setBackupJson">Đổi thư mục JSON…</button>' : '') +
+    (loi.copy2 ? '<button class="btn sm" data-act="setBackup2">Đổi thư mục thứ hai…</button>' : '') +
+    '<button class="btn ghost sm" data-act="backup">Thử sao lưu lại</button></div>' : '';
+  const msgHtml = m ? '<div class="msg ' + m[1] + '" id="kslMsg"><span id="setMsg">' + esc(m[0]) + '</span>' + actions + '</div>' : '';
   if (!SB_TABS.some(t => t[0] === ksl.tab)) ksl.tab = 'thaotac';
   const pane = (k, inner) => '<section data-sbpane="' + k + '" id="sbPane_' + k + '"' + (ksl.tab === k ? '' : ' hidden') + '>' + inner + '</section>';   // ẩn bằng hidden: phần tử vẫn có trong trang, chữ gõ dở không mất khi đổi tab
   return msgHtml + '<nav class="hak-catalog-tabs sub" id="sbTabs" aria-label="Sao lưu và khôi phục">' + SB_TABS.map(([k, l]) => '<button type="button" data-sbtab="' + k + '" id="sbTab_' + k + '"' + (ksl.tab === k ? ' aria-current="page"' : '') + '>' + l + '</button>').join('') + '</nav>' +
@@ -50,7 +57,7 @@ function kslPaint() {
   const tuDong = !au.keep || ck === 'tat' ? '<span class="pill warn">đang tắt</span>' : au.last ? '<b>' + esc(kslNgay(au.last.day + 'T12:00:00')) + '</b> (' + esc(au.last.day.split('-').reverse().join('/')) + ', ' + kslMB(au.last.size) + ') · giữ ' + au.keep + ' bản gần nhất' : 'chưa có bản nào';
   const toanBo = rm.lastBackup ? '<b>' + esc(kslNgay(rm.lastBackup)) + '</b> (' + esc(fmtDT(rm.lastBackup)) + ')' + (rm.due ? ' <span class="pill warn">đã đến hạn nhắc</span>' : '') : '<b>chưa có</b>' + (rm.due ? ' <span class="pill warn">nên sao lưu</span>' : '');
   const r = au.result, last = au.last;
-  const stTxt = !au.keep || ck === 'tat' ? 'Đang tắt.' : r && !r.ok ? '<span class="warnTxt">Lần chạy gần nhất không được: ' + esc(r.error || '') + '</span>' : r && r.skipped && r.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : '';
+  const stTxt = !au.keep || ck === 'tat' ? 'Đang tắt.' : r && !r.ok ? '<span class="warnTxt">Lần chạy gần nhất không được: ' + esc(r.error || '') + '. Chọn thư mục SQLite có quyền ghi và đủ chỗ rồi bấm “Sao lưu ngay”.</span>' : r && r.skipped && r.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : '';
   const sqlCard = '<div class="card" style="margin:10px 0" id="autoBk"><h3 style="margin:0 0 4px">Thư mục và tự sao lưu SQLite (Tự sao lưu hằng ngày / định kỳ)</h3>' +
     '<p class="mut" style="margin:0 0 8px">Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu định kỳ và bản .sqlite khi bấm Sao lưu toàn bộ. Khi đóng phần mềm (và định kỳ khi để máy mở), bản hiện hành được làm mới nếu dữ liệu đã đổi.</p>' +
     '<div style="word-break:break-all"><b>Đang dùng:</b> <code data-set-path>' + esc(st.backupDir || '') + '</code> <span class="pill ' + (st.customBackup ? 'ok' : '') + '">' + (st.customBackup ? 'thư mục riêng' : 'mặc định') + '</span></div>' +
@@ -62,7 +69,7 @@ function kslPaint() {
     '<button class="btn ghost sm" data-act="kslAuto">Sao lưu ngay</button>' +
     '<span class="mut" data-auto-last>' + (last ? 'Bản gần nhất: ' + esc(last.day.split('-').reverse().join('/')) + ' (' + sz(last.size) + ') · đang có ' + au.count + ' bản' : 'Chưa có bản tự sao lưu nào') + '</span>' + (stTxt ? ' <span class="mut">' + stTxt + '</span>' : '') + '</div>' +
     '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#ddd)" id="dbBk2"><h4 style="margin:0 0 4px">Thư mục sao lưu thứ hai</h4><p class="mut" style="margin:0 0 6px">Mỗi bản tự sao lưu SQLite được chép thêm sang đây (ổ ngoài, USB, thư mục đồng bộ) để phòng hỏng cả máy. Ổ không cắm thì bỏ qua, bản chính vẫn còn.</p>' +
-    (au.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(au.dir2) + '</code></div>' + ((au.result && au.result.copy2 && !au.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' + esc(au.result.copy2.error) + '</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
+    (au.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(au.dir2) + '</code></div>' + ((au.result && au.result.copy2 && !au.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' + esc(au.result.copy2.error) + '. Kết nối lại ổ hoặc chọn thư mục thứ hai khác rồi bấm “Sao lưu ngay”.</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
     '<div class="row" style="margin-top:6px;gap:8px"><button class="btn sm" data-act="setBackup2">Chọn thư mục…</button>' + (au.dir2 ? '<button class="btn ghost sm" data-act="setBackup2Off">Tắt</button>' : '') + '</div>' +
     ((ksl.targets && ksl.targets.length) ? ('<div style="margin-top:8px"><small class="mut">Gợi ý kết nối nhanh thư mục Cloud / Ổ đĩa ngoài:</small><div class="row" style="gap:6px;margin-top:4px">' + ksl.targets.map(t => '<button type="button" class="btn ghost sm" data-act="setBk2Quick" data-path="' + esc(t.path) + '" title="Gán ' + esc(t.path) + ' làm thư mục sao lưu thứ hai">' + (t.type === 'cloud' ? '☁️ ' : '💾 ') + esc(t.name) + '</button>').join('') + '</div></div>') : '') +
     '</div></div>';
@@ -114,7 +121,7 @@ async function backupSaveAs(fromSaveHelp) {
   try {
     const r = await HB.backupSaveAs();
     if (!r || r.canceled) return;
-    ksl.msg = r.ok ? ['Đã lưu bản sao lưu toàn bộ ra tệp: ' + r.file, 'ok'] : ['Không lưu được bản sao lưu: ' + (r.error || 'lỗi không rõ'), 'err'];
+    ksl.msg = r.ok ? ['Đã lưu bản sao lưu toàn bộ ra tệp: ' + r.file, 'ok'] : ['Không lưu được bản sao lưu: ' + (r.error || 'lỗi không rõ') + '. Mở Thư mục và lịch, chọn thư mục SQLite có quyền ghi và đủ chỗ rồi thử lại.', 'err'];
     if (fromSaveHelp) pushNote(...ksl.msg);
     render();
   } finally { ksl.busy = false; }
@@ -149,8 +156,16 @@ async function kslKiem(el) {
 }
 async function kslAuto() {
   if (ksl.busy) return; ksl.busy = true;
-  try { const r = await HB.saoLuu.autoNow(); ksl.msg = r.ok ? [r.auto && r.auto.skipped ? (r.auto.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : 'Bản tự sao lưu của hôm nay đã chứa dữ liệu mới nhất.') : 'Đã tự sao lưu và kiểm tra: ' + ((r.auto && r.auto.file) || ''),
-  'ok'] : ['Tự sao lưu không được: ' + (r.error || 'lỗi không rõ'), 'err']; }
+  try {
+    const r = await HB.saoLuu.autoNow();
+    const au = r.auto;
+    if (!r.ok) ksl.msg = ['Tự sao lưu không được. ' + (r.error || '') + ' Mở Thư mục và lịch, chọn thư mục SQLite có quyền ghi và đủ chỗ rồi thử lại.', 'err'];
+    else if (au?.copy2?.ok === false) ksl.msg = ['Bản tự sao lưu chính vẫn dùng được. Chép sang thư mục thứ hai gặp lỗi. ' +
+      au.copy2.error + ' Kết nối lại ổ hoặc chọn thư mục thứ hai khác rồi bấm “Sao lưu ngay”.', 'warn'];
+    else if (au?.reason === 'off') ksl.msg = ['Tự sao lưu đang tắt. Chọn chu kỳ trong Thư mục và lịch để bật lại.', 'warn'];
+    else if (au?.reason === 'empty') ksl.msg = ['Chưa có hồ sơ để tự sao lưu.', 'warn'];
+    else ksl.msg = [au?.skipped ? 'Bản tự sao lưu hiện tại đã chứa dữ liệu mới nhất.' : 'Đã tự sao lưu và kiểm tra. ' + (au?.file || ''), 'ok'];
+  }
   finally { ksl.busy = false; }
   render();
 }
