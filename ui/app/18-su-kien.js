@@ -146,7 +146,11 @@ document.addEventListener('click', async e => {
     const dirty = !!(f && (loDirty.has(f.id) || (st && HAKStage.dirty(st))));
     if (f && !loKhoa(f) && (dirty || act === 'stepSave')) {
       const r = await luuLo();
-      if (r && r.ok === false) return render();
+      if (r && r.ok === false) {
+        render();
+        document.getElementById('loSaveIssue')?.focus();
+        return;
+      }
     }
     if (act === 'stepNext') {
       if (el.dataset.nextMuc && el.dataset.loNhom) mucLoDaMo.set(mucLoKey(el.dataset.loNhom), el.dataset.nextMuc);
@@ -163,6 +167,17 @@ document.addEventListener('click', async e => {
     setTheme(dark ? 'light' : 'dark'); return;
   }
   if (act === 'backup') return backupAll();
+  if (act === 'saveHelpBackup') return backupSaveAs(true);
+  if (act === 'saveHelpBulk') {
+    const help = document.getElementById('bulkSaveHelp');
+    if (help) {
+      const list = help.querySelector('details');
+      if (list) list.open = true;
+      help.focus();
+    }
+    return;
+  }
+  if (act === 'saveHelpField') return openLoSaveField();
   if (act === 'backupSaveAs') return backupSaveAs();
   if (act === 'ktGo') {
     const go = JSON.parse(el.dataset.go || '{}');

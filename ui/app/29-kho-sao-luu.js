@@ -99,13 +99,14 @@ function kslPaint() {
   const rmEl = document.getElementById('setRemind');
   if (rmEl) rmEl.addEventListener('change', async () => { const prev = String(rm.remindDays ?? 7), r = await HB.settings.setRemind(rmEl.value); if (r && r.ok) { setg.s = ksl.st = r.settings; setg.msg = ksl.msg = ['Đã lưu mức nhắc sao lưu.', 'ok']; render(); } else { rmEl.value = prev; setg.msg = ksl.msg = ['Không lưu được mức nhắc sao lưu: ' + ((r && r.error) || 'lỗi không rõ'), 'err']; render(); } });
 }
-async function backupSaveAs() {
+async function backupSaveAs(fromSaveHelp) {
   if (!HB || !HB.backupSaveAs || ksl.busy || !backupConfirmSaved()) return;
   ksl.busy = true;
   try {
     const r = await HB.backupSaveAs();
     if (!r || r.canceled) return;
     ksl.msg = r.ok ? ['Đã lưu bản sao lưu toàn bộ ra tệp: ' + r.file, 'ok'] : ['Không lưu được bản sao lưu: ' + (r.error || 'lỗi không rõ'), 'err'];
+    if (fromSaveHelp) pushNote(...ksl.msg);
     render();
   } finally { ksl.busy = false; }
 }

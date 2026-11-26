@@ -388,7 +388,12 @@ class Store {
   }
   _guardDelete(goneO, goneF, opts) {
     const thatO = (goneO || []).filter(id => !this._chuRong(id));
-    if (thatO.length >= 2 && !opts.allowBulkDelete) throw Object.assign(new Error('Lần lưu này sẽ xóa ' + thatO.length + ' hồ sơ chủ rừng cùng lúc nên đã bị chặn để tránh mất dữ liệu. Xóa từng chủ rừng, hoặc dùng Khôi phục toàn bộ nếu muốn thay toàn bộ dữ liệu.'), {code: 'BULK_DELETE'});
+    if (thatO.length >= 2 && !opts.allowBulkDelete) {
+      const owner = this.db.prepare('SELECT ten FROM owners WHERE id=?');
+      const forests = this.db.prepare('SELECT COUNT(*) AS total FROM forests WHERE owner_id=?');
+      const blockedOwners = thatO.map(id => ({name: owner.get(String(id)).ten, forests: forests.get(String(id)).total}));
+      throw Object.assign(new Error('Đã chặn lưu vì lần ghi sẽ xóa ' + thatO.length + ' hồ sơ chủ rừng.'), {code: 'BULK_DELETE', blockedOwners});
+    }
     if (thatO.length || (goneF && goneF.length)) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
   }
   /* KHÓA CHỈ ĐỌC Ở TẦNG LƯU (mã LOCKED): lô đang chốt hoặc dừng trong cơ sở dữ liệu không nhận thay đổi dữ liệu, trừ các khóa vòng đời (chot, luuTru, dung, nhatKy: chốt, mở khóa,

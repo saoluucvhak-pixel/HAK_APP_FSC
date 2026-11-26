@@ -31,19 +31,43 @@ function nhapTomTatUI() {
 }
 window.__stTomTat = () => { try { return nhapTomTatUI(); } catch (e) { return null; } };
 let loSaveIssue = null;
-function loSaveIssueText() {
-  return loSaveIssue?.key === stKey() && loSaveIssue.epoch === dbEpoch ? loSaveIssue.text : '';
+function currentLoSaveIssue() {
+  return loSaveIssue?.key === stKey() && loSaveIssue.epoch === dbEpoch ? loSaveIssue : null;
+}
+function loSaveHelpHtml() {
+  const issue = currentLoSaveIssue();
+  if (!issue) return '';
+  return esc(issue.text) + (issue.bulk
+    ? ' <button type="button" class="btn sm" data-act="saveHelpBulk">Xem hồ sơ được bảo vệ</button>'
+    : issue.field ? ' <button type="button" class="btn sm" data-act="saveHelpField">Mở ' + esc(issue.field.label) + '</button>' : '');
+}
+function openLoSaveField() {
+  const field = currentLoSaveIssue()?.field;
+  if (!field) return;
+  NAV.ftab = field.tab;
+  if (field.muc === 'thanhvien') NAV.ncTatCa = true;
+  if (field.muc === 'xe') xeTatCa = true;
+  if (field.muc === 'phieu') pcTatCa = true;
+  mucLoDaMo.set(mucLoKey(field.tab), field.muc);
+  render();
+  // Màn hình có thể tự chọn hợp đồng đầu tiên khi mở lần đầu.
+  if (mucLoDangMo(field.tab) !== field.muc) {
+    mucLoDaMo.set(mucLoKey(field.tab), field.muc);
+    render();
+  }
+  const target = document.querySelector(field.pending ? '#stPend button' : '.mucNav [aria-current="page"]');
+  target?.focus();
 }
 /* thanh “Chưa lưu” của cả lô (mọi tab của lô) */
 function loBar() { const t = stBlockText(); return t ? '<div class="msg warn" id="loDirtyBar"><b>Chưa lưu</b> — ' + esc(t.replace(/ Bấm .*$/,
 '')) + (() => { const s = nhapTomTatUI(); return s.dong ? ' <span class="mut" id="loTomTat">(' + esc(s.dong.replace(/^Chưa lưu: /, 'Gồm ')) + ')</span>' : ''; })() + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span>' +
-  '<div id="loSaveIssue" class="msg err" role="alert" tabindex="-1"' + (loSaveIssueText() ? '' : ' hidden') + '>' + esc(loSaveIssueText()) + '</div></div>' : ''; }
+  '<div id="loSaveIssue" class="msg err" role="alert" tabindex="-1"' + (currentLoSaveIssue() ? '' : ' hidden') + '>' + loSaveHelpHtml() + '</div></div>' : ''; }
 /* lưu phần thông tin lô (khi không có bảng nháp) */
 async function luuLoTT(opt) {
   const f = curForest(); if (!f) return {ok: false};
   const sNhap = nhapChup(), o0 = curOwner(); if (o0) chuChot(o0.id);
   const had = loDirty.delete(f.id), r = await persistNow();
-  if (!r || !r.ok) { if (had) loDirty.add(f.id); nhapKhoiPhuc(sNhap); pushNote('Không lưu được: ' + ((r && r.error) || 'không rõ'), 'err'); render(); return r || {ok: false}; }
+  if (!r || !r.ok) { if (had) loDirty.add(f.id); nhapKhoiPhuc(sNhap); render(); return r || {ok: false}; }
   if (had && !(opt && opt.tuKhung)) pushNote('Đã lưu dữ liệu vào lô ' + ((f.info || {}).maRung || '') + '.', 'ok');
   nhapTamGhi(); render(); return {ok: true};
 }

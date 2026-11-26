@@ -209,7 +209,10 @@ test('hồi quy: lưu đối tượng không có danh sách chủ rừng ({} / n
 test('hồi quy: xóa từ 2 chủ rừng trở lên trong một lần lưu bị chặn; xóa 1 chủ vẫn được; allowBulkDelete cho phép', () => {
   const s = new Store(':memory:'), o = (id) => ({id, info: {ten: 'CHỦ ' + id}, forests: {}});
   s.save({v: 2, rs: {a: o('a'), b: o('b'), c: o('c')}});
-  assert.throws(() => s.save({v: 2, rs: {a: o('a')}}), e => e.code === 'BULK_DELETE');
+  assert.throws(() => s.save({v: 2, rs: {a: o('a')}}), e => {
+    assert.deepStrictEqual(e.blockedOwners, [{name: 'CHỦ b', forests: 0}, {name: 'CHỦ c', forests: 0}]);
+    return e.code === 'BULK_DELETE';
+  });
   assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['a', 'b', 'c']);
   s.save({v: 2, rs: {a: o('a'), b: o('b')}});
   assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['a', 'b']);

@@ -66,7 +66,9 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   ok('trạng thái từng dòng: PA2 “Sửa” (đổi khách hàng), PE1/PE2 “Thêm mới”; PE2 trùng số phiếu trong file bị báo lỗi', (await w.$$eval('tr', rs => rs.filter(r => /PA2/.test(r.innerText) && r.querySelector('[data-act=stEdit]'))[0].innerText)).includes('Sửa') && /Số phiếu cân PE2 trùng/.test(t));
   // lưu bị chặn vì còn lỗi (PE2 trùng)
   await w.click('#stDirty [data-act=stSave]'); await w.waitForTimeout(500); t = await body();
-  ok('bấm Lưu khi còn lỗi: không ghi, liệt kê lỗi cần sửa; bản nháp còn nguyên', /Chưa lưu được vì còn lỗi/.test(t) && (await forest('fa')).pc.length === 3 && !!(await w.$('#stDirty')));
+  ok('bấm Lưu khi còn lỗi: không ghi, liệt kê lỗi cần sửa; bản nháp còn nguyên', /Chưa lưu được.*PE2/.test(await w.innerText('#loSaveIssue')) && (await forest('fa')).pc.length === 3 && !!(await w.$('#stDirty')));
+  await w.click('#loSaveIssue [data-act=saveHelpField]');
+  ok('nút mở mục cần sửa đưa tới Phiếu cân', !!(await w.$('[data-muc-lo=phieu][aria-current=page]')));
   // bỏ dòng PE2 thứ hai (Bỏ dòng = chỉ bỏ khỏi lượt nhập)
   const idxPE2 = await w.$$eval('tr[class]', rs => rs.filter(r => /PE2/.test(r.innerText)).map(r => r.querySelector('[data-act=stDel]').dataset.i));
   await w.click('[data-act=stDel][data-kind=pc][data-i="' + idxPE2[1] + '"]'); await w.waitForTimeout(300);
@@ -97,7 +99,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   const flag = path.join(dir, 'fail-save.flag'); fs.writeFileSync(flag, '1');
   const savedBefore = JSON.stringify(await forest('fa'));
   await w.click('[data-ftab=dx]'); await w.click('#stDirty [data-act=stSave]'); await w.waitForTimeout(700); t = await body();
-  ok('lưu thất bại: báo lỗi, KHÔNG báo “Đã lưu”, dữ liệu đã lưu nguyên vẹn (cả nhân công, xe, phiếu cân), bản nháp còn để thử lại', /Không lưu được, dữ liệu đã lưu giữ nguyên/.test(t) && !/Đã lưu dữ liệu vào lô/.test(t) && JSON.stringify(await forest('fa')) === savedBefore && !!(await w.$('#stDirty')) && /PX1/.test(t));
+  ok('lưu thất bại: báo lỗi, KHÔNG báo “Đã lưu”, dữ liệu đã lưu nguyên vẹn (cả nhân công, xe, phiếu cân), bản nháp còn để thử lại', /Chưa lưu được.*giả lập lỗi ghi/.test(t) && !/Đã lưu dữ liệu vào lô/.test(t) && JSON.stringify(await forest('fa')) === savedBefore && !!(await w.$('#stDirty')) && /PX1/.test(t));
   ok('thanh Chưa lưu hiện lý do ghi thất bại ngay cạnh nút Lưu', /giả lập lỗi ghi/.test(await w.innerText('#loDirtyBar #loSaveIssue')));
 
   ok('sau khi lưu hỏng, nút xuất vẫn bị khóa vì bản nháp còn', !!(await w.$('#stDirty')) && await (async () => { await w.click('[data-ftab=xuat]'); return !!(await w.$('#stGate')); })());

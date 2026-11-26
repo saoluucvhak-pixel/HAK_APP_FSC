@@ -2,6 +2,10 @@
 /* Sổ đăng ký các móc CHỈ để kiểm thử (đọc, điều hướng): module nào có móc thì ghi vào CONG_KT; module 35 mở ra thành window.__hak khi chạy từ mã nguồn. */
 const CONG_KT = {};
 let storeOk = true;
+let bulkSaveIssue = null;
+function trackBulkSave(r) {
+  bulkSaveIssue = r?.code === 'BULK_DELETE' ? {epoch: dbEpoch, owners: r.blockedOwners || []} : null;
+}
 let migrated = false;
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 // Chuyển dữ liệu v1 (nhân công, đội xe nằm dưới chủ rừng) sang v2 (nằm dưới rừng). Mỗi chủ rừng cũ được tạo 1 rừng mặc định.
@@ -170,10 +174,11 @@ let khoaNhacDen = 0; const KHOA_NHAC_MS = 8000;
 function flushSave() {
   saveTimer = null;
   storeSave().then(r => {
+    trackBulkSave(r);
     if (r && r.ok) { storeOk = true; const nhac = Date.now() < khoaNhacDen; showSave('Đã lưu vào máy lúc ' + hhmm() + (nhac ? ' · Lô chỉ đọc: thay đổi vừa rồi đã được bỏ' : ''), nhac); }
     else if (r && r.code === 'LOCKED') { storeOk = true; khoaNhacDen = Date.now() + KHOA_NHAC_MS; showSave('Lô chỉ đọc: không ghi thay đổi', true); pushNote(r.error, 'err'); render(); }
     else { storeOk = false; showSave(r?.code === 'BULK_DELETE'
-      ? 'Chưa lưu: ứng dụng phát hiện nhiều hồ sơ chủ rừng sẽ bị xóa. Giữ nguyên hồ sơ và bản nháp để kiểm tra lại.'
+      ? 'Chưa lưu · xem hướng dẫn xử lý'
       : 'Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
   }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });
 }

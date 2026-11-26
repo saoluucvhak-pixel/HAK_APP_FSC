@@ -145,7 +145,7 @@ function checkModel(where) {
     fs.appendFileSync(f, 'OK ' + where + '\n');
   } catch (e) { fs.appendFileSync(f, 'LECH ' + where + ' ' + String(e.message).slice(0, 4000).replace(/\n/g, ' ⏎ ') + '\n'); }
 }
-function wrap(fn, anyState) { return (...a) => { try { if (!store && !anyState) throw Object.assign(new Error(NO_STORE()), {unavailable: true}); return {ok: true, ...fn(...a)}; } catch (e) { if (e.code !== 'STALE') log('ERROR', e.message); return {ok: false, error: e.message, code: e.code, unavailable: !!e.unavailable}; } }; }
+function wrap(fn, anyState) { return (...a) => { try { if (!store && !anyState) throw Object.assign(new Error(NO_STORE()), {unavailable: true}); return {ok: true, ...fn(...a)}; } catch (e) { if (e.code !== 'STALE') log('ERROR', e.message); return {ok: false, error: e.message, code: e.code, unavailable: !!e.unavailable, ...(e.blockedOwners && {blockedOwners: e.blockedOwners})}; } }; }
 /* Mọi thao tác ghi/đọc dữ liệu chờ nếu đang đổi thư mục dữ liệu: không mất thao tác lưu phát sinh lúc đó, và chạy trên cơ sở dữ liệu mới sau khi chuyển */
 const afterReloc = fn => async (...a) => { if (relocating) { try { await relocating; } catch (e) { /* lỗi đã được báo ở nơi đổi */ } } return fn(...a); };
 

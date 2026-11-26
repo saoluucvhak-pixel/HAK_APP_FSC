@@ -81,7 +81,8 @@ async function persistNow() {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   showSave('… Đang lưu');
   const r = await storeSave();
-  if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); } else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || ''), true); }
+  trackBulkSave(r);
+  if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); } else { storeOk = false; showSave(r?.code === 'BULK_DELETE' ? 'Chưa lưu · xem hướng dẫn xử lý' : 'Lỗi lưu: ' + ((r && r.error) || ''), true); }
   return r || {ok: false, error: 'không rõ'};
 }
 

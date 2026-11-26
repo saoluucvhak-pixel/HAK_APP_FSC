@@ -9,13 +9,13 @@ async function stSave(opt) {
   if (epoch !== dbEpoch) return result;
   const details = result?.errs?.length ? result.errs.slice(0, 3).join(' • ') : result?.error;
   const text = result?.ok ? '' : 'Chưa lưu được. ' + (result?.code === 'BULK_DELETE'
-    ? 'Lần lưu có thể xóa nhiều hồ sơ chủ rừng. Bản nháp còn nguyên. Giữ dữ liệu để kiểm tra các hồ sơ đang bị loại khỏi lần lưu.'
-    : details || 'Chưa nhận được lý do từ ứng dụng. Bản nháp vẫn còn để kiểm tra.');
-  loSaveIssue = text ? {key, epoch, text} : null;
+    ? 'Lần ghi bị chặn để bảo vệ hồ sơ chủ rừng. Bản nháp vẫn còn.'
+    : (details || 'Ứng dụng chưa trả về lý do.') + (result?.errs?.length ? ' Sửa các dòng được báo rồi bấm Lưu lại.' : ''));
+  loSaveIssue = text ? {key, epoch, text, field: result?.field, bulk: result?.code === 'BULK_DELETE'} : null;
   if (key === stKey()) {
     const el = document.getElementById('loSaveIssue');
     if (el) {
-      el.textContent = text;
+      el.innerHTML = loSaveHelpHtml();
       el.hidden = !text;
       if (text && !opt?.tuKhung) el.focus();
     }
@@ -28,16 +28,32 @@ async function stSaveDraft(opt) {
   if (stSaving) return {ok: false, error: 'đang lưu'};
   const o = db.rs[NAV.cur], f = o && o.forests && o.forests[NAV.curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
   const pend = HAKStage.pendingOf(st);   // cùng quy tắc với bước xem trước: dòng cần đối chiếu chưa xử lý thì chưa lưu
-  if (pend.length) { const msg = 'Chưa lưu: còn ' + pend.length + ' dòng CẦN ĐỐI CHIẾU (cùng số phiếu nhưng khác ngày, biển số, nơi cân hoặc khối lượng): ' + pend.slice(0,
-  10).map(q => q.key).join(', ') + (pend.length > 10 ? '…' : '') + '. Chọn giữ bản hiện có, cập nhật cùng chuyến, chuyến khác hoặc bỏ dòng nguồn. Dữ liệu đã lưu và bản nháp giữ nguyên.'; pushNote(msg, 'err'); NAV.ftab = 'dx'; render(); return {ok: false, error: 'Còn ' + pend.length + ' dòng phiếu cân cần đối chiếu. Mở Vận chuyển để chọn cách xử lý từng dòng.', pend}; }
+  if (pend.length) return {
+    ok: false,
+    error: 'Còn ' + pend.length + ' dòng phiếu cân cần đối chiếu. Giữ bản hiện có nếu phiếu đang lưu đúng, cập nhật nếu xác nhận cùng chuyến, chọn chuyến khác nếu là hai chuyến, hoặc bỏ qua dòng nguồn nếu nhập nhầm. Xử lý xong rồi lưu lại.',
+    field: {tab: 'dx', muc: 'phieu', label: 'Vận chuyển → Phiếu cân', pending: true}
+  };
   const idc = HAKStage.idConflicts(st);   // _id nội bộ phải duy nhất trước khi ghi SQLite; xung đột thì chặn, giữ dữ liệu đã lưu và bản nháp
   if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: msg, idc}; }
   const rec0 = jobView(o, f), g0 = ganDoi(rec0.doi, st.cur.nc), v0 = ganVC(rec0.hdvc, st.cur.dx), p0 = ganPC(g0.doi, st.cur.pc), rec = Object.assign(rec0, {nc: g0.nc, doi: g0.doi, dx: v0.dx, hdvc: v0.hdvc, pc: p0, info: Object.assign({}, rec0.info, {_klPC: klPhieu(p0)})}), errs = [];
-  let errTab = null, cfgWarn = 0;
-  const dkv = HAKStage.dirtyKinds(st);   // chỉ kiểm phần có thay đổi; phiếu cân luôn kiểm cùng xe (quan hệ biển số)
-  [['Nhân công', checkNC, 'nc', ['nc']], ['Vận chuyển (xe)', checkDX, 'dx', ['dx']], ['Phiếu cân', checkPC, 'dx', ['pc', 'dx']]].filter(x => x[3].some(k => dkv.includes(k))).forEach(([n, fn, tb]) => { const c = fn(rec); if (c.errs.length && !errTab) errTab = tb;
-  c.errs.filter(e => !CONFIG_ERR.test(e)).forEach(e => errs.push(n + ' — ' + e)); if (c.errs.some(e => CONFIG_ERR.test(e))) cfgWarn++; });
-  if (errs.length) { stErrList = errs; pushNote('Chưa lưu: còn ' + errs.length + ' lỗi trong bản nháp. Sửa hoặc bỏ các dòng lỗi rồi lưu lại.', 'err'); NAV.ftab = errTab || NAV.ftab; render(); return {ok: false, error: 'lỗi dữ liệu', errs}; }
+  let field = null;
+  const dkv = HAKStage.dirtyKinds(st);
+  const checks = [
+    ['nc', 'thanhvien', 'Nhân công → Thành viên', checkNC, ['nc']],
+    ['dx', 'xe', 'Vận chuyển → Xe và tài xế', checkDX, ['dx']],
+    ['dx', 'phieu', 'Vận chuyển → Phiếu cân', checkPC, ['pc', 'dx']]
+  ];
+  for (const [tab, muc, label, check, kinds] of checks) {
+    if (!kinds.some(k => dkv.includes(k))) continue;
+    const errors = check(rec).errs;
+    const invalid = errors.filter(e => !CONFIG_ERR.test(e));
+    if (invalid.length && !field) field = {tab, muc, label};
+    invalid.forEach(e => errs.push(label + ' — ' + e));
+  }
+  if (errs.length) {
+    stErrList = errs;
+    return {ok: false, error: 'lỗi dữ liệu', errs, field};
+  }
   // phiếu có cùng số ở lô khác: chưa đủ căn cứ xác định cùng chuyến → phải đối chiếu, không tự gộp
   /* chỉ hỏi cho phiếu MỚI hoặc vừa ĐỔI số phiếu / ngày cân trong lần lưu này (phiếu đã lưu từ trước thì đã đối chiếu rồi, không hỏi lại mỗi lần bấm Lưu);
    * so cùng khóa với trong lô: số phiếu + ngày cân (HAKBks.khoaPhieu). Cùng số mà khác ngày là hai chuyến khác nhau, không hỏi. Phiếu thiếu ngày thì so theo số phiếu. */
@@ -46,7 +62,7 @@ async function stSaveDraft(opt) {
   if (mine.size) Object.values(db.rs).forEach(ow => forestList(ow).forEach(ff => { if (ow.id === NAV.cur && ff.id === NAV.curF) return; (ff.pc || []).forEach(p => { const k = khoaSo(p); if (mine.has(k) || (!HAKBks.khoaPhieu(p) && [...mine].some(m => m.split('|')[0] === k))) dups.push(p.soPhieu + (p.ngay ? ' ngày ' + p.ngay : '') + ' (lô ' + (ff.info.maRung || '?') + ', ' + (ow.info.ten || '') + ')'); }); }));
   if (dups.length && !opt?.confirmedDup && !confirm('Có ' + dups.length + ' phiếu cân cùng số phiếu và ngày cân đang có ở lô khác:\n' + dups.slice(0,
   10).map(x => '• ' + x).join('\n') + (dups.length > 10 ? '\n• …' : '') + '\n\nHai nơi cân hoặc hai lô có thể dùng trùng số phiếu. Đối chiếu kỹ (ngày, biển số, khối lượng) rồi bấm OK để vẫn lưu vào lô này, hoặc Hủy để quay lại.')) return {ok: false, error: 'chờ đối chiếu'};
-  stSaving = true; const sNhap = nhapChup(), chuU = chuChot(o.id); const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, soLog: f.soLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
+  stSaving = true; const sNhap = nhapChup(), chuU = chuChot(o.id); const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, soLog: f.soLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt, nhatKyNap: f.nhatKyNap};
   try {
     const cm = HAKStage.commit(st, r => HAKPhieuCan.chuanHoaNgay2(r, null)), at = stamp(), dk = HAKStage.dirtyKinds(st);   // mọi phiếu có cột ngày cân 2 khi lưu vào hồ sơ rừng (nhập thật thì giữ, trống thì suy ra)
     const oldNcIds = (f.nc || []).map(r => r && r.id).filter(Boolean), oldDxIds = (f.dx || []).map(r => r && r.id).filter(Boolean);
@@ -61,7 +77,7 @@ async function stSaveDraft(opt) {
     if (dk.includes('nc')) { f.ncAt = at; if (st.src.nc && /^Excel: /.test(st.src.nc)) f.ncFile = st.src.nc.slice(7); }
     if (dk.includes('dx')) { f.dxAt = at; if (st.src.dx && /^Excel: /.test(st.src.dx)) f.dxFile = st.src.dx.slice(7); }
     if (dk.includes('pc')) { f.pcAt = at; if (st.src.pc && /^Excel: /.test(st.src.pc)) f.pcFile = st.src.pc.slice(7); else if (st.src.pc && /Google/.test(st.src.pc) && !f.pcFile) f.pcFile = 'Tra cứu Google Sheets'; }
-    f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).concat((st.sk || []).map(x => ({at: new Date().toISOString(), kind: x.kind, nguon: x.nguon, them: x.them, capNhat: 0, giu: 0, loi: 0}))).slice(-200); st.sk = [];   // 3.5.1: thêm tay / từ Danh mục / từ phiếu cân cũng vào nhật ký truy xuất   // ghi vào lô cùng lần lưu (không kèm ảnh chụp hoàn tác)
+    f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).concat((st.sk || []).map(x => ({at: new Date().toISOString(), kind: x.kind, nguon: x.nguon, them: x.them, capNhat: 0, giu: 0, loi: 0}))).slice(-200);
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
     const r = await persistNow(); if (!r || !r.ok) throw Object.assign(new Error(r?.error || 'không rõ'), {code: r?.code});
     const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote(nDm[0], nDm[1]);
@@ -69,8 +85,8 @@ async function stSaveDraft(opt) {
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
     nhapKhoiPhuc(sNhap);
-    Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog; if (!snap.soLog) delete f.soLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
-    pushNote('Không lưu được, dữ liệu đã lưu giữ nguyên và bản nháp vẫn còn để thử lại: ' + e.message, 'err'); render(); return {ok: false, error: e.message, code: e.code};
+    Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog; if (!snap.soLog) delete f.soLog; if (!snap.nhatKyNap) delete f.nhatKyNap;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
+    render(); return {ok: false, error: e.message, code: e.code};
   } finally { stSaving = false; }
 }
 let stErrList = null;
