@@ -19,12 +19,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const ng0 = await w.$$eval('#nvNganh [data-nvten-txt]', e => e.map(x => x.textContent.trim())), cv0 = await w.$$eval('#nvChucVu [data-nvten-txt]', e => e.map(x => x.textContent.trim()));
   ok('gieo sẵn 2 ngành: Khai thác gỗ keo, Vận chuyển', JSON.stringify(ng0) === JSON.stringify(['Khai thác gỗ keo', 'Vận chuyển']), JSON.stringify(ng0));
   ok('gieo sẵn 5 chức vụ: Chủ xe, Tổ trưởng, Công nhân, Tài xế, Khác', JSON.stringify(cv0) === JSON.stringify(['Chủ xe', 'Tổ trưởng', 'Công nhân', 'Tài xế', 'Khác']), JSON.stringify(cv0));
-  await w.fill('#nvMoiNg', 'Chế biến'); await w.click('#nvThemNg'); await w.waitForTimeout(400);
-  await w.fill('#nvMoiNg', 'vận chuyển'); await w.click('#nvThemNg'); await w.waitForTimeout(200);
-  ok('thêm trùng tên (không phân biệt hoa/dấu) bị chặn', /Đã có ngành nghề/.test(await w.innerText('#nvMsg')));
+  await w.click('#nvThemNg'); await w.fill('#nvThemTen', 'Chế biến'); await w.click('#nvThemLuu'); await w.waitForTimeout(400);
+  await w.click('#nvThemNg'); await w.fill('#nvThemTen', 'vận chuyển'); await w.click('#nvThemLuu'); await w.waitForTimeout(200);
+  ok('thêm trùng tên (không phân biệt hoa/dấu) bị chặn', /Đã có ngành nghề/.test(await w.innerText('#nvThemLoi')));
+  await w.keyboard.press('Escape'); await w.waitForTimeout(200); ok('Esc đóng hộp thoại Thêm ngành nghề', !(await w.$('#dmModal')));
   let d = await db(); const che = (d.dmNganh || []).find(n => n.ten === 'Chế biến');
   ok('thêm ngành mới lưu vào dữ liệu', !!che && d.dmNganh.length === 3, JSON.stringify(d.dmNganh));
-  await w.fill('#nvMoiCv', 'Thợ máy'); await w.selectOption('#nvMoiCvNg', che.id); await w.click('#nvThemCv'); await w.waitForTimeout(400);
+  await w.click('#nvThemCv'); await w.fill('#nvThemTen', 'Thợ máy'); await w.selectOption('#nvThemNganh', che.id); await w.click('#nvThemLuu'); await w.waitForTimeout(400);
   d = await db(); const tm = d.dmChucVu.find(c => c.ten === 'Thợ máy');
   ok('thêm chức vụ kèm ngành mặc định', !!tm && tm.nganh === che.id, JSON.stringify(tm));
   await w.click('[data-act=nvXoa][data-nv="dmChucVu|' + tm.id + '"]'); await w.waitForTimeout(400);
@@ -48,7 +49,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   d = await db(); const p2 = ((d.dmDoiTuong.find(o => o.ten === 'Người hai giả lập') || {}).nguoi || [])[0] || {};
   ok('không chọn chức vụ chi tiết: người KHÔNG có khóa chucVu/nganh (JSON như bản cũ)', !('chucVu' in p2) && !('nganh' in p2) && p2.vaiTro && p2.vaiTro.taiXe, JSON.stringify(p2));
   // đang dùng → Ngừng sử dụng
-  await w.click('#setTab_setnv'); await w.waitForSelector('#nvChucVu'); await w.fill('#nvMoiCv', 'Giám sát'); await w.selectOption('#nvMoiCvNg', che.id); await w.click('#nvThemCv'); await w.waitForTimeout(300);
+  await w.click('#setTab_setnv'); await w.waitForSelector('#nvChucVu'); await w.click('#nvThemCv'); await w.fill('#nvThemTen', 'Giám sát'); await w.selectOption('#nvThemNganh', che.id); await w.click('#nvThemLuu'); await w.waitForTimeout(300);
   await w.click('[data-act=nvXoa][data-nv="dmNganh|' + che.id + '"]'); await w.waitForTimeout(300);
   d = await db(); ok('ngành đang là mặc định của chức vụ: xóa → Ngừng sử dụng, không mất', (d.dmNganh.find(n => n.id === che.id) || {}).ngung === true);
 

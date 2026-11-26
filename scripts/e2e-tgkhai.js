@@ -23,11 +23,11 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 2. màn Định mức: khai 1 ha = 5 ngày (hiệu lực từ 01/01/2025), và định mức gỗ keo 80 tấn/ha
   await w.click('#navNorm'); await w.click('#normTab_tg'); await w.waitForSelector('#tgForm');
   ok('màn Định mức có mục “Định mức thời gian khai thác: 1 ha = ? ngày”', /Định mức thời gian khai thác: 1 ha = \? ngày/.test(await w.innerText('#main')));
-  await w.fill('#tgForm tr[data-tg=new] [name=t_tu]', '01/01/2025'); await w.fill('#tgForm tr[data-tg=new] [name=t_ngay]', '0'); await w.click('#tgForm button[type=submit]'); await w.waitForTimeout(300);
+  await w.click('#tgThem'); await w.fill('#tgMoForm [name=t_tu]', '01/01/2025'); await w.fill('#tgMoForm [name=t_ngay]', '0'); await w.click('#normMoLuu'); await w.waitForTimeout(300);
   ok('định mức 0 ngày/ha bị từ chối, nêu lý do, không ghi', /lớn hơn 0/.test(await w.innerText('#main')) && !((await db()).dinhMucNgay || []).length);
-  await w.fill('#tgForm tr[data-tg=new] [name=t_tu]', '01/01/2025'); await w.fill('#tgForm tr[data-tg=new] [name=t_ngay]', '5'); await w.click('#tgForm button[type=submit]'); await w.waitForTimeout(300);
+  await w.click('#normMoHuy'); await w.click('#tgThem'); await w.fill('#tgMoForm [name=t_tu]', '01/01/2025'); await w.fill('#tgMoForm [name=t_ngay]', '5'); await w.click('#normMoLuu'); await w.waitForTimeout(300);
   ok('lưu 1 ha = 5 ngày (hiệu lực từ 01/01/2025) vào SQLite', JSON.stringify((await db()).dinhMucNgay) === JSON.stringify([{tuNgay: '01/01/2025', ngayHa: 5}]));
-  await w.click('#normTab_keo'); await w.fill('#keoForm tr[data-keo=new] [name=k_tu]', '01/01/2025'); await w.fill('#keoForm tr[data-keo=new] [name=k_tan]', '80'); await w.click('#keoForm button[type=submit]'); await w.waitForTimeout(300);
+  await w.click('#normTab_keo'); await w.click('#keoThem'); await w.fill('#keoMoForm [name=k_tu]', '01/01/2025'); await w.fill('#keoMoForm [name=k_tan]', '80'); await w.click('#normMoLuu'); await w.waitForTimeout(300);
   await w.click('#navNorm'); await w.click('#normTab_tg'); await w.waitForSelector('#tgForm');
   ok('cột năng suất: 1 ngày ≈ 16 tấn (80 tấn/ha ÷ 5 ngày/ha)', /1 ngày ≈ 16 tấn/.test(await w.innerText('#tgForm')), (await w.innerText('#tgForm')).slice(-200));
   // 3. thông tin rừng: 2,5 ha × 5 = 12,5 → 13 ngày; chưa có ngày bắt đầu
@@ -59,7 +59,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await openInfo(); await w.click('[data-act=tgDefault]'); await w.waitForTimeout(200); await w.$eval('#forestForm', f => f.requestSubmit()); await w.waitForTimeout(400);
   ok('“Dùng mặc định”: xóa số riêng, quay về 5 ngày/ha (13 ngày)', (await db()).rs.own1.forests.fa.info.dinhMucNgayHa == null && /13 ngày/.test(await (async () => { await openInfo(); return note(); })()));
   // 7. định mức hiệu lực theo ngày bắt đầu: bản mới 4 ngày/ha từ 01/07/2026
-  await w.click('#navNorm'); await w.click('#normTab_tg'); await w.waitForSelector('#tgForm'); await w.fill('#tgForm tr[data-tg=new] [name=t_tu]', '01/07/2026'); await w.fill('#tgForm tr[data-tg=new] [name=t_ngay]', '4'); await w.click('#tgForm button[type=submit]'); await w.waitForTimeout(300);
+  await w.click('#navNorm'); await w.click('#normTab_tg'); await w.waitForSelector('#tgForm'); await w.click('#tgThem'); await w.fill('#tgMoForm [name=t_tu]', '01/07/2026'); await w.fill('#tgMoForm [name=t_ngay]', '4'); await w.click('#normMoLuu'); await w.waitForTimeout(300);
   await openInfo(); n = await note();
   ok('bắt đầu khai thác 04/10/2026 ≥ 01/07/2026: dùng bản 4 ngày/ha → 2,5 × 4 = 10 ngày', /10 ngày/.test(n) && /2,5 ha × 4 ngày\/ha/.test(n), n);
   await w.fill('#forestForm [name=tuNgay]', '01/03/2026'); await w.waitForTimeout(250);
@@ -83,9 +83,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   { const d0 = await db(); d0.rs.own1.forests.fa.pc = [{_row: 2, maRung: 'R-A', stt: '1', ngay: '30/10/2026', bienSo: '92C-12345', soPhieu: 'Z1', kl: 5, noiGiao: 'KCN', ghiChu: ''}, {_row: 3, maRung: 'R-A', stt: '2', ngay: '31/10/2026', bienSo: '92C-12345', soPhieu: 'Z2', kl: 5, noiGiao: 'KCN', ghiChu: ''}]; await w.evaluate(x => window.hak.save(x), d0); await w.reload(); await w.waitForSelector('#side'); }
   await openInfo(); lech = await w.innerText('#tgLech').catch(() => '');
   ok('ô đến ngày trống nhưng đã có phiếu cân (cuối cùng 31/10/2026): cảnh báo so với “ngày cân cuối cùng”', /theo ngày cân cuối cùng/.test(lech) && /thực tế 27 ngày/.test(lech), lech);
-  // xóa một dòng định mức: bấm Xóa rồi Lưu mới ghi
-  await w.click('#navNorm'); await w.click('#normTab_tg'); await w.waitForSelector('#tgForm'); await w.click('#tgForm tr[data-tg="1"] [data-act=keoDel]'); ok('bấm Xóa: dòng ẩn nhưng chưa ghi vào SQLite cho đến khi bấm Lưu', ((await db()).dinhMucNgay || []).length === 2);
-  await w.click('#tgForm button[type=submit]'); await w.waitForTimeout(300); ok('Lưu sau khi Xóa: chỉ còn bản 5 ngày/ha từ 01/01/2025', JSON.stringify((await db()).dinhMucNgay) === JSON.stringify([{tuNgay: '01/01/2025', ngayHa: 5}]));
+  // xóa một dòng định mức: bấm Xóa (hỏi xác nhận) thì ghi ngay
+  await w.click('#navNorm'); await w.click('#normTab_tg'); await w.waitForSelector('#tgForm'); await w.click('#tgBang tr[data-tg="1"] [data-act=normXoa]'); await w.waitForTimeout(400);
+  ok('Xóa: chỉ còn bản 5 ngày/ha từ 01/01/2025', JSON.stringify((await db()).dinhMucNgay) === JSON.stringify([{tuNgay: '01/01/2025', ngayHa: 5}]));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

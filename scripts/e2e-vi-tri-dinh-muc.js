@@ -46,32 +46,31 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 3. thêm dòng nhân công chọn vị trí từ danh mục: tự điền nhiệm vụ. Tự điền chỉ chạy ở sự kiện change (rời ô hoặc chọn từ danh sách, soát độc lập P2-3: không điền ở mỗi phím gõ), nên sau mỗi lần gõ phải phát change như người dùng rời ô
   const opts = await w.$$eval('#dbPosVt option', o => o.map(x => x.value));
   ok('ô Vị trí có danh sách chọn từ danh mục vị trí (không có vị trí ngừng sử dụng)', opts.includes('Thợ lái máy') && opts.includes('Khác'), JSON.stringify(opts));
-  const moi = '#dbForm tr[data-db=new]';
+  const moi = '#dbMoForm';
+  await w.click('#dbThem'); await w.waitForSelector(moi);
   await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.dispatchEvent(moi + ' [name=b_cd]', 'change'); await w.waitForTimeout(100);
   ok('chọn vị trí từ danh mục: Nhiệm vụ tự điền từ danh mục', (await w.inputValue(moi + ' [name=b_nv]')) === 'Lái máy xúc, máy kéo gỗ', await w.inputValue(moi + ' [name=b_nv]'));
   await w.fill(moi + ' [name=b_nv]', 'Tôi tự gõ nhiệm vụ'); await w.fill(moi + ' [name=b_cd]', ''); await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.dispatchEvent(moi + ' [name=b_cd]', 'change'); await w.waitForTimeout(100);
   ok('nhiệm vụ đã gõ không bị ghi đè khi chọn lại vị trí', (await w.inputValue(moi + ' [name=b_nv]')) === 'Tôi tự gõ nhiệm vụ');
   await w.fill(moi + ' [name=b_nv]', ''); await w.fill(moi + ' [name=b_cd]', 'Thợ lái máy'); await w.dispatchEvent(moi + ' [name=b_cd]', 'change'); await w.waitForTimeout(100);
 
-  // 4. tiêu đề tổng đội đổi ngay khi gõ, chưa lưu
+  // 4. tiêu đề tổng đội đổi khi lưu (hộp thoại chưa lưu thì không đổi dữ liệu)
   const tong = () => w.evaluate(() => +(/= (\d+) người/.exec(document.querySelector('#normPane_nhancong h2').textContent) || [])[1]);
   const tab = () => w.$eval('#normTab_nhancong', b => +(/= (\d+) người/.exec(b.textContent) || [])[1]);
   const t0 = await tong(), dbTruoc = JSON.stringify((await db()).dinhBien || null);
   await w.fill(moi + ' [name=b_so]', '4');
-  const t1 = await tong(); ok('gõ Số người = 4 ở dòng mới: tiêu đề tăng ngay đúng 4, chưa bấm Lưu', t1 === t0 + 4, t0 + ' -> ' + t1);
-  ok('tên tab Nhân công cũng đổi theo', (await tab()) === t1);
-  ok('chưa lưu: dữ liệu định biên trong CSDL không đổi', JSON.stringify((await db()).dinhBien || null) === dbTruoc);
-  await w.fill(moi + ' [name=b_so]', '1'); ok('sửa lại thành 1: tiêu đề giảm theo', (await tong()) === t0 + 1);
-  await w.fill(moi + ' [name=b_so]', '2'); await w.click('#dbForm button[type=submit]'); await w.waitForTimeout(600);
+  ok('gõ Số người = 4 trong hộp thoại nhưng chưa bấm Lưu: tiêu đề và dữ liệu chưa đổi', (await tong()) === t0 && JSON.stringify((await db()).dinhBien || null) === dbTruoc);
+  ok('tên tab Nhân công khớp tiêu đề', (await tab()) === t0);
+  await w.fill(moi + ' [name=b_so]', '2'); await w.click('#normMoLuu'); await w.waitForTimeout(600);
   d = await db(); const hang2 = (d.dinhBien || []).find(r => r.chucDanh === 'Thợ lái máy');
   ok('Lưu: dòng mới ghi đúng vị trí, số người, nhiệm vụ lấy từ danh mục', !!hang2 && hang2.soNguoi === 2 && hang2.nhiemVu === 'Lái máy xúc, máy kéo gỗ', JSON.stringify(hang2));
-  ok('sau khi lưu vẫn ở tab Nhân công và tiêu đề khớp dữ liệu lưu', JSON.stringify(await hien()) === '["nhancong"]' && (await tong()) === t0 + 2);
+  ok('sau khi lưu vẫn ở tab Nhân công, hộp thoại đóng, tiêu đề tăng đúng 2 và tên tab khớp', JSON.stringify(await hien()) === '["nhancong"]' && !(await w.$('#dmModal')) && (await tong()) === t0 + 2 && (await tab()) === t0 + 2);
 
   // 5. lưu ở tab nào chỉ ảnh hưởng tab đó
   const dinhBien0 = JSON.stringify((await db()).dinhBien), tgTruoc = JSON.stringify((await db()).dinhMucNgay || null);
   await w.click('#normTab_keo'); await w.waitForSelector('#keoForm');
   ok('tab Gỗ keo: chỉ #keoForm hiện', JSON.stringify(await hien()) === '["keo"]' && !(await w.isVisible('#dbForm')));
-  await w.fill('#keoForm tr[data-keo=new] [name=k_tu]', '01/01/2026'); await w.fill('#keoForm tr[data-keo=new] [name=k_tan]', '85'); await w.click('#keoForm button[type=submit]'); await w.waitForTimeout(600);
+  await w.click('#keoThem'); await w.fill('#keoMoForm [name=k_tu]', '01/01/2026'); await w.fill('#keoMoForm [name=k_tan]', '85'); await w.click('#normMoLuu'); await w.waitForTimeout(600);
   d = await db();
   ok('lưu định mức gỗ keo: chỉ đổi dinhMucKeo, định biên không đổi', JSON.stringify(d.dinhMucKeo) === JSON.stringify([{tuNgay: '01/01/2026', tanHa: 85}]) && JSON.stringify(d.dinhBien) === dinhBien0 && JSON.stringify(d.dinhMucNgay || null) === tgTruoc, JSON.stringify(d.dinhMucKeo));
   ok('lưu xong vẫn ở tab Gỗ keo (nhớ tab trong phiên)', JSON.stringify(await hien()) === '["keo"]');

@@ -20,7 +20,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const DB = async () => (await w.evaluate(() => window.hak.loadSync().db));
   // ---- 3. ô Số người trống khác số 0 ----
   await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm');
-  const them = async (cd, so, nv) => { await w.evaluate(([c, s, n]) => { const trs = [...document.querySelectorAll('#dbForm tr[data-db]')], tr = trs[trs.length - 1]; tr.querySelector('[name=b_cd]').value = c; tr.querySelector('[name=b_so]').value = s; tr.querySelector('[name=b_nv]').value = n; document.getElementById('dbForm').requestSubmit(); }, [cd, so, nv]); await w.waitForTimeout(500); };
+  const them = async (cd, so, nv) => { if (await w.$('#dmModal')) await w.click('#normMoHuy'); await w.click('#dbThem'); await w.fill('#dbMoForm [name=b_cd]', cd); await w.fill('#dbMoForm [name=b_so]', so); await w.fill('#dbMoForm [name=b_nv]', nv); await w.click('#normMoLuu'); await w.waitForTimeout(500); };   // 3.7.1: hộp thoại Thêm vị trí; lỗi hiện ngay trong hộp thoại
   const truoc = JSON.stringify((await DB()).dinhBienVer);
   await w.selectOption('#dbVerSel', '01/12/2026'); await w.waitForTimeout(300);
   await them('Vị trí thử trống', '', ''); let t = await w.innerText('#main');

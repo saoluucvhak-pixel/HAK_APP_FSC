@@ -417,24 +417,33 @@ function panelSetNv() {
       '<label style="grid-column:1/-1"><span>Tên</span><input data-nvten="' + k + '|' + esc(id) + '" value="' + esc(x.ten) + '" autocomplete="off" aria-label="Tên ' + (k === 'dmNganh' ? 'ngành nghề' : 'chức vụ') + '"></label>' +
       (k === 'dmChucVu' ? '<label style="grid-column:1/-1"><span>Ngành mặc định</span><select data-nvng="' + k + '|' + esc(id) + '" aria-label="Ngành mặc định">' + optNg(x.nganh) + '</select></label>' : '') + '</div>' +
       '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" data-act="nvDoi" data-nv="' + k + '|' + esc(id) + '" id="nvLuuSua">💾 Lưu thông tin</button><button class="btn ghost" data-act="nvHuySua" id="nvHuySua">Hủy bỏ</button></div></div></div>'; })() : '';
-  return '<div class="card"><h3 style="margin-top:0">Ngành nghề</h3>' + (cd.nvMsg ? '<div class="msg ' + cd.nvMsg[1] + '" id="nvMsg">' + esc(cd.nvMsg[0]) + '</div>' : '') +
+  const themMo = cd.nvThem ? (() => { const k = cd.nvThem, ngK = k === 'dmNganh', tieu = ngK ? 'Thêm ngành nghề' : 'Thêm chức vụ';
+    return '<div class="dmModalBack" id="dmModal"><div class="dmModal" role="dialog" aria-modal="true" aria-label="' + tieu + '" style="max-width:520px"><form id="nvThemForm" style="margin:0" data-nv="' + k + '"><h3 style="margin:0 0 8px">' + tieu + '</h3>' +
+      '<div class="msg err" id="nvThemLoi" role="alert" hidden></div><div class="grid">' +
+      '<label style="grid-column:1/-1"><span class="req">' + (ngK ? 'Tên ngành nghề' : 'Tên chức vụ') + '</span><input id="nvThemTen" name="ten" placeholder="' + (ngK ? 'Tên ngành nghề mới' : 'Tên chức vụ mới') + '" autocomplete="off"></label>' +
+      (ngK ? '' : '<label style="grid-column:1/-1"><span>Ngành mặc định</span><select id="nvThemNganh" name="nganh" aria-label="Ngành mặc định">' + optNg('') + '</select></label>') + '</div>' +
+      '<div class="row" style="gap:8px;margin-top:12px"><button class="btn" type="submit" id="nvThemLuu">💾 Lưu</button><button class="btn ghost" type="button" data-act="nvThemHuy" id="nvThemHuy">Hủy</button></div></form></div></div>'; })() : '';
+  return '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Ngành nghề</h3><button class="btn" type="button" data-act="nvThemMo" data-nv="dmNganh" id="nvThemNg">+ Thêm ngành nghề</button></div>' + (cd.nvMsg ? '<div class="msg ' + cd.nvMsg[1] + '" id="nvMsg">' + esc(cd.nvMsg[0]) + '</div>' : '') +
     '<p class="mut" style="margin-top:0">Ngành nghề dùng để lọc Bên nhận khoán, nhân công, bên vận chuyển và tài xế. Một doanh nghiệp được chọn cả hai ngành. Mục đang được dùng không xóa hẳn mà chuyển sang “Ngừng sử dụng”.</p>' +
     '<div class="wrap"><table id="nvNganh"><thead><tr><th>Ngành nghề</th><th>Đang dùng</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' +
     ng.map(n => '<tr data-nvrow="' + esc(n.id) + '"' + (n.ngung ? ' class="mut"' : '') + '><td><b data-nvten-txt>' + esc(n.ten) + '</b> ' + (n.ngung ? '<span class="pill">Ngừng sử dụng</span>' : '') + '</td><td>' + (HAKNganh.dangDungNganh(db, n.id) || 'Chưa dùng') + '</td><td class="nvNut">' +
       nut('nvSua', 'dmNganh', n.id, 'Sửa') + (n.ngung ? nut('nvDung', 'dmNganh', n.id, 'Dùng lại') : '') + nut('nvXoa', 'dmNganh', n.id, n.ngung ? 'Xóa' : 'Ngừng / Xóa') + '</td></tr>').join('') +
-    '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px;align-items:flex-end;flex-wrap:wrap"><label><span>Tên ngành nghề mới</span><input id="nvMoiNg" placeholder="Tên ngành nghề mới"></label><button class="btn" data-act="nvThemNg" id="nvThemNg">+ Thêm ngành nghề</button></div></div>' +
-    '<div class="card"><h3 style="margin-top:0">Chức vụ</h3><p class="mut" style="margin-top:0">Chức vụ gắn với ngành mặc định. Chức vụ không có ngành (như “Khác”) thì khi nhập người phải chọn ngành. “Tổ trưởng” trong lô vẫn là chữ ở cột Chức vụ của dòng nhân công.</p>' +
+    '</tbody></table></div></div>' +
+    '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Chức vụ</h3><button class="btn" type="button" data-act="nvThemMo" data-nv="dmChucVu" id="nvThemCv">+ Thêm chức vụ</button></div><p class="mut" style="margin-top:0">Chức vụ gắn với ngành mặc định. Chức vụ không có ngành (như “Khác”) thì khi nhập người phải chọn ngành. “Tổ trưởng” trong lô vẫn là chữ ở cột Chức vụ của dòng nhân công.</p>' +
     '<div class="wrap"><table id="nvChucVu"><thead><tr><th>Chức vụ</th><th>Ngành mặc định</th><th>Đang dùng</th><th><span class="sro">Thao tác</span></th></tr></thead><tbody>' +
     cv.map(c => '<tr data-nvrow="' + esc(c.id) + '"' + (c.ngung ? ' class="mut"' : '') + '><td><b data-nvten-txt>' + esc(c.ten) + '</b> ' + (c.ngung ? '<span class="pill">Ngừng sử dụng</span>' : '') + '</td><td>' + (esc(tenNg(c.nganh)) || '<span class="mut">— chọn khi nhập người —</span>') + '</td><td>' + (HAKNganh.dangDungChucVu(db, c.id) || 'Chưa dùng') + '</td><td class="nvNut">' +
       nut('nvSua', 'dmChucVu', c.id, 'Sửa') + (c.ngung ? nut('nvDung', 'dmChucVu', c.id, 'Dùng lại') : '') + nut('nvXoa', 'dmChucVu', c.id, c.ngung ? 'Xóa' : 'Ngừng / Xóa') + '</td></tr>').join('') +
-    '</tbody></table></div><div class="row" style="gap:8px;margin-top:8px;align-items:flex-end;flex-wrap:wrap"><label><span>Tên chức vụ mới</span><input id="nvMoiCv" placeholder="Tên chức vụ mới"></label><label><span>Ngành mặc định</span><select id="nvMoiCvNg">' + optNg('') + '</select></label><button class="btn" data-act="nvThemCv" id="nvThemCv">+ Thêm chức vụ</button></div></div>' + sua;
+    '</tbody></table></div></div>' + sua + themMo;
+}
+function nvThemLuu(fm) {
+  nvGhiSan(); const k = fm.dataset.nv, ten = (fm.elements.ten || {}).value, r = k === 'dmNganh' ? HAKNganh.themNganh(db, ten) : HAKNganh.themChucVu(db, ten, (fm.elements.nganh || {}).value);
+  if (!r.ok) { const el = document.getElementById('nvThemLoi'); if (el) { el.textContent = r.error; el.hidden = false; } return; }
+  cd.nvThem = null; cd.nvMsg = [r.thongBao || 'Đã thêm.', r.kieu === 'ngung' ? 'warn' : 'ok']; persist(); render();
 }
 function nvXuLy(a, el) {
   nvGhiSan(); const kid = el && el.dataset.nv ? el.dataset.nv.split('|') : [], k = kid[0], id = kid[1];
   let r;
-  if (a === 'nvThemNg') r = HAKNganh.themNganh(db, ($('#nvMoiNg') || {}).value);
-  else if (a === 'nvThemCv') r = HAKNganh.themChucVu(db, ($('#nvMoiCv') || {}).value, ($('#nvMoiCvNg') || {}).value);
-  else if (a === 'nvDoi') { const t = document.querySelector('[data-nvten="' + k + '|' + id + '"]'), n = document.querySelector('[data-nvng="' + k + '|' + id + '"]'); r = HAKNganh.doi(db, k, id, t ? t.value : '', n ? n.value : undefined); if (r.ok) r.thongBao = 'Đã lưu.'; }
+  if (a === 'nvDoi') { const t = document.querySelector('[data-nvten="' + k + '|' + id + '"]'), n = document.querySelector('[data-nvng="' + k + '|' + id + '"]'); r = HAKNganh.doi(db, k, id, t ? t.value : '', n ? n.value : undefined); if (r.ok) r.thongBao = 'Đã lưu.'; }
   else if (a === 'nvDung') { r = HAKNganh.dung(db, k, id, false); if (r.ok) r.thongBao = 'Đã dùng lại.'; }
   else if (a === 'nvXoa') r = HAKNganh.xoa(db, k, id);
   if (r.ok && a === 'nvDoi') cd.nvSua = null;
@@ -517,7 +526,9 @@ document.addEventListener('click', e => {
   if (a === 'dlgDong') return dlgDong();
   if (a === 'nvSua') { cd.nvSua = el.dataset.nv; cd.nvMsg = null; return render(); }
   if (a === 'nvHuySua') { cd.nvSua = null; return render(); }
-  if (/^nv(ThemNg|ThemCv|Doi|Dung|Xoa)$/.test(a || '')) return nvXuLy(a, el);
+  if (a === 'nvThemMo') { cd.nvThem = el.dataset.nv; cd.nvMsg = null; return render(); }
+  if (a === 'nvThemHuy') { cd.nvThem = null; return render(); }
+  if (/^nv(Doi|Dung|Xoa)$/.test(a || '')) return nvXuLy(a, el);
   if (a === 'cnThem') return dtMo(null, 'thenhan'); if (a === 'dnThem') return dtMo(null, 'phapnhan'); if (a === 'dtHuy') { cd.sua = null; cd.loi = []; return render(); } if (a === 'dtMau') return dtMau();
   if (a === 'dtExcelLuu') return dtExcelLuu(); if (a === 'xeExcelLuu') return xeExcelLuu();
   if (a === 'ngThem') { cd.sua = dtDocForm(); return ngMo(null); }
@@ -554,6 +565,9 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     const b = document.getElementById('dlgBox');
     if (b && b.classList.contains('on')) { e.preventDefault(); if (roiCho) roiXuLy('tiep'); else dlgDong(); return; }
+    if (cd.nvThem) { e.preventDefault(); cd.nvThem = null; return render(); }
+    if (cd.nvSua) { e.preventDefault(); cd.nvSua = null; return render(); }
     if (cd.vt && cd.vt.sua) { e.preventDefault(); cd.vt.sua = null; cd.vt.loi = []; return render(); }
   }
 });
+document.addEventListener('submit', e => { if (e.target.id === 'nvThemForm') { e.preventDefault(); nvThemLuu(e.target); } });

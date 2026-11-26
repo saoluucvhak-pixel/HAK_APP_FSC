@@ -138,7 +138,8 @@ function benNhanKhoanHtml(t) {
   const L = HAKDoiTuong.benKy(dmDT(), 'nhanCong').filter(({dt, ng}) => HAKNganh.hopNganh(db, dt, ng, HAKNganh.KT)), cur = benGiaTri(t.benNhanKhoan);
   return '<label><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px">' +
     '<span>Bên nhận khoán (đối tượng có quyền ký Nhân công)</span>' +
-    '<button type="button" class="btn sm" data-act="kyThemNhanhNC" title="Thêm nhanh vào Danh mục đối tượng với quyền ký Nhân công và chọn ngay">+ Thêm bên nhận khoán mới</button>' +
+    '<span class="row" style="gap:6px"><button type="button" class="btn sm" data-act="bnkMo" id="bnkMoBtn" title="Mở danh mục để chọn bên nhận khoán">📋 Chọn từ danh mục</button>' +
+    '<button type="button" class="btn sm" data-act="kyThemNhanhNC" title="Thêm nhanh vào Danh mục đối tượng với quyền ký Nhân công và chọn ngay">+ Thêm bên nhận khoán mới</button></span>' +
     '</div>' +
     '<input type="search" class="locNhanh" data-locsel="benNK" placeholder="🔍 Gõ tên hoặc CCCD để lọc nhanh…" autocomplete="off" aria-label="Lọc bên nhận khoán" style="margin-bottom:4px">' +
     '<select name="benNK" id="benNK"><option value="">— Tổ trưởng của đội (như trước) —</option>' +

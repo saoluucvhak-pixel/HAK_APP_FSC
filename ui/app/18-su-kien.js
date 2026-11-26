@@ -87,6 +87,7 @@ document.addEventListener('click', async e => {
   if (act === 'openNorm') { NAV.view = 'norm'; return render(); }
   if (act === 'bhldSua' || (el.dataset && el.dataset.bhldsua)) { normBhldSua = el.dataset.bhldsua || el.dataset.pos; return render(); }
   if (act === 'bhldHuyModal') { normBhldSua = null; return render(); }
+  if (/^(normMoThem|normMoSua|normMoHuy|normXoa|dbLuuMd)$/.test(act)) return normMoAction(act, el);
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
@@ -98,13 +99,11 @@ document.addEventListener('click', async e => {
     NAV.ftab = 'inpc';
     return render();
   }
-  if (act === 'dbDel') { const tr = el.closest('tr'); tr.querySelectorAll('input,textarea').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'dbVerAdd') { const r = HAKDinhBien.addVersion(db, (document.getElementById('dbVerNew') || {}).value); if (!r.ok) return note('Chưa thêm phiên bản: ' + r.error, 'err'); dbVer = r.id; persist();
   return note('Đã thêm phiên bản hiệu lực từ ' + r.id + ' (sao chép từ phiên bản đang hiệu lực tại ngày đó). Sửa số người, nhiệm vụ rồi Lưu.', 'ok'); }
   if (act === 'dbVerDel') { if (!confirm('Xóa phiên bản này? Các lô bắt đầu từ ngày này sẽ dùng phiên bản trước đó.')) return; HAKDinhBien.delVersion(db, dbVer); dbVer = ''; persist(); return note('Đã xóa phiên bản.', 'ok'); }
   if (act === 'dbReset' && HAKDinhBien.versions(db).length > 1) return note('Đã có nhiều phiên bản theo ngày: xóa các phiên bản có ngày trước khi dùng định mức mặc định.', 'warn');
   if (act === 'dbReset') { delete db.dinhBien; persist(); note('Đã quay về định mức nhân công mặc định (chưa lưu thành định mức riêng; bấm Lưu để dùng).', 'warn'); return render(); }
-  if (act === 'keoDel') { const tr = el.closest('tr'); tr.querySelectorAll('input').forEach(x => { x.value = ''; }); tr.style.display = 'none'; return; }
   if (act === 'delGiay') return el.closest('.giayRow').remove();
   if (act === 'pcFixDate') {   // sửa ngày phiếu cũ bị sai: chỉ nhận ngày có thật; giữ nguyên mọi dữ liệu khác của phiếu
     const f = curForest(), row = el.dataset.row, r = f && (f.pc || []).find(x => String(x._row) === String(row)), inp = document.querySelector('[data-pcfix="' + row + '"]');
@@ -271,9 +270,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
   if (e.target.id === 'normForm') { e.preventDefault(); saveNorm(e.target); }
   if (e.target.id === 'bhldForm') { e.preventDefault(); saveBhldPos(e.target); }
-  if (e.target.id === 'keoForm') { e.preventDefault(); saveKeo(e.target); }
-  if (e.target.id === 'tgForm') { e.preventDefault(); saveTg(e.target); }
-  if (e.target.id === 'dbForm') { e.preventDefault(); saveDb(e.target); }
+  if (/^(keo|tg|db)MoForm$/.test(e.target.id)) { e.preventDefault(); normMoLuu(e.target); }
 });
 
 document.addEventListener('change', e => {
@@ -401,6 +398,7 @@ if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa
 render();
 /* hộp “Thêm vào danh mục để dùng lại?” (sau khi lưu lô có người / xe mới): Esc = Chỉ lưu trong lô (chạy trước bộ xử lý Esc chung của #dlgBox) */
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && normMo) { e.preventDefault(); normMoDong(); return render(); }
   if (e.key === 'Escape' && normBhldSua) { e.preventDefault(); normBhldSua = null; return render(); }
   if (e.key !== 'Escape' || !document.querySelector('#dlgBox.on #dmHopDlg')) return;
   e.preventDefault(); e.stopImmediatePropagation(); dmHopXuLy(false);
