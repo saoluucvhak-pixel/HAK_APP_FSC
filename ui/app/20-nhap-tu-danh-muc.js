@@ -234,10 +234,11 @@ document.addEventListener('change', e => {
 }, true);
 
 /* ========== Chọn nhiều người / nhiều xe từ Danh mục đưa thẳng vào hợp đồng của lô ========== */
-const dmPickState = {kind: '', list: [], sel: new Set(), q: ''};
+const dmPickState = {kind: '', list: [], sel: new Set(), q: '', loaiXe: '', taiXe: '', viTri: '', cccd: '', gioiTinh: ''};
 function dmChonNhieuMo(kind) {
   const st = stGet(true), rec = curRec(); if (!st || !rec) return;
   dmPickState.kind = kind; dmPickState.sel = new Set(); dmPickState.q = '';
+  dmPickState.loaiXe = ''; dmPickState.taiXe = ''; dmPickState.viTri = ''; dmPickState.cccd = ''; dmPickState.gioiTinh = '';
   if (kind === 'nc') {
     const t = curTeam(), dId = t ? t.id : '';
     const daCoCccd = new Set(st.cur.nc.filter(r => !rec.doi || rec.doi.length < 2 || r.doiId === dId).map(r => HAKModel.cccdSo(r.cccd)).filter(Boolean));
@@ -254,7 +255,23 @@ function dmChonNhieuMo(kind) {
 }
 function dmChonNhieuRender() {
   const kind = dmPickState.kind, q = trim(dmPickState.q).toLowerCase();
-  const items = dmPickState.list.map((r, i) => ({r, i})).filter(({r}) => !q || foldVi(JSON.stringify(r)).includes(foldVi(q)));   // tìm không dấu như mọi ô tìm khác
+  const dsLoaiXe = kind === 'dx' ? [...new Set(dmPickState.list.map(x => trim(x.loaiXe)).filter(Boolean))] : [];
+  const dsViTri = kind === 'nc' ? [...new Set(dmPickState.list.map(r => trim(r.viTri || r.chucVu || '')).filter(Boolean))] : [];
+  const items = dmPickState.list.map((r, i) => ({r, i})).filter(({r}) => {
+    if (q && !foldVi(JSON.stringify(r)).includes(foldVi(q))) return false;
+    if (kind === 'dx') {
+      if (dmPickState.loaiXe && trim(r.loaiXe) !== dmPickState.loaiXe) return false;
+      if (dmPickState.taiXe === 'co' && !trim(r.taiXe)) return false;
+      if (dmPickState.taiXe === 'chua' && trim(r.taiXe)) return false;
+    } else if (kind === 'nc') {
+      if (dmPickState.viTri && trim(r.viTri || r.chucVu || '') !== dmPickState.viTri) return false;
+      if (dmPickState.cccd === 'co' && !trim(r.cccd)) return false;
+      if (dmPickState.cccd === 'chua' && trim(r.cccd)) return false;
+      if (dmPickState.gioiTinh === 'nam' && trim(r.gioiTinh || '') === 'Nữ') return false;
+      if (dmPickState.gioiTinh === 'nu' && trim(r.gioiTinh || '') !== 'Nữ') return false;
+    }
+    return true;
+  });
   const title = kind === 'nc' ? 'Chọn nhân công từ Danh mục đối tượng' : 'Chọn xe từ Danh mục xe vận chuyển';
   const rows = items.length ? items.map(({r, i}) => {
     const chk = dmPickState.sel.has(i) ? ' checked' : '';
@@ -262,12 +279,24 @@ function dmChonNhieuRender() {
       return '<tr><td><input type="checkbox" data-dmpick="' + i + '"' + chk + '></td><td><b>' + esc(r.ten) + '</b>' + (r._nhan ? '<br><small class="mut">' + esc(r._nhan) + '</small>' : '') + '</td><td>' + (r.cccd ? esc(r.cccd) : '<span class="pill warn">chưa có CCCD</span>') + '</td><td>' + esc(r.viTri || r.chucVu || '') + '</td></tr>';
     }
     return '<tr' + (r._oKhac ? ' class="mut"' : '') + '><td><input type="checkbox" data-dmpick="' + i + '"' + (r._oKhac ? ' disabled title="Xe đã có trong lô ở ' + esc(r._oKhac) + '"' : chk) + '></td><td><b>' + esc(r.bienSo) + '</b>' + (r._oKhac ? ' <span class="pill warn" data-xe-khac>đã ở ' + esc(r._oKhac) + '</span>' : '') + '</td><td>' + esc(r.chuXe || '') + '</td><td>' + esc(r.taiXe || '') + '</td><td>' + esc(r.loaiXe || '') + '</td></tr>';
-  }).join('') : '<tr><td colspan="5" class="mut">Không còn mục nào chưa có trong hợp đồng này (hoặc không khớp tìm kiếm). Bạn có thể bấm “+ Nhập mới” hoặc mở Danh mục để thêm trước.</td></tr>';
+  }).join('') : '<tr><td colspan="5" class="mut">Không còn mục nào chưa có trong hợp đồng này (hoặc không khớp tìm kiếm / bộ lọc). Bạn có thể bấm “+ Nhập mới” hoặc mở Danh mục để thêm trước.</td></tr>';
+  
+  const filterHtml = '<div class="row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">' +
+    '<input id="dmPickQ" value="' + esc(dmPickState.q) + '" placeholder="Tìm theo tên, CCCD, biển số…" style="flex:2;min-width:180px">' +
+    (kind === 'dx' ?
+      '<select data-dmfilter="loaiXe" style="flex:1;min-width:120px" aria-label="Lọc loại xe"><option value="">-- Mọi loại xe --</option>' + dsLoaiXe.map(l => '<option value="' + esc(l) + '"' + (l === dmPickState.loaiXe ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select>' +
+      '<select data-dmfilter="taiXe" style="flex:1;min-width:120px" aria-label="Lọc tài xế"><option value="">-- Mọi tài xế --</option><option value="co"' + (dmPickState.taiXe === 'co' ? ' selected' : '') + '>Đã có tài xế</option><option value="chua"' + (dmPickState.taiXe === 'chua' ? ' selected' : '') + '>Chưa có tài xế</option></select>'
+    : '') +
+    (kind === 'nc' ?
+      '<select data-dmfilter="viTri" style="flex:1;min-width:120px" aria-label="Lọc vị trí"><option value="">-- Mọi vị trí --</option>' + dsViTri.map(v => '<option value="' + esc(v) + '"' + (v === dmPickState.viTri ? ' selected' : '') + '>' + esc(v) + '</option>').join('') + '</select>' +
+      '<select data-dmfilter="cccd" style="flex:1;min-width:110px" aria-label="Lọc CCCD"><option value="">-- Mọi CCCD --</option><option value="co"' + (dmPickState.cccd === 'co' ? ' selected' : '') + '>Đã có CCCD</option><option value="chua"' + (dmPickState.cccd === 'chua' ? ' selected' : '') + '>Chưa có CCCD</option></select>' +
+      '<select data-dmfilter="gioiTinh" style="flex:1;min-width:100px" aria-label="Lọc giới tính"><option value="">-- Giới tính --</option><option value="nam"' + (dmPickState.gioiTinh === 'nam' ? ' selected' : '') + '>Nam</option><option value="nu"' + (dmPickState.gioiTinh === 'nu' ? ' selected' : '') + '>Nữ</option></select>'
+    : '') +
+    '<button type="button" class="btn ghost sm" data-act="dmPickAll">Chọn tất cả đang hiện (' + items.length + ')</button>' +
+    '</div>';
+
   dlgMo('<h3 style="margin-top:0">' + title + '</h3>' +
-    '<div class="row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
-      '<input id="dmPickQ" value="' + esc(dmPickState.q) + '" placeholder="Tìm theo tên, CCCD, biển số…" style="flex:1;min-width:200px">' +
-      '<button type="button" class="btn ghost sm" data-act="dmPickAll">Chọn tất cả đang hiện (' + items.length + ')</button>' +
-    '</div>' +
+    filterHtml +
     '<div class="hak-pick-wrap"><table><thead><tr><th style="width:36px"></th>' +
       (kind === 'nc' ? '<th>Họ và tên / Đối tượng</th><th>CCCD</th><th>Vị trí mặc định</th>' : '<th>Biển kiểm soát</th><th>Chủ xe</th><th>Tài xế</th><th>Loại xe</th>') +
     '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
@@ -315,6 +344,12 @@ document.addEventListener('change', e => {
   if (cb.checked) dmPickState.sel.add(idx); else dmPickState.sel.delete(idx);
   const cnt = document.getElementById('dmPickCount'); if (cnt) cnt.textContent = String(dmPickState.sel.size);
   const btn = document.querySelector('#dlgBox [data-act=dmChonNhieuLuu]'); if (btn) btn.disabled = !dmPickState.sel.size;
+});
+document.addEventListener('change', e => {
+  const sel = e.target && e.target.closest && e.target.closest('#dlgBox select[data-dmfilter]'); if (!sel) return;
+  const k = sel.dataset.dmfilter;
+  dmPickState[k] = sel.value;
+  dmChonNhieuRender();
 });
 document.addEventListener('input', e => {
   if (!e.target || e.target.id !== 'dmPickQ') return;

@@ -24,5 +24,14 @@ Bản công khai trước là v3.6.0. Tên bộ cài dự kiến là `HAKQN-HoSo
    - Hiển thị trực quan sơ đồ tọa độ lô rừng bằng vector SVG với tâm tọa độ GPS, la bàn hướng Bắc và thước tỷ lệ.
    - Bổ sung nút chép liên kết Google Maps vệ tinh vào clipboard an toàn trong môi trường Electron.
 
-7. **Bảo toàn dữ liệu & nghiệp vụ**:
+7. **Thêm nhanh Bên nhận khoán tại chỗ & Typeahead**:
+   - Xóa bỏ nút văng màn hình "Mở Danh mục đối tượng", bổ sung nút "+ Thêm bên nhận khoán mới" mở Quick Modal tại chỗ (nhập Họ tên, CCCD, SĐT, Địa chỉ, tự động cấp quyền ký Nhân công và chọn ngay vào hợp đồng) cùng ô gõ tìm kiếm nhanh.
+
+8. **Bộ lọc Dropdown cho modal Chọn từ Danh mục**:
+   - Bổ sung bộ lọc Dropdown theo Loại xe, Tình trạng tài xế (chọn xe) và Vị trí chức vụ, Tình trạng CCCD, Giới tính (chọn nhân công), lọc kết hợp tức thì và đồng bộ nút chọn tất cả theo kết quả lọc.
+
+9. **Bảng màu Ocean (Executive Blue)**:
+   - Bổ sung bảng màu Ocean xanh dương hiện đại đạt chuẩn tương phản WCAG AA (≥ 4.5:1) cho cả chế độ Sáng và Tối, chọn nhanh tại thanh tiêu đề trên cùng hoặc Cài đặt.
+
+10. **Bảo toàn dữ liệu & nghiệp vụ**:
    - Giữ nguyên toàn bộ công thức kế toán, nội dung 20 biểu mẫu BM-01 đến BM-20, và giữ nguyên cấu trúc schema SQLite v3.5.1.

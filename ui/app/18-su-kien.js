@@ -323,7 +323,8 @@ const SKINS = [
   ['luxe', 'Luxe — navy, champagne, ngà (mặc định)', ['#1d3a63', '#b8903f', '#f5f2ec']],
   ['classic', 'Classic — xanh ngọc (teal)', ['#0e7c86', '#0f2740', '#f3f6fa']],
   ['neutral', 'Neutral — xám xanh doanh nghiệp', ['#35475a', '#a8812f', '#f3f5f7']],
-  ['champagne', 'Champagne — vàng ấm', ['#85601a', '#2b2411', '#faf6ec']]];
+  ['champagne', 'Champagne — vàng ấm', ['#85601a', '#2b2411', '#faf6ec']],
+  ['ocean', 'Ocean — xanh dương hiện đại (Executive Blue)', ['#1e40af', '#2563eb', '#f8fafc']]];
 function setSkin(k) {
   if (!SKINS.some(x => x[0] === k)) k = 'luxe';
   document.documentElement.dataset.skin = k;

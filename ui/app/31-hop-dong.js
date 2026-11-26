@@ -136,10 +136,15 @@ function benTuGiaTri(v) {
 /* ô “Bên nhận khoán” của hợp đồng nhân công (giao khoán): đối tượng có quyền ký Nhân công */
 function benNhanKhoanHtml(t) {
   const L = HAKDoiTuong.benKy(dmDT(), 'nhanCong').filter(({dt, ng}) => HAKNganh.hopNganh(db, dt, ng, HAKNganh.KT)), cur = benGiaTri(t.benNhanKhoan);
-  return '<label><span>Bên nhận khoán (đối tượng có quyền ký Nhân công)</span><select name="benNK"><option value="">— Tổ trưởng của đội (như trước) —</option>' +
+  return '<label><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px">' +
+    '<span>Bên nhận khoán (đối tượng có quyền ký Nhân công)</span>' +
+    '<button type="button" class="btn sm" data-act="kyThemNhanhNC" title="Thêm nhanh vào Danh mục đối tượng với quyền ký Nhân công và chọn ngay">+ Thêm bên nhận khoán mới</button>' +
+    '</div>' +
+    '<input type="search" class="locNhanh" data-locsel="benNK" placeholder="🔍 Gõ tên hoặc CCCD để lọc nhanh…" autocomplete="off" aria-label="Lọc bên nhận khoán" style="margin-bottom:4px">' +
+    '<select name="benNK" id="benNK"><option value="">— Tổ trưởng của đội (như trước) —</option>' +
     L.map(({dt, ng, nhan}) => { const v = ng ? 'ng:' + ng.id : 'dt:' + dt.id; return '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(nhan) + '</option>'; }).join('') +
     (cur && !L.some(({dt, ng}) => (ng ? 'ng:' + ng.id : 'dt:' + dt.id) === cur) ? '<option value="' + esc(cur) + '" selected>' + esc(benTen(t.benNhanKhoan) || '(đã ngừng / không còn quyền ký)') + '</option>' : '') +
-    '</select><small class="mut">Chưa có? <button type="button" class="btn ghost sm" data-act="openSetDt" data-quaylai="nc">Mở Danh mục đối tượng</button></small></label>';
+    '</select></label>';
 }
 /* bên nhận khoán: danh mục đã đổi sau khi chụp (cập nhật có chủ ý); thông tin còn thiếu để in */
 function benNhanKhoanCanhBao(rec, t) {
