@@ -585,10 +585,18 @@ class Lookup {
       const idx = new Map();
       this.db.prepare("SELECT DISTINCT k_hd FROM lookup_rows WHERE set_id=? AND k_hd<>''").all(a.id).forEach(r => { const n = normHd(r.k_hd); if (!idx.has(n)) idx.set(n, []); idx.get(n).push(r.k_hd); });
       this._hdKs = {setId: a.id, idx};
+      this._stmtHd1 = null;
     }
     const ks = this._hdKs.idx.get(hd) || [];
     if (!ks.length) return none;
-    const all = this.rows('k_hd IN (' + ks.map(() => '?').join(',') + ')', ks);
+    let raw;
+    if (ks.length === 1) {
+      if (!this._stmtHd1) this._stmtHd1 = this.db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE set_id=? AND k_hd=?');
+      raw = this._stmtHd1.all(a.id, ks[0]);
+    } else {
+      raw = this.db.prepare('SELECT tab, row_no, data FROM lookup_rows WHERE set_id=? AND k_hd IN (' + ks.map(() => '?').join(',') + ')').all(a.id, ...ks);
+    }
+    const all = raw.sort((x, y) => (x.tab < y.tab ? -1 : x.tab > y.tab ? 1 : x.row_no - y.row_no)).map(r => Object.assign(JSON.parse(r.data), {_tab: r.tab, _row: r.row_no}));
     return {rung: all.filter(r => r._tab === 'HoSoRung_QC'), toado: all.filter(r => r._tab === 'ToaDoRung_QC'), keo: all.filter(r => r._tab === 'HoSoKeo_QC')};
   }
 
