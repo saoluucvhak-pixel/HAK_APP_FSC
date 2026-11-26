@@ -19,7 +19,7 @@ function stAct(act, el) {
   if (act === 'stAdd') return stOpen(kind, null);
   if (act === 'stEdit') return stOpen(kind, i);
   if (act === 'stDel') return stDelete(kind, i);
-  if (act === 'stRestore') { HAKStage.restoreRow(stCur(), kind, el.dataset.id); stErrList = null; return render(); }
+  if (act === 'stRestore') { HAKStage.restoreRow(stCur(), kind, el.dataset.id); stErrList = null; loSaveIssue = null; return render(); }
   if (act === 'stAddXe') { stOpen('dx', null); stm.vals.bienSo = el.dataset.bien || ''; return stRender(); }
   if (act === 'stPend') return stPendAct(el);
   if (act === 'stSave') return stSave();
@@ -154,7 +154,7 @@ function stFinishRow() {
   st.src[kind] = st.src[kind] || 'Nhập tay';
   if (kind === 'dx' && stm.kyKhac && hdMo('dx')) { const er = kyDatHd(hdMo('dx'), stm.kyKhac); if (er) pushNote('Chưa đổi được người ký của đội xe: ' + er, 'err'); }   // “Chỉ định người khác…”
   stm.kyKhac = ''; stm.kyKhacMo = false;
-  stErrList = null; const parent = stm.parent; stm.errs = []; $('#stBox').classList.remove('on');
+  stErrList = null; loSaveIssue = null; const parent = stm.parent; stm.errs = []; $('#stBox').classList.remove('on');
   if (parent) { parent.vals.bienSo = row.bienSo; stOpen(parent.kind, parent.id ? st.cur[parent.kind].findIndex(r => r._id === parent.id) : null, parent.vals); return; }
   render();
 }
@@ -169,5 +169,5 @@ function stDelete(kind, i) {
     if (ngay.length && !confirm((r.ten || 'Người này') + ' có ' + ngay.length + ' ngày đã chấm công:\n' + ngay.slice(0, 20).join(', ') + (ngay.length > 20 ? ', …' : '') + '\n\nXóa người này thì các ngày công trên không còn được tính. Tiếp tục?')) return;
   }
   if (base && !confirm('Xóa bản ghi đã lưu' + (r.ten ? ' “' + r.ten + '”' : r.bienSo ? ' “' + r.bienSo + '”' : r.soPhieu ? ' “' + r.soPhieu + '”' : '') + ' khỏi lô?\nBản ghi chỉ thật sự bị xóa khi bấm “Lưu dữ liệu vào lô”; có thể “Hoàn tác” trước đó.')) return;
-  HAKStage.removeRow(st, kind, r._id); stErrList = null; render();
+  HAKStage.removeRow(st, kind, r._id); stErrList = null; loSaveIssue = null; render();
 }
