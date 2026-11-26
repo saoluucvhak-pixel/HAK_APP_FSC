@@ -811,6 +811,7 @@ function createWindow() {
       if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveAll ? window.__stSaveAll() : (window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true})'), new Promise(res => setTimeout(() => res(null), Math.min(120000, 15000 + 10000 * n)))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
     }
     if (pick === 2) return;
+    try { await ask('window.__persistFlush ? window.__persistFlush() : 0', 0); } catch (_) {}
     if (n > 0) { try { await ask('window.__nhapTamXoa ? window.__nhapTamXoa() : 0', 0); } catch (err) { /* không xóa được bản tạm: bỏ qua */ } }
     // bộ nhớ trình duyệt (localStorage) ghi đĩa trễ: ép ghi rồi mới đóng, để lần xóa bản tạm không bị mất khi tiến trình thoát ngay
     if (n > 0) { try { win.webContents.session.flushStorageData(); await new Promise(r => setTimeout(r, 400)); } catch (err) { /* bỏ qua */ } }   // đóng có chủ ý (lưu hoặc bỏ): không giữ bản nháp tạm

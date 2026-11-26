@@ -201,6 +201,7 @@ function persist() {
     localStorage.setItem(KEY, JSON.stringify(W)); if (sn) { savedSnap = sn; nhapChotSo(); } storeOk = true; showSave('Lưu trong trình duyệt lúc ' + hhmm()); }
   catch (e) { storeOk = false; showSave('Trình duyệt không lưu được', true); }
 }
+window.__persistFlush = async () => { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; return await storeSave(); } return {ok: true}; };
 if (HB) window.addEventListener('beforeunload', () => { if (saveTimer) { clearTimeout(saveTimer); flushSave(); } });
 
 /* ========== Trạng thái giao diện ========== */

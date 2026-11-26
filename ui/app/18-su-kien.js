@@ -19,9 +19,9 @@ document.addEventListener('click', async e => {
   const el = t.closest('[data-act]'); if (!el) return;
   const act = el.dataset.act;
   if (act === 'newRs') return newRs(), render();
-  if (act === 'delRs') return delRs(), render();
+  if (act === 'delRs') return (await delRs()), render();
   if (act === 'newForest') return newForest(), render();
-  if (act === 'delForest') return delForest(), render();
+  if (act === 'delForest') return (await delForest()), render();
   if (act === 'chonDoi') { hdMoDat('nc', el.dataset.doi); return render(); }   // 3.0: mở trang chi tiết hợp đồng nhân công của đội
   if (act === 'hdQuayLai') { hdMoDat(el.dataset.kind, null); return render(); }
   if (act === 'ncTatCa') { NAV.ncTatCa = true; return render(); }

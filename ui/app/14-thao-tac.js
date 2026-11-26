@@ -274,7 +274,7 @@ function addGiayRow() {
   list.insertAdjacentHTML('beforeend', giayRowHtml({}));
 }
 
-function delForest() {
+async function delForest() {
   const o = curOwner(), f = curForest(); if (!f) return;
   const fid = f.id, k = stKeyOf(o.id, fid), coNhap = loDirty.has(fid) || (stages[k] && HAKStage.dirty(stages[k]));
   const nNc = (f.nc || []).length, nDx = (f.dx || []).length, nPc = (f.pc || []).length;
@@ -283,8 +283,13 @@ function delForest() {
   if (loDirty.has(fid) || loMoi.has(fid)) loVeBanDaLuu(fid);   // lô nháp: dọn các sổ nháp (lô mới, chủ rừng mới hết lô, ánh xạ biển số) trước khi xóa
   const o2 = db.rs[o.id]; if (o2) delete o2.forests[fid];
   delete stages[k]; if (typeof hdMoS !== 'undefined') delete hdMoS[fid];
-  loDirty.delete(fid); loMoi.delete(fid); aliasHoan(fid); NAV.curF = null; if (cn0 && !cn0.moi && !chuNhap.has(o.id)) pushNote('Đã xóa lô nháp cuối của chủ rừng: thông tin chủ rừng đang nháp (từ Google Sheets) được hoàn lại về bản đã lưu.', 'warn'); nhapTamGhi(); persist();
-  note('Đã xóa rừng.');
+  loDirty.delete(fid); loMoi.delete(fid); aliasHoan(fid); NAV.curF = null; if (cn0 && !cn0.moi && !chuNhap.has(o.id)) pushNote('Đã xóa lô nháp cuối của chủ rừng: thông tin chủ rừng đang nháp (từ Google Sheets) được hoàn lại về bản đã lưu.', 'warn'); nhapTamGhi();
+  const r = await persistNow();
+  if (r && r.ok) {
+    note('Đã xóa rừng thành công và lưu vào máy.', 'ok');
+  } else {
+    note('Không thể xóa trên máy: ' + ((r && r.error) || 'lỗi ghi cơ sở dữ liệu'), 'err');
+  }
 }
 
 function saveInfo(form) {
@@ -304,15 +309,20 @@ function saveInfo(form) {
   note((cn && cn.moi ? 'Chủ rừng này còn là BẢN NHÁP (tạo từ Google Sheets): thông tin vừa sửa sẽ được lưu cùng lô khi bấm “Lưu dữ liệu vào lô”.' : 'Đã lưu thông tin chủ rừng.') + (canh.length ? ' Lưu ý: ' + canh.join('; ') + '.' : ''), canh.length ? 'warn' : 'ok');
 }
 
-function delRs() {
+async function delRs() {
   const rec = curOwner(); if (!rec) return;
   const fs = forestList(rec), nLo = fs.length, nNc = fs.reduce((s, f) => s + (f.nc || []).length, 0), nDx = fs.reduce((s, f) => s + (f.dx || []).length, 0), nPc = fs.reduce((s, f) => s + (f.pc || []).length, 0);
   if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?')) return;
   fs.forEach(f => { delete stages[stKeyOf(rec.id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
   window.__hakDelO = window.__hakDelO || new Set(); window.__hakDelO.add(rec.id);
   delete db.rs[rec.id]; chuNhap.delete(rec.id);
-  NAV.cur = null; NAV.curF = null; nhapTamGhi(); persist();
-  note('Đã xóa hồ sơ chủ rừng.');
+  NAV.cur = null; NAV.curF = null; nhapTamGhi();
+  const r = await persistNow();
+  if (r && r.ok) {
+    note('Đã xóa hồ sơ chủ rừng thành công.', 'ok');
+  } else {
+    note('Không thể xóa trên máy: ' + ((r && r.error) || 'lỗi ghi cơ sở dữ liệu'), 'err');
+  }
 }
 
 // Mặc định nạp vào lô đang mở. File cũ có cột Mã rừng điền đúng một mã và lô đó tồn tại trong chủ rừng đang mở thì nạp vào lô đó; điền nhiều mã khác nhau thì nạp vào lô đang mở và báo lỗi các dòng lệch mã
