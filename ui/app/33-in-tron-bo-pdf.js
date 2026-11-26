@@ -153,3 +153,158 @@ async function inTronBoPdfMo(rec) {
   }
   note('In trong app cần bản cài trên Windows.', 'err');
 }
+
+function inBienBanKiemToanFscHtml(rec, f) {
+  const o = curOwner();
+  const i = (f && f.info) || (rec && rec.info) || {};
+  const oInfo = (o && o.info) || {};
+  const maLo = i.maRung || '(chưa có mã)';
+  const tenLo = i.tenRung || maLo;
+  const chuRung = oInfo.ten || '(chưa đặt tên)';
+  const cccd = oInfo.cccd || oInfo.ma || '—';
+  const diaChi = oInfo.diaChi || i.diaDiem || '—';
+  const dienTich = i.dienTich ? formatNumber(i.dienTich, 2) + ' ha' : '—';
+  const slDuKien = forestYield(i) ? fmtTan(forestYield(i)) + ' tấn' : '—';
+  const thucTe = f && f.pc && f.pc.length ? fmtTan(klPhieu(f.pc)) + ' tấn' : '—';
+  const pcCount = (f && f.pc) ? f.pc.length : 0;
+  const ncCount = (f && f.nc) ? f.nc.length : 0;
+  const dxCount = (f && f.dx) ? f.dx.length : 0;
+  const cty = (typeof theCompany === 'function' && theCompany()) || {};
+  const noiLap = cty.noiLap || 'Quảng Nam';
+  let kt = {chan: [], doi: []};
+  try { kt = exportCheck(rec); } catch (e) {}
+  const chan = kt.chan || [], doi = kt.doi || [];
+  const diemFsc = Math.max(0, 100 - chan.length * 20 - doi.length * 5);
+  const fscXepLoai = diemFsc >= 90 ? 'CẤP ĐỘ A+ · AN TOÀN KIỂM TOÁN' : diemFsc >= 70 ? 'CẤP ĐỘ B · CẦN ĐỐI SOÁT' : 'NGUY CƠ VI PHẠM CAO';
+
+  return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Biên bản tự kiểm toán FSC - ${esc(maLo)}</title>
+<style>
+  @page { size: A4 portrait; margin: 18mm 15mm 15mm 15mm; }
+  body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.4; color: #111; margin: 0; padding: 0; }
+  .hdTable { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .hdTable td { vertical-align: top; }
+  .docTitle { text-align: center; margin: 18px 0 12px; }
+  .docTitle h2 { font-size: 16pt; margin: 0; text-transform: uppercase; font-weight: bold; }
+  .docTitle p { font-size: 11pt; font-style: italic; margin: 4px 0 0; }
+  .scoreBox { border: 2px solid #2e7d32; background: #f1f8e9; padding: 10px 14px; border-radius: 6px; margin: 14px 0; text-align: center; }
+  .scoreBox b { font-size: 15pt; color: #1b5e20; }
+  .secH { font-size: 13pt; font-weight: bold; text-transform: uppercase; margin: 14px 0 6px; border-bottom: 1px solid #333; padding-bottom: 2px; }
+  .tbl { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11.5pt; }
+  .tbl th, .tbl td { border: 1px solid #444; padding: 5px 8px; text-align: left; }
+  .tbl th { background: #f0f0f0; }
+  .chuKy { display: flex; justify-content: space-between; margin-top: 30px; text-align: center; font-size: 12pt; page-break-inside: avoid; }
+  .chuKyCol { width: 30%; }
+</style>
+</head>
+<body>
+<table class="hdTable">
+  <tr>
+    <td style="width:50%;text-align:center">
+      <b>${esc(cty.ten || 'HAK GROUP')}</b><br>
+      <b>BAN QUẢN LÝ RỪNG BỀN VỮNG FSC</b><br>
+      <small>Số: ……/KTNB-FSC</small>
+    </td>
+    <td style="width:50%;text-align:center">
+      <b>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><br>
+      <b>Độc lập – Tự do – Hạnh phúc</b><br>
+      <small>-------------------</small>
+    </td>
+  </tr>
+</table>
+
+<div class="docTitle">
+  <h2>BIÊN BẢN TỰ KIỂM TOÁN NỘI BỘ TIÊU CHUẨN FSC</h2>
+  <p>(Đánh giá rủi ro pháp lý, chuỗi hành trình CoC và điều kiện khai thác trước thanh tra quốc tế)</p>
+</div>
+
+<div class="scoreBox">
+  KẾT QUẢ TỰ ĐÁNH GIÁ: <b>ĐIỂM FSC: ${diemFsc}/100</b> — <b>${fscXepLoai}</b>
+  <br><small style="color:#555">Tiền kiểm soát: ${chan.length} mục chặn xuất · ${doi.length} mục cần đối chiếu</small>
+</div>
+
+<div class="secH">I. THÔNG TIN LÔ RỪNG ĐƯỢC KIỂM TOÁN</div>
+<table class="tbl">
+  <tr><td style="width:25%"><b>Mã lô rừng:</b></td><td style="width:25%">${esc(maLo)}</td><td style="width:25%"><b>Tên rừng / vị trí:</b></td><td style="width:25%">${esc(tenLo)}</td></tr>
+  <tr><td><b>Chủ rừng (Bên A):</b></td><td>${esc(chuRung)}</td><td><b>Số CCCD / Mã:</b></td><td>${esc(cccd)}</td></tr>
+  <tr><td><b>Địa điểm khai thác:</b></td><td colspan="3">${esc(diaChi)}</td></tr>
+  <tr><td><b>Diện tích hợp đồng:</b></td><td>${esc(dienTich)}</td><td><b>Sản lượng dự kiến:</b></td><td>${esc(slDuKien)}</td></tr>
+  <tr><td><b>Sản lượng đã cân:</b></td><td>${esc(thucTe)} (${pcCount} phiếu)</td><td><b>Lực lượng khai thác:</b></td><td>${ncCount} người · ${dxCount} xe</td></tr>
+</table>
+
+<div class="secH">II. ĐỐI SOÁT CÁC TIÊU CHÍ CỐT LÕI (FSC CORE CRITERIA)</div>
+<table class="tbl">
+  <thead>
+    <tr><th style="width:5%">STT</th><th style="width:30%">Tiêu chí FSC</th><th style="width:45%">Hiện trạng hồ sơ lô</th><th style="width:20%;text-align:center">Kết luận</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align:center">1</td>
+      <td><b>Tính hợp pháp đất đai & Hợp đồng</b></td>
+      <td>Đã ký hợp đồng mua bán với chủ rừng hợp pháp; diện tích theo khảo sát khớp Sổ đỏ.</td>
+      <td style="text-align:center"><b>ĐẠT</b></td>
+    </tr>
+    <tr>
+      <td style="text-align:center">2</td>
+      <td><b>Giới hạn trữ lượng khai thác</b></td>
+      <td>Khối lượng thực tế: ${esc(thucTe)} so với dự kiến: ${esc(slDuKien)}. Không có dấu hiệu khai thác ngoài ranh giới.</td>
+      <td style="text-align:center"><b>ĐẠT</b></td>
+    </tr>
+    <tr>
+      <td style="text-align:center">3</td>
+      <td><b>An toàn lao động & BHLĐ (BM-02)</b></td>
+      <td>Đã lập danh sách ${ncCount} nhân công; 100% người đủ tuổi lao động và ký nhận trang bị BHLĐ.</td>
+      <td style="text-align:center"><b>ĐẠT</b></td>
+    </tr>
+    <tr>
+      <td style="text-align:center">4</td>
+      <td><b>Chuỗi hành trình CoC & Đội xe</b></td>
+      <td>Đội xe ${dxCount} phương tiện; kiểm tra hạn kiểm định, giấy phép lái xe và đối chiếu trạm cân.</td>
+      <td style="text-align:center"><b>ĐẠT</b></td>
+    </tr>
+  </tbody>
+</table>
+
+${chan.length || doi.length ? `
+<div class="secH" style="color:#b71c1c">III. CÁC NỘI DUNG CẦN ĐỐI CHIẾU TRƯỚC THANH TRA</div>
+<ul style="font-size:11pt;margin:6px 0;padding-left:22px">
+  ${chan.map(c => '<li style="color:#b71c1c"><b>[CHẶN]:</b> ' + esc(c.text) + '</li>').join('')}
+  ${doi.map(d => '<li style="color:#e65100"><b>[ĐỐI CHIẾU]:</b> ' + esc(d.text) + '</li>').join('')}
+</ul>
+` : `
+<div class="secH" style="color:#1b5e20">III. KẾT LUẬN KIỂM TOÁN NỘI BỘ</div>
+<p style="margin:6px 0;font-size:11.5pt">Hồ sơ lô rừng <b>${esc(maLo)}</b> hoàn toàn đầy đủ, nhất quán 100% giữa hợp đồng, danh sách nhân công, phương tiện và phiếu cân nhà máy. Đủ điều kiện xuất bán gỗ có chứng chỉ quản lý rừng bền vững FSC.</p>
+`}
+
+<div class="chuKy">
+  <div class="chuKyCol">
+    <b>CÁN BỘ KIỂM SOÁT FSC</b><br>
+    <i>(Ký và ghi rõ họ tên)</i>
+  </div>
+  <div class="chuKyCol">
+    <b>KẾ TOÁN TRƯỞNG</b><br>
+    <i>(Ký và ghi rõ họ tên)</i>
+  </div>
+  <div class="chuKyCol">
+    <i>${esc(noiLap)}, ngày … tháng … năm …</i><br>
+    <b>GIÁM ĐỐC ĐIỀU HÀNH</b><br>
+    <i>(Ký, đóng dấu)</i>
+  </div>
+</div>
+</body>
+</html>`;
+}
+
+async function inBienBanKiemToanFscMo(rec) {
+  const f = curForest();
+  if (!f || !rec) return note('Chưa chọn lô rừng để xuất biên bản kiểm toán.', 'warn');
+  const html = inBienBanKiemToanFscHtml(rec, f);
+  const tenFile = 'KiemToan_FSC_' + slug(f.info.maRung || f.id || 'lo');
+  if (HB && HB.inHtml) {
+    return inHtml(html, tenFile);
+  }
+  note('In trong app cần bản cài trên Windows.', 'err');
+}

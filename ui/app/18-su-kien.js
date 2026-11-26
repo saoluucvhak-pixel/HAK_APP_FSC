@@ -64,6 +64,7 @@ document.addEventListener('click', async e => {
   if (act === 'inTomTat') return inTomTat();
   if (act === 'inBaoCao') return inBaoCao();
   if (act === 'inTronBoPdf') return typeof inTronBoPdfMo === 'function' ? inTronBoPdfMo(curRec()) : note('Chức năng đang khởi tạo.', 'warn');
+  if (act === 'inBienBanKiemToanFsc') return typeof inBienBanKiemToanFscMo === 'function' ? inBienBanKiemToanFscMo(curRec()) : note('Chức năng đang khởi tạo.', 'warn');
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
   if (act === 'hdHien') { hdDat(false); NAV.cur = null; NAV.curF = null; NAV.view = 'bld'; return render(); }   // 3.5.1: hướng dẫn 6 bước nằm ở Bàn làm việc
@@ -128,6 +129,33 @@ document.addEventListener('click', async e => {
       stRender();
     }
     return note('Đã thêm vị trí “' + t + '” và chọn cho nhân công.', 'ok');
+  }
+  if (act === 'qfNoiCap') {
+    const st = stGet(true), i = +el.dataset.i;
+    if (st && st.cur.nc && st.cur.nc[i]) {
+      st.cur.nc[i].noiCap = 'Cục Cảnh sát QLHC về TTXH';
+      doiDuLieu(); render();
+      return note('Đã điền nơi cấp cho ' + (st.cur.nc[i].ten || 'nhân công') + '.', 'ok');
+    }
+  }
+  if (act === 'qfHoaTen') {
+    const st = stGet(true), i = +el.dataset.i;
+    if (st && st.cur.nc && st.cur.nc[i]) {
+      const tenMoi = chuanHoaTenVN(st.cur.nc[i].ten);
+      st.cur.nc[i].ten = tenMoi;
+      doiDuLieu(); render();
+      return note('Đã chuẩn hóa viết hoa tên thành: ' + tenMoi, 'ok');
+    }
+  }
+  if (act === 'qfNoiCapXe') {
+    const st = stGet(true), i = +el.dataset.i;
+    if (st && st.cur.dx && st.cur.dx[i]) {
+      const x = st.cur.dx[i];
+      if (normCccd(x.cccd || '').length === 12 && !trim(x.noiCap)) x.noiCap = 'Cục Cảnh sát QLHC về TTXH';
+      if (normCccd(x.cccdTx || '').length === 12 && !trim(x.noiCapTx)) x.noiCapTx = 'Cục Cảnh sát QLHC về TTXH';
+      doiDuLieu(); render();
+      return note('Đã điền nơi cấp CCCD 12 số cho xe ' + (x.bienSo || '') + '.', 'ok');
+    }
   }
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
   if (act === 'pcPrint') {
@@ -526,4 +554,38 @@ document.addEventListener('change', e => {
   db.dinhDangNgayBaoCao = e.target.value === 'iso' ? 'iso' : 'vi';
   persist();
   render();
+});
+
+/* Kéo - Thả trực tiếp file Excel Phiếu cân (.xlsx, .xls) */
+document.addEventListener('dragover', e => {
+  if (!e.dataTransfer || !e.dataTransfer.types || !e.dataTransfer.types.includes('Files')) return;
+  const zone = e.target.closest('[data-dropzone="pc"], #stTbl_pc, #pcBang, .napCard');
+  if (zone && curForest()) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    zone.style.borderColor = 'var(--ok, #2e7d32)';
+    zone.style.background = 'rgba(46, 125, 50, 0.08)';
+  }
+});
+document.addEventListener('dragleave', e => {
+  const zone = e.target.closest('[data-dropzone="pc"], #stTbl_pc, #pcBang, .napCard');
+  if (zone) {
+    zone.style.borderColor = '';
+    zone.style.background = '';
+  }
+});
+document.addEventListener('drop', e => {
+  const zone = e.target.closest('[data-dropzone="pc"], #stTbl_pc, #pcBang, .napCard') ||
+    ((NAV.ftab === 'inpc' || (NAV.ftab === 'dx' && mucLoDangMo('dx') === 'phieu')) ? e.target.closest('#main') : null);
+  document.querySelectorAll('[data-dropzone="pc"], .napCard').forEach(z => { z.style.borderColor = ''; z.style.background = ''; });
+  if (!zone || !curForest()) return;
+  const dt = e.dataTransfer;
+  if (!dt || !dt.files || !dt.files.length) return;
+  const f = dt.files[0];
+  if (!/\.(xlsx|xls)$/i.test(f.name)) {
+    return note('Chỉ hỗ trợ kéo thả file Excel (.xlsx, .xls)', 'err');
+  }
+  e.preventDefault();
+  note('Đang nạp file phiếu cân: ' + f.name + '…');
+  importFile('pc', f).then(render);
 });

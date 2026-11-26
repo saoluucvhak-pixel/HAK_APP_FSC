@@ -48,6 +48,69 @@ function homeSysFill() {
       '<div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="lkOpen">Dữ liệu Google Sheets</button><button class="btn ghost sm" data-act="rpDoiChieu"' + (a ? '' : ' disabled') + '>Báo cáo đối chiếu</button><button class="btn ghost sm" data-act="backup">Sao lưu toàn bộ</button><button class="btn ghost sm" data-act="openSettings">Cài đặt</button></div>';
   }).catch(() => {});
 }
+function homeBangToanBoLoHtml(recs) {
+  if (!recs || !recs.length) return '';
+  const rows = recs.map(r => {
+    const o = db.rs[r.oid], f = o && forestList(o).find(x => x.id === r.fid);
+    if (!f) return '';
+    let kt = {chan: [], doi: []};
+    try { kt = exportCheck(jobView(o, f)); } catch (e) {}
+    const diemFsc = Math.max(0, 100 - (kt.chan.length * 20) - (kt.doi.length * 5));
+    const capDo = diemFsc >= 90 ? 'A+' : diemFsc >= 70 ? 'B' : 'Cần rà soát';
+    const tongCan = (r.pc || []).reduce((a, p) => a + (+p.kl || 0), 0);
+    const duKien = (typeof r.dienTich === 'number' && typeof r.dinhMuc === 'number') ? r.dienTich * r.dinhMuc : null;
+
+    let ttBadge = '';
+    if (f.chot && f.chot.at) {
+      ttBadge = '<span class="pill du" title="Hồ sơ đã niêm phong ngày ' + esc(f.chot.at) + '">🔒 Đã niêm phong</span>';
+    } else if (kt.chan.length) {
+      ttBadge = '<span class="pill err" title="' + esc(kt.chan.map(c => c.label).join('; ')) + '">⛔ Chặn xuất (' + kt.chan.length + ')</span>';
+    } else if (kt.doi.length) {
+      ttBadge = '<span class="pill doi" title="' + esc(kt.doi.map(c => c.label).join('; ')) + '">⚠️ Đối chiếu (' + kt.doi.length + ')</span>';
+    } else {
+      ttBadge = '<span class="pill du">✅ Hợp lệ</span>';
+    }
+
+    const fscPill = kt.chan.length
+      ? '<span class="pill err" style="font-weight:600">' + diemFsc + ' · ' + capDo + '</span>'
+      : diemFsc >= 90
+        ? '<span class="pill du" style="font-weight:600">' + diemFsc + ' · ' + capDo + '</span>'
+        : '<span class="pill doi" style="font-weight:600">' + diemFsc + ' · ' + capDo + '</span>';
+
+    return '<tr class="clickRow" data-dash="' + esc(r.oid + '|' + r.fid) + '" tabindex="0">' +
+      '<td><b>' + esc(r.tenRung || r.maRung || '(rừng chưa đặt tên)') + '</b><br><small class="mut">' + esc(r.maRung) + (r.diaDiem ? ' · ' + esc(r.diaDiem) : '') + '</small></td>' +
+      '<td>' + esc(r.chuRung) + '<br><small class="mut">CCCD: ' + esc(r.cccd || '—') + '</small></td>' +
+      '<td style="text-align:right">' + (typeof r.dienTich === 'number' ? HAKReports.fmtCell(r.dienTich, 'n2') + ' ha' : '—') + '</td>' +
+      '<td style="text-align:right"><b>' + HAKReports.fmtCell(Math.round(tongCan * 1000) / 1000, 'n3') + '</b>' + (duKien ? '<br><small class="mut">/' + HAKReports.fmtCell(Math.round(duKien * 10) / 10, 'n1') + ' t</small>' : '') + '</td>' +
+      '<td style="text-align:center">' + r.nc + ' NC · ' + r.dx + ' xe</td>' +
+      '<td style="text-align:center">' + fscPill + '</td>' +
+      '<td style="text-align:center">' + ttBadge + '</td>' +
+      '<td style="text-align:right"><button class="btn sm ghost" type="button" data-dash="' + esc(r.oid + '|' + r.fid) + '">👁️ Mở lô</button></td>' +
+      '</tr>';
+  }).join('');
+
+  return '<div class="card" id="homeBangToanBoLo" style="margin-top:16px">' +
+    '<div class="row" style="align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">' +
+    '<div><h3 style="margin:0">Bàn điều hành Toàn bộ Rừng (' + recs.length + ' lô)</h3>' +
+    '<p class="mut" style="margin:2px 0 0;font-size:13px">Theo dõi tập trung tình trạng hồ sơ, khối lượng cân và điểm tuân thủ FSC toàn bộ các lô của công ty</p></div>' +
+    '<div class="row" style="gap:8px"><input id="homeTimLo" type="search" placeholder="🔍 Tìm mã rừng, chủ rừng, vị trí..." style="width:240px;font-size:13px" oninput="homeLocBangLo(this.value)"></div>' +
+    '</div>' +
+    '<div class="wrap" style="max-height:480px">' +
+    '<table id="homeTblLo"><thead><tr>' +
+    '<th>Lô rừng</th><th>Chủ rừng</th><th style="text-align:right">Diện tích</th><th style="text-align:right">Đã cân (tấn)</th><th style="text-align:center">Lực lượng</th><th style="text-align:center">Điểm FSC</th><th style="text-align:center">Tình trạng</th><th style="text-align:right">Thao tác</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+}
+function homeLocBangLo(q) {
+  const norm = foldVi(q || '');
+  const tbl = document.getElementById('homeTblLo');
+  if (!tbl) return;
+  const trs = tbl.querySelectorAll('tbody tr');
+  trs.forEach(tr => {
+    const txt = foldVi(tr.innerText || '');
+    tr.style.display = (!norm || txt.includes(norm)) ? '' : 'none';
+  });
+}
+
 function panelHome() {
   const recs = rpRecords(''), F = HAKReports.fmtCell, n = Object.keys(db.rs).length;
   if (!n) {
@@ -82,6 +145,7 @@ function panelHome() {
       hk('👷', 'Lực lượng tác nghiệp', H.T.nc + ' nhân công · ' + H.T.dx + ' xe', '', 'theo hồ sơ các lô đã lưu', 'k3') +
       hk('✅', 'Tỷ lệ hồ sơ FSC hợp lệ', String(hopLe).replace('.', ','), '%', (tongLo - chanLo) + '/' + tongLo + ' lô không có mục chặn xuất · tiến độ TB ' + String(avg).replace('.', ',') + '%', 'k4') + '</div>' +
     viecCanLamBox(recs) +
+    homeBangToanBoLoHtml(recs) +
     '<div class="grid2"><div class="card" id="homeThang"><h3>Sản lượng 6 tháng gần nhất</h3>' + homeMonthsHtml(H.months) + '</div>' +
     '<div class="card" id="homeRadar"><h3>Radar cảnh báo tuân thủ FSC</h3>' + (chanLo ? '<div class="alr"><span class="pill err">' + chanLo + '</span><div><b>Lô còn mục chặn xuất</b><div class="alrN">' + loChan.slice(0, 3).map(x => '<button class="lnk" data-dash="' + esc(x.r.oid + '|' + x.r.fid) + '">' + esc((x.r.tenRung || x.r.maRung || '(rừng chưa đặt tên)') + ' · ' + x.n + ' mục') + '</button>').join('') + (loChan.length > 3 ? '<span class="mut">… và ' + (loChan.length - 3) + ' lô khác</span>' : '') + '</div></div></div>' : '') + homeAlertsHtml(H.A) + '</div></div>' +
     '<div class="grid2" style="margin-top:16px"><div class="card" id="homeTichCuc"><h3>5 lô đang khai thác tích cực nhất <small class="mut">(30 ngày qua)</small></h3>' + (tichCuc.some(x => x.tong > 0) ? '<div class="wrap" style="max-height:none"><table><tr><th>Lô rừng</th><th>Chủ rừng</th><th style="text-align:right">30 ngày (tấn)</th><th style="text-align:right">Tổng (tấn)</th></tr>' + tichCuc.map(x => '<tr class="clickRow" data-dash="' + esc(x.r.oid + '|' + x.r.fid) + '" tabindex="0"><td><b>' + esc(x.r.tenRung || x.r.maRung || '(rừng chưa đặt tên)') + '</b> <span class="mut">' + esc(x.r.maRung) + '</span></td><td>' + esc(x.r.chuRung) + '</td><td style="text-align:right">' + esc(fmtT3(x.t30)) + '</td><td style="text-align:right">' + esc(fmtT3(x.tong)) + '</td></tr>').join('') + '</table></div>' : '<p class="mut">Chưa có phiếu cân. Nạp ở tab Vận chuyển của từng rừng' + (HB ? ' hoặc lấy từ Dữ liệu Google Sheets' : '') + '.</p>') + '</div>' +

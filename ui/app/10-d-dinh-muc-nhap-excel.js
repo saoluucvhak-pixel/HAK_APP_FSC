@@ -351,10 +351,11 @@ function panelImport(kind, rec, heading = '', congCu = '') {
   /* phiếu #06 (D-01): MỘT thanh công cụ — Thêm / Nhập Excel / Dán / Tải file mẫu (+ công cụ của hợp đồng), tình trạng nạp ghi gọn ở cuối thanh */
   const tinhTrang = 'Sheet ' + name + ' · ' + (count ? 'đã nạp ' + count + ' dòng' + (file ? ' từ ' + esc(file) : '') + (at ? ' lúc ' + esc(at) : '') : 'chưa có dữ liệu');
   const tt = '<span class="mut napTinhTrang">' + tinhTrang + '</span>', dau = heading ? heading.replace(/<\/div>$/, tt + '</div>') : '<div class="row pcHdDau"><h3 style="margin:0">' + M.title + '</h3>' + tt + '</div>';   // tình trạng nạp ở cuối dòng tiêu đề
-  return '<div class="card napCard">' + dau + '<div class="row importActions napThanh">' +
+  const dropHint = kind === 'pc' ? '<span class="mut" style="font-size:12px;margin-left:auto">💡 Hoặc kéo thả file .xlsx trực tiếp vào đây</span>' : '';
+  return '<div class="card napCard" data-dropzone="' + kind + '" style="transition:border-color .2s, background .2s">' + dau + '<div class="row importActions napThanh" style="align-items:center">' +
     (kind === 'pc' ? '<button class="btn sm" data-act="stAdd" data-kind="pc">+ Thêm phiếu cân</button>' : '') +
     '<label class="btn sm" style="cursor:pointer" title="Chọn file Excel (.xlsx, .xls) để nạp">Nhập Excel<input type="file" accept=".xlsx,.xls" data-file="' + kind + '" hidden></label><button class="btn ghost sm" data-act="danMo" data-kind="' + kind + '" title="Chép vùng ô trong Excel (gồm dòng tiêu đề) rồi dán vào phần mềm">Dán từ Excel</button>' +
-    '<button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">Tải file mẫu</button>' + congCu + '</div>' + (count && (kind !== 'pc' || !hdMo('dx')) ? '<p><button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu của lô</button></p>' : '') + '</div>';
+    '<button class="btn ghost sm" data-act="tpl" data-kind="' + kind + '" title="File mẫu có trang HUONG_DAN giải thích từng cột, danh sách chọn và ví dụ">Tải file mẫu</button>' + congCu + dropHint + '</div>' + (count && (kind !== 'pc' || !hdMo('dx')) ? '<p><button class="btn danger sm" data-act="clear" data-kind="' + kind + '">Xóa dữ liệu của lô</button></p>' : '') + '</div>';
 }
 
 /* kiểm thử B7: kết quả kiểm tra của lô đang mở (bản nháp nếu có) và phiên bản dữ liệu hiện tại */

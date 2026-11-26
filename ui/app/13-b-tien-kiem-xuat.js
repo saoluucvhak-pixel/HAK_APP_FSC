@@ -7,6 +7,9 @@ function tienKiemXuatHtml(rec) {
   const f = curForest();
   const g = gate(rec), chan = kt.chan || [], doi = kt.doi || [], ok = chan.length === 0, choXuat = g.ok('all');
   const daChot = f && !!f.chot, daDung = f && !!f.dung;
+  const diemFsc = Math.max(0, 100 - chan.length * 20 - doi.length * 5);
+  const fscTone = diemFsc >= 90 ? 'ok' : diemFsc >= 70 ? 'warn' : 'err';
+  const fscXepLoai = diemFsc >= 90 ? 'CẤP ĐỘ A+ · AN TOÀN KIỂM TOÁN' : diemFsc >= 70 ? 'CẤP ĐỘ B · CẦN ĐỐI SOÁT' : 'NGUY CƠ VI PHẠM CAO';
   const hang = (k, m) => '<li class="' + k + '"><div><span aria-hidden="true">' + (k === 'chan' ? '⛔' : '⚠️') + '</span> <span class="pill ' + (k === 'chan' ? 'err' : 'warn') + '">' + (k === 'chan' ? 'Chặn xuất' : 'Cần đối chiếu') + '</span> ' + esc(m.text) + (m.nhom ? ' <small class="mut">· ' + esc(m.nhom) + '</small>' : '') + '</div>' +
     '<button type="button" class="btn sm' + (k === 'chan' ? '' : ' ghost') + '" data-act="ktGo" data-go="' + esc(JSON.stringify(m.go || m.noiSua || {})) + '">🛠️ Đi đến sửa</button></li>';
   const muc = chan.map(m => ['chan', m]).concat(doi.map(m => ['doi', m])), hien = muc.slice(0, 40);
@@ -19,13 +22,14 @@ function tienKiemXuatHtml(rec) {
     : '<button type="button" class="btn ghost sm" data-act="chotLo"' + (ok ? '' : ' disabled title="Còn mục chặn xuất: xử lý trước khi niêm phong"') + '>🔒 Niêm phong chốt lô</button>';
 
   return '<div class="card" id="tienKiem" data-chan="' + chan.length + '" data-doi="' + doi.length + '"><div class="row" style="justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Tiền kiểm soát trước khi xuất</h3>' +
-    pillStatus + '</div>' +
+    '<div class="row" style="gap:6px;align-items:center"><span class="pill ' + fscTone + '" style="font-weight:700">🛡️ Điểm FSC: ' + diemFsc + '/100 · ' + fscXepLoai + '</span> ' + pillStatus + '</div></div>' +
     (hien.length ? '<ul class="bldHang" id="tienKiemDs">' + hien.map(([k, m]) => hang(k, m)).join('') + '</ul>' + (muc.length > hien.length ? '<p class="mut">… và ' + (muc.length - hien.length) + ' mục khác (xem tab Kiểm tra).</p>' : '') : '<div class="msg ok" style="margin-top:8px">Hồ sơ đã qua kiểm tra: có thể xuất trọn bộ.</div>') +
     '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">' +
       '<button type="button" class="btn" data-act="dl" data-kind="all" id="xuatTronBo"' + (choXuat ? '' : ' disabled title="Còn mục chặn xuất: bấm “Đi đến sửa” ở các dòng trên"') + '>📦 Xuất trọn bộ hồ sơ FSC (.zip)</button>' +
       '<button type="button" class="btn ghost" data-act="inTronBoPdf" id="inTronBoPdfBtn"' + (choXuat ? '' : ' disabled title="Còn mục chặn xuất: bấm “Đi đến sửa” ở các dòng trên"') + '>🖨️ In bìa & mục lục hồ sơ (A4)</button>' +
+      '<button type="button" class="btn ghost" data-act="inBienBanKiemToanFsc" id="inBienBanKiemToanFscBtn" title="In hoặc lưu PDF Biên bản tự kiểm toán nội bộ FSC để trình đoàn đánh giá">📄 Biên bản tự kiểm toán FSC</button>' +
       nutNiemPhong +
-      '<span class="mut" style="width:100%">Gói .zip chứa các biểu mẫu Word; bìa & mục lục in khổ A4 để đóng tập hồ sơ.</span>' +
+      '<span class="mut" style="width:100%">Gói .zip chứa các biểu mẫu Word; bìa & mục lục in khổ A4 để đóng tập hồ sơ. Biên bản tự kiểm toán giúp bảo vệ chứng chỉ khi bị thanh tra FSC.</span>' +
     '</div></div>';
 }
 { const g0 = panelXuat; panelXuat = function (rec) { return g0(rec) + tienKiemXuatHtml(rec); }; }   // cuối trang: không đẩy nút tải biểu mẫu xuống dưới màn đầu

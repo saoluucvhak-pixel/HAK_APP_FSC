@@ -135,6 +135,9 @@ function stPendAct(el) {
   const r = HAKStage.resolve(st, pid, d, opt); if (!r.ok) { pushNote(r.error, 'err'); return render(); }
   stErrList = null; pushNote({keep: 'Giữ nguyên bản hiện có; dòng nguồn không được áp dụng.', drop: 'Đã bỏ dòng nguồn.', update: 'Đã cập nhật phiếu theo dòng nguồn (cùng chuyến).', other: 'Đã thêm dòng nguồn thành chuyến riêng với số phiếu mới.'}[d], 'ok'); render();
 }
+function chuanHoaTenVN(s) {
+  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase().split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+}
 const ST_STATUS = {new: ['ok', 'Thêm mới'], changed: ['warn', 'Sửa'], same: ['', ''], removed: ['err', 'Sẽ xóa']};
 /* ô trạng thái + thao tác của một dòng; diffMap: id → {status, old} */
 function stCells(kind, r, i, dm) {
@@ -143,7 +146,23 @@ function stCells(kind, r, i, dm) {
   const stat = (L[1] ? '<span class="pill ' + L[0] + '" title="' + esc(tip) + '">' + L[1] + '</span>' : '<span class="mut">Đã lưu</span>') + (r._nguon ? '<br><small class="mut">' + esc(r._nguon) + '</small>' : '');
   const del = s === 'new' ? '<button class="btn ghost sm" data-act="stDel" data-kind="' + kind + '" data-i="' + i + '" title="Bỏ dòng này khỏi lượt nhập (chưa lưu nên không ảnh hưởng dữ liệu đã lưu)">Bỏ dòng</button>' : '<button class="btn ghost sm" data-act="stDel" data-kind="' + kind +
   '" data-i="' + i + '" title="Xóa bản ghi đã lưu khỏi lô (có hiệu lực khi bấm Lưu)">Xóa đã lưu</button>';
-  return {stat: '<td>' + stat + '</td>', act: '<td class="stAct"><button class="btn ghost sm" data-act="stEdit" data-kind="' + kind + '" data-i="' + i + '">Sửa</button> ' + (kind === 'pc' && s !== 'new' ? '<button class="btn ghost sm" data-act="pcDoiSo" data-i="' + i + '" title="Đổi số phiếu của chuyến đã lưu: bắt lý do, ghi nhật ký, giữ nguyên khối lượng">Đổi số</button> ' : '') + del + '</td>'};
+  let qf = '';
+  if (kind === 'nc') {
+    const c = normCccd(r.cccd || '');
+    if (c.length === 12 && !trim(r.noiCap)) {
+      qf += '<button class="btn ghost sm" type="button" data-act="qfNoiCap" data-i="' + i + '" style="color:var(--warnFg,#9a6700);border-color:var(--warnFg,#9a6700);font-weight:600" title="Tự động điền nơi cấp: Cục Cảnh sát QLHC về TTXH">⚡ Nơi cấp</button> ';
+    }
+    const ten = trim(r.ten || '');
+    if (ten && chuanHoaTenVN(ten) !== ten) {
+      qf += '<button class="btn ghost sm" type="button" data-act="qfHoaTen" data-i="' + i + '" style="color:var(--brand);border-color:var(--brand);font-weight:600" title="Tự động viết hoa chuẩn tên người: ' + esc(chuanHoaTenVN(ten)) + '">⚡ Viết hoa tên</button> ';
+    }
+  } else if (kind === 'dx') {
+    const c1 = normCccd(r.cccd || ''), c2 = normCccd(r.cccdTx || '');
+    if ((c1.length === 12 && !trim(r.noiCap)) || (c2.length === 12 && !trim(r.noiCapTx))) {
+      qf += '<button class="btn ghost sm" type="button" data-act="qfNoiCapXe" data-i="' + i + '" style="color:var(--warnFg,#9a6700);border-color:var(--warnFg,#9a6700);font-weight:600" title="Tự động điền nơi cấp CCCD 12 số: Cục Cảnh sát QLHC về TTXH">⚡ Nơi cấp</button> ';
+    }
+  }
+  return {stat: '<td>' + stat + '</td>', act: '<td class="stAct">' + qf + '<button class="btn ghost sm" data-act="stEdit" data-kind="' + kind + '" data-i="' + i + '">Sửa</button> ' + (kind === 'pc' && s !== 'new' ? '<button class="btn ghost sm" data-act="pcDoiSo" data-i="' + i + '" title="Đổi số phiếu của chuyến đã lưu: bắt lý do, ghi nhật ký, giữ nguyên khối lượng">Đổi số</button> ' : '') + del + '</td>'};
 }
 /* bảng có dữ liệu nhưng không dòng nào hiện (bộ lọc, hoặc chỉ xem đội / hợp đồng đang mở): nói rõ, KHÔNG mời nhập lại (tránh nhập trùng) */
 const ST_SF = {nc: 'lo_nhan_cong', dx: 'lo_xe', pc: 'lo_phieu_can'};
