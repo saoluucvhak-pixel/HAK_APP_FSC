@@ -93,11 +93,42 @@ document.addEventListener('click', async e => {
   if (act === 'openNorm') { NAV.view = 'norm'; return render(); }
   if (act === 'bhldSua' || (el.dataset && el.dataset.bhldsua)) { normBhldSua = el.dataset.bhldsua || el.dataset.pos; return render(); }
   if (act === 'bhldHuyModal') { normBhldSua = null; return render(); }
+  if (act === 'bhldThemViTri') { normBhldThemMo = true; return render(); }
+  if (act === 'bhldThemHuy') { normBhldThemMo = false; return render(); }
   if (/^(normMoThem|normMoSua|normMoHuy|normXoa|dbLuuMd)$/.test(act)) return normMoAction(act, el);
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
   if (act === 'issWarn') { issWarnMo = !issWarnMo; return render(); }
+  if (act === 'ncThemViTriNhanh') {
+    const ten = prompt('Nhập tên vị trí công việc mới (ví dụ: Thợ cưa máy, Công nhân bốc vác, Lái xe cẩu...):');
+    if (!ten || !ten.trim()) return;
+    const t = ten.trim();
+    if (t.length > 60) return note('Tên vị trí tối đa 60 ký tự', 'err');
+    if (!chucDanhAll().some(x => x.toLowerCase() === t.toLowerCase())) {
+      if (!Array.isArray(db.dinhBien) || !db.dinhBien.length) {
+        db.dinhBien = JSON.parse(JSON.stringify(HAKDinhBien.MAC_DINH));
+      }
+      db.dinhBien.push({
+        chucDanh: t,
+        soNguoi: 0,
+        kiemNhiem: '',
+        nhiemVu: 'Vị trí ngoài định biên chuẩn'
+      });
+      persist();
+    }
+    if (typeof stm !== 'undefined' && stm.vals) {
+      const fm = document.getElementById('stForm');
+      if (fm) {
+        for (const f of fm.elements) {
+          if (f.name) stm.vals[f.name] = f.value;
+        }
+      }
+      stm.vals.chucDanh = t;
+      stRender();
+    }
+    return note('Đã thêm vị trí “' + t + '” và chọn cho nhân công.', 'ok');
+  }
   if (/^st(Add|AddXe|Edit|Del|Restore|Pend|Save|Discard|Close|Go)$/.test(act)) return stAct(act, el);
   if (act === 'pcPrint') {
     if (!curRec() || stBlockNote()) return;
@@ -347,12 +378,13 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
   if (e.target.id === 'normForm') { e.preventDefault(); saveNorm(e.target); }
   if (e.target.id === 'bhldForm') { e.preventDefault(); saveBhldPos(e.target); }
+  if (e.target.id === 'bhldThemForm') { e.preventDefault(); saveBhldNewPos(e.target); }
   if (/^(keo|tg|db)MoForm$/.test(e.target.id)) { e.preventDefault(); normMoLuu(e.target); }
 });
 
 document.addEventListener('change', e => {
   const t = e.target;
-  if (t.id === 'normVer') { normSel = t.value; normBhldSua = null; return render(); }
+  if (t.id === 'normVer') { normSel = t.value; normBhldSua = null; normBhldThemMo = false; return render(); }
   if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persistLo(); render(); return; }
   if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persistLo(); render(); return; }
   if (t.id === 'dbVerSel') { dbVer = t.value; return render(); }
@@ -484,6 +516,7 @@ render();
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && normMo) { e.preventDefault(); normMoDong(); return render(); }
   if (e.key === 'Escape' && normBhldSua) { e.preventDefault(); normBhldSua = null; return render(); }
+  if (e.key === 'Escape' && normBhldThemMo) { e.preventDefault(); normBhldThemMo = false; return render(); }
   if (e.key !== 'Escape' || !document.querySelector('#dlgBox.on #dmHopDlg')) return;
   e.preventDefault(); e.stopImmediatePropagation(); dmHopXuLy(false);
 }, true);

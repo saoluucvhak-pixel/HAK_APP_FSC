@@ -48,6 +48,17 @@ function stRender() {
     if (daLuu && k === 'soPhieu') return '<label><span>' + esc(label) + ' (đã lưu: chỉ đổi qua nút bên cạnh)</span><span class="row" style="gap:6px;flex-wrap:nowrap"><input name="' + k + '" value="' + esc(v) + '" readonly aria-readonly="true" style="flex:1"><button type="button" class="btn ghost sm" data-act="pcDoiSoForm">Đổi số phiếu…</button></span></label>';
     if (opt === 'XE') return '<label><span>' + esc(label) + '</span><select name="' + k + '">' + '<option value="">— chọn xe của lô —</option>' + plates.map(p => '<option value="' + esc(p) + '"' + (HAKStage.bienKey(p) === HAKStage.bienKey(v) ? ' selected' : '') + '>' + esc(p) +
     '</option>').join('') + (v && !plates.some(p => HAKStage.bienKey(p) === HAKStage.bienKey(v)) ? '<option value="' + esc(v) + '" selected>' + esc(v) + ' (chưa có trong lô)</option>' : '') + '<option value="__new">+ Thêm xe mới…</option></select></label>';
+    if (k === 'chucDanh') {
+      const list = typeof opt === 'function' ? opt() : opt;
+      return '<label style="grid-column:1/-1"><span>' + esc(label) + '</span>' +
+        '<span class="row" style="gap:8px;flex-wrap:nowrap">' +
+        '<select name="' + k + '" id="stChucDanh" style="flex:1">' +
+        (list.includes(v) ? '' : '<option value="">— chọn vị trí —</option>') +
+        list.map(x => '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>').join('') +
+        '</select>' +
+        '<button type="button" class="btn ghost sm" data-act="ncThemViTriNhanh" id="ncThemViTriBtn" title="Thêm vị trí mới vào danh mục">+ Thêm vị trí mới</button>' +
+        '</span></label>';
+    }
     if (opt) { const list = typeof opt === 'function' ? opt() : opt;
     return '<label><span>' + esc(label) + '</span><select name="' + k + '">' + (list.includes(v) ? '' : '<option value="">—</option>') + list.map(x => '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></label>'; }
     return '<label><span>' + esc(label) + '</span><input name="' + k + '" value="' + esc(v) + '"></label>';

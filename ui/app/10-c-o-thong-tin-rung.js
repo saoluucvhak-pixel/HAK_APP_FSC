@@ -89,11 +89,14 @@ function panelLuong(rec) {
   /* Bảng đơn giá theo vị trí (bản 2.2): mỗi dòng một vị trí đang có người trong đội kèm số người; vị trí chưa có người gập trong mục riêng. Tên ô (dt_/ha_/dn_ + số thứ tự vị trí) giữ nguyên để lưu như cũ. */
   const nguoi = ((rec.nc || []).filter(r => !rec.doi || !t || r.doiId === t.id)), dem = {}; nguoi.forEach(r => { const k = trim(r.chucDanh); dem[k] = (dem[k] || 0) + 1; });
   const rate = (pre, map, unit) => {
-    const ds = chucDanhAll().map((cd, k) => ({cd, k, n: dem[cd] || 0})), co = ds.filter(x => x.n), chua = ds.filter(x => !x.n);
-    const row = x => '<tr><td>' + esc(x.cd) + '</td><td style="text-align:center">' + x.n + '</td><td><input name="' + pre + x.k + '" value="' + esc(displayInputNumber((map || {})[x.cd])) + '" inputmode="numeric" data-group-number="integer" style="text-align:right;width:140px"> <span class="mut">' + unit + '</span></td></tr>';
-    return '<div class="wrap" style="grid-column:1/-1"><table class="normTbl dgTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí đang có người</th><th>Số người</th><th>Đơn giá (' + unit + ')</th></tr></thead><tbody>' +
-      (co.length ? co.map(row).join('') : '<tr><td colspan="3" class="mut">Đội chưa có người: thêm nhân công để thấy các vị trí cần đơn giá.</td></tr>') + '</tbody></table>' +
-      (chua.length ? '<details style="margin-top:6px"><summary class="mut">Vị trí chưa có người (' + chua.length + ')</summary><table class="normTbl" style="min-width:0;table-layout:auto"><tbody>' + chua.map(row).join('') + '</tbody></table></details>' : '') + '</div>';
+    const ds = chucDanhAll().map((cd, k) => ({cd, k, n: dem[cd] || 0}));
+    const row = x => '<tr' + (x.n ? '' : ' style="opacity:0.85"') + '>' +
+      '<td><b>' + esc(x.cd) + '</b>' + (x.n ? '' : ' <small class="mut">(chưa có người trong đội)</small>') + '</td>' +
+      '<td style="text-align:center">' + (x.n ? '<b>' + x.n + ' người</b>' : '<span class="mut">0 người</span>') + '</td>' +
+      '<td><input name="' + pre + x.k + '" value="' + esc(displayInputNumber((map || {})[x.cd])) + '" inputmode="numeric" data-group-number="integer" style="text-align:right;width:140px"> <span class="mut">' + unit + '</span></td>' +
+      '</tr>';
+    return '<div class="wrap" style="grid-column:1/-1"><table class="normTbl dgTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí công việc</th><th style="text-align:center">Số người trong đội</th><th>Đơn giá (' + unit + ')</th></tr></thead><tbody>' +
+      (ds.length ? ds.map(row).join('') : '<tr><td colspan="3" class="mut">Chưa có vị trí nào: hãy thêm vị trí ở Định mức nhân công.</td></tr>') + '</tbody></table></div>';
   };
   const grp = (name, html) => '<div class="grid" data-grp="' + name + '" style="grid-column:1/-1;' + (cur === name ? '' : 'display:none') + '">' + html + '</div>';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá' + (t && rec.doi.length > 1 ? ' — đội “' + esc(t.ten || '') + '”' : '') + '</h3>' +

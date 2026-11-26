@@ -1,5 +1,6 @@
 let normSel = 'b';   // bản định mức đang xem/sửa ('b' = bản gốc, 'i0', 'i1'… = các bản hiệu lực từ ngày muộn hơn)
 let normBhldSua = null; // vị trí đang mở modal sửa BHLĐ
+let normBhldThemMo = false; // mở modal thêm vị trí mới & BHLĐ
 const normUsed = name => Object.values(db.rs || {}).some(o => Object.values(o.forests || {}).some(f => (f.nc || []).some(r => r.chucDanh === name)));
 function panelNorm() {
   const vs = HAKDinhMuc.versions(db); if (!vs.some(v => v.id === normSel)) normSel = vs[vs.length - 1].id;
@@ -33,6 +34,24 @@ function panelNorm() {
     '<button class="btn ghost" type="button" data-act="bhldHuyModal" id="bhldHuy">Hủy bỏ</button>' +
     '</div></form></div></div>';
 
+  // Modal Thêm vị trí mới & BHLĐ
+  const modalThem = !normBhldThemMo ? '' :
+    '<div class="dmModalBack" id="dmModal"><div class="dmModal" role="dialog" aria-modal="true" aria-label="Thêm vị trí mới và Định mức BHLĐ" style="max-width:540px">' +
+    '<form id="bhldThemForm" style="margin:0">' +
+    '<h3 style="margin:0 0 6px">+ Thêm vị trí mới &amp; Định mức BHLĐ</h3>' +
+    '<p class="mut" style="margin:0 0 12px;font-size:13px">Bản định mức: <b>' + esc(label(cur)) + '</b>. Nhập tên vị trí mới và định mức BHLĐ cấp phát. Vị trí sẽ tự động xuất hiện ở bảng Định mức và danh sách nhân công.</p>' +
+    '<label style="display:block;margin-bottom:12px"><span class="req">Tên vị trí công việc</span>' +
+    '<input name="tenViTri" id="bhldNewPosName" placeholder="Ví dụ: Thợ máy, Công nhân bốc vác, Tài xế..." required autocomplete="off" autofocus style="width:100%"></label>' +
+    '<div class="grid">' +
+    BHLD_ITEMS.map(([key, ten]) =>
+      '<label><span>' + esc(ten) + '</span><input name="' + esc(key) + '" placeholder="VD: ' + (key === 'qa' ? '1 bộ' : key === 'giay' ? '1 đôi' : key === 'gang' ? '3 đôi' : key === 'nut' ? '2 đôi' : '1 cái') + '" autocomplete="off"></label>'
+    ).join('') +
+    '</div>' +
+    '<div class="row" style="gap:8px;margin-top:16px">' +
+    '<button class="btn" type="submit" id="bhldThemLuu">💾 Lưu vị trí và định mức</button>' +
+    '<button class="btn ghost" type="button" data-act="bhldThemHuy" id="bhldThemHuy">Hủy bỏ</button>' +
+    '</div></form></div></div>';
+
   const bhld = '<div class="card"><h3 style="margin-top:0">Định mức BHLĐ theo vị trí</h3>' +
     '<p class="mut" style="margin-top:0">Mỗi bản định mức có <b>hiệu lực từ ngày</b>. Biểu mẫu dùng bản có ngày hiệu lực lớn nhất không vượt quá ngày của biểu mẫu: danh sách cấp phát BHLĐ (BM-02) theo <b>ngày cấp phát</b> (không nhập thì theo ngày bắt đầu khai thác), hợp đồng lao động theo ngày bắt đầu hợp đồng hoặc ngày ký. Bấm <b>Sửa</b> trên từng vị trí để cập nhật định mức cấp phát.</p>' +
     '<form id="normForm" style="margin-top:12px">' +
@@ -41,11 +60,12 @@ function panelNorm() {
     '<label style="min-width:220px"><span class="req">Hiệu lực từ ngày (dd/mm/yyyy)</span><input name="tuNgay" value="' + esc(cur.tuNgay) + '" placeholder="' + (cur.base ? 'để trống = áp dụng từ trước đến nay' : 'dd/mm/yyyy') + '"></label>' +
     '<button class="btn" type="submit" id="normDateSave" title="Lưu ngày hiệu lực của bản này">💾 Lưu ngày hiệu lực</button>' +
     '<button class="btn ghost sm" type="button" data-act="normDelVer"' + (cur.base ? ' disabled' : '') + '>Xóa bản này</button>' +
+    '<button class="btn sm" type="button" data-act="bhldThemViTri" id="bhldThemViTriBtn" style="margin-left:auto">+ Thêm vị trí mới</button>' +
     '</div>' +
     '<div class="wrap" style="max-height:min(60vh,520px);margin-top:8px"><table class="normTbl" id="normTbl"><thead><tr><th style="min-width:160px">Vị trí</th>' +
     BHLD_ITEMS.map(x => '<th style="text-align:center">' + x[1] + '</th>').join('') +
     '<th style="text-align:right"><span class="sro">Thao tác</span></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-    '</form>' + modalSua +
+    '</form>' + modalSua + modalThem +
     '<div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap;align-items:flex-end"><label><span>Thêm bản mới, hiệu lực từ ngày</span><input id="normNewDate" placeholder="dd/mm/yyyy" style="width:160px"></label><button class="btn ghost" type="button" data-act="normAddVer" id="normAddVerBtn">+ Thêm bản mới (sao chép bản đang chọn)</button></div>' +
     '<p class="mut" style="margin-top:12px">Danh sách vị trí lấy từ <b>Định mức nhân công</b>: thêm, đổi tên hoặc xóa vị trí ở đó; vị trí số người 0 là vị trí ngoài định biên chuẩn (vẫn có định mức BHLĐ và đơn giá).</p></div>';
 
@@ -225,9 +245,43 @@ function saveBhldPos(form) {
   render();
   note('Đã lưu định mức BHLĐ cho vị trí “' + cd + '”.');
 }
+function saveBhldNewPos(form) {
+  const cd = trim((form.elements.tenViTri || {}).value || '');
+  if (!cd) { note('Chưa nhập tên vị trí', 'err'); return; }
+  if (cd.length > 60) { note('Tên vị trí tối đa 60 ký tự', 'err'); return; }
+  const allCd = chucDanhAll();
+  const found = allCd.find(x => x.toLowerCase() === cd.toLowerCase());
+  const targetCd = found || cd;
+  if (!found) {
+    if (!Array.isArray(db.dinhBien) || !db.dinhBien.length) {
+      db.dinhBien = JSON.parse(JSON.stringify(HAKDinhBien.MAC_DINH));
+    }
+    db.dinhBien.push({
+      chucDanh: targetCd,
+      soNguoi: 0,
+      kiemNhiem: '',
+      nhiemVu: 'Vị trí ngoài định biên chuẩn'
+    });
+  }
+  const cur = HAKDinhMuc.byId(db, normSel);
+  if (!cur.dm) cur.dm = {};
+  if (!cur.dm[targetCd]) cur.dm[targetCd] = {};
+  BHLD_ITEMS.forEach(([k]) => {
+    const v = trim((form.elements[k] || {}).value || '');
+    if (v) cur.dm[targetCd][k] = v;
+    else delete cur.dm[targetCd][k];
+  });
+  HAKDinhMuc.setNorm(db, normSel, cur.dm);
+  persist();
+  normBhldThemMo = false;
+  render();
+  note('Đã lưu vị trí “' + targetCd + '” và định mức BHLĐ.', 'ok');
+}
 function normAction(act, el) {
   if (act === 'bhldSua') { normBhldSua = el.dataset.bhldsua || el.dataset.pos; return render(); }
   if (act === 'bhldHuyModal') { normBhldSua = null; return render(); }
+  if (act === 'bhldThemViTri') { normBhldThemMo = true; return render(); }
+  if (act === 'bhldThemHuy') { normBhldThemMo = false; return render(); }
   if (act === 'normAddVer') {
     const r = HAKDinhMuc.addVersion(db, ($('#normNewDate') || {}).value, normSel);
     if (!r.ok) return note(r.error, 'err');
