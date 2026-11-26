@@ -37,6 +37,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
   ok('số người âm: bị từ chối, nêu dòng và lý do (0 đến 50), không ghi', /Dòng \d+: số người của “Công nhân cưa” phải là số nguyên từ 0 đến 50/.test(await w.innerText('#main')) && !(await db()).dinhBien, (await w.innerText('#main')).slice(0, 300));
   await suaHang('Công nhân bóc vỏ'); await w.fill('#dbMoForm [name=b_nv]', ''); await w.click('#normMoLuu'); await w.waitForTimeout(300);
   ok('vị trí có người mà thiếu nhiệm vụ: bị từ chối, nêu tên vị trí', /chưa ghi nhiệm vụ của “Công nhân bóc vỏ”/.test(await w.innerText('#main')) && !(await db()).dinhBien);
+  await w.keyboard.press('Escape'); await w.waitForTimeout(150);   // lỗi nhập thì hộp thoại vẫn mở (giữ chữ đang gõ): đóng trước khi đi tiếp
   // 3. lưu: vị trí mới tự vào danh sách chức danh
   await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm'); await w.click('#dbLuuMd'); await w.waitForTimeout(400); let d = await db();
   ok('lưu định mức mặc định: danh mục 5 vị trí vào SQLite (4 vị trí định biên + Công nhân khai thác 0 người), không ghi riêng danh sách chức danh; có nhắc khai BHLĐ và đơn giá cho vị trí mới', d.dinhBien.length === 5 && d.dinhBien.filter(r => r.soNguoi > 0).length === 4 && !d.chucDanhThem && /Khai định mức BHLĐ và đơn giá/.test(await w.innerText('body')), JSON.stringify([d.dinhBien && d.dinhBien.map(r => r.chucDanh + ':' + r.soNguoi), d.chucDanhThem]));

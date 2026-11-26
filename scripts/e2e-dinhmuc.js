@@ -17,7 +17,8 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const L = lot('fa', 'R-A', {exp: Object.assign({}, EXP0, {capNgay: '15/08/2026'}), pc: PC, kl: 30, nc: NC}); L.info.donGia = null; L.info.donGiaTan['Công nhân phụ'] = 300000;
   await w.evaluate(d => window.hak.save(d), seed([L])); await w.reload(); await w.waitForSelector('#side');
-  const openNorm = async () => { await w.evaluate(() => document.querySelector('[data-act=openNorm]').click()); await w.click('#normTab_bhld'); await w.waitForSelector('#normForm'); };
+  const dongHop = async () => { if (await w.$('#dmModal')) { await w.keyboard.press('Escape'); await w.waitForTimeout(150); } };   // lỗi nhập ở hộp thoại Thêm vị trí thì hộp vẫn mở (giữ chữ đang gõ): đóng bằng Esc trước khi đi tiếp
+  const openNorm = async () => { await dongHop(); await w.evaluate(() => document.querySelector('[data-act=openNorm]').click()); await w.click('#normTab_bhld'); await w.waitForSelector('#normForm'); };
   const note = () => w.evaluate(() => (document.querySelector('.msg') || {innerText: ''}).innerText);
   const getText = async kind => { clearOut(); await w.click('button[data-act=dl][data-kind=' + kind + ']'); let f = null; for (let i = 0; i < 80 && !f; i++) { f = fs.readdirSync(out).find(x => /\.docx$/.test(x)); if (!f) await w.waitForTimeout(150); } await w.waitForTimeout(200); return plain(await (await JSZip.loadAsync(fs.readFileSync(path.join(out, f)))).file('word/document.xml').async('string')); };
 
@@ -31,7 +32,7 @@ const clearOut = () => { fs.mkdirSync(out, {recursive: true}); for (const f of f
   // 2. danh mục vị trí = Định mức nhân công
   ok('màn BHLĐ không còn ô thêm vị trí riêng; ghi rõ vị trí lấy từ Định mức nhân công', !(await w.$('#normNewPos')) && /Danh sách vị trí lấy từ Định mức nhân công/.test(await w.innerText('#main')));
   ok('vị trí đang có người giữ (“Công nhân phụ”) tự có trong bảng định mức BHLĐ và trong Định mức nhân công (số người 0)', !!(await w.$('tr[data-pos="Công nhân phụ"]')) && (await w.$$eval('#dbBang tbody tr', trs => trs.map(t => t.cells[0].innerText.trim() + ':' + (t.cells[1].innerText.match(/\d+/) || ['0'])[0]))).includes('Công nhân phụ:0'));
-  const addDb = async (cd, so) => { await w.click('#normTab_nhancong'); await w.click('#dbThem'); await w.fill('#dbMoForm [name=b_cd]', cd); await w.fill('#dbMoForm [name=b_so]', String(so)); await w.click('#normMoLuu'); await w.waitForTimeout(400); };
+  const addDb = async (cd, so) => { await dongHop(); await w.click('#normTab_nhancong'); await w.click('#dbThem'); await w.fill('#dbMoForm [name=b_cd]', cd); await w.fill('#dbMoForm [name=b_so]', String(so)); await w.click('#normMoLuu'); await w.waitForTimeout(400); };
   await addDb('Công nhân lái máy', 0); await openNorm();
   ok('thêm vị trí “Công nhân lái máy” (0 người) ở Định mức nhân công: hiện ngay trong bảng định mức BHLĐ', !!(await w.$('tr[data-pos="Công nhân lái máy"]')), await note());
   await addDb('công nhân LÁI MÁY', 0);
