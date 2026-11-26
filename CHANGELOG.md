@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+## 3.7.4 — Lưu và khôi phục theo từng lô
+
+- Yêu cầu sao lưu trước khi lưu bản nháp Google Sheets áp dụng cho lô nhận dữ liệu. Có thể giữ bản nháp gặp lỗi và tiếp tục lưu các lô khác.
+- Sao lưu JSON và SQLite kiểm tra và ghi từng định dạng riêng. Thông báo nêu bản dùng được và bước đổi thư mục hoặc thử lại.
+- Khôi phục riêng cập nhật theo ID lô đích trên máy, giữ bản nháp của các lô khác và chỉ nhập lịch sử chốt của các lô được khôi phục.
+
 ## 3.7.3 — Phân tách độc lập lưu lô, Sao lưu nhanh 1-chạm, Khôi phục từng phần và tự nhận diện USB/Cloud
 
 - **Phân tách độc lập lưu lô và dọn dẹp hồ sơ cũ**: Lưu lô mới hoặc sửa dữ liệu rừng không bao giờ bị chặn bởi các hồ sơ cũ chờ xóa hoặc chưa nạp. Khi phát hiện yêu cầu xóa nhiều chủ rừng, ứng dụng ưu tiên lưu thành công dữ liệu lô hiện tại và cung cấp nút hành động trực tiếp (“Hủy lệnh xóa cũ & Lưu lô ngay”, “Mở Dọn dẹp hồ sơ”, “Xác nhận xóa vĩnh viễn”) thay vì các thông báo bế tắc.
