@@ -1,5 +1,14 @@
 # Nhật ký thay đổi
 
+## 3.7.1 — Định mức và danh mục dạng hộp thoại, cải thiện kiểm soát chéo lô
+
+- Gồm các tính năng của 3.7.0, phiên bản chưa từng được công bố trên GitHub Releases.
+- Định mức Gỗ keo, Nhân công và Thời gian khai thác hiển thị dạng bảng. Thêm và sửa bằng hộp thoại, giữ nội dung đang nhập khi cần sửa lỗi.
+- Danh mục Ngành nghề / Chức vụ dùng hộp thoại thêm, sửa. Hợp đồng nhân công có hộp thoại chọn bên nhận khoán từ danh mục.
+- Tăng tốc kiểm soát chéo lô khi mở hồ sơ có nhiều phiếu cân.
+- Ô Mã chủ rừng cho phép gõ ngay cả khi đang chọn dùng CCCD. Khi gõ mã riêng, ứng dụng tự bỏ tích dùng CCCD.
+- Có năm bảng màu, gồm Ocean. Tọa độ trên Mini GIS hiển thị năm chữ số thập phân.
+
 ## 3.7.0 — Kiểm soát chéo lô nâng cao, niêm phong tại Tiền kiểm soát, in bìa & mục lục A4, sơ đồ vị trí lô rừng (Mini GIS), bộ lọc danh mục & Theme Ocean
 
 - **Khóa ô Mã chủ rừng khi dùng CCCD**: Ô nhập mã chủ rừng tự động khóa (`readonly`) ngay khi tích chọn "Dùng số CCCD làm Mã chủ rừng", tránh nhầm lẫn hoặc sửa lệch mã định danh.
