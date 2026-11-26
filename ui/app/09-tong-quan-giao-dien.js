@@ -141,15 +141,24 @@ function renderMsgs() {
     parts.push('<div class="msg warn" id="preservedOwnersNotice"><b>Hồ sơ lưu trên máy:</b> Phát hiện có ' + window.__hakPreservedOwners.length + ' hồ sơ khác trong cơ sở dữ liệu trên máy chưa nạp vào danh sách làm việc. Việc lưu hồ sơ hiện tại vẫn an toàn và không bị chặn. <button type="button" class="btn sm" data-act="openSetDon">Xem &amp; Dọn dẹp hồ sơ</button></div>');
   }
   if (!storeOk && bulkSaveIssue?.epoch === dbEpoch) {
-    const owners = bulkSaveIssue.owners;
-    parts.push('<div class="msg err" id="bulkSaveHelp" role="alert" tabindex="-1"><b>Đã chặn lưu để bảo vệ hồ sơ chủ rừng</b>' +
-      '<p>Lần ghi này sẽ xóa ' + (owners.length || 'nhiều') + ' hồ sơ đang có trong cơ sở dữ liệu. Dữ liệu đã ghi vẫn còn. Các thay đổi trong lô vẫn là bản nháp.</p>' +
-      (owners.length ? '<details><summary>Xem ' + owners.length + ' hồ sơ được bảo vệ</summary><ul>' +
-        owners.map(o => '<li>' + esc(o.name || '(Chủ rừng chưa có tên)') + ' · ' + o.forests + ' lô</li>').join('') + '</ul></details>' : '') +
-      '<p>Bạn có thể vào Cài đặt để kiểm tra, đưa các hồ sơ này vào danh sách làm việc hoặc xác nhận dọn dẹp.</p>' +
-      '<div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" data-act="openSetDon">Mở Dọn dẹp hồ sơ trong Cài đặt</button>' +
-      (HB?.backupSaveAs ? '<button type="button" class="btn sm ghost" data-act="saveHelpBackup">Sao lưu bản đã ghi…</button>' : '') + '</div></div>');
-  } else if (!storeOk) parts.push(HB ? '<div class="msg err">Lần ghi gần nhất bị lỗi. Xem lý do ở thanh trạng thái lưu hoặc cạnh nút Lưu dữ liệu vào lô. <button type="button" class="btn sm" data-act="openSetDon" style="margin-left:8px">Kiểm tra CSDL &amp; Dọn hồ sơ</button></div>' : '<div class="msg err">Trình duyệt không lưu được dữ liệu (có thể đã đầy hoặc bị chặn). Hãy bấm “Sao lưu dữ liệu (.json)” thường xuyên.</div>');
+    const owners = bulkSaveIssue.owners || [];
+    parts.push('<div class="msg err" id="bulkSaveHelp" role="alert" tabindex="-1"><b>Đã chặn xóa để bảo vệ dữ liệu hồ sơ chủ rừng</b>' +
+      '<p>Hệ thống phát hiện có yêu cầu xóa đồng thời ' + (owners.length || 'nhiều') + ' hồ sơ chủ rừng đang có trong cơ sở dữ liệu. Để bảo vệ bạn khỏi vô tình mất dữ liệu, thao tác xóa này đã được tạm giữ lại an toàn. Bản nháp của lô hiện tại vẫn còn nguyên.</p>' +
+      (owners.length ? '<details><summary>Xem danh sách ' + owners.length + ' hồ sơ chủ rừng được bảo vệ</summary><ul>' +
+        owners.map(o => '<li><b>' + esc(o.name || '(Chủ rừng chưa có tên)') + '</b> · ' + o.forests + ' lô rừng</li>').join('') + '</ul></details>' : '') +
+      '<div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">' +
+      '<button type="button" class="btn sm" data-act="cancelBulkDel">Hủy lệnh xóa cũ &amp; Lưu lô này ngay</button>' +
+      '<button type="button" class="btn sm ghost" data-act="openSetDon">Mở Dọn dẹp hồ sơ trong Cài đặt</button>' +
+      '<button type="button" class="btn sm danger" data-act="confirmBulkDel">Xác nhận xóa vĩnh viễn ' + (owners.length ? owners.length + ' hồ sơ này' : '') + '</button>' +
+      (HB?.backupTo ? '<button type="button" class="btn sm ghost" data-act="quickBackup">Sao lưu bản đã ghi…</button>' : '') + '</div></div>');
+  } else if (!storeOk) {
+    parts.push(HB ? '<div class="msg err" id="storeErrNotice"><b>Lần ghi gần nhất vào cơ sở dữ liệu trên máy bị lỗi:</b> ' + esc(saveSt.text || 'Lỗi không xác định') +
+      '<div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">' +
+      '<button type="button" class="btn sm" data-act="stRetrySave">Thử lưu lại ngay</button>' +
+      '<button type="button" class="btn sm ghost" data-act="quickBackup">Sao lưu an toàn ra file</button>' +
+      '<button type="button" class="btn sm ghost" data-act="openSetDon">Kiểm tra CSDL &amp; Dọn hồ sơ</button>' +
+      '</div></div>' : '<div class="msg err">Trình duyệt không lưu được dữ liệu (có thể đã đầy hoặc bị chặn). Hãy bấm “Sao lưu dữ liệu (.json)” thường xuyên.</div>');
+  }
   notes.forEach(n => parts.push('<div class="msg ' + n.kind + '">' + esc(n.text) + '</div>'));
   notes = [];
   return parts.join('');

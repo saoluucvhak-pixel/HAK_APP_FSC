@@ -312,11 +312,32 @@ function saveInfo(form) {
 async function delRs() {
   const rec = curOwner(); if (!rec) return;
   const fs = forestList(rec), nLo = fs.length, nNc = fs.reduce((s, f) => s + (f.nc || []).length, 0), nDx = fs.reduce((s, f) => s + (f.dx || []).length, 0), nPc = fs.reduce((s, f) => s + (f.pc || []).length, 0);
-  if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?')) return;
-  fs.forEach(f => { delete stages[stKeyOf(rec.id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
-  window.__hakDelO = window.__hakDelO || new Set(); window.__hakDelO.add(rec.id);
-  delete db.rs[rec.id]; chuNhap.delete(rec.id);
+  if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?\n\nPhần mềm sẽ tự động sao lưu dữ liệu trước khi xóa.')) return;
+  const id = rec.id, ten = rec.info.ten || '';
+  fs.forEach(f => { delete stages[stKeyOf(id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
+  delete db.rs[id]; chuNhap.delete(id);
+  if (window.__hakDelO) window.__hakDelO.delete(id);
   NAV.cur = null; NAV.curF = null; nhapTamGhi();
+  if (HB && HB.owners && HB.owners.remove) {
+    try {
+      const r = await HB.owners.remove(id);
+      if (!r || !r.ok) {
+        note('Không thể xóa chủ rừng trên máy: ' + ((r && r.error) || 'lỗi không rõ'), 'err');
+        return;
+      }
+      if (saveCache) saveCache = null;
+      try { savedSnap = HAKDelta.snapshot(dbGhi()); } catch (e) { savedSnap = null; }
+      storeOk = true;
+      bulkSaveIssue = null;
+      showSave('Đã xóa chủ rừng lúc ' + hhmm());
+      note('Đã xóa hồ sơ chủ rừng "' + ten + '" trên máy thành công.', 'ok');
+      return;
+    } catch (e) {
+      note('Lỗi khi xóa chủ rừng: ' + e.message, 'err');
+      return;
+    }
+  }
+  window.__hakDelO = window.__hakDelO || new Set(); window.__hakDelO.add(id);
   const r = await persistNow();
   if (r && r.ok) {
     note('Đã xóa hồ sơ chủ rừng thành công.', 'ok');
@@ -395,6 +416,11 @@ let backupBusy = false;
 async function backupAll() {
   if (HB) {
     if (backupBusy) return note('Đang sao lưu, vui lòng đợi xong rồi bấm lại.', 'warn');
+    if (typeof saveTimer !== 'undefined' && saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      if (typeof storeSave === 'function') await storeSave();
+    }
     if (!backupConfirmSaved()) return;
     backupBusy = true; note('Đang sao lưu và kiểm tra hai file…', 'warn');
     try {

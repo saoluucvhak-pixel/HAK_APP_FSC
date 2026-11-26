@@ -159,9 +159,21 @@ async function saveOnce() {
   }
   if (!r) {
     const W = dbGhi(); snap = HAKDelta.snapshot(W);   // chụp lại ngay trước khi gửi: db có thể đã đổi trong lúc chờ
-    const delO = window.__hakDelO ? [...window.__hakDelO] : undefined;
+    const delO = window.__hakDelO && window.__hakDelO.size ? [...window.__hakDelO] : undefined;
     r = await HB.save(W, {preserveMissingOwners: true, delO});
-    if (r && r.ok) {
+    if (r && !r.ok && r.code === 'BULK_DELETE' && delO && delO.length) {
+      // Phân tách nghiệp vụ: nếu việc xóa các chủ rừng cũ bị chặn bởi BULK_DELETE,
+      // KHÔNG ĐƯỢC CHẶN việc lưu các thay đổi của lô / chủ rừng hiện tại!
+      // Thử lưu lại W mà KHÔNG kèm delO để bảo vệ và ghi nhận dữ liệu đang làm việc.
+      const rRetry = await HB.save(W, {preserveMissingOwners: true});
+      if (rRetry && rRetry.ok) {
+        r = rRetry;
+        trackBulkSave(null);
+        if (Array.isArray(rRetry.preservedOwners)) window.__hakPreservedOwners = rRetry.preservedOwners;
+        CONG_KT.saveStats.full++;
+        pushNote('Đã lưu dữ liệu vào máy an toàn. Có ' + delO.length + ' hồ sơ chủ rừng cũ chưa xóa được để bảo vệ dữ liệu (vào Cài đặt → Dọn dẹp hồ sơ để xử lý).', 'warn');
+      }
+    } else if (r && r.ok) {
       if (window.__hakDelO) window.__hakDelO.clear();
       if (Array.isArray(r.preservedOwners)) window.__hakPreservedOwners = r.preservedOwners;
       CONG_KT.saveStats.full++;

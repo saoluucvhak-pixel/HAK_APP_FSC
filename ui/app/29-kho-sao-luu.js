@@ -15,8 +15,15 @@ function dbThayToanBo(moi) {
 }
 /* 3.0 + phiếu #13b (quyết định 7): bốn thao tác ở đầu màn (Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô) */
 function backupConfirmSaved() {
-  return (storeOk && !stDirtyList().length && !saveTimer) ||
-    confirm('Bản sao lưu toàn bộ chỉ chứa dữ liệu đã ghi vào máy. Nếu còn thay đổi chưa lưu hoặc vừa gặp lỗi lưu, các thay đổi đó có thể chưa có trong bản sao.\n\nBấm OK để sao lưu bản đã ghi hoặc Hủy để quay lại lưu dữ liệu.');
+  if (storeOk && !stDirtyList().length && !saveTimer) return true;
+  const dList = stDirtyList();
+  if (dList.length) {
+    return confirm('Đang có ' + dList.length + ' lô còn bản nháp chưa bấm "Lưu dữ liệu vào lô".\n\nBản sao lưu toàn bộ sẽ chỉ gồm dữ liệu đã lưu vào máy (chưa gồm các bản nháp này).\n\n• Bấm OK: Vẫn sao lưu ngay các dữ liệu đã lưu.\n• Bấm Hủy: Quay lại để bấm "Lưu dữ liệu vào lô" trước khi sao lưu.');
+  }
+  if (!storeOk) {
+    return confirm('Cơ sở dữ liệu đang có lỗi ghi nhận gần nhất. Dữ liệu đã lưu an toàn trước đó vẫn có thể sao lưu.\n\n• Bấm OK: Sao lưu các dữ liệu an toàn đã lưu.\n• Bấm Hủy: Kiểm tra lại lỗi lưu trước.');
+  }
+  return true;
 }
 
 const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 style="margin:0 0 6px">Sao lưu và khôi phục</h3><p class="mut">Sau khi nhập hoặc sửa, bấm “Lưu dữ liệu vào lô”. Để mang cả hồ sơ sang máy khác, chọn lưu bản sao ra tệp hoặc USB. Nếu chỉ cần một lô, mở lô đó và chọn “Sao lưu lô rừng”.</p><div class="row" style="gap:8px;flex-wrap:wrap">' +
@@ -295,8 +302,12 @@ async function kslDoRestoreForest(oid, fid, maRung) {
 
 async function quickBackup() {
   if (!HB || !HB.backupTo || ksl.busy) return;
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    await storeSave();
+  }
   if (!backupConfirmSaved()) return;
-  if (typeof storeSave === 'function') await storeSave();
   showSave('… Đang sao lưu toàn bộ');
   ksl.busy = true;
   try {

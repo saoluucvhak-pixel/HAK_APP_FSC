@@ -188,6 +188,46 @@ document.addEventListener('click', async e => {
   }
   if (act === 'backup') return backupAll();
   if (act === 'saveHelpBackup') return backupSaveAs(true);
+  if (act === 'stRetrySave') {
+    const f = curForest();
+    if (f && (loDirty.has(f.id) || stDirtyCur())) return luuLo();
+    return persistNow().then(r => {
+      if (r && r.ok) note('Đã lưu dữ liệu vào máy thành công.', 'ok');
+      else note('Vẫn chưa lưu được: ' + ((r && r.error) || 'lỗi không rõ'), 'err');
+      render();
+    });
+  }
+  if (act === 'cancelBulkDel') {
+    if (window.__hakDelO) window.__hakDelO.clear();
+    bulkSaveIssue = null;
+    storeOk = true;
+    showSave('Đang lưu lại dữ liệu...');
+    const f = curForest();
+    if (f && (loDirty.has(f.id) || stDirtyCur())) return luuLo();
+    return persistNow().then(r => {
+      if (r && r.ok) note('Đã bỏ qua yêu cầu xóa cũ và lưu dữ liệu thành công.', 'ok');
+      render();
+    });
+  }
+  if (act === 'confirmBulkDel') {
+    const delO = window.__hakDelO && window.__hakDelO.size ? [...window.__hakDelO] : [];
+    if (!confirm('Xác nhận xóa vĩnh viễn ' + (delO.length ? delO.length + ' ' : '') + 'hồ sơ chủ rừng này khỏi cơ sở dữ liệu trên máy?\n\nPhần mềm sẽ tự động sao lưu an toàn trước khi xóa.')) return;
+    try {
+      const W = dbGhi();
+      const r = await HB.save(W, {allowBulkDelete: true, preserveMissingOwners: true, delO: delO.length ? delO : undefined});
+      if (r && r.ok) {
+        if (window.__hakDelO) window.__hakDelO.clear();
+        bulkSaveIssue = null;
+        storeOk = true;
+        note('Đã xóa hồ sơ chủ rừng và lưu dữ liệu thành công.', 'ok');
+      } else {
+        note('Chưa xóa được: ' + ((r && r.error) || 'lỗi không rõ'), 'err');
+      }
+    } catch (e) {
+      note('Lỗi khi xóa: ' + e.message, 'err');
+    }
+    return render();
+  }
   if (act === 'saveHelpBulk') {
     const help = document.getElementById('bulkSaveHelp');
     if (help) {

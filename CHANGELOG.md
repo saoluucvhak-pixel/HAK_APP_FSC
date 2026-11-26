@@ -1,5 +1,13 @@
 # Nhật ký thay đổi
 
+## 3.7.3 — Phân tách độc lập lưu lô, Sao lưu nhanh 1-chạm, Khôi phục từng phần và tự nhận diện USB/Cloud
+
+- **Phân tách độc lập lưu lô và dọn dẹp hồ sơ cũ**: Lưu lô mới hoặc sửa dữ liệu rừng không bao giờ bị chặn bởi các hồ sơ cũ chờ xóa hoặc chưa nạp. Khi phát hiện yêu cầu xóa nhiều chủ rừng, ứng dụng ưu tiên lưu thành công dữ liệu lô hiện tại và cung cấp nút hành động trực tiếp (“Hủy lệnh xóa cũ & Lưu lô ngay”, “Mở Dọn dẹp hồ sơ”, “Xác nhận xóa vĩnh viễn”) thay vì các thông báo bế tắc.
+- **Sao lưu nhanh 1-chạm (Quick Backup `Ctrl+B`)**: Nút sao lưu nhanh đặt ngay trên thanh tiêu đề trên cùng (Header) kèm phím tắt `Ctrl+B`, tự động lưu dữ liệu đệm trước khi tạo bản sao lưu, loại bỏ cảnh báo thừa và phản hồi trạng thái tức thời.
+- **Tự động nhận diện USB và Cloud Drive**: Nút quét 1-chạm tự động tìm và gợi ý ổ USB gắn ngoài hoặc thư mục Google Drive, OneDrive, Dropbox để thiết lập thư mục sao lưu thứ hai.
+- **Xem chi tiết & Khôi phục từng phần từ bản sao lưu**: Cho phép mở xem chi tiết cơ cấu bên trong bất kỳ bản sao lưu nào (danh sách chủ rừng, số lô, số phiếu cân) và bấm khôi phục riêng lẻ một chủ rừng hoặc một lô rừng mà không làm thay đổi các hồ sơ khác trên máy.
+- **Nhắc nhở sao lưu thông minh theo khối lượng việc**: Hiển thị nhắc nhở và hiệu ứng nhịp thở dịu nhẹ sau khi hoàn thành đợt nạp phiếu cân hoặc xuất biểu mẫu.
+
 ## 3.7.2 — Khắc phục kẹt lưu do chủ rừng rỗng và hoàn thiện Sao lưu / Khôi phục
 
 - **Tự gỡ kẹt lưu (`BULK_DELETE`) do dòng chủ rừng rỗng**: Tầng lưu SQLite (`src/store.js`) phân biệt rõ chủ rừng thật và dòng chủ rừng rỗng hoàn toàn (0 lô rừng, chưa nhập tên/mã/CCCD/hợp đồng), cho phép ứng dụng tự động dọn sạch các chủ rừng tạo dở từ phiên trước mà không chặn lưu hàng loạt và không tạo thừa tệp sao lưu `truoc-xoa`.
