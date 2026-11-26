@@ -3,15 +3,35 @@
 const CONFIG_ERR = /chưa có đơn giá/;
 let stSaving = false;
 async function stSave(opt) {
+  const key = stKey(), epoch = dbEpoch;
+  if (stSaving) return {ok: false, error: 'đang lưu'};
+  const result = await stSaveDraft(opt);
+  if (epoch !== dbEpoch) return result;
+  const details = result?.errs?.length ? result.errs.slice(0, 3).join(' • ') : result?.error;
+  const text = result?.ok ? '' : 'Chưa lưu được. ' + (result?.code === 'BULK_DELETE'
+    ? 'Lần lưu có thể xóa nhiều hồ sơ chủ rừng. Bản nháp còn nguyên. Giữ dữ liệu để kiểm tra các hồ sơ đang bị loại khỏi lần lưu.'
+    : details || 'Chưa nhận được lý do từ ứng dụng. Bản nháp vẫn còn để kiểm tra.');
+  loSaveIssue = text ? {key, epoch, text} : null;
+  if (key === stKey()) {
+    const el = document.getElementById('loSaveIssue');
+    if (el) {
+      el.textContent = text;
+      el.hidden = !text;
+      if (text && !opt?.tuKhung) el.focus();
+    }
+  }
+  return result;
+}
+async function stSaveDraft(opt) {
   { const f0 = curForest(); if (f0 && loKhoa(f0)) return loKhoaNote(f0); }
   const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { if (loDirty.has(NAV.curF)) return luuLoTT(opt); if (!(opt && opt.tuKhung)) note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
   if (stSaving) return {ok: false, error: 'đang lưu'};
   const o = db.rs[NAV.cur], f = o && o.forests && o.forests[NAV.curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
   const pend = HAKStage.pendingOf(st);   // cùng quy tắc với bước xem trước: dòng cần đối chiếu chưa xử lý thì chưa lưu
   if (pend.length) { const msg = 'Chưa lưu: còn ' + pend.length + ' dòng CẦN ĐỐI CHIẾU (cùng số phiếu nhưng khác ngày, biển số, nơi cân hoặc khối lượng): ' + pend.slice(0,
-  10).map(q => q.key).join(', ') + (pend.length > 10 ? '…' : '') + '. Chọn giữ bản hiện có, cập nhật cùng chuyến, chuyến khác hoặc bỏ dòng nguồn. Dữ liệu đã lưu và bản nháp giữ nguyên.'; pushNote(msg, 'err'); NAV.ftab = 'dx'; render(); return {ok: false, error: 'cần đối chiếu', pend}; }
+  10).map(q => q.key).join(', ') + (pend.length > 10 ? '…' : '') + '. Chọn giữ bản hiện có, cập nhật cùng chuyến, chuyến khác hoặc bỏ dòng nguồn. Dữ liệu đã lưu và bản nháp giữ nguyên.'; pushNote(msg, 'err'); NAV.ftab = 'dx'; render(); return {ok: false, error: 'Còn ' + pend.length + ' dòng phiếu cân cần đối chiếu. Mở Vận chuyển để chọn cách xử lý từng dòng.', pend}; }
   const idc = HAKStage.idConflicts(st);   // _id nội bộ phải duy nhất trước khi ghi SQLite; xung đột thì chặn, giữ dữ liệu đã lưu và bản nháp
-  if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: 'trùng _id', idc}; }
+  if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: msg, idc}; }
   const rec0 = jobView(o, f), g0 = ganDoi(rec0.doi, st.cur.nc), v0 = ganVC(rec0.hdvc, st.cur.dx), p0 = ganPC(g0.doi, st.cur.pc), rec = Object.assign(rec0, {nc: g0.nc, doi: g0.doi, dx: v0.dx, hdvc: v0.hdvc, pc: p0, info: Object.assign({}, rec0.info, {_klPC: klPhieu(p0)})}), errs = [];
   let errTab = null, cfgWarn = 0;
   const dkv = HAKStage.dirtyKinds(st);   // chỉ kiểm phần có thay đổi; phiếu cân luôn kiểm cùng xe (quan hệ biển số)
@@ -43,19 +63,19 @@ async function stSave(opt) {
     if (dk.includes('pc')) { f.pcAt = at; if (st.src.pc && /^Excel: /.test(st.src.pc)) f.pcFile = st.src.pc.slice(7); else if (st.src.pc && /Google/.test(st.src.pc) && !f.pcFile) f.pcFile = 'Tra cứu Google Sheets'; }
     f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).concat((st.sk || []).map(x => ({at: new Date().toISOString(), kind: x.kind, nguon: x.nguon, them: x.them, capNhat: 0, giu: 0, loi: 0}))).slice(-200); st.sk = [];   // 3.5.1: thêm tay / từ Danh mục / từ phiếu cân cũng vào nhật ký truy xuất   // ghi vào lô cùng lần lưu (không kèm ảnh chụp hoàn tác)
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
-    const r = await persistNow(); if (!r || !r.ok) throw new Error((r && r.error) || 'không rõ');
+    const r = await persistNow(); if (!r || !r.ok) throw Object.assign(new Error(r?.error || 'không rõ'), {code: r?.code});
     const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote(nDm[0], nDm[1]);
     pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + ')' + (chuU.chot ? ', kèm thông tin chủ rừng đang ở bản nháp (kể cả phần đến từ lô khác của chủ rừng này)' : '') + '. Có thể tạo, xuất, in hồ sơ.', 'ok'); if (typeof dmHopCho !== 'undefined' && dmHopCho) dmHopCho.daLuu = notes[notes.length - 1].text; render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
     nhapKhoiPhuc(sNhap);
     Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog; if (!snap.soLog) delete f.soLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
-    pushNote('Không lưu được, dữ liệu đã lưu giữ nguyên và bản nháp vẫn còn để thử lại: ' + e.message, 'err'); render(); return {ok: false, error: e.message};
+    pushNote('Không lưu được, dữ liệu đã lưu giữ nguyên và bản nháp vẫn còn để thử lại: ' + e.message, 'err'); render(); return {ok: false, error: e.message, code: e.code};
   } finally { stSaving = false; }
 }
 let stErrList = null;
 function stDiscard(silent) { const k = stKey(), cn0 = chuNhap.get(NAV.cur); if (!stages[k] && !loDirty.has(NAV.curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(NAV.curF); if (NAV.cur && !db.rs[NAV.cur]) { NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; } else if (NAV.curF && !curForest()) NAV.curF = null;   // lô / chủ rừng tạo từ bản nháp (Google Sheets) bị bỏ hẳn: rời khỏi màn của chúng
-nhapTamGhi(); stErrList = null;
+nhapTamGhi(); stErrList = null; if (loSaveIssue?.key === k) loSaveIssue = null;
 if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.' + (cn0 && !chuNhap.has(NAV.cur || '') && !cn0.moi ? ' Lô nháp cuối của chủ rừng đã được bỏ nên thông tin chủ rừng đang nháp (từ Google Sheets) cũng được hoàn lại.' : ''), 'warn'); render(); }
 /* hỏi khi rời lô còn thay đổi chưa lưu: Lưu và tiếp tục / Bỏ thay đổi / Quay lại chỉnh sửa */
 let stBypass = false;

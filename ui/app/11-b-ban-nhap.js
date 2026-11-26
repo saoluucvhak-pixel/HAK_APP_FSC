@@ -30,9 +30,14 @@ function nhapTomTatUI() {
   return HAKNhap.tomTat({lo, chu, alias: aliasNhap.size});
 }
 window.__stTomTat = () => { try { return nhapTomTatUI(); } catch (e) { return null; } };
+let loSaveIssue = null;
+function loSaveIssueText() {
+  return loSaveIssue?.key === stKey() && loSaveIssue.epoch === dbEpoch ? loSaveIssue.text : '';
+}
 /* thanh “Chưa lưu” của cả lô (mọi tab của lô) */
 function loBar() { const t = stBlockText(); return t ? '<div class="msg warn" id="loDirtyBar"><b>Chưa lưu</b> — ' + esc(t.replace(/ Bấm .*$/,
-'')) + (() => { const s = nhapTomTatUI(); return s.dong ? ' <span class="mut" id="loTomTat">(' + esc(s.dong.replace(/^Chưa lưu: /, 'Gồm ')) + ')</span>' : ''; })() + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : ''; }
+'')) + (() => { const s = nhapTomTatUI(); return s.dong ? ' <span class="mut" id="loTomTat">(' + esc(s.dong.replace(/^Chưa lưu: /, 'Gồm ')) + ')</span>' : ''; })() + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span>' +
+  '<div id="loSaveIssue" class="msg err" role="alert" tabindex="-1"' + (loSaveIssueText() ? '' : ' hidden') + '>' + esc(loSaveIssueText()) + '</div></div>' : ''; }
 /* lưu phần thông tin lô (khi không có bảng nháp) */
 async function luuLoTT(opt) {
   const f = curForest(); if (!f) return {ok: false};

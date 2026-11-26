@@ -98,6 +98,8 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   const savedBefore = JSON.stringify(await forest('fa'));
   await w.click('[data-ftab=dx]'); await w.click('#stDirty [data-act=stSave]'); await w.waitForTimeout(700); t = await body();
   ok('lưu thất bại: báo lỗi, KHÔNG báo “Đã lưu”, dữ liệu đã lưu nguyên vẹn (cả nhân công, xe, phiếu cân), bản nháp còn để thử lại', /Không lưu được, dữ liệu đã lưu giữ nguyên/.test(t) && !/Đã lưu dữ liệu vào lô/.test(t) && JSON.stringify(await forest('fa')) === savedBefore && !!(await w.$('#stDirty')) && /PX1/.test(t));
+  ok('thanh Chưa lưu hiện lý do ghi thất bại ngay cạnh nút Lưu', /giả lập lỗi ghi/.test(await w.innerText('#loDirtyBar #loSaveIssue')));
+
   ok('sau khi lưu hỏng, nút xuất vẫn bị khóa vì bản nháp còn', !!(await w.$('#stDirty')) && await (async () => { await w.click('[data-ftab=xuat]'); return !!(await w.$('#stGate')); })());
   fs.unlinkSync(flag); await w.click('[data-ftab=dx]');
 
