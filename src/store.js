@@ -373,9 +373,23 @@ class Store {
     (lots || []).forEach(f => QH.kiem(f).forEach(x => loi.push(x)));
     if (loi.length) throw Object.assign(new Error('Dữ liệu chưa đúng quan hệ nên chưa ghi: ' + loi.slice(0, 5).join('; ') + (loi.length > 5 ? ' (và ' + (loi.length - 5) + ' lỗi khác)' : '') + '. Dữ liệu đang nhập vẫn còn để sửa.'), {code: 'QUAN_HE', loi});
   }
+  /* Chủ rừng còn TRỐNG HOÀN TOÀN trong SQLite (bấm "+ Chủ rừng mới" nhưng chưa nhập thông tin nào và chưa có lô rừng nào):
+   * không tính vào giới hạn chặn xóa hàng loạt (giao diện tự dọn các dòng rỗng cũ khi mở cột trái) và không sinh bản sao lưu truoc-xoa thừa. */
+  _chuRong(oid) {
+    const id = String(oid);
+    if (this.db.prepare('SELECT 1 FROM forests WHERE owner_id=? LIMIT 1').get(id)) return false;
+    const row = this.db.prepare('SELECT ma, ten, cccd, data FROM owners WHERE id=?').get(id);
+    if (!row) return true;
+    if (String(row.ma || '').trim() || String(row.ten || '').trim() || String(row.cccd || '').trim()) return false;
+    try {
+      const o = JSON.parse(row.data), info = (o && o.info) || {};
+      return !['ma', 'ten', 'cccd', 'soHopDong', 'ngayKyHopDong', 'ngaySinh', 'ngayCap', 'noiCap', 'diaChi', 'sdt', 'nguoiDmId'].some(k => String(info[k] || '').trim());
+    } catch (e) { return false; }
+  }
   _guardDelete(goneO, goneF, opts) {
-    if (goneO.length >= 2 && !opts.allowBulkDelete) throw Object.assign(new Error('Lần lưu này sẽ xóa ' + goneO.length + ' hồ sơ chủ rừng cùng lúc nên đã bị chặn để tránh mất dữ liệu. Xóa từng chủ rừng, hoặc dùng Khôi phục toàn bộ nếu muốn thay toàn bộ dữ liệu.'), {code: 'BULK_DELETE'});
-    if (goneO.length || goneF.length) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
+    const thatO = (goneO || []).filter(id => !this._chuRong(id));
+    if (thatO.length >= 2 && !opts.allowBulkDelete) throw Object.assign(new Error('Lần lưu này sẽ xóa ' + thatO.length + ' hồ sơ chủ rừng cùng lúc nên đã bị chặn để tránh mất dữ liệu. Xóa từng chủ rừng, hoặc dùng Khôi phục toàn bộ nếu muốn thay toàn bộ dữ liệu.'), {code: 'BULK_DELETE'});
+    if (thatO.length || (goneF && goneF.length)) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
   }
   /* KHÓA CHỈ ĐỌC Ở TẦNG LƯU (mã LOCKED): lô đang chốt hoặc dừng trong cơ sở dữ liệu không nhận thay đổi dữ liệu, trừ các khóa vòng đời (chot, luuTru, dung, nhatKy: chốt, mở khóa,
    * lưu trữ, dừng, mở lại). rowsF: các lô sẽ ghi {id, data}. Gọi TRƯỚC khi ghi: có vi phạm thì không ghi gì. */

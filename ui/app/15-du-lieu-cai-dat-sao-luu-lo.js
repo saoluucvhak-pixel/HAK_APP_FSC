@@ -143,8 +143,13 @@ async function settingsBackupJson(reset) {
 async function lotBackup() {
   const f = curForest(), o = curOwner(); if (!f || !o) return note('Hãy mở một lô rừng trước khi sao lưu.', 'err');
   if (!HB) return note('Sao lưu lô rừng cần bản cài trên Windows.', 'err');
-  if (stDirtyCur() && !confirm('Lô này còn thay đổi chưa lưu. File sao lưu chỉ gồm dữ liệu ĐÃ LƯU (không gồm phần chưa lưu).\n\nTiếp tục sao lưu?')) return;
-  let pkg; try { pkg = HAKLoRung.exportLot(db, o.id, f.id, {version: (dbInfo && dbInfo.version) || ''}); } catch (e) { return note('Không sao lưu được lô: ' + e.message, 'err'); }
+  if (stDirtyCur()) {
+    if (!confirm('Lô này còn thay đổi chưa lưu.\n\nBấm OK để lưu dữ liệu vào lô trước rồi sao lưu ngay bản mới nhất (hoặc Hủy để quay lại).')) return;
+    const sv = await stSave({tuKhung: true});
+    if (!sv || !sv.ok) return;
+  }
+  const W = dbGhi();
+  let pkg; try { pkg = HAKLoRung.exportLot(W, o.id, f.id, {version: (dbInfo && dbInfo.version) || ''}); } catch (e) { return note('Không sao lưu được lô: ' + e.message, 'err'); }
   const r = await HB.lotSave(pkg);
   if (r.canceled) return;
   if (r.ok && r.canhBao) pushNote('Cảnh báo: ' + r.canhBao, 'err');

@@ -16,6 +16,7 @@ function dbThayToanBo(moi) {
 /* 3.0 + phiếu #13b (quyết định 7): bốn thao tác ở đầu màn (Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô) */
 const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 style="margin:0 0 6px">Sao lưu và khôi phục</h3><div class="row" style="gap:8px;flex-wrap:wrap">' +
   '<button class="btn" data-act="backup" id="kslJson">Sao lưu toàn bộ dữ liệu (.json' + (HB ? ' + .sqlite' : '') + ')</button>' +
+  (HB && HB.backupSaveAs ? '<button class="btn ghost" data-act="backupSaveAs" id="kslSaveAsBtn">Lưu bản sao lưu ra tệp / USB…</button>' : '') +
   (HB && HB.restorePick ? '<button class="btn ghost" data-act="restorePick" id="restorePickBtn">Khôi phục toàn bộ dữ liệu (.json / .sqlite)…</button>' : '') +
   '<label class="btn ghost" style="' + (HB && HB.restorePick ? 'display:none;' : '') + 'cursor:pointer" id="restoreLbl">Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>' +
   (HB ? '<button class="btn ghost" data-act="lotBackup" id="kslLotSaveBtn">Sao lưu lô rừng…</button><button class="btn ghost" data-act="lotRestore" id="lotRestoreBtn">Khôi phục lô rừng…</button>' : '') + '</div></div>';
@@ -93,12 +94,23 @@ function kslPaint() {
   const rmEl = document.getElementById('setRemind');
   if (rmEl) rmEl.addEventListener('change', async () => { const prev = String(rm.remindDays ?? 7), r = await HB.settings.setRemind(rmEl.value); if (r && r.ok) { setg.s = ksl.st = r.settings; setg.msg = ksl.msg = ['Đã lưu mức nhắc sao lưu.', 'ok']; render(); } else { rmEl.value = prev; setg.msg = ksl.msg = ['Không lưu được mức nhắc sao lưu: ' + ((r && r.error) || 'lỗi không rõ'), 'err']; render(); } });
 }
+async function backupSaveAs() {
+  if (!HB || !HB.backupSaveAs || ksl.busy) return;
+  ksl.busy = true;
+  try {
+    const r = await HB.backupSaveAs();
+    if (!r || r.canceled) return;
+    ksl.msg = r.ok ? ['Đã lưu bản sao lưu toàn bộ ra tệp: ' + r.file, 'ok'] : ['Không lưu được bản sao lưu: ' + (r.error || 'lỗi không rõ'), 'err'];
+    render();
+  } finally { ksl.busy = false; }
+}
 async function kslRestorePick() {
   if (!HB || !HB.restorePick || ksl.busy) return;
   const r = await HB.restorePick();
   if (!r || r.canceled) return;
   if (!r.ok) { ksl.msg = setg.msg = ['Không khôi phục được: ' + r.error, 'err']; return render(); }
   if (r.dinhDang === 'json') return restoreAll({text: async () => r.text});
+  ksl.loc = '';
   await kslLoad();
   const idx = (ksl.hien || []).findIndex(x => x.name === r.name || x.file === r.file);
   if (idx >= 0) return kslKhoiPhuc({dataset: {i: String(idx)}});

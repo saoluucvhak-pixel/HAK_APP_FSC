@@ -1,5 +1,12 @@
 # Nhật ký thay đổi
 
+## 3.7.2 — Khắc phục kẹt lưu do chủ rừng rỗng và hoàn thiện Sao lưu / Khôi phục
+
+- **Tự gỡ kẹt lưu (`BULK_DELETE`) do dòng chủ rừng rỗng**: Tầng lưu SQLite (`src/store.js`) phân biệt rõ chủ rừng thật và dòng chủ rừng rỗng hoàn toàn (0 lô rừng, chưa nhập tên/mã/CCCD/hợp đồng), cho phép ứng dụng tự động dọn sạch các chủ rừng tạo dở từ phiên trước mà không chặn lưu hàng loạt và không tạo thừa tệp sao lưu `truoc-xoa`.
+- **Lưu bản sao lưu trực tiếp ra tệp / USB**: Bổ sung nút “Lưu bản sao lưu ra tệp / USB…” mở hộp thoại Lưu chuẩn của Windows để xuất tệp `.sqlite` hoặc `.json` có kiểm tra toàn vẹn ra bất kỳ thư mục ngoài nào.
+- **Sao lưu lô rừng khi còn bản nháp**: Khi bấm “Sao lưu lô rừng” lúc lô đang có thay đổi chưa lưu, ứng dụng cho phép lưu lô ngay trước khi xuất gói sao lưu và luôn xuất từ dữ liệu đã lưu nhất quán, kèm báo lỗi chi tiết nếu thiếu thông tin gói.
+- **Khôi phục tệp `.sqlite` ngoài máy khi đang bật bộ lọc kho**: Tự động đặt lại bộ lọc danh sách kho sao lưu để luôn mở ngay màn xem trước khôi phục.
+
 ## 3.7.1 — Định mức và danh mục dạng hộp thoại, cải thiện kiểm soát chéo lô
 
 - Gồm các tính năng của 3.7.0, phiên bản chưa từng được công bố trên GitHub Releases.

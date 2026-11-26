@@ -7,7 +7,7 @@ function newRs() {
   db.rs[id] = {id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
   persist();
   NAV.cur = id; NAV.curF = null; NAV.tab = 'info'; NAV.view = 'owner';
-  note('Đã tạo chủ rừng mới. Nhập thông tin rồi bấm Lưu dữ liệu vào lô (hoặc Enter).');
+  note('Đã tạo chủ rừng mới. Nhập thông tin rồi bấm Lưu thông tin (hoặc Enter).');
 }
 
 function newForest() {

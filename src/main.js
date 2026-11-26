@@ -15,7 +15,7 @@ const {GoogleAuth, fileIdOf} = require('./google-auth');
 /* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
  * để không tiến trình nào trên máy đặt được chúng nhằm bỏ qua hộp thoại xác nhận hay đổi nguồn dữ liệu. HAKQN_USERDATA/HAKQN_DB/HAKQN_SMOKE* vẫn dùng cho kiểm tra khói bản cài. */
 const TEST_ONLY_ENV = ['HAKQN_CHECK_MODEL', 'HAKQN_FAIL_SAVE', 'HAKQN_SHEET_URL', 'HAKQN_TEST_BACKUP_FAIL', 'HAKQN_LOT_DIR', 'HAKQN_LOT_FILE', 'HAKQN_PICK_DIR', 'HAKQN_PICK_CHOICE',
-  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE', 'HAKQN_PRINT_DIR', 'HAKQN_TEST_LEGACY_IMPORT'];
+  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE', 'HAKQN_PRINT_DIR', 'HAKQN_TEST_LEGACY_IMPORT', 'HAKQN_SAVEAS_FILE'];
 if (app.isPackaged) TEST_ONLY_ENV.forEach(k => { delete process.env[k]; });
 /* Đường dẫn file do giao diện gửi lên (thay hộp thoại chọn file) chỉ nhận khi chạy từ mã nguồn (kiểm thử); bản cài luôn hỏi qua hộp thoại của hệ điều hành */
 const rendererPath = p => (!app.isPackaged && typeof p === 'string' && p) ? p : null;
@@ -199,12 +199,54 @@ function registerIpc() {
     } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
     finally { backingUp = false; }
   }));
+  /* Xuất bản sao lưu toàn bộ ra tệp do người dùng chọn trực tiếp (Desktop, ổ D, USB…) qua hộp thoại Lưu của Windows (.sqlite hoặc .json). */
+  handle('backup:saveAs', afterReloc(async () => {
+    if (!store) return {ok: false, error: NO_STORE(), unavailable: true};
+    if (backingUp) return {ok: false, error: 'Đang sao lưu, vui lòng đợi xong rồi bấm lại.'};
+    backingUp = true;
+    try {
+      const defName = 'HoSoKhaiThac_SaoLuu_' + Backup.stampOf(new Date()).slice(0, 15) + '.sqlite';
+      let file = process.env.HAKQN_SAVEAS_FILE || '';
+      if (!file) {
+        const r = await dialog.showSaveDialog(win, {title: 'Lưu bản sao lưu toàn bộ dữ liệu ra máy / USB', defaultPath: path.join(app.getPath('documents'), defName),
+          filters: [{name: 'Cơ sở dữ liệu sao lưu HAKQN (.sqlite)', extensions: ['sqlite']}, {name: 'Bản sao lưu JSON (.json)', extensions: ['json']}]});
+        if (r.canceled || !r.filePath) return {ok: true, canceled: true};
+        file = r.filePath;
+      }
+      if (path.resolve(file) === path.resolve(store.file)) throw new Error('Không thể ghi đè lên chính cơ sở dữ liệu đang mở. Hãy chọn tên hoặc thư mục khác.');
+      fs.mkdirSync(path.dirname(file), {recursive: true});
+      if (/\.json$/i.test(file)) {
+        const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();
+        const tmp = file + '.tmp-' + process.pid;
+        try {
+          fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+          const back = JSON.parse(fs.readFileSync(tmp, 'utf8'));
+          if (!back || typeof back !== 'object' || !back.rs) throw new Error('JSON sao lưu thiếu dữ liệu hồ sơ');
+          fs.renameSync(tmp, file);
+        } catch (er) { try { fs.unlinkSync(tmp); } catch (_) {} throw new Error(Settings.describeError(er, file)); }
+      } else {
+        if (!/\.sqlite$/i.test(file)) file += '.sqlite';
+        const tmp = file + '.tmp-' + process.pid;
+        try {
+          await store.db.backup(tmp);
+          const bi = DM.inspect(tmp, undefined, {cleanSidecars: true});
+          if (!bi.ok) throw new Error('Bản sao lưu SQLite không qua kiểm tra (' + bi.error + ')');
+          fs.renameSync(tmp, file);
+        } catch (er) { for (const x of ['', '-wal', '-shm', '-journal']) { try { fs.unlinkSync(tmp + x); } catch (_) {} } throw new Error(Settings.describeError(er, file)); }
+      }
+      try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (_) {}
+      log('INFO', 'Xuất bản sao lưu ra tệp: ' + path.basename(file));
+      return {ok: true, file};
+    } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
+    finally { backingUp = false; }
+  }));
   /* Sao lưu / khôi phục MỘT lô rừng: chạy hoàn toàn trên máy, không cần mạng. Khi kiểm thử tự động: HAKQN_LOT_DIR (thư mục lưu) và HAKQN_LOT_FILE (file mở) thay cho hộp thoại. */
   const sha = txt => require('crypto').createHash('sha256').update(txt).digest('hex');
   const sizeWithWal = f => { let n = 0; for (const x of ['', '-wal']) try { n += fs.statSync(f + x).size; } catch (e) { /* không có */ } return n; };
   handle('lot:save', async (e, pkg) => {
     try {
-      const p0 = LoRung.parsePackage(pkg).pkg || (() => { throw new Error('Dữ liệu lô không hợp lệ.'); })();
+      const parsed0 = LoRung.parsePackage(pkg); if (!parsed0.ok) throw new Error(parsed0.error);
+      const p0 = parsed0.pkg;
       if (store && p0.lo && p0.lo.chot && p0.lo.chot.goi == null) { const g = store.docGoi(p0.lo.id, p0.lo.chot.phienBan); if (g) p0.lo.chot.goi = g.data; }   // B5: gói đóng băng ở bảng chot_goi, file sao lưu lô vẫn mang gói
       const sealed = LoRung.seal(p0, sha), name = LoRung.fileName(sealed);
       let file = process.env.HAKQN_LOT_DIR ? path.join(process.env.HAKQN_LOT_DIR, name) : null;

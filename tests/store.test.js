@@ -217,6 +217,21 @@ test('hồi quy: xóa từ 2 chủ rừng trở lên trong một lần lưu bị
   assert.strictEqual(Object.keys(s.load().rs).length, 0);
 });
 
+test('hồi quy 3.7.2: tự dọn 6 chủ rừng trống hoàn toàn (0 lô, chưa nhập thông tin) không bị chặn BULK_DELETE và không sinh truoc-xoa thừa; có 2 chủ thật vẫn chặn', () => {
+  const d = tmp(), bk = path.join(d, 'bk'), s = new Store(path.join(d, 'r.sqlite'), {backupDir: bk});
+  const that = (id, ten) => ({id, info: {ma: 'CR-' + id, ten, cccd: '', danhXung: 'Ông'}, forests: {}});
+  const rong = id => ({id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}});
+  s.save({v: 2, rs: {o1: that('o1', 'LÊ QUỐC Ý'), o2: that('o2', 'LÊ VĂN QUẢNG'), e1: rong('e1'), e2: rong('e2'), e3: rong('e3'), e4: rong('e4'), e5: rong('e5'), e6: rong('e6')}});
+  // Dọn cả 6 chủ rừng rỗng cùng lúc (như renderSide lúc mở app): được phép, không tạo bản sao lưu truoc-xoa
+  s.save({v: 2, rs: {o1: that('o1', 'LÊ QUỐC Ý'), o2: that('o2', 'LÊ VĂN QUẢNG')}});
+  assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['o1', 'o2']);
+  assert.strictEqual((fs.existsSync(bk) ? fs.readdirSync(bk) : []).filter(n => n.startsWith('truoc-xoa-')).length, 0);
+  // Nhưng xóa cùng lúc cả 2 chủ rừng thật (o1, o2) vẫn bị chặn BULK_DELETE
+  assert.throws(() => s.save({v: 2, rs: {}}), e => e.code === 'BULK_DELETE');
+  assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['o1', 'o2']);
+  s.close();
+});
+
 test('hồi quy: khôi phục "replace" vẫn thay được toàn bộ dữ liệu nhiều chủ rừng', () => {
   const d = tmp(), s = new Store(path.join(d, 'r.sqlite')), o = (id) => ({id, info: {ten: id}, forests: {}});
   s.save({v: 2, rs: {a: o('a'), b: o('b'), c: o('c')}});

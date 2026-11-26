@@ -11,7 +11,7 @@ const base = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-kpn-')), ud = path.joi
 fs.mkdirSync(usb, {recursive: true});
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 const sha = f => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
-const launch = file => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_USERDATA: ud, HAKQN_CLOSE: 'discard', HAKQN_RESTORE_FILE: file || ''}});
+const launch = (file, extra) => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_USERDATA: ud, HAKQN_CLOSE: 'discard', HAKQN_RESTORE_FILE: file || '', ...(extra || {})}});
 (async () => {
   // "máy khác": một cơ sở dữ liệu có 1 chủ rừng, 2 lô, đặt trên USB
   const ngoai = path.join(usb, 'may-khac.sqlite');
@@ -54,6 +54,29 @@ const launch = file => electron.launch({executablePath: require('electron'), arg
   app = await launch(''); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   const st = await w.evaluate(() => window.hak.settings.get());
   ok('chu kỳ hằng tuần được nhớ qua lần mở lại', st.ok && st.settings.auto.chuKy === 'tuan');
+  await app.close();
+  // 3.7.2: cơ sở dữ liệu có sẵn 6 chủ rừng rỗng + 2 chủ rừng thật → mở app tự dọn sạch không báo lỗi BULK_DELETE, lưu lô bình thường; nút Lưu ra tệp/USB và khôi phục khi đang lọc hoạt động đúng
+  { const dbf = path.join(ud, 'hakqn.sqlite'), s2 = new Store(dbf);
+    const rong = id => ({id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}});
+    s2.save({v: 2, rs: {
+      o1: {id: 'o1', info: {ma: 'CR-01', ten: 'LÊ QUỐC Ý', cccd: '049000000011'}, forests: {fa: {id: 'fa', info: {maRung: 'CR1-001-R1', tenRung: 'Rừng 1'}, nc: [], dx: [], pc: [], exp: {}}}},
+      o2: {id: 'o2', info: {ma: 'CR-02', ten: 'LÊ VĂN QUẢNG', cccd: '049000000022'}, forests: {}},
+      e1: rong('e1'), e2: rong('e2'), e3: rong('e3'), e4: rong('e4'), e5: rong('e5'), e6: rong('e6')
+    }}, {allowBulkDelete: true});
+    s2.close();
+  }
+  const outSaveAs = path.join(usb, 'xuat-ra-usb.sqlite');
+  app = await launch(ngoai, {HAKQN_SAVEAS_FILE: outSaveAs}); w = await app.firstWindow(); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
+  await w.waitForTimeout(800);
+  const body0 = await w.innerText('body');
+  const keysSau = await w.evaluate(() => Object.keys(window.hak.loadSync().db.rs).sort());
+  ok('3.7.2: tự dọn 6 chủ rừng rỗng trong SQLite lúc mở app, không báo lỗi BULK_DELETE', JSON.stringify(keysSau) === '["o1","o2"]' && !/Lần lưu này sẽ xóa|Lần ghi gần nhất/.test(body0), JSON.stringify(keysSau) + ' | ' + body0.slice(0, 160));
+  await w.click('#navSet'); await w.click('#setTab_setbk'); await w.waitForSelector('#kslSaveAsBtn');
+  await w.click('#kslSaveAsBtn'); await w.waitForTimeout(600);
+  ok('3.7.2: nút “Lưu bản sao lưu ra tệp / USB…” xuất file .sqlite hợp lệ', fs.existsSync(outSaveAs) && /Đã lưu bản sao lưu toàn bộ ra tệp/.test(await w.innerText('body')));
+  await w.click('#sbTab_ban'); await w.waitForSelector('#kslLoc'); await w.selectOption('#kslLoc', 'toanbo').catch(() => {});
+  await w.click('#sbTab_thaotac'); await w.click('#restorePickBtn'); await w.waitForSelector('#kslXem', {timeout: 5000});
+  ok('3.7.2: bấm Khôi phục toàn bộ khi đang bật bộ lọc vẫn mở ngay màn xem trước #kslXem', await w.isVisible('#kslXem'));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join(' | '));
   await app.close();
   console.log(fail ? fail + ' MỤC LỖI' : 'ĐẠT HẾT'); process.exit(fail ? 1 : 0);

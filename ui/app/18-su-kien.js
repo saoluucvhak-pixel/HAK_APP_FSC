@@ -163,6 +163,7 @@ document.addEventListener('click', async e => {
     setTheme(dark ? 'light' : 'dark'); return;
   }
   if (act === 'backup') return backupAll();
+  if (act === 'backupSaveAs') return backupSaveAs();
   if (act === 'ktGo') {
     const go = JSON.parse(el.dataset.go || '{}');
     if (go.view) { NAV.view = go.view; return render(); }
