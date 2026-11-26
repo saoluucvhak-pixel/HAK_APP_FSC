@@ -49,7 +49,7 @@ const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN'
   app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   ok('mở lại: nhớ bảng màu classic (xanh ngọc)', await w.evaluate(() => document.documentElement.dataset.skin) === 'classic');
   ok('mở lại: bảng màu không làm đổi dữ liệu hồ sơ', (await w.$$('[data-open]')).length === 1);
-  await w.click('#navSet'); await w.click('#setTab_setfmt'); await w.click('#setTab_setgd'); await w.waitForSelector('#skinPick'); ok('Giao diện: bảng màu đánh dấu đúng lựa chọn đang dùng', await w.$eval('[data-skinpick=classic]', e => e.classList.contains('on') && e.getAttribute('aria-pressed') === 'true') && (await w.$$('[data-skinpick]')).length === 4);
+  await w.click('#navSet'); await w.click('#setTab_setfmt'); await w.click('#setTab_setgd'); await w.waitForSelector('#skinPick'); ok('Giao diện: bảng màu đánh dấu đúng lựa chọn đang dùng', await w.$eval('[data-skinpick=classic]', e => e.classList.contains('on') && e.getAttribute('aria-pressed') === 'true') && (await w.$$('[data-skinpick]')).length === 5);
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('; '));
   await app.close();
   console.log('Ảnh chụp: ' + shots);

@@ -29,17 +29,35 @@
    * phân tích lại ngày giờ của mọi phiếu ở các lô khác (100.000 phiếu: ~600 ms mỗi lần dựng chỉ mục → vài chục ms). Mảng `b` dùng chung: chỉ đọc. */
   const nhoPhieu = new WeakMap();
   function suyRa(q) {
-    if (!q || typeof q !== 'object') return {k: khoaPhieu(q), ksn: khoaPhieuSoNgay(q), pl: plate(q && q.bienSo), b: khoang(q || {})};
+    if (!q || typeof q !== 'object') return {k: khoaPhieu(q), ksn: khoaPhieuSoNgay(q), pl: plate(q && q.bienSo), b: khoang(q || {}), dk: Dt().key(s(q && q.ngay))};
     const c = nhoPhieu.get(q);
     if (c && c.so === q.soPhieu && c.ngay === q.ngay && c.bien === q.bienSo && c.ngay2 === q.ngay2 && c.g1 === q.gioCan1 && c.g2 === q.gioCan2) return c;
-    const n = {so: q.soPhieu, ngay: q.ngay, bien: q.bienSo, ngay2: q.ngay2, g1: q.gioCan1, g2: q.gioCan2, k: khoaPhieu(q), ksn: khoaPhieuSoNgay(q), pl: plate(q.bienSo), b: khoang(q)};
+    const n = {so: q.soPhieu, ngay: q.ngay, bien: q.bienSo, ngay2: q.ngay2, g1: q.gioCan1, g2: q.gioCan2, k: khoaPhieu(q), ksn: khoaPhieuSoNgay(q), pl: plate(q.bienSo), b: khoang(q), dk: Dt().key(s(q.ngay))};   // dk: khóa ngày cân, tính MỘT lần theo phiếu (không phân tích lại ngày ở mỗi cặp phiếu cùng biển số)
     nhoPhieu.set(q, n); return n;
   }
   function taoChiMuc(db) {
     const all = lots(db), byKey = new Map(), bySoNgay = new Map(), byPlate = new Map(), add = (m, k, v) => { const a = m.get(k); if (a) a.push(v); else m.set(k, [v]); };
-    all.forEach(l => (l.f.pc || []).forEach(q => { const x = suyRa(q), k = x.k, ksn = x.ksn, pl = x.pl; if (k) add(byKey, k, l); if (ksn) add(bySoNgay, ksn, {l, q, pl}); if (pl) add(byPlate, pl, {l, q, k, b: x.b}); }));
-    return {db, all, byKey, bySoNgay, byPlate};
+    all.forEach(l => (l.f.pc || []).forEach(q => { const x = suyRa(q), k = x.k, ksn = x.ksn, pl = x.pl; if (k) add(byKey, k, l); if (ksn) add(bySoNgay, ksn, {l, q, pl}); if (pl) add(byPlate, pl, {l, q, k, b: x.b, dk: x.dk}); }));
+    return {db, all, byKey, bySoNgay, byPlate, plIdx: new Map()};
   }
+  /* HIỆU NĂNG: chỉ mục theo BIỂN SỐ, dựng lười MỘT lần cho mỗi xe: với từng lô, các mốc bắt đầu và kết thúc của khoảng giờ cân được sắp xếp nên số phiếu của lô đó có khoảng giờ giao với một khoảng cho trước
+   * đếm bằng tìm nhị phân (giao khi bắt đầu < cuối khoảng và kết thúc > đầu khoảng), không duyệt từng cặp phiếu (một xe có hàng chục nghìn phiếu ở hàng trăm lô). */
+  function chiMucBien(cm, pl) {
+    let r = cm.plIdx.get(pl); if (r) return r;
+    const grp = cm.byPlate.get(pl) || [], byLot = new Map(), dup = new Map(), byDay = new Map(), noB = new Map(), push = (m, k, v) => { const a = m.get(k); if (a) a.push(v); else m.set(k, [v]); },
+      dayLot = (m, e) => { let t = m.get(e.dk); if (!t) m.set(e.dk, t = new Map()); push(t, e.l.ma, e); };   // ngày cân → mã lô → các phiếu (theo thứ tự trong chỉ mục)
+    grp.forEach((e, i) => {
+      e.gi = i;   // vị trí trong chỉ mục của xe: giữ đúng thứ tự phát hiện khi gộp theo lô
+      if (e.b) { let t = byLot.get(e.l); if (!t) byLot.set(e.l, t = {l: e.l, st: [], en: []}); t.st.push(e.b[0]); t.en.push(e.b[1]); }
+      if (e.k) push(dup, e.k, e);
+      if (e.dk) { dayLot(byDay, e); if (!e.b) dayLot(noB, e); }
+    });
+    const lots = [...byLot.values()].map(t => ({l: t.l, st: Float64Array.from(t.st).sort(), en: Float64Array.from(t.en).sort()}));
+    [...dup.keys()].forEach(k => { if (dup.get(k).length < 2) dup.delete(k); });
+    r = {grp, lots, dup, byDay, noB}; cm.plIdx.set(pl, r); return r;
+  }
+  const demNho = (arr, v) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < v) lo = m + 1; else hi = m; } return lo; };      // số phần tử < v
+  const demNhoBang = (arr, v) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] <= v) lo = m + 1; else hi = m; } return lo; };   // số phần tử <= v
   const chiMucCua = (db, ctx) => ctx && ctx.db === db ? ctx : taoChiMuc(db);
   function phieuTrung(db, oid, fid, pcList, ctx) {
     const cm = chiMucCua(db, ctx), me = cm.all.find(l => l.oid === oid && l.fid === fid); if (!me) return [];
@@ -59,26 +77,36 @@
     if (dup.length) add('chan', 'Chéo lô: phiếu cân trùng', dup.length + ' phiếu cân giống hệt (cùng số phiếu, cùng ngày cân, cùng biển số; ngày viết khác nhau như 1/11 và 01/11 vẫn là một ngày) đã có ở lô khác: ' + dup.slice(0, 5).map(x => 'phiếu ' + x.p.soPhieu + ' (' + x.p.ngay + ', ' + s(x.p.bienSo) + ') ↔ lô ' + x.ma).join('; ') + (dup.length > 5 ? '; …' : '') + '. Một phiếu cân chỉ thuộc một lô: kiểm tra rồi xóa hoặc chuyển ở lô sai (phần mềm không tự xóa).', 'Phiếu ' + dup[0].p.soPhieu);
     if (dupSoft.length) add('doi', 'Chéo lô: phiếu cân cùng số và ngày ở lô khác', dupSoft.length + ' phiếu cân có cùng số phiếu và ngày cân với lô khác nhưng khác biển số: ' + dupSoft.slice(0, 5).map(x => 'phiếu ' + x.p.soPhieu + ' (' + x.p.ngay + ', BKS ' + (s(x.p.bienSo) || 'trống') + ' ↔ lô ' + x.ma + ' BKS ' + (x.bienKhac || 'trống') + ')').join('; ') + (dupSoft.length > 5 ? '; …' : '') + '. Kiểm tra xem có phải cùng một phiếu bị gõ khác biển số không.', 'Phiếu ' + dupSoft[0].p.soPhieu);
     // 2. một xe ở hai lô: trùng giờ cân, giờ quá sát (< 2 giờ) hoặc cùng ngày cân
-    const xung = new Map(), xungSat = new Map(), xungNgay = new Map();
+    const xung = new Map(), xungSat = new Map(), xungNgay = new Map(), xungIdx = new Map();   // xungIdx: biển số → (mã lô → bản ghi): tra không ghép chuỗi ở mỗi cặp phiếu (HIỆU NĂNG khi một xe có hàng chục nghìn phiếu)
     (f.pc || []).forEach(p => {
-      const x = suyRa(p), a = x.b, pl = x.pl, dKey = Dt().key(s(p.ngay));
+      const x = suyRa(p), a = x.b, pl = x.pl, dKey = x.dk;
       if (!pl) return;
-      (cm.byPlate.get(pl) || []).forEach(e => {
-        const l = e.l, q = e.q;
-        if (l === me || (e.k && e.k === x.k)) return;
-        const b = e.b, qKey = Dt().key(s(q.ngay));
-        if (a && b) {
-          const giao = a[0] < b[1] && b[0] < a[1];
-          if (giao) {
-            const k = pl + '|' + l.ma;
-            if (!xung.has(k)) xung.set(k, {bien: p.bienSo, lo: l.ma, p, q, n: 0});
-            xung.get(k).n++;
+      const ix = chiMucBien(cm, pl), trung = e => e.l !== me && !(e.k && e.k === x.k), giao = e => e.b && a && a[0] < e.b[1] && e.b[0] < a[1];
+      if (a) {
+        // đếm theo từng lô khác, trừ các phiếu cùng khóa phiếu (cùng một phiếu cân), rồi gộp theo mã lô
+        const dem = new Map();   // lô → số phiếu giao khoảng giờ
+        ix.lots.forEach(t => { if (t.l === me) return; const n = demNho(t.st, a[1]) - demNhoBang(t.en, a[0]); if (n > 0) dem.set(t.l, n); });
+        const loai = x.k ? ix.dup.get(x.k) : null; if (loai) loai.forEach(e => { if (e.l !== me && giao(e) && dem.has(e.l)) dem.set(e.l, dem.get(e.l) - 1); });
+        const theoMa = new Map(); dem.forEach((n, l) => { if (n > 0) theoMa.set(l.ma, (theoMa.get(l.ma) || 0) + n); });
+        if (theoMa.size) {
+          let idxPl = xungIdx.get(pl); if (!idxPl) xungIdx.set(pl, idxPl = new Map());
+          const moi = new Set([...theoMa.keys()].filter(ma => !idxPl.has(ma)));
+          if (moi.size) {   // bản ghi đầu tiên của mỗi mã lô: phiếu đối chiếu đầu tiên theo đúng thứ tự trong chỉ mục (như khi duyệt từng cặp)
+            for (let i = 0; i < ix.grp.length && moi.size; i++) {
+              const e = ix.grp[i]; if (!moi.has(e.l.ma) || !trung(e) || !giao(e)) continue;
+              const r = {bien: p.bienSo, lo: e.l.ma, p, q: e.q, n: 0}; idxPl.set(e.l.ma, r); xung.set(pl + '|' + e.l.ma, r); moi.delete(e.l.ma);
+            }
           }
-        } else if (dKey && qKey && dKey === qKey) {
-          const k = pl + '|' + l.ma + '|' + dKey;
-          if (!xungNgay.has(k)) xungNgay.set(k, {bien: p.bienSo, lo: l.ma, ngay: p.ngay, p, q});
+          theoMa.forEach((n, ma) => { idxPl.get(ma).n += n; });
         }
-      });
+      }
+      // phiếu hoặc phiếu đối chiếu thiếu giờ cân: so theo ngày cân
+      const ung = !dKey ? null : a ? ix.noB.get(dKey) : ix.byDay.get(dKey);
+      if (ung) {
+        const moi = [];   // (xe, lô, ngày) chưa ghi nhận: lấy phiếu đối chiếu đầu tiên hợp lệ, rồi ghi theo thứ tự xuất hiện trong chỉ mục
+        ung.forEach((list, ma) => { if (xungNgay.has(pl + '|' + ma + '|' + dKey)) return; const e = list.find(trung); if (e) moi.push(e); });
+        moi.sort((u, v) => u.gi - v.gi).forEach(e => xungNgay.set(pl + '|' + e.l.ma + '|' + dKey, {bien: p.bienSo, lo: e.l.ma, ngay: p.ngay, p, q: e.q}));
+      }
     });
     xung.forEach(x => add('doi', 'Chéo lô: xe trùng giờ cân', 'Xe ' + x.bien + ' có ' + x.n + ' phiếu cân trùng khoảng giờ cân với lô ' + x.lo + ' (phiếu ' + x.p.soPhieu + ' ngày ' + x.p.ngay + ' và phiếu ' + x.q.soPhieu + '): một xe không thể ở hai nơi cùng lúc, đối chiếu giờ cân hoặc biển số.', x.bien));
     xungNgay.forEach(x => add('doi', 'Chéo lô: xe cùng ngày ở hai lô', 'Xe ' + x.bien + ' có phiếu cân ngày ' + x.ngay + ' ở cả lô này (phiếu ' + x.p.soPhieu + ') và lô ' + x.lo + ' (phiếu ' + x.q.soPhieu + ') nhưng thiếu giờ cân: kiểm tra hành trình thực tế.', x.bien));

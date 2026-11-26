@@ -63,7 +63,7 @@ function miniGisHtml(i) {
         '</svg>' : '<div style="padding:40px 10px;color:var(--muted)">Nhập tọa độ <b>Vĩ độ (Lat)</b> và <b>Kinh độ (Lng)</b> để hiển thị sơ đồ vị trí lô rừng.</div>') +
       '</div>' +
       '<div style="font-size:12px;line-height:1.7">' +
-        '<div><b>Tọa độ tâm WGS84:</b><br>' + (coToaDo ? '<code>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</code>' : '<i>Chưa có</i>') + '</div>' +
+        '<div><b>Tọa độ tâm WGS84:</b><br>' + (coToaDo ? '<code>' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</code>' : '<i>Chưa có</i>') + '</div>' +
         '<div style="margin-top:6px"><b>Diện tích khai báo:</b> ' + (coDt ? formatNumber(coDt, 2) + ' ha (' + fmt(dtM2) + ' m²)' : '—') + '</div>' +
         '<div><b>Bán kính ước tính:</b> ' + (banKinhM ? '~' + banKinhM + ' m' : '—') + '</div>' +
         '<div><b>Chu vi ước tính:</b> ' + (chuViM ? '~' + chuViM + ' m' : '—') + '</div>' +
