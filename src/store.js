@@ -390,7 +390,7 @@ class Store {
     if (thatO.length >= 2 && !opts.allowBulkDelete) {
       const owner = this.db.prepare('SELECT ten FROM owners WHERE id=?');
       const forests = this.db.prepare('SELECT COUNT(*) AS total FROM forests WHERE owner_id=?');
-      const blockedOwners = thatO.map(id => ({name: owner.get(String(id)).ten, forests: forests.get(String(id)).total}));
+      const blockedOwners = thatO.map(id => ({name: owner.get(String(id))?.ten || '', forests: forests.get(String(id))?.total || 0}));
       throw Object.assign(new Error('Đã chặn lưu vì lần ghi sẽ xóa ' + thatO.length + ' hồ sơ chủ rừng.'), {code: 'BULK_DELETE', blockedOwners});
     }
     if (thatO.length || (goneF && goneF.length)) { try { this.snapshotFile('truoc-xoa', {keep: 20}); } catch (e) { throw new Error('Không sao lưu được trước khi xóa nên chưa ghi: ' + e.message); } }
