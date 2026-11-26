@@ -18,7 +18,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join(' ');
 
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--user-data-dir=' + path.join(dir, 'ud')], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out}});
   const w = await app.firstWindow(); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   // ---- dữ liệu giả lập ----
   const p = (i, vai, ten, cd, doi, ma) => ({...nv(i, vai, ten, cd, '04908500' + String(7000 + i)), maRung: ma || 'R-A', doi});
@@ -72,7 +72,8 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
   const dmCu = (await w.evaluate(() => window.hak.loadSync().db)).dinhMuc || {};
   await moRung('fa', 'nc'); if (await w.$('#loDirtyBar [data-act=stSave]')) { await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(600); }   // lô không còn thay đổi chưa lưu
   await (async () => { if (await w.$('#navDm')) await w.click('#navDm'); else await w.click('#navSet'); })(); await w.click('#setTab_setvt'); await w.waitForSelector('#vtBang');
-  await w.fill('[data-vtten="vt2"]', 'Thợ cưa'); await w.click('[data-vtdoi="vt2"]'); await w.waitForTimeout(600);
+  await w.click('[data-vtsua="vt2"]'); await w.waitForSelector('#vtForm');
+  await w.fill('#vtMoi', 'Thợ cưa'); await w.click('#vtLuu'); await w.waitForTimeout(600);
   const fa1 = await lotDb('fa'), fb1 = await lotDb('fb');
   ok('đổi tên vị trí: lô đang lập nhận tên mới (dòng nhân công, đơn giá)', fa1.nc.some(r => r.chucDanh === 'Thợ cưa') && !fa1.nc.some(r => r.chucDanh === 'Công nhân cưa') && 'Thợ cưa' in ((fa1.doi[0].hinhThuc || {}).donGiaTan || {}), JSON.stringify(fa1.doi[0].hinhThuc));
   const dmMoi = (await w.evaluate(() => window.hak.loadSync().db)).dinhMuc || {};

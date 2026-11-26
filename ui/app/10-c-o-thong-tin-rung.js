@@ -65,7 +65,7 @@ function panelForest(f, muc) {
     inp('dienTich', 'Diện tích khảo sát / theo hợp đồng (ha)') + inp('dienTichSoDo', 'Diện tích theo Sổ đỏ (ha)') + inp('dienTichGps', 'Diện tích đo GPS — ToaDoRung (ha)') + '<div id="doiSoatDT" style="grid-column:1/-1">' + doiSoatDienTichHtml(i) + '</div>' + inp('tuNgay', 'Thời gian khai thác — từ ngày', {btn: fillBtn('fillTu', 'Lấy ngày cân nhỏ nhất')}) + inp('denNgay', 'Thời gian khai thác — đến ngày', {btn: fillBtn('fillDen', 'Lấy ngày cân lớn nhất')}) + '</div>' +
     start('toado') + inp('lat', 'Vĩ độ WGS84 (điểm tâm)', {ph: 'vd: 15.912345'}) + inp('lng', 'Kinh độ WGS84 (điểm tâm)', {ph: 'vd: 108.123456'}) +
     inp('cuLy', 'Cự ly vận chuyển (km) — rừng đến nơi giao', {ph: HAKCuLy.auto(i) != null ? 'Để trống = tự tính ' + String(HAKCuLy.auto(i)).replace('.', ',') + ' km' : 'Để trống = tự tính từ tọa độ; hoặc nhập số km thực tế'}) + '<p class="mut" id="cuLyNote" style="grid-column:1/-1;margin:0">' +
-    cuLyNote(i) + '</p></div>' +
+    cuLyNote(i) + '</p>' + '<div style="grid-column:1/-1">' + (typeof miniGisHtml === 'function' ? miniGisHtml(i) : '') + '</div></div>' +
     start('dinhmuc') + dmField(i) +
     dmTgField(i) + soDoiField(i, f.nc) + '<p class="mut" id="tgNote" style="grid-column:1/-1;margin:0">' + tgDuKienHtml(i, f.pc, nDoiOf(i, f.nc)) + '</p>' +
     '<label><span>Sản lượng dự kiến (tự tính = diện tích × định mức)</span><input id="slDuKien" value="' + (sl == null ? '' : fmt(Math.round(sl)) + ' tấn') + '" readonly placeholder="Nhập diện tích và định mức"></label>' +

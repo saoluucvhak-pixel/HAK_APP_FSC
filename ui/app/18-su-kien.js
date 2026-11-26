@@ -57,6 +57,7 @@ document.addEventListener('click', async e => {
   if (act === 'chiXemTai') return chiXemTai();
   if (act === 'inTomTat') return inTomTat();
   if (act === 'inBaoCao') return inBaoCao();
+  if (act === 'inTronBoPdf') return typeof inTronBoPdfMo === 'function' ? inTronBoPdfMo(curRec()) : note('Chức năng đang khởi tạo.', 'warn');
   if (act === 'phuLucKyLai') return phuLucKyLai();
   if (act === 'hdAn') { hdDat(true); return render(); }
   if (act === 'hdHien') { hdDat(false); NAV.cur = null; NAV.curF = null; NAV.view = 'bld'; return render(); }   // 3.5.1: hướng dẫn 6 bước nằm ở Bàn làm việc
@@ -84,6 +85,8 @@ document.addEventListener('click', async e => {
   if (act === 'openSetHd') { NAV.cur = null; NAV.curF = null; NAV.view = 'sethd'; return render(); }
   if (act === 'openSetCan') { NAV.cur = null; NAV.curF = null; NAV.view = 'setcan'; return render(); }
   if (act === 'openNorm') { NAV.view = 'norm'; return render(); }
+  if (act === 'bhldSua' || (el.dataset && el.dataset.bhldsua)) { normBhldSua = el.dataset.bhldsua || el.dataset.pos; return render(); }
+  if (act === 'bhldHuyModal') { normBhldSua = null; return render(); }
   if (/^norm(AddVer|DelVer|AddPos|DelPos)$/.test(act)) return normAction(act, el);
   if (/^(fillTu|fillDen|boKlCu|dmDefault|tgDefault|fillDenDk)$/.test(act)) return forestFill(act, el);
   if (/^cc(Fill|Clear|Print)$/.test(act)) { if (act === 'ccPrint' && stBlockNote()) return; return ccAct(act); }
@@ -267,6 +270,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'vcForm') { e.preventDefault(); saveVc(e.target); }
   if (e.target.id === 'giayForm') { e.preventDefault(); saveGiay(e.target); }
   if (e.target.id === 'normForm') { e.preventDefault(); saveNorm(e.target); }
+  if (e.target.id === 'bhldForm') { e.preventDefault(); saveBhldPos(e.target); }
   if (e.target.id === 'keoForm') { e.preventDefault(); saveKeo(e.target); }
   if (e.target.id === 'tgForm') { e.preventDefault(); saveTg(e.target); }
   if (e.target.id === 'dbForm') { e.preventDefault(); saveDb(e.target); }
@@ -274,6 +278,7 @@ document.addEventListener('submit', e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.id === 'normVer') { normSel = t.value; normBhldSua = null; return render(); }
   if (t.dataset && t.dataset.pcdoi) { const f = curForest(); if (!f) return; const r = HAKModel.assignPc(f, [Number(t.dataset.pcdoi)], t.value); if (r.error) return note(r.error, 'err'); f.pc = r.f.pc; persistLo(); render(); return; }
   if (t.dataset && t.dataset.xehd) { const f = curForest(); if (!f) return; const r = HAKModel.moveXe(f, [Number(t.dataset.xehd)], t.value); if (r.error) return note(r.error, 'err'); Object.assign(f, {hdvc: r.f.hdvc, dx: r.f.dx}); persistLo(); render(); return; }
   if (t.id === 'dbVerSel') { dbVer = t.value; return render(); }
@@ -322,7 +327,8 @@ const SKINS = [
   ['luxe', 'Luxe — navy, champagne, ngà (mặc định)', ['#1d3a63', '#b8903f', '#f5f2ec']],
   ['classic', 'Classic — xanh ngọc (teal)', ['#0e7c86', '#0f2740', '#f3f6fa']],
   ['neutral', 'Neutral — xám xanh doanh nghiệp', ['#35475a', '#a8812f', '#f3f5f7']],
-  ['champagne', 'Champagne — vàng ấm', ['#85601a', '#2b2411', '#faf6ec']]];
+  ['champagne', 'Champagne — vàng ấm', ['#85601a', '#2b2411', '#faf6ec']],
+  ['ocean', 'Ocean — xanh dương hiện đại (Executive Blue)', ['#1e40af', '#2563eb', '#f8fafc']]];
 function setSkin(k) {
   if (!SKINS.some(x => x[0] === k)) k = 'luxe';
   document.documentElement.dataset.skin = k;
@@ -395,6 +401,7 @@ if (m && m.due && Object.keys(db.rs || {}).length) note((m.days == null ? 'Chưa
 render();
 /* hộp “Thêm vào danh mục để dùng lại?” (sau khi lưu lô có người / xe mới): Esc = Chỉ lưu trong lô (chạy trước bộ xử lý Esc chung của #dlgBox) */
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && normBhldSua) { e.preventDefault(); normBhldSua = null; return render(); }
   if (e.key !== 'Escape' || !document.querySelector('#dlgBox.on #dmHopDlg')) return;
   e.preventDefault(); e.stopImmediatePropagation(); dmHopXuLy(false);
 }, true);

@@ -1,5 +1,18 @@
 # Nhật ký thay đổi
 
+## 3.7.0 — Kiểm soát chéo lô nâng cao, niêm phong tại Tiền kiểm soát, in bìa & mục lục A4, sơ đồ vị trí lô rừng (Mini GIS), bộ lọc danh mục & Theme Ocean
+
+- **Khóa ô Mã chủ rừng khi dùng CCCD**: Ô nhập mã chủ rừng tự động khóa (`readonly`) ngay khi tích chọn "Dùng số CCCD làm Mã chủ rừng", tránh nhầm lẫn hoặc sửa lệch mã định danh.
+- **Bàn làm việc bước 5**: Bấm vào bước 5 ("Cập nhật phiếu cân") chuyển thẳng đến tab con "Phiếu cân" thay vì mở trang chung.
+- **Kiểm soát chéo lô nâng cao (Kiểm toán FSC)**: Cảnh báo xe có phiếu cân cùng ngày ở hai lô khai thác khác nhau khi thiếu giờ cân (`Chéo lô: xe cùng ngày ở hai lô`), bổ sung cho kiểm tra trùng giờ cân và người ở hai lô.
+- **Niêm phong / Mở khóa hồ sơ tại Tiền kiểm soát**: Bổ sung nút thao tác trực tiếp "Niêm phong chốt lô" và "Mở khóa niêm phong" ngay tại thẻ Tiền kiểm soát xuất hồ sơ (tự động ẩn khi lô đang tạm dừng khai thác).
+- **In bìa hồ sơ & mục lục 20 biểu mẫu FSC khổ A4**: Bổ sung mô-đun in chuẩn A4 gồm trang bìa hồ sơ khai thác FSC và bảng mục lục chi tiết 20 biểu mẫu (BM-01 đến BM-20) kèm thông tin nơi lập và ngày lập.
+- **Sơ đồ minh họa vị trí lô rừng (Mini GIS)**: Tích hợp khung hiển thị vị trí lô rừng trực quan bằng vector SVG (tọa độ GPS trung tâm, la bàn hướng Bắc, thước tỷ lệ) kèm tính năng chép nhanh liên kết Google Maps vệ tinh vào bộ nhớ tạm (clipboard).
+- **Thêm nhanh Bên nhận khoán tại chỗ**: Xóa nút "Mở Danh mục đối tượng" gây văng trang ở hợp đồng nhân công; bổ sung nút "+ Thêm bên nhận khoán mới" (Quick Modal tại chỗ, tự động gán quyền ký Nhân công và chọn ngay) kèm ô tìm kiếm nhanh Typeahead.
+- **Bộ lọc Dropdown cho modal Chọn từ Danh mục**: Bổ sung các dropdown lọc theo Loại xe, Tình trạng tài xế (chọn xe) và Vị trí chức vụ, Tình trạng CCCD, Giới tính (chọn nhân công), lọc kết hợp tức thời và đồng bộ số lượng.
+- **Bảng màu Ocean (Executive Blue)**: Bổ sung bảng màu Ocean xanh dương hiện đại đạt chuẩn tương phản WCAG AA (≥ 4.5:1) cho cả chế độ Sáng và Tối, chọn nhanh tại thanh tiêu đề trên cùng.
+- **Kế thừa & bảo toàn nghiệp vụ**: Không thay đổi công thức kế toán, nội dung 20 biểu mẫu BM-01 đến BM-20, và giữ nguyên cấu trúc cơ sở dữ liệu SQLite v3.5.1 (không can thiệp migration).
+
 ## 3.6.0 — Giao diện điều hành: Tổng quan, Bàn làm việc, Danh mục dạng hộp thoại, nhật ký truy xuất
 
 - Màn Danh mục: Thêm/Sửa đối tượng, xe, ngành nghề và chức vụ mở trong hộp thoại riêng (có Lưu thông tin / Hủy bỏ, Esc để hủy); Chức vụ, Ngành nghề, Quyền ký hợp đồng chọn bằng nút phân đoạn (quyền ký loại trừ nhau); bảng Ngành nghề / Chức vụ là danh sách sạch với nút Sửa, Ngừng / Xóa.

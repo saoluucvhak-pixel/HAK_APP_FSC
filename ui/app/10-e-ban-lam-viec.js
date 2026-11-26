@@ -42,7 +42,11 @@ function bldDi(buoc) {
   NAV.cur = x.oid; NAV.curF = x.fid; NAV.view = 'owner'; NAV.tab = 'rung';
   NAV.ftab = {lo: 'finfo', nc: 'nc', dx: 'dx', pc: 'dx', xuat: 'kt'}[buoc] || 'finfo';
   if (buoc === 'chu') { NAV.tab = 'info'; }
-  if (buoc === 'pc') { const h = HAKModel.hdOrder({dx: x.f.dx || [], hdvc: x.f.hdvc || []})[0]; if (h) hdMoDat('dx', h.id); }
+  if (buoc === 'pc') {
+    const h = HAKModel.hdOrder({dx: x.f.dx || [], hdvc: x.f.hdvc || []})[0];
+    if (h) hdMoDat('dx', h.id);
+    if (typeof mucLoDaMo !== 'undefined') mucLoDaMo.set(mucLoKey('dx'), 'phieu');
+  }
   render();
 }
 document.addEventListener('click', e => {

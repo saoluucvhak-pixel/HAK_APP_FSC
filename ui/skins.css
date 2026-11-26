@@ -27,5 +27,19 @@
 --hero:radial-gradient(1200px 300px at 90% -20%,rgba(220,184,98,.14),transparent 60%),linear-gradient(120deg,#0f0c06,#3a2d12);
 --c1:rgba(220,184,98,.16);--c1f:#e8c97c;--deep:#0f0c06}
 
+/* Bảng màu Ocean: xanh dương hiện đại (Executive Blue) theo chuẩn mô phỏng trực quan */
+[data-skin="ocean"]{--mut-aa:#475569;--brand:#1e40af;--brand2:#2563eb;--brandH:#1e3a8a;--brandA:#172554;--brandSoft:rgba(30,64,175,.10);--onBrand:#fff;
+--bg:#f8fafc;--card:#fff;--ink:#0f172a;--mut:#64748b;--line:#e2e8f0;--line2:#edf2f7;--ctl:#cbd5e1;--th:#f1f5f9;--hover:#f1f5f9;--field:#fff;
+--sb:linear-gradient(180deg,#0f172a 0%,#090d16 100%);--sbText:#cbd5e1;--sbMut:#94a3b8;--sbLine:rgba(255,255,255,.08);
+--warnBg:#fef3c7;--warnBd:#fde68a;--warnFg:#78350f;--okBg:#ecfdf5;--okFg:#065f46;--infoBg:#eff6ff;--infoBd:#bfdbfe;--infoFg:#1e40af;--red:#b91c1c;--edit:#1e40af;--editBg:#eff6ff;--focus:rgba(37,99,235,.32);
+--shadow:0 1px 2px rgba(15,23,42,.05),0 8px 22px rgba(15,23,42,.07);--shadowH:0 12px 28px rgba(30,64,175,.16);--r:10px;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(255,255,255,.14),transparent 60%),linear-gradient(120deg,#0f172a,#1e40af);
+--c1:#eff6ff;--c1f:#1e40af;--deep:#0f172a}
+[data-skin="ocean"][data-theme="dark"]{--mut-aa:#94a3b8;--brand:#93c5fd;--brand2:#bfdbfe;--brandH:#bfdbfe;--brandA:#dbeafe;--brandSoft:rgba(147,197,253,.16);--onBrand:#0f172a;
+--bg:#0b1120;--card:#111827;--ink:#f1f5f9;--mut:#94a3b8;--line:#1e293b;--line2:#162032;--ctl:#334155;--th:#162032;--hover:#172338;--field:#0d1526;
+--sb:linear-gradient(180deg,#070b14 0%,#04070c 100%);--okBg:rgba(52,211,153,.14);--okFg:#6ee7b7;--red:#f87171;--focus:rgba(147,197,253,.34);--edit:#93c5fd;--editBg:#172554;
+--hero:radial-gradient(1200px 300px at 90% -20%,rgba(147,197,253,.12),transparent 60%),linear-gradient(120deg,#070b14,#1e3a8a);
+--c1:rgba(147,197,253,.16);--c1f:#93c5fd;--deep:#070b14}
+
 /* Chế độ tối: bảng màu có màu cảnh báo/thông tin riêng cho chế độ sáng (nền sáng) phải có bản tối, nếu không chữ sáng nằm trên nền sáng (độ tương phản 1,1) */
 [data-skin][data-theme="dark"]{--warnBg:#2a2213;--warnBd:#5a4520;--warnFg:#f0cf8f;--warn:#f0b35a;--red:#ff8a6a;--redBg:#3a1e17;--infoBg:#18243a;--infoBd:#2c3d5c;--infoFg:#c3d3f0}

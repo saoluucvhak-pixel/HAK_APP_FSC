@@ -1,12 +1,13 @@
-/* ========== 3.5.1: Hộp “Thêm nhanh” người ký / chủ xe / tài xế ngay tại chỗ (không rời màn đang nhập) ==========
+/* ========== 3.5.1 / 3.7.1: Hộp “Thêm nhanh” người ký / bên nhận khoán / chủ xe / tài xế ngay tại chỗ (không rời màn đang nhập) ==========
  * Ghi vào Danh mục đối tượng (thể nhân một người) đúng quy tắc HAKDoiTuong.luu rồi tự chọn người vừa thêm:
  *  - ô Người ký của đội xe (hợp đồng vận chuyển): người có quyền ký Vận chuyển;
+ *  - ô Bên nhận khoán của đội khai thác (hợp đồng nhân công): người có quyền ký Nhân công;
  *  - form Thêm xe: chủ xe (chức vụ Chủ xe) hoặc tài xế (chức vụ Tài xế, bắt buộc GPLX). */
-const qnTen = {kyVC: 'người ký hợp đồng vận chuyển', chuXe: 'chủ xe', taiXe: 'tài xế'};
+const qnTen = {kyVC: 'người ký hợp đồng vận chuyển', kyNC: 'bên nhận khoán (ký hợp đồng nhân công)', chuXe: 'chủ xe', taiXe: 'tài xế'};
 let qnCtx = null;
 function qnMo(vt) {
   qnCtx = {vt}; const f = (n, l, req) => '<label><span' + (req ? ' class="req"' : '') + '>' + l + '</span><input name="' + n + '" autocomplete="off"></label>';
-  dlgMo('<form id="qnForm"><h3 style="margin-top:0" id="dlgBoxTitle">Thêm ' + qnTen[vt] + '</h3><p class="mut" style="margin-top:0">Lưu vào Danh mục đối tượng' + (vt === 'kyVC' ? ' (kèm quyền ký Vận chuyển)' : '') + ' và chọn ngay vào màn đang nhập.</p><div id="qnLoi"></div>' +
+  dlgMo('<form id="qnForm"><h3 style="margin-top:0" id="dlgBoxTitle">Thêm ' + qnTen[vt] + '</h3><p class="mut" style="margin-top:0">Lưu vào Danh mục đối tượng' + (vt === 'kyVC' ? ' (kèm quyền ký Vận chuyển)' : vt === 'kyNC' ? ' (kèm quyền ký Nhân công)' : '') + ' và chọn ngay vào màn đang nhập.</p><div id="qnLoi"></div>' +
     '<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px 14px">' + f('hoTen', 'Họ tên', true) + f('cccd', 'Số CCCD (12 số; CMND 9 số)', true) + f('ngayCap', 'Ngày cấp (dd/mm/yyyy)') + f('noiCap', 'Nơi cấp') + f('sdt', 'Số điện thoại') + f('diaChi', 'Địa chỉ thường trú') +
     (vt === 'taiXe' ? f('gplx', 'Số giấy phép lái xe', true) + f('hanGplx', 'Hạn GPLX (dd/mm/yyyy)') : '') + '</div>' +
     '<div class="row" style="gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" type="submit" id="qnLuu">💾 Lưu thông tin</button><button class="btn ghost" type="button" data-act="dlgDong" id="qnHuy">Hủy bỏ</button></div></form>');
@@ -14,7 +15,7 @@ function qnMo(vt) {
 function qnLuu(fm) {
   const g = n => trim((fm.elements[n] || {}).value || ''), vt = qnCtx && qnCtx.vt; if (!vt) return;
   const p = {hoTen: g('hoTen'), cccd: g('cccd'), ngayCap: g('ngayCap'), noiCap: g('noiCap'), sdt: g('sdt'), diaChi: g('diaChi'), gioiTinh: '', ngaySinh: '', hanCccd: '', gplx: g('gplx'), hanGplx: g('hanGplx'),
-    vaiTro: {nhanCong: false, taiXe: vt === 'taiXe', chuXe: vt === 'chuXe'}, kyHD: {vanChuyen: vt === 'kyVC', nhanCong: false}};
+    vaiTro: {nhanCong: vt === 'kyNC', taiXe: vt === 'taiXe', chuXe: vt === 'chuXe'}, kyHD: {vanChuyen: vt === 'kyVC', nhanCong: vt === 'kyNC'}};
   const loi = m => { document.getElementById('qnLoi').innerHTML = '<div class="msg err">' + m.map(esc).join('<br>') + '</div>'; };
   if (!p.hoTen) return loi(['Thiếu họ tên.']);
   const le = HAKNganh.kiemNguoi(db, p); if (le.length) return loi(le);
@@ -32,13 +33,23 @@ function qnLuu(fm) {
     if (sel && ct) { const v = 'd:' + HAKDanhMuc.chuanDoiTacId(ct.id); let o = [...sel.options].find(x => x.value === v);
       if (!o) { o = document.createElement('option'); o.value = v; o.textContent = (ct.ten || '') + (ct.cccd ? ' · CCCD ' + ct.cccd : '') + ' · người ký (Danh mục đối tượng)'; sel.appendChild(o); }
       sel.value = v; sel.dispatchEvent(new Event('change', {bubbles: true})); }
+  } else if (vt === 'kyNC') {   // chọn ngay vào ô Bên nhận khoán (hợp đồng nhân công)
+    const sel = document.querySelector('select[name=benNK]'), ct = dmCaNhan().find(d => (p.cccd && HAKModel.cccdSo(d.cccd) === HAKModel.cccdSo(p.cccd)) || trim(d.ten) === p.hoTen);
+    if (sel && ct) {
+      const v = ng && ng.id ? 'ng:' + ng.id : 'dt:' + ct.id;
+      let o = [...sel.options].find(x => x.value === v);
+      if (!o) { o = document.createElement('option'); o.value = v; o.textContent = (ct.ten || '') + (ct.cccd ? ' · CCCD ' + ct.cccd : '') + ' · Bên nhận khoán (Danh mục)'; sel.appendChild(o); }
+      sel.value = v; sel.dispatchEvent(new Event('change', {bubbles: true}));
+    }
   } else if (ng.id) {   // form Thêm xe đang mở: điền chủ xe / tài xế vừa thêm
     stRead(); if (vt === 'taiXe') { dxDienTx(ng.id); stm.vals.taiXeId = ng.id; } else dxDienChu(ng.id); stRender();
   }
 }
 document.addEventListener('click', e => {
-  const el = e.target && e.target.closest && e.target.closest('[data-act=kyThemNhanh],[data-act=dxThemNguoi]'); if (!el) return;
-  e.preventDefault(); qnMo(el.dataset.act === 'kyThemNhanh' ? 'kyVC' : el.dataset.vt);
+  const el = e.target && e.target.closest && e.target.closest('[data-act=kyThemNhanh],[data-act=kyThemNhanhNC],[data-act=dxThemNguoi]'); if (!el) return;
+  e.preventDefault();
+  const act = el.dataset.act;
+  qnMo(act === 'kyThemNhanh' ? 'kyVC' : act === 'kyThemNhanhNC' ? 'kyNC' : el.dataset.vt);
 });
 document.addEventListener('submit', e => { if (e.target && e.target.id === 'qnForm') { e.preventDefault(); e.stopPropagation(); qnLuu(e.target); } }, true);
 /* lọc nhanh khi gõ (typeahead) cho ô Người ký: ẩn các lựa chọn không khớp, giữ lựa chọn đang chọn */

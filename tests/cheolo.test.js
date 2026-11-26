@@ -16,6 +16,14 @@ test('một xe ở hai lô trùng khoảng giờ cân: cảnh báo; giờ không
   const r = nhom(C.kiemTra(mk(a, b(['09:00:00', '10:00:00'])), 'o1', 'b'), 'Chéo lô: xe trùng giờ cân'); assert.equal(r.length, 1); assert.equal(r[0].kind, 'doi');
   assert.equal(nhom(C.kiemTra(mk(a, b(['10:00:00', '11:00:00'])), 'o1', 'b'), 'Chéo lô: xe trùng giờ cân').length, 0);
 });
+test('một xe ở hai lô cùng ngày cân nhưng thiếu giờ cân: cảnh báo; khác ngày thì không', () => {
+  const a = lo('a', 'A', {pc: [pc('1', '05/10/2026', '92C-1')]});
+  const b = lo('b', 'B', {pc: [pc('2', '05/10/2026', '92C-1')]});
+  const r = nhom(C.kiemTra(mk(a, b), 'o1', 'b'), 'Chéo lô: xe cùng ngày ở hai lô');
+  assert.equal(r.length, 1); assert.equal(r[0].kind, 'doi');
+  const bKhac = lo('b', 'B', {pc: [pc('2', '06/10/2026', '92C-1')]});
+  assert.equal(nhom(C.kiemTra(mk(a, bKhac), 'o1', 'b'), 'Chéo lô: xe cùng ngày ở hai lô').length, 0);
+});
 test('một người ở hai lô có thời gian khai thác giao nhau: cảnh báo, không chặn; không giao nhau thì không báo', () => {
   const nc = [{ten: 'AN', cccd: '049085007001'}];
   const r = nhom(C.kiemTra(mk(lo('a', 'A', {nc}), lo('b', 'B', {nc, info: {tuNgay: '20/10/2026', denNgay: '30/11/2026'}})), 'o1', 'b'), 'Chéo lô: người ở hai lô'); assert.equal(r.length, 1); assert.equal(r[0].kind, 'doi');

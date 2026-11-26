@@ -10,7 +10,7 @@ const root = path.join(__dirname, '..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-vtdm-'));
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'v.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--user-data-dir=' + path.join(dir, 'ud')], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'v.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const vtTen = async () => (await db()).dmViTri.map(v => v.ten);
@@ -21,12 +21,14 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   let ten = await vtTen();
   ok('danh mục trống: gieo sẵn Công nhân cưa, Công nhân lột vỏ và bốc xếp, Quản lý chung, Khác (kèm các vị trí mặc định của định biên)', ['Công nhân cưa', 'Công nhân lột vỏ và bốc xếp', 'Quản lý chung', 'Khác'].every((x, i) => ten[i] === x), JSON.stringify(ten));
   ok('bảng Vị trí có các cột Vị trí, Nhiệm vụ, Ghi chú, Đang dùng', await w.evaluate(() => [...document.querySelectorAll('#vtBang thead th')].map(t => t.textContent.trim()).slice(0, 4).join('|') === 'Vị trí|Nhiệm vụ|Ghi chú|Đang dùng'));
-  await w.fill('#vtMoi', 'Thợ lái máy'); await w.fill('#vtMoiNv', 'Lái máy xúc, máy kéo gỗ'); await w.fill('#vtMoiGc', 'Có bằng lái'); await w.click('[data-act=vtThem]'); await w.waitForTimeout(400);
+  await w.click('#vtThem'); await w.waitForSelector('#vtForm');
+  await w.fill('#vtMoi', 'Thợ lái máy'); await w.fill('#vtMoiNv', 'Lái máy xúc, máy kéo gỗ'); await w.fill('#vtMoiGc', 'Có bằng lái'); await w.click('#vtLuu'); await w.waitForTimeout(400);
   let d = await db(), vt = d.dmViTri.find(v => v.ten === 'Thợ lái máy');
   ok('thêm vị trí kèm nhiệm vụ và ghi chú: lưu đúng hai khóa', !!vt && vt.nhiemVu === 'Lái máy xúc, máy kéo gỗ' && vt.ghiChu === 'Có bằng lái', JSON.stringify(vt));
   const khac = d.dmViTri.find(v => v.ten === 'Khác');
   ok('vị trí không dùng nhiệm vụ / ghi chú: JSON y hệt bản cũ (không có khóa rỗng)', JSON.stringify(khac) === JSON.stringify({id: khac.id, ten: 'Khác', ngung: false}), JSON.stringify(khac));
-  await w.fill('[data-vtnv="' + khac.id + '"]', 'Việc phát sinh ngoài danh sách'); await w.click('[data-vtdoi="' + khac.id + '"]'); await w.waitForTimeout(400);
+  await w.click('[data-vtsua="' + khac.id + '"]'); await w.waitForSelector('#vtForm');
+  await w.fill('#vtMoiNv', 'Việc phát sinh ngoài danh sách'); await w.click('#vtLuu'); await w.waitForTimeout(400);
   d = await db(); ok('sửa nhiệm vụ tại chỗ rồi Lưu', d.dmViTri.find(v => v.id === khac.id).nhiemVu === 'Việc phát sinh ngoài danh sách');
   const qly = d.dmViTri.find(v => v.ten === 'Quản lý chung'); await w.click('[data-vtxoa="' + qly.id + '"]'); await w.waitForTimeout(400);
   ok('xóa vị trí chưa dùng: mất hẳn khỏi danh mục', !(await vtTen()).includes('Quản lý chung'));

@@ -34,7 +34,7 @@ const BAR_INK = '#f1ede2';                                       // chữ thanh 
 const PAIRS = [['ink', 'card'], ['ink', 'bg'], ['mut-aa', 'card'], ['mut-aa', 'bg'], ['mut-aa', 'th'], ['brand', 'card'], ['brand', 'bg'], ['onBrand', 'brand'], ['onBrand', 'brandH'],
   ['warnFg', 'warnBg'], ['okFg', 'okBg'], ['red', 'card']];
 
-for (const skin of ['classic', 'luxe', 'neutral', 'champagne']) {
+for (const skin of ['classic', 'luxe', 'neutral', 'champagne', 'ocean']) {
   for (const [name, isDark] of [['sáng', false], ['tối', true]]) {
     test(`${skin} ${name}: chữ đạt AA ≥ 4,5:1, thanh trên cùng đọc được`, () => {
       const T = theme(skin, isDark);

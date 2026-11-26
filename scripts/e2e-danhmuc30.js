@@ -15,7 +15,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
 const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(rows); Object.keys(ws).filter(k => /^[A-Z]+\d+$/.test(k)).forEach(k => { ws[k].t = 's'; }); XLSX.utils.book_append_sheet(wb, ws, 'S'); XLSX.writeFile(wb, f); return f; };
 
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--user-data-dir=' + path.join(dir, 'ud')], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'd.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: path.join(dir, 'out')}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   const dbAll = () => w.evaluate(() => window.hak.loadSync().db);
   const set = (sel, o) => w.evaluate(([sel, o]) => { const f = document.querySelector(sel); Object.entries(o).forEach(([k, v]) => { const e = f.elements[k]; if (e.type === 'checkbox') e.checked = !!v; else e.value = v; }); }, [sel, o]);
@@ -102,7 +102,8 @@ const xlsx = (ten, rows) => { const f = path.join(dir, ten), wb = XLSX.utils.boo
   await w.click('#setTab_setvt'); await w.waitForSelector('#vtBang');
   D = await dbAll(); const vt = (D.dmViTri || [])[0];
   ok('Vị trí có sẵn danh sách với mã ổn định', !!vt && /^vt/.test(vt.id), JSON.stringify(D.dmViTri));
-  await w.fill('[data-vtten="' + vt.id + '"]', vt.ten + ' (đổi)'); await w.click('[data-vtdoi="' + vt.id + '"]'); await w.waitForTimeout(400);
+  await w.click('[data-vtsua="' + vt.id + '"]'); await w.waitForSelector('#vtForm');
+  await w.fill('#vtMoi', vt.ten + ' (đổi)'); await w.click('#vtLuu'); await w.waitForTimeout(400);
   D = await dbAll(); ok('đổi tên vị trí: cùng mã, tên mới', (D.dmViTri.find(v => v.id === vt.id) || {}).ten === vt.ten + ' (đổi)');
 
   // 9. rời màn khi đang sửa dở
