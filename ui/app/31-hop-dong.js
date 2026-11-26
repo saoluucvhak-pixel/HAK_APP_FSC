@@ -47,6 +47,7 @@ function panelDsNC(rec, opt = {}) {
       '<td style="text-align:right;white-space:nowrap">' + kl(d) + '</td></tr>';
   };
   return '<div id="dsHdNc"><div class="hak-pane-head"><h3>Hợp đồng nhân công (' + ds.length + ')</h3></div>' +
+    '<p class="mut">Chọn đội, điền thông tin hợp đồng và thêm thành viên. Sau đó bấm “Lưu dữ liệu vào lô”.</p>' +
     '<div class="hak-pane-body" style="padding:10px 12px"><div class="row" style="gap:6px;margin-bottom:8px"><input id="doiMoiTen" placeholder="Tên đội mới…" style="flex:1;min-width:110px"><button class="btn sm" data-act="themDoi">+ Thêm đội</button></div>' +
     '<div class="hak-master-list"><table id="dsHdNcTbl"><thead><tr><th>#</th><th>Hợp đồng nhân công</th><th>Người</th><th style="text-align:right">KL</th></tr></thead><tbody>' +
     (ds.length ? ds.map(row).join('') : '<tr><td colspan="4" class="mut">Chưa có đội nào: nhập tên rồi bấm “+ Thêm đội”.</td></tr>') + '</tbody></table></div>' +

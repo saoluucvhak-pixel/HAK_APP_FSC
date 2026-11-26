@@ -14,7 +14,12 @@ function dbThayToanBo(moi) {
   doiDuLieu();
 }
 /* 3.0 + phiếu #13b (quyết định 7): bốn thao tác ở đầu màn (Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô) */
-const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 style="margin:0 0 6px">Sao lưu và khôi phục</h3><div class="row" style="gap:8px;flex-wrap:wrap">' +
+function backupConfirmSaved() {
+  return (storeOk && !stDirtyList().length && !saveTimer) ||
+    confirm('Bản sao lưu toàn bộ chỉ chứa dữ liệu đã ghi vào máy. Nếu còn thay đổi chưa lưu hoặc vừa gặp lỗi lưu, các thay đổi đó có thể chưa có trong bản sao.\n\nBấm OK để sao lưu bản đã ghi hoặc Hủy để quay lại lưu dữ liệu.');
+}
+
+const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 style="margin:0 0 6px">Sao lưu và khôi phục</h3><p class="mut">Sau khi nhập hoặc sửa, bấm “Lưu dữ liệu vào lô”. Để mang cả hồ sơ sang máy khác, chọn lưu bản sao ra tệp hoặc USB. Nếu chỉ cần một lô, mở lô đó và chọn “Sao lưu lô rừng”.</p><div class="row" style="gap:8px;flex-wrap:wrap">' +
   '<button class="btn" data-act="backup" id="kslJson">Sao lưu toàn bộ dữ liệu (.json' + (HB ? ' + .sqlite' : '') + ')</button>' +
   (HB && HB.backupSaveAs ? '<button class="btn ghost" data-act="backupSaveAs" id="kslSaveAsBtn">Lưu bản sao lưu ra tệp / USB…</button>' : '') +
   (HB && HB.restorePick ? '<button class="btn ghost" data-act="restorePick" id="restorePickBtn">Khôi phục toàn bộ dữ liệu (.json / .sqlite)…</button>' : '') +
@@ -95,7 +100,7 @@ function kslPaint() {
   if (rmEl) rmEl.addEventListener('change', async () => { const prev = String(rm.remindDays ?? 7), r = await HB.settings.setRemind(rmEl.value); if (r && r.ok) { setg.s = ksl.st = r.settings; setg.msg = ksl.msg = ['Đã lưu mức nhắc sao lưu.', 'ok']; render(); } else { rmEl.value = prev; setg.msg = ksl.msg = ['Không lưu được mức nhắc sao lưu: ' + ((r && r.error) || 'lỗi không rõ'), 'err']; render(); } });
 }
 async function backupSaveAs() {
-  if (!HB || !HB.backupSaveAs || ksl.busy) return;
+  if (!HB || !HB.backupSaveAs || ksl.busy || !backupConfirmSaved()) return;
   ksl.busy = true;
   try {
     const r = await HB.backupSaveAs();

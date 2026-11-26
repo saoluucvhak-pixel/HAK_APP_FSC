@@ -118,3 +118,16 @@ test('Lô 6 (T-08): dữ liệu thay đổi giữa chừng khi đang sao lưu �
     assert.strictEqual(Object.keys(jsonData.rs || {}).length, sqlCounts.owners);
   } finally { s.close(); }
 });
+
+test('đích sao lưu chặn SQLite đang mở sau khi thêm đuôi và qua đường dẫn khác', () => {
+  const dir = tmp(), live = path.join(dir, 'active.sqlite'), alias = path.join(dir, 'alias.sqlite');
+  try {
+    fs.writeFileSync(live, 'giả lập');
+    fs.linkSync(live, alias);
+    for (const target of [live, path.join(dir, 'active'), alias]) {
+      assert.throws(() => B.backupDestination(target, live), /cơ sở dữ liệu đang mở/);
+    }
+    assert.equal(B.backupDestination(path.join(dir, 'backup'), live), path.join(dir, 'backup.sqlite'));
+    assert.equal(B.backupDestination(path.join(dir, 'backup.json'), live), path.join(dir, 'backup.json'));
+  } finally { fs.rmSync(dir, {recursive: true, force: true}); }
+});

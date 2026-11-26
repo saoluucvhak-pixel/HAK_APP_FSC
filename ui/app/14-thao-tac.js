@@ -384,6 +384,7 @@ let backupBusy = false;
 async function backupAll() {
   if (HB) {
     if (backupBusy) return note('Đang sao lưu, vui lòng đợi xong rồi bấm lại.', 'warn');
+    if (!backupConfirmSaved()) return;
     backupBusy = true; note('Đang sao lưu và kiểm tra hai file…', 'warn');
     try {
       const r = await HB.backupTo();

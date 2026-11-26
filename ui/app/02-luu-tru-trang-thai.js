@@ -172,7 +172,9 @@ function flushSave() {
   storeSave().then(r => {
     if (r && r.ok) { storeOk = true; const nhac = Date.now() < khoaNhacDen; showSave('Đã lưu vào máy lúc ' + hhmm() + (nhac ? ' · Lô chỉ đọc: thay đổi vừa rồi đã được bỏ' : ''), nhac); }
     else if (r && r.code === 'LOCKED') { storeOk = true; khoaNhacDen = Date.now() + KHOA_NHAC_MS; showSave('Lô chỉ đọc: không ghi thay đổi', true); pushNote(r.error, 'err'); render(); }
-    else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
+    else { storeOk = false; showSave(r?.code === 'BULK_DELETE'
+      ? 'Chưa lưu: ứng dụng phát hiện nhiều hồ sơ chủ rừng sẽ bị xóa. Giữ nguyên hồ sơ và bản nháp để kiểm tra lại.'
+      : 'Lỗi lưu: ' + ((r && r.error) || 'không rõ') + ' — hãy sao lưu ngay', true); render(); }
   }).catch(e => { storeOk = false; showSave('Lỗi lưu: ' + e.message, true); });
 }
 function persist() {

@@ -213,7 +213,7 @@ function registerIpc() {
         if (r.canceled || !r.filePath) return {ok: true, canceled: true};
         file = r.filePath;
       }
-      if (path.resolve(file) === path.resolve(store.file)) throw new Error('Không thể ghi đè lên chính cơ sở dữ liệu đang mở. Hãy chọn tên hoặc thư mục khác.');
+      file = Backup.backupDestination(file, store.file);
       fs.mkdirSync(path.dirname(file), {recursive: true});
       if (/\.json$/i.test(file)) {
         const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();
@@ -222,15 +222,16 @@ function registerIpc() {
           fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
           const back = JSON.parse(fs.readFileSync(tmp, 'utf8'));
           if (!back || typeof back !== 'object' || !back.rs) throw new Error('JSON sao lưu thiếu dữ liệu hồ sơ');
+          Backup.backupDestination(file, store.file);
           fs.renameSync(tmp, file);
         } catch (er) { try { fs.unlinkSync(tmp); } catch (_) {} throw new Error(Settings.describeError(er, file)); }
       } else {
-        if (!/\.sqlite$/i.test(file)) file += '.sqlite';
         const tmp = file + '.tmp-' + process.pid;
         try {
           await store.db.backup(tmp);
           const bi = DM.inspect(tmp, undefined, {cleanSidecars: true});
           if (!bi.ok) throw new Error('Bản sao lưu SQLite không qua kiểm tra (' + bi.error + ')');
+          Backup.backupDestination(file, store.file);
           fs.renameSync(tmp, file);
         } catch (er) { for (const x of ['', '-wal', '-shm', '-journal']) { try { fs.unlinkSync(tmp + x); } catch (_) {} } throw new Error(Settings.describeError(er, file)); }
       }

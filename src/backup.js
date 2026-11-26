@@ -14,6 +14,20 @@ const sha = t => crypto.createHash('sha256').update(t).digest('hex');
 const pad = (n, w = 2) => String(n).padStart(w, '0');
 function stampOf(d) { return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '-' + pad(d.getMilliseconds(), 3); }
 
+/* Kiểm tra tên cuối cùng, kể cả bí danh hệ thống tệp trỏ vào SQLite đang mở. */
+function backupDestination(file, liveFile) {
+  const target = /\.(?:json|sqlite)$/i.test(file) ? file : file + '.sqlite';
+  const key = p => process.platform === 'win32' ? path.resolve(p).toLowerCase() : path.resolve(p);
+  const deny = () => { throw new Error('Không thể ghi đè lên chính cơ sở dữ liệu đang mở. Hãy chọn tên hoặc thư mục khác.'); };
+  if (key(target) === key(liveFile)) deny();
+  let dst;
+  try { dst = fs.statSync(target, {bigint: true}); }
+  catch (e) { if (e.code === 'ENOENT') return target; throw e; }
+  const src = fs.statSync(liveFile, {bigint: true});
+  if (dst.ino !== 0n && dst.ino === src.ino && dst.dev === src.dev) deny();
+  return target;
+}
+
 function uniqueBase(dir, base, exts, io) {
   for (let n = 0; n < 1000; n++) {
     const b = base + (n ? '_' + (n + 1) : '');
@@ -149,4 +163,4 @@ function saveLotFile(o) {
   }
 }
 
-module.exports = {backupAll, saveLotFile, writeFileVerified, stampOf};
+module.exports = {backupDestination, backupAll, saveLotFile, writeFileVerified, stampOf};
