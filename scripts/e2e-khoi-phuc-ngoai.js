@@ -61,6 +61,8 @@ const launch = (file, extra) => electron.launch({executablePath: require('electr
     s2.save({v: 2, rs: {
       o1: {id: 'o1', info: {ma: 'CR-01', ten: 'LÊ QUỐC Ý', cccd: '049000000011'}, forests: {fa: {id: 'fa', info: {maRung: 'CR1-001-R1', tenRung: 'Rừng 1'}, nc: [], dx: [], pc: [], exp: {}}}},
       o2: {id: 'o2', info: {ma: 'CR-02', ten: 'LÊ VĂN QUẢNG', cccd: '049000000022'}, forests: {}},
+      hopdong: {...rong('hopdong'), info: {...rong('hopdong').info, soHopDong: 'HD-001'}},
+      diachi: {...rong('diachi'), info: {...rong('diachi').info, diaChi: 'Địa chỉ thử'}},
       e1: rong('e1'), e2: rong('e2'), e3: rong('e3'), e4: rong('e4'), e5: rong('e5'), e6: rong('e6')
     }}, {allowBulkDelete: true});
     s2.close();
@@ -70,7 +72,7 @@ const launch = (file, extra) => electron.launch({executablePath: require('electr
   await w.waitForTimeout(800);
   const body0 = await w.innerText('body');
   const keysSau = await w.evaluate(() => Object.keys(window.hak.loadSync().db.rs).sort());
-  ok('3.7.2: tự dọn 6 chủ rừng rỗng trong SQLite lúc mở app, không báo lỗi BULK_DELETE', JSON.stringify(keysSau) === '["o1","o2"]' && !/Lần lưu này sẽ xóa|Lần ghi gần nhất/.test(body0), JSON.stringify(keysSau) + ' | ' + body0.slice(0, 160));
+  ok('Chỉ dọn 6 hồ sơ rỗng khi mở ứng dụng, giữ hồ sơ có địa chỉ hoặc số hợp đồng', JSON.stringify(keysSau) === '["diachi","hopdong","o1","o2"]' && !/Lần lưu này sẽ xóa|Lần ghi gần nhất/.test(body0), JSON.stringify(keysSau) + ' | ' + body0.slice(0, 160));
   await w.click('#navSet'); await w.click('#setTab_setbk'); await w.waitForSelector('#kslSaveAsBtn');
   await w.click('#kslSaveAsBtn'); await w.waitForTimeout(600);
   ok('3.7.2: nút “Lưu bản sao lưu ra tệp / USB…” xuất file .sqlite hợp lệ', fs.existsSync(outSaveAs) && /Đã lưu bản sao lưu toàn bộ ra tệp/.test(await w.innerText('body')));

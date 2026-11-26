@@ -382,8 +382,7 @@ class Store {
     if (!row) return true;
     if (String(row.ma || '').trim() || String(row.ten || '').trim() || String(row.cccd || '').trim()) return false;
     try {
-      const o = JSON.parse(row.data), info = (o && o.info) || {};
-      return !['ma', 'ten', 'cccd', 'soHopDong', 'ngayKyHopDong', 'ngaySinh', 'ngayCap', 'noiCap', 'diaChi', 'sdt', 'nguoiDmId'].some(k => String(info[k] || '').trim());
+      return require('./model').chuRongTrong(JSON.parse(row.data));
     } catch (e) { return false; }
   }
   _guardDelete(goneO, goneF, opts) {

@@ -235,6 +235,32 @@ test('hồi quy 3.7.2: tự dọn 6 chủ rừng trống hoàn toàn (0 lô, ch�
   s.close();
 });
 
+test('lưu lô vẫn giữ chủ rừng chỉ có số hợp đồng hoặc địa chỉ', () => {
+  const s = new Store(':memory:');
+  const owner = (id, info, forests = {}) => ({id, info, forests});
+  const lot = {id: 'f1', info: {maRung: 'R1'}, nc: [], dx: [], pc: []};
+  s.save({v: 2, rs: {
+    active: owner('active', {ten: 'Chủ đang nhập'}, {f1: lot}),
+    contract: owner('contract', {soHopDong: 'HD-001'}),
+    address: owner('address', {diaChi: 'Địa chỉ thử'}),
+    blank: owner('blank', {danhXung: 'Ông'})
+  }});
+  const db = s.load();
+  const {chuRongTrong} = require('../src/model');
+  for (const [id, record] of Object.entries(db.rs)) {
+    if (id !== 'active' && chuRongTrong(record)) delete db.rs[id];
+  }
+  db.rs.active.forests.f1.info.dinhMucTanHa = 110;
+  s.save(db);
+  const saved = s.load().rs;
+  assert.deepStrictEqual(Object.keys(saved).sort(), ['active', 'address', 'contract']);
+  assert.strictEqual(saved.active.forests.f1.info.dinhMucTanHa, 110);
+  assert.strictEqual(saved.contract.info.soHopDong, 'HD-001');
+  assert.strictEqual(saved.address.info.diaChi, 'Địa chỉ thử');
+  assert.throws(() => s.save({v: 2, rs: {active: saved.active}}), e => e.code === 'BULK_DELETE');
+  s.close();
+});
+
 test('hồi quy: khôi phục "replace" vẫn thay được toàn bộ dữ liệu nhiều chủ rừng', () => {
   const d = tmp(), s = new Store(path.join(d, 'r.sqlite')), o = (id) => ({id, info: {ten: id}, forests: {}});
   s.save({v: 2, rs: {a: o('a'), b: o('b'), c: o('c')}});
