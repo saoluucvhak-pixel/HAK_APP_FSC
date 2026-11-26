@@ -42,25 +42,52 @@
     byNgayBks.forEach(ds => ds.forEach(e => { e.nhan = daNhan.has(e.l.id); }));
     const lenh = new Map();   // idx Sheet → {nk, bk, kg}
     const duyet = (q, cb) => { const ds = q.ds; for (let i = 0; i < ds.length; i++) { const e = ds[i]; if (e.nhan) continue; const d = q.kg - e.kg; if (d <= nguong && d >= -nguong) cb(e); } };   // e.kg NaN → so sánh sai → bị loại
+    const memo = new Map();
     sheet.forEach(s => {
       if (kq.has(s.idx)) return;
       const nk = ngayKey(s.ngay), bk = bks.khoa(s.bks), kg = kgLam(s.kg);
       if (!nk || !bk || !Number.isFinite(kg)) { kq.set(s.idx, {idx: s.idx, tt: 'moi'}); return; }
-      const q = {kg, ds: byNgayBks.get(nk + '|' + bk) || []}, top = []; let tong = 0;
+      const key = nk + '|' + bk + '|' + kg;
+      const hit = memo.get(key);
+      if (hit) {
+        hit.matches.forEach(e => { e.cnt++; });
+        if (!hit.tong) { kq.set(s.idx, {idx: s.idx, tt: 'moi'}); return; }
+        const e = {idx: s.idx, tt: 'nghi-doi-so', ungVien: hit.top.slice()}; if (hit.tong > MAX_UV) e.nhieuHon = true;
+        kq.set(s.idx, e); lenh.set(s.idx, hit.q);
+        return;
+      }
+      const q = {kg, ds: byNgayBks.get(nk + '|' + bk) || []}, top = []; let tong = 0; const matches = [];
       const truoc = (x, y) => Math.abs(x.dKg) - Math.abs(y.dKg) || cmpSo(x.so, y.so) || cmpSo(x.id, y.id);
       duyet(q, e => {
-        tong++; e.cnt++;
-        const l = e.l, u = {id: l.id, so: l.so, ngay: l.ngay, bks: l.bks, kg: e.kg, dKg: kg - e.kg, lo: l.lo};
-        if (top.length === MAX_UV && truoc(u, top[MAX_UV - 1]) >= 0) return;
+        tong++; e.cnt++; matches.push(e);
+        const dKg = kg - e.kg;
+        if (top.length === MAX_UV) {
+          const worst = top[MAX_UV - 1];
+          const diff = Math.abs(dKg) - Math.abs(worst.dKg) || cmpSo(e.l.so, worst.so) || cmpSo(e.l.id, worst.id);
+          if (diff >= 0) return;
+        }
+        const l = e.l, u = {id: l.id, so: l.so, ngay: l.ngay, bks: l.bks, kg: e.kg, dKg, lo: l.lo};
         let i = top.length; while (i > 0 && truoc(u, top[i - 1]) < 0) i--;
         top.splice(i, 0, u); if (top.length > MAX_UV) top.pop();
       });
+      memo.set(key, {top, tong, matches, q});
       if (!tong) { kq.set(s.idx, {idx: s.idx, tt: 'moi'}); return; }
       const e = {idx: s.idx, tt: 'nghi-doi-so', ungVien: top}; if (tong > MAX_UV) e.nhieuHon = true;
       kq.set(s.idx, e); lenh.set(s.idx, q);
     });
     // 4. tranh chấp: một lô là ứng viên của ≥ 2 dòng Sheet (xét trên TOÀN BỘ ứng viên, kể cả phần bị cắt)
-    lenh.forEach((q, idx) => { let tranh = false; duyet(q, e => { if (e.cnt > 1) tranh = true; }); if (tranh) kq.get(idx).canhTranh = true; });
+    lenh.forEach((q, idx) => {
+      const ds = q.ds;
+      for (let i = 0; i < ds.length; i++) {
+        const e = ds[i];
+        if (e.nhan) continue;
+        const d = q.kg - e.kg;
+        if (d <= nguong && d >= -nguong && e.cnt > 1) {
+          kq.get(idx).canhTranh = true;
+          break;
+        }
+      }
+    });
     const ketQua = sheet.map(s => kq.get(s.idx)), tomTat = {canhTranh: 0};
     TT.forEach(t => { tomTat[t] = 0; });
     ketQua.forEach(k => { tomTat[k.tt]++; if (k.canhTranh) tomTat.canhTranh++; });
