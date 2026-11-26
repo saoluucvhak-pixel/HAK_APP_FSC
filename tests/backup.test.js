@@ -143,8 +143,11 @@ test('đích sao lưu chặn SQLite đang mở sau khi thêm đuôi và qua đư
   const dir = tmp(), live = path.join(dir, 'active.sqlite'), alias = path.join(dir, 'alias.sqlite');
   try {
     fs.writeFileSync(live, 'giả lập');
-    fs.linkSync(live, alias);
-    for (const target of [live, path.join(dir, 'active'), alias]) {
+    let hasLink = false;
+    try { fs.linkSync(live, alias); hasLink = true; } catch {}
+    const targets = [live, path.join(dir, 'active')];
+    if (hasLink) targets.push(alias);
+    for (const target of targets) {
       assert.throws(() => B.backupDestination(target, live), /cơ sở dữ liệu đang mở/);
     }
     assert.equal(B.backupDestination(path.join(dir, 'backup'), live), path.join(dir, 'backup.sqlite'));
