@@ -166,10 +166,11 @@ html[data-skin^="glass-"] body{
 [data-skin^="glass-"] header .nav .nb.on{background:var(--brandSoft);color:var(--ink)}
 [data-skin^="glass-"] header .nav .nb:hover,
 [data-skin^="glass-"] header .hbtn:hover{background:var(--hover)}
-[data-skin^="glass-"] header select#skinQuick{max-width:118px;border-color:var(--ctl)}
+[data-skin^="glass-"] header select#skinQuick{min-width:110px;max-width:118px;border-color:var(--ctl)}
 [data-skin^="glass-"] header.top .brand{max-width:210px}
 @media (max-width:1500px) {
-  [data-skin^="glass-"] header.top .nav .nb::before{content:none}
+  [data-skin^="glass-"] header.top{gap:8px}
+  [data-skin^="glass-"] header.top .nav .nb::before{content:none!important}
 }
 [data-skin^="glass-"] #lotBackupBtn{border-color:var(--brand)}
 @media print {
