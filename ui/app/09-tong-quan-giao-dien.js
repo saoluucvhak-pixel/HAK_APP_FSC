@@ -240,7 +240,7 @@ function renderMain() {
   if (NAV.view === 'dm') NAV.view = 'setdt';
   const DM30 = {setdt: panelSetDt, setxe: panelSetXe, setvt: panelSetVt, setnv: panelSetNv, cty: panelCty};
   if (DM30[NAV.view]) { $('#main').innerHTML = renderMsgs() + danhMucFrame(NAV.view, DM30[NAV.view]()); return; }
-  const P30 = {setgd: panelSetGd, sethd: panelSetHd, setcan: panelSetCan};
+  const P30 = {setgd: panelSetGd, setaccount: panelSetAccount, sethd: panelSetHd, setcan: panelSetCan};
   if (P30[NAV.view]) { $('#main').innerHTML = renderMsgs() + settingsFrame(NAV.view, P30[NAV.view]()); return; }
   if (NAV.view === 'bld') { $('#main').innerHTML = renderMsgs() + panelBanLamViec(); return; }
   if (NAV.view === 'norm') { $('#main').innerHTML = renderMsgs() + panelNorm(); return; }

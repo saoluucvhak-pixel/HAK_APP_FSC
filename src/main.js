@@ -11,6 +11,7 @@ const Backup = require('./backup');
 const AutoBackup = require('./autobackup');
 const KhoSaoLuu = require('./khosaoluu');
 const {GoogleAuth, fileIdOf} = require('./google-auth');
+const {LocalAccount} = require('./local-account');
 
 /* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
  * để không tiến trình nào trên máy đặt được chúng nhằm bỏ qua hộp thoại xác nhận hay đổi nguồn dữ liệu. HAKQN_USERDATA/HAKQN_DB/HAKQN_SMOKE* vẫn dùng cho kiểm tra khói bản cài. */
@@ -72,6 +73,7 @@ async function syncSheets() {
 
 const TITLE = 'HAKQN – Hồ sơ khai thác và vận chuyển gỗ keo';
 let store = null, win = null, loc = null;
+let localAccount = null;
 let dataIssue = null;        // khác null khi vị trí dữ liệu đã cấu hình không mở được: KHÔNG tự dùng bản mặc định, chờ người dùng chọn
 let relocating = null;       // Promise khi đang đổi thư mục dữ liệu: mọi thao tác ghi chờ xong rồi mới chạy trên cơ sở dữ liệu mới
 let notice = null;           // thông báo hiện sau khi cửa sổ tải lại từ cơ sở dữ liệu mới (không phụ thuộc vào renderer kịp lưu trước khi tải lại)
@@ -154,11 +156,27 @@ function registerIpc() {
   const fromMainFrame = e => win && !win.isDestroyed() && e.sender === win.webContents &&
     e.senderFrame != null && e.senderFrame === win.webContents.mainFrame;
   const denied = () => ({ok: false, error: 'Nguồn IPC không hợp lệ'});
-  const handle = (channel, fn) => ipcMain.handle(channel, (e, ...args) => fromMainFrame(e) ? fn(e, ...args) : denied());
-  const on = (channel, fn) => ipcMain.on(channel, (e, ...args) => {
-    if (fromMainFrame(e)) fn(e, ...args);
-    else e.returnValue = denied();
+  const locked = () => ({ok: false, code: 'ACCOUNT_LOCKED', error: 'Hãy đăng nhập để sử dụng hồ sơ.'});
+  const accountChannels = new Set(['account:status', 'account:login', 'account:create']);
+  const handle = (channel, fn) => ipcMain.handle(channel, (e, ...args) => {
+    if (!fromMainFrame(e)) return denied();
+    if (!localAccount.unlocked && !accountChannels.has(channel)) return locked();
+    return fn(e, ...args);
   });
+  const on = (channel, fn) => ipcMain.on(channel, (e, ...args) => {
+    if (!fromMainFrame(e)) e.returnValue = denied();
+    else if (!localAccount.unlocked) e.returnValue = locked();
+    else fn(e, ...args);
+  });
+  handle('account:status', () => localAccount.status());
+  for (const action of ['login', 'create', 'disable']) {
+    handle('account:' + action, async (e, credentials) => {
+      const wasUnlocked = localAccount.unlocked;
+      const result = await localAccount.request(action, credentials);
+      if (result.ok && !wasUnlocked) setImmediate(openWorkspace);
+      return result;
+    });
+  }
   on('db:load', e => {
     if (!store) { e.returnValue = {ok: false, unavailable: true, issue: dataIssue, error: NO_STORE()}; return; }
     try { e.returnValue = {ok: true, db: store.load(), rev: store.rev, file: store.file, schema: SCHEMA_VERSION, version: app.getVersion(), notice}; notice = null; }
@@ -800,6 +818,18 @@ async function openPhieuCan(rows, company) {
   { const r = await w.webContents.executeJavaScript(require('./phieucan').inject(list, co)); if (r !== true) throw new Error('Không nạp được dữ liệu vào công cụ in phiếu cân: ' + r); }
 }
 
+function openWorkspace() {
+  if (!win || win.isDestroyed()) return;
+  try { openStore(); } catch (e) {
+    log('ERROR', e.message);
+    dialog.showErrorBox(TITLE, 'Không khởi động được: ' + e.message);
+    app.quit();
+    return;
+  }
+  win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  if (process.env.HAKQN_SMOKE) setTimeout(() => smoke().catch(() => app.exit(4)), 1500);
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1366, height: 820, minWidth: 1024, minHeight: 640, title: TITLE, backgroundColor: '#f4f6f8',
@@ -846,22 +876,25 @@ function createWindow() {
     if (autoBackupStale()) { try { await Promise.race([runAutoBackup(true), new Promise(r => setTimeout(r, 30000))]); } catch (err) { /* lỗi đã ghi nhật ký */ } }
     closing = true; win.close();
   });
-  win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  if (localAccount.unlocked) openWorkspace();
+  else win.loadFile(path.join(__dirname, '..', 'renderer', 'account.html'));
 }
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
   app.whenReady().then(() => {
-    try { openStore(); } catch (e) { log('ERROR', e.message); dialog.showErrorBox(TITLE, 'Không khởi động được: ' + e.message); app.quit(); return; }   // vị trí dữ liệu không mở được: không thoát, màn hình chính hiện thông báo và cho thử lại/chọn khác
+    const requireSetup = app.isPackaged
+      ? fs.existsSync(path.join(process.resourcesPath, 'hakqn-account-setup'))
+      : process.argv.includes('--hakqn-account-setup-test');
+    localAccount = new LocalAccount(app.getPath('userData'), {requireSetup});
     Menu.setApplicationMenu(Menu.buildFromTemplate([
-      {label: 'Tệp', submenu: [{label: 'Mở thư mục dữ liệu', click: () => shell.showItemInFolder(loc.dbFile)}, {type: 'separator'}, {role: 'quit', label: 'Thoát'}]},
+      {label: 'Tệp', submenu: [{label: 'Mở thư mục dữ liệu', click: () => { if (localAccount.unlocked && loc) shell.showItemInFolder(loc.dbFile); }}, {type: 'separator'}, {role: 'quit', label: 'Thoát'}]},
       {label: 'Xem', submenu: [{role: 'zoomIn', label: 'Phóng to'}, {role: 'zoomOut', label: 'Thu nhỏ'}, {role: 'resetZoom', label: 'Cỡ chữ mặc định'}, {role: 'togglefullscreen', label: 'Toàn màn hình'}]}
     ]));
     try { installFileCsp(); } catch (e) { log('ERROR', 'Không đặt được CSP cho cửa sổ in phiếu cân: ' + e.message); }
     registerIpc(); createWindow();
     setInterval(() => { if (store) runAutoBackup(true); }, 2 * 3600 * 1000).unref();   // phiên làm việc dài (để máy qua ngày): mỗi 2 giờ tạo bản của ngày mới / làm mới bản hôm nay nếu dữ liệu đã đổi
-    if (process.env.HAKQN_SMOKE) setTimeout(() => smoke().catch(() => app.exit(4)), 1500);
   });
   app.on('window-all-closed', () => { if (store) { try { store.close(); } catch (e) {} } app.quit(); });
 }

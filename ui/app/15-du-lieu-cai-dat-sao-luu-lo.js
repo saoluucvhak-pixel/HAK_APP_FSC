@@ -29,9 +29,9 @@ async function issueAct(kind) {
 const DM_TABS = [['setdt', 'Đối tượng (người và pháp nhân)', 'openSetDt'], ['setxe', 'Xe vận chuyển', 'openSetXe'], ['setvt', 'Vị trí công việc', 'openSetVt'], ['setnv', 'Ngành nghề và chức vụ', 'openSetNv'], ['cty', 'Công ty mua hàng', 'openCty']];
 const DM_VIEWS = ['setdt', 'setxe', 'setvt', 'setnv', 'cty'];
 /* Cài đặt: tab NGANG cùng kiểu Danh mục (hak-catalog-tabs). “Hiển thị” gộp Hiển thị số và Giao diện (hai màn giữ nguyên, chuyển bằng tab con); “Hệ thống” đổi tên “Dữ liệu”. Giữ nguyên mã màn (NAV.view) và id nút setTab_<màn>. */
-const SET_TABS = [['settings', 'Dữ liệu', 'openSettings'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['setdon', 'Dọn dẹp hồ sơ', 'openSetDon'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị', 'openSetFmt'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
+const SET_TABS = [['settings', 'Dữ liệu', 'openSettings'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['setdon', 'Dọn dẹp hồ sơ', 'openSetDon'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị', 'openSetFmt'], ['setaccount', 'Tài khoản', 'openSetAccount'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
 const SET_HIEN_THI = [['setfmt', 'Hiển thị số', 'openSetFmt', 'setSub_setfmt'], ['setgd', 'Giao diện', 'openSetGd', 'setTab_setgd']];
-const SET_VIEWS = ['settings', 'setbk', 'setdon', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
+const SET_VIEWS = ['settings', 'setbk', 'setdon', 'setgs', 'setfmt', 'setgd', 'setaccount', 'sethd', 'setcan'];
 function danhMucFrame(active, inner) {
   return '<div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">Danh mục dùng chung</h2><div class="mut" style="font-size:12.5px">Khai báo một lần cho đối tượng, xe vận chuyển, vị trí công việc và công ty mua hàng để dùng lại cho mọi lô rừng.</div></div></div>' +
     veLaiThanh() + '<nav class="hak-catalog-tabs" aria-label="Các danh mục dữ liệu gốc">' + DM_TABS.map(([v, l, a]) => '<button type="button"' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') +
