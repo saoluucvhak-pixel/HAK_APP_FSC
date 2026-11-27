@@ -45,6 +45,11 @@ function dbCapNhatKhoiPhucRieng({dich, dbMoi, dbCu, rev}) {
   for (const [id, c] of Object.entries(dbMoi.congTy || {})) {
     if (!Object.hasOwn(congTy, id) && !Object.hasOwn(dbCu.congTy || {}, id)) congTy[id] = c;
   }
+  for (const key of ['dinhMuc', 'bienAlias']) {
+    for (const [id, value] of Object.entries(dbMoi[key] || {})) {
+      if (!Object.hasOwn(dbCu[key] || {}, id) && !Object.hasOwn(db[key] || {}, id)) (db[key] ||= {})[id] = value;
+    }
+  }
   for (const key of ['dmDoiTuong', 'dmXe', 'dmViTri']) {
     const cu = new Map((dbCu[key] || []).map(row => [row.id, json(row)]));
     const moi = new Map((dbMoi[key] || []).filter(row => cu.get(row.id) !== json(row)).map(row => [row.id, row]));

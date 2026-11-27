@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+## 3.7.5 — Sao lưu riêng từng lô và ổn định đối soát sản lượng
+
+- Khôi phục từ gói lô chỉ thay lô đã chọn, giữ bản nháp các lô khác và dữ liệu dùng chung đang có.
+- Thông báo khi chưa lưu nêu số phiếu cân cần đối chiếu. Kiểm tra mã trùng trước khi tạo lô từ hồ sơ cũ.
+- Sửa màn Đối soát sản lượng và dự báo ngày hoàn thành. Hiển thị “Chưa kiểm tra được” khi tiền kiểm FSC gặp lỗi.
+
 ## 3.7.4 — Lưu và khôi phục theo từng lô
 
 - Yêu cầu sao lưu trước khi lưu bản nháp Google Sheets áp dụng cho lô nhận dữ liệu. Có thể giữ bản nháp gặp lỗi và tiếp tục lưu các lô khác.

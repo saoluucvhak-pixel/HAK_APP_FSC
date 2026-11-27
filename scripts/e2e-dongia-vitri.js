@@ -18,7 +18,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = B.dx.map(r => ({...r, maRung: 'R-B'}));
   await w.evaluate(d => window.hak.save(d), seed([A, B])); await w.reload(); await w.waitForSelector('#side');
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fb]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(400);
-  const rows = await w.$$eval('[data-grp=sanluong] .dgTbl tbody tr', r => r.map(x => x.innerText.replace(/\s+/g, ' ').trim()));
+  const rows = await w.$$eval('[data-grp=sanluong] > div > .wrap .dgTbl tbody tr', r => r.map(x => x.innerText.replace(/\s+/g, ' ').trim()));
   ok('bảng đơn giá chỉ liệt kê vị trí đang có người, kèm số người (Tổ trưởng 1, Công nhân khai thác 1)', rows.length === 2 && /Tổ trưởng.*1/.test(rows[0]) && /Công nhân khai thác.*1/.test(rows[1]), rows.join(' | '));
   ok('vị trí chưa có người nằm trong mục gập riêng', !!(await w.$('#luongForm details')));
   await w.click('[data-act=luongLay]'); await w.waitForTimeout(300);
