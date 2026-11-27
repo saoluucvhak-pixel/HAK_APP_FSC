@@ -95,8 +95,11 @@ function panelLuong(rec) {
       '<td style="text-align:center">' + (x.n ? '<b>' + x.n + ' người</b>' : '<span class="mut">0 người</span>') + '</td>' +
       '<td><input name="' + pre + x.k + '" value="' + esc(displayInputNumber((map || {})[x.cd])) + '" inputmode="numeric" data-group-number="integer" style="text-align:right;width:140px"> <span class="mut">' + unit + '</span></td>' +
       '</tr>';
-    return '<div class="wrap" style="grid-column:1/-1"><table class="normTbl dgTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí công việc</th><th style="text-align:center">Số người trong đội</th><th>Đơn giá (' + unit + ')</th></tr></thead><tbody>' +
-      (ds.length ? ds.map(row).join('') : '<tr><td colspan="3" class="mut">Chưa có vị trí nào: hãy thêm vị trí ở Định mức nhân công.</td></tr>') + '</tbody></table></div>';
+    const table = (rows, empty) => '<div class="wrap"><table class="normTbl dgTbl" style="min-width:0;table-layout:auto"><thead><tr><th>Vị trí công việc</th><th style="text-align:center">Số người trong đội</th><th>Đơn giá (' + unit + ')</th></tr></thead><tbody>' +
+      (rows.length ? rows.map(row).join('') : '<tr><td colspan="3" class="mut">' + empty + '</td></tr>') + '</tbody></table></div>';
+    const unused = ds.filter(x => !x.n);
+    return '<div style="grid-column:1/-1">' + table(ds.filter(x => x.n), ds.length ? 'Chưa có người trong đội.' : 'Chưa có vị trí nào: hãy thêm vị trí ở Định mức nhân công.') +
+      (unused.length ? '<details><summary>Vị trí chưa có người (' + unused.length + ')</summary>' + table(unused) + '</details>' : '') + '</div>';
   };
   const grp = (name, html) => '<div class="grid" data-grp="' + name + '" style="grid-column:1/-1;' + (cur === name ? '' : 'display:none') + '">' + html + '</div>';
   return '<div class="card"><h3 style="margin-top:0">Thông số hợp đồng và đơn giá' + (t && rec.doi.length > 1 ? ' — đội “' + esc(t.ten || '') + '”' : '') + '</h3>' +
