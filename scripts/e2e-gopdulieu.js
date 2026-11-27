@@ -89,7 +89,9 @@ const mkP = (so, ngay, bien, klTan, giao, dg) => ({_row: 2, maRung: 'R-A', stt: 
   const d1 = xlsx('d1.xlsx', [['P1', '09/10/2026', '92C-67890', 4000, 'Kho B', 1300]]);
   await w.setInputFiles('input[data-file="pc"]', d1); await w.waitForTimeout(900); t = await body();
   ok('P1 cùng số, khác ngày, biển số, khối lượng: hiện “Cần đối chiếu” hai bản cạnh nhau (số phiếu, mã lô, ngày, biển số, nơi giao, khối lượng, nguồn); phiếu cũ chưa đổi', !!(await w.$('#stPend')) && /Bản hiện có/.test(t) && /Dòng nguồn mới/.test(t) && /R-A/.test(t) && /Excel: d1\.xlsx/.test(t) && (await pcOf('fa'))[0].kl === 1, t.slice(0, 300));
-  await saveStage(w); t = await body(); ok('còn dòng cần đối chiếu thì chặn lưu, nêu số phiếu; dữ liệu đã lưu giữ nguyên', /CẦN ĐỐI CHIẾU/.test(t) && (await pcOf('fa'))[0].kl === 1 && !!(await w.$('#stPend')));
+  const tuChoi = await saveStage(w);
+  ok('còn dòng cần đối chiếu thì chặn lưu, nêu số phiếu; dữ liệu đã lưu giữ nguyên', tuChoi?.ok === false &&
+    /cần đối chiếu.*P1/i.test(tuChoi.error) && (await pcOf('fa'))[0].kl === 1 && await w.isVisible('#stPend'), tuChoi?.error);
   await w.click('[data-act=stPend][data-do=keep]'); await w.waitForTimeout(300); ok('Giữ bản hiện có: hết cần đối chiếu, P1 không đổi', !(await w.$('#stPend')) && (await w.innerText('#main')).includes('Chưa lưu') === false || true);
   await w.click('[data-act=stDiscard]').catch(() => {});
   await w.setInputFiles('input[data-file="pc"]', d1); await w.waitForTimeout(900); await w.click('[data-act=stPend][data-do=update]'); await w.waitForTimeout(300); await saveStage(w); pc = await pcOf('fa');

@@ -490,6 +490,7 @@ else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
 document.addEventListener('change', e => { if (e.target && e.target.id === 'skinQuick') setSkin(e.target.value); });
 document.addEventListener('change', e => { if (e.target && e.target.id === 'normVer') { normSel = e.target.value; render(); } });
 document.addEventListener('input', e => {
+  if (e.target.id === 'homeTimLo') return homeLocBangLo(e.target.value);
   const t = e.target;
   if (!e.isComposing && t.dataset?.groupNumber !== undefined) {
     const raw = t.value, pos = t.selectionStart, separator = numStyle === 'en' ? ',' : '.';

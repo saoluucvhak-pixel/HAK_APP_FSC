@@ -10,30 +10,35 @@ function doiSoatSanLuongHtml(rec) {
 
   // 3.7.5: Dự báo tiến độ & Ngày hoàn thành (Burn-up completion forecast)
   let duBaoHtml = '';
-  const validPc = (rec.pc || []).filter(p => HAKDates.isValid(p.ngay) && typeof p.kl === 'number' && p.kl > 0);
-  const dateKeys = [...new Set(validPc.map(p => HAKDates.dateKey(p.ngay)))].sort((a, b) => a - b);
-  const soNgayCan = dateKeys.length;
+  const ngayCan = new Set();
+  let tongDuBao = 0, ngayCuoi = 0;
+  for (const p of rec.pc || []) {
+    const ngay = HAKDates.key(p.ngay);
+    const kg = HAKDinhMuc.kgPhieu(p);
+    if (!ngay || !Number.isFinite(kg) || kg <= 0) continue;
+    ngayCan.add(ngay);
+    tongDuBao += kg / 1000;
+    ngayCuoi = Math.max(ngayCuoi, ngay);
+  }
+  const soNgayCan = ngayCan.size;
+  const tocDoTB = tongDuBao / soNgayCan;
+  const conLai = dk - tt;
+  const ngayCanThem = Math.ceil(conLai / tocDoTB);
 
   if (dk && tt > 0 && soNgayCan > 0) {
-    const tocDoTB = tt / soNgayCan;
-    const conLai = Math.max(0, dk - tt);
     if (tt >= dk) {
-      duBaoHtml = '<div class="msg ok" style="margin-top:10px">🎉 <b>Đã hoàn thành sản lượng kế hoạch:</b> Thực tế cân <b>' + tan(tt) + ' tấn</b> (đạt ' + pct + '% kế hoạch ' + tan(dk) + ' tấn).</div>';
-    } else if (tocDoTB > 0) {
-      const ngayCanThem = Math.ceil(conLai / tocDoTB);
-      const lastKey = dateKeys[dateKeys.length - 1];
-      const ly = Math.floor(lastKey / 10000), lm = Math.floor((lastKey % 10000) / 100) - 1, ld = lastKey % 100;
-      const dEnd = new Date(ly, lm, ld);
-      let dem = 0;
-      while (dem < ngayCanThem) {
-        dEnd.setDate(dEnd.getDate() + 1);
-        if (dEnd.getDay() !== 0) dem++; // Bỏ qua Chủ nhật
-      }
-      const dEndStr = pad2(dEnd.getDate()) + '/' + pad2(dEnd.getMonth() + 1) + '/' + dEnd.getFullYear();
+      duBaoHtml = '<div class="msg ok" style="margin-top:10px"><b>Đã hoàn thành sản lượng kế hoạch.</b> Thực tế cân ' + tan(tt) + ' tấn, đạt ' + pct + '% kế hoạch.</div>';
+    } else if (Number.isSafeInteger(ngayCanThem) && ngayCanThem > 0 && ngayCanThem < 366 * 10000) {
+      const ly = Math.floor(ngayCuoi / 10000), lm = Math.floor((ngayCuoi % 10000) / 100) - 1, ld = ngayCuoi % 100;
+      const dEnd = new Date(Date.UTC(ly, lm, ld));
+      const thu = dEnd.getUTCDay();
+      const chuNhat = Math.floor((ngayCanThem + (thu ? thu - 1 : -1)) / 6);
+      dEnd.setUTCDate(dEnd.getUTCDate() + ngayCanThem + chuNhat);
+      const dEndStr = pad2(dEnd.getUTCDate()) + '/' + pad2(dEnd.getUTCMonth() + 1) + '/' + dEnd.getUTCFullYear();
 
       let hdMsg = '';
       if (den && den.y) {
-        const dContract = new Date(den.y, den.m - 1, den.d);
+        const dContract = Date.UTC(den.y, den.m - 1, den.d);
         const diffNgay = Math.round((dContract - dEnd) / 864e5);
         if (diffNgay >= 0) {
           hdMsg = '<span class="pill ok" style="font-weight:600">⚡ Dự kiến về đích trước hạn ' + diffNgay + ' ngày</span>';
@@ -45,7 +50,7 @@ function doiSoatSanLuongHtml(rec) {
       duBaoHtml = '<div style="margin-top:10px;padding:12px;background:var(--bg2,#f7f9fa);border-radius:6px;border:1px solid var(--border,#e1e4e8)">' +
         '<div class="row" style="align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">' +
         '<div><b style="font-size:13.5px">📈 Dự báo tiến độ &amp; Ngày hoàn thành thu hoạch</b>' +
-        '<span class="mut" style="font-size:12px;margin-left:8px">(Dựa trên ' + soNgayCan + ' ngày cân thực tế, trừ Chủ nhật)</span></div>' +
+        '<span class="mut" style="font-size:12px;margin-left:8px">(Dựa trên ' + soNgayCan + ' ngày cân thực tế. Dự báo bỏ qua Chủ nhật.)</span></div>' +
         (hdMsg || '') + '</div>' +
         '<div class="kpi" style="margin:0;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">' +
         '<div><b>' + formatNumber(Math.round(tocDoTB * 10) / 10, 1) + '</b>Tốc độ TB (tấn/ngày)</div>' +

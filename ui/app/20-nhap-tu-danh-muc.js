@@ -252,6 +252,8 @@ function thucHienKeThuaRung() {
   if (!src) return note('Không thấy rừng nguồn để kế thừa.', 'err');
 
   const ma = trim(document.getElementById('ktMaRung').value) || ((o.info.ma || 'CR') + '-R' + (forestList(o).length + 1));
+  const trung = HAKLoRung.maTrung(db, ma);
+  if (trung) return note(trung, 'err');
   const ten = trim(document.getElementById('ktTenRung').value) || ma;
   const optNc = document.getElementById('ktOptNc').checked;
   const optDx = document.getElementById('ktOptDx').checked;

@@ -274,6 +274,11 @@ select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);bord
 .pcInLoc{flex-wrap:wrap;gap:10px}
 .importActions{flex-wrap:wrap;gap:6px}
 .pcInFrame{display:block;width:100%;height:70vh;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+/* Thanh điều hướng giữ một hàng. Các nút vẫn tới được bằng Tab khi cần cuộn riêng thanh này. */
+header.top .brand{min-width:0}
+header.top .brand h1{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+header.top .nav{min-width:0;overflow-x:auto;scrollbar-width:none}
+header.top .nav .nb{flex-shrink:0}
 /* header.top .brand: đặc hiệu hơn quy tắc header.top h1 small ở trên, nếu không dòng phụ vẫn hiện, thanh chính rộng ~500 px và nút Tìm xuống hàng thứ hai ở 1024 px */
 @media (max-width:1100px){header.top{gap:8px;padding-inline:10px}header.top .brand h1{font-size:13px}header.top .brand h1 small{display:none}.nav .nb,.hbtn{padding-inline:8px}}
 @media (min-width:700px) and (max-width:950px){header.top{flex-wrap:nowrap}.brand h1{display:none}.nav{flex:1 1 auto;order:0;flex-wrap:nowrap}}
