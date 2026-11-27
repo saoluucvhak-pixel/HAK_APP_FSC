@@ -77,11 +77,17 @@ function homeBangToanBoLoHtml(recs) {
         ? '<span class="pill du" style="font-weight:600">' + diemFsc + ' · ' + capDo + '</span>'
         : '<span class="pill doi" style="font-weight:600">' + diemFsc + ' · ' + capDo + '</span>';
 
+    const pctVal = duKien ? Math.round(tongCan / duKien * 1000) / 10 : null;
+    const pctBadge = pctVal != null
+      ? '<div style="margin-top:2px"><span class="pill ' + (pctVal >= 100 ? 'du' : pctVal >= 80 ? 'du' : 'doi') + '" style="font-size:11px;padding:1px 5px">' + pctVal + '%</span>' +
+        (tongCan >= duKien ? ' <small style="color:var(--okFg,#1b5e20);font-weight:600">Đạt</small>' : '') + '</div>'
+      : '';
+
     return '<tr class="clickRow" data-dash="' + esc(r.oid + '|' + r.fid) + '" tabindex="0">' +
       '<td><b>' + esc(r.tenRung || r.maRung || '(rừng chưa đặt tên)') + '</b><br><small class="mut">' + esc(r.maRung) + (r.diaDiem ? ' · ' + esc(r.diaDiem) : '') + '</small></td>' +
       '<td>' + esc(r.chuRung) + '<br><small class="mut">CCCD: ' + esc(r.cccd || '—') + '</small></td>' +
       '<td style="text-align:right">' + (typeof r.dienTich === 'number' ? HAKReports.fmtCell(r.dienTich, 'n2') + ' ha' : '—') + '</td>' +
-      '<td style="text-align:right"><b>' + HAKReports.fmtCell(Math.round(tongCan * 1000) / 1000, 'n3') + '</b>' + (duKien ? '<br><small class="mut">/' + HAKReports.fmtCell(Math.round(duKien * 10) / 10, 'n1') + ' t</small>' : '') + '</td>' +
+      '<td style="text-align:right"><b>' + HAKReports.fmtCell(Math.round(tongCan * 1000) / 1000, 'n3') + '</b>' + (duKien ? '<br><small class="mut">/' + HAKReports.fmtCell(Math.round(duKien * 10) / 10, 'n1') + ' t</small>' : '') + pctBadge + '</td>' +
       '<td style="text-align:center">' + r.nc + ' NC · ' + r.dx + ' xe</td>' +
       '<td style="text-align:center">' + fscPill + '</td>' +
       '<td style="text-align:center">' + ttBadge + '</td>' +

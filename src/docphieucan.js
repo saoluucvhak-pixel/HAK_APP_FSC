@@ -153,10 +153,53 @@
         if (r.kl == null) { if (!canDao) mark(r, 'err', 'Thiếu khối lượng'); }
         else if (r.kl === 'x' || !(r.kl > 0)) mark(r, 'err', 'Khối lượng không hợp lệ');
         else if (typeof r.kl === 'number' && r.kl > ((SO() && SO().MAX_TAN_CHUYEN) || 60)) mark(r, 'warn', 'Khối lượng ' + ctx.fmt(r.kl) + ' tấn/chuyến vượt ngưỡng 60 tấn: kiểm tra lại đơn vị (tấn hay kg)');
+        else if (typeof r.kl === 'number' && r.kl > 32) mark(r, 'warn', 'Khối lượng ' + ctx.fmt(r.kl) + ' tấn/chuyến vượt tải trọng thông thường (≤ 30-32 tấn): kiểm tra nguy cơ quá tải hoặc sai số cân');
+        else if (typeof r.kl === 'number' && r.kl > 0 && r.kl < 0.5) mark(r, 'warn', 'Khối lượng ' + ctx.fmt(r.kl) + ' tấn/chuyến (dưới 500 kg) quá nhỏ đối với chuyến xe chở gỗ: kiểm tra lại đơn vị');
         (r.giaLoi || []).forEach(m => mark(r, 'err', m + ' (sửa hoặc để trống ô này rồi nạp lại; giá trị đã lưu không bị đổi)'));
         [['can1', 'Cân lần 1'], ['can2', 'Cân lần 2'], ['klKg', 'Khối lượng (kg)']].forEach(([k, label]) => { if (r[k] === 'x' || (typeof r[k] === 'number' && r[k] < 0)) mark(r, 'err', label + ' phải là số không âm'); });
         if (typeof r.klKg === 'number' && typeof r.kl === 'number' && r.klKg > 0 && Math.abs(r.klKg / 1000 - r.kl) > 0.0005) mark(r, 'warn', 'Khối lượng kg (' + ctx.fmt(r.klKg) + ') và tấn (' + fmtT(Math.round(r.kl * 1000)) + ') không khớp nhau');
         if (typeof r.can1 === 'number' && typeof r.can2 === 'number' && typeof r.klKg === 'number' && r.klKg > 0 && !canDao && Math.abs((r.can1 - r.can2) - r.klKg) > 1) mark(r, 'warn', 'Khối lượng kg không bằng chênh lệch cân lần 1 và cân lần 2');
+      });
+      /* Nghiệp vụ nâng cấp: Phát hiện bất thường phiếu cân & phòng ngừa gian lận (tần suất quay đầu phi thực tế, quá nhiều chuyến trong ngày, bất thường xác xe/bì) */
+      const xePhieuMap = new Map();
+      pc.forEach(r => {
+        const bk = bienKey(r.bienSo);
+        if (!bk) return;
+        if (!xePhieuMap.has(bk)) xePhieuMap.set(bk, []);
+        xePhieuMap.get(bk).push(r);
+      });
+      const phutOf = s => {
+        if (!s || typeof s !== 'string') return null;
+        const m = s.match(/(\d{1,2}):(\d{2})/);
+        return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+      };
+      xePhieuMap.forEach((trips, bk) => {
+        const byDate = new Map();
+        trips.forEach(t => {
+          const d = t.ngay || '';
+          if (!byDate.has(d)) byDate.set(d, []);
+          byDate.get(d).push(t);
+        });
+        byDate.forEach((dayTrips, d) => {
+          if (dayTrips.length > 5) {
+            const last = dayTrips[dayTrips.length - 1];
+            mark(last, 'warn', 'Biển số ' + (last.bienSo || bk) + ' có ' + dayTrips.length + ' chuyến cân trong ngày ' + d + ': tần suất chạy trong ngày cao bất thường so với cự ly rừng');
+          }
+          const timed = dayTrips.map(t => ({t, m: phutOf(t.gioCan1 || t.gioCan2 || t.gio)})).filter(x => x.m != null).sort((a, b) => a.m - b.m);
+          for (let i = 1; i < timed.length; i++) {
+            const diff = timed[i].m - timed[i - 1].m;
+            if (diff >= 0 && diff < 45) {
+              mark(timed[i].t, 'warn', 'Biển số ' + timed[i].t.bienSo + ' cân lúc ' + (timed[i].t.gioCan1 || timed[i].t.gioCan2 || '') + ', chỉ cách phiếu ' + (timed[i - 1].t.soPhieu || ('dòng ' + timed[i - 1].t._row)) + ' ' + diff + ' phút: không đủ thời gian quay đầu rừng - nhà máy (nghi vấn trùng chuyến hoặc mượn biển số)');
+            }
+          }
+        });
+        const can2List = trips.filter(t => typeof t.can2 === 'number' && t.can2 > 0);
+        for (let i = 1; i < can2List.length; i++) {
+          const chenhBi = Math.abs(can2List[i].can2 - can2List[i - 1].can2);
+          if (chenhBi > 2500) {
+            mark(can2List[i], 'warn', 'Biển số ' + can2List[i].bienSo + ': xác xe cân lần 2 (' + can2List[i].can2 + ' kg) lệch hơn ' + Math.round(chenhBi / 100) / 10 + ' tạ so với chuyến dòng ' + can2List[i - 1]._row + ' (' + can2List[i - 1].can2 + ' kg): kiểm tra lại trạm cân');
+          }
+        }
       });
       /* đối chiếu khối lượng khai thác với tổng phiếu cân (mục tiêu “nhất quán số liệu” của QT-FSC-01): ngưỡng người dùng đặt (pcNguong, %) áp dụng cho cả số dự kiến;
        * không đặt ngưỡng thì vẫn đối chiếu KHỐI LƯỢNG THỰC TẾ (số ghi vào BM-08, BM-14) với ngưỡng mặc định PC_NGUONG_MAC_DINH %, để biên bản không ghi khác tổng phiếu cân mà không ai biết */

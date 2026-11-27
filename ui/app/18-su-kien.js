@@ -21,6 +21,8 @@ document.addEventListener('click', async e => {
   if (act === 'newRs') return newRs(), render();
   if (act === 'delRs') return (await delRs()), render();
   if (act === 'newForest') return newForest(), render();
+  if (act === 'keThuaRungMo') return keThuaRungMo();
+  if (act === 'keThuaRungDong') return keThuaRungDong();
   if (act === 'delForest') return (await delForest()), render();
   if (act === 'chonDoi') { hdMoDat('nc', el.dataset.doi); return render(); }   // 3.0: mở trang chi tiết hợp đồng nhân công của đội
   if (act === 'hdQuayLai') { hdMoDat(el.dataset.kind, null); return render(); }
@@ -407,6 +409,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'normForm') { e.preventDefault(); saveNorm(e.target); }
   if (e.target.id === 'bhldForm') { e.preventDefault(); saveBhldPos(e.target); }
   if (e.target.id === 'bhldThemForm') { e.preventDefault(); saveBhldNewPos(e.target); }
+  if (e.target.id === 'keThuaForm') { e.preventDefault(); thucHienKeThuaRung(); }
   if (/^(keo|tg|db)MoForm$/.test(e.target.id)) { e.preventDefault(); normMoLuu(e.target); }
 });
 

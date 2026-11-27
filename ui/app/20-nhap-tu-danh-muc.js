@@ -187,6 +187,105 @@ setInterval(nhapTamGhi, 1000);   // và gọi ngay sau mỗi lần lưu / bỏ t
 setTimeout(nhapTamKhoiPhuc, 400);
 
 /* ========== Tạo lô từ lô cũ (bản 2.2, mục 11.3 điểm 8) ========== */
+let keThuaModalMo = false;
+function keThuaRungMo() {
+  keThuaModalMo = true;
+  render();
+}
+function keThuaRungDong() {
+  keThuaModalMo = false;
+  render();
+}
+function keThuaRungModalHtml() {
+  if (!keThuaModalMo) return '';
+  const o = curOwner();
+  if (!o) return '';
+  const ds = [];
+  Object.values(db.rs || {}).forEach(ow => forestList(ow).forEach(f => ds.push({f, ow})));
+  if (!ds.length) {
+    return '<div class="hak-modal-backdrop" id="keThuaModalBackdrop" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999">' +
+      '<div class="card" style="width:min(500px,94vw);background:var(--bg,#fff);border-radius:8px;padding:20px">' +
+      '<h3>📋 Kế thừa lực lượng sang Rừng mới</h3><p class="mut">Chưa có rừng nào trong hệ thống để kế thừa. Vui lòng tạo rừng đầu tiên bằng nút "+ Rừng mới".</p>' +
+      '<div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="keThuaRungDong">Đóng</button></div></div></div>';
+  }
+  const base = (o.info.ma || 'CR') + '-R';
+  let k = forestList(o).length + 1, code = base + k;
+  while (HAKLoRung.lotsByMa(db, code).length) code = base + (++k);
+
+  const opts = ds.map(x => {
+    const ncCount = (x.f.nc || []).length, dxCount = (x.f.dx || []).length;
+    const tenLo = x.f.info.tenRung || x.f.info.maRung || '(rừng chưa tên)';
+    const chu = x.ow.info.ten || '(chưa tên)';
+    return '<option value="' + esc(x.ow.id + '|' + x.f.id) + '">' +
+      esc(x.f.info.maRung || '?') + ' · ' + esc(tenLo) + ' (' + esc(chu) + ') — ' + ncCount + ' NC, ' + dxCount + ' xe</option>';
+  }).join('');
+
+  return '<div class="hak-modal-backdrop" id="keThuaModalBackdrop" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999">' +
+    '<div class="card" style="width:min(640px,94vw);max-height:90vh;overflow-y:auto;background:var(--bg,#fff);box-shadow:0 8px 30px rgba(0,0,0,0.3);border-radius:8px;padding:20px">' +
+    '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">' +
+    '<h3 style="margin:0">📋 Kế thừa lực lượng &amp; Đơn giá sang Rừng mới</h3>' +
+    '<button class="btn ghost sm" type="button" data-act="keThuaRungDong">✕</button></div>' +
+    '<p class="mut" style="margin:0 0 16px;font-size:13px">Tạo rừng mới cho chủ rừng <b>' + esc(o.info.ten || o.info.ma) + '</b> bằng cách sao chép lực lượng và cấu hình từ rừng đã làm. Phiếu cân và dữ liệu riêng của lô sẽ bắt đầu mới hoàn toàn.</p>' +
+    '<form id="keThuaForm" style="display:flex;flex-direction:column;gap:12px">' +
+    '<label><span>Rừng nguồn để kế thừa</span>' +
+    '<select id="ktNguonSel" required style="width:100%">' + opts + '</select></label>' +
+    '<div class="row" style="gap:12px">' +
+    '<label style="flex:1"><span class="req">Mã rừng mới</span><input id="ktMaRung" value="' + esc(code) + '" required></label>' +
+    '<label style="flex:2"><span>Tên rừng mới</span><input id="ktTenRung" value="Rừng ' + k + '" placeholder="Ví dụ: Rừng Khe Rinh..."></label>' +
+    '</div>' +
+    '<div style="background:var(--bg2,#f7f9fa);padding:12px;border-radius:6px;border:1px solid var(--border,#e1e4e8)">' +
+    '<div style="font-weight:600;margin-bottom:8px">Chọn các hạng mục kế thừa:</div>' +
+    '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="ktOptNc" checked> <span><b>Nhân công &amp; Tổ đội:</b> Sao chép toàn bộ công nhân, chức danh, CCCD, định mức BHLĐ</span></label>' +
+    '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="ktOptDx" checked> <span><b>Đội xe &amp; Hợp đồng vận chuyển:</b> Sao chép danh sách xe, chủ xe, tài xế</span></label>' +
+    '<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="ktOptLuong" checked> <span><b>Bảng đơn giá &amp; Hình thức lương:</b> Kế thừa đơn giá khoán (tấn/ngày/ha)</span></label>' +
+    '<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ktOptMuaHang" checked> <span><b>Công ty mua hàng &amp; Nơi giao:</b> Kế thừa thông tin bên mua và cự ly</span></label>' +
+    '</div>' +
+    '<div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px">' +
+    '<button class="btn ghost" type="button" data-act="keThuaRungDong">Hủy bỏ</button>' +
+    '<button class="btn" type="submit" id="ktBtnSubmit">🚀 Tạo rừng &amp; Kế thừa ngay</button>' +
+    '</div></form></div></div>';
+}
+function thucHienKeThuaRung() {
+  const o = curOwner(), sel = document.getElementById('ktNguonSel');
+  if (!o || !sel) return;
+  const [oid, fid] = sel.value.split('|'), src = db.rs[oid] && db.rs[oid].forests && db.rs[oid].forests[fid];
+  if (!src) return note('Không thấy rừng nguồn để kế thừa.', 'err');
+
+  const ma = trim(document.getElementById('ktMaRung').value) || ((o.info.ma || 'CR') + '-R' + (forestList(o).length + 1));
+  const ten = trim(document.getElementById('ktTenRung').value) || ma;
+  const optNc = document.getElementById('ktOptNc').checked;
+  const optDx = document.getElementById('ktOptDx').checked;
+  const optLuong = document.getElementById('ktOptLuong').checked;
+  const optMuaHang = document.getElementById('ktOptMuaHang').checked;
+
+  const id = newId('f');
+  const r = HAKDanhMuc.loTuLoCu(src, {id, maRung: ma, tenRung: ten, dmLaoDong: db.dmLaoDong, dmXe: db.dmXeVC});
+  const newF = r.f;
+
+  if (!optNc) { newF.nc = []; newF.doi = []; }
+  if (!optDx) { newF.dx = []; newF.hdvc = []; }
+  if (!optLuong && newF.info) {
+    delete newF.info.hinhThucLuong;
+    delete newF.info.donGiaTan;
+    delete newF.info.donGiaHa;
+    delete newF.info.donGiaNgay;
+  }
+  if (!optMuaHang && newF.info) {
+    delete newF.info.muaHang;
+    delete newF.info.cuLy;
+  }
+
+  newF.taoLuc = new Date().toISOString();
+  o.forests[id] = newF;
+  NAV.curF = id;
+  NAV.ftab = 'finfo';
+  NAV.tab = 'rung';
+  keThuaModalMo = false;
+  persist();
+  note('🎉 Đã tạo rừng mới "' + ten + '" (' + ma + ') và kế thừa thành công ' + (newF.nc || []).length + ' nhân công, ' + (newF.dx || []).length + ' xe từ ' + (src.info.maRung || 'lô nguồn') + '!', 'ok');
+  render();
+}
+
 function loTuLoCuBox(own) {
   const ds = []; Object.values(db.rs || {}).forEach(ow => forestList(ow).forEach(f => ds.push({f, ow})));
   if (!ds.length) return '';

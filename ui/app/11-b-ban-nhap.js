@@ -140,7 +140,7 @@ function chuanHoaTenVN(s) {
 }
 const ST_STATUS = {new: ['ok', 'Thêm mới'], changed: ['warn', 'Sửa'], same: ['', ''], removed: ['err', 'Sẽ xóa']};
 /* ô trạng thái + thao tác của một dòng; diffMap: id → {status, old} */
-function stCells(kind, r, i, dm) {
+function stCells(kind, r, i, dm, c) {
   const d = dm && r._id ? dm.get(r._id) : null, s = d ? d.status : 'same', L = ST_STATUS[s];
   let tip = ''; if (s === 'changed' && d.old) tip = Object.keys(r).filter(k => k[0] !== '_' && JSON.stringify(r[k]) !== JSON.stringify(d.old[k])).map(k => k + ': ' + (d.old[k] == null || d.old[k] === '' ? '(trống)' : d.old[k]) + ' → ' + (r[k] == null || r[k] === '' ? '(trống)' : r[k])).join('\n');
   const stat = (L[1] ? '<span class="pill ' + L[0] + '" title="' + esc(tip) + '">' + L[1] + '</span>' : '<span class="mut">Đã lưu</span>') + (r._nguon ? '<br><small class="mut">' + esc(r._nguon) + '</small>' : '');
@@ -148,8 +148,8 @@ function stCells(kind, r, i, dm) {
   '" data-i="' + i + '" title="Xóa bản ghi đã lưu khỏi lô (có hiệu lực khi bấm Lưu)">Xóa đã lưu</button>';
   let qf = '';
   if (kind === 'nc') {
-    const c = normCccd(r.cccd || '');
-    if (c.length === 12 && !trim(r.noiCap)) {
+    const cVal = normCccd(r.cccd || '');
+    if (cVal.length === 12 && !trim(r.noiCap)) {
       qf += '<button class="btn ghost sm" type="button" data-act="qfNoiCap" data-i="' + i + '" style="color:var(--warnFg,#9a6700);border-color:var(--warnFg,#9a6700);font-weight:600" title="Tự động điền nơi cấp: Cục Cảnh sát QLHC về TTXH">⚡ Nơi cấp</button> ';
     }
     const ten = trim(r.ten || '');
@@ -160,6 +160,13 @@ function stCells(kind, r, i, dm) {
     const c1 = normCccd(r.cccd || ''), c2 = normCccd(r.cccdTx || '');
     if ((c1.length === 12 && !trim(r.noiCap)) || (c2.length === 12 && !trim(r.noiCapTx))) {
       qf += '<button class="btn ghost sm" type="button" data-act="qfNoiCapXe" data-i="' + i + '" style="color:var(--warnFg,#9a6700);border-color:var(--warnFg,#9a6700);font-weight:600" title="Tự động điền nơi cấp CCCD 12 số: Cục Cảnh sát QLHC về TTXH">⚡ Nơi cấp</button> ';
+    }
+  } else if (kind === 'pc' && c) {
+    const rowMsgs = (c.warns || []).concat(c.errs || []).filter(m => m.startsWith('Dòng ' + r._row + ':') || (r.soPhieu && (m.includes('phiếu ' + r.soPhieu) || m.includes('Phiếu ' + r.soPhieu))));
+    const bt = rowMsgs.find(m => m.includes('quay đầu') || m.includes('tải trọng') || m.includes('bì') || m.includes('cao bất thường') || m.includes('nghi vấn'));
+    if (bt) {
+      const cleanMsg = bt.replace(/^Dòng \d+: /, '');
+      qf += '<span class="pill warn" style="font-size:11px;font-weight:600;margin-right:4px;cursor:help" title="' + esc(cleanMsg) + '">⚠️ Bất thường</span> ';
     }
   }
   return {stat: '<td>' + stat + '</td>', act: '<td class="stAct">' + qf + '<button class="btn ghost sm" data-act="stEdit" data-kind="' + kind + '" data-i="' + i + '">Sửa</button> ' + (kind === 'pc' && s !== 'new' ? '<button class="btn ghost sm" data-act="pcDoiSo" data-i="' + i + '" title="Đổi số phiếu của chuyến đã lưu: bắt lý do, ghi nhật ký, giữ nguyên khối lượng">Đổi số</button> ' : '') + del + '</td>'};
@@ -174,7 +181,7 @@ function stTrongDoLoc(kind, n) {
 /* bảng dữ liệu có cột trạng thái, thao tác; dòng sẽ xóa hiện gạch ngang kèm “Hoàn tác” */
 function stTable(kind, rec, heads, cells, c, align, only) {
   const st = stCur(), dm = st ? new Map(HAKStage.diff(st, kind).map(d => [d.row._id, d])) : null;
-  const rows = rec[kind].map((r, i) => only && !only(r) ? '' : '<tr class="' + (c.state[r._row] === 'err' ? 'rerr' : c.state[r._row] === 'warn' ? 'rwarn' : '') + '">' + (x => '<td>' + r._row + '</td>' + x.act + cells(r) + x.stat)(stCells(kind, r, i, dm)) + '</tr>');
+  const rows = rec[kind].map((r, i) => only && !only(r) ? '' : '<tr class="' + (c.state[r._row] === 'err' ? 'rerr' : c.state[r._row] === 'warn' ? 'rwarn' : '') + '">' + (x => '<td>' + r._row + '</td>' + x.act + cells(r) + x.stat)(stCells(kind, r, i, dm, c)) + '</tr>');
   const gone = st ? HAKStage.diff(st, kind).filter(d => d.status === 'removed') : [];
   const gtr = gone.map(d => '<tr class="stGone"><td>' + d.row._row + '</td><td class="stAct"><button class="btn ghost sm" data-act="stRestore" data-kind="' + kind + '" data-id="' + esc(d.row._id) + '">Hoàn tác</button></td>' + cells(d.row) + '<td><span class="pill err">Sẽ xóa</span></td></tr>');
   return '<div class="wrap"><table id="stTbl_' + kind + '"><thead><tr><th>Dòng</th><th>Thao tác</th>' + heads.map(h => '<th>' + h + '</th>').join('') + '<th>Trạng thái</th></tr></thead><tbody>' +

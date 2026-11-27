@@ -58,13 +58,13 @@ function panelKiemTra(job) {
 
 function panelRung(own, chuTab) {
   const fl = forestList(own), f = curForest();
-  const add = '<button class="btn sm" data-act="newForest">+ Rừng mới</button>';
-  const list = '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Các rừng của chủ rừng</h3>' + (f ? '' : add) + '</div>' +
+  const add = '<div class="row" style="gap:6px;align-items:center"><button class="btn sm" data-act="newForest">+ Rừng mới</button><button class="btn ghost sm" type="button" data-act="keThuaRungMo" id="keThuaRungBtn" title="Tạo rừng mới bằng cách sao chép nhân công, đội xe, đơn giá từ rừng đã có">📋 Kế thừa từ rừng khác</button></div>';
+  const list = '<div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Các rừng của chủ rừng</h3>' + (f ? '' : add) + '</div>' +
     '<p class="mut">Mỗi rừng có tổ khai thác, vận chuyển, hợp đồng và hồ sơ xuất riêng.</p>' + loTuLoCuBox(own) +
     (fl.length ? fl.map(f => '<button class="item ' + (f.id === NAV.curF ? 'on' : '') + '" data-forest="' + f.id + '"><span class="pill ' + (progressOf(jobView(own, f)).pct === 100 ? 'ok' : '') + '">' + progressOf(jobView(own, f)).pct + '%</span><b>' + esc(f.info.tenRung || f.info.maRung) +
       '</b><small>Mã ' + esc(f.info.maRung) + ' · ' + esc(f.info.diaDiem || 'chưa có địa điểm') + ' · ' + f.nc.length + ' người · ' + f.dx.length + ' xe</small></button>').join('')
       : '<p class="mut">Chưa có rừng. Bấm “+ Rừng mới”.</p>') + '</div>';
-  if (!f) return list;
+  if (!f) return list + (typeof keThuaRungModalHtml === 'function' ? keThuaRungModalHtml() : '');
   const job = curRec(), g = gateRaw(job);
   const kt = exportCheck(job);
   const stFinfo = !g.info.length ? 'ok' : 'warn';
@@ -97,6 +97,6 @@ function panelRung(own, chuTab) {
       ['vanban', 'Số văn bản chung', () => soVanBanBox(job)]
     ]) : NAV.ftab === 'nc' ? panelNC(stJob(job)) : NAV.ftab === 'dx' ? panelVanChuyen(stJob(job)) : NAV.ftab === 'kt' ? panelKiemTra(job) : '<div class="msg ' + (kt.chan.length ? 'err' : kt.doi.length ? 'warn' : 'ok') + '">' + (kt.chan.length ? 'Có <b>' + kt.chan.length + ' mục chặn xuất</b> và ' +
     kt.doi.length + ' mục cần đối chiếu.' : kt.doi.length ? 'Không có mục chặn xuất; còn <b>' + kt.doi.length + ' mục cần đối chiếu.</b>' : 'Hồ sơ đạt mọi kiểm tra.') + ' <button class="btn sm" data-act="ktGo" data-go="{&quot;ftab&quot;:&quot;kt&quot;}">Kiểm tra hồ sơ trước khi xuất</button></div>' +
-    chotBox(job) + soVanBanBox(job, true) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job));
+    chotBox(job) + soVanBanBox(job, true) + thuTuInBox(job) + tienIchBox(job) + panelXuat(job)) + (typeof keThuaRungModalHtml === 'function' ? keThuaRungModalHtml() : '');
 }
 
