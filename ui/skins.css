@@ -43,3 +43,74 @@
 
 /* Chế độ tối: bảng màu có màu cảnh báo/thông tin riêng cho chế độ sáng (nền sáng) phải có bản tối, nếu không chữ sáng nằm trên nền sáng (độ tương phản 1,1) */
 [data-skin][data-theme="dark"]{--warnBg:#2a2213;--warnBd:#5a4520;--warnFg:#f0cf8f;--warn:#f0b35a;--red:#ff8a6a;--redBg:#3a1e17;--infoBg:#18243a;--infoBd:#2c3d5c;--infoFg:#c3d3f0}
+
+/* Bộ kính: nền ảnh tĩnh đi cùng bộ cài. Chỉ thanh đầu và danh sách dùng kính mờ. */
+[data-skin="glass-fog"]{
+  --brand:#175c9c;--brand2:#3279b9;--brandH:#114a80;--brandA:#0f3f6e;--onBrand:#fff;--brandSoft:#dcecf9;
+  --bg:#e7f0f8;--card:#f9fcff;--field:#fff;--ink:#122e45;--mut:#445c70;--mut-aa:#445c70;
+  --th:#e1edf7;--hover:#edf5fc;--line:#c9dbe9;--line2:#dbe7f0;--ctl:#889fb2;
+  --deep:#15324b;--hero:linear-gradient(120deg,#143957,#205d91);--focus:#427aad;
+  --glass-wall:rgb(216 233 247 / .78);--glass-panel:rgb(242 249 255 / .87);--glass-ink:#17394f;
+}
+[data-skin="glass-sage"]{
+  --brand:#20653e;--brand2:#318153;--brandH:#174f30;--brandA:#133f27;--onBrand:#fff;--brandSoft:#d8ebdf;
+  --bg:#e7f1e9;--card:#f8fbf8;--field:#fff;--ink:#153229;--mut:#425d51;--mut-aa:#425d51;
+  --th:#e1eee5;--hover:#eaf3ec;--line:#c1d7c8;--line2:#d7e6dc;--ctl:#87a795;
+  --deep:#173e32;--hero:linear-gradient(120deg,#163e2d,#27694c);--focus:#46825f;
+  --glass-wall:rgb(215 235 219 / .76);--glass-panel:rgb(239 249 241 / .87);--glass-ink:#173c2e;
+}
+[data-skin="glass-night"]{
+  --brand:#176577;--brand2:#207f91;--brandH:#125161;--brandA:#103f4b;--onBrand:#fff;--brandSoft:#d9edf0;
+  --bg:#e4eef1;--card:#f6fbfc;--field:#fff;--ink:#142f3c;--mut:#455f6b;--mut-aa:#455f6b;
+  --th:#e1edf1;--hover:#e7f3f6;--line:#bed7de;--line2:#d6e6eb;--ctl:#86a7b3;
+  --deep:#102d3f;--hero:linear-gradient(120deg,#0f2d41,#196070);--focus:#377d8c;
+  --glass-wall:rgb(211 230 235 / .78);--glass-panel:rgb(235 248 250 / .88);--glass-ink:#173b49;
+}
+[data-skin="glass-fog"][data-theme="dark"]{
+  --brand:#9dd2ff;--brand2:#a4d8ff;--brandH:#b8dfff;--brandA:#cde9ff;--onBrand:#10273a;--brandSoft:#263c54;
+  --bg:#101e2c;--card:#192c3d;--field:#112331;--ink:#ebf5ff;--mut:#bad0e1;--mut-aa:#bad0e1;
+  --th:#22394d;--hover:#21384b;--line:#3a5367;--line2:#2c4357;--ctl:#6c8ea9;
+  --deep:#101f30;--hero:linear-gradient(120deg,#111f35,#234b6d);--focus:#83b9e9;
+  --glass-wall:rgb(13 28 46 / .82);--glass-panel:rgb(22 41 58 / .88);--glass-ink:#e1f2ff;
+}
+[data-skin="glass-sage"][data-theme="dark"]{
+  --brand:#9bdfac;--brand2:#a6e8b7;--brandH:#b7ecc4;--brandA:#caf2d4;--onBrand:#102e22;--brandSoft:#254739;
+  --bg:#122920;--card:#1a352a;--field:#122c23;--ink:#e9f6ee;--mut:#bdd5c9;--mut-aa:#bdd5c9;
+  --th:#244838;--hover:#244538;--line:#3b5e50;--line2:#2e4f42;--ctl:#6a9982;
+  --deep:#10241d;--hero:linear-gradient(120deg,#10241e,#245244);--focus:#88cda0;
+  --glass-wall:rgb(14 35 26 / .82);--glass-panel:rgb(23 48 36 / .88);--glass-ink:#e2f6e9;
+}
+[data-skin="glass-night"][data-theme="dark"]{
+  --brand:#59dcea;--brand2:#76e4ee;--brandH:#89ebf3;--brandA:#b2f4f8;--onBrand:#082530;--brandSoft:#204354;
+  --bg:#0d1d2c;--card:#162b3b;--field:#0f2230;--ink:#e9f5fc;--mut:#b3ccd9;--mut-aa:#b3ccd9;
+  --th:#203d50;--hover:#203b4c;--line:#3c596c;--line2:#2b475a;--ctl:#6d92a7;
+  --deep:#091a2b;--hero:linear-gradient(120deg,#091a2b,#173e53);--focus:#6dd1de;
+  --glass-wall:rgb(7 20 35 / .83);--glass-panel:rgb(17 37 53 / .88);--glass-ink:#e3f7fd;
+}
+html[data-skin^="glass-"]{--barInk:var(--glass-ink)}
+html[data-skin^="glass-"] body{
+  background-image:linear-gradient(var(--glass-wall),var(--glass-wall)),url("./assets/glass-forest.webp");
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
+}
+[data-skin^="glass-"] header.top,
+[data-skin^="glass-"] #side,
+[data-skin^="glass-"] aside.hak-master-pane{
+  background-color:var(--glass-panel);
+  backdrop-filter:blur(14px);
+}
+[data-skin^="glass-"] header.top{box-shadow:0 1px 0 var(--line),0 4px 18px rgb(12 35 56 / .10)}
+[data-skin^="glass-"] header.top h1 small{opacity:1;color:var(--mut-aa)}
+[data-skin^="glass-"] header .nav .nb.on{background:var(--brandSoft);color:var(--ink)}
+[data-skin^="glass-"] header .nav .nb:hover,
+[data-skin^="glass-"] header .hbtn:hover{background:var(--hover)}
+[data-skin^="glass-"] header select#skinQuick{max-width:118px;border-color:var(--ctl)}
+[data-skin^="glass-"] header.top .brand{max-width:210px}
+@media (max-width:1500px) {
+  [data-skin^="glass-"] header.top .nav .nb::before{content:none}
+}
+[data-skin^="glass-"] #lotBackupBtn{border-color:var(--brand)}
+@media print {
+  html[data-skin^="glass-"] body{background-image:none}
+}
