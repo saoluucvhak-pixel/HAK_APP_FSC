@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tài khoản HAKQN</title>
+  <link rel="stylesheet" href="./account.css">
+  <script defer src="./account.js"></script>
+</head>
+<body>
+  <main>
+    <p class="brand">HAKQN</p>
+    <h1 id="accountTitle">Tài khoản HAKQN</h1>
+    <form id="accountForm" hidden>
+      <label for="accountUser">Tên đăng nhập</label>
+      <input id="accountUser" name="user" autocomplete="username" maxlength="64" required>
+      <label for="accountPassword">Mật khẩu</label>
+      <input id="accountPassword" name="password" type="password" autocomplete="current-password" maxlength="256" required>
+      <div id="accountConfirmRow" hidden>
+        <label for="accountConfirm">Nhập lại mật khẩu</label>
+        <input id="accountConfirm" name="confirm" type="password" autocomplete="new-password" maxlength="256">
+        <p class="hint">Mật khẩu phải có ít nhất 8 ký tự.</p>
+      </div>
+      <button type="submit">Đăng nhập</button>
+    </form>
+    <p id="accountFeedback" role="alert"></p>
+  </main>
+</body>
+</html>

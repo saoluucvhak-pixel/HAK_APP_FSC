@@ -2,6 +2,12 @@
 const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('hak', {
   desktop: true,
+  account: {
+    status: () => ipcRenderer.invoke('account:status'),
+    login: credentials => ipcRenderer.invoke('account:login', credentials),
+    create: credentials => ipcRenderer.invoke('account:create', credentials),
+    disable: credentials => ipcRenderer.invoke('account:disable', credentials)
+  },
   testLegacyImport: process.argv.includes('--hakqn-test-legacy-import'),
   testHooks: process.argv.includes('--hakqn-test-hooks'),   // chỉ khi chạy từ mã nguồn (xem src/main.js)
   loadSync: () => ipcRenderer.sendSync('db:load'),

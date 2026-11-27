@@ -91,6 +91,14 @@ document.addEventListener('click', async e => {
   if (act === 'openSetVt') { NAV.cur = null; NAV.curF = null; NAV.view = 'setvt'; cd.vtMsg = null; return render(); }
   if (act === 'openSetNv') { NAV.cur = null; NAV.curF = null; NAV.view = 'setnv'; cd.nvMsg = null; return render(); }
   if (act === 'openSetGd') { NAV.cur = null; NAV.curF = null; NAV.view = 'setgd'; return render(); }
+  if (act === 'openSetAccount') {
+    NAV.cur = null; NAV.curF = null; NAV.view = 'setaccount'; render();
+    if (HB?.account) {
+      setAccount.status = await HB.account.status().catch(() => ({mode: 'unavailable'}));
+      if (NAV.view === 'setaccount') render();
+    }
+    return;
+  }
   if (act === 'openSetHd') { NAV.cur = null; NAV.curF = null; NAV.view = 'sethd'; return render(); }
   if (act === 'openSetCan') { NAV.cur = null; NAV.curF = null; NAV.view = 'setcan'; return render(); }
   if (act === 'openNorm') { NAV.view = 'norm'; return render(); }
