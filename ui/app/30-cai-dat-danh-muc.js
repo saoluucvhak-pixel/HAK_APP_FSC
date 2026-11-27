@@ -500,8 +500,7 @@ function panelSetVt() {
 function panelSetGd() {
   const k = document.documentElement.dataset.skin, dark = document.documentElement.dataset.theme === 'dark';
   return '<div class="card"><h3 style="margin-top:0">Giao diện</h3><div class="row" style="gap:8px;align-items:center"><b>Chế độ</b><button class="btn ghost" data-act="theme" id="themeBtn2">' + (dark ? 'Chế độ sáng' : 'Chế độ tối') + '</button></div>' +
-    '<div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu" style="margin-top:10px">' + '<b>Bảng màu</b>' + SKINS.map(([id, label, c]) => '<button class="skinbtn' + (id === k ? ' on' : '') + '" data-skinpick="' + id + '" aria-pressed="' + (id === k) + '"><span class="sw">' +
-    c.map(x => '<i style="background:' + x + '"></i>').join('') + '</span>' + esc(label) + '</button>').join('') + '</div></div>';
+    '<div class="mi-sec" id="skinPick" role="group" aria-label="Bảng màu" style="margin-top:10px">' + skinButtons(k) + '</div></div>';
 }
 function panelSetHd() {
   return '<div class="card"><h3 style="margin-top:0">Hướng dẫn</h3><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="guide" id="hdSuDung">Hướng dẫn sử dụng</button><button class="btn ghost" data-act="hdHien" id="hdHienBtn">Hướng dẫn bắt đầu</button></div>' +
