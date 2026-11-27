@@ -55,7 +55,7 @@ const launch = (file, extra) => electron.launch({executablePath: require('electr
   const st = await w.evaluate(() => window.hak.settings.get());
   ok('chu kỳ hằng tuần được nhớ qua lần mở lại', st.ok && st.settings.auto.chuKy === 'tuan');
   await app.close();
-  // 3.7.2: cơ sở dữ liệu có sẵn 6 chủ rừng rỗng + 2 chủ rừng thật → mở app tự dọn sạch không báo lỗi BULK_DELETE, lưu lô bình thường; nút Lưu ra tệp/USB và khôi phục khi đang lọc hoạt động đúng
+  // 3.7.2: cơ sở dữ liệu có sẵn 6 chủ rừng rỗng + 2 chủ rừng thật → mở app giữ nguyên dữ liệu, lưu lô bình thường; nút Lưu ra tệp/USB và khôi phục khi đang lọc hoạt động đúng
   { const dbf = path.join(ud, 'hakqn.sqlite'), s2 = new Store(dbf);
     const rong = id => ({id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}});
     s2.save({v: 2, rs: {
@@ -72,7 +72,7 @@ const launch = (file, extra) => electron.launch({executablePath: require('electr
   await w.waitForTimeout(800);
   const body0 = await w.innerText('body');
   const keysSau = await w.evaluate(() => Object.keys(window.hak.loadSync().db.rs).sort());
-  ok('Chỉ dọn 6 hồ sơ rỗng khi mở ứng dụng, giữ hồ sơ có địa chỉ hoặc số hợp đồng', JSON.stringify(keysSau) === '["diachi","hopdong","o1","o2"]' && !/Lần lưu này sẽ xóa|Lần ghi gần nhất/.test(body0), JSON.stringify(keysSau) + ' | ' + body0.slice(0, 160));
+  ok('Mở ứng dụng giữ nguyên hồ sơ trống và hồ sơ có địa chỉ hoặc số hợp đồng', JSON.stringify(keysSau) === '["diachi","e1","e2","e3","e4","e5","e6","hopdong","o1","o2"]' && !/Lần lưu này sẽ xóa|Lần ghi gần nhất/.test(body0), JSON.stringify(keysSau) + ' | ' + body0.slice(0, 160));
   await w.click('#navSet'); await w.click('#setTab_setbk'); await w.waitForSelector('#kslSaveAsBtn');
   await w.click('#kslSaveAsBtn'); await w.waitForTimeout(600);
   ok('3.7.2: nút “Lưu bản sao lưu ra tệp / USB…” xuất file .sqlite hợp lệ', fs.existsSync(outSaveAs) && /Đã lưu bản sao lưu toàn bộ ra tệp/.test(await w.innerText('body')));
