@@ -728,7 +728,7 @@ class Store {
     LK.chuanLo(forest);
     LK.noiDanhMuc(forest, r.next);
     const backup = this.snapshotFile('truoc-khoi-phuc-lo', {keep: 20});
-    this.save(r.next);
+    this.save(r.next, {preserveMissingOwners: true});
     return {backup, plan: r.plan, doi: true, ownerId: r.ownerId, forestId: r.forestId};
   }
 

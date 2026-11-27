@@ -293,7 +293,7 @@ function registerIpc() {
   });
   handle('lot:apply', afterReloc((e, pkg, action) => wrap(() => {
     const parsed = LoRung.parsePackage(pkg, sha); if (!parsed.ok) throw new Error(parsed.error);
-    return {...store.applyLot(parsed.pkg, action), db: store.load()};
+    return {...store.applyLot(parsed.pkg, action), db: store.load(), rev: store.rev};
   })()));
   /* IN TRONG APP: in một trang HTML do giao diện dựng (tóm tắt hồ sơ, báo cáo). Trang được ghi ra file tạm rồi nạp vào một cửa sổ ẩn KHÔNG chạy script, không có cầu nối với ứng dụng;
    * hộp thoại in của hệ điều hành cho chọn máy in. Kiểm thử tự động: HAKQN_PRINT_DIR → ghi PDF vào thư mục đó thay cho hộp thoại in. */

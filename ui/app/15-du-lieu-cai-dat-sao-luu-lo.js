@@ -199,10 +199,20 @@ async function lotRestoreOpen(filePath) {
 async function lotGo() {
   const act = (document.querySelector('input[name=lotAct]:checked') || {}).value || 'giu';
   if (act === 'thay' && !confirm('Thay lô này trên máy bằng bản trong file? Chỉ lô này bị thay; phần đang có trên máy vẫn còn trong bản sao lưu tự động.')) return;
-  const r = await HB.lotApply(window.__lot, act);
+  const pkg = window.__lot;
+  if (!pkg) return;
+  const r = await storeSave(async () => {
+    const cu = HB.loadSync();
+    if (!cu?.ok) return cu;
+    const result = await HB.lotApply(pkg, act);
+    if (result?.ok && result.doi) {
+      dbCapNhatKhoiPhucRieng({dich: {ownerId: result.ownerId, forestIds: [result.forestId]},
+        dbMoi: result.db, dbCu: cu.db, rev: result.rev});
+    }
+    return result;
+  });
   $('#impBox').classList.remove('on'); window.__lot = null;
-  if (!r.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
-  dbThayToanBo(r.db);   // kể cả dấu “chưa lưu” và bản đã lưu cũ: lô vừa khôi phục không bị ghi lại bằng bản trước khi khôi phục
+  if (!r?.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + (r?.error || 'Hãy thử lại.'), 'err');
   if (!r.doi) return note('Giữ bản hiện có của lô ' + r.plan.maLo + ': không có gì thay đổi.');
   NAV.cur = r.ownerId; NAV.curF = r.forestId; NAV.view = 'owner'; NAV.tab = 'rung'; NAV.ftab = 'finfo'; render();
   note('Đã khôi phục lô ' + r.plan.maLo + ' (' + lotCnt(r.plan.incoming) + '). Bản sao lưu trước khi ghi: ' + r.backup, 'ok');
