@@ -11,7 +11,7 @@
   const SPECS = {
     nc: {
       sheet: 'NHAN_CONG', file: 'HAK_Mau_NhanCong.xlsx', title: 'MẪU NHẬP NHÂN CÔNG', tab: 'tab Nhân công',
-      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG có cột Mã rừng. ' + 'Danh sách người lao động của MỘT lô rừng (một dòng = một người). Từ đây phần mềm lập hợp đồng khai thác, Giấy ủy quyền, hợp đồng lao động, bảng chấm công, sổ cấp phát BHLĐ và bảng thanh toán tiền công.',
+      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG cần cột Mã rừng. ' + 'Danh sách người lao động của MỘT lô rừng (một dòng = một người). Từ đây phần mềm lập hợp đồng khai thác, Giấy ủy quyền, hợp đồng lao động, bảng chấm công, sổ cấp phát BHLĐ và bảng thanh toán tiền công.',
       steps: ['Mở lô rừng cần nhập trong phần mềm, vào tab “Nhân công” và chọn cách ký, cách trả lương, đơn giá theo chức danh TRƯỚC (thiếu đơn giá thì phần mềm báo lỗi).',
         'Mở trang tính NHAN_CONG của file này. Điền từ dòng 2, mỗi người một dòng; KHÔNG sửa, xóa, đổi tên hay đổi thứ tự dòng tiêu đề (dòng 1).',
         'Cột có tiêu đề màu đỏ sẫm là cột bắt buộc. Cột có mũi tên chọn (Vai trò, Danh xưng, Chức danh) chỉ chọn trong danh sách.',
@@ -32,8 +32,7 @@
         {n: 'Đội', req: K, fmt: 'Văn bản (tên đội)', ex: '', note: 'Chỉ cần khi lô có từ 2 tổ trưởng: mỗi tổ trưởng một tên đội riêng, công nhân ghi tên đội của mình. Lô chỉ có 1 tổ trưởng thì để trống.'}],
       rules: ['Mỗi lô có ít nhất 1 tổ trưởng; mỗi tổ trưởng là một đội. Lô nhiều đội: ghi tên đội ở cột Đội cho cả tổ trưởng và công nhân, tên đội của các tổ trưởng không trùng nhau.', 'CCCD đủ 12 chữ số và không trùng giữa các dòng.', 'Ngày sinh, ngày cấp là ngày có thật (kiểm tra theo lịch, có tính năm nhuận: 29/02/2028 hợp lệ, 29/02/2026 sai).',
         'Phải có đơn giá cho từng chức danh trong mục “Cơ sở tính đơn giá” của tab Nhân công; thiếu thì báo lỗi.', 'Người dưới 18 tuổi bị chặn xuất Giấy ủy quyền (BM-20).'],
-      errors: [['File thiếu cột: ...', 'Dùng đúng file mẫu; không sửa, xóa hay đổi tên các ô tiêu đề ở dòng 1.'], ['Mã rừng "…" khác lô đang mở', 'Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng (mẫu mới không cần cột này; dữ liệu luôn nạp vào lô đang mở).'],
-        ['CCCD phải gồm 9 hoặc 12 chữ số', 'Nhập lại đủ 12 số (CCCD) hoặc 9 số (CMND); giữ số 0 đầu (cột đã là văn bản, không đổi sang số).'], ['CCCD trùng dòng n', 'Hai người không dùng chung CCCD: sửa CCCD ở một trong hai dòng.'],
+      errors: [['File thiếu cột: ...', 'Dùng đúng file mẫu; không sửa, xóa hay đổi tên các ô tiêu đề ở dòng 1.'], ['CCCD phải gồm 9 hoặc 12 chữ số', 'Nhập lại đủ 12 số (CCCD) hoặc 9 số (CMND); giữ số 0 đầu (cột đã là văn bản, không đổi sang số).'], ['CCCD trùng dòng n', 'Hai người không dùng chung CCCD: sửa CCCD ở một trong hai dòng.'],
         ['Cần ít nhất 1 tổ trưởng', 'Có ít nhất một dòng Vai trò “Tổ trưởng”; lô nhiều tổ trưởng thì ghi cột Đội cho mọi dòng.'], ['Chức danh không hợp lệ', 'Chọn chức danh trong danh sách của ô.'], ['Ngày sinh "…" không có thật hoặc sai dd/mm/yyyy', 'Nhập lại dạng dd/mm/yyyy với ngày có thật.'],
         ['chưa có đơn giá … cho "…"', 'Vào tab Nhân công, mục Cơ sở tính đơn giá, nhập đơn giá cho chức danh đó rồi nạp lại.']],
       example: [['Tổ trưởng', '1', 'Ông', 'TRẦN VĂN TỔ', '15/03/1985', '049085000001', '01/01/2021', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 2, xã Quế Sơn Trung, TP Đà Nẵng', 'Tổ trưởng', ''],
@@ -42,7 +41,7 @@
     },
     dx: {
       sheet: 'DOI_XE', file: 'HAK_Mau_DoiXe.xlsx', title: 'MẪU NHẬP ĐỘI XE VẬN CHUYỂN', tab: 'tab Vận chuyển',
-      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG có cột Mã rừng. ' + 'Danh sách xe vận chuyển gỗ của MỘT lô rừng (một dòng = một xe). Từ đây phần mềm lập hợp đồng vận chuyển (BM-04), nhóm xe theo người ký, kiểm tra biển số khi nhập phiếu cân và cảnh báo giấy tờ xe sắp hết hạn.',
+      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG cần cột Mã rừng. ' + 'Danh sách xe vận chuyển gỗ của MỘT lô rừng (một dòng = một xe). Từ đây phần mềm lập hợp đồng vận chuyển (BM-04), nhóm xe theo người ký, kiểm tra biển số khi nhập phiếu cân và cảnh báo giấy tờ xe sắp hết hạn.',
       steps: ['Mở lô rừng, vào tab “Vận chuyển”, chọn cách tính giá vận chuyển (cố định hoặc tấn/km).',
         'Mở trang tính DOI_XE. Điền từ dòng 2, mỗi xe một dòng; KHÔNG sửa dòng tiêu đề (dòng 1). Cột tiêu đề đỏ sẫm là cột bắt buộc.',
         'Chọn người ký hợp đồng ở cột “Người ký HĐ vận chuyển”: “Chủ xe” hoặc “Tài xế”. Chỉ người ký mới phải có đủ CCCD, ngày cấp, thường trú và SĐT; người không ký thì có thể để trống các cột này.',
@@ -84,7 +83,7 @@
     },
     pc: {
       sheet: 'PHIEU_CAN', file: 'HAK_Mau_PhieuCan.xlsx', title: 'MẪU NHẬP PHIẾU CÂN VẬN CHUYỂN', tab: 'tab Vận chuyển',
-      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG có cột Mã rừng. ' + 'Phiếu cân của nhà máy cho từng chuyến xe của MỘT lô rừng (một dòng = một chuyến). Từ đây phần mềm tính khối lượng giao, tiền vận chuyển từng xe (BM-09, BM-10), sổ phiếu cân và các báo cáo.',
+      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG cần cột Mã rừng. ' + 'Phiếu cân của nhà máy cho từng chuyến xe của MỘT lô rừng (một dòng = một chuyến). Từ đây phần mềm tính khối lượng giao, tiền vận chuyển từng xe (BM-09, BM-10), sổ phiếu cân và các báo cáo.',
       steps: ['Nạp đội xe của lô TRƯỚC (mẫu DOI_XE): phiếu cân chỉ nhận biển số có trong danh sách xe.',
         'Mở trang tính PHIEU_CAN. Điền từ dòng 2, mỗi chuyến một dòng; KHÔNG sửa dòng tiêu đề (dòng 1). Cột tiêu đề đỏ sẫm là cột bắt buộc. Đây là bộ cột ĐẦY ĐỦ để in phiếu cân (cùng tên cột với file mẫu của công cụ PhieuCan); file của công cụ đó (tiêu đề ở dòng 4) cũng nạp được.',
         'Ngày cân nhập dạng dd/mm/yyyy và phải là ngày có thật. Khối lượng nhập bằng cột KL (kg), cột tấn hoặc để phần mềm tự tính từ Cân 1 − Cân 2. Giờ cân, cân 1/2, khách hàng, địa chỉ, đơn giá, thành tiền là tùy chọn nhưng nên điền đủ để in phiếu cân đầy đủ.',
@@ -118,7 +117,7 @@
         'Cảnh báo (không chặn) khi tổng phiếu cân lệch khối lượng khai thác quá ngưỡng đã đặt ở tab Xuất hồ sơ.'],
       errors: [['Biển … chưa có trong danh sách xe', 'Thêm xe vào file đội xe, nạp lại đội xe rồi nạp phiếu cân.'], ['Ngày … không có thật / thiếu ngày cân', 'Sửa ngày đúng dd/mm/yyyy với ngày có thật (ví dụ 28/02/2026) rồi nạp lại.'],
         ['Số phiếu cân … trùng với dòng n', 'Kiểm tra phiếu nhập hai lần; xóa hoặc sửa số phiếu.'], ['Khối lượng không hợp lệ / thiếu khối lượng', 'Nhập số tấn lớn hơn 0 (25,4).'],
-        ['Mã rừng "…" khác lô đang mở', 'Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng.'], ['File thiếu cột: ...', 'Dùng đúng file mẫu, không sửa dòng tiêu đề.']],
+        ['File thiếu cột: ...', 'Dùng đúng file mẫu, không sửa dòng tiêu đề.']],
       example: [['1', 'PC001', '05/10/2026', '08:15:00', '05/10/2026', '09:40:00', '92C-123.45', '40400', '15000', '25400', '25,4', 'DT_ĐL', 'NGUYỄN VĂN AN', 'Thôn A, xã B', '1250000', '101/2026/NK', '', 'OK', '31750000', 'Nhà máy dăm A', '', ''], ['2', 'PC002', '06/10/2026', '08:30:00', '06/10/2026', '10:05:00', '92C-678.90', '39600', '15000', '', '', 'DT_ĐL', 'NGUYỄN VĂN AN', 'Thôn A, xã B', '1250000', '102/2026/NK', '', 'OK', '', 'Nhà máy dăm A', 'KL tự tính = Cân 1 − Cân 2', ''], ['3', 'PC003', '29/02/2028', '', '', '', '92C-123.45', '', '', '', '26,1', '', '', '', '', '', '', '', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ', '']]
     }
   };
