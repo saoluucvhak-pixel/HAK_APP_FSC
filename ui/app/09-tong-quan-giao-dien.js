@@ -53,15 +53,17 @@ function homeBangToanBoLoHtml(recs) {
   const rows = recs.map(r => {
     const o = db.rs[r.oid], f = o && forestList(o).find(x => x.id === r.fid);
     if (!f) return '';
-    let kt = {chan: [], doi: []};
-    try { kt = exportCheck(jobView(o, f)); } catch (e) {}
-    const diemFsc = Math.max(0, 100 - (kt.chan.length * 20) - (kt.doi.length * 5));
+    let kt;
+    try { kt = exportCheck(jobView(o, f)); } catch (e) { kt = null; }
+    const diemFsc = kt ? Math.max(0, 100 - kt.chan.length * 20 - kt.doi.length * 5) : null;
     const capDo = diemFsc >= 90 ? 'A+' : diemFsc >= 70 ? 'B' : 'Cần rà soát';
     const tongCan = (r.pc || []).reduce((a, p) => a + (+p.kl || 0), 0);
     const duKien = (typeof r.dienTich === 'number' && typeof r.dinhMuc === 'number') ? r.dienTich * r.dinhMuc : null;
 
     let ttBadge = '';
-    if (f.chot && f.chot.at) {
+    if (!kt) {
+      ttBadge = '<span class="pill doi">Chưa kiểm tra được</span>';
+    } else if (f.chot && f.chot.at) {
       ttBadge = '<span class="pill du" title="Hồ sơ đã niêm phong ngày ' + esc(f.chot.at) + '">🔒 Đã niêm phong</span>';
     } else if (kt.chan.length) {
       ttBadge = '<span class="pill err" title="' + esc(kt.chan.map(c => c.label).join('; ')) + '">⛔ Chặn xuất (' + kt.chan.length + ')</span>';
@@ -71,7 +73,7 @@ function homeBangToanBoLoHtml(recs) {
       ttBadge = '<span class="pill du">✅ Hợp lệ</span>';
     }
 
-    const fscPill = kt.chan.length
+    const fscPill = !kt ? '—' : kt.chan.length
       ? '<span class="pill err" style="font-weight:600">' + diemFsc + ' · ' + capDo + '</span>'
       : diemFsc >= 90
         ? '<span class="pill du" style="font-weight:600">' + diemFsc + ' · ' + capDo + '</span>'
@@ -99,7 +101,7 @@ function homeBangToanBoLoHtml(recs) {
     '<div class="row" style="align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">' +
     '<div><h3 style="margin:0">Bàn điều hành Toàn bộ Rừng (' + recs.length + ' lô)</h3>' +
     '<p class="mut" style="margin:2px 0 0;font-size:13px">Theo dõi tập trung tình trạng hồ sơ, khối lượng cân và điểm tuân thủ FSC toàn bộ các lô của công ty</p></div>' +
-    '<div class="row" style="gap:8px"><input id="homeTimLo" type="search" placeholder="🔍 Tìm mã rừng, chủ rừng, vị trí..." style="width:240px;font-size:13px" oninput="homeLocBangLo(this.value)"></div>' +
+    '<div class="row" style="gap:8px"><input id="homeTimLo" type="search" aria-label="Tìm lô rừng" placeholder="Tìm mã rừng, chủ rừng, vị trí…" style="width:240px;font-size:13px"></div>' +
     '</div>' +
     '<div class="wrap" style="max-height:480px">' +
     '<table id="homeTblLo"><thead><tr>' +

@@ -30,11 +30,16 @@ async function stSaveDraft(opt) {
   const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { if (loDirty.has(NAV.curF)) return luuLoTT(opt); if (!(opt && opt.tuKhung)) note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
   const o = db.rs[NAV.cur], f = o && o.forests && o.forests[NAV.curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
   const pend = HAKStage.pendingOf(st);   // cùng quy tắc với bước xem trước: dòng cần đối chiếu chưa xử lý thì chưa lưu
-  if (pend.length) return {
-    ok: false,
-    error: 'Còn ' + pend.length + ' dòng phiếu cân cần đối chiếu. Giữ bản hiện có nếu phiếu đang lưu đúng, cập nhật nếu xác nhận cùng chuyến, chọn chuyến khác nếu là hai chuyến, hoặc bỏ qua dòng nguồn nếu nhập nhầm. Xử lý xong rồi lưu lại.',
-    field: {tab: 'dx', muc: 'phieu', label: 'Vận chuyển → Phiếu cân', pending: true}
-  };
+  if (pend.length) {
+    const soPhieu = [...new Set(pend.map(p => p.incoming?.soPhieu).filter(Boolean))];
+    const chiTiet = soPhieu.length ? ' Phiếu ' + soPhieu.slice(0, 5).join(', ') + (soPhieu.length > 5 ? '…' : '') + '.' : '';
+    return {
+      ok: false,
+      error: 'CẦN ĐỐI CHIẾU ' + pend.length + ' dòng phiếu cân.' + chiTiet +
+        ' Giữ bản hiện có, xác nhận cùng chuyến, chọn chuyến khác hoặc bỏ dòng nguồn, rồi lưu lại.',
+      field: {tab: 'dx', muc: 'phieu', label: 'Vận chuyển → Phiếu cân', pending: true}
+    };
+  }
   const idc = HAKStage.idConflicts(st);   // _id nội bộ phải duy nhất trước khi ghi SQLite; xung đột thì chặn, giữ dữ liệu đã lưu và bản nháp
   if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: msg, idc}; }
   const rec0 = jobView(o, f), g0 = ganDoi(rec0.doi, st.cur.nc), v0 = ganVC(rec0.hdvc, st.cur.dx), p0 = ganPC(g0.doi, st.cur.pc), rec = Object.assign(rec0, {nc: g0.nc, doi: g0.doi, dx: v0.dx, hdvc: v0.hdvc, pc: p0, info: Object.assign({}, rec0.info, {_klPC: klPhieu(p0)})}), errs = [];

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi" data-skin="luxe">
+<html lang="vi" data-skin="glass-fog">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -264,6 +264,7 @@ select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);bord
 .loDau{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0 0 2px}.loDau h2{margin:0;font-size:17px}.loDau .crumb{margin:0;font-size:12.5px}
 .loDau .rungTomTat{margin:0}.loDau .rungTomTat>summary{display:inline-block;padding:2px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--mut-aa);background:var(--card);white-space:nowrap}
 .loDau .rungTomTat[open]{flex-basis:100%;order:9}.loDau .rungTomTat:not([open])>:not(summary){display:none}.loDauTab{margin:0;border-bottom:0}.loDauTab button{padding:6px 8px}.loDauNut .btn{padding:5px 10px}.loDauNut{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+@media (min-width:900px){.loDau #loCrumb{flex:1 1 140px;min-width:0;white-space:nowrap;overflow-x:auto;margin:0}}
 .rungTabs{flex-wrap:wrap}
 #loCrumb{margin:4px 0 8px;color:var(--mut-aa);font-size:13px}
 #stTbl_pc{min-width:1100px}
@@ -274,6 +275,11 @@ select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);bord
 .pcInLoc{flex-wrap:wrap;gap:10px}
 .importActions{flex-wrap:wrap;gap:6px}
 .pcInFrame{display:block;width:100%;height:70vh;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+/* Thanh điều hướng giữ một hàng. Các nút vẫn tới được bằng Tab khi cần cuộn riêng thanh này. */
+header.top .brand{min-width:0}
+header.top .brand h1{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+header.top .nav{min-width:0;overflow-x:auto;scrollbar-width:none}
+header.top .nav .nb{flex-shrink:0}
 /* header.top .brand: đặc hiệu hơn quy tắc header.top h1 small ở trên, nếu không dòng phụ vẫn hiện, thanh chính rộng ~500 px và nút Tìm xuống hàng thứ hai ở 1024 px */
 @media (max-width:1100px){header.top{gap:8px;padding-inline:10px}header.top .brand h1{font-size:13px}header.top .brand h1 small{display:none}.nav .nb,.hbtn{padding-inline:8px}}
 @media (min-width:700px) and (max-width:950px){header.top{flex-wrap:nowrap}.brand h1{display:none}.nav{flex:1 1 auto;order:0;flex-wrap:nowrap}}
@@ -349,7 +355,7 @@ select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);bord
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
   <button class="hbtn" data-act="theme" id="themeBtn" title="Đổi nhanh giao diện Sáng / Tối" aria-label="Đổi giao diện Sáng hoặc Tối">🌙 Tối</button>
-  <select class="hbtn" id="skinQuick" title="Chọn nhanh bảng màu" aria-label="Bảng màu"><option value="luxe">Luxe</option><option value="classic">Classic</option><option value="neutral">Neutral</option><option value="champagne">Champagne</option><option value="ocean">Ocean</option></select>
+  <select class="hbtn" id="skinQuick" title="Chọn nhanh bảng màu" aria-label="Bảng màu"></select>
   <button class="hbtn" data-act="quickBackup" id="quickBackupBtn" title="Sao lưu nhanh toàn bộ dữ liệu (Ctrl+B)">💾 Sao lưu</button>
   <button class="hbtn" data-act="tkOpen" id="tkBtn" title="Tìm kiếm toàn cục (Ctrl+K)">🔍 Tìm</button>
 </header>

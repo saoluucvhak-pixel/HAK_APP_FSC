@@ -1,7 +1,7 @@
 /* ========== Sự kiện ========== */
 document.addEventListener('click', async e => {
   const t = e.target;
-  const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick); return; }
+  const skp = t.closest('[data-skinpick]'); if (skp) { setSkin(skp.dataset.skinpick, true); return; }
   const muc = t.closest('[data-muc-lo]');
   if (muc) {
     mucLoDaMo.set(mucLoKey(muc.dataset.loNhom), muc.dataset.mucLo);
@@ -461,19 +461,41 @@ document.addEventListener('change', e => {
 });
 
 const SKINS = [
-  ['luxe', 'Luxe — navy, champagne, ngà (mặc định)', ['#1d3a63', '#b8903f', '#f5f2ec']],
-  ['classic', 'Classic — xanh ngọc (teal)', ['#0e7c86', '#0f2740', '#f3f6fa']],
-  ['neutral', 'Neutral — xám xanh doanh nghiệp', ['#35475a', '#a8812f', '#f3f5f7']],
-  ['champagne', 'Champagne — vàng ấm', ['#85601a', '#2b2411', '#faf6ec']],
-  ['ocean', 'Ocean — xanh dương hiện đại (Executive Blue)', ['#1e40af', '#2563eb', '#f8fafc']]];
-function setSkin(k) {
-  if (!SKINS.some(x => x[0] === k)) k = 'luxe';
+  ['glass-fog', 'Kính Sương', ['#175c9c', '#c5dff3', '#e7f0f8'], 'light'],
+  ['glass-sage', 'Kính Lục', ['#20653e', '#c4dfca', '#e7f1e9'], 'light'],
+  ['glass-night', 'Kính Đêm', ['#091a2b', '#59dcea', '#14283a'], 'dark'],
+  ['ocean', 'Ocean', ['#1e40af', '#2563eb', '#f8fafc']],
+  ['luxe', 'Luxe', ['#1d3a63', '#b8903f', '#f5f2ec']],
+  ['classic', 'Classic', ['#0e7c86', '#0f2740', '#f3f6fa']]
+];
+const LEGACY_SKINS = new Map([['neutral', 'Neutral'], ['champagne', 'Champagne']]);
+const DEFAULT_SKIN = SKINS[0][0];
+function skinButtons(k) {
+  const legacy = LEGACY_SKINS.get(k);
+  return '<b>Bảng màu</b>' + (legacy ? '<p class="mut">Đang dùng ' + legacy + ' từ cài đặt trước.</p>' : '') +
+    SKINS.map(([id, label, colors]) => '<button type="button" class="skinbtn' + (id === k ? ' on' : '') +
+      '" data-skinpick="' + id + '" aria-pressed="' + (id === k) + '"><span class="sw" aria-hidden="true">' +
+      colors.map(color => '<i style="background:' + color + '"></i>').join('') + '</span>' + esc(label) + '</button>').join('');
+}
+function setSkin(k, picked = false) {
+  const skin = SKINS.find(x => x[0] === k);
+  if (!skin && !LEGACY_SKINS.has(k)) k = DEFAULT_SKIN;
+  if (picked && skin?.[3] && k !== document.documentElement.dataset.skin) setTheme(skin[3]);
   document.documentElement.dataset.skin = k;
   try { localStorage.setItem('hskt.skin', k); } catch (e) {}
-  const sq = document.getElementById('skinQuick'); if (sq) sq.value = k;
+  const sq = document.getElementById('skinQuick');
+  if (sq) {
+    const legacy = LEGACY_SKINS.get(k);
+    sq.innerHTML = SKINS.map(([id, label]) => '<option value="' + id + '">' + esc(label) + '</option>').join('') +
+      (legacy ? '<option value="' + k + '" hidden>' + legacy + '</option>' : '');
+    sq.value = k;
+  }
   const box = document.getElementById('skinPick');
-  if (box) box.innerHTML = '<b>Bảng màu</b>' + SKINS.map(([id, label, c]) => '<button class="skinbtn' + (id === k ? ' on' : '') + '" data-skinpick="' + id + '" aria-pressed="' + (id === k) + '"><span class="sw">' + c.map(x => '<i style="background:' + x + '"></i>').join('') + '</span>' +
-  esc(label) + '</button>').join('');
+  if (box) {
+    const restoreFocus = box.contains(document.activeElement);
+    box.innerHTML = skinButtons(k);
+    if (restoreFocus) box.querySelector('.skinbtn.on')?.focus();
+  }
 }
 let savedSkin = null;
 try { savedSkin = localStorage.getItem('hskt.skin'); } catch (e) {}
@@ -486,10 +508,12 @@ function setTheme(t) {
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('hskt.theme'); } catch (e) {}
 if (savedTheme === 'dark' || savedTheme === 'light') setTheme(savedTheme);
+else if (!savedSkin || savedSkin === DEFAULT_SKIN) setTheme('light');
 else if (matchMedia('(prefers-color-scheme:dark)').matches) setTheme('dark');
-document.addEventListener('change', e => { if (e.target && e.target.id === 'skinQuick') setSkin(e.target.value); });
+document.addEventListener('change', e => { if (e.target && e.target.id === 'skinQuick') setSkin(e.target.value, true); });
 document.addEventListener('change', e => { if (e.target && e.target.id === 'normVer') { normSel = e.target.value; render(); } });
 document.addEventListener('input', e => {
+  if (e.target.id === 'homeTimLo') return homeLocBangLo(e.target.value);
   const t = e.target;
   if (!e.isComposing && t.dataset?.groupNumber !== undefined) {
     const raw = t.value, pos = t.selectionStart, separator = numStyle === 'en' ? ',' : '.';

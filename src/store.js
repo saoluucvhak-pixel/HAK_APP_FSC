@@ -435,7 +435,7 @@ class Store {
     let goneO = [...have.keys()].filter(id => !keepO.has(id)), goneF = [...haveF.keys()].filter(id => !keepF.has(id));
     if (opts.preserveMissingOwners) {
       const explicitDel = new Set(Array.isArray(opts.delO) ? opts.delO.map(String) : []);
-      goneO = goneO.filter(id => explicitDel.has(String(id)));
+      goneO = goneO.filter(id => explicitDel.has(String(id)) || this._chuRong(id));
       goneF = goneF.filter(id => {
         const row = this.db.prepare('SELECT owner_id FROM forests WHERE id=?').get(id);
         return row && (keepO.has(row.owner_id) || explicitDel.has(String(row.owner_id)));
@@ -728,7 +728,7 @@ class Store {
     LK.chuanLo(forest);
     LK.noiDanhMuc(forest, r.next);
     const backup = this.snapshotFile('truoc-khoi-phuc-lo', {keep: 20});
-    this.save(r.next);
+    this.save(r.next, {preserveMissingOwners: true});
     return {backup, plan: r.plan, doi: true, ownerId: r.ownerId, forestId: r.forestId};
   }
 

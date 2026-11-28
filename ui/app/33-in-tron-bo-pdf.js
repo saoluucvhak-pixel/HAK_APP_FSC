@@ -171,11 +171,13 @@ function inBienBanKiemToanFscHtml(rec, f) {
   const dxCount = (f && f.dx) ? f.dx.length : 0;
   const cty = (typeof theCompany === 'function' && theCompany()) || {};
   const noiLap = cty.noiLap || 'Quảng Nam';
-  let kt = {chan: [], doi: []};
-  try { kt = exportCheck(rec); } catch (e) {}
-  const chan = kt.chan || [], doi = kt.doi || [];
+  let kt;
+  try { kt = exportCheck(rec); } catch (e) { kt = null; }
+  const chan = kt?.chan || [], doi = kt?.doi || [];
   const diemFsc = Math.max(0, 100 - chan.length * 20 - doi.length * 5);
-  const fscXepLoai = diemFsc >= 90 ? 'CẤP ĐỘ A+ · AN TOÀN KIỂM TOÁN' : diemFsc >= 70 ? 'CẤP ĐỘ B · CẦN ĐỐI SOÁT' : 'NGUY CƠ VI PHẠM CAO';
+  const ketQua = kt
+    ? '<b>' + diemFsc + '/100</b><br><small>' + chan.length + ' mục chặn xuất · ' + doi.length + ' mục cần đối chiếu</small>'
+    : '<b>Chưa kiểm tra được</b><br><small>Mở màn Kiểm tra hồ sơ và thử lại trước khi sử dụng biên bản.</small>';
 
   return `<!DOCTYPE html>
 <html lang="vi">
@@ -222,8 +224,7 @@ function inBienBanKiemToanFscHtml(rec, f) {
 </div>
 
 <div class="scoreBox">
-  KẾT QUẢ TỰ ĐÁNH GIÁ: <b>ĐIỂM FSC: ${diemFsc}/100</b> — <b>${fscXepLoai}</b>
-  <br><small style="color:#555">Tiền kiểm soát: ${chan.length} mục chặn xuất · ${doi.length} mục cần đối chiếu</small>
+  ĐIỂM KIỂM TRA NỘI BỘ: ${ketQua}
 </div>
 
 <div class="secH">I. THÔNG TIN LÔ RỪNG ĐƯỢC KIỂM TOÁN</div>
@@ -244,31 +245,31 @@ function inBienBanKiemToanFscHtml(rec, f) {
     <tr>
       <td style="text-align:center">1</td>
       <td><b>Tính hợp pháp đất đai & Hợp đồng</b></td>
-      <td>Đã ký hợp đồng mua bán với chủ rừng hợp pháp; diện tích theo khảo sát khớp Sổ đỏ.</td>
-      <td style="text-align:center"><b>ĐẠT</b></td>
+      <td>Đối chiếu hợp đồng, giấy tờ đất và diện tích khảo sát.</td>
+      <td style="text-align:center">Cần xác minh</td>
     </tr>
     <tr>
       <td style="text-align:center">2</td>
       <td><b>Giới hạn trữ lượng khai thác</b></td>
-      <td>Khối lượng thực tế: ${esc(thucTe)} so với dự kiến: ${esc(slDuKien)}. Không có dấu hiệu khai thác ngoài ranh giới.</td>
-      <td style="text-align:center"><b>ĐẠT</b></td>
+      <td>Khối lượng thực tế: ${esc(thucTe)} so với dự kiến: ${esc(slDuKien)}. Đối chiếu ranh giới và trữ lượng khai thác.</td>
+      <td style="text-align:center">Cần xác minh</td>
     </tr>
     <tr>
       <td style="text-align:center">3</td>
       <td><b>An toàn lao động & BHLĐ (BM-02)</b></td>
-      <td>Đã lập danh sách ${ncCount} nhân công; 100% người đủ tuổi lao động và ký nhận trang bị BHLĐ.</td>
-      <td style="text-align:center"><b>ĐẠT</b></td>
+      <td>Danh sách có ${ncCount} nhân công. Đối chiếu tuổi lao động và hồ sơ ký nhận BHLĐ.</td>
+      <td style="text-align:center">Cần xác minh</td>
     </tr>
     <tr>
       <td style="text-align:center">4</td>
       <td><b>Chuỗi hành trình CoC & Đội xe</b></td>
       <td>Đội xe ${dxCount} phương tiện; kiểm tra hạn kiểm định, giấy phép lái xe và đối chiếu trạm cân.</td>
-      <td style="text-align:center"><b>ĐẠT</b></td>
+      <td style="text-align:center">Cần xác minh</td>
     </tr>
   </tbody>
 </table>
 
-${chan.length || doi.length ? `
+${kt && (chan.length || doi.length) ? `
 <div class="secH" style="color:#b71c1c">III. CÁC NỘI DUNG CẦN ĐỐI CHIẾU TRƯỚC THANH TRA</div>
 <ul style="font-size:11pt;margin:6px 0;padding-left:22px">
   ${chan.map(c => '<li style="color:#b71c1c"><b>[CHẶN]:</b> ' + esc(c.text) + '</li>').join('')}
@@ -276,7 +277,7 @@ ${chan.length || doi.length ? `
 </ul>
 ` : `
 <div class="secH" style="color:#1b5e20">III. KẾT LUẬN KIỂM TOÁN NỘI BỘ</div>
-<p style="margin:6px 0;font-size:11.5pt">Hồ sơ lô rừng <b>${esc(maLo)}</b> hoàn toàn đầy đủ, nhất quán 100% giữa hợp đồng, danh sách nhân công, phương tiện và phiếu cân nhà máy. Đủ điều kiện xuất bán gỗ có chứng chỉ quản lý rừng bền vững FSC.</p>
+<p style="margin:6px 0;font-size:11.5pt">${kt ? 'Ứng dụng chưa phát hiện mục chặn xuất hoặc mục cần đối chiếu.' : 'Chưa kiểm tra được hồ sơ.'} Cán bộ kiểm soát xác minh hồ sơ gốc và ghi kết luận trước khi ký.</p>
 `}
 
 <div class="chuKy">
