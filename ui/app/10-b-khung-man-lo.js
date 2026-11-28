@@ -8,8 +8,8 @@ function khungMucLo(k, cacMuc, macDinh = 'chung', opt = {}) {
   const idx = Math.max(0, cacMuc.findIndex(x => x[0] === active)), muc = cacMuc[idx];
   const nextMuc = idx < cacMuc.length - 1 ? cacMuc[idx + 1] : null;
   const nextTabMap = {finfo: ['nc', 'Sang Bước 2: Nhân công →'], nc: ['dx', 'Sang Bước 3: Vận chuyển →'], dx: ['kt', 'Sang Bước 4: Kiểm tra →']};
-  const menu = cacMuc.map(([id, ten, , dem, ok]) =>
-    '<button type="button" data-muc-lo="' + id + '" data-lo-nhom="' + k + '"' +
+  const menu = cacMuc.map(([id, ten, , dem, ok, lyDo]) =>
+    '<button type="button" data-muc-lo="' + id + '" data-lo-nhom="' + k + '"' + (ok === false && lyDo ? ' title="Chưa hoàn tất: ' + esc(lyDo) + '"' : '') +
     (id === muc[0] ? ' aria-current="page"' : '') + '>' +
     (ok === true ? '<span class="mucIc" style="color:var(--ok)">✓</span>' : ok === false ? '<span class="mucIc" style="color:var(--warnFg,#9a6700)">!</span>' : '<span class="mucIc"></span>') +
     '<span>' + esc(ten) + '</span>' + (dem == null ? '' : '<span class="pill">' + esc(dem) + '</span>') + '</button>').join('');
@@ -21,7 +21,8 @@ function khungMucLo(k, cacMuc, macDinh = 'chung', opt = {}) {
     (nextMuc ? '<button type="button" class="btn sm" data-act="stepNext" data-lo-nhom="' + k + '" data-next-muc="' + esc(nextMuc[0]) + '">' + (khoa ? 'Tiếp tục: ' + esc(nextMuc[1]) + ' →' : esc(nextLabel)) + '</button>'
       : nextTabMap[k] ? '<button type="button" class="btn sm" data-act="stepNext" data-next-ftab="' + nextTabMap[k][0] + '">' + (khoa ? nextTabMap[k][1] : esc(nextLabel)) + '</button>' : '') +
     '</div></div>';
-  const body = (khoa ? '<fieldset disabled id="loKhoaFs" class="mucKhoa">' + muc[2]() + '</fieldset>' : muc[2]()) + footer;
+  const canhBao = muc[4] === false && muc[5] ? '<div class="msg warn mucChuaXong" role="status"><b>Mục này chưa hoàn tất:</b> ' + esc(muc[5]) + '</div>' : '';   // dấu “!” trên tab không phải lỗi: cho biết còn thiếu gì
+  const body = canhBao + (khoa ? '<fieldset disabled id="loKhoaFs" class="mucKhoa">' + muc[2]() + '</fieldset>' : muc[2]()) + footer;
   if (opt && opt.inspector) {
     return '<nav class="hak-inspector-tabs mucNav" aria-label="Các mục nhập liệu">' + menu +
       '</nav><div class="hak-pane-body"><section class="mucNoiDung" aria-label="' + esc(muc[1]) + '">' + body + '</section></div>';

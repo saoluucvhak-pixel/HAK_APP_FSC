@@ -235,12 +235,18 @@ function panelNC(rec) {
   const count = teamNc.length;
   const infoD = d ? infoTeam(rec, d) : {};
   const hasCc = d ? Object.values(rec.cc || {}).some(m => teamNc.some(r => m && m[HAKChamCong.personKey(r)] && Object.keys(m[HAKChamCong.personKey(r)]).length)) : false;
+  /* Dấu “!” trên tab = mục chưa hoàn tất (không phải lỗi). Mỗi mục có thêm lý do, hiện khi rê chuột và ở đầu mục. */
+  const BASIS_MAP = {sanluong: 'donGiaTan', ha: 'donGiaHa', ngaycong: 'donGiaNgay'}, BASIS_TEN = {sanluong: 'tấn', ha: 'ha', ngaycong: 'ngày công'};
+  const coSo = (infoD && infoD.hinhThucLuong) || 'sanluong', mapGia = (infoD && infoD[BASIS_MAP[coSo] || 'donGiaTan']) || {};
+  const thieuGia = [...new Set(teamNc.map(r => trim(r.chucDanh)).filter(Boolean))].filter(cd => !(Number(mapGia[cd]) > 0));
+  const dongiaOk = !!d && count > 0 && thieuGia.length === 0;
+  const dongiaLyDo = !d ? 'Chưa chọn đội.' : count === 0 ? 'Đội chưa có thành viên nên chưa có vị trí nào để nhập đơn giá.' : 'Chưa nhập đơn giá (đ/' + BASIS_TEN[coSo] + ') cho vị trí: ' + thieuGia.join(', ') + '. Nhập đơn giá rồi bấm Lưu.';
   const detail = khungMucLo('nc', [
-    ['chung', 'Thông tin HĐ', () => panelDoiKT(rec), null, !!(d && (d.ten || d.benNhanKhoan))],
-    ['dongia', 'Hình thức & đơn giá', () => panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec), null, !!(infoD && infoD.cachTinh)],
-    ['thanhvien', 'Thành viên', () => panelThanhVien(rec), count, count > 0],
-    ['chamcong', 'Chấm công', () => panelChamCong(recDoiChon(rec)), null, hasCc],
-    ['vanban', 'Số văn bản', () => panelDoiVB(rec), null, !!(d && d.exp && (d.exp.soKT || d.exp.ngayKT))]
+    ['chung', 'Thông tin HĐ', () => panelDoiKT(rec), null, !!(d && (d.ten || d.benNhanKhoan)), 'Chưa đặt tên đội hoặc chưa chọn bên nhận khoán.'],
+    ['dongia', 'Hình thức & đơn giá', () => panelLuong(rec) + doiPanel(rec) + dinhBienPanel(rec), null, dongiaOk, dongiaLyDo],
+    ['thanhvien', 'Thành viên', () => panelThanhVien(rec), count, count > 0, 'Đội chưa có thành viên nào: thêm người hoặc nạp file Excel.'],
+    ['chamcong', 'Chấm công', () => panelChamCong(recDoiChon(rec)), null, hasCc, 'Chưa có dữ liệu chấm công. Chỉ cần nhập khi đội tính tiền theo ngày công; tính theo tấn hoặc ha thì có thể bỏ qua mục này.'],
+    ['vanban', 'Số văn bản', () => panelDoiVB(rec), null, !!(d && d.exp && (d.exp.soKT || d.exp.ngayKT)), 'Chưa nhập số hoặc ngày ký hợp đồng khai thác.']
   ], 'chung', {inspector: true});
   if (!rec.doi) return detail;
   return '<div class="hak-master-detail">' +
