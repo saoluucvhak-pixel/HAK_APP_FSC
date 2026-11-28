@@ -13,7 +13,6 @@
     const dot = (v, n) => v || '…'.repeat(n || 6);
     const rungRef = i => {
       const a = [];
-      if (i.maRung) a.push('Mã rừng: ' + i.maRung);
       if (i.lat != null && i.lng != null) a.push('Tọa độ (WGS84): ' + i.lat + ', ' + i.lng);
       if (i.tuNgay) a.push('Thời gian khai thác: ' + i.tuNgay + (i.denNgay ? ' – ' + i.denNgay : ''));
       return a.join(' · ');
@@ -246,7 +245,7 @@
       return [
         ...TITLE_HEAD(),
         ctx.P('**PHIẾU THẨM ĐỊNH CHỦ RỪNG VÀ RỪNG TRƯỚC KHI KHAI THÁC**', {al: 'center', sz: 28, before: 120, after: 40}),
-        ctx.P('Mã rừng: ' + dot(rs.maRung, 4) + ' · Ngày thẩm định: ' + dot(ex.tdNgay, 6) + ' · Người thẩm định: ' + dot(ex.tdNguoi, 8), {al: 'center', after: 160}),
+        ctx.P('Ngày thẩm định: ' + dot(ex.tdNgay, 6) + ' · Người thẩm định: ' + dot(ex.tdNguoi, 8), {al: 'center', after: 160}),
         ctx.P('**A. Chủ rừng:** ' + ctx.upper(rsName) + ' · Hợp đồng số: ' + dot(rs.soHopDong, 6) + ' · ký ngày: ' + dot(rs.ngayKyHopDong, 6), {al: 'left', after: 40}),
         ctx.P('CCCD số: ' + (rs.cccd || '…………') + ', cấp ngày ' + (rs.ngayCap || '…………') + ', nơi cấp ' + (rs.noiCap || '…………') + '. Địa chỉ: ' + (rs.diaChi || '…………'), {al: 'left', ind: 360, after: 80}),
         ctx.P('**B. Rừng thẩm định:** ' + (rs.tenRung ? rs.tenRung + ' · ' : '') + 'tại ' + dot(rs.diaDiem, 8), {al: 'left', after: 40}),
@@ -269,7 +268,7 @@
       const rows = Array.from({length: n}, (_, i) => [String(i + 1), days[i] || '', '', '', '', '', '', '']);
       return [
         ctx.P('**NHẬT KÝ KHAI THÁC HẰNG NGÀY**', {al: 'center', sz: 28, before: 60, after: 40}),
-        ctx.P('Rừng ' + (rs.tenRung || rs.maRung) + ' · Mã rừng: **' + dot(rs.maRung, 4) + '** · Chủ rừng: **' + ctx.upper(rsName) + '** · Tổ trưởng: ' + ttName, {al: 'center', after: 40}),
+        ctx.P((rs.tenRung ? 'Rừng ' + rs.tenRung + ' · ' : '') + 'Chủ rừng: **' + ctx.upper(rsName) + '** · Tổ trưởng: ' + ttName, {al: 'center', after: 40}),
         ctx.P('Địa điểm: ' + dot(rs.diaDiem, 8) + (rs.lat != null && rs.lng != null ? ' · Tọa độ: ' + rs.lat + ', ' + rs.lng : '') + ' · Thời gian khai thác: ' + (rs.tuNgay || '…/…/……') + ' – ' + (rs.denNgay || '…/…/……'), {al: 'center', after: 100}),
         ctx.P('Hướng dẫn: tổ trưởng ghi cuối mỗi ngày làm việc (không ghi dồn); khối lượng ghi theo ước tính tại bãi hoặc theo bảng kê lâm sản; chủ rừng, người giám sát đối chiếu khi kiểm tra. Ngày Chủ nhật đã được loại khỏi bảng.', {al: 'left', i: true, sz: 20, after: 80}),
         ctx.T([650, 1500, 1300, 2300, 2000, 2400, 3000, 1987],
@@ -302,7 +301,7 @@
       return [
         ...TITLE_HEAD(),
         ctx.P('**BIÊN BẢN PHỔ BIẾN CHÍNH SÁCH THU MUA GỖ HỢP PHÁP THEO TIÊU CHUẨN FSC**', {al: 'center', sz: 26, before: 120, after: 80}),
-        ctx.P('Mã rừng: ' + dot(rs.maRung, 4) + ' · Địa điểm: ' + dot(rs.diaDiem, 8), {al: 'center', after: 140}),
+        ctx.P('Địa điểm: ' + dot(rs.diaDiem, 8), {al: 'center', after: 140}),
         ctx.P('- Thời gian phổ biến: **' + dot(ex.fscNgay, 6) + '** · Địa điểm: **' + dot(ex.fscDiaDiem, 8) + '**', {al: 'left', after: 40}),
         ctx.P('- Người phổ biến: **' + dot(ex.fscNguoi, 8) + '**', {al: 'left', after: 100}),
         ctx.P('Nội dung đã được phổ biến cho chủ rừng, tổ khai thác và bên vận chuyển:', {after: 60, keep: true}),
@@ -330,7 +329,7 @@
       const blank = Array.from({length: 8}, (_, i) => [String(i + 1), '', '', '', '', '', '', '']);
       return [
         ctx.P('**SỔ THEO DÕI TAI NẠN LAO ĐỘNG VÀ SỰ CỐ**', {al: 'center', sz: 28, before: 60, after: 40}),
-        ctx.P('Khai thác rừng ' + (rs.tenRung || rs.maRung) + ' · Mã rừng: **' + dot(rs.maRung, 4) + '** · Chủ rừng: **' + ctx.upper(rsName) + '**', {al: 'center', after: 40}),
+        ctx.P('Khai thác rừng ' + (rs.tenRung ? rs.tenRung + ' · ' : '') + 'Chủ rừng: **' + ctx.upper(rsName) + '**', {al: 'center', after: 40}),
         ctx.P('Địa điểm: ' + dot(rs.diaDiem, 8) + ' · Thời gian khai thác: ' + (rs.tuNgay || '…/…/……') + ' – ' + (rs.denNgay || '…/…/……') + ' · Tổ trưởng: ' + ttName, {al: 'center', after: 100}),
         ctx.P('Hướng dẫn: ghi ngay khi xảy ra tai nạn lao động hoặc sự cố (cháy, đổ dầu, hư hỏng thiết bị, sạt lở...). Tổ trưởng xác nhận trong ngày; chủ rừng xác nhận khi kiểm tra. Nếu không phát sinh thì ghi xác nhận ở phần cuối.', {al: 'left', i: true, sz: 22, after: 100}),
         ctx.T([600, 1700, 2300, 1500, 3300, 2000, 2337, 1400],
@@ -367,7 +366,7 @@
       return [
         ctx.P('**BIÊN BẢN KIỂM TRA, BẢO DƯỠNG THIẾT BỊ**', {al: 'center', sz: 28, before: 60, after: 40}),
         ctx.P('Cưa xăng · Phương tiện vận chuyển · Bình chữa cháy', {al: 'center', i: true, after: 80}),
-        ctx.P('- Chủ rừng: **' + ctx.upper(rsName) + '** · Mã rừng: **' + dot(rs.maRung, 4) + '** · Địa điểm: ' + dot(rs.diaDiem, 8), {al: 'left', after: 40}),
+        ctx.P('- Chủ rừng: **' + ctx.upper(rsName) + '** · Địa điểm: ' + dot(rs.diaDiem, 8), {al: 'left', after: 40}),
         ctx.P('- Ngày kiểm tra: **' + dot(ex.tbNgay, 6) + '** · Người kiểm tra: **' + dot(ex.tbNguoi, 8) + '**', {al: 'left', after: 100}),
         ctx.T([650, 3000, 1800, 2400, 2200, 3200, 1887],
           [['STT', 'THIẾT BỊ / BIỂN KIỂM SOÁT', 'SỐ HIỆU / MÃ', 'HẠN KIỂM ĐỊNH, BẢO HIỂM, SỬ DỤNG', 'TÌNH TRẠNG', 'NỘI DUNG KIỂM TRA, BẢO DƯỠNG', 'GHI CHÚ'], ...rows],
@@ -399,7 +398,7 @@
         ...(direct ? partyBlock('ĐẠI DIỆN TỔ KHAI THÁC (BÊN B)', tt, ttName) : benBGiaoKhoan('BÊN KHAI THÁC (BÊN B)', rec, tt, ttName)),
         ctx.P('Hai bên cùng tiến hành nghiệm thu và thanh lý với các nội dung sau:', {keep: true}),
         ctx.P('**Điều 1: Thông tin rừng đã khai thác**', {keep: true}),
-        ctx.P('Mã rừng: ' + dot(rs.maRung, 4) + '. Địa điểm: ' + dot(rs.diaDiem, 8) + ctx.rungText(rs) + '.', {ind: 360}),
+        ctx.P('Địa điểm: ' + dot(rs.diaDiem, 8) + ctx.rungText(rs) + '.', {ind: 360}),
         ctx.P('Thời gian khai thác: ' + ctx.VP(ctx.tuDen(rs.tuNgay, rs.denNgay, ex), ctx.S_TUDEN) + '.', {ind: 360}),
         ctx.P('**Điều 2: Nghiệm thu khối lượng**', {keep: true}),
         ctx.P('2.1. Khối lượng khai thác được nghiệm thu: **' + ctx.V(vol ? ctx.fmtT(kg) : '………', 14) + ' tấn**' + (ex._mode === 'day' ? ctx.V(vol ? ' (' + vol.src + ')' : '', 0, '') : '') + '.', {ind: 360}),
@@ -432,7 +431,7 @@
         ctx.P('Tôi tên là:', {after: 60, before: 80}),
         ...partyBlock('CHỦ RỪNG (NGƯỜI CAM KẾT)', rs, rsName, {noSinh: true}),
         ctx.P('Là chủ sử dụng diện tích rừng trồng có thông tin như sau:', {after: 60}),
-        ctx.bl('Mã rừng: ' + dot(rs.maRung, 4) + (rs.tenRung ? ' (' + rs.tenRung + ')' : '')),
+        ctx.bl('Rừng: ' + dot(rs.tenRung, 4)),
         ctx.bl('Địa điểm: ' + dot(rs.diaDiem, 8)),
         ctx.bl('Tọa độ (WGS84): ' + (rs.lat != null && rs.lng != null ? rs.lat + ', ' + rs.lng : '……………………')),
         ctx.bl('Diện tích: ' + (rs.dienTich ? rs.dienTich + ' ha' : '……… ha') + ' · Khối lượng dự kiến khai thác: ' + (vol ? ctx.fmtT(Math.round(vol.v * 1000)) + ' tấn' : '……… tấn')),
@@ -458,7 +457,7 @@
       return [
         ...TITLE_HEAD(),
         ctx.P('**BẢN CAM KẾT SỬ DỤNG LAO ĐỘNG**', {al: 'center', sz: 28, before: 120, after: 40}),
-        ctx.P('Khai thác rừng ' + (rs.tenRung || rs.maRung) + ' · Mã rừng ' + dot(rs.maRung, 4), {al: 'center', after: 40}),
+        ctx.P('Khai thác rừng ' + dot(rs.tenRung, 4), {al: 'center', after: 40}),
         ctx.P('(' + rs.diaDiem + ')', {al: 'center', i: true, after: 200}),
         ...LAW_LD.slice(0, 2).map(t => ctx.P('- ' + t, {after: 60})),
         ctx.P('Chúng tôi gồm: **' + ctx.upper(rsName) + '** (chủ rừng) và **' + ctx.upper(ttName) + '** (tổ trưởng, đại diện tổ khai thác), cùng cam kết đối với toàn bộ người lao động tham gia khai thác rừng nêu trên như sau:', {before: 80}),
@@ -498,7 +497,7 @@
       return [
         ctx.P('**BIÊN BẢN KIỂM TRA HIỆN TRƯỜNG KHAI THÁC**', {al: 'center', sz: 28, before: 60, after: 40}),
         ctx.P('(Kiểm tra trước khai thác và sau khai thác)', {al: 'center', i: true, after: 120}),
-        ctx.P('- Chủ rừng: **' + ctx.upper(rsName) + '** · Mã rừng: **' + dot(rs.maRung, 4) + '** · Địa điểm: ' + dot(rs.diaDiem, 8), {al: 'left', after: 40}),
+        ctx.P('- Chủ rừng: **' + ctx.upper(rsName) + '** · Địa điểm: ' + dot(rs.diaDiem, 8), {al: 'left', after: 40}),
         ctx.P('- Tọa độ (WGS84): ' + (rs.lat != null && rs.lng != null ? rs.lat + ', ' + rs.lng : '……………………') + ' · Diện tích: ' + (rs.dienTich ? rs.dienTich + ' ha' : '……… ha') + ' · Thời gian khai thác: ' + (rs.tuNgay || '…/…/……') + ' – ' + (rs.denNgay || '…/…/……'), {al: 'left', after: 40}),
         ctx.P('- Kiểm tra trước khai thác ngày: **' + dot(ex.ktNgayTruoc, 6) + '** · Kiểm tra sau khai thác ngày: **' + dot(ex.ktNgaySau, 6) + '** · Người kiểm tra: **' + dot(ex.ktNguoi, 8) + '**', {al: 'left', after: 120}),
         ctx.T([650, 7000, 2200, 2200, 3087],
@@ -543,7 +542,7 @@
           {t: 'br'},
           ctx.P('**BẢNG KÊ KHỐI LƯỢNG ĐÍNH KÈM**', {al: 'center', sz: 28, before: 0, after: 60, full: true}),
           ctx.P('(Kèm theo Biên bản xác nhận khối lượng vận chuyển số ' + ex._so.xn.so + ' và Hợp đồng vận chuyển số ' + hdNo + ')', {al: 'center', i: true, after: 160, full: true}),
-          ctx.P('Bên vận chuyển (Bên B): **' + ctx.upper(g.ten) + '** · Mã rừng: ' + (rs.maRung || '…') + ' · ' + (ctx.tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', Object.assign({}, ex, {_mode: 'day'}))) + '.', {al: 'left', after: 120, full: true}),
+          ctx.P('Bên vận chuyển (Bên B): **' + ctx.upper(g.ten) + '** · ' + (ctx.tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', Object.assign({}, ex, {_mode: 'day'}))) + '.', {al: 'left', after: 120, full: true}),
           ...(ngSame ? [ctx.P('Nơi giao (nhà máy): **' + (ex.vcDiemDen || (tr[0] && tr[0].noiGiao) || '………………') + '**', {al: 'left', after: 120, full: true})] : []),
           ngSame
             ? ctx.T([650, 1700, 2100, 2400, 2505],   // cùng một nơi giao: ghi một dòng phía trên, không lặp trong khung bảng
@@ -572,7 +571,7 @@
         ctx.P('**Bên nhận tiền (Bên B): ' + ctx.upper(g.ten) + '**', {after: 40}),
         ctx.P('Địa chỉ: ' + (g.diaChi || '…………') + ' · CCCD số: ' + (g.cccd || '…………'), {ind: 360, after: 100}),
         ctx.P('Địa điểm giao hàng (theo hồ sơ rừng): ' + dot(ex.vcDiemDen, 10) + '.', {after: 100}),
-        ctx.P('Mã rừng: ' + (rs.maRung || '…') + ' · Kỳ thanh toán: ' + ctx.VP(ctx.tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', ex), ctx.S_TUDEN) + '.', {after: 40}),
+        ctx.P('Kỳ thanh toán: ' + ctx.VP(ctx.tuDen(tr.length ? tr[0].ngay : '', tr.length ? tr[tr.length - 1].ngay : '', ex), ctx.S_TUDEN) + '.', {after: 40}),
         ctx.P('Đơn giá: **' + ctx.fmt(g.donGia) + ' đồng/tấn** (' + tp.text + '), tính theo khối lượng giao tại nhà máy theo phiếu cân.', {after: 140}),
         ctx.P('Chi tiết từng xe: xem **Bảng kê chi tiết thanh toán đính kèm**.', {after: 80}),
         ctx.P('Tổng khối lượng: **' + ctx.V(py.n ? ctx.fmtT(py.kg) : '………', 14) + ' tấn** (' + ctx.V(py.n ? String(py.n) : '…', 4) + ' chuyến).', {before: 40, after: 40}),
@@ -590,7 +589,7 @@
           {t: 'br'},
           ctx.P('**BẢNG KÊ CHI TIẾT THANH TOÁN ĐÍNH KÈM**', {al: 'center', sz: 28, before: 0, after: 60, full: true}),
           ctx.P('(Kèm theo Bảng thanh toán tiền vận chuyển, Hợp đồng vận chuyển số ' + hdNo + ' và Biên bản xác nhận khối lượng vận chuyển số ' + ex._so.xn.so + ')', {al: 'center', i: true, after: 160, full: true}),
-          ctx.P('Bên nhận tiền (Bên B): **' + ctx.upper(g.ten) + '** · Mã rừng: ' + (rs.maRung || '…') + ' · Đơn giá: ' + ctx.fmt(g.donGia) + ' đồng/tấn.', {al: 'left', after: 120, full: true}),
+          ctx.P('Bên nhận tiền (Bên B): **' + ctx.upper(g.ten) + '** · Đơn giá: ' + ctx.fmt(g.donGia) + ' đồng/tấn.', {al: 'left', after: 120, full: true}),
           ctx.T([650, 2100, 1300, 1700, 1700, 1905],
             [['STT', 'Biển kiểm soát', 'Số chuyến', 'Khối lượng (tấn)', 'Đơn giá (đồng/tấn)', 'Thành tiền (đồng)'],
               ...py.rows.map((r, i) => [String(i + 1), r.bienSo, String(r.n), ctx.fmtT(r.kg), ctx.fmt(g.donGia), ctx.fmt(r.tien)]),
