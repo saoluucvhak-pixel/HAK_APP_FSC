@@ -106,7 +106,7 @@ jobs:
         run: test -f reports/e2e-pdf/summary.md && cat reports/e2e-pdf/summary.md >> "$GITHUB_STEP_SUMMARY" || true
   build:
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 60   # 40 phút không đủ: bước e2e Electron riêng đã ~34 phút, PR 110 bị hủy hai lần đúng lúc chạm 40 phút
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
         with:
