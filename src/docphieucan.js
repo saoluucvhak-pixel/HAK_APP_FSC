@@ -43,14 +43,14 @@
       });
     }
     const normNC = o => ({
-      _row: o._row, maRung: ctx.trim(o.maRung), vaiTro: ctx.trim(o.vaiTro), stt: ctx.trim(o.stt), danhXung: ctx.trim(o.danhXung),
+      _row: o._row, maRung: '', vaiTro: ctx.trim(o.vaiTro), stt: ctx.trim(o.stt), danhXung: ctx.trim(o.danhXung),
       ten: ctx.trim(o.ten), ngaySinh: ctx.normDate(o.ngaySinh), cccd: ctx.normCccd(o.cccd), ngayCap: ctx.normDate(o.ngayCap),
       noiCap: ctx.trim(o.noiCap), diaChi: ctx.trim(o.diaChi), chucDanh: ctx.trim(o.chucDanh), doi: ctx.trim(o.doi)
     });
     const noneVal = v => /^(khong|khong co|n\/a|na|-+|x)$/.test(ctx.trim(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase()) ? '' : v;
     const keyName = v => ctx.trim(v).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase();
     const normDX0 = o => ({
-      _row: o._row, maRung: ctx.trim(o.maRung), stt: ctx.trim(o.stt), chuXe: ctx.trim(o.chuXe), ngaySinh: ctx.normDate(o.ngaySinh),
+      _row: o._row, maRung: '', stt: ctx.trim(o.stt), chuXe: ctx.trim(o.chuXe), ngaySinh: ctx.normDate(o.ngaySinh),
       cccd: ctx.normCccd(o.cccd), ngayCap: ctx.normDate(o.ngayCap), noiCap: ctx.trim(o.noiCap), diaChi: ctx.trim(o.diaChi),
       bienSo: ctx.trim(o.bienSo).toUpperCase(), cavet: ctx.normDate(o.cavet), loaiXe: ctx.trim(o.loaiXe), nguoiKy: ctx.normNK(o.nguoiKy),
       taiXe: ctx.trim(o.taiXe), ngaySinhTx: ctx.normDate(o.ngaySinhTx), cccdTx: ctx.normCccd(o.cccdTx), ngayCapTx: ctx.normDate(o.ngayCapTx),
@@ -85,7 +85,7 @@
       const lbl = 'Phiếu ' + (ctx.trim(o.soPhieu) || '(không số)'), giaLoi = [['donGia', 'cột ĐG_AD / Đơn giá'], ['donGiaTC', 'cột Đơn giá_TC'], ['thanhTien', 'cột Thành tiền']].map(([k, n]) => ctx.HAKMoney.problem(lbl + ', ' + n, o[k])).filter(Boolean);
       let donGia = moneyCell(o.donGia); if (donGia == null) donGia = moneyCell(o.donGiaTC);   // ĐG_AD; trống thì dùng Đơn giá_TC
       return {
-        _row: o._row, maRung: ctx.trim(o.maRung), stt: ctx.trim(o.stt), ngay: ctx.normDate(o.ngay), ngay2: o.ngay2 == null || ctx.trim(o.ngay2) === '' ? '' : ctx.normDate(o.ngay2), gioCan1: timeCell(o.gioCan1), gioCan2: timeCell(o.gioCan2), bienSo: ctx.trim(o.bienSo).toUpperCase(),
+        _row: o._row, maRung: '', stt: ctx.trim(o.stt), ngay: ctx.normDate(o.ngay), ngay2: o.ngay2 == null || ctx.trim(o.ngay2) === '' ? '' : ctx.normDate(o.ngay2), gioCan1: timeCell(o.gioCan1), gioCan2: timeCell(o.gioCan2), bienSo: ctx.trim(o.bienSo).toUpperCase(),
         soPhieu: typeof o.soPhieu === 'number' ? String(Math.round(o.soPhieu)) : ctx.trim(o.soPhieu), can1: c1, can2: c2, klKg,
         kl, khachHang: ctx.trim(o.khachHang), diaChi: ctx.trim(o.diaChi), nguonGoc: ctx.trim(o.nguonGoc), soCT: ctx.trim(o.soCT), trangThai: ctx.trim(o.trangThai), donGia, thanhTien: moneyCell(o.thanhTien), giaLoi, noiGiao: ctx.trim(o.noiGiao), ghiChu: ctx.trim(o.ghiChu), doi: ctx.trim(o.doi)
       };
@@ -130,7 +130,6 @@
       pc.forEach(r => {
         if (ctx.trim(r.doi) && rec.doi && rec.doi.length > 1 && !rec.doi.some(d => d.id === r.doiId) && !rec.doi.some(d => keyName(d.ten) === keyName(r.doi))) mark(r, 'err', 'Đội “' + ctx.trim(r.doi) + '” không có trong lô (tên đội ở tab Nhân công): sửa tên đội hoặc để trống ô Đội');
         { const d = thieuKy.size ? doiXeOfPc(rec, r) : null; if (d && d.hd && thieuKy.has(d.hd.id)) mark(r, 'err', 'Biển ' + r.bienSo + ' thuộc đội xe chưa có người ký (chủ xe hoặc tài xế): vào tab Vận chuyển chọn người ký cho đội xe này'); }
-        if (r.maRung && (String(r.maRung == null ? '' : r.maRung).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase()) !== (String(rec.info.maRung == null ? '' : rec.info.maRung).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase())) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
         if (!ctx.HAKDates.isValid(r.ngay)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + ctx.HAKDates.why(r.ngay).replace(/^thiếu ngày$/, 'thiếu ngày cân'));
         const coXe = r.xeRowId && rec.dx.some(x => x.id === r.xeRowId);   // 3.0: phiếu đã chọn xe (ID dòng xe) — BKS ghi trên phiếu giữ nguyên dù khác
         if (!r.bienSo && !coXe) mark(r, 'err', 'Thiếu biển kiểm soát');

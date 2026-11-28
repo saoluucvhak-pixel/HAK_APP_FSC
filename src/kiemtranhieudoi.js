@@ -60,7 +60,6 @@
         const at = 'Dòng ' + r._row + ': ';
         const bad = m => { errs.push(at + m); state[r._row] = 'err'; };
         const warn = m => { warns.push(at + m); if (!state[r._row]) state[r._row] = 'warn'; };
-        if (r.maRung && (String(r.maRung == null ? '' : r.maRung).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase()) !== (String(rec.info.maRung == null ? '' : rec.info.maRung).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase())) bad('Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
         const role = /^tổ trưởng/i.test(r.vaiTro) ? 'TT' : /^công nhân/i.test(r.vaiTro) ? 'CN' : null;
         if (!role) bad('Vai trò phải là "Tổ trưởng" hoặc "Công nhân"');
         if (role === 'TT') tt++;
@@ -130,7 +129,6 @@
       rec.dx.forEach(r => {
         const at = 'Dòng ' + r._row + ': ';
         const bad = m => { errs.push(at + m); state[r._row] = 'err'; };
-        if (r.maRung && (String(r.maRung == null ? '' : r.maRung).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase()) !== (String(rec.info.maRung == null ? '' : rec.info.maRung).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase())) bad('Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
         if (ctx.trim(r.doiXe) && rec.hdvc) {
           const khopHd = rec.hdvc.filter(h => ctx.hdTenKhop({dx: rec.dx, hdvc: rec.hdvc}, h, r.doiXe));
           if (!khopHd.length) bad('Đội xe “' + ctx.trim(r.doiXe) + '” không có trong lô: thêm đội xe ở tab Vận chuyển trước, hoặc để trống ô Đội xe');

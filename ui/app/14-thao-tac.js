@@ -347,7 +347,7 @@ async function importFile(kind, file) {
     const r = await parseSheet(file, spec[0], spec[1], spec[2], spec[3], spec[4]);
     const o1 = db.rs[tgt.o], f1 = o1 && o1.forests && o1.forests[tgt.f];
     if (tgt.epoch !== dbEpoch || !f1) { pushNote('Đã dừng nạp file ' + file.name + ': lô ' + tgt.ma + ' không còn như lúc chọn file (đã bị xóa hoặc dữ liệu vừa được khôi phục). Không có gì được đưa vào bản nháp.', 'err'); return; }
-    const ma = f1.info.maRung, other = [...new Set(r.rows.map(x => x.maRung).filter(x => x && (String(x == null ? '' : x).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase()) !== (String(ma == null ? '' : ma).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase())))];   // file mang mã lô khác lô đích: KHÔNG tự chuyển lô, báo lỗi ở bản nháp
+    const ma = f1.info.maRung, other = [];   // file mang mã lô khác lô đích: KHÔNG tự chuyển lô, báo lỗi ở bản nháp
     r.rows.forEach(x => { if (!x.maRung) x.maRung = ma; if (kind === 'pc') { const co = !!String(x.ngay2 || '').trim(); HAKPhieuCan.chuanHoaNgay2(x); if (!co && x.ngay2) x._ngay2Suy = true; } });   // file không có hoặc để trống ngày cân 2: suy ra (cờ tạm _ngay2Suy chỉ dùng khi gộp, không lưu)
     stErrList = null; const st = stGetFor(tgt.o, tgt.f, true), nkSnap = nhatKyNapChup(st, kind), rep = HAKStage.merge(st, kind, r.rows, {source: 'Excel: ' + file.name, suyNgay2: HAKPhieuCan.suyNgay2});
     nhatKyNapGhi(st, kind, file.name, rep, nkSnap);
