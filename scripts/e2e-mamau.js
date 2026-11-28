@@ -35,8 +35,8 @@ const build = (kind, mode) => {   // mode: 'khong' (như mẫu mới) | 'trong' 
       ok(kind + ' — ' + label + ': không có lỗi về mã rừng ở màn Kiểm tra', !/khác lô đang mở/.test(await w.innerText('#main')));
     }
     await w.setInputFiles(`input[data-file="${kind}"]`, build(kind, 'lech')); await w.waitForTimeout(900);
-    const t = await w.innerText('#main'), f = await forest();
-    ok(kind + ' — file cũ có Mã rừng lệch lô: báo lỗi nêu rõ cách xử lý (để trống ô hoặc sửa cho đúng)', /khác lô đang mở/.test(t) && /để trống ô Mã rừng hoặc sửa cho đúng lô/.test(t), t.slice(0, 300));
+    const t = await w.innerText('#main');
+    ok(kind + ' — file cũ có Mã rừng khác lô đang mở: vẫn nạp vào lô đang mở (bỏ qua cột Mã rừng), không báo lỗi lệch mã', !/khác lô đang mở/.test(t) && /vào BẢN NHÁP của lô CR-001-R1/.test(t), t.slice(0, 300));
     await w.evaluate(() => document.querySelector('[data-act=stDiscard]') && document.querySelector('[data-act=stDiscard]').click()); await w.waitForTimeout(300);   // bỏ bản nháp lệch lô (không ghi gì)
     await w.setInputFiles(`input[data-file="${kind}"]`, build(kind, 'khong')); await w.waitForTimeout(900); if (kind === 'pc') await xacNhanHopDongPhieu(w); await stSave(w);   // trả về dữ liệu sạch cho các mẫu sau
   }

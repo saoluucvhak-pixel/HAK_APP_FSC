@@ -37,8 +37,8 @@ test('dot: giá trị trống thì in dấu chấm; có giá trị thì giữ ng
 
 test('rungRef: mã rừng, tọa độ và thời gian khai thác nối bằng dấu chấm giữa', () => {
   const api = mk();
-  assert.strictEqual(api.rungRef({maRung: 'R-1', lat: 15.5, lng: 108.1, tuNgay: '05/10/2026', denNgay: '20/10/2026'}), 'Mã rừng: R-1 · Tọa độ (WGS84): 15.5, 108.1 · Thời gian khai thác: 05/10/2026 – 20/10/2026');
-  assert.strictEqual(api.rungRef({maRung: 'R-1', tuNgay: '05/10/2026'}), 'Mã rừng: R-1 · Thời gian khai thác: 05/10/2026');
+  assert.strictEqual(api.rungRef({maRung: 'R-1', lat: 15.5, lng: 108.1, tuNgay: '05/10/2026', denNgay: '20/10/2026'}), 'Tọa độ (WGS84): 15.5, 108.1 · Thời gian khai thác: 05/10/2026 – 20/10/2026');
+  assert.strictEqual(api.rungRef({maRung: 'R-1', tuNgay: '05/10/2026'}), 'Thời gian khai thác: 05/10/2026');
   assert.strictEqual(api.rungRef({}), '');
 });
 

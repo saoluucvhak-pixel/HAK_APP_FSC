@@ -11,7 +11,7 @@
   const SPECS = {
     nc: {
       sheet: 'NHAN_CONG', file: 'HAK_Mau_NhanCong.xlsx', title: 'MẪU NHẬP NHÂN CÔNG', tab: 'tab Nhân công',
-      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG có cột Mã rừng. ' + 'Danh sách người lao động của MỘT lô rừng (một dòng = một người). Từ đây phần mềm lập hợp đồng khai thác, Giấy ủy quyền, hợp đồng lao động, bảng chấm công, sổ cấp phát BHLĐ và bảng thanh toán tiền công.',
+      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG cần cột Mã rừng. ' + 'Danh sách người lao động của MỘT lô rừng (một dòng = một người). Từ đây phần mềm lập hợp đồng khai thác, Giấy ủy quyền, hợp đồng lao động, bảng chấm công, sổ cấp phát BHLĐ và bảng thanh toán tiền công.',
       steps: ['Mở lô rừng cần nhập trong phần mềm, vào tab “Nhân công” và chọn cách ký, cách trả lương, đơn giá theo vị trí TRƯỚC (thiếu đơn giá thì phần mềm báo lỗi).',
         'Mở trang tính NHAN_CONG của file này. Điền từ dòng 2, mỗi người một dòng; KHÔNG sửa, xóa, đổi tên hay đổi thứ tự dòng tiêu đề (dòng 1).',
         'Cột có tiêu đề màu đỏ sẫm là cột bắt buộc. Cột có mũi tên chọn (Chức vụ, Danh xưng, Vị trí) chỉ chọn trong danh sách.',
@@ -32,8 +32,7 @@
         {n: 'Đội', req: K, fmt: 'Văn bản (tên đội)', ex: '', note: 'Chỉ cần khi lô có từ 2 tổ trưởng: mỗi tổ trưởng một tên đội riêng, công nhân ghi tên đội của mình. Lô chỉ có 1 tổ trưởng thì để trống.'}],
       rules: ['Mỗi lô có ít nhất 1 tổ trưởng; mỗi tổ trưởng là một đội. Lô nhiều đội: ghi tên đội ở cột Đội cho cả tổ trưởng và công nhân, tên đội của các tổ trưởng không trùng nhau.', 'CCCD đủ 12 chữ số và không trùng giữa các dòng.', 'Ngày sinh, ngày cấp là ngày có thật (kiểm tra theo lịch, có tính năm nhuận: 29/02/2028 hợp lệ, 29/02/2026 sai).',
         'Phải có đơn giá cho từng vị trí trong mục “Cơ sở tính đơn giá” của tab Nhân công; thiếu thì báo lỗi.', 'Người dưới 18 tuổi bị chặn xuất Giấy ủy quyền (BM-20).'],
-      errors: [['File thiếu cột: ...', 'Dùng đúng file mẫu; không sửa, xóa hay đổi tên các ô tiêu đề ở dòng 1.'], ['Mã rừng "…" khác lô đang mở', 'Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng (mẫu mới không cần cột này; dữ liệu luôn nạp vào lô đang mở).'],
-        ['CCCD phải gồm 9 hoặc 12 chữ số', 'Nhập lại đủ 12 số (CCCD) hoặc 9 số (CMND); giữ số 0 đầu (cột đã là văn bản, không đổi sang số).'], ['CCCD trùng dòng n', 'Hai người không dùng chung CCCD: sửa CCCD ở một trong hai dòng.'],
+      errors: [['File thiếu cột: ...', 'Dùng đúng file mẫu; không sửa, xóa hay đổi tên các ô tiêu đề ở dòng 1.'], ['CCCD phải gồm 9 hoặc 12 chữ số', 'Nhập lại đủ 12 số (CCCD) hoặc 9 số (CMND); giữ số 0 đầu (cột đã là văn bản, không đổi sang số).'], ['CCCD trùng dòng n', 'Hai người không dùng chung CCCD: sửa CCCD ở một trong hai dòng.'],
         ['Cần ít nhất 1 tổ trưởng', 'Có ít nhất một dòng Chức vụ “Tổ trưởng”; lô nhiều tổ trưởng thì ghi cột Đội cho mọi dòng.'], ['Vị trí không hợp lệ', 'Chọn vị trí trong danh sách của ô.'], ['Ngày sinh "…" không có thật hoặc sai dd/mm/yyyy', 'Nhập lại dạng dd/mm/yyyy với ngày có thật.'],
         ['chưa có đơn giá … cho "…"', 'Vào tab Nhân công, mục Cơ sở tính đơn giá, nhập đơn giá cho vị trí đó rồi nạp lại.']],
       example: [['Tổ trưởng', '1', 'Ông', 'TRẦN VĂN TỔ', '15/03/1985', '049085000001', '01/01/2021', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 2, xã Quế Sơn Trung, TP Đà Nẵng', 'Tổ trưởng', ''],
@@ -42,7 +41,7 @@
     },
     dx: {
       sheet: 'DOI_XE', file: 'HAK_Mau_DoiXe.xlsx', title: 'MẪU NHẬP ĐỘI XE VẬN CHUYỂN', tab: 'tab Vận chuyển',
-      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG có cột Mã rừng. ' + 'Danh sách xe vận chuyển gỗ của MỘT lô rừng (một dòng = một xe). Từ đây phần mềm lập hợp đồng vận chuyển (BM-04), nhóm xe theo người ký, kiểm tra biển số khi nhập phiếu cân và cảnh báo giấy tờ xe sắp hết hạn.',
+      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG cần cột Mã rừng. ' + 'Danh sách xe vận chuyển gỗ của MỘT lô rừng (một dòng = một xe). Từ đây phần mềm lập hợp đồng vận chuyển (BM-04), nhóm xe theo người ký, kiểm tra biển số khi nhập phiếu cân và cảnh báo giấy tờ xe sắp hết hạn.',
       steps: ['Mở lô rừng, vào tab “Vận chuyển”, chọn cách tính giá vận chuyển (cố định hoặc tấn/km).',
         'Mở trang tính DOI_XE. Điền từ dòng 2, mỗi xe một dòng; KHÔNG sửa dòng tiêu đề (dòng 1). Cột tiêu đề đỏ sẫm là cột bắt buộc.',
         'Chọn người ký hợp đồng ở cột “Người ký HĐ vận chuyển”: “Chủ xe” hoặc “Tài xế”. Chỉ người ký mới phải có đủ CCCD, ngày cấp, thường trú và SĐT; người không ký thì có thể để trống các cột này.',
@@ -84,7 +83,7 @@
     },
     pc: {
       sheet: 'PHIEU_CAN', file: 'HAK_Mau_PhieuCan.xlsx', title: 'MẪU NHẬP PHIẾU CÂN VẬN CHUYỂN', tab: 'tab Vận chuyển',
-      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG có cột Mã rừng. ' + 'Phiếu cân của nhà máy cho từng chuyến xe của MỘT lô rừng (một dòng = một chuyến). Từ đây phần mềm tính khối lượng giao, tiền vận chuyển từng xe (BM-09, BM-10), sổ phiếu cân và các báo cáo.',
+      purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG cần cột Mã rừng. ' + 'Phiếu cân của nhà máy cho từng chuyến xe của MỘT lô rừng (một dòng = một chuyến). Từ đây phần mềm tính khối lượng giao, tiền vận chuyển từng xe (BM-09, BM-10), sổ phiếu cân và các báo cáo.',
       steps: ['Nạp đội xe của lô TRƯỚC (mẫu DOI_XE): phiếu cân chỉ nhận biển số có trong danh sách xe.',
         'Mở trang tính PHIEU_CAN. Điền từ dòng 2, mỗi chuyến một dòng; KHÔNG sửa dòng tiêu đề (dòng 1). Cột tiêu đề đỏ sẫm là cột bắt buộc. Đây là bộ cột ĐẦY ĐỦ để in phiếu cân (cùng tên cột với file mẫu của công cụ PhieuCan); file của công cụ đó (tiêu đề ở dòng 4) cũng nạp được.',
         'Ngày cân nhập dạng dd/mm/yyyy và phải là ngày có thật. Khối lượng nhập bằng cột KL (kg), cột tấn hoặc để phần mềm tự tính từ Cân 1 − Cân 2. Giờ cân, cân 1/2, khách hàng, địa chỉ, đơn giá, thành tiền là tùy chọn nhưng nên điền đủ để in phiếu cân đầy đủ.',
@@ -118,7 +117,7 @@
         'Cảnh báo (không chặn) khi tổng phiếu cân lệch khối lượng khai thác quá ngưỡng đã đặt ở tab Xuất hồ sơ.'],
       errors: [['Biển … chưa có trong danh sách xe', 'Thêm xe vào file đội xe, nạp lại đội xe rồi nạp phiếu cân.'], ['Ngày … không có thật / thiếu ngày cân', 'Sửa ngày đúng dd/mm/yyyy với ngày có thật (ví dụ 28/02/2026) rồi nạp lại.'],
         ['Số phiếu cân … trùng với dòng n', 'Kiểm tra phiếu nhập hai lần; xóa hoặc sửa số phiếu.'], ['Khối lượng không hợp lệ / thiếu khối lượng', 'Nhập số tấn lớn hơn 0 (25,4).'],
-        ['Mã rừng "…" khác lô đang mở', 'Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng.'], ['File thiếu cột: ...', 'Dùng đúng file mẫu, không sửa dòng tiêu đề.']],
+        ['File thiếu cột: ...', 'Dùng đúng file mẫu, không sửa dòng tiêu đề.']],
       example: [['1', 'PC001', '05/10/2026', '08:15:00', '05/10/2026', '09:40:00', '92C-123.45', '40400', '15000', '25400', '25,4', 'DT_ĐL', 'NGUYỄN VĂN AN', 'Thôn A, xã B', '1250000', '101/2026/NK', '', 'OK', '31750000', 'Nhà máy dăm A', '', ''], ['2', 'PC002', '06/10/2026', '08:30:00', '06/10/2026', '10:05:00', '92C-678.90', '39600', '15000', '', '', 'DT_ĐL', 'NGUYỄN VĂN AN', 'Thôn A, xã B', '1250000', '102/2026/NK', '', 'OK', '', 'Nhà máy dăm A', 'KL tự tính = Cân 1 − Cân 2', ''], ['3', 'PC003', '29/02/2028', '', '', '', '92C-123.45', '', '', '', '26,1', '', '', '', '', '', '', '', '', 'Nhà máy dăm A', 'Ví dụ ngày nhuận hợp lệ', '']]
     }
   };
@@ -171,7 +170,7 @@
 <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
 </cellXfs>
-<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles><dxfs count="2"><dxf><fill><patternFill patternType="solid"><fgColor rgb="FFF0FDFA"/><bgColor rgb="FFF0FDFA"/></patternFill></fill><border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom></border></dxf><dxf><border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom></border></dxf></dxfs>
 </styleSheet>`;
 
   /* Trang tính dựng từ danh sách hàng: row = {h: chiều cao, cells: [{c, v, s, t}]} ; merges, cols, validations... */
@@ -192,10 +191,11 @@
     const mc = (o.merges || []).length ? '<mergeCells count="' + o.merges.length + '">' + o.merges.map(m => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>' : '';
     const dv = (o.validations || []).length ? '<dataValidations count="' + o.validations.length + '">' + o.validations.join('') + '</dataValidations>' : '';
     const pg = '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="' + (o.landscape ? 'landscape' : 'portrait') + '" fitToHeight="0"/>';
-    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:' + lastCol + o.rows.length + '"/>' + view + '<sheetFormatPr defaultRowHeight="15"/>' + colsXml + '<sheetData>' + rows + '</sheetData>' + af + mc + dv + pg + '</worksheet>';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr>' + (o.tab ? '<tabColor rgb="' + o.tab + '"/>' : '') + '<pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:' + lastCol + o.rows.length + '"/>' + view + '<sheetFormatPr defaultRowHeight="' + (o.rowH || 15) + '"' + (o.rowH ? ' customHeight="1"' : '') + '/>' + colsXml + '<sheetData>' + rows + '</sheetData>' + af + mc + (o.cf || '') + dv + pg + (o.hf ? '<headerFooter><oddHeader>' + esc(o.hf[0]) + '</oddHeader><oddFooter>' + esc(o.hf[1]) + '</oddFooter></headerFooter>' : '') + '</worksheet>';
   }
   const dvPrompt = (ref, title, prompt, list) => '<dataValidation' + (list ? ' type="list" allowBlank="1" showErrorMessage="1" errorTitle="Giá trị không hợp lệ" error="Chọn một giá trị trong danh sách."' : ' allowBlank="1"') + ' showInputMessage="1" promptTitle="' + esc(String(title).slice(0, 32)) + '" prompt="' + esc(String(prompt).slice(0, 250)) + '" sqref="' + ref + '">' + (list ? '<formula1>"' + esc(list.join(',')) + '"</formula1>' : '') + '</dataValidation>';
 
+  const HF_HEAD = '&L&"Calibri,Bold"HAKQN Desktop&R&"Calibri,Regular"&A', HF_FOOT = '&L&"Calibri,Italic"Hồ sơ khai thác và vận chuyển gỗ keo · chuẩn FSC&RTrang &P / &N';
   function guideSheet(spec, meta) {
     const W = [6, 30, 16, 28, 26, 64], rows = [], merges = [], n = W.length - 1;
     const add = (cells, h) => { rows.push({h, cells}); return rows.length; };
@@ -221,20 +221,20 @@
     add([]);
     mergeRow('6. Lưu ý', S.sec, 22);
     ['File thật chứa thông tin cá nhân (họ tên, CCCD, địa chỉ): chỉ lưu và gửi trong nội bộ, không đăng công khai.', 'Không đổi tên trang tính ' + spec.sheet + ', không thêm cột, không gộp ô, không để dòng trống ở giữa dữ liệu.', 'Dùng đúng mẫu của bản phần mềm đang cài: tải lại mẫu từ nút “Tải file mẫu” khi cập nhật phần mềm.'].forEach((t, i) => { const r = add([{c: 0, v: i + 1, s: S.mid}, {c: 1, v: t, s: S.body}].concat(Array.from({length: n - 1}, (_, k) => ({c: k + 2, s: S.body}))), 28); merges.push('B' + r + ':' + colL(n) + r); });
-    return sheetXml({rows, cols: W.map(w => ({w})), merges, active: true, landscape: true});
+    return sheetXml({rows, cols: W.map(w => ({w})), merges, active: true, landscape: true, tab: 'FF0F766E', hf: [HF_HEAD, HF_FOOT]});
   }
   function dataSheet(spec) {
     const cols = spec.cols, nCol = cols.length, last = colL(nCol - 1), head = cols.map((c, i) => ({c: i, v: c.n, s: c.req === A ? S.dHeadReq : S.dHeadOpt}));
     const widths = cols.map(c => Math.min(34, Math.max(13, c.n.length + 4, c.ex ? String(c.ex).length + 3 : 0)));
     const vals = cols.map((c, i) => dvPrompt(colL(i) + '2:' + colL(i) + '1000', c.n + (c.req === A ? ' (bắt buộc)' : ''), c.fmt + '. ' + c.note, c.list || null));
-    return sheetXml({rows: [{h: 38, cells: head}], cols: widths.map(w => ({w, s: S.text})), freeze: 1, filter: 'A1:' + last + '1', validations: vals, grid: true, landscape: true});
+    return sheetXml({rows: [{h: 38, cells: head}], cols: widths.map(w => ({w, s: S.text})), freeze: 1, filter: 'A1:' + last + '1', validations: vals, grid: true, landscape: true, tab: 'FF16A34A', rowH: 22, cf: '<conditionalFormatting sqref="A2:' + last + '500"><cfRule type="expression" dxfId="0" priority="1"><formula>MOD(ROW(),2)=0</formula></cfRule><cfRule type="expression" dxfId="1" priority="2"><formula>MOD(ROW(),2)=1</formula></cfRule></conditionalFormatting>', hf: [HF_HEAD, HF_FOOT]});
   }
   function exampleSheet(spec) {
     const cols = spec.cols, n = cols.length, rows = [], merges = [];
     rows.push({h: 28, cells: [{c: 0, v: 'DỮ LIỆU GIẢ ĐỂ THAM KHẢO CÁCH ĐIỀN – phần mềm KHÔNG đọc trang này. Sao chép dòng cần dùng sang trang ' + spec.sheet + ' rồi sửa cho đúng.', s: S.note}].concat(Array.from({length: n - 1}, (_, i) => ({c: i + 1, s: S.note})))}); merges.push('A1:' + colL(n - 1) + '1');
     rows.push({h: 38, cells: cols.map((c, i) => ({c: i, v: c.n, s: c.req === A ? S.dHeadReq : S.dHeadOpt}))});
     spec.example.forEach(r => rows.push({h: 30, cells: r.map((v, i) => ({c: i, v, s: S.ex}))}));
-    return sheetXml({rows, cols: cols.map(c => ({w: Math.min(34, Math.max(13, c.n.length + 4, c.ex ? String(c.ex).length + 3 : 0))})), merges, freeze: 2, grid: true, landscape: true});
+    return sheetXml({rows, cols: cols.map(c => ({w: Math.min(34, Math.max(13, c.n.length + 4, c.ex ? String(c.ex).length + 3 : 0))})), merges, freeze: 2, grid: true, landscape: true, tab: 'FF94A3B8', hf: [HF_HEAD, HF_FOOT]});
   }
 
   async function build(kind, JSZip, meta) {
@@ -248,7 +248,7 @@
       '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
     z.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
     z.file('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets>' +
-      names.map((n, i) => '<sheet name="' + n + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">' + spec.sheet + '!$A$1:$' + colL(spec.cols.length - 1) + '$1</definedName></definedNames></workbook>');
+      names.map((n, i) => '<sheet name="' + n + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">' + spec.sheet + '!$A$1:$' + colL(spec.cols.length - 1) + '$1</definedName><definedName name="_xlnm.Print_Titles" localSheetId="1">' + spec.sheet + '!$1:$1</definedName></definedNames></workbook>');
     z.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
       names.map((_, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (names.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
     z.file('xl/styles.xml', STYLES);
