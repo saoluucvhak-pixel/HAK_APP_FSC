@@ -26,11 +26,27 @@ function panelPhanBo(rec) {
     chon + (doi ? '<div class="msg warn" id="pbChuaLuu">Đang xem trước “' + esc(HAKPhanBo.CHE_DO[cd]) + '”: bấm “Lưu phân bổ” để áp dụng.</div>' : '') + bang + cgDong + theoPhieu + '</div>';
 }
 /* chọn phiếu theo đội: mỗi phiếu tối đa một đội (pc.doiId); ghi ngay như ô Đội của bảng phiếu cân */
+/* Smart Filter của bảng chọn phiếu theo đội: chỉ lọc dòng HIỂN THỊ; tổng và phần mỗi đội luôn tính trên TOÀN BỘ phiếu */
+function pbSfCfg(rec) {
+  const SF = HAKCore.sf, dsDoi = rec.doi || [], tenD = d => trim(d.ten) || 'Đội ' + (dsDoi.indexOf(d) + 1);
+  return {
+    screenId: 'lo_phan_bo_phieu', title: 'Phiếu cân theo đội',
+    searchPlaceholder: 'Tìm số phiếu, ngày, BKS…',
+    quickFields: ['q', 'doi', 'chuaGan'], advancedFields: ['q', 'doi', 'chuaGan'],
+    matchQ: (r, q) => { const h = SF.hay([r.p.soPhieu, r.p.ngay, r.p.bienSo]); return q.split(/\s+/).filter(Boolean).every(w => h.includes(w)); },
+    fields: [
+      {key: 'doi', label: 'Đội', type: 'enum', options: dsDoi.map(d => ({value: d.id, label: tenD(d)})), match: (r, v) => r.p.doiId === v},
+      {key: 'chuaGan', label: 'Chưa phân bổ', type: 'bool', match: r => !dsDoi.some(x => x.id === r.p.doiId)}
+    ]
+  };
+}
 function pbPhieuHtml(rec, f) {
   const pc = rec.pc || []; if (!pc.length) return '<p class="mut">Rừng chưa có phiếu cân đã lưu.</p>';
+  const sfCfg = pbSfCfg(rec), sfRes = hakSfApply('lo_phan_bo_phieu', sfCfg, pc.map((p, i) => ({p, i})));   // giữ chỉ số gốc i cho ô data-pcdoi
   const tenD = d => trim(d.ten) || 'Đội ' + (rec.doi.indexOf(d) + 1);
-  return '<details style="margin-top:8px" open id="pbPhieu"><summary>Chọn phiếu theo đội (' + pc.length + ' phiếu)</summary><div class="wrap" style="max-height:320px"><table id="pbPhieuTbl"><thead><tr><th>Số phiếu</th><th>Ngày</th><th>BKS</th><th style="text-align:right">KL (tấn)</th><th>Đội</th></tr></thead><tbody>' +
-    pc.map((p, i) => { const d = rec.doi.find(x => x.id === p.doiId);
+  return '<details style="margin-top:8px" open id="pbPhieu"><summary>Chọn phiếu theo đội (' + pc.length + ' phiếu)</summary>' + hakSfBarHtml('lo_phan_bo_phieu', sfRes.total, sfRes.kept) + '<div class="wrap" style="max-height:320px"><table id="pbPhieuTbl"><thead><tr><th>Số phiếu</th><th>Ngày</th><th>BKS</th><th style="text-align:right">KL (tấn)</th><th>Đội</th></tr></thead><tbody>' +
+    (sfRes.rows.length ? '' : '<tr><td colspan="5" class="mut" id="pbPhieuTrong">Không có phiếu nào khớp bộ lọc.</td></tr>') +
+    sfRes.rows.map(({p, i}) => { const d = rec.doi.find(x => x.id === p.doiId);
     return '<tr><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bienSo) + '</td><td style="text-align:right">' + (typeof p.kl === 'number' ? fmtT(Math.round(p.kl * 1000)) : esc(p.kl)) + '</td><td><select data-pcdoi="' + i + '">' + (d ? '' :
     '<option value="" selected>(chưa phân bổ)</option>') + rec.doi.map(x => '<option value="' + esc(x.id) + '"' + (x === d ? ' selected' : '') + '>' + esc(tenD(x)) + '</option>').join('') + '</select></td></tr>';
     }).join('') +

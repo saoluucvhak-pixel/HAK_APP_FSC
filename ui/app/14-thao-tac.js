@@ -7,7 +7,7 @@ function newRs() {
   db.rs[id] = {id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}};
   persist();
   NAV.cur = id; NAV.curF = null; NAV.tab = 'info'; NAV.view = 'owner';
-  note('Đã tạo chủ rừng mới. Nhập thông tin rồi bấm Lưu dữ liệu vào lô (hoặc Enter).');
+  note('Đã tạo chủ rừng mới. Nhập thông tin rồi bấm Lưu thông tin (hoặc Enter).');
 }
 
 function newForest() {
@@ -28,23 +28,30 @@ function readForest(form) {
   const fd = new FormData(form);
   return {
     maRung: trim(fd.get('maRung')), tenRung: trim(fd.get('tenRung')), diaDiem: trim(fd.get('diaDiem')),
-    lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: toDec(fd.get('dienTich')),
-    dinhMucTanHa: toDec(fd.get('dinhMucTanHa')), dinhMucNgayHa: toDec(fd.get('dinhMucNgayHa')), cuLy: toDec(fd.get('cuLy')),
-    tuNgay: trim(fd.get('tuNgay')), denNgay: trim(fd.get('denNgay'))
+    lat: toDec(fd.get('lat')), lng: toDec(fd.get('lng')), dienTich: readInputNumber(fd.get('dienTich')),
+    dinhMucTanHa: readInputNumber(fd.get('dinhMucTanHa')), dinhMucNgayHa: readInputNumber(fd.get('dinhMucNgayHa')), cuLy: readInputNumber(fd.get('cuLy')),
+    tuNgay: readInputDate(fd.get('tuNgay')), denNgay: readInputDate(fd.get('denNgay')),
+    ...dienTichPhu(fd)
   };
+}
+/* hai ô diện tích đối soát (Sổ đỏ, đo GPS): chỉ tạo khóa khi có giá trị (hoặc để xóa giá trị cũ) — lô chưa khai không có thêm khóa mới */
+function dienTichPhu(fd) {
+  const cf = curForest(), ci = (cf && cf.info) || {}, out = {};
+  ['dienTichSoDo', 'dienTichGps'].forEach(k => { const v = readInputNumber(fd.get(k)); if (v != null) out[k] = v; else if (k in ci) out[k] = null; });
+  return out;
 }
 
 function readLuong(form) {
   const fd = new FormData(form), f = curForest(), cur = (f && fInfo(f)) || {}, cds = chucDanhAll();
-  const rHa = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('ha_' + k)]), cur.donGiaHa);
-  const rNgay = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('dn_' + k)]), cur.donGiaNgay);
-  const rTan = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, fd.get('dt_' + k)]), cur.donGiaTan);
+  const rHa = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, readInputNumber(fd.get('ha_' + k), true)]), cur.donGiaHa);
+  const rNgay = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, readInputNumber(fd.get('dn_' + k), true)]), cur.donGiaNgay);
+  const rTan = HAKSo.docBangDonGia(cds.map((cd, k) => [cd, readInputNumber(fd.get('dt_' + k), true)]), cur.donGiaTan);
   return {
     hinhThucLuong: ['ha', 'ngaycong'].includes(fd.get('hinhThucLuong')) ? fd.get('hinhThucLuong') : 'sanluong',
     donGiaHa: rHa.map,
     donGiaNgay: rNgay.map,
     donGiaTan: rTan.map,
-    ngayBDLD: trim(fd.get('ngayBDLD')),
+    ngayBDLD: readInputDate(fd.get('ngayBDLD')),
     moHinhKy: fd.get('moHinhKy') === 'tructiep' ? 'tructiep' : 'giaokhoan',
     _errs: rHa.errs.concat(rNgay.errs, rTan.errs)
   };
@@ -73,17 +80,17 @@ const clearFormMsg = form => { const m = form.querySelector('.formMsg'); if (m) 
 /* Nút điền nhanh ở form Thông tin rừng: chỉ điền vào ô (chưa lưu); người dùng vẫn tự sửa được rồi bấm Lưu */
 function forestFill(act, el) {
   const f = curForest(), form = document.getElementById('forestForm'); if (!f || !form) return;
-  const setv = (name, v) => { const inp = form.elements[name]; inp.value = v; inp.dispatchEvent(new Event('input', {bubbles: true})); };
+  const setv = (name, v) => { const inp = form.elements[name]; inp.value = ['tuNgay', 'denNgay'].includes(name) ? displayInputDate(v) : v; inp.dispatchEvent(new Event('input', {bubbles: true})); };
   const hint = t => { let h = document.getElementById('forestHint'); if (!h) { h = document.createElement('div'); h.id = 'forestHint'; h.className = 'msg warn'; h.style.gridColumn = '1/-1'; form.prepend(h); } h.textContent = t; };
   const pcs = (f.pc || []);
   if (act === 'soDoiAuto') { setv('soDoi', ''); const sn = document.getElementById('soDoiNote'); if (sn) sn.innerHTML = soDoiNote(readForest(form), (curForest() || {}).nc); const nt = document.getElementById('tgNote');
   if (nt) nt.innerHTML = tgDuKienHtml(readForest(form), (curForest() || {}).pc, nDoiOf(readForest(form), (curForest() || {}).nc)); return; }
-  if (act === 'tgDefault') { setv('dinhMucNgayHa', ''); const k = HAKDinhMuc.tgPick(db, trim(form.elements.tuNgay.value)); document.getElementById('tgDmNote').textContent = k.found ? 'Sẽ dùng định mức mặc định ' + fmtTan(k.item.ngayHa) + ' ngày/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
+  if (act === 'tgDefault') { setv('dinhMucNgayHa', ''); const k = HAKDinhMuc.tgPick(db, readInputDate(form.elements.tuNgay.value)); document.getElementById('tgDmNote').textContent = k.found ? 'Sẽ dùng định mức mặc định ' + fmtTan(k.item.ngayHa) + ' ngày/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
   return; }
   if (act === 'fillDenDk') { const ii = readForest(form), d = ngayHaEff(ii), n = d ? HAKDinhMuc.soNgay(haDoi(ii, nDoiOf(ii, (curForest() || {}).nc)), d.v) : null, kt = n && HAKDates.isValid(ii.tuNgay) ? HAKDinhMuc.ngayKetThuc(ii.tuNgay, n) : '';
   if (!kt) return hint('Chưa tính được ngày kết thúc: cần diện tích, định mức thời gian khai thác và ngày bắt đầu hợp lệ.'); setv('denNgay', kt);
   return hint('Đã điền ngày kết thúc dự kiến ' + kt + ' (' + n + ' ngày khai thác, không tính Chủ nhật). Bấm Lưu dữ liệu vào lô (hoặc Enter) để ghi nhận, hoặc sửa ngày.'); }
-  if (act === 'dmDefault') { setv('dinhMucTanHa', ''); const k = HAKDinhMuc.keoPick(db, trim(form.elements.tuNgay.value)); document.getElementById('dmNote').textContent = k.found ? 'Sẽ dùng định mức gỗ keo mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
+  if (act === 'dmDefault') { setv('dinhMucTanHa', ''); const k = HAKDinhMuc.keoPick(db, readInputDate(form.elements.tuNgay.value)); document.getElementById('dmNote').textContent = k.found ? 'Sẽ dùng định mức gỗ keo mặc định ' + fmtTan(k.item.tanHa) + ' tấn/ha sau khi lưu.' : 'Chưa có định mức mặc định.';
   return; }
   if (act === 'boKlCu') { const f = curForest(); if (!f) return; delete f.info.klHoSoCu; (f.doi || []).forEach(d => { delete d.klHoSoCu; }); persistLo(); note('Đã bỏ số khối lượng của hồ sơ cũ: khối lượng lô lấy theo tổng phiếu cân.', 'ok'); return render(); }
   const ds = pcs.map(p => HAKDates.parse(p.ngay)).filter(Boolean); if (!ds.length) return hint('Chưa có phiếu cân có ngày hợp lệ của rừng này.');
@@ -267,17 +274,31 @@ function addGiayRow() {
   list.insertAdjacentHTML('beforeend', giayRowHtml({}));
 }
 
-function delForest() {
+let deletingRecord = false;
+async function delForest() {
+  if (deletingRecord || stSaving) return;
   const o = curOwner(), f = curForest(); if (!f) return;
   const fid = f.id, k = stKeyOf(o.id, fid), coNhap = loDirty.has(fid) || (stages[k] && HAKStage.dirty(stages[k]));
   const nNc = (f.nc || []).length, nDx = (f.dx || []).length, nPc = (f.pc || []).length;
   if (!confirm('Xóa rừng "' + (f.info.tenRung || f.info.maRung) + '" (có ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân' + (coNhap ? ' và thay đổi chưa lưu' : '') + ')?')) return;
-  const cn0 = chuNhap.get(o.id);
-  if (loDirty.has(fid) || loMoi.has(fid)) loVeBanDaLuu(fid);   // lô nháp: dọn các sổ nháp (lô mới, chủ rừng mới hết lô, ánh xạ biển số) trước khi xóa
-  const o2 = db.rs[o.id]; if (o2) delete o2.forests[fid];
-  delete stages[k]; if (typeof hdMoS !== 'undefined') delete hdMoS[fid];
-  loDirty.delete(fid); loMoi.delete(fid); aliasHoan(fid); NAV.curF = null; if (cn0 && !cn0.moi && !chuNhap.has(o.id)) pushNote('Đã xóa lô nháp cuối của chủ rừng: thông tin chủ rừng đang nháp (từ Google Sheets) được hoàn lại về bản đã lưu.', 'warn'); nhapTamGhi(); persist();
-  note('Đã xóa rừng.');
+  const removeDraft = () => {
+    doiDuLieu();
+    const cn0 = chuNhap.get(o.id);
+    if (loDirty.has(fid) || loMoi.has(fid)) loVeBanDaLuu(fid);   // lô nháp: dọn các sổ nháp (lô mới, chủ rừng mới hết lô, ánh xạ biển số) trước khi xóa
+    const o2 = db.rs[o.id]; if (o2) delete o2.forests[fid];
+    delete stages[k]; if (typeof hdMoS !== 'undefined') delete hdMoS[fid];
+    loDirty.delete(fid); loMoi.delete(fid); loCanSaoLuuSheets.delete(fid); aliasHoan(fid); if (NAV.curF === fid) NAV.curF = null; if (cn0 && !cn0.moi && !chuNhap.has(o.id)) pushNote('Đã xóa lô nháp cuối của chủ rừng: thông tin chủ rừng đang nháp (từ Google Sheets) được hoàn lại về bản đã lưu.', 'warn'); nhapTamGhi();
+  };
+  deletingRecord = true;
+  try {
+    const r = HB ? await storeSave(async () => {
+      const result = await HB.lotRemove(o.id, fid);
+      if (result?.ok) { removeDraft(); saveCache = null; }
+      return result;
+    }) : (removeDraft(), await persistNow());
+    note(r?.ok ? 'Đã xóa rừng thành công và lưu vào máy.' : 'Không thể xóa rừng. ' + (r?.error || 'Thử lại sau.'), r?.ok ? 'ok' : 'err');
+  } catch (e) { note('Không thể xóa rừng. ' + e.message, 'err'); }
+  finally { deletingRecord = false; }
 }
 
 function saveInfo(form) {
@@ -297,14 +318,30 @@ function saveInfo(form) {
   note((cn && cn.moi ? 'Chủ rừng này còn là BẢN NHÁP (tạo từ Google Sheets): thông tin vừa sửa sẽ được lưu cùng lô khi bấm “Lưu dữ liệu vào lô”.' : 'Đã lưu thông tin chủ rừng.') + (canh.length ? ' Lưu ý: ' + canh.join('; ') + '.' : ''), canh.length ? 'warn' : 'ok');
 }
 
-function delRs() {
+async function delRs() {
+  if (deletingRecord || stSaving) return;
   const rec = curOwner(); if (!rec) return;
   const fs = forestList(rec), nLo = fs.length, nNc = fs.reduce((s, f) => s + (f.nc || []).length, 0), nDx = fs.reduce((s, f) => s + (f.dx || []).length, 0), nPc = fs.reduce((s, f) => s + (f.pc || []).length, 0);
-  if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?')) return;
-  fs.forEach(f => { delete stages[stKeyOf(rec.id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
-  delete db.rs[rec.id]; chuNhap.delete(rec.id);
-  NAV.cur = null; NAV.curF = null; nhapTamGhi(); persist();
-  note('Đã xóa hồ sơ chủ rừng.');
+  if (!confirm('Xóa chủ rừng "' + (rec.info.ten || '') + '" (' + nLo + ' lô rừng, ' + nNc + ' nhân công, ' + nDx + ' xe, ' + nPc + ' phiếu cân)?\n\nPhần mềm sẽ tự động sao lưu dữ liệu trước khi xóa.')) return;
+  const id = rec.id, ten = rec.info.ten || '';
+  const removeDraft = () => {
+    doiDuLieu();
+    fs.forEach(f => { delete stages[stKeyOf(id, f.id)]; loDirty.delete(f.id); loMoi.delete(f.id); loCanSaoLuuSheets.delete(f.id); aliasHoan(f.id); if (typeof hdMoS !== 'undefined') delete hdMoS[f.id]; });
+    delete db.rs[id]; chuNhap.delete(id);
+    if (window.__hakDelO) window.__hakDelO.delete(id);
+    if (NAV.cur === id) { NAV.cur = null; NAV.curF = null; }
+    nhapTamGhi();
+  };
+  deletingRecord = true;
+  try {
+    const r = HB ? await storeSave(async () => {
+      const result = await HB.owners.remove(id);
+      if (result?.ok) { removeDraft(); saveCache = null; }
+      return result;
+    }) : (removeDraft(), await persistNow());
+    note(r?.ok ? 'Đã xóa hồ sơ chủ rừng “' + ten + '”.' : 'Không thể xóa chủ rừng. ' + (r?.error || 'Thử lại sau.'), r?.ok ? 'ok' : 'err');
+  } catch (e) { note('Không thể xóa chủ rừng. ' + e.message, 'err'); }
+  finally { deletingRecord = false; }
 }
 
 // Mặc định nạp vào lô đang mở. File cũ có cột Mã rừng điền đúng một mã và lô đó tồn tại trong chủ rừng đang mở thì nạp vào lô đó; điền nhiều mã khác nhau thì nạp vào lô đang mở và báo lỗi các dòng lệch mã
@@ -376,13 +413,23 @@ async function downloadTemplate(kind) {
 let backupBusy = false;
 async function backupAll() {
   if (HB) {
-    if (backupBusy) return note('Đang sao lưu, vui lòng đợi xong rồi bấm lại.', 'warn');
+    if (backupBusy || ksl.busy) return note('Đang sao lưu, vui lòng đợi xong rồi bấm lại.', 'warn');
+    if (!backupConfirmSaved()) return;
     backupBusy = true; note('Đang sao lưu và kiểm tra hai file…', 'warn');
     try {
       const r = await HB.backupTo();
       if (r.canceled) return;
-      // chỉ báo thành công khi cả hai file (JSON và SQLite) đã ghi và qua kiểm tra; ngược lại nêu rõ file nào dùng được
-      return note(r.ok ? 'Đã sao lưu và kiểm tra xong: ' + r.jsonFile + ' và ' + r.sqlFile + '.' : 'Sao lưu chưa đầy đủ: ' + (r.message || r.error || 'lỗi không rõ'), r.ok ? 'ok' : 'err');
+      const copyIssue = r.copy2 && !r.copy2.skipped && !r.copy2.ok;
+      const partial = r.json?.ok || r.sqlite?.ok;
+      const message = (r.message || r.error || 'Sao lưu thất bại.') +
+        (!r.ok && copyIssue ? ' Chép sang thư mục thứ hai cũng chưa hoàn tất. ' + r.copy2.error : '') +
+        (copyIssue ? ' Kết nối lại ổ hoặc đổi thư mục sao lưu thứ hai rồi sao lưu lại.' : '');
+      const kind = r.ok && !copyIssue ? 'ok' : partial ? 'warn' : 'err';
+      ksl.loiToanBo = r.ok && !copyIssue ? null : {json: !r.json?.ok, sqlite: !r.sqlite?.ok, copy2: copyIssue};
+      ksl.msg = [message, kind];
+      return note(message, kind);
+    } catch (e) {
+      return note('Sao lưu thất bại. ' + e.message + ' Kiểm tra thư mục sao lưu rồi thử lại.', 'err');
     } finally { backupBusy = false; }
   }
   const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});
@@ -465,6 +512,13 @@ async function importGo() {
   note('Đã nhập xong: ' + r.counts.owners + ' chủ rừng, ' + r.counts.forests + ' rừng, ' + r.counts.nc + ' nhân công, ' + r.counts.dx + ' xe, ' + r.counts.pc + ' phiếu cân' + (r.goiCu ? ', ' + r.goiCu + ' bản chụp chốt cũ' : '') + '. Bản sao lưu trước khi nhập: ' + r.backup);
   if (r.goiBoQua) pushNote('Có ' + r.goiBoQua + ' bản chụp chốt trong file bị hỏng hoặc sai dấu vân tay nên không chép (hồ sơ và các bản chụp còn lại đã nhập đủ).', 'warn');   // phiếu #11
 }
-
-
-
+/* đặt người ký (đối tượng có quyền ký Vận chuyển, giá trị 'd:<id>') cho một hợp đồng vận chuyển đã có, cùng quy tắc với biểu mẫu hợp đồng (saveHd); trả chuỗi lỗi hoặc '' */
+function kyDatHd(hdId, ky) {
+  const f = curForest(); if (!f || !hdId || !String(ky).startsWith('d:')) return 'không có hợp đồng hoặc người ký';
+  const dv = HAKDanhMuc.timDoiTac(dmDoiTacAll(), String(ky).slice(2)); if (!dv) return 'người ký không còn trong Danh mục đối tượng';
+  const cur = (f.hdvc || []).find(h => h.id === hdId); if (!cur) return 'chưa có hợp đồng vận chuyển này trong lô đã lưu';
+  if (HAKDanhMuc.chuanDoiTacId(cur.donViId) === dv.id) return '';
+  const r = HAKModel.updateHd(f, hdId, {donVi: dv}); if (r.error) return r.error;
+  const h = (r.f.hdvc || []).find(x => x.id === hdId); if (h) { if (dv.doiTuongId) h.benKy = {doiTuongId: dv.doiTuongId, nguoiId: dv.nguoiId || ''}; else delete h.benKy; }
+  f.hdvc = r.f.hdvc; persistLo(); return '';
+}

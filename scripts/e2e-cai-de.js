@@ -45,10 +45,18 @@ const tomTat = db => { const f = db.rs.own1.forests.fa, i = f.info; return {chuc
   ok('số hợp đồng (số khai thác, số vận chuyển), phiếu cân, xe giữ nguyên', tCu.soPhieu === tMoi.soPhieu && tCu.xe === tMoi.xe && (tCu.soKT || '') === ((dbMoi.rs.own1.forests.fa.doi[0].exp || {}).soKT || tMoi.soKT || '') , JSON.stringify([tCu, tMoi.soKT, dbMoi.rs.own1.forests.fa.doi[0].exp]));
   const ten = Object.keys(cu).sort(), tenM = Object.keys(moi).sort();
   ok('gói xuất của bản mới có đủ các file như bản cũ (không mất biểu mẫu)', ten.every(n => tenM.includes(n)), JSON.stringify(ten.filter(n => !tenM.includes(n))));
-  const khac = ten.filter(n => moi[n] !== undefined && sha(cu[n]) !== sha(moi[n]));
+  // BM-14 đổi đúng một đoạn: sau tiêu đề Điều 1 bỏ mã lô, giữ phần còn lại của XML.
+  const bm14 = ten.find(n => n.startsWith('14_BB_nghiem_thu_thanh_ly_'));
+  const boMaRung = xml => xml.replace(
+    /(Thông tin rừng đã khai thác(?:(?!<\/w:p>).)*<\/w:p>\s*<w:p(?:\s[^>]*)?>(?:(?!<\/w:p>).)*?)Mã rừng: R-A\. (?=Địa điểm:)/s,
+    '$1'
+  );
+  const bm14Cu = bm14 && cu[bm14], bm14Moi = bm14Cu && boMaRung(bm14Cu);
+  ok('BM-14: chỉ bỏ mã rừng trong đoạn ngay sau tiêu đề Điều 1', !!bm14Moi && bm14Moi !== bm14Cu && bm14Moi === moi[bm14]);
+  const khac = ten.filter(n => moi[n] !== undefined && sha(n === bm14 ? bm14Moi : cu[n]) !== sha(moi[n]));
   const tien = x => new Set((x.replace(/<[^>]+>/g, ' ').match(/\b\d{1,3}(?:\.\d{3})+(?:,\d+)?\b|\b\d+,\d+\b/g) || []));
   const mat = khac.filter(n => [...tien(cu[n])].some(v => !tien(moi[n]).has(v)));
-  ok('NỘI DUNG file Word: ' + (ten.length - khac.length) + '/' + ten.length + ' file giống từng byte; ' + khac.length + ' file khác (' + khac.join(', ') + ') chỉ BỔ SUNG diễn giải đơn giá khoán bình quân từ định biên (tính năng 2.0): mọi số tiền, số công, số hợp đồng của bản cũ còn nguyên trong bản mới', mat.length === 0 && khac.every(n => /^(01_|08_|20_)/.test(n)), JSON.stringify({khac, matSo: mat}));
+  ok('NỘI DUNG file Word: ' + (ten.length - khac.length) + '/' + ten.length + ' file khớp sau khi đối chiếu riêng BM-14; ' + khac.length + ' file khác (' + khac.join(', ') + ') chỉ BỔ SUNG diễn giải đơn giá khoán bình quân từ định biên (tính năng 2.0): mọi số tiền, số công, số hợp đồng của bản cũ còn nguyên trong bản mới', mat.length === 0 && khac.every(n => /^(01_|08_|20_)/.test(n)), JSON.stringify({khac, matSo: mat}));
   if (process.env.DIFF) khac.forEach(n => { const t = x => x.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); const a = t(cu[n]).split(/(?<=[.;:])\s/), b = t(moi[n]).split(/(?<=[.;:])\s/); console.log('## ' + n); a.filter(x => !b.includes(x)).forEach(x => console.log('  CŨ : ' + x.slice(0, 260))); b.filter(x => !a.includes(x)).forEach(x => console.log('  MỚI: ' + x.slice(0, 260))); });
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); process.exit(fail ? 1 : 0);

@@ -53,7 +53,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const ten1 = await w.innerText('#hdDauTen');
   await muc('thanhvien');
   ok('hợp đồng nhân công: nhập Excel ở Danh mục đối tượng', !await w.locator('input[data-file=nc], [data-act=danMo][data-kind=nc]').count() &&
-    await w.getByRole('button', {name: /(Nhập Excel tại Danh mục đối tượng|Mở Danh mục đối tượng \(Excel\))/}).isVisible());
+    !await w.getByRole('button', {name: /Mở Danh mục đối tượng/}).count());   // 3.5.1: bỏ nút văng sang Danh mục
   ok('trang chi tiết nhân công: một bảng chính (nhân công), không còn bảng danh sách đội', !(await w.$('#doiKT .normTbl')) && (await w.$$('#main table')).length >= 1);
   await muc('chung');
   await w.fill('#doiForm [name=dienTich]', '1,5'); await w.press('#doiForm [name=dienTich]', 'Enter'); await w.waitForTimeout(300);
@@ -68,7 +68,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('#dsHdVcTbl tr[data-hd="' + h2.id + '"]'); await w.waitForTimeout(200);
   await muc('xe');
   const bienSo = await w.$$eval('#stTbl_dx tbody tr', t => t.map(x => x.innerText).join('|'));
-  const napXe = await w.getByRole('button', {name: /(Nhập Excel tại Danh mục xe|Mở Danh mục xe \(Excel\))/}).isVisible();
+  const napXe = !(await w.getByRole('button', {name: /Mở Danh mục xe/}).count()) && /Xe và tài xế/.test(await w.innerText('#stHuongDanXe'));
   await muc('phieu');
   ok('hợp đồng vận chuyển: nhập Excel xe ở Danh mục xe; nạp phiếu cân vẫn tại hợp đồng',
     !await w.locator('input[data-file=dx], [data-act=danMo][data-kind=dx]').count() &&
@@ -86,14 +86,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.press('#hdVbForm [name=soVC]', 'Enter');
   await w.waitForFunction(() => window.hak.loadSync().db.rs.own1.forests.fa.hdvc.some(h => h.exp?.soVC === '017'));
   await muc('chung'); await w.waitForSelector('#hdForm');
-  await w.click('#hdForm [data-act=openSetDt][data-quaylai]'); await w.waitForSelector('#veLaiBar');
-  ok('mở Danh mục đối tượng từ hợp đồng: có thanh “Quay lại”, không hỏi lưu / bỏ', await w.isVisible('#veLaiBtn') && !(await w.isVisible('#roiLuu').catch(() => false)));
-  await w.click('#dtThem'); await w.fill('#dtForm [name=ten]', 'HỘ KINH DOANH VẬN TẢI CHÍN');
-  await w.click('#ngThem'); await w.waitForSelector('#ngForm');
-  await w.evaluate(() => { const f = document.getElementById('ngForm'); f.elements.hoTen.value = 'PHẠM VĂN CHÍN'; f.elements.cccd.value = '049085000099'; f.elements.vtChuXe.checked = true; f.elements.kyVC.checked = true; });
-  await w.click('#ngLuu'); await w.waitForTimeout(150); await w.click('#dtLuu'); await w.waitForTimeout(400);
-  await w.click('#veLaiBtn'); await w.waitForSelector('#hdDau');
-  ok('“Quay lại”: về đúng hợp đồng vận chuyển đang mở', !!(await w.$('#hdForm')) && /R-A/.test(await w.innerText('#loCrumb')));
+  ok('hợp đồng vận chuyển: không còn nút văng sang Danh mục, có hướng dẫn thêm xe ở tab “Xe và tài xế”', !(await w.$('#hdForm [data-act=openSetDt]')) && /Xe và tài xế/.test(await w.innerText('#hdKyHuongDan')));
+  await w.click('#navDm'); await w.click('#setTab_setdt'); await w.waitForSelector('#dtBang');
+  await w.click('#cnThem'); await w.waitForSelector('#dtForm'); await w.fill('#dtForm [name=ten]', 'HỘ KINH DOANH VẬN TẢI CHÍN');
+  await w.evaluate(() => { const f = document.getElementById('dtForm'); f.elements.hoTen.value = 'PHẠM VĂN CHÍN'; f.elements.cccd.value = '049085000099'; f.elements.vtChuXe.checked = true; f.elements.kyVC.checked = true; });
+  await w.click('#dtLuu'); await w.waitForTimeout(400);
+  await moRung(); await w.click('[data-ftab=dx]'); await w.waitForTimeout(200); await w.waitForSelector('#hdForm');
+  ok('mở lại hợp đồng vận chuyển sau khi khai người ký ở Danh mục đối tượng', !!(await w.$('#hdForm')) && /R-A/.test(await w.innerText('#loCrumb')));
   const ky = await w.$$eval('#hdForm [name=ky] option', o => o.map(x => x.textContent));
   ok('ô Người ký có người của Danh mục đối tượng (quyền ký Vận chuyển), hiện cả tên đối tượng và tên người', ky.some(t => /HỘ KINH DOANH VẬN TẢI CHÍN — PHẠM VĂN CHÍN/.test(t)), ky.join(' | '));
   await w.selectOption('#hdForm [name=ky]', 'd:ct:049085000099'); await w.$eval('#hdForm', x => x.requestSubmit()); await w.waitForTimeout(500);
@@ -104,10 +103,9 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lưu xong vẫn ở hợp đồng đang mở', !!(await w.$('#hdDau')));
 
   // 4. hợp đồng nhân công giao khoán: bên nhận khoán chọn từ Danh mục đối tượng (quyền ký Nhân công), lưu theo ID
-  await (async () => { if (await w.$('#navDm')) await w.click('#navDm'); else await w.click('#navSet'); })(); await w.click('#setTab_setdt'); await w.click('#dtThem'); await w.fill('#dtForm [name=ten]', 'TỔ KHAI THÁC TRẦN SƠN');
-  await w.click('#ngThem'); await w.waitForSelector('#ngForm');
-  await w.evaluate(() => { const f = document.getElementById('ngForm'); f.elements.hoTen.value = 'TRẦN SƠN'; f.elements.cccd.value = '049085000123'; f.elements.vtNhanCong.checked = true; f.elements.kyNC.checked = true; });
-  await w.click('#ngLuu'); await w.waitForTimeout(150); await w.click('#dtLuu'); await w.waitForTimeout(400);
+  await (async () => { if (await w.$('#navDm')) await w.click('#navDm'); else await w.click('#navSet'); })(); await w.click('#setTab_setdt'); await w.click('#cnThem'); await w.waitForSelector('#dtForm'); await w.fill('#dtForm [name=ten]', 'TỔ KHAI THÁC TRẦN SƠN');
+  await w.evaluate(() => { const f = document.getElementById('dtForm'); f.elements.hoTen.value = 'TRẦN SƠN'; f.elements.cccd.value = '049085000123'; f.elements.vtNhanCong.checked = true; f.elements.kyNC.checked = true; });
+  await w.click('#dtLuu'); await w.waitForTimeout(400);
   await moRung(); await w.click('[data-ftab=nc]'); await w.waitForTimeout(200);
   if (!(await w.$('#hdDau'))) { await w.click('#dsHdNcTbl tbody tr[data-act]'); await w.waitForTimeout(200); }
   await muc('chung');
@@ -126,7 +124,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
       await w.setViewportSize({width, height: 768});
       for (const theme of ['light', 'dark']) {
         await w.click('#navSet');
-        await w.click('#setTab_setgd');
+        await w.click('#setTab_setfmt'); await w.click('#setTab_setgd');
         if (await w.evaluate(() => document.documentElement.dataset.theme) !== theme) await w.click('#themeBtn2');
         const shot = name => w.screenshot({path: path.join(process.env.SHOTS, width + '-' + theme + '-' + name + '.png')});
         await shot('cai-dat');

@@ -30,10 +30,18 @@ function panelDoiChieuPhieuChuaGan(rec) {
       rows.map(p => '<tr><td>' + esc(p.soPhieu) + '</td><td>' + esc(p.ngay) + '</td><td>' + esc(p.bienSo) + '</td>' + pcCotHd(rec, p) +
         '<td><button class="btn ghost sm" data-act="stEdit" data-kind="pc" data-i="' + rec.pc.indexOf(p) + '">Sửa phiếu</button></td></tr>').join('') + '</tbody></table></div>' : '<p>Không có phiếu cần gán.</p>') + '</div>';
 }
+/* Danh sách lựa chọn (duy nhất + sắp xếp) của bộ lọc: nhớ theo khóa, chỉ tính lại khi các giá trị nguồn đổi (FLT-02) */
+const sfOptsMemo = {};
+function sfOptsMemoize(key, vals) {
+  const sig = vals.length + '|' + vals.join('\u0001'), m = sfOptsMemo[key];
+  if (m && m.sig === sig) return m.out;
+  const out = [...new Set(vals.map(trim).filter(Boolean))].sort();
+  sfOptsMemo[key] = {sig, out}; return out;
+}
 function panelDX(rec, hMo) {
   const c = checkDX(rec), baseOnly = hMo && !xeTatCa ? r => r.hdvcId === hMo.id || !(rec.hdvc || []).some(h => h.id === r.hdvcId) : null;
   const baseDx = baseOnly ? (rec.dx || []).filter(baseOnly) : (rec.dx || []);
-  const SF = HAKCore.sf, loaiOpts = [...new Set(baseDx.map(r => trim(r.loaiXe)).filter(Boolean))].sort();
+  const SF = HAKCore.sf, loaiOpts = sfOptsMemoize('dx.loaiXe', baseDx.map(r => r.loaiXe));
   const sfCfg = {
     screenId: 'lo_xe', title: 'Xe và tài xế',
     searchPlaceholder: 'Tìm BKS, chủ xe, tài xế, loại xe…',
@@ -71,8 +79,8 @@ function panelPhieuCan(rec) {
   const hdOnly = hMo && !pcTatCa ? r => r.hdvcId === hMo.id || !r.hdvcId : null;
   const basePc = hdOnly ? pc.filter(hdOnly) : pc;
   const SF = HAKCore.sf;
-  const bksOpts = [...new Set(basePc.map(r => trim(r.bienSo)).filter(Boolean))].sort();
-  const noiOpts = [...new Set(basePc.map(r => trim(r.noiGiao)).filter(Boolean))].sort();
+  const bksOpts = sfOptsMemoize('pc.bienSo', basePc.map(r => r.bienSo));
+  const noiOpts = sfOptsMemoize('pc.noiGiao', basePc.map(r => r.noiGiao));
   const sfCfg = {
     screenId: 'lo_phieu_can', title: 'Phiếu cân',
     searchPlaceholder: 'Tìm số phiếu, BKS, khách hàng, nơi giao…',

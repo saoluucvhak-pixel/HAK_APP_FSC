@@ -30,7 +30,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await openLot('fc'); f = await download(); ok('hai người ký khác CCCD: 2 hợp đồng vận chuyển', f && f.length === 2, JSON.stringify(f));
   // thêm xe thứ hai cùng CCCD khác tên vào bản nháp: không lưu được
   await openLot('fc'); await w.click('[data-act=stAdd][data-kind=dx]'); await w.waitForSelector('#stForm');
-  const set = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); };
+  const set = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else if (await w.$('#stForm input[type=radio][name=' + k + ']')) await w.check('#stForm input[type=radio][name=' + k + '][value="' + v + '"]'); else await w.fill('#stForm input[name=' + k + ']', v); };
   for (const [k, v] of Object.entries({bienSo: '92C-7', chuXe: 'LÊ VĂN C', ngaySinh: '01/01/1980', cccd: '049000000077', ngayCap: '01/01/2021', noiCap: 'CA', diaChi: 'Đà Nẵng', sdt: '0905123456', nguoiKy: 'Chủ xe', loaiXe: 'Xe tải'})) await set(k, v);
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
   const r = await saveStage(w); const saved = (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fc.dx.length;

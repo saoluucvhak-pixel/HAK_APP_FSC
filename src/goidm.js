@@ -31,12 +31,13 @@
     const id = idCuaLo(f), DT = (db && db.dmDoiTuong) || [], XE = (db && db.dmXe) || [], VT = (db && db.dmViTri) || [];
     const xe = XE.filter(x => id.xe.has(x.id));
     xe.forEach(x => { if (s(x.chuXeId)) { if (DT.some(o => o.id === x.chuXeId)) id.dt.add(x.chuXeId); else id.ng.add(x.chuXeId); } });
+    xe.forEach(x => { if (s(x.taiXeId)) id.ng.add(x.taiXeId); });   // tài xế thường chạy của xe (người) cũng mang theo
     const doiTuong = DT.filter(o => id.dt.has(o.id) || (o.nguoi || []).some(p => id.ng.has(p.id)));
     return {doiTuong: clone(doiTuong), xe: clone(xe), viTri: clone(VT.filter(v => id.vt.has(v.id)))};
   }
   const idMoi = (dung, tien) => { let k = dung.size + 1; while (dung.has(tien + k)) k++; const v = tien + k; dung.add(v); return v; };
 
-  /* Nối danh mục của gói vào danh mục máy (KHÔNG sửa đầu vào). opts.loKhoa: lô đã chốt/dừng không đổi được ID trong lô nên mục thêm mới phải giữ nguyên ID gốc; nếu ID gốc đã bị chiếm bởi mục khác trên máy thì đưa vào Cần đối chiếu, không cấp ID khác làm lô chốt trỏ nhầm người (lô 3c, T-07). Trả {dm: {dmDoiTuong, dmXe, dmViTri}, doi: {dt, ng, xe, vt} (id gói → id máy), them: [...], khac: [...], can: [...]} */
+  /* Nối danh mục của gói vào danh mục máy (KHÔNG sửa đầu vào). Vị trí: nhiemVu/ghiChu tùy chọn đi theo gói (chỉ có khi khác rỗng). opts.loKhoa: lô đã chốt/dừng không đổi được ID trong lô nên mục thêm mới phải giữ nguyên ID gốc; nếu ID gốc đã bị chiếm bởi mục khác trên máy thì đưa vào Cần đối chiếu, không cấp ID khác làm lô chốt trỏ nhầm người (lô 3c, T-07). Trả {dm: {dmDoiTuong, dmXe, dmViTri}, doi: {dt, ng, xe, vt} (id gói → id máy), them: [...], khac: [...], can: [...]} */
   function noi(db, goi, opts) {
     const loKhoa = !!(opts && opts.loKhoa);
     const DT = clone((db && db.dmDoiTuong) || []), XE = clone((db && db.dmXe) || []), VT = clone((db && db.dmViTri) || []);
@@ -48,6 +49,12 @@
       const m = VT.find(x => fold(x.ten) === fold(v.ten));
       if (m) {
         doi.vt[v.id] = m.id;
+        /* nhiemVu / ghiChu (tùy chọn): máy đích còn trống thì bổ sung từ gói, đã có nội dung thì DÙNG BẢN CỦA MÁY và nêu khác biệt */
+        [['nhiemVu', 'nhiệm vụ'], ['ghiChu', 'ghi chú']].forEach(([k, nhan]) => {
+          if (!s(v[k])) return;
+          if (!s(m[k])) { m[k] = s(v[k]); them.push('Vị trí “' + s(m.ten) + '”: bổ sung ' + nhan + ' từ gói'); }
+          else if (s(m[k]) !== s(v[k])) khac.push('Vị trí “' + s(m.ten) + '”: ' + nhan + ' trong gói khác máy — DÙNG BẢN CỦA MÁY');
+        });
         if (loKhoa && m.id !== v.id) can.push({loai: 'vitri', ref: v.id, lyDo: 'Lô đã chốt trỏ vị trí “' + s(v.ten) + '” theo ID “' + v.id + '”, nhưng trên máy vị trí này có ID “' + m.id + '”: lô chốt giữ nguyên dữ liệu gốc', goc: clone(v)});
         return;
       }
@@ -124,10 +131,14 @@
     (g.xe || []).forEach(x => {
       const m = XE.find(y => bk(y.bks) && bk(y.bks) === bk(x.bks));
       const chu = s(x.chuXeId) ? (doi.ng[x.chuXeId] || doi.dt[x.chuXeId] || '') : '';
+      /* tài xế thường chạy: ánh xạ sang người trên máy đích; không có người đó, hoặc người đó chưa có chức vụ Tài xế trên máy → bỏ rỗng và báo */
+      let tai = s(x.taiXeId) ? (doi.ng[x.taiXeId] || '') : '';
+      if (tai) { const ngT = DT.reduce((a, o) => a || (o.nguoi || []).find(p => p.id === tai), null); if (!ngT || !(ngT.vaiTro && ngT.vaiTro.taiXe)) tai = ''; }
       if (m) {
         doi.xe[x.id] = m.id;
         if (loKhoa && m.id !== x.id) can.push({loai: 'xe', ref: x.id, lyDo: 'Lô đã chốt trỏ xe ' + s(x.bks) + ' theo ID “' + x.id + '”, trên máy xe này có ID “' + m.id + '”: lô chốt giữ nguyên dữ liệu gốc', goc: clone(x)});
         if (chu && s(m.chuXeId) && m.chuXeId !== chu) khac.push('Xe ' + s(x.bks) + ': chủ xe trong gói khác máy — DÙNG BẢN CỦA MÁY');
+        if (tai && s(m.taiXeId) && m.taiXeId !== tai) khac.push('Xe ' + s(x.bks) + ': tài xế thường chạy trong gói khác máy — DÙNG BẢN CỦA MÁY');
         return;
       }
       if (loKhoa && dungXe.has(x.id)) {
@@ -135,7 +146,9 @@
         return;
       }
       const id = dungXe.has(x.id) ? idMoi(dungXe, 'xe') : (dungXe.add(x.id), x.id);
-      XE.push(Object.assign(clone(x), {id, chuXeId: chu})); doi.xe[x.id] = id; them.push('Xe ' + s(x.bks));
+      if (s(x.taiXeId) && !tai) khac.push('Xe ' + s(x.bks) + ': tài xế thường chạy trong gói không có (hoặc chưa có chức vụ Tài xế) trên máy — để trống, chọn lại ở Danh mục xe');
+      const moiXe = Object.assign(clone(x), {id, chuXeId: chu}); if (tai) moiXe.taiXeId = tai; else delete moiXe.taiXeId;
+      XE.push(moiXe); doi.xe[x.id] = id; them.push('Xe ' + s(x.bks));
     });
     return {dm: {dmDoiTuong: DT, dmXe: XE, dmViTri: VT}, doi, them, khac, can};
   }

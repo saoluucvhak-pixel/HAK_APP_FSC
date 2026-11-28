@@ -52,10 +52,13 @@
     return rows;
   }
   /* kiểm nhanh trước khi nạp: có dòng tiêu đề chứa đủ các cột bắt buộc không. Trả {ok, error, dong: số dòng dữ liệu, cot: số cột} */
+  /* tiêu đề cột nhân công trước khi đổi tên (Vai trò → Chức vụ, Chức danh → Vị trí): vùng dán dùng tên cũ vẫn được chấp nhận */
+  const TEN_CU = {'Chức vụ': 'Vai trò', 'Vị trí': 'Chức danh'};
   function danKiem(aoa, batBuoc) {
     if (!aoa || !aoa.length) return {ok: false, error: 'Chưa có dữ liệu. Chép vùng ô trong Excel (gồm cả dòng tiêu đề) rồi dán vào đây.'};
-    const h = aoa.findIndex(r => (batBuoc || []).every(n => r.some(c => s(c) === n)));
-    if (h < 0) return {ok: false, error: 'Vùng dán thiếu dòng tiêu đề hoặc thiếu cột: ' + (batBuoc || []).filter(n => !aoa[0].some(c => s(c) === n)).join(', ') + '. Chép cả dòng tiêu đề của file mẫu.'};
+    const co = (r, n) => r.some(c => s(c) === n || (TEN_CU[n] && s(c) === TEN_CU[n]));
+    const h = aoa.findIndex(r => (batBuoc || []).every(n => co(r, n)));
+    if (h < 0) return {ok: false, error: 'Vùng dán thiếu dòng tiêu đề hoặc thiếu cột: ' + (batBuoc || []).filter(n => !co(aoa[0], n)).join(', ') + '. Chép cả dòng tiêu đề của file mẫu.'};
     return {ok: true, error: '', dong: aoa.length - h - 1, cot: aoa[h].length};
   }
 
@@ -117,7 +120,7 @@
       (d.chot ? '<h2>Chốt hồ sơ</h2>' + kv([['Phiên bản chốt', d.chot.phienBan], ['Dấu vân tay', d.chot.hash], ['Thời điểm chốt', d.chot.at]]) : '') +
       '<div class="wrap">' + bang('Đội khai thác', ['Đội', 'Tổ trưởng', 'Số người', 'Khối lượng (tấn)'], (d.doi || []).map(x => [x.ten, x.toTruong, x.soNguoi, x.kl]), 'cxDoi') + '</div>' +
       '<div class="wrap">' + bang('Đội xe', ['Đội xe', 'Người ký', 'Số xe', 'Số hợp đồng vận chuyển', 'Số biên bản xác nhận KL', 'Khối lượng (tấn)'], (d.doiXe || []).map(x => [x.ten, x.nguoiKy, x.soXe, x.soHD, x.soXN, x.kl]), 'cxDoiXe') + '</div>' +
-      '<div class="wrap">' + bang('Nhân công', ['STT', 'Họ và tên', 'Vai trò', 'Chức danh', 'Đội'], d.nc, 'cxNc') + '</div>' +
+      '<div class="wrap">' + bang('Nhân công', ['STT', 'Họ và tên', 'Chức vụ', 'Vị trí', 'Đội'], d.nc, 'cxNc') + '</div>' +
       '<div class="wrap">' + bang('Xe vận chuyển', ['STT', 'Biển số', 'Chủ xe', 'Tài xế', 'Đội xe'], d.dx, 'cxDx') + '</div>' +
       '<div class="wrap">' + bang('Phiếu cân', ['STT', 'Ngày', 'Số phiếu', 'Biển số', 'Khối lượng (tấn)', 'Đội'], d.pc, 'cxPc') + '</div>' +
       '<div class="wrap">' + bang('Nhật ký vòng đời', ['Thời điểm', 'Việc', 'Lý do'], (d.nhatKy || []).map(x => [x.at, x.hanh, x.lyDo]), 'cxNhatKy') + '</div>' +

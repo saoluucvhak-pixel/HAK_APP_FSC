@@ -13,7 +13,7 @@ const lst = d => { try { return fs.readdirSync(d).filter(n => /^tu-dong-.*\.sqli
   let app = await launch(), w = require('./_hd30').boc(await app.firstWindow()); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', 'BK-1'); await w.fill('#infoForm [name="ten"]', 'CHỦ SAO LƯU');
   for (const [k, v] of Object.entries({cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v);
-  await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
+  await w.check('#infoForm [name="danhXung"][value="Ông"]'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(1500);
   await w.click('#navSet'); await w.click('#setTab_setbk'); await w.waitForSelector('#dbBk2');
   ok('Cài đặt có khung “Thư mục sao lưu thứ hai”, chưa chọn', /Chưa chọn/.test(await w.innerText('#dbBk2')));
   await w.click('[data-act=setBackup2]'); await w.waitForFunction(() => /Đang dùng/.test(document.getElementById('dbBk2').innerText), null, {timeout: 20000});

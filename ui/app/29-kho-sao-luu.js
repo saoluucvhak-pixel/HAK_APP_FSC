@@ -2,27 +2,112 @@
  * Một nơi xem mọi bản sao lưu trên máy (tự động hằng ngày, sao lưu toàn bộ, bản tự tạo trước khi nâng cấp / khôi phục / xóa): thời điểm, loại, dung lượng;
  * kiểm tra từng bản có dùng được không; khôi phục toàn bộ từ bản .sqlite (có xem trước số liệu, phần mềm sao lưu dữ liệu hiện tại trước khi ghi) hoặc bản .json
  * (qua màn xem trước sẵn có); xóa bản cũ để giải phóng ổ đĩa. Nhãn trạng thái sao lưu ở thanh ngữ cảnh mở thẳng màn này. */
-const ksl = {d: null, msg: null, loc: '', kiem: {}, busy: false, st: null};
+const ksl = {d: null, msg: null, loc: '', kiem: {}, busy: false, st: null, tab: 'thaotac'};   // tab: tab con đang mở của “Sao lưu và khôi phục” (PR C), nhớ trong phiên
+const SB_TABS = [['thaotac', 'Thao tác'], ['thumuc', 'Thư mục và lịch'], ['ban', 'Các bản sao lưu']];
 const kslMB = b => b >= 1073741824 ? (b / 1073741824).toFixed(2).replace('.', ',') + ' GB' : b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.ceil(b / 1024)) + ' KB';
 const kslNgay = iso => { const d = new Date(iso), n = Math.round((new Date(new Date().toDateString()) - new Date(d.toDateString())) / 86400000); return n <= 0 ? 'hôm nay' : n === 1 ? 'hôm qua' : n + ' ngày trước'; };
 /* dữ liệu vừa bị THAY từ nơi khác (khôi phục toàn bộ, khôi phục lô, khôi phục từ kho): bản nháp và dấu “chưa lưu” cũ không còn đích; bản đã lưu = đúng dữ liệu vừa nạp.
  * Không làm bước này thì một lô đang “chưa lưu” sẽ bị ghi lại bằng bản TRƯỚC khi khôi phục ở lần lưu kế tiếp (dbGhi dùng savedSnap cũ). */
 function dbThayToanBo(moi) {
-  db = withDefaults(moi); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear();   // saveCache giữ nguyên: phiên bản (rev) đã cũ nên lần lưu kế bị từ chối STALE và tự lưu toàn bộ
+  db = withDefaults(moi); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); loCanSaoLuuSheets.clear();   // saveCache giữ nguyên: phiên bản (rev) đã cũ nên lần lưu kế bị từ chối STALE và tự lưu toàn bộ
   try { savedSnap = HAKDelta.snapshot(db); } catch (e) { savedSnap = null; }
   doiDuLieu();
 }
+
+/* SQLite trả ID đích đã dùng khi ghi. Chỉ bỏ bản nháp của các lô thực sự nhận dữ liệu. */
+function dbCapNhatKhoiPhucRieng({dich, dbMoi, dbCu, rev}) {
+  const {ownerId, forestIds} = dich;
+  const ownerMoi = dbMoi.rs[ownerId];
+  const owner = db.rs[ownerId] || (db.rs[ownerId] = {...ownerMoi, forests: {}});
+  owner.forests ||= {};
+  for (const fid of forestIds) {
+    const key = stKeyOf(ownerId, fid);
+    delete stages[key];
+    if (loSaveIssue?.key === key) loSaveIssue = null;
+    loDirty.delete(fid);
+    loMoi.delete(fid);
+    loCanSaoLuuSheets.delete(fid);
+    owner.forests[fid] = ownerMoi.forests[fid];
+  }
+
+  const chu = chuNhap.get(ownerId);
+  if (chu && !Object.keys(owner.forests).some(fid => loDirty.has(fid))) {
+    const {forests: _lo, ...infoDaLuu} = ownerMoi;
+    Object.keys(owner).filter(k => k !== 'forests').forEach(k => delete owner[k]);
+    Object.assign(owner, infoDaLuu);
+    chuNhap.delete(ownerId);
+  } else if (chu?.moi) chu.moi = false;
+  forestIds.forEach(aliasHoan);
+
+  // Cập nhật các mục danh mục thực sự đổi trên SQLite. Giữ chỉnh sửa khác đang chờ ghi.
+  const json = JSON.stringify;
+  const congTy = db.congTy || (db.congTy = {});
+  for (const [id, c] of Object.entries(dbMoi.congTy || {})) {
+    if (!Object.hasOwn(congTy, id) && !Object.hasOwn(dbCu.congTy || {}, id)) congTy[id] = c;
+  }
+  for (const key of ['dinhMuc', 'bienAlias']) {
+    for (const [id, value] of Object.entries(dbMoi[key] || {})) {
+      if (!Object.hasOwn(dbCu[key] || {}, id) && !Object.hasOwn(db[key] || {}, id)) (db[key] ||= {})[id] = value;
+    }
+  }
+  for (const key of ['dmDoiTuong', 'dmXe', 'dmViTri']) {
+    const cu = new Map((dbCu[key] || []).map(row => [row.id, json(row)]));
+    const moi = new Map((dbMoi[key] || []).filter(row => cu.get(row.id) !== json(row)).map(row => [row.id, row]));
+    if (!moi.size) continue;
+    const local = (db[key] || []).map(row => {
+      const next = moi.get(row.id);
+      if (!next) return row;
+      moi.delete(row.id);
+      return json(row) === cu.get(row.id) ? next : row;
+    });
+    db[key] = local.concat([...moi.values()].filter(row => !cu.has(row.id)));
+  }
+  const doiChieu = new Set((dbCu.canDoiChieu || []).map(row => json(row)));
+  for (const row of dbMoi.canDoiChieu || []) {
+    const key = json(row);
+    if (!doiChieu.has(key)) (db.canDoiChieu ||= []).push(row);
+    doiChieu.add(key);
+  }
+  savedSnap = HAKDelta.snapshot(dbMoi);
+  saveCache = {rev, snap: savedSnap};
+  doiDuLieu();
+  nhapTamGhi();
+}
 /* 3.0 + phiếu #13b (quyết định 7): bốn thao tác ở đầu màn (Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô) */
-const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 style="margin:0 0 6px">Sao lưu và khôi phục</h3><div class="row" style="gap:8px;flex-wrap:wrap">' +
+function backupConfirmSaved() {
+  if (storeOk && !stDirtyList().length && !saveTimer) return true;
+  const dList = stDirtyList();
+  if (dList.length) {
+    return confirm('Đang có ' + dList.length + ' lô còn bản nháp chưa bấm "Lưu dữ liệu vào lô".\n\nBản sao lưu toàn bộ sẽ chỉ gồm dữ liệu đã lưu vào máy (chưa gồm các bản nháp này).\n\n• Bấm OK: Vẫn sao lưu ngay các dữ liệu đã lưu.\n• Bấm Hủy: Quay lại để bấm "Lưu dữ liệu vào lô" trước khi sao lưu.');
+  }
+  if (saveTimer) return confirm('Đang có thay đổi chờ ghi. Bấm OK để sao lưu phần đã lưu vào máy hoặc bấm Hủy và đợi ghi xong.');
+  if (!storeOk) {
+    return confirm('Cơ sở dữ liệu đang có lỗi ghi nhận gần nhất. Dữ liệu đã lưu an toàn trước đó vẫn có thể sao lưu.\n\n• Bấm OK: Sao lưu các dữ liệu an toàn đã lưu.\n• Bấm Hủy: Kiểm tra lại lỗi lưu trước.');
+  }
+  return true;
+}
+
+const kslNut = () => '<div class="card" style="margin:0 0 10px" id="kslNut"><h3 style="margin:0 0 6px">Sao lưu và khôi phục</h3><p class="mut">Sau khi nhập hoặc sửa, bấm “Lưu dữ liệu vào lô”. Để mang cả hồ sơ sang máy khác, chọn lưu bản sao ra tệp hoặc USB. Nếu chỉ cần một lô, mở lô đó và chọn “Sao lưu lô rừng”.</p><div class="row" style="gap:8px;flex-wrap:wrap">' +
   '<button class="btn" data-act="backup" id="kslJson">Sao lưu toàn bộ dữ liệu (.json' + (HB ? ' + .sqlite' : '') + ')</button>' +
+  (HB && HB.backupSaveAs ? '<button class="btn ghost" data-act="backupSaveAs" id="kslSaveAsBtn">Lưu bản sao lưu ra tệp / USB…</button>' : '') +
   (HB && HB.restorePick ? '<button class="btn ghost" data-act="restorePick" id="restorePickBtn">Khôi phục toàn bộ dữ liệu (.json / .sqlite)…</button>' : '') +
   '<label class="btn ghost" style="' + (HB && HB.restorePick ? 'display:none;' : '') + 'cursor:pointer" id="restoreLbl">Khôi phục toàn bộ dữ liệu (.json)<input type="file" accept=".json,application/json" data-file="restore" hidden></label>' +
   (HB ? '<button class="btn ghost" data-act="lotBackup" id="kslLotSaveBtn">Sao lưu lô rừng…</button><button class="btn ghost" data-act="lotRestore" id="lotRestoreBtn">Khôi phục lô rừng…</button>' : '') + '</div></div>';
 function panelKhoSaoLuu() {
   if (!HB) return kslNut() + '<div class="card"><div class="msg warn">Kho sao lưu (các bản .sqlite tự động) chỉ có ở bản cài trên Windows.</div></div>';
   const m = ksl.msg || setg.msg;
-  const msgHtml = m ? '<div class="msg ' + m[1] + '" id="kslMsg"><span id="setMsg">' + esc(m[0]) + '</span></div>' : '';
-  return kslNut() + '<div class="card"><h2 style="margin-top:0">Kho sao lưu và cài đặt sao lưu</h2>' + msgHtml + '<div id="kslBox" class="mut">Đang đọc thư mục sao lưu…</div></div>';
+  const loi = ksl.loiToanBo;
+  const actions = loi && m && m === ksl.msg && m[1] !== 'ok' ? '<div class="row" style="margin-top:8px;gap:8px">' +
+    (loi.sqlite ? '<button class="btn sm" data-act="setBackup">Đổi thư mục SQLite…</button>' : '') +
+    (loi.json ? '<button class="btn sm" data-act="setBackupJson">Đổi thư mục JSON…</button>' : '') +
+    (loi.copy2 ? '<button class="btn sm" data-act="setBackup2">Đổi thư mục thứ hai…</button>' : '') +
+    '<button class="btn ghost sm" data-act="backup">Thử sao lưu lại</button></div>' : '';
+  const msgHtml = m ? '<div class="msg ' + m[1] + '" id="kslMsg"><span id="setMsg">' + esc(m[0]) + '</span>' + actions + '</div>' : '';
+  if (!SB_TABS.some(t => t[0] === ksl.tab)) ksl.tab = 'thaotac';
+  const pane = (k, inner) => '<section data-sbpane="' + k + '" id="sbPane_' + k + '"' + (ksl.tab === k ? '' : ' hidden') + '>' + inner + '</section>';   // ẩn bằng hidden: phần tử vẫn có trong trang, chữ gõ dở không mất khi đổi tab
+  return msgHtml + '<nav class="hak-catalog-tabs sub" id="sbTabs" aria-label="Sao lưu và khôi phục">' + SB_TABS.map(([k, l]) => '<button type="button" data-sbtab="' + k + '" id="sbTab_' + k + '"' + (ksl.tab === k ? ' aria-current="page"' : '') + '>' + l + '</button>').join('') + '</nav>' +
+    pane('thaotac', kslNut() + '<div class="card"><h2 style="margin-top:0">Kho sao lưu và cài đặt sao lưu</h2><div id="kslBox" class="mut">Đang đọc thư mục sao lưu…</div></div>') +
+    pane('thumuc', '<div id="kslBoxB" class="mut">Đang đọc cài đặt sao lưu…</div>') + pane('ban', '<div id="kslBoxC" class="mut">Đang đọc thư mục sao lưu…</div>');
 }
 function kslPaint() {
   const box = document.getElementById('kslBox'), d = ksl.d; if (!box || !d) return;
@@ -32,7 +117,7 @@ function kslPaint() {
   const tuDong = !au.keep || ck === 'tat' ? '<span class="pill warn">đang tắt</span>' : au.last ? '<b>' + esc(kslNgay(au.last.day + 'T12:00:00')) + '</b> (' + esc(au.last.day.split('-').reverse().join('/')) + ', ' + kslMB(au.last.size) + ') · giữ ' + au.keep + ' bản gần nhất' : 'chưa có bản nào';
   const toanBo = rm.lastBackup ? '<b>' + esc(kslNgay(rm.lastBackup)) + '</b> (' + esc(fmtDT(rm.lastBackup)) + ')' + (rm.due ? ' <span class="pill warn">đã đến hạn nhắc</span>' : '') : '<b>chưa có</b>' + (rm.due ? ' <span class="pill warn">nên sao lưu</span>' : '');
   const r = au.result, last = au.last;
-  const stTxt = !au.keep || ck === 'tat' ? 'Đang tắt.' : r && !r.ok ? '<span class="warnTxt">Lần chạy gần nhất không được: ' + esc(r.error || '') + '</span>' : r && r.skipped && r.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : '';
+  const stTxt = !au.keep || ck === 'tat' ? 'Đang tắt.' : r && !r.ok ? '<span class="warnTxt">Lần chạy gần nhất không được: ' + esc(r.error || '') + '. Chọn thư mục SQLite có quyền ghi và đủ chỗ rồi bấm “Sao lưu ngay”.</span>' : r && r.skipped && r.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : '';
   const sqlCard = '<div class="card" style="margin:10px 0" id="autoBk"><h3 style="margin:0 0 4px">Thư mục và tự sao lưu SQLite (Tự sao lưu hằng ngày / định kỳ)</h3>' +
     '<p class="mut" style="margin:0 0 8px">Nơi lưu bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu định kỳ và bản .sqlite khi bấm Sao lưu toàn bộ. Khi đóng phần mềm (và định kỳ khi để máy mở), bản hiện hành được làm mới nếu dữ liệu đã đổi.</p>' +
     '<div style="word-break:break-all"><b>Đang dùng:</b> <code data-set-path>' + esc(st.backupDir || '') + '</code> <span class="pill ' + (st.customBackup ? 'ok' : '') + '">' + (st.customBackup ? 'thư mục riêng' : 'mặc định') + '</span></div>' +
@@ -44,8 +129,10 @@ function kslPaint() {
     '<button class="btn ghost sm" data-act="kslAuto">Sao lưu ngay</button>' +
     '<span class="mut" data-auto-last>' + (last ? 'Bản gần nhất: ' + esc(last.day.split('-').reverse().join('/')) + ' (' + sz(last.size) + ') · đang có ' + au.count + ' bản' : 'Chưa có bản tự sao lưu nào') + '</span>' + (stTxt ? ' <span class="mut">' + stTxt + '</span>' : '') + '</div>' +
     '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#ddd)" id="dbBk2"><h4 style="margin:0 0 4px">Thư mục sao lưu thứ hai</h4><p class="mut" style="margin:0 0 6px">Mỗi bản tự sao lưu SQLite được chép thêm sang đây (ổ ngoài, USB, thư mục đồng bộ) để phòng hỏng cả máy. Ổ không cắm thì bỏ qua, bản chính vẫn còn.</p>' +
-    (au.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(au.dir2) + '</code></div>' + ((au.result && au.result.copy2 && !au.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' + esc(au.result.copy2.error) + '</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
-    '<div class="row" style="margin-top:6px;gap:8px"><button class="btn sm" data-act="setBackup2">Chọn thư mục…</button>' + (au.dir2 ? '<button class="btn ghost sm" data-act="setBackup2Off">Tắt</button>' : '') + '</div></div></div>';
+    (au.dir2 ? '<div style="word-break:break-all"><b>Đang dùng:</b> <code>' + esc(au.dir2) + '</code></div>' + ((au.result && au.result.copy2 && !au.result.copy2.ok) ? '<div class="msg warn" style="margin-top:6px">Lần chép gần nhất không được: ' + esc(au.result.copy2.error) + '. Kết nối lại ổ hoặc chọn thư mục thứ hai khác rồi bấm “Sao lưu ngay”.</div>' : '') : '<div class="mut">Chưa chọn.</div>') +
+    '<div class="row" style="margin-top:6px;gap:8px"><button class="btn sm" data-act="setBackup2">Chọn thư mục…</button>' + (au.dir2 ? '<button class="btn ghost sm" data-act="setBackup2Off">Tắt</button>' : '') + '</div>' +
+    ((ksl.targets && ksl.targets.length) ? ('<div style="margin-top:8px"><small class="mut">Gợi ý kết nối nhanh thư mục Cloud / Ổ đĩa ngoài:</small><div class="row" style="gap:6px;margin-top:4px">' + ksl.targets.map(t => '<button type="button" class="btn ghost sm" data-act="setBk2Quick" data-path="' + esc(t.path) + '" title="Gán ' + esc(t.path) + ' làm thư mục sao lưu thứ hai">' + (t.type === 'cloud' ? '☁️ ' : '💾 ') + esc(t.name) + '</button>').join('') + '</div></div>') : '') +
+    '</div></div>';
   const jsonDir = st.backupDirJson || st.backupDir || '';
   const jsonCard = '<div class="card" style="margin:10px 0" id="jsonBk"><h3 style="margin:0 0 4px">Thư mục sao lưu JSON</h3><p class="mut" style="margin:0 0 8px">Nơi lưu file .json khi bấm Sao lưu toàn bộ dữ liệu và thư mục gợi ý khi sao lưu lô rừng.</p>' +
     '<div style="word-break:break-all"><b>Đang dùng:</b> <code data-set-json-path>' + esc(jsonDir) + '</code> <span class="pill ' + (st.customBackupJson ? 'ok' : '') + '">' + (st.customBackupJson ? 'thư mục riêng' : 'mặc định') + '</span></div>' +
@@ -54,14 +141,17 @@ function kslPaint() {
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Nhắc sau <select id="setRemind">' + [[0, 'Không nhắc'], [3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày']].map(o => '<option value="' + o[0] + '"' + (o[0] === rm.remindDays ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' +
     '<span class="mut">Sao lưu toàn bộ lần cuối: ' + (rm.lastBackup ? esc(new Date(rm.lastBackup).toLocaleString('vi-VN')) : 'chưa có') + '</span></div></div>';
   box.className = '';
-  box.innerHTML = '<div class="card" style="margin:10px 0" id="kslTinhTrang"><h3 style="margin:0 0 6px">Tình trạng</h3>' +
+  box.innerHTML = dungLuongHtml(st) + '<div class="card" style="margin:10px 0" id="kslTinhTrang"><h3 style="margin:0 0 6px">Tình trạng</h3>' +
     '<div>Tự sao lưu hằng ngày: ' + tuDong + (d.chuaVaoBanTuDong ? ' · <span class="pill warn" id="kslChuaVao">có thay đổi chưa vào bản hôm nay</span> <span class="mut">(tự làm mới khi đóng phần mềm, hoặc bấm “Tự sao lưu ngay”)</span>' : '') + '</div>' +
     '<div style="margin-top:4px">Sao lưu toàn bộ (.json + .sqlite, nên lưu ra ổ khác): ' + toanBo + '</div>' +
     '<div class="mut" style="margin-top:4px;word-break:break-all">Thư mục: ' + d.dirs.map(x => '<code>' + esc(x) + '</code>').join(' · ') + '</div>' +
     (d.loi && d.loi.length ? '<div class="msg warn" style="margin-top:6px">Không đọc được: ' + d.loi.map(x => esc(x.dir) + ' (' + esc(x.error) + ')').join('; ') + '</div>' : '') +
     '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn" data-act="backup" id="kslToanBo">Sao lưu toàn bộ ngay</button><button class="btn ghost" data-act="kslAuto" id="kslAutoBtn"' + (au.keep ? '' : ' disabled') + '>Tự sao lưu ngay</button>' +
     '<button class="btn ghost" data-act="setOpenBackup">Mở thư mục sao lưu</button><button class="btn ghost" data-act="kslTai">Tải lại danh sách</button></div></div>' +
-    sqlCard + jsonCard + remindCard +
+    remindCard;
+  const boxB = document.getElementById('kslBoxB'), boxC = document.getElementById('kslBoxC');
+  if (boxB) { boxB.className = ''; boxB.innerHTML = sqlCard + jsonCard; }
+  if (boxC) { boxC.className = ''; boxC.innerHTML =
     '<div class="card" style="margin:10px 0"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Các bản sao lưu trên máy</h3>' +
     '<span class="mut" id="kslTong">' + d.tong.soBan + ' bản · ' + kslMB(d.tong.bytes) + '</span></div>' +
     (d.items.length ? '<div class="row" style="margin:8px 0;gap:8px;align-items:center"><label style="flex-direction:row;gap:6px;align-items:center">Loại <select id="kslLoc"><option value="">Tất cả (' + d.items.length + ')</option>' + loai.map(([m, t]) => '<option value="' + esc(m) + '"' +
@@ -72,10 +162,10 @@ function kslPaint() {
         esc(x.dir) + '</small>' : '') + '</td><td style="text-align:right;white-space:nowrap">' + kslMB(x.size) + '</td>' +
           '<td data-ksl-kiem>' + (!k ? '<span class="mut">chưa kiểm</span>' : k.ok ? '<span class="pill ok">dùng được</span><br><small class="mut">' + (k.counts.owners || 0) + ' chủ rừng, ' + (k.counts.forests || 0) + ' lô' + (k.version ? ' · cấu trúc v' + k.version : '') + '</small>' :
           '<span class="pill err">không dùng được</span><br><small>' + esc(k.error) + '</small>') + '</td>' +
-          '<td style="white-space:nowrap"><button class="btn ghost sm" data-act="kslKiem" data-i="' + i + '">Kiểm tra</button> <button class="btn ghost sm" data-act="kslKhoiPhuc" data-i="' + i + '">Khôi phục…</button> <button class="btn danger sm" data-act="kslXoa" data-i="' + i + '">Xóa</button></td></tr>';
+          '<td style="white-space:nowrap"><button class="btn ghost sm" data-act="kslChiTiet" data-i="' + i + '" title="Xem danh sách chủ rừng &amp; trích xuất khôi phục từng phần">🔍 Chi tiết</button> <button class="btn ghost sm" data-act="kslKiem" data-i="' + i + '">Kiểm tra</button> <button class="btn ghost sm" data-act="kslKhoiPhuc" data-i="' + i + '">Khôi phục…</button> <button class="btn danger sm" data-act="kslXoa" data-i="' + i + '">Xóa</button></td></tr>';
           }).join('') + '</table></div>' +
       '<p class="mut" style="margin:8px 0 0">Khôi phục từ bản .sqlite thay <b>toàn bộ</b> hồ sơ trên máy bằng bản đó (có xem trước; dữ liệu hiện tại được sao lưu trước khi ghi nên hoàn tác được bằng chính màn này). Bản .json mở màn xem trước cho phép chọn giữ / ghi đè / giữ cả hai. Bản “Trước khi…” do phần mềm tự tạo trước mỗi thao tác lớn; loại “Trước khi khôi phục”, “Trước khi khôi phục lô”, “Trước khi xóa” tự giữ 20 bản gần nhất.</p>'
-      : '<p class="mut" id="kslTrong">Chưa có bản sao lưu nào trong thư mục sao lưu.</p>') + '</div>';
+      : '<p class="mut" id="kslTrong">Chưa có bản sao lưu nào trong thư mục sao lưu.</p>') + '</div>'; }
   ksl.hien = items;
   const sel = document.getElementById('kslLoc'); if (sel) sel.addEventListener('change', () => { ksl.loc = sel.value; kslPaint(); });
   const ckEl = document.getElementById('setAutoChuKy');
@@ -85,21 +175,38 @@ function kslPaint() {
   const rmEl = document.getElementById('setRemind');
   if (rmEl) rmEl.addEventListener('change', async () => { const prev = String(rm.remindDays ?? 7), r = await HB.settings.setRemind(rmEl.value); if (r && r.ok) { setg.s = ksl.st = r.settings; setg.msg = ksl.msg = ['Đã lưu mức nhắc sao lưu.', 'ok']; render(); } else { rmEl.value = prev; setg.msg = ksl.msg = ['Không lưu được mức nhắc sao lưu: ' + ((r && r.error) || 'lỗi không rõ'), 'err']; render(); } });
 }
+async function backupSaveAs(fromSaveHelp) {
+  if (!HB || !HB.backupSaveAs || ksl.busy || !backupConfirmSaved()) return;
+  ksl.busy = true;
+  try {
+    const r = await HB.backupSaveAs();
+    if (!r || r.canceled) return;
+    ksl.msg = r.ok ? ['Đã lưu bản sao lưu toàn bộ ra tệp: ' + r.file, 'ok'] : ['Không lưu được bản sao lưu: ' + (r.error || 'lỗi không rõ') + '. Mở Thư mục và lịch, chọn thư mục SQLite có quyền ghi và đủ chỗ rồi thử lại.', 'err'];
+    if (fromSaveHelp) pushNote(...ksl.msg);
+    render();
+  } finally { ksl.busy = false; }
+}
 async function kslRestorePick() {
   if (!HB || !HB.restorePick || ksl.busy) return;
   const r = await HB.restorePick();
   if (!r || r.canceled) return;
   if (!r.ok) { ksl.msg = setg.msg = ['Không khôi phục được: ' + r.error, 'err']; return render(); }
   if (r.dinhDang === 'json') return restoreAll({text: async () => r.text});
+  ksl.loc = '';
   await kslLoad();
   const idx = (ksl.hien || []).findIndex(x => x.name === r.name || x.file === r.file);
   if (idx >= 0) return kslKhoiPhuc({dataset: {i: String(idx)}});
 }
 async function kslLoad() {
   if (!HB || !HB.saoLuu) return;
-  const [r, s] = await Promise.all([HB.saoLuu.list(), HB.settings.get()]);
+  const [r, s, tg] = await Promise.all([
+    HB.saoLuu.list(),
+    HB.settings.get(),
+    (HB.settings && HB.settings.detectTargets) ? HB.settings.detectTargets() : Promise.resolve({targets: []})
+  ]);
   if (!r.ok) { const b = document.getElementById('kslBox'); if (b) b.innerHTML = '<div class="msg err">Không đọc được thư mục sao lưu: ' + esc(r.error) + '</div>'; return; }
-  ksl.d = r; ksl.st = s.ok ? s.settings : null; kslPaint(); bkChipFill(ksl.st);
+  ksl.d = r; ksl.st = s.ok ? s.settings : null; ksl.targets = (tg && tg.ok ? tg.targets : []) || [];
+  kslPaint(); bkChipFill(ksl.st);
 }
 const kslItem = el => (ksl.hien || [])[+el.dataset.i] || null;
 async function kslKiem(el) {
@@ -109,8 +216,16 @@ async function kslKiem(el) {
 }
 async function kslAuto() {
   if (ksl.busy) return; ksl.busy = true;
-  try { const r = await HB.saoLuu.autoNow(); ksl.msg = r.ok ? [r.auto && r.auto.skipped ? (r.auto.reason === 'empty' ? 'Chưa có hồ sơ nên chưa sao lưu.' : 'Bản tự sao lưu của hôm nay đã chứa dữ liệu mới nhất.') : 'Đã tự sao lưu và kiểm tra: ' + ((r.auto && r.auto.file) || ''),
-  'ok'] : ['Tự sao lưu không được: ' + (r.error || 'lỗi không rõ'), 'err']; }
+  try {
+    const r = await HB.saoLuu.autoNow();
+    const au = r.auto;
+    if (!r.ok) ksl.msg = ['Tự sao lưu không được. ' + (r.error || '') + ' Mở Thư mục và lịch, chọn thư mục SQLite có quyền ghi và đủ chỗ rồi thử lại.', 'err'];
+    else if (au?.copy2?.ok === false) ksl.msg = ['Bản tự sao lưu chính vẫn dùng được. Chép sang thư mục thứ hai gặp lỗi. ' +
+      au.copy2.error + ' Kết nối lại ổ hoặc chọn thư mục thứ hai khác rồi bấm “Sao lưu ngay”.', 'warn'];
+    else if (au?.reason === 'off') ksl.msg = ['Tự sao lưu đang tắt. Chọn chu kỳ trong Thư mục và lịch để bật lại.', 'warn'];
+    else if (au?.reason === 'empty') ksl.msg = ['Chưa có hồ sơ để tự sao lưu.', 'warn'];
+    else ksl.msg = [au?.skipped ? 'Bản tự sao lưu hiện tại đã chứa dữ liệu mới nhất.' : 'Đã tự sao lưu và kiểm tra. ' + (au?.file || ''), 'ok'];
+  }
   finally { ksl.busy = false; }
   render();
 }
@@ -165,10 +280,195 @@ function bkChipFill(s) {
   if (s) return ve(s);
   HB.settings.get().then(r => { if (r && r.ok) ve(r.settings); }).catch(() => {});
 }
+async function kslChiTiet(el) {
+  const x = kslItem(el); if (!x || ksl.busy) return;
+  ksl.busy = true; let r;
+  try { r = await HB.saoLuu.inspectDetail(x.file); }
+  finally { ksl.busy = false; }
+  if (!r || !r.ok || !r.detail) return note('Không đọc được chi tiết: ' + ((r && r.error) || 'lỗi không rõ'), 'err');
+  const d = r.detail;
+  window.__kslDetail = {file: x.file, name: x.name, detail: d};
+  let html = '<h2>🔍 Khám phá &amp; Trích xuất bản sao lưu</h2>' +
+    '<p>Tệp: <code>' + esc(x.name) + '</code> (' + esc(x.tenLoai) + ', ' + esc(fmtDT(x.mtime)) + ') · <b>' + d.soChuRong + ' chủ rừng</b>, <b>' + d.soLoRung + ' lô rừng</b></p>' +
+    '<div class="msg" style="background:var(--accSoft);border:1px solid var(--acc);color:var(--ink);margin-bottom:12px">' +
+      '<b>Trích xuất từng phần an toàn:</b> Bạn có thể chọn khôi phục <b>riêng 1 chủ rừng</b> hoặc <b>riêng 1 lô rừng</b> từ bản sao lưu này vào máy tính mà <b>không ảnh hưởng</b> đến các chủ rừng/lô khác đang làm việc.' +
+    '</div>' +
+    '<div class="wrap" style="max-height:55vh;overflow:auto;margin-bottom:14px">';
+  
+  if (!d.owners.length) {
+    html += '<p class="mut" style="text-align:center">Bản sao lưu này không có hồ sơ chủ rừng nào.</p>';
+  } else {
+    d.owners.forEach(o => {
+      html += '<div class="card" style="margin-bottom:10px;border-left:4px solid var(--acc)">' +
+        '<div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">' +
+          '<div>' +
+            '<b style="font-size:15px">' + esc(o.ten || '(chưa đặt tên)') + '</b> ' + (o.danhXung ? '<span class="mut">(' + esc(o.danhXung) + ')</span>' : '') +
+            '<div class="mut" style="font-size:12px;margin-top:2px">Mã: <code>' + esc(o.ma || '—') + '</code> · CCCD: ' + esc(o.cccd || '—') + ' · ' + o.soRung + ' lô rừng</div>' +
+          '</div>' +
+          '<div class="row" style="gap:6px">' +
+            '<button type="button" class="btn sm" data-act="kslRestoreOwner" data-oid="' + esc(o.id) + '" data-name="' + esc(o.ten || o.id) + '">📥 Khôi phục riêng chủ này</button>' +
+          '</div>' +
+        '</div>';
+      if (o.forests && o.forests.length) {
+        html += '<table style="margin-top:8px;font-size:12.5px;width:100%">' +
+          '<thead><tr><th>Mã lô</th><th>Tên rừng</th><th style="text-align:right">Diện tích</th><th style="text-align:center">Số phiếu</th><th style="text-align:right">Sản lượng</th><th>Trạng thái</th><th style="text-align:right">Thao tác</th></tr></thead>' +
+          '<tbody>' +
+          o.forests.map(f => {
+            return '<tr>' +
+              '<td><code>' + esc(f.maRung || f.id) + '</code></td>' +
+              '<td>' + esc(f.tenRung || 'Rừng') + '</td>' +
+              '<td style="text-align:right">' + (f.dienTich ? f.dienTich + ' ha' : '—') + '</td>' +
+              '<td style="text-align:center">' + f.soPhieu + '</td>' +
+              '<td style="text-align:right">' + (f.tongKg ? (f.tongKg / 1000).toFixed(2).replace('.', ',') + ' tấn' : '—') + '</td>' +
+              '<td><span class="pill ' + (f.trangThai === 'Đã chốt' ? 'ok' : '') + '">' + esc(f.trangThai) + '</span></td>' +
+              '<td style="text-align:right"><button type="button" class="btn ghost sm" data-act="kslRestoreForest" data-oid="' + esc(o.id) + '" data-fid="' + esc(f.id) + '" data-ma="' + esc(f.maRung || f.id) + '">📥 Lấy riêng lô này</button></td>' +
+            '</tr>';
+          }).join('') +
+          '</tbody></table>';
+      }
+      html += '</div>';
+    });
+  }
+  html += '</div>' +
+    '<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">' +
+      '<button type="button" class="btn ghost" data-act="dlgDong">Đóng</button>' +
+      '<button type="button" class="btn ghost" data-act="kslKhoiPhucTuDetail">Khôi phục toàn bộ bằng bản này…</button>' +
+    '</div>';
+  
+  $('#impBody').innerHTML = html;
+  $('#impBox').classList.add('on');
+}
+
+async function kslDoRestoreOwner(oid, name) {
+  if (!confirm('Khôi phục các lô của chủ rừng “' + (name || oid) + '”? Ứng dụng sẽ sao lưu SQLite trước khi ghi. Bản nháp của các lô được khôi phục sẽ được thay thế.')) return;
+  return kslKhoiPhucRieng(file => HB.saoLuu.restoreOwner(file, oid, 'overwrite'), 'chủ rừng “' + (name || oid) + '”');
+}
+
+async function kslDoRestoreForest(oid, fid, maRung) {
+  if (!confirm('Khôi phục lô “' + (maRung || fid) + '”? Ứng dụng sẽ sao lưu SQLite trước khi ghi. Bản nháp của lô này sẽ được thay thế.')) return;
+  return kslKhoiPhucRieng(file => HB.saoLuu.restoreForest(file, oid, fid, 'overwrite'), 'lô “' + (maRung || fid) + '”');
+}
+
+async function kslKhoiPhucRieng(restore, nhan) {
+  const d = window.__kslDetail;
+  if (!d || ksl.busy || stSaving) return;
+  ksl.busy = true;
+  try {
+    const r = await storeSave(async () => {
+      const cu = HB.loadSync();
+      if (!cu?.ok) return cu;
+      const ketQua = await restore(d.file);
+      if (ketQua?.ok && (ketQua.dich.forestIds.length || !db.rs[ketQua.dich.ownerId])) {
+        dbCapNhatKhoiPhucRieng({dich: ketQua.dich, dbMoi: ketQua.db, dbCu: cu.db, rev: ketQua.rev});
+      }
+      return ketQua;
+    });
+    if (!r?.ok) return note('Không khôi phục được ' + nhan + '. ' + (r?.error || 'Hãy thử lại.'), 'err');
+    $('#impBox').classList.remove('on');
+    const boQua = r.goiBoQua ? ' Đã bỏ qua ' + r.goiBoQua + ' bản chụp chốt không hợp lệ.' : '';
+    note('Đã khôi phục ' + nhan + '.' + (r.backup ? ' Bản sao trước khi ghi nằm tại ' + r.backup + '.' : '') + boQua, boQua ? 'warn' : 'ok');
+  } catch (e) {
+    note('Lỗi khi khôi phục ' + nhan + '. ' + e.message, 'err');
+  } finally {
+    ksl.busy = false;
+  }
+}
+
+async function quickBackup() {
+  if (!HB || !HB.backupTo || ksl.busy || backupBusy) return;
+  ksl.busy = true;
+  try {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      const rSave = await storeSave().catch(e => ({ok: false, error: e.message}));
+      storeOk = !!rSave?.ok;
+      if (!storeOk) {
+        pushNote('Chưa sao lưu nhanh vì lần ghi dữ liệu đang chờ gặp lỗi. ' +
+          (rSave?.error || '') + ' Thử lưu lại trước khi sao lưu.', 'err');
+        showSave('Lỗi lưu · chưa sao lưu', true);
+        return;
+      }
+    } else await saveChain;
+    if (!storeOk) {
+      pushNote('Chưa sao lưu nhanh vì lần ghi dữ liệu gần nhất gặp lỗi. ' +
+        (saveSt.text || '') + ' Thử lưu lại trước khi sao lưu.', 'err');
+      return;
+    }
+    if (!backupConfirmSaved()) return;
+    showSave('… Đang sao lưu toàn bộ');
+    const r = await HB.backupTo();
+    if (!r || r.canceled) return;
+    const copyIssue = r.copy2 && !r.copy2.skipped && !r.copy2.ok;
+    const partial = r.json?.ok || r.sqlite?.ok;
+    if (!r.ok || copyIssue) {
+      const msg = (r.message || r.error || 'Sao lưu thất bại.') +
+        (!r.ok && copyIssue ? ' Chép sang thư mục thứ hai cũng chưa hoàn tất. ' + r.copy2.error : '') +
+        (copyIssue ? ' Kết nối lại ổ hoặc đổi thư mục thứ hai rồi thử lại.' : '');
+      const kind = r.ok || partial ? 'warn' : 'err';
+      ksl.loiToanBo = {json: !r.json?.ok, sqlite: !r.sqlite?.ok, copy2: copyIssue};
+      ksl.msg = [msg, kind];
+      pushNote(msg, kind);
+      showSave('Sao lưu chưa đầy đủ · xem thông báo', true);
+      return;
+    }
+    const dirtyCount = stDirtyList().length;
+    const status = (dirtyCount ? 'Đã sao lưu phần đã ghi lúc ' : 'Đã sao lưu lúc ') + hhmm();
+    pushNote(status + (dirtyCount ? '. Còn ' + dirtyCount + ' lô chưa lưu bản nháp.' : '.'), 'ok');
+    showSave(status, false);
+    ksl.loiToanBo = null;
+    ksl.msg = [r.message || status, 'ok'];
+    if (typeof bkChipFill === 'function') bkChipFill();
+    if (!dirtyCount) {
+      window.__hakWorkDone = 0;
+      updateBkPulse(false);
+    }
+  } catch (e) {
+    pushNote('Lỗi sao lưu. ' + e.message + ' Kiểm tra thư mục sao lưu rồi thử lại.', 'err');
+    showSave('Lỗi sao lưu', true);
+  } finally {
+    ksl.busy = false;
+    render();
+  }
+}
+
+function updateBkPulse(active) {
+  const btn = document.getElementById('quickBackupBtn');
+  if (btn) btn.classList.toggle('pulse-bk', !!active);
+}
+
+function notifyWorkDone(amount = 1) {
+  window.__hakWorkDone = (window.__hakWorkDone || 0) + amount;
+  if (window.__hakWorkDone >= 15) {
+    updateBkPulse(true);
+  }
+}
+
+async function setBk2Quick(targetPath) {
+  if (!HB || !HB.settings || !HB.settings.setBackup2Dir) return;
+  try {
+    const r = await HB.settings.setBackup2Dir(targetPath);
+    if (r && r.ok) {
+      note('Đã gán thư mục sao lưu thứ hai: ' + targetPath + '. Bản sao lưu sẽ tự động được chép thêm vào đây.', 'ok');
+      kslLoad();
+    } else {
+      note('Không gán được thư mục: ' + ((r && r.error) || 'lỗi không rõ'), 'err');
+    }
+  } catch (e) {
+    note('Lỗi: ' + e.message, 'err');
+  }
+}
+
 if (HB) { document.addEventListener('DOMContentLoaded', () => { setTimeout(bkChipFill, 1500); setInterval(bkChipFill, 600000); }); }
-/* Ctrl+S: lưu lô đang mở (như bấm “Lưu dữ liệu vào lô”); không có gì chưa lưu thì chỉ báo. Không lưu khi đang mở hộp thoại nhập / khôi phục / tìm kiếm / tổng hợp (lô 9c, T-23). */
+/* Ctrl+S: lưu lô; Ctrl+B: sao lưu toàn bộ */
 document.addEventListener('keydown', e => {
-  if (!(e.ctrlKey || e.metaKey) || e.altKey || (e.key !== 's' && e.key !== 'S')) return;
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  if (e.key === 'b' || e.key === 'B') {
+    e.preventDefault();
+    quickBackup();
+    return;
+  }
+  if (e.key !== 's' && e.key !== 'S') return;
   e.preventDefault();
   if (document.querySelector('#impBox.on, #stBox.on, #lkBox.on, #rpBox.on, #dlgBox.on, #guideBox.on, #tkBox, #thBox')) return;
   if (document.activeElement && typeof document.activeElement.blur === 'function' && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) document.activeElement.blur();   // ô đang gõ: ghi nhận giá trị (sự kiện change) trước khi lưu
@@ -178,4 +478,11 @@ document.addEventListener('keydown', e => {
     const r = await window.__stSaveCurrent();
     if (r && r.ok === false && r.error) note('Chưa lưu được: ' + r.error, 'err');
   }, 0);
+});
+/* PR C: đổi tab con của Sao lưu và khôi phục (không vẽ lại: chỉ hiện / ẩn khung, nhớ tab trong phiên) */
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest && e.target.closest('[data-sbtab]'); if (!b) return;
+  ksl.tab = b.dataset.sbtab;
+  document.querySelectorAll('[data-sbpane]').forEach(x => { x.hidden = x.dataset.sbpane !== ksl.tab; });
+  document.querySelectorAll('[data-sbtab]').forEach(x => { if (x.dataset.sbtab === ksl.tab) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
 });

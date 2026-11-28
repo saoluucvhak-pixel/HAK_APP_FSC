@@ -19,8 +19,8 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');
   const DB = async () => (await w.evaluate(() => window.hak.loadSync().db));
   // ---- 3. ô Số người trống khác số 0 ----
-  await w.click('#navNorm'); await w.waitForSelector('#dbForm');
-  const them = async (cd, so, nv) => { await w.evaluate(([c, s, n]) => { const trs = [...document.querySelectorAll('#dbForm tr[data-db]')], tr = trs[trs.length - 1]; tr.querySelector('[name=b_cd]').value = c; tr.querySelector('[name=b_so]').value = s; tr.querySelector('[name=b_nv]').value = n; document.getElementById('dbForm').requestSubmit(); }, [cd, so, nv]); await w.waitForTimeout(500); };
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm');
+  const them = async (cd, so, nv) => { if (await w.$('#dmModal')) await w.click('#normMoHuy'); await w.click('#dbThem'); await w.fill('#dbMoForm [name=b_cd]', cd); await w.fill('#dbMoForm [name=b_so]', so); await w.fill('#dbMoForm [name=b_nv]', nv); await w.click('#normMoLuu'); await w.waitForTimeout(500); };   // 3.7.1: hộp thoại Thêm vị trí; lỗi hiện ngay trong hộp thoại
   const truoc = JSON.stringify((await DB()).dinhBienVer);
   await w.selectOption('#dbVerSel', '01/12/2026'); await w.waitForTimeout(300);
   await them('Vị trí thử trống', '', ''); let t = await w.innerText('#main');
@@ -33,7 +33,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await them('Vị trí gốc trống', '', ''); t = await w.innerText('#main'); ok('bản gốc: ô trống bị từ chối, bản gốc đã lưu không đổi', /chưa nhập số người/.test(t) && JSON.stringify((await DB()).dinhBien) === gocTruoc);
   await them('Vị trí gốc 0', '0', ''); ok('bản gốc: nhập 0 chủ động được lưu', ((await DB()).dinhBien.find(r => r.chucDanh === 'Vị trí gốc 0') || {}).soNguoi === 0);
   // ---- 4. chọn phiên bản bằng ngày lịch hợp lệ ----
-  await w.click('#navNorm'); await w.waitForSelector('#dbVerBar'); await w.selectOption('#dbVerSel', '01/12/2026'); await w.waitForTimeout(300); t = await w.innerText('#dbVerBar'.replace('Bar', 'Bar')) + await w.innerText('#main');
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbVerBar'); await w.selectOption('#dbVerSel', '01/12/2026'); await w.waitForTimeout(300); t = await w.innerText('#dbVerBar'.replace('Bar', 'Bar')) + await w.innerText('#main');
   ok('màn Định mức: phiên bản 01/12/2026 áp cho R-B và R-D (ngày trống = bản mới nhất); R-C (31/11/2026) nêu riêng là chưa xác định được', /R-B/.test(t) && /R-D/.test(t) && /Chưa xác định được phiên bản của 1 lô/.test(t) && /R-C \(31\/11\/2026\)/.test(t), t.slice(0, 700));
   const open = async (fid, ftab) => { await w.click('[data-open=own1]').catch(() => {}); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=' + ftab + ']'); await w.waitForTimeout(400); };
   await open('fa', 'nc'); await w.evaluate(() => window.__hak.mucLo('nc', 'dongia'));   /* 3.0: so định mức ở mục “Hình thức và đơn giá” */ const ta = await w.innerText('#main'); await open('fb', 'nc'); await w.evaluate(() => window.__hak.mucLo('nc', 'dongia'));   /* 3.0: so định mức ở mục “Hình thức và đơn giá” */ const tb = await w.innerText('#main');
@@ -44,7 +44,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('Kiểm tra: mục chặn “Định mức nhân công: ngày bắt đầu sai” nêu ngày 31/11/2026', /ngày bắt đầu sai|ngày bắt đầu khai thác “31\/11\/2026”/.test(kt), kt.slice(0, 500));
   const Z = await DB(); ok('giá trị ngày gốc 31/11/2026 được giữ nguyên, định mức không bị ghi lại', Z.rs.own1.forests.fc.info.tuNgay === '31/11/2026');
   // ---- số dương, số âm, số lẻ, vượt giới hạn: bản gốc lẫn bản có ngày hiệu lực; sau lần lưu lỗi, mở lại app thì dữ liệu đã lưu giữ nguyên ----
-  await w.click('#navNorm'); await w.waitForSelector('#dbForm');
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm');
   await w.selectOption('#dbVerSel', '01/12/2026'); await w.waitForTimeout(300);
   const v0 = JSON.stringify((await DB()).dinhBienVer), g0 = JSON.stringify((await DB()).dinhBien);
   for (const [so, re, mo] of [['-1', /từ 0 đến 50|số nguyên/, 'âm'], ['1,5', /số nguyên/, 'lẻ'], ['51', /từ 0 đến 50|vượt/, 'vượt giới hạn'], ['abc', /số nguyên|từ 0 đến 50/, 'chữ']]) {

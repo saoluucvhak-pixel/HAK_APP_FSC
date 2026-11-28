@@ -61,7 +61,7 @@
         const bad = m => { errs.push(at + m); state[r._row] = 'err'; };
         const warn = m => { warns.push(at + m); if (!state[r._row]) state[r._row] = 'warn'; };
         const role = /^tổ trưởng/i.test(r.vaiTro) ? 'TT' : /^công nhân/i.test(r.vaiTro) ? 'CN' : null;
-        if (!role) bad('Vai trò phải là "Tổ trưởng" hoặc "Công nhân"');
+        if (!role) bad('Chức vụ phải là "Tổ trưởng" hoặc "Công nhân"');
         if (role === 'TT') tt++;
         if (!r.ten) bad('thiếu Họ và tên');
         if (!['Ông', 'Bà'].includes(r.danhXung)) bad('Danh xưng phải là Ông hoặc Bà');
@@ -80,9 +80,9 @@
           else seen[r.cccd + '|' + (r.doiId || '')] = r._row;
           if (ctx.trim(r.ten)) (byCccd[r.cccd] = byCccd[r.cccd] || []).push({row: r._row, nm: ctx.trim(r.ten)});
         }
-        if (!ctx.chucDanhAll().includes(r.chucDanh)) bad('Chức danh không hợp lệ: "' + r.chucDanh + '"');
-        if (role === 'TT' && r.chucDanh !== 'Tổ trưởng') bad('Tổ trưởng phải có chức danh "Tổ trưởng"');
-        if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi chức danh "Tổ trưởng"');
+        if (!ctx.chucDanhAll().includes(r.chucDanh)) bad('Vị trí không hợp lệ: "' + r.chucDanh + '"');
+        if (role === 'TT' && r.chucDanh !== 'Tổ trưởng') bad('Tổ trưởng phải có vị trí "Tổ trưởng"');
+        if (role === 'CN' && r.chucDanh === 'Tổ trưởng') bad('Công nhân không được ghi vị trí "Tổ trưởng"');
         const ngc = rec.info.hinhThucLuong === 'ngaycong';
         if (ctx.chucDanhAll().includes(r.chucDanh)) {
           const ir = infoRow(rec, r), rate = rateOf(ir, r);
@@ -206,7 +206,7 @@
     /* Cơ sở tính đơn giá. Hợp đồng có 2 hình thức:
        - Giao khoán (chủ rừng ký với Tổ trưởng, công nhân ủy quyền cho Tổ trưởng): tính theo TẤN, HA hoặc NGÀY CÔNG (Tổ trưởng nhận thay cả tổ rồi chi trả từng người).
        - Trực tiếp (chủ rừng ký với tất cả nhân công): tính theo TẤN hoặc NGÀY CÔNG.
-       Đơn giá theo từng vai trò (chức danh); sản lượng (tấn, ha) hoặc số công chia đều cho mọi người. */
+       Đơn giá theo từng vị trí (trường chucDanh); sản lượng (tấn, ha) hoặc số công chia đều cho mọi người. */
     const BASIS = {sanluong: {map: 'donGiaTan', unit: 'đồng/tấn', short: 'đ/tấn', qty: 'tấn'}, ha: {map: 'donGiaHa', unit: 'đồng/ha', short: 'đ/ha', qty: 'ha'}, ngaycong: {map: 'donGiaNgay', unit: 'đồng/công', short: 'đ/công', qty: 'công'}};
     const basisOf = i => BASIS[i.hinhThucLuong] || BASIS.sanluong;
     const basisAllowed = (direct, b) => direct ? b !== 'ha' : true;   // giao khoán: tấn, ha hoặc ngày công; trực tiếp: tấn hoặc ngày công
@@ -314,7 +314,7 @@
       }
       return {ngc, basis, tu, den, cong, vol, issues};
     }
-    /* Bảng tiền theo từng người: sản lượng (tấn/ha) hoặc số công chia đều; đơn giá theo vai trò. Dùng chung cho BM-01, BM-08, BM-14. */
+    /* Bảng tiền theo từng người: sản lượng (tấn/ha) hoặc số công chia đều; đơn giá theo vị trí. Dùng chung cho BM-01, BM-08, BM-14. */
     function payRows(rec, ex) {
       const rs = rec.info, plan = payrollPlan(rec, ex), list = ncList(rec), N = list.length;
       const each = (!plan.ngc && plan.vol && N) ? plan.vol.v / N : null;
@@ -346,7 +346,7 @@
     const normRefHDLD = (rec, ex) => { const e = ex || rec.exp || {}; return [rec.info.ngayBDLD, e.ngayKy, rec.info.ngayKyHopDong, rec.info.tuNgay].find(x => ctx.HAKDates.isValid(x)) || ''; };
     const normErrors = rec => { const ref = normRefCapPhat(rec), pk = ctx.HAKDinhMuc.pick(ctx.db, ref), out = [];
       if (!pk.found) return ['chưa có bản định mức BHLĐ hiệu lực tại ngày ' + ref + ' (bản sớm nhất hiệu lực từ ' + (pk.earliest.tuNgay || '…') + '): thêm bản định mức hoặc đổi ngày cấp phát'];
-      [...new Set(rec.nc.map(r => r.chucDanh))].filter(cd => ctx.chucDanhAll().includes(cd) && !ctx.BHLD_ITEMS.some(([k]) => ctx.trim(((pk.ver.dm || {})[cd] || {})[k]))).forEach(cd => out.push('chưa có định mức BHLĐ cho chức danh "' + cd + '"' + (pk.ver.tuNgay ? ' (bản hiệu lực từ ' + pk.ver.tuNgay + ')' : '')));
+      [...new Set(rec.nc.map(r => r.chucDanh))].filter(cd => ctx.chucDanhAll().includes(cd) && !ctx.BHLD_ITEMS.some(([k]) => ctx.trim(((pk.ver.dm || {})[cd] || {})[k]))).forEach(cd => out.push('chưa có định mức BHLĐ cho vị trí "' + cd + '"' + (pk.ver.tuNgay ? ' (bản hiệu lực từ ' + pk.ver.tuNgay + ')' : '')));
       return out; };
     /* Định mức của một vị trí tại ngày ref (không truyền ref: bản mới nhất) */
     function normOf(chucDanh, ref) { return ctx.HAKDinhMuc.normFor(ctx.db, chucDanh, ref).norm; }

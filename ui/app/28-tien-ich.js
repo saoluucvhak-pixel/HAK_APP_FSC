@@ -97,7 +97,11 @@ async function inHtml(html, ten) {
 function inTomTat() { const f = curForest(), rec = curRec(); if (!f || !rec) return; if (stBlockNote()) return; return inHtml(HAKTienIch.chiXemHtml(chiXemData(rec, f, [])), 'Tom_tat_ho_so_' + slug(rec.info.maRung || '')); }
 function inBaoCao() {
   if (!document.getElementById('rpBody')) return;
-  return inHtml(HAKReports.toPrintHtml(rpModel(), {scope: rpScope()}), 'Bao_cao_' + rp.id);
+  rpReadParams();
+  const problem = rpRangeProblem();
+  if (problem) { rp.msg = {kind: 'err', text: problem}; return rpRender(); }
+  const m = rpModel();
+  return inHtml(HAKReports.toPrintHtml({...m, period: rpDateText(m.period)}, {...rpFormat(), scope: rpDateText(rpScope())}), 'Bao_cao_' + rp.id);
 }
 function tienIchBox(rec) {
   const f = curForest(); if (!f) return '';

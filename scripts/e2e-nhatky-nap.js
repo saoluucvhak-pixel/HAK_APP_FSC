@@ -17,7 +17,7 @@ const book = (sheet, rows, name) => { const wb = XLSX.utils.book_new(); XLSX.uti
   await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.waitForSelector('#side');
   const open = async () => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300); };
   const db = async () => (await w.evaluate(() => window.hak.loadSync().db)).rs.own1.forests.fa;
-  const person = (stt, ten, cccd, doi) => { const o = {'Vai trò': 'Công nhân', 'STT': stt, 'Danh xưng': 'Ông', 'Họ và tên': ten, 'Ngày sinh': '01/01/1990', 'CCCD': cccd, 'Ngày cấp CCCD': '01/01/2021', 'Nơi cấp CCCD': 'CA', 'Địa chỉ thường trú': 'Đà Nẵng', 'Chức danh': 'Công nhân khai thác'}; if (doi !== undefined) o['Đội'] = doi; return o; };
+  const person = (stt, ten, cccd, doi) => { const o = {'Chức vụ': 'Công nhân', 'STT': stt, 'Danh xưng': 'Ông', 'Họ và tên': ten, 'Ngày sinh': '01/01/1990', 'CCCD': cccd, 'Ngày cấp CCCD': '01/01/2021', 'Nơi cấp CCCD': 'CA', 'Địa chỉ thường trú': 'Đà Nẵng', 'Vị trí': 'Công nhân khai thác'}; if (doi !== undefined) o['Đội'] = doi; return o; };
   await open();
   const dem = async () => (await w.$$eval('#main table tbody tr', r => r.length));
   await w.setInputFiles('input[data-file="nc"]', book('NHAN_CONG', [person(2, 'LÊ HAI', '049085006002'), person(3, 'PHẠM BA', '049085006003')], 'n1.xlsx')); await w.waitForTimeout(900);

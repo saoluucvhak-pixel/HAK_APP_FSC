@@ -15,7 +15,7 @@ const {GoogleAuth, fileIdOf} = require('./google-auth');
 /* Biến môi trường CHỈ dành cho kiểm thử tự động (giả lập lỗi, thay hộp thoại, đổi nguồn tải bảng tính...): bị xóa trong bản đã đóng gói (bộ cài),
  * để không tiến trình nào trên máy đặt được chúng nhằm bỏ qua hộp thoại xác nhận hay đổi nguồn dữ liệu. HAKQN_USERDATA/HAKQN_DB/HAKQN_SMOKE* vẫn dùng cho kiểm tra khói bản cài. */
 const TEST_ONLY_ENV = ['HAKQN_CHECK_MODEL', 'HAKQN_FAIL_SAVE', 'HAKQN_SHEET_URL', 'HAKQN_TEST_BACKUP_FAIL', 'HAKQN_LOT_DIR', 'HAKQN_LOT_FILE', 'HAKQN_PICK_DIR', 'HAKQN_PICK_CHOICE',
-  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE', 'HAKQN_PRINT_DIR', 'HAKQN_TEST_LEGACY_IMPORT'];
+  'HAKQN_RELOC_DELAY_MS', 'HAKQN_TEST_FAIL_STEP', 'HAKQN_CONFIRM_DEFAULT', 'HAKQN_DOWNLOAD_DIR', 'HAKQN_CLOSE', 'HAKQN_PRINT_DIR', 'HAKQN_TEST_LEGACY_IMPORT', 'HAKQN_SAVEAS_FILE'];
 if (app.isPackaged) TEST_ONLY_ENV.forEach(k => { delete process.env[k]; });
 /* Đường dẫn file do giao diện gửi lên (thay hộp thoại chọn file) chỉ nhận khi chạy từ mã nguồn (kiểm thử); bản cài luôn hỏi qua hộp thoại của hệ điều hành */
 const rendererPath = p => (!app.isPackaged && typeof p === 'string' && p) ? p : null;
@@ -115,17 +115,18 @@ let autoBkP = null;  // Promise của lần chạy đang dở (kiểm tra khói 
 let autoBkRev = null;   // phiên bản dữ liệu (store.rev) mà bản tự sao lưu của hôm nay đã chứa; khác store.rev = có thay đổi chưa vào bản tự sao lưu
 /* lamMoi (đóng ứng dụng, hẹn giờ, bấm "Tự sao lưu ngay"): nếu dữ liệu đã đổi sau bản của hôm nay thì LÀM MỚI bản đó, để bản tự sao lưu chứa cả việc làm trong ngày
  * (trước đây bản của hôm nay chỉ tạo lúc mở lần đầu nên là dữ liệu của hôm trước). Các lần chạy xếp hàng, không chạy chồng. */
-function runAutoBackup(lamMoi) {
+function runAutoBackup(lamMoi, chepLai = false) {
   let st; try { st = Settings.load(app.getPath('userData')); } catch (e) { return Promise.resolve(); }
   if (!st.autoKeep || st.autoChuKy === 'tat') { autoBk = {ok: true, skipped: true, reason: 'off'}; return Promise.resolve(); }
   const s = store, dir = loc.backupDir;
   autoBkP = (autoBkP || Promise.resolve()).then(() => {
     if (!s || store !== s) return;   // cơ sở dữ liệu đã đổi (đổi thư mục dữ liệu) trong lúc chờ
     const rev = s.rev, refresh = !!lamMoi && rev !== autoBkRev;
+    const thuChepLai = chepLai || autoBk?.copy2?.ok === false;
     return AutoBackup.tuDong(s, {keep: st.autoKeep, dir, refresh, chuKy: st.autoChuKy}).then(r => {   // phiếu #13a: chu kỳ ngày / tuần / 2 giờ
       autoBk = {...r, at: new Date().toISOString()};
       if (r.ok && (!r.skipped || autoBkRev === null)) autoBkRev = rev;   // lần đầu trong phiên: bản của hôm nay (nếu có) do lần đóng trước làm mới, coi như đã chứa dữ liệu lúc mở
-      if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep, {overwrite: !!r.refreshed, chuKy: st.autoChuKy}); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
+      if (r.ok && r.file && st.backupDir2) { const c = AutoBackup.copyTo(r.file, st.backupDir2, st.autoKeep, {overwrite: !!r.refreshed || thuChepLai, chuKy: st.autoChuKy}); autoBk.copy2 = c; if (!c.ok) log('ERROR', 'Chép bản tự sao lưu sang thư mục thứ hai không được: ' + c.error); }   // ổ ngoài rút ra: bản chính vẫn còn
       if (!r.ok) log('ERROR', 'Tự sao lưu hằng ngày không được: ' + r.error);
       else if (!r.skipped) log('INFO', 'Tự sao lưu hằng ngày: ' + path.basename(r.file) + (r.refreshed ? ' (làm mới)' : '') + (r.removed.length ? ' (xóa ' + r.removed.length + ' bản cũ)' : ''));
     });
@@ -145,61 +146,127 @@ function checkModel(where) {
     fs.appendFileSync(f, 'OK ' + where + '\n');
   } catch (e) { fs.appendFileSync(f, 'LECH ' + where + ' ' + String(e.message).slice(0, 4000).replace(/\n/g, ' ⏎ ') + '\n'); }
 }
-function wrap(fn, anyState) { return (...a) => { try { if (!store && !anyState) throw Object.assign(new Error(NO_STORE()), {unavailable: true}); return {ok: true, ...fn(...a)}; } catch (e) { if (e.code !== 'STALE') log('ERROR', e.message); return {ok: false, error: e.message, code: e.code, unavailable: !!e.unavailable}; } }; }
+function wrap(fn, anyState) { return (...a) => { try { if (!store && !anyState) throw Object.assign(new Error(NO_STORE()), {unavailable: true}); return {ok: true, ...fn(...a)}; } catch (e) { if (e.code !== 'STALE') log('ERROR', e.message); return {ok: false, error: e.message, code: e.code, unavailable: !!e.unavailable, ...(e.blockedOwners && {blockedOwners: e.blockedOwners})}; } }; }
 /* Mọi thao tác ghi/đọc dữ liệu chờ nếu đang đổi thư mục dữ liệu: không mất thao tác lưu phát sinh lúc đó, và chạy trên cơ sở dữ liệu mới sau khi chuyển */
 const afterReloc = fn => async (...a) => { if (relocating) { try { await relocating; } catch (e) { /* lỗi đã được báo ở nơi đổi */ } } return fn(...a); };
 
 function registerIpc() {
-  ipcMain.on('db:load', e => {
+  const fromMainFrame = e => win && !win.isDestroyed() && e.sender === win.webContents &&
+    e.senderFrame != null && e.senderFrame === win.webContents.mainFrame;
+  const denied = () => ({ok: false, error: 'Nguồn IPC không hợp lệ'});
+  const handle = (channel, fn) => ipcMain.handle(channel, (e, ...args) => fromMainFrame(e) ? fn(e, ...args) : denied());
+  const on = (channel, fn) => ipcMain.on(channel, (e, ...args) => {
+    if (fromMainFrame(e)) fn(e, ...args);
+    else e.returnValue = denied();
+  });
+  on('db:load', e => {
     if (!store) { e.returnValue = {ok: false, unavailable: true, issue: dataIssue, error: NO_STORE()}; return; }
     try { e.returnValue = {ok: true, db: store.load(), rev: store.rev, file: store.file, schema: SCHEMA_VERSION, version: app.getVersion(), notice}; notice = null; }
     catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, error: err.message}; }
   });
   /* HAKQN_FAIL_SAVE=<đường dẫn file>: khi file đó tồn tại thì lần lưu giả lập thất bại (chỉ dùng để kiểm thử “lưu lỗi”) */
-  ipcMain.handle('db:save', afterReloc((e, db, opts) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.save(db, {allowBulkDelete: !!(opts && opts.allowBulkDelete)}))(); if (r.ok) checkModel('save'); return r; })()));
+  handle('db:save', afterReloc((e, db, opts) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => {
+    const r = wrap(() => store.save(db, {
+      allowBulkDelete: !!(opts && opts.allowBulkDelete),
+      preserveMissingOwners: opts && opts.preserveMissingOwners != null ? !!opts.preserveMissingOwners : true,
+      delO: opts && Array.isArray(opts.delO) ? opts.delO : undefined
+    }))();
+    if (r.ok) checkModel('save');
+    return r;
+  })()));
+  /* Quản lý và dọn dẹp hồ sơ chủ rừng trên SQLite */
+  handle('owners:list', () => wrap(() => ({ok: true, owners: store.danhSachChuRong()}))());
+  handle('owners:get', (e, id) => wrap(() => ({ok: true, owner: store.docChuRong(id)}))());
+  handle('owners:remove', afterReloc((e, id) => wrap(() => store.xoaChuRong(id))()));
+  handle('lot:remove', afterReloc((e, oid, fid) => wrap(() => store.xoaLoRung(String(oid), String(fid)))()));
+  handle('owners:purgeUnlisted', (e, ids) => wrap(() => ({ok: true, ...store.donDepChuRong(ids)}))());
   /* Lưu theo phần thay đổi (src/delta.js, Store.saveDelta): chỉ các chủ rừng / lô đã đổi; lệch phiên bản thì giao diện tự lưu toàn bộ */
-  ipcMain.handle('db:saveDelta', afterReloc((e, d) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.saveDelta(d))(); if (r.ok) checkModel('delta'); return r; })()));
+  handle('db:saveDelta', afterReloc((e, d) => (process.env.HAKQN_FAIL_SAVE && fs.existsSync(process.env.HAKQN_FAIL_SAVE)) ? {ok: false, error: 'giả lập lỗi ghi (kiểm thử)'} : (() => { const r = wrap(() => store.saveDelta(d))(); if (r.ok) checkModel('delta'); return r; })()));
   /* B5: đọc gói đóng băng của lô đã chốt (bảng chot_goi); phienBan bỏ trống = bản mới nhất. Gói không nạp sẵn khi mở app. */
-  ipcMain.handle('db:goiChot', (e, forestId, phienBan) => wrap(() => ({goi: store.docGoi(forestId, phienBan), ds: store.dsGoi(forestId)}))());
+  handle('db:goiChot', (e, forestId, phienBan) => wrap(() => ({goi: store.docGoi(forestId, phienBan), ds: store.dsGoi(forestId)}))());
   /* kiểm gói đã chốt của một lô (cấu trúc, JSON, dấu vân tay) trên SQLite; giao diện so tiếp dữ liệu hiện tại (src/vongdoi.js kiemToanVen). Đồng bộ, không kèm dữ liệu gói. */
-  ipcMain.on('db:kiemGoi', (e, forestId) => { try { e.returnValue = store ? store.kiemGoi(forestId) : {ok: false, ma: 'thieu-goi', lyDo: NO_STORE()}; } catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, ma: 'thieu-goi', lyDo: err.message}; } });
-  ipcMain.on('db:lichSuGoi', (e, forestId) => { try { e.returnValue = store ? store.lichSuGoi(forestId) : []; } catch (err) { log('ERROR', err.message); e.returnValue = []; } });   // lịch sử bản chụp của lô (mọi phiên bản chốt còn lưu), mỗi bản đã kiểm
+  on('db:kiemGoi', (e, forestId) => { try { e.returnValue = store ? store.kiemGoi(forestId) : {ok: false, ma: 'thieu-goi', lyDo: NO_STORE()}; } catch (err) { log('ERROR', err.message); e.returnValue = {ok: false, ma: 'thieu-goi', lyDo: err.message}; } });
+  on('db:lichSuGoi', (e, forestId) => { try { e.returnValue = store ? store.lichSuGoi(forestId) : []; } catch (err) { log('ERROR', err.message); e.returnValue = []; } });   // lịch sử bản chụp của lô (mọi phiên bản chốt còn lưu), mỗi bản đã kiểm
   /* tùy chọn khôi phục từ giao diện chỉ qua LoRung.optsKhoiPhuc (cách xử lý, mã lô mới): tùy chọn nội bộ của tiến trình chính không lấy từ giao diện */
   const optsKhoiPhuc = o => LoRung.optsKhoiPhuc(o);
-  ipcMain.handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, optsKhoiPhuc(opts)))()));
-  ipcMain.handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, optsKhoiPhuc(opts)), db: store.load()}))()));
-  ipcMain.handle('backup:to', afterReloc(async () => {
+  handle('import:preview', afterReloc((e, db, opts) => wrap(() => store.previewImport(db, optsKhoiPhuc(opts)))()));
+  handle('import:apply', afterReloc((e, db, strategy, opts) => wrap(() => ({...store.applyImport(db, strategy, optsKhoiPhuc(opts)), db: store.load()}))()));
+  handle('backup:to', afterReloc(async () => {
     if (!store) return {ok: false, error: NO_STORE(), unavailable: true};
     if (backingUp) return {ok: false, error: 'Đang sao lưu, vui lòng đợi xong rồi bấm lại.'};
     backingUp = true;
     try {
       /* phiếu #13a: .sqlite vào thư mục sao lưu SQLite, .json vào thư mục sao lưu JSON (Cài đặt → Sao lưu và khôi phục), không hỏi hộp thoại */
       const outDir = loc.backupDirSql, outDirJson = loc.backupDirJson;
-      for (const d of [outDir, outDirJson]) fs.mkdirSync(d, {recursive: true});
       const t = process.env.HAKQN_TEST_BACKUP_FAIL;   // chỉ dùng khi kiểm thử: json | sqlite | enospc | space
       const hooks = {};
       if (t === 'json' || t === 'enospc') hooks.beforeJson = () => { throw Object.assign(new Error('giả lập'), {code: t === 'enospc' ? 'ENOSPC' : 'EIO'}); };
       if (t === 'sqlite') hooks.beforeSqlite = () => { throw Object.assign(new Error('giả lập'), {code: 'EIO'}); };
       if (t === 'space') hooks.freeBytes = 1024;
-      const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();   // phiếu #11: bản .json mang đủ lịch sử bản chụp chốt (mọi phiên bản), như bản .sqlite
-      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, dbBytes: sizeWithWal(store.file), hooks});
+      const data = () => ({...store.load({kemGoi: true}), goiLichSu: store.goiTatCa()});
+      let outDir2 = ''; try { outDir2 = Settings.load(app.getPath('userData')).backupDir2 || ''; } catch (er) { /* không có cài đặt */ }   // BK-01: thư mục sao lưu thứ hai (USB/ổ ngoài)
+      const res = await Backup.backupAll({db: store.db, data, outDir, outDirJson, outDir2, createDirs: true, dbBytes: () => sizeWithWal(store.file), hooks});
       if (res.ok) { try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (er) { log('WARN', 'Không ghi được ngày sao lưu: ' + er.message); } }   // chỉ khi cả hai file đã ghi và qua kiểm tra
       else log('ERROR', 'Sao lưu không đầy đủ: ' + res.message);
-      return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite};
+      if (res.copy2 && !res.copy2.skipped && !res.copy2.ok) log('WARN', 'Chưa chép được bản sao lưu sang thư mục thứ hai: ' + res.copy2.error);
+      return {ok: res.ok, error: res.ok ? undefined : res.message, message: res.message, jsonFile: res.json.file, sqlFile: res.sqlite.file, json: res.json, sqlite: res.sqlite, copy2: res.copy2};
+    } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
+    finally { backingUp = false; }
+  }));
+  /* Xuất bản sao lưu toàn bộ ra tệp do người dùng chọn trực tiếp (Desktop, ổ D, USB…) qua hộp thoại Lưu của Windows (.sqlite hoặc .json). */
+  handle('backup:saveAs', afterReloc(async () => {
+    if (!store) return {ok: false, error: NO_STORE(), unavailable: true};
+    if (backingUp) return {ok: false, error: 'Đang sao lưu, vui lòng đợi xong rồi bấm lại.'};
+    backingUp = true;
+    try {
+      const defName = 'HoSoKhaiThac_SaoLuu_' + Backup.stampOf(new Date()).slice(0, 15) + '.sqlite';
+      let file = process.env.HAKQN_SAVEAS_FILE || '';
+      if (!file) {
+        const r = await dialog.showSaveDialog(win, {title: 'Lưu bản sao lưu toàn bộ dữ liệu ra máy / USB', defaultPath: path.join(app.getPath('documents'), defName),
+          filters: [{name: 'Cơ sở dữ liệu sao lưu HAKQN (.sqlite)', extensions: ['sqlite']}, {name: 'Bản sao lưu JSON (.json)', extensions: ['json']}]});
+        if (r.canceled || !r.filePath) return {ok: true, canceled: true};
+        file = r.filePath;
+      }
+      file = Backup.backupDestination(file, store.file);
+      fs.mkdirSync(path.dirname(file), {recursive: true});
+      if (/\.json$/i.test(file)) {
+        const data = store.load({kemGoi: true}); data.goiLichSu = store.goiTatCa();
+        const tmp = file + '.tmp-' + process.pid;
+        try {
+          fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+          const back = JSON.parse(fs.readFileSync(tmp, 'utf8'));
+          if (!back || typeof back !== 'object' || !back.rs) throw new Error('JSON sao lưu thiếu dữ liệu hồ sơ');
+          Backup.backupDestination(file, store.file);
+          fs.renameSync(tmp, file);
+        } catch (er) { try { fs.unlinkSync(tmp); } catch (_) {} throw new Error(Settings.describeError(er, file)); }
+      } else {
+        const tmp = file + '.tmp-' + process.pid;
+        try {
+          await store.db.backup(tmp);
+          const bi = DM.inspect(tmp, undefined, {cleanSidecars: true});
+          if (!bi.ok) throw new Error('Bản sao lưu SQLite không qua kiểm tra (' + bi.error + ')');
+          Backup.backupDestination(file, store.file);
+          fs.renameSync(tmp, file);
+        } catch (er) { for (const x of ['', '-wal', '-shm', '-journal']) { try { fs.unlinkSync(tmp + x); } catch (_) {} } throw new Error(Settings.describeError(er, file)); }
+      }
+      try { const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), lastBackup: new Date().toISOString()}); } catch (_) {}
+      log('INFO', 'Xuất bản sao lưu ra tệp: ' + path.basename(file));
+      return {ok: true, file};
     } catch (e) { log('ERROR', e.message); return {ok: false, error: e.message}; }
     finally { backingUp = false; }
   }));
   /* Sao lưu / khôi phục MỘT lô rừng: chạy hoàn toàn trên máy, không cần mạng. Khi kiểm thử tự động: HAKQN_LOT_DIR (thư mục lưu) và HAKQN_LOT_FILE (file mở) thay cho hộp thoại. */
   const sha = txt => require('crypto').createHash('sha256').update(txt).digest('hex');
   const sizeWithWal = f => { let n = 0; for (const x of ['', '-wal']) try { n += fs.statSync(f + x).size; } catch (e) { /* không có */ } return n; };
-  ipcMain.handle('lot:save', async (e, pkg) => {
+  handle('lot:save', async (e, pkg) => {
     try {
-      const p0 = LoRung.parsePackage(pkg).pkg || (() => { throw new Error('Dữ liệu lô không hợp lệ.'); })();
+      const parsed0 = LoRung.parsePackage(pkg); if (!parsed0.ok) throw new Error(parsed0.error);
+      const p0 = parsed0.pkg;
       if (store && p0.lo && p0.lo.chot && p0.lo.chot.goi == null) { const g = store.docGoi(p0.lo.id, p0.lo.chot.phienBan); if (g) p0.lo.chot.goi = g.data; }   // B5: gói đóng băng ở bảng chot_goi, file sao lưu lô vẫn mang gói
       const sealed = LoRung.seal(p0, sha), name = LoRung.fileName(sealed);
       let file = process.env.HAKQN_LOT_DIR ? path.join(process.env.HAKQN_LOT_DIR, name) : null;
       if (!file) {
-        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackupJson ? loc.backupDirJson : app.getPath('documents'), name), filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}]});
+        const r = await dialog.showSaveDialog(win, {title: 'Lưu sao lưu lô rừng', defaultPath: path.join(loc.customBackupJson ? loc.backupDirJson : app.getPath('documents'), name.replace(/\.json$/i, '.fscpkg')), filters: [{name: 'Gói hồ sơ lô rừng HAKQN (.fscpkg)', extensions: ['fscpkg']}, {name: 'Sao lưu lô rừng HAKQN (.json)', extensions: ['json']}]});   // 3.5.1: gói lô di động .fscpkg (cùng nội dung niêm phong như .json; tên mặc định của kiểm thử HAKQN_LOT_DIR giữ .json)
         if (r.canceled || !r.filePath) return {ok: true, canceled: true};
         file = r.filePath;
       }
@@ -209,13 +276,13 @@ function registerIpc() {
       return {ok: true, file: out, canhBao: tv ? tv.moTa : ''};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
-  ipcMain.handle('lot:open', async (e, filePath) => {
+  handle('lot:open', async (e, filePath) => {
     try {
       if (!store) throw new Error(NO_STORE());
       if (relocating) await relocating.catch(() => {});
       let p = rendererPath(filePath) || process.env.HAKQN_LOT_FILE;
       if (!p) {
-        const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu lô rừng', filters: [{name: 'Sao lưu lô rừng HAKQN', extensions: ['json']}], properties: ['openFile']});
+        const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu lô rừng', filters: [{name: 'Gói / sao lưu lô rừng HAKQN (.fscpkg, .json)', extensions: ['fscpkg', 'json']}], properties: ['openFile']});
         if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true};
         p = r.filePaths[0];
       }
@@ -224,13 +291,13 @@ function registerIpc() {
       return {ok: true, file: p, pkg: parsed.pkg, plan: store.previewLot(parsed.pkg)};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
-  ipcMain.handle('lot:apply', afterReloc((e, pkg, action) => wrap(() => {
+  handle('lot:apply', afterReloc((e, pkg, action) => wrap(() => {
     const parsed = LoRung.parsePackage(pkg, sha); if (!parsed.ok) throw new Error(parsed.error);
-    return {...store.applyLot(parsed.pkg, action), db: store.load()};
+    return {...store.applyLot(parsed.pkg, action), db: store.load(), rev: store.rev};
   })()));
   /* IN TRONG APP: in một trang HTML do giao diện dựng (tóm tắt hồ sơ, báo cáo). Trang được ghi ra file tạm rồi nạp vào một cửa sổ ẩn KHÔNG chạy script, không có cầu nối với ứng dụng;
    * hộp thoại in của hệ điều hành cho chọn máy in. Kiểm thử tự động: HAKQN_PRINT_DIR → ghi PDF vào thư mục đó thay cho hộp thoại in. */
-  ipcMain.handle('print:html', async (e, html, ten) => {
+  handle('print:html', async (e, html, ten) => {
     let pw = null, tmp = '';
     try {
       if (typeof html !== 'string' || !html || html.length > 50 * 1024 * 1024) throw new Error('Nội dung in không hợp lệ.');
@@ -253,11 +320,11 @@ function registerIpc() {
       try { if (tmp) fs.rmSync(tmp, {force: true, maxRetries: 20, retryDelay: 100}); } catch (er) { log('WARN', 'in: chưa xóa được file tạm ' + tmp + ': ' + er.message); }
     }
   });
-  ipcMain.handle('lookup:audit', () => wrap(() => ({audit: lookup.audit()}))());
-  ipcMain.handle('lookup:status', () => wrap(() => ({...lookup.status(), sheetUrl: lookup.getMeta('sheetUrl') || DEFAULT_SHEET}))());
-  ipcMain.handle('lookup:setSheet', afterReloc((e, link) => wrap(() => { if (!exportUrl(link)) throw new Error('Liên kết không phải Google Sheets'); lookup.setMeta('sheetUrl', link); return {}; })()));
-  ipcMain.handle('lookup:sync', afterReloc(async () => { try { return await syncSheets(); } catch (e) { log('ERROR', e.message); return {ok: false, errors: [e.message]}; } }));
-  ipcMain.handle('lookup:importExcel', afterReloc(async (e, filePath) => {
+  handle('lookup:audit', () => wrap(() => ({audit: lookup.audit()}))());
+  handle('lookup:status', () => wrap(() => ({...lookup.status(), sheetUrl: lookup.getMeta('sheetUrl') || DEFAULT_SHEET}))());
+  handle('lookup:setSheet', afterReloc((e, link) => wrap(() => { if (!exportUrl(link)) throw new Error('Liên kết không phải Google Sheets'); lookup.setMeta('sheetUrl', link); return {}; })()));
+  handle('lookup:sync', afterReloc(async () => { try { return await syncSheets(); } catch (e) { log('ERROR', e.message); return {ok: false, errors: [e.message]}; } }));
+  handle('lookup:importExcel', afterReloc(async (e, filePath) => {
     try {
       let p = rendererPath(filePath);
       if (!p) {
@@ -268,7 +335,7 @@ function registerIpc() {
       return loadLookup(fs.readFileSync(p), 'excel', path.basename(p), 'excel:' + path.basename(p));
     } catch (err) { log('ERROR', err.message); return {ok: false, errors: [err.message]}; }
   }));
-  ipcMain.handle('lookup:confirmTabs', afterReloc((e, choices) => {
+  handle('lookup:confirmTabs', afterReloc((e, choices) => {
     try {
       if (!lookup) throw new Error(NO_STORE());
       if (!pendingTabs) return {ok: false, errors: ['Không còn bản tải về đang chờ xác nhận tab. Hãy đồng bộ hoặc nhập file lại.']};
@@ -277,49 +344,64 @@ function registerIpc() {
       return r;                                // lỗi (ví dụ chọn tab thiếu cột): giữ bản chờ để người dùng chọn lại
     } catch (err) { log('ERROR', err.message); return {ok: false, errors: [err.message]}; }
   }));
-  ipcMain.handle('lookup:template', () => { try { return {ok: true, file: 'HAK_Mau_TraCuu.xlsx', bytes: require('./lookup').buildTemplate(app.getVersion())}; } catch (err) { return {ok: false, error: err.message}; } });
-  ipcMain.handle('lookup:cancelTabs', () => { pendingTabs = null; return {ok: true}; });
-  ipcMain.handle('google:status', () => gauth.status());
-  ipcMain.handle('google:login', async () => { try { return {ok: true, status: await gauth.login()}; } catch (e) { log('ERROR', 'google login: ' + e.code); return {ok: false, code: e.code, error: e.message, status: gauth.status()}; } });
-  ipcMain.handle('google:logout', () => ({ok: true, status: gauth.logout()}));
-  ipcMain.handle('lookup:search', (e, q, tab, opts) => checkQuery(q) || wrap(() => lookup.search(q || '', tab || '', cleanSearchOpts(opts)))());
-  ipcMain.handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
-  ipcMain.handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
-  ipcMain.handle('lookup:summaryHd', (e, list) => wrap(() => lookup.summaryHd(list))());
-  ipcMain.handle('lookup:buildHd', (e, hd) => wrap(() => { if (typeof hd !== 'string' || !hd.trim() || hd.length > 64) return {ok: false, error: 'Mã hợp đồng không hợp lệ.'}; return lookup.build(hd); })());
+  handle('lookup:template', () => { try { return {ok: true, file: 'HAK_Mau_TraCuu.xlsx', bytes: require('./lookup').buildTemplate(app.getVersion())}; } catch (err) { return {ok: false, error: err.message}; } });
+  handle('lookup:cancelTabs', () => { pendingTabs = null; return {ok: true}; });
+  handle('google:status', () => gauth.status());
+  handle('google:login', async () => { try { return {ok: true, status: await gauth.login()}; } catch (e) { log('ERROR', 'google login: ' + e.code); return {ok: false, code: e.code, error: e.message, status: gauth.status()}; } });
+  handle('google:logout', () => ({ok: true, status: gauth.logout()}));
+  handle('lookup:search', (e, q, tab, opts) => checkQuery(q) || wrap(() => lookup.search(q || '', tab || '', cleanSearchOpts(opts)))());
+  handle('lookup:candidates', (e, tab, row) => { try { return lookup.candidates(tab, row); } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; } });
+  handle('lookup:build', (e, cccd, hd) => wrap(() => lookup.build(cccd, hd, ''))());
+  /* PR D bước 3: chỉ đọc, KHÔNG nhận tham số từ giao diện (bỏ qua mọi đối số), chỉ trả số đếm theo danh sách trắng (src/chatluong.js) */
+  handle('lookup:chatLuong', () => wrap(() => lookup.chatLuong())());
+  handle('lookup:summaryHd', (e, list) => wrap(() => lookup.summaryHd(list))());
+  handle('lookup:buildHd', (e, hd) => wrap(() => { if (typeof hd !== 'string' || !hd.trim() || hd.length > 64) return {ok: false, error: 'Mã hợp đồng không hợp lệ.'}; return lookup.build(hd); })());
   /* ===== Cài đặt hệ thống: thư mục dữ liệu, thư mục sao lưu. Kiểm thử tự động: HAKQN_PICK_DIR (thư mục chọn) và HAKQN_PICK_CHOICE ('use' | 'overwrite') thay cho hộp thoại. ===== */
   const remind = () => { const ud = app.getPath('userData'), st = Settings.load(ud); let first = NaN; try { first = fs.statSync(loc.dbFile).birthtimeMs || fs.statSync(loc.dbFile).ctimeMs; } catch (er) { /* chưa có file */ } return {remindDays: st.remindDays, lastBackup: st.lastBackup, ...Settings.backupDue(st, Date.now(), first)}; };
   const dbInfo = () => { try { const st = fs.statSync(loc.dbFile); return {size: st.size, mtime: st.mtime.toISOString(), version: store ? store.db.pragma('user_version', {simple: true}) : null, open: !!store}; } catch (e) { return {size: 0, mtime: null, version: null, open: !!store}; } };
   const autoView = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } const ls = AutoBackup.list(loc.backupDir, st.autoChuKy); return {chuKy: st.autoChuKy, keep: st.autoKeep, dir2: st.backupDir2 || '', count: ls.length, last: ls[0] ? {name: ls[0].name, day: ls[0].day, size: ls[0].size} : null, result: autoBk}; };
-  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), auto: autoView(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, backupDirJson: loc.backupDirJson, customBackupJson: loc.customBackupJson, lockedByEnv: loc.lockedByEnv, missing: loc.missing});
+  /* BK-04: ổ chứa dữ liệu / thư mục sao lưu còn dưới 500 MB trống → cảnh báo vàng (không chặn). Tính khi giao diện đọc cài đặt (mở app, mở tab), không lặp theo giờ. */
+  const dungLuongThap = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } return Settings.kiemDungLuong([['Thư mục dữ liệu', loc.dataDir], ['Thư mục sao lưu SQLite', loc.backupDir], ['Thư mục sao lưu JSON', loc.backupDirJson], ['Thư mục sao lưu thứ hai', st.backupDir2]], Settings.NGUONG_DUNG_LUONG_MB); };
+  const setView = () => ({issue: dataIssue, dbInfo: dbInfo(), remind: remind(), auto: autoView(), dbFile: loc.dbFile, dataDir: loc.dataDir, defaultDataDir: loc.defaultDataDir, customData: loc.customData, backupDir: loc.backupDir, defaultBackupDir: loc.defaultBackupDir, customBackup: loc.customBackup, backupDirJson: loc.backupDirJson, customBackupJson: loc.customBackupJson, lockedByEnv: loc.lockedByEnv, missing: loc.missing, dungLuong: dungLuongThap()});
   const pickFolder = async title => {
     if (process.env.HAKQN_PICK_DIR) return process.env.HAKQN_PICK_DIR;
     const r = await dialog.showOpenDialog(win, {title, properties: ['openDirectory', 'createDirectory']});
     return r.canceled || !r.filePaths[0] ? '' : r.filePaths[0];
   };
-  ipcMain.handle('settings:get', () => wrap(() => ({settings: setView()}), true)());
-  ipcMain.handle('settings:setRemind', (e, days) => wrap(() => { const ud = app.getPath('userData'); const d = Math.max(0, Math.min(365, parseInt(days, 10) || 0)); Settings.save(ud, {...Settings.load(ud), remindDays: d}); return {settings: setView()}; })());
-  ipcMain.handle('settings:setAutoKeep', (e, n) => wrap(() => { const ud = app.getPath('userData'); const k = Math.max(0, Math.min(60, parseInt(n, 10) || 0)); Settings.save(ud, {...Settings.load(ud), autoKeep: k}); if (k) runAutoBackup(); return {settings: setView()}; })());
+  handle('settings:get', () => wrap(() => ({settings: setView()}), true)());
+  handle('settings:setRemind', (e, days) => wrap(() => { const ud = app.getPath('userData'); const d = Math.max(0, Math.min(365, parseInt(days, 10) || 0)); Settings.save(ud, {...Settings.load(ud), remindDays: d}); return {settings: setView()}; })());
+  handle('settings:setAutoKeep', (e, n) => wrap(() => { const ud = app.getPath('userData'); const k = Math.max(0, Math.min(60, parseInt(n, 10) || 0)); Settings.save(ud, {...Settings.load(ud), autoKeep: k}); if (k) runAutoBackup(); return {settings: setView()}; })());
   /* phiếu #13a: chu kỳ tự sao lưu SQLite và thư mục sao lưu JSON */
-  ipcMain.handle('settings:setAutoChuKy', (e, c) => wrap(() => { if (!Settings.CHU_KY.includes(c)) throw new Error('Chu kỳ không hợp lệ: ' + c); const ud = app.getPath('userData'), cur = Settings.load(ud);
+  handle('settings:setAutoChuKy', (e, c) => wrap(() => { if (!Settings.CHU_KY.includes(c)) throw new Error('Chu kỳ không hợp lệ: ' + c); const ud = app.getPath('userData'), cur = Settings.load(ud);
     Settings.save(ud, {...cur, autoChuKy: c, autoKeep: c === 'tat' ? 0 : (cur.autoKeep || 7)}); if (c !== 'tat') runAutoBackup(); return {settings: setView()}; })());
-  ipcMain.handle('settings:setBackupJson', async (e, reset) => {
+  handle('settings:setBackupJson', async (e, reset) => {
     try {
       let dir = ''; if (!reset) { dir = await pickFolder('Chọn thư mục lưu bản sao lưu JSON'); if (!dir) return {ok: true, canceled: true}; dir = Settings.checkFolder(dir); }
       const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), backupDirJson: dir}); loc = Settings.resolve(ud, process.env); if (store) store.backupDir = loc.backupDir;
       log('INFO', 'Đổi thư mục sao lưu JSON: ' + (reset ? 'mặc định' : 'thư mục riêng')); return {ok: true, settings: setView()};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
-  ipcMain.handle('settings:openBackupJson', () => { try { fs.mkdirSync(loc.backupDirJson, {recursive: true}); shell.openPath(loc.backupDirJson); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
-  ipcMain.handle('settings:openBackup', () => { try { fs.mkdirSync(loc.backupDir, {recursive: true}); shell.openPath(loc.backupDir); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
-  ipcMain.handle('settings:setBackup2', async (e, reset) => {
+  handle('settings:openBackupJson', () => { try { fs.mkdirSync(loc.backupDirJson, {recursive: true}); shell.openPath(loc.backupDirJson); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
+  handle('settings:openBackup', () => { try { fs.mkdirSync(loc.backupDir, {recursive: true}); shell.openPath(loc.backupDir); return {ok: true}; } catch (e) { return {ok: false, error: e.message}; } });
+  handle('settings:setBackup2', async (e, reset) => {
     try {
       let dir = ''; if (!reset) { dir = await pickFolder('Chọn thư mục sao lưu thứ hai (ổ ngoài, thư mục đồng bộ)'); if (!dir) return {ok: true, canceled: true}; dir = Settings.checkFolder(dir); }
       const ud = app.getPath('userData'); Settings.save(ud, {...Settings.load(ud), backupDir2: dir}); log('INFO', 'Thư mục sao lưu thứ hai: ' + (dir ? 'đã chọn' : 'tắt')); if (dir) runAutoBackup();
       return {ok: true, settings: setView()};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
-  ipcMain.handle('settings:setBackup', async (e, reset) => {
+  handle('settings:setBackup2Dir', async (e, targetDir) => {
+    try {
+      const dir = Settings.checkFolder(targetDir);
+      const ud = app.getPath('userData');
+      Settings.save(ud, {...Settings.load(ud), backupDir2: dir});
+      log('INFO', 'Thư mục sao lưu thứ hai: ' + dir);
+      runAutoBackup();
+      return {ok: true, settings: setView()};
+    } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
+  });
+  handle('settings:detectTargets', () => wrap(() => ({targets: Settings.detectBackupTargets()}))());
+  handle('settings:setBackup', async (e, reset) => {
     try {
       let dir = '';
       if (!store) throw new Error(NO_STORE());   // chưa mở được dữ liệu: không ghi cấu hình rồi mới báo lỗi
@@ -335,7 +417,7 @@ function registerIpc() {
    * sau khi mở và dùng được cơ sở dữ liệu mới; lỗi ở bước nào cũng hoàn tác và giữ phiên làm việc cũ. Trong lúc đổi, mọi thao tác lưu chờ rồi chạy trên cơ sở dữ liệu mới. */
   const vi = d => d ? new Date(d).toLocaleString('vi-VN') : 'không rõ';
   const describeDb = i => (i.counts && i.counts.owners != null ? i.counts.owners + ' chủ rừng, ' + (i.counts.forests || 0) + ' lô rừng · ' : '') + 'cấu trúc v' + i.version + ' · sửa lần cuối ' + vi(i.mtime);
-  ipcMain.handle('settings:setData', async (e, reset) => {
+  handle('settings:setData', async (e, reset) => {
     if (relocating) return {ok: false, error: 'Đang đổi thư mục dữ liệu, vui lòng đợi xong.'};
     let done; relocating = new Promise(r => { done = r; });
     try {
@@ -389,9 +471,9 @@ function registerIpc() {
     finally { relocating = null; done(); }
   });
   /* Ổ hoặc thư mục dữ liệu đã cấu hình không truy cập được: thử lại / chọn cơ sở dữ liệu khác / (xác nhận) dùng vị trí mặc định. Cấu hình cũ giữ nguyên cho đến khi người dùng chọn đổi. */
-  ipcMain.handle('data:status', () => ({ok: true, unavailable: !store, issue: dataIssue}));
-  ipcMain.handle('data:retry', () => { if (store) return {ok: true}; const ok = openStore(); if (ok) setTimeout(() => { if (win && !win.isDestroyed()) win.webContents.reload(); }, 150); return {ok, unavailable: !ok, issue: dataIssue}; });
-  ipcMain.handle('data:pickOther', async () => {
+  handle('data:status', () => ({ok: true, unavailable: !store, issue: dataIssue}));
+  handle('data:retry', () => { if (store) return {ok: true}; const ok = openStore(); if (ok) setTimeout(() => { if (win && !win.isDestroyed()) win.webContents.reload(); }, 150); return {ok, unavailable: !ok, issue: dataIssue}; });
+  handle('data:pickOther', async () => {
     try {
       const userDir = app.getPath('userData'), dir = await pickFolder('Chọn thư mục chứa cơ sở dữ liệu HAKQN (file ' + Settings.DB_NAME + ')');
       if (!dir) return {ok: true, canceled: true};
@@ -404,7 +486,7 @@ function registerIpc() {
       return {ok: true, settings: setView()};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   });
-  ipcMain.handle('data:useDefault', async () => {
+  handle('data:useDefault', async () => {
     try {
       const userDir = app.getPath('userData'), defFile = path.join(userDir, Settings.DB_NAME), exists = fs.existsSync(defFile), insp = exists ? DM.inspect(defFile, SCHEMA_VERSION) : null;
       let okc = process.env.HAKQN_CONFIRM_DEFAULT === '1';
@@ -426,13 +508,13 @@ function registerIpc() {
    * file đó ĐANG CÓ trong danh sách của thư mục sao lưu (timTrongKho); không thao tác trên đường dẫn tùy ý. ===== */
   const bkDirs = () => { let st = {}; try { st = Settings.load(app.getPath('userData')); } catch (e) { /* mặc định */ } return [loc.backupDir, loc.backupDirJson, st.backupDir2 || ''].filter(Boolean); };   // phiếu #13a: cả thư mục sao lưu JSON
   const bkFile = f => KhoSaoLuu.timTrongKho(bkDirs(), f);
-  ipcMain.handle('bk:list', () => wrap(() => ({...KhoSaoLuu.lietKe(bkDirs()), dirs: bkDirs(), auto: autoBk, chuaVaoBanTuDong: autoBackupStale()}), true)());
-  ipcMain.handle('bk:verify', (e, f) => wrap(() => ({kiem: KhoSaoLuu.kiemTra(bkFile(f).file, SCHEMA_VERSION)}), true)());
-  ipcMain.handle('bk:preview', afterReloc((e, f) => wrap(() => ({xem: KhoSaoLuu.xemTruoc(store, bkFile(f).file, SCHEMA_VERSION)}))()));
+  handle('bk:list', () => wrap(() => ({...KhoSaoLuu.lietKe(bkDirs()), dirs: bkDirs(), auto: autoBk, chuaVaoBanTuDong: autoBackupStale()}), true)());
+  handle('bk:verify', (e, f) => wrap(() => ({kiem: KhoSaoLuu.kiemTra(bkFile(f).file, SCHEMA_VERSION)}), true)());
+  handle('bk:preview', afterReloc((e, f) => wrap(() => ({xem: KhoSaoLuu.xemTruoc(store, bkFile(f).file, SCHEMA_VERSION)}))()));
   /* phiếu #13a: "Khôi phục toàn bộ…" nhận .json và .sqlite chọn ở BẤT KỲ ĐÂU. Hộp thoại mở ở tiến trình chính (giao diện không gửi đường dẫn tùy ý);
    * kiểm thử dùng HAKQN_RESTORE_FILE. .json: trả nội dung cho màn xem trước khôi phục hiện có. .sqlite: kiểm tra, CHÉP vào thư mục sao lưu SQLite thành
    * nhap-ngoai-<thời điểm>.sqlite (file gốc không bị sửa) rồi trả tên để giao diện dùng đúng luồng xem trước / khôi phục của kho (bk:preview, bk:restore). */
-  ipcMain.handle('restore:pick', afterReloc(async () => {
+  handle('restore:pick', afterReloc(async () => {
     try {
       let p = process.env.HAKQN_RESTORE_FILE || '';
       if (!p) { const r = await dialog.showOpenDialog(win, {title: 'Chọn file sao lưu để khôi phục toàn bộ', filters: [{name: 'Sao lưu HAKQN (.json, .sqlite)', extensions: ['json', 'sqlite']}], properties: ['openFile']}); if (r.canceled || !r.filePaths[0]) return {ok: true, canceled: true}; p = r.filePaths[0]; }
@@ -449,18 +531,34 @@ function registerIpc() {
       return {ok: true, dinhDang: 'sqlite', name: path.basename(dest), file: dest, nguon: path.basename(p)};
     } catch (err) { log('ERROR', err.message); return {ok: false, error: err.message}; }
   }));
-  ipcMain.handle('bk:restore', afterReloc((e, f) => wrap(() => {
+  handle('bk:restore', afterReloc((e, f) => wrap(() => {
     const it = bkFile(f); if (it.dinhDang !== 'sqlite') throw new Error('Bản .json khôi phục qua màn xem trước của “Khôi phục toàn bộ dữ liệu”.');
     const r = KhoSaoLuu.khoiPhuc(store, it.file, SCHEMA_VERSION); log('INFO', 'Khôi phục toàn bộ từ bản sao lưu ' + it.name); checkModel('khoiphuc');
     return {...r, name: it.name, db: store.load()};
   })()));
-  ipcMain.handle('bk:readJson', (e, f) => wrap(() => { const it = bkFile(f); if (it.dinhDang !== 'json') throw new Error('Không phải bản sao lưu .json.'); if (it.size > 512 * 1024 * 1024) throw new Error('File quá lớn.'); return {name: it.name, text: fs.readFileSync(it.file, 'utf8')}; }, true)());
-  ipcMain.handle('bk:delete', (e, f) => wrap(() => { const r = KhoSaoLuu.xoa(bkDirs(), f, loc.dbFile); log('INFO', 'Xóa bản sao lưu ' + r.name); return r; }, true)());
-  ipcMain.handle('bk:autoNow', afterReloc(async () => { if (!store) return {ok: false, error: NO_STORE(), unavailable: true}; await runAutoBackup(true); return {ok: !!(autoBk && autoBk.ok), auto: autoBk, error: autoBk && !autoBk.ok ? autoBk.error : undefined}; }));
-  ipcMain.handle('phieucan:open', async (e, rows, company) => { try { await openPhieuCan(rows, company); return {ok: true}; } catch (err) { log('ERROR', 'phieucan: ' + err.message); return {ok: false, error: err.message}; } });
-  ipcMain.handle('phieucan:nhung', async (e, rows, company, dark) => {
+  handle('bk:readJson', (e, f) => wrap(() => { const it = bkFile(f); if (it.dinhDang !== 'json') throw new Error('Không phải bản sao lưu .json.'); if (it.size > 512 * 1024 * 1024) throw new Error('File quá lớn.'); return {name: it.name, text: fs.readFileSync(it.file, 'utf8')}; }, true)());
+  handle('bk:delete', (e, f) => wrap(() => { const r = KhoSaoLuu.xoa(bkDirs(), f, loc.dbFile); log('INFO', 'Xóa bản sao lưu ' + r.name); return r; }, true)());
+  handle('bk:inspectDetail', (e, f) => wrap(() => ({detail: KhoSaoLuu.docChiTiet(bkFile(f).file, SCHEMA_VERSION)}), true)());
+  handle('bk:restoreOwner', afterReloc((e, f, ownerId, strategy) => wrap(() => {
+    const it = bkFile(f);
+    const r = KhoSaoLuu.khoiPhucChuRong(store, it.file, ownerId, strategy || 'overwrite', SCHEMA_VERSION);
+    log('INFO', 'Khôi phục chủ rừng ' + r.ten + ' từ bản sao lưu ' + it.name);
+    checkModel('khoiphuc-chu');
+    return {...r, name: it.name, db: store.load(), rev: store.rev};
+  })()));
+  handle('bk:restoreForest', afterReloc((e, f, ownerId, forestId, strategy) => wrap(() => {
+    const it = bkFile(f);
+    const r = KhoSaoLuu.khoiPhucLoRungTuBanSao(store, it.file, ownerId, forestId, strategy || 'overwrite', SCHEMA_VERSION);
+    log('INFO', 'Khôi phục lô rừng ' + r.maRung + ' từ bản sao lưu ' + it.name);
+    checkModel('khoiphuc-lo');
+    return {...r, name: it.name, db: store.load(), rev: store.rev};
+  })()));
+  /* Bản dự phòng trước khi ghi lô nhận thay đổi từ Google Sheets. */
+  handle('bk:truocSheets', afterReloc(() => wrap(() => { const f = store.snapshotFile('truoc-cap-nhat-sheets', {keep: 10}); return {file: f ? path.basename(f) : ''}; })()));
+  handle('bk:autoNow', afterReloc(async () => { if (!store) return {ok: false, error: NO_STORE(), unavailable: true}; await runAutoBackup(true, true); return {ok: !!(autoBk && autoBk.ok), auto: autoBk, error: autoBk && !autoBk.ok ? autoBk.error : undefined}; }));
+  handle('phieucan:open', async (e, rows, company) => { try { await openPhieuCan(rows, company); return {ok: true}; } catch (err) { log('ERROR', 'phieucan: ' + err.message); return {ok: false, error: err.message}; } });
+  handle('phieucan:nhung', async (e, rows, company, dark) => {
     try {
-      if (!win || e.sender !== win.webContents || e.senderFrame !== e.sender.mainFrame) throw new Error('Không phải màn hồ sơ');
       const frame = e.sender.mainFrame.frames.find(f => f.name === 'phieuCanNhung' && f.url === PC_FRAME_URL);
       if (!frame) throw new Error('Chưa tải công cụ in phiếu cân');
       const {injectEmbedded} = require('./phieucan');
@@ -469,7 +567,7 @@ function registerIpc() {
       return {ok: true};
     } catch (err) { return {ok: false, error: err.message}; }
   });
-  ipcMain.handle('app:openData', () => { shell.showItemInFolder(loc.dbFile); return {ok: true}; });
+  handle('app:openData', () => { shell.showItemInFolder(loc.dbFile); return {ok: true}; });
 }
 
 /* Kiểm tra khói cho bản đã cài (dùng trong CI và khi nghiệm thu): HAKQN_SMOKE=<file kết quả>, HAKQN_SMOKE_PHASE=create|verify|upgrade|upgrade14 (upgrade: mở dữ liệu do bản 1.0.0 tạo; upgrade14: một chủ hai lô của bản 1.4.x).
@@ -731,13 +829,16 @@ function createWindow() {
     // giao diện treo/không trả lời trong 3 giây: vẫn cho đóng (không kẹt cửa sổ), coi như không có thay đổi để hỏi
     const ask = (js, fallback) => Promise.race([win.webContents.executeJavaScript(js), new Promise(r => setTimeout(() => r(fallback), 3000))]).catch(() => fallback);
     let n = 0; try { n = (await ask('window.__stDirty ? window.__stDirty().length : 0', 0)) || 0; } catch (err) { n = 0; }
+    let tomTat = null; if (n > 0) { try { tomTat = await ask('window.__stTomTat ? window.__stTomTat() : null', null); } catch (err) { tomTat = null; } }   // PR D bước 2: nêu CỤ THỂ phần sẽ lưu / mất
+    const chiTiet = tomTat && Array.isArray(tomTat.chiTiet) && tomTat.chiTiet.length ? '\n\n' + (tomTat.dong || 'Chưa lưu:') + '\n' + tomTat.chiTiet.slice(0, 12).map(x => '• ' + String(x).slice(0, 160)).join('\n') + (tomTat.chiTiet.length > 12 ? '\n• … và ' + (tomTat.chiTiet.length - 12) + ' mục nữa' : '') : '';
     let pick = 1;   // 0 = lưu và đóng, 1 = bỏ thay đổi và đóng (không có gì để hỏi), 2 = quay lại
     if (n > 0) {
       const auto = {save: 0, discard: 1, back: 2}[process.env.HAKQN_CLOSE];
-      pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Lô đang mở có nhân công, xe hoặc phiếu cân chưa lưu. Dữ liệu chưa lưu sẽ mất nếu đóng ngay.', buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
+      pick = auto !== undefined ? auto : (await dialog.showMessageBox(win, {type: 'warning', title: TITLE, message: 'Còn thay đổi chưa lưu', detail: 'Có lô còn thay đổi chưa lưu. Chọn “Lưu và đóng” để lưu các lô. Nếu có lỗi, cửa sổ sẽ giữ mở để xử lý.' + chiTiet, buttons: ['Lưu và đóng', 'Bỏ thay đổi và đóng', 'Quay lại chỉnh sửa'], defaultId: 0, cancelId: 2, noLink: true})).response;
       if (pick === 0) { let r = null; try { r = await Promise.race([win.webContents.executeJavaScript('window.__stSaveAll ? window.__stSaveAll() : (window.__stSaveCurrent ? window.__stSaveCurrent() : {ok: true})'), new Promise(res => setTimeout(() => res(null), Math.min(120000, 15000 + 10000 * n)))]); } catch (err) { r = null; } if (!r || !r.ok) pick = 2; }
     }
     if (pick === 2) return;
+    try { await ask('window.__persistFlush ? window.__persistFlush() : 0', 0); } catch (_) {}
     if (n > 0) { try { await ask('window.__nhapTamXoa ? window.__nhapTamXoa() : 0', 0); } catch (err) { /* không xóa được bản tạm: bỏ qua */ } }
     // bộ nhớ trình duyệt (localStorage) ghi đĩa trễ: ép ghi rồi mới đóng, để lần xóa bản tạm không bị mất khi tiến trình thoát ngay
     if (n > 0) { try { win.webContents.session.flushStorageData(); await new Promise(r => setTimeout(r, 400)); } catch (err) { /* bỏ qua */ } }   // đóng có chủ ý (lưu hoặc bỏ): không giữ bản nháp tạm

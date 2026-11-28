@@ -109,7 +109,7 @@ function exportCheckTinh(job) {
   // mâu thuẫn, chồng lấn khi nhập liệu (ngày ở nhiều ô, khoảng ngày đảo, số/năm lệch, phiếu cân ngoài thời gian)
   g.nhapLieu.forEach(x => add(x.kind, x.nhom, x.text, x.ref, x.go, x.doiTuong));   // của lô, từng đội và từng đội xe
   // các mục checklist FSC còn lại chưa được xét ở trên
-  const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo chức danh', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
+  const covered = ['Thông tin rừng đầy đủ', 'Nhân công hợp lệ', 'Hình thức, đơn giá lương', 'Định mức BHLĐ theo vị trí', 'Người lao động đủ 18 tuổi', 'Vận chuyển hợp lệ', 'Giấy tờ xe, GPLX còn hạn', 'Giá vận chuyển', 'Công ty mua hàng và điểm đến vận chuyển', 'Phiếu cân vận chuyển hợp lệ'];
   const goOf = lb => /Tọa độ/.test(lb) ? {ftab: 'finfo', muc: 'toado'} : /Giấy tờ pháp lý/.test(lb) ? {ftab: 'finfo', muc: 'giay'} : /Biên bản/.test(lb) ? {ftab: 'xuat'} : {ftab: 'finfo', muc: 'chung'};
   checklistRung(job).filter(x => !x.ok && !covered.includes(x.label)).forEach(x => add(x.warn ? 'doi' : 'doi', 'Checklist FSC', x.label + (x.hint ? ': ' + x.hint : ''), x.label, goOf(x.label)));
   // thiếu dữ liệu cơ bản (chưa nạp)

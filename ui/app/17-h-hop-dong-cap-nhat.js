@@ -107,6 +107,7 @@ async function gsApply() {
         const refs = d.owner.ref.concat(X.ref);
         if (s.ref && refs.length && JSON.stringify((f.ref && f.ref.fields) || []) !== JSON.stringify(refs)) { f.ref = {at, set, hd: d.hd, cccd: d.cccd, fields: refs}; ch++; }
       }
+      if (s.on[1]) { const gp = (X.area || []).find(a => /m²/.test(a.label || '')); if (gp && typeof gp.value === 'number' && !gsSame(f.info.dienTichGps, gp.value)) { f.info.dienTichGps = gp.value; mark(f, 'dienTichGps', gp.src); ch++; } }   // 3.5.1: diện tích đo từ ToaDoRung (m² ÷ 10.000) cho thẻ đối soát 3 nguồn
       if (s.on[1] && typeof s.gps === 'number') { const g = X.gps[s.gps]; if (g && g.ok && !(f.info.lat === g.lat && f.info.lng === g.lng)) { f.info.lat = g.lat; f.info.lng = g.lng; mark(f, 'latlng', {tab: 'ToaDoRung_QC', row: g.row, col: 'Latitude_Vĩ độ / Longtitude_Kinh độ' + (g.converted ? ' (đã quy đổi từ ' + g.raw + ')' : ''), gps: g.id}); ch++; line.g++; } }
       const wrows = s.on[2] ? gsWriteRows(rows, e) : [];
       if (wrows.length) {
@@ -153,6 +154,7 @@ async function gsApply() {
     });
     if (touched.length && aliasNhap.size) lines.push('Ánh xạ tên xe → biển số đang ở bản nháp: chỉ lên đĩa khi đã lưu hết các lô liên quan (' + touched.length + ' lô).');
     if (!touched.length && m.alias && Object.keys(m.alias).length) lines.push('Ánh xạ tên xe → biển số chưa ghi: không có lô nào thay đổi để giữ bản nháp.');
+    touched.forEach(id => loCanSaoLuuSheets.add(id));
     nhapTamGhi();
     m.sum = lines.length ? lines : ['Không có thay đổi nào cần ghi (đã có đủ trong hồ sơ).']; m.sumPhieu = nPhieu; m.sumLo = touched.map(id => { const oo = Object.values(db.rs).find(x => x.forests && x.forests[id]); return oo ? {o: oo.id, f: id, ma: (oo.forests[id].info || {}).maRung || ''} : null; }).filter(Boolean); m.msg = null; m.busy = false;
     note('Hợp đồng ' + d.hd + ': ' + (touched.length ? 'MỌI thay đổi (chủ rừng, rừng, tọa độ, giấy tờ' + (nPhieu ? ', ' + nPhieu + ' phiếu cân' : '') + (nXe ? ', ' + nXe + ' xe' : '') + ') đã vào BẢN NHÁP, CHƯA lưu — mở từng lô và bấm “Lưu dữ liệu vào lô” (chưa lưu thì chưa dùng để tạo hồ sơ).' : 'không có thay đổi nào cần ghi.'), touched.length ? 'warn' : undefined);

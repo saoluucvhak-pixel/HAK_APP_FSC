@@ -1,5 +1,5 @@
 'use strict';
-/* Kiểm thử bộ chọn bảng màu trong Electron thật: 4 bảng màu × sáng/tối × (1366×768, 1920×1080).
+/* Kiểm thử bộ chọn bảng màu trong Electron thật: 6 bảng màu × sáng/tối × (1366×768, 1920×1080).
  * Kiểm tra: áp dụng đúng, đổi thật (màu thanh trên cùng và nền khác nhau), nhớ sau khi mở lại, không tràn ngang, không lỗi JavaScript.
  * Ảnh chụp lưu ở SHOTS (mặc định thư mục tạm). Chạy: xvfb-run -a node scripts/e2e-skins.js (Linux) hoặc node scripts/e2e-skins.js (Windows). */
 const {_electron: electron} = require('playwright-core');
@@ -8,7 +8,7 @@ const root = path.join(__dirname, '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-skin-')), shots = process.env.SHOTS || path.join(tmp, 'shots');
 fs.mkdirSync(shots, {recursive: true});
 let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name + (!cond && extra ? ' — ' + extra : '')); if (!cond) fail++; };
-const SKINS = ['luxe', 'classic', 'neutral', 'champagne'];
+const SKINS = ['glass-fog', 'glass-sage', 'glass-night', 'ocean', 'luxe', 'classic'];
 const forest = (id, ma, dt, pc) => ({id, info: {maRung: ma, tenRung: 'Rừng ' + ma, diaDiem: 'Thôn A, xã Quế Sơn Trung, thành phố Đà Nẵng', lat: 15.5, lng: 108.1, dienTich: dt, dinhMucTanHa: 10, cuLy: null, tuNgay: '01/01/2026', denNgay: '28/02/2026', donGia: 340000, giayTo: []}, nc: [], dx: [], pc, exp: {}});
 const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN', cccd: '049000000001', diaChi: 'Quế Sơn', danhXung: 'Ông'}, nc: [], dx: [], exp: {}, forests: {
   f1: forest('f1', 'R1', 2, [{stt: 1, ngay: '05/01/2026', bienSo: '92C-11111', soPhieu: 'P1', kl: 12.5, noiGiao: 'NM'}]), f2: forest('f2', 'R2', 1.5, [])}}}};
@@ -20,16 +20,26 @@ const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN'
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');
   const size = async (W, H) => { await app.evaluate(({BrowserWindow}, [a, b]) => { const win = BrowserWindow.getAllWindows()[0]; win.setContentSize(a, b); }, [W, H]); await w.waitForTimeout(250); };
   const css = (sel, prop) => w.$eval(sel, (e, p) => getComputedStyle(e)[p], prop);
-  const giaoDien = async () => { await w.click('#navSet'); await w.click('#setTab_setgd'); await w.waitForSelector('#themeBtn2'); };   // 3.0: chủ đề và bảng màu ở Cài đặt → Giao diện
+  const giaoDien = async () => { await w.click('#navSet'); await w.click('#setTab_setfmt'); await w.click('#setTab_setgd'); await w.waitForSelector('#themeBtn2'); };   // 3.0: chủ đề và bảng màu ở Cài đặt → Giao diện
   const setTheme = async t => { const cur = await w.evaluate(() => document.documentElement.dataset.theme || 'light'); if (cur !== t) { await giaoDien(); await w.click('#themeBtn2'); await w.waitForTimeout(350); } };
   const pick = async k => { await giaoDien(); await w.click('[data-skinpick=' + k + ']'); await w.waitForTimeout(250); };   // 3.0: không còn menu cần đóng (bấm vào giữa màn sẽ trúng nút bảng màu khác)
 
   const bars = {}, bgs = {}, brands = {};
-  ok('mặc định là luxe (navy + champagne)', await w.evaluate(() => document.documentElement.dataset.skin) === 'luxe');
+  ok('mặc định là Kính Sương sáng', await w.evaluate(() => document.documentElement.dataset.skin === 'glass-fog' && document.documentElement.dataset.theme === 'light'));
+  ok('ảnh nền kính tải được từ bộ cài', await w.evaluate(async () => {
+    const background = getComputedStyle(document.body).backgroundImage;
+    if (!background.includes('glass-forest.webp')) return false;
+    const photo = new Image();
+    photo.src = './assets/glass-forest.webp';
+    await photo.decode();
+    return photo.naturalWidth > 0;
+  }).catch(() => false));
+  await pick('glass-night');
+  ok('chọn Kính Đêm tự mở chế độ tối', await w.evaluate(() => document.documentElement.dataset.theme) === 'dark');
   for (const [W, H] of [[1366, 768], [1920, 1080]]) {
     await size(W, H);
     for (const k of SKINS) for (const th of ['light', 'dark']) {
-      await setTheme(th); await pick(k);
+      await pick(k); await setTheme(th);
       const tag = `${k}/${th}/${W}x${H}`;
       ok(tag + ': áp dụng đúng bảng màu và chế độ', await w.evaluate(() => [document.documentElement.dataset.skin, document.documentElement.dataset.theme || 'light']).then(a => a[0] === k && a[1] === th));
       if (th === 'light' && W === 1366) { bars[k] = await css('header.top', 'backgroundColor'); bgs[k] = await css('body', 'backgroundColor'); brands[k] = await css('.btn:not(.ghost)', 'backgroundColor'); }
@@ -40,16 +50,21 @@ const SEED = {v: 2, rs: {o1: {id: 'o1', info: {ma: 'K1', ten: 'NGUYỄN VĂN AN'
       await w.click('[data-act=rpClose]');
     }
   }
-  ok('4 bảng màu cho 4 màu thanh trên cùng khác nhau', new Set(Object.values(bars)).size === 4, JSON.stringify(bars));
-  ok('4 bảng màu cho 4 màu nền khác nhau', new Set(Object.values(bgs)).size === 4, JSON.stringify(bgs));
-  ok('4 bảng màu cho 4 màu nút chính khác nhau', new Set(Object.values(brands)).size === 4, JSON.stringify(brands));
+  ok('6 bảng màu cho 6 màu thanh trên cùng khác nhau', new Set(Object.values(bars)).size === SKINS.length, JSON.stringify(bars));
+  ok('6 bảng màu cho 6 màu nền khác nhau', new Set(Object.values(bgs)).size === SKINS.length, JSON.stringify(bgs));
+  ok('6 bảng màu cho 6 màu nút chính khác nhau', new Set(Object.values(brands)).size === SKINS.length, JSON.stringify(brands));
   await pick('classic'); await setTheme('light');
   await app.close();
   // Mở lại: nhớ lựa chọn của người dùng (bảng màu và chế độ), không đổi dữ liệu hồ sơ
   app = await launch(); w = require('./_hd30').boc(await app.firstWindow()); w.on('pageerror', e => errs.push(e.message)); await w.waitForSelector('#side');
   ok('mở lại: nhớ bảng màu classic (xanh ngọc)', await w.evaluate(() => document.documentElement.dataset.skin) === 'classic');
   ok('mở lại: bảng màu không làm đổi dữ liệu hồ sơ', (await w.$$('[data-open]')).length === 1);
-  await w.click('#navSet'); await w.click('#setTab_setgd'); await w.waitForSelector('#skinPick'); ok('Giao diện: bảng màu đánh dấu đúng lựa chọn đang dùng', await w.$eval('[data-skinpick=classic]', e => e.classList.contains('on') && e.getAttribute('aria-pressed') === 'true') && (await w.$$('[data-skinpick]')).length === 4);
+  await giaoDien();
+  ok('Giao diện: đánh dấu đúng lựa chọn và đủ sáu bảng màu', await w.$eval('[data-skinpick=classic]', e => e.classList.contains('on') && e.getAttribute('aria-pressed') === 'true') && (await w.$$('[data-skinpick]')).length === SKINS.length);
+  await w.evaluate(() => localStorage.setItem('hskt.skin', 'neutral')); await w.reload(); await w.waitForSelector('#side');
+  ok('cài đặt Neutral cũ vẫn được nhớ', await w.evaluate(() => document.documentElement.dataset.skin) === 'neutral');
+  await size(1366, 768); await w.selectOption('#skinQuick', 'ocean');
+  ok('chọn nhanh Ocean và bỏ lựa chọn Neutral khỏi danh sách', await w.evaluate(() => document.documentElement.dataset.skin === 'ocean' && !document.querySelector('#skinQuick option[value="neutral"]')));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('; '));
   await app.close();
   console.log('Ảnh chụp: ' + shots);

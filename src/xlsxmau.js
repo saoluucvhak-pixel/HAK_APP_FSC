@@ -12,14 +12,14 @@
     nc: {
       sheet: 'NHAN_CONG', file: 'HAK_Mau_NhanCong.xlsx', title: 'MẪU NHẬP NHÂN CÔNG', tab: 'tab Nhân công',
       purpose: 'Dữ liệu luôn được nạp vào lô rừng đang mở, nên file này KHÔNG cần cột Mã rừng. ' + 'Danh sách người lao động của MỘT lô rừng (một dòng = một người). Từ đây phần mềm lập hợp đồng khai thác, Giấy ủy quyền, hợp đồng lao động, bảng chấm công, sổ cấp phát BHLĐ và bảng thanh toán tiền công.',
-      steps: ['Mở lô rừng cần nhập trong phần mềm, vào tab “Nhân công” và chọn cách ký, cách trả lương, đơn giá theo chức danh TRƯỚC (thiếu đơn giá thì phần mềm báo lỗi).',
+      steps: ['Mở lô rừng cần nhập trong phần mềm, vào tab “Nhân công” và chọn cách ký, cách trả lương, đơn giá theo vị trí TRƯỚC (thiếu đơn giá thì phần mềm báo lỗi).',
         'Mở trang tính NHAN_CONG của file này. Điền từ dòng 2, mỗi người một dòng; KHÔNG sửa, xóa, đổi tên hay đổi thứ tự dòng tiêu đề (dòng 1).',
-        'Cột có tiêu đề màu đỏ sẫm là cột bắt buộc. Cột có mũi tên chọn (Vai trò, Danh xưng, Chức danh) chỉ chọn trong danh sách.',
+        'Cột có tiêu đề màu đỏ sẫm là cột bắt buộc. Cột có mũi tên chọn (Chức vụ, Danh xưng, Vị trí) chỉ chọn trong danh sách.',
         'Lưu file ở định dạng .xlsx (giữ nguyên tên trang tính). Không cần xóa hai trang HUONG_DAN và VI_DU.',
         'Trong phần mềm: tab “Nhân công” → “Nạp file Excel” → chọn file. Phần mềm báo số dòng hợp lệ, dòng lỗi (kèm số dòng) và hỏi trước khi ghi.',
         'Có dòng lỗi: sửa trong Excel theo thông báo rồi nạp lại. Nạp file chỉ đưa dữ liệu vào BẢN NHÁP “Chưa lưu” của lô: dòng mới được thêm, dòng đã có (cùng CCCD hoặc họ tên) được cập nhật, bản ghi đã lưu mà file không có vẫn được GIỮ; xem trước và chỉnh sửa rồi bấm “Lưu dữ liệu vào lô” thì mới ghi.'],
       cols: [
-        {n: 'Vai trò', req: A, fmt: 'Chọn: Tổ trưởng | Công nhân', ex: 'Tổ trưởng', note: 'Mỗi ĐỘI có 1 tổ trưởng; những người còn lại là “Công nhân”. Lô có 2 tổ trưởng trở lên thì mỗi tổ trưởng là một đội và ký hợp đồng giao khoán riêng (xem cột Đội).', list: ['Tổ trưởng', 'Công nhân']},
+        {n: 'Chức vụ', req: A, fmt: 'Chọn: Tổ trưởng | Công nhân', ex: 'Tổ trưởng', note: 'Mỗi ĐỘI có 1 tổ trưởng; những người còn lại là “Công nhân”. Lô có 2 tổ trưởng trở lên thì mỗi tổ trưởng là một đội và ký hợp đồng giao khoán riêng (xem cột Đội).', list: ['Tổ trưởng', 'Công nhân']},
         {n: 'STT', req: K, fmt: 'Số', ex: '1', note: 'Số thứ tự, có thể bỏ trống.'},
         {n: 'Danh xưng', req: A, fmt: 'Chọn: Ông | Bà', ex: 'Ông', note: 'Dùng trong hợp đồng và biểu mẫu (Ông/Bà ...).', list: ['Ông', 'Bà']},
         {n: 'Họ và tên', req: A, fmt: 'Văn bản, viết đúng như CCCD', ex: 'TRẦN VĂN TỔ', note: 'Họ tên đầy đủ có dấu.'},
@@ -28,13 +28,13 @@
         {n: 'Ngày cấp CCCD', req: A, fmt: 'dd/mm/yyyy', ex: '01/01/2021', note: 'Ngày có thật.'},
         {n: 'Nơi cấp CCCD', req: A, fmt: 'Văn bản', ex: 'Cục Cảnh sát QLHC về TTXH', note: 'Nơi cấp ghi trên căn cước.'},
         {n: 'Địa chỉ thường trú', req: A, fmt: 'Văn bản', ex: 'Thôn 2, xã Quế Sơn Trung, TP Đà Nẵng', note: 'Địa chỉ thường trú ghi trên căn cước.'},
-        {n: 'Chức danh', req: A, fmt: 'Chọn: Tổ trưởng | Công nhân khai thác | Công nhân cưa', ex: 'Tổ trưởng', note: 'Quyết định đơn giá và định mức BHLĐ. Vai trò “Tổ trưởng” phải có chức danh “Tổ trưởng”; công nhân không được ghi chức danh “Tổ trưởng”.', list: ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa']},
+        {n: 'Vị trí', req: A, fmt: 'Chọn: Tổ trưởng | Công nhân khai thác | Công nhân cưa', ex: 'Tổ trưởng', note: 'Quyết định đơn giá và định mức BHLĐ. Chức vụ “Tổ trưởng” phải có vị trí “Tổ trưởng”; công nhân không được ghi vị trí “Tổ trưởng”.', list: ['Tổ trưởng', 'Công nhân khai thác', 'Công nhân cưa']},
         {n: 'Đội', req: K, fmt: 'Văn bản (tên đội)', ex: '', note: 'Chỉ cần khi lô có từ 2 tổ trưởng: mỗi tổ trưởng một tên đội riêng, công nhân ghi tên đội của mình. Lô chỉ có 1 tổ trưởng thì để trống.'}],
       rules: ['Mỗi lô có ít nhất 1 tổ trưởng; mỗi tổ trưởng là một đội. Lô nhiều đội: ghi tên đội ở cột Đội cho cả tổ trưởng và công nhân, tên đội của các tổ trưởng không trùng nhau.', 'CCCD đủ 12 chữ số và không trùng giữa các dòng.', 'Ngày sinh, ngày cấp là ngày có thật (kiểm tra theo lịch, có tính năm nhuận: 29/02/2028 hợp lệ, 29/02/2026 sai).',
-        'Phải có đơn giá cho từng chức danh trong mục “Cơ sở tính đơn giá” của tab Nhân công; thiếu thì báo lỗi.', 'Người dưới 18 tuổi bị chặn xuất Giấy ủy quyền (BM-20).'],
+        'Phải có đơn giá cho từng vị trí trong mục “Cơ sở tính đơn giá” của tab Nhân công; thiếu thì báo lỗi.', 'Người dưới 18 tuổi bị chặn xuất Giấy ủy quyền (BM-20).'],
       errors: [['File thiếu cột: ...', 'Dùng đúng file mẫu; không sửa, xóa hay đổi tên các ô tiêu đề ở dòng 1.'], ['CCCD phải gồm 9 hoặc 12 chữ số', 'Nhập lại đủ 12 số (CCCD) hoặc 9 số (CMND); giữ số 0 đầu (cột đã là văn bản, không đổi sang số).'], ['CCCD trùng dòng n', 'Hai người không dùng chung CCCD: sửa CCCD ở một trong hai dòng.'],
-        ['Cần ít nhất 1 tổ trưởng', 'Có ít nhất một dòng Vai trò “Tổ trưởng”; lô nhiều tổ trưởng thì ghi cột Đội cho mọi dòng.'], ['Chức danh không hợp lệ', 'Chọn chức danh trong danh sách của ô.'], ['Ngày sinh "…" không có thật hoặc sai dd/mm/yyyy', 'Nhập lại dạng dd/mm/yyyy với ngày có thật.'],
-        ['chưa có đơn giá … cho "…"', 'Vào tab Nhân công, mục Cơ sở tính đơn giá, nhập đơn giá cho chức danh đó rồi nạp lại.']],
+        ['Cần ít nhất 1 tổ trưởng', 'Có ít nhất một dòng Chức vụ “Tổ trưởng”; lô nhiều tổ trưởng thì ghi cột Đội cho mọi dòng.'], ['Vị trí không hợp lệ', 'Chọn vị trí trong danh sách của ô.'], ['Ngày sinh "…" không có thật hoặc sai dd/mm/yyyy', 'Nhập lại dạng dd/mm/yyyy với ngày có thật.'],
+        ['chưa có đơn giá … cho "…"', 'Vào tab Nhân công, mục Cơ sở tính đơn giá, nhập đơn giá cho vị trí đó rồi nạp lại.']],
       example: [['Tổ trưởng', '1', 'Ông', 'TRẦN VĂN TỔ', '15/03/1985', '049085000001', '01/01/2021', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 2, xã Quế Sơn Trung, TP Đà Nẵng', 'Tổ trưởng', ''],
         ['Công nhân', '2', 'Ông', 'LÊ VĂN KHAI', '20/07/1990', '049090000002', '15/06/2022', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 2, xã Quế Sơn Trung, TP Đà Nẵng', 'Công nhân khai thác', ''],
         ['Công nhân', '3', 'Bà', 'NGUYỄN THỊ CƯA', '02/11/1992', '049092000003', '10/05/2022', 'Cục Cảnh sát QLHC về TTXH', 'Thôn 3, xã Quế Sơn Trung, TP Đà Nẵng', 'Công nhân cưa', '']]
@@ -240,8 +240,8 @@
   async function build(kind, JSZip, meta) {
     let spec = SPECS[kind]; if (!spec) throw new Error('Không có mẫu cho: ' + kind);
     meta = meta || {};
-    // danh sách vị trí (chức danh) của phần mềm, kể cả vị trí người dùng thêm: ghi vào cột Chức danh và danh sách chọn
-    if (kind === 'nc' && Array.isArray(meta.chucDanh) && meta.chucDanh.length) spec = Object.assign({}, spec, {cols: spec.cols.map(c => c.n === 'Chức danh' ? Object.assign({}, c, {fmt: 'Chọn: ' + meta.chucDanh.join(' | '), list: meta.chucDanh.slice()}) : c)});
+    // danh sách vị trí của phần mềm, kể cả vị trí người dùng thêm: ghi vào cột Vị trí và danh sách chọn
+    if (kind === 'nc' && Array.isArray(meta.chucDanh) && meta.chucDanh.length) spec = Object.assign({}, spec, {cols: spec.cols.map(c => c.n === 'Vị trí' ? Object.assign({}, c, {fmt: 'Chọn: ' + meta.chucDanh.join(' | '), list: meta.chucDanh.slice()}) : c)});
     const z = new JSZip(), names = ['HUONG_DAN', spec.sheet, 'VI_DU'];
     z.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
       names.map((_, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') +

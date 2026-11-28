@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi" data-skin="luxe">
+<html lang="vi" data-skin="glass-fog">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -11,7 +11,9 @@
 /* ===== Ánh xạ token của ứng dụng sang HAK Enterprise Design System (chủ đề luxe: navy + champagne; sáng/tối theo data-theme) =====
    Tên token dùng chung (--brand, --bg, --card, --ink, --mut, --line, --th, --r…) lấy nguyên từ thư viện; phần dưới chỉ đặt tên phụ của ứng dụng. */
 :root{--acc:var(--brand);--accHi:var(--brandH);--accSoft:var(--brandSoft);--accInk:var(--onBrand);--inbd:var(--ctl);--bar:var(--deep);--barInk:#f1ede2;
---err:var(--red);--errBg:var(--redBg);--rs:8px;--ring:0 0 0 3px var(--focus)}
+--err:var(--red);--errBg:var(--redBg);--rs:8px;--ring:0 0 0 3px var(--focus);--sel:var(--accSoft,#eef5ee)}
+:root[data-theme=dark]{--sel:var(--hover,#1e3550)}   /* UI-01: nền hàng đang chọn có token chính thức (trước đây --sel không định nghĩa nên giao diện tối rơi về #eef5ee) */
+tr.sel,tr.sel td{background:var(--sel)}
 /* Màu trạng thái (xanh = đạt) giữ riêng, độ ưu tiên cao hơn token chủ đề */
 :root[data-skin]{--ok:#1e7a3c;--okBg:#e4f4e8;--err:#b23a0b}   /* phiếu #10: đỏ báo lỗi đậm hơn một chút để chữ trên nền --errBg đạt 4,5:1 (trước 4,4:1); giao diện tối giữ --red của thư viện */
 :root[data-skin][data-theme=dark]{--err:var(--red)}
@@ -52,8 +54,10 @@ h4{font-size:13.5px}
 .stToolbar{gap:8px;flex-wrap:wrap;align-items:center}.stToolbar .stInfo{font-size:12px}
 .napCard{padding:8px 12px;margin-bottom:6px}.napThanh{gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}.napTinhTrang{font-size:12px;margin-left:auto}
 .pcHdDau{gap:8px;flex-wrap:wrap;align-items:baseline}
-.mucNav .pill{white-space:nowrap}.mucNav button{white-space:nowrap}   /* phiếu #06 (D-08): nhãn mục một dòng ở 150% */
-#stTbl_pc td{white-space:nowrap}#stTbl_pc th,#stTbl_pc td{padding:4px 7px;font-size:12.5px}#stTbl_pc select{padding:2px 5px;font-size:12.5px}.pcXeHd .pcXe,.pcXeHd .pcHdCua{display:inline-flex;align-items:center;gap:4px}
+.mucNav .pill{white-space:nowrap;margin-left:auto}.mucNav .mucIc{flex:0 0 16px;width:16px;text-align:center}.mucNav button{white-space:nowrap}   /* phiếu #06 (D-08): nhãn mục một dòng ở 150% */
+#stTbl_pc td{white-space:nowrap}#stTbl_pc th,#stTbl_pc td{padding:4px 7px;font-size:12.5px}#stTbl_pc select{padding:2px 5px;font-size:12.5px}
+/* UI-03: bảng thành viên và bảng xe gọn như bảng phiếu cân (trước: padding 8px 9px nên ở khung 910×512 px CSS chỉ thấy vài dòng) */
+#stTbl_nc td,#stTbl_dx td{white-space:nowrap}#stTbl_nc th,#stTbl_nc td{padding:4px 7px;font-size:12.5px}#stTbl_nc select,#stTbl_nc input{padding:2px 5px;font-size:12.5px}#stTbl_dx th,#stTbl_dx td{padding:4px 7px;font-size:12.5px}#stTbl_dx select,#stTbl_dx input{padding:2px 5px;font-size:12.5px}.pcXeHd .pcXe,.pcXeHd .pcHdCua{display:inline-flex;align-items:center;gap:4px}
 .card>h3:first-child{margin-top:0}
 /* Nút */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--acc);background:var(--acc);color:var(--accInk);border-radius:var(--rs);padding:7px 14px;font:inherit;font-weight:550;cursor:pointer;text-decoration:none;transition:background .12s,box-shadow .12s}
@@ -207,26 +211,75 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 @media (max-width:900px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}main{padding:14px}header.top,#ctxBar{position:static}header.top h1 small{display:none}header.top{padding:8px 12px;gap:6px}.nav .nb,.hbtn{padding:5px 10px;font-size:13px}.nav{order:3;flex:1 1 100%}}
 .mucLayout{display:grid;grid-template-columns:minmax(180px,max-content) minmax(0,1fr);gap:12px;align-items:start}
 @media (min-width:901px) and (max-width:1300px){.mucLayout{grid-template-columns:minmax(0,1fr)}.mucNav{display:flex;flex-wrap:wrap}.mucNav button{flex:0 0 auto}}
+/* 3.5.1: màn Danh mục — hộp thoại Thêm/Sửa riêng, nút chọn phân đoạn (skill crud-directory-standard) */
+.dmModalBack{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:4vh 16px;overflow:auto}
+.dmModal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;width:100%;max-width:880px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.segRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}.segNhan{min-width:130px}
+.segBar{display:inline-flex;flex-wrap:wrap;border:1px solid var(--inbd);border-radius:8px;overflow:hidden}
+.segOp{position:relative;display:flex!important;flex-direction:row!important;align-items:center;margin:0;padding:6px 14px;cursor:pointer;background:var(--card);color:var(--ink);border-right:1px solid var(--inbd);font-weight:500}
+.segOp:last-child{border-right:0}.segOp input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
+.segOp:has(input:checked){background:var(--acc);color:var(--accInk);font-weight:700}.segOp:has(input:focus-visible){outline:2px solid var(--acc);outline-offset:-2px}
+/* 3.5.1: Bàn làm việc — đường ray quy trình, trạm, hàng đợi */
+.bldRay{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;list-style:none;margin:0;padding:0;counter-reset:b}
+.bldNode{position:relative;padding:0 4px}.bldNode::before{content:"";position:absolute;top:26px;left:-50%;width:100%;height:3px;background:var(--line);z-index:0}.bldNode:first-child::before{display:none}
+.bldNode button{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;padding:6px 4px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--ink);font:inherit;cursor:pointer;text-align:center}
+.bldNode button:hover{background:var(--hover)}.bldNode.sel button{border-color:var(--acc);background:var(--accSoft)}
+.bldIc{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:var(--card);border:2px solid var(--line);font-size:20px}
+.bldNode[data-tt="Đã xong"] .bldIc{border-color:var(--ok)}.bldNode[data-tt="Đang làm"] .bldIc{border-color:var(--acc)}.bldNode[data-tt="Bị khóa"] .bldIc{border-color:var(--err)}
+.bldNhan{display:flex;flex-direction:column;gap:2px;font-size:12.5px}.bldNhan small{color:var(--mut)}
+.bldCot{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:14px;align-items:start;margin-top:12px}.bldTrai{display:grid;gap:10px}.bldPhai{position:sticky;top:12px}
+.bldTram.sel{outline:2px solid var(--acc);outline-offset:0}
+.bldHang{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}.bldHang li{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.bldLo select{width:100%}.bldHang .btn{white-space:nowrap;flex:0 0 auto}
+header.top .nav .nb,header.top .hbtn{padding:6px 9px}header.top{flex-wrap:nowrap}header.top .nav{flex-wrap:nowrap;white-space:nowrap}select#skinQuick{max-width:104px}@media (max-width:1560px){header.top h1 small{display:none}}
+@media (max-width:900px){.bldRay{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.bldNode::before{display:none}.bldCot{grid-template-columns:1fr}.bldPhai{position:static}}
+.heroKpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.heroKpi{display:flex;gap:12px;align-items:center;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;border-left:4px solid var(--acc)}
+.heroKpi.k2{border-left-color:var(--ok)}.heroKpi.k3{border-left-color:var(--accHi)}.heroKpi.k3 b{font-size:19px}.heroKpi.k4{border-left-color:var(--ok)}
+.hkIc{font-size:28px;line-height:1}.heroKpi small{display:block;color:var(--mut)}.heroKpi b{display:block;font-size:24px;line-height:1.2;color:var(--ink)}.heroKpi b em{font-size:14px;font-style:normal;font-weight:500;color:var(--mut)}.heroKpi .mut{font-size:12.5px}
+.padGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.padBtn{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer;text-align:left}.padBtn:hover{background:var(--hover);border-color:var(--acc)}.padBtn span{font-size:20px}
+tr.clickRow{cursor:pointer}tr.clickRow:hover{background:var(--hover)}
+@media (max-width:1100px){.heroKpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:600px){.heroKpis{grid-template-columns:1fr}}
+.nav #navHome::before{content:"📊 "}.nav #navBld::before{content:"💼 "}.nav #navDm::before{content:"📁 "}.nav [data-act=rpOpen]::before{content:"📑 "}.nav #navNorm::before{content:"⚙️ "}.nav #navSet::before{content:"🔧 "}
+@media (max-width:1320px){.nav .nb::before{content:none!important}select#skinQuick{display:none}}
+@media (max-width:980px){#themeBtn{font-size:0;padding:6px 8px}#themeBtn::before{content:"🌓";font-size:14px}}
+.nvNut{white-space:nowrap}
+button.segNut{border:0;font:inherit;color:var(--ink)}button.segNut.on{background:var(--acc);color:var(--accInk);font-weight:700}
+.nkDong{list-style:none;margin:8px 0 0;padding:0 0 0 18px;border-left:3px solid var(--line)}.nkDong li{position:relative;padding:4px 0 10px 12px}
+.nkDong li::before{content:"";position:absolute;left:-24px;top:9px;width:11px;height:11px;border-radius:50%;background:var(--card);border:3px solid var(--acc)}
+.nkDong .nkGio{font-size:12.5px;color:var(--mut)}.nkDong li[data-loai=doiSo]::before,.nkDong li[data-loai=doiBien]::before{border-color:var(--err)}.nkDong li[data-loai=ky]::before{border-color:var(--ok)}
+.sideSf{display:grid;gap:6px;margin:6px 0 10px}.sideSf select{width:100%}
+select#skinQuick{appearance:auto;background:transparent;color:var(--barInk);border-color:rgba(255,255,255,.28);padding:5px 8px}select#skinQuick option{color:#1b232c;background:#fff}
+.dmModal .grid,.infoTraCuu>.grid,.dxKhoi .grid,.dxKhoi details .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px 16px}
+.dmModal label>span,.dxKhoi label>span{display:block;margin-bottom:3px}
 .mucNav{display:grid;gap:4px;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px}
-.mucNav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;padding:8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
+.mucNav button{display:flex;justify-content:flex-start;align-items:center;gap:8px;text-align:left;padding:8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
 .mucNav button[aria-current]{border-color:var(--line);background:var(--hover);font-weight:700}
 .mucNoiDung,.mucKhoa{min-width:0}
 .mucKhoa{padding:0;margin:0;border:0}
 .mucForm:not([hidden]){display:contents}
-.rungTomTat{margin:8px 0;color:var(--mut)}
+.rungTomTat{margin:8px 0;color:var(--mut-aa)}
 .rungTomTat summary{cursor:pointer}
 /* phiếu #10: phần đầu lô một hàng; chip tiến độ; mở danh sách rừng thì khối gập xuống hàng riêng, rộng hết */
 .loDau{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0 0 2px}.loDau h2{margin:0;font-size:17px}.loDau .crumb{margin:0;font-size:12.5px}
 .loDau .rungTomTat{margin:0}.loDau .rungTomTat>summary{display:inline-block;padding:2px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--mut-aa);background:var(--card);white-space:nowrap}
 .loDau .rungTomTat[open]{flex-basis:100%;order:9}.loDau .rungTomTat:not([open])>:not(summary){display:none}.loDauTab{margin:0;border-bottom:0}.loDauTab button{padding:6px 8px}.loDauNut .btn{padding:5px 10px}.loDauNut{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+@media (min-width:900px){.loDau #loCrumb{flex:1 1 140px;min-width:0;white-space:nowrap;overflow-x:auto;margin:0}}
 .rungTabs{flex-wrap:wrap}
-#loCrumb{margin:4px 0 8px;color:var(--mut);font-size:13px}
+#loCrumb{margin:4px 0 8px;color:var(--mut-aa);font-size:13px}
 #stTbl_pc{min-width:1100px}
 .wrap:has(> #stTbl_pc){max-height:55vh;overflow:auto}
 #stTbl_pc thead th{position:sticky;top:0;z-index:1}
+.wrap:has(> #stTbl_nc){max-height:55vh;overflow:auto}.wrap:has(> #stTbl_dx){max-height:55vh;overflow:auto}
+#stTbl_nc thead th{position:sticky;top:0;z-index:1}#stTbl_dx thead th{position:sticky;top:0;z-index:1}
 .pcInLoc{flex-wrap:wrap;gap:10px}
 .importActions{flex-wrap:wrap;gap:6px}
 .pcInFrame{display:block;width:100%;height:70vh;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+/* Thanh điều hướng giữ một hàng. Các nút vẫn tới được bằng Tab khi cần cuộn riêng thanh này. */
+header.top .brand{min-width:0}
+header.top .brand h1{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+header.top .nav{min-width:0;overflow-x:auto;scrollbar-width:none}
+header.top .nav .nb{flex-shrink:0}
 /* header.top .brand: đặc hiệu hơn quy tắc header.top h1 small ở trên, nếu không dòng phụ vẫn hiện, thanh chính rộng ~500 px và nút Tìm xuống hàng thứ hai ở 1024 px */
 @media (max-width:1100px){header.top{gap:8px;padding-inline:10px}header.top .brand h1{font-size:13px}header.top .brand h1 small{display:none}.nav .nb,.hbtn{padding-inline:8px}}
 @media (min-width:700px) and (max-width:950px){header.top{flex-wrap:nowrap}.brand h1{display:none}.nav{flex:1 1 auto;order:0;flex-wrap:nowrap}}
@@ -271,6 +324,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .hak-catalog-tabs button{border:1px solid transparent;background:transparent;color:var(--mut-aa);padding:7px 14px;border-radius:var(--rs);font:inherit;font-weight:550;cursor:pointer}
 .hak-catalog-tabs button:hover{color:var(--ink);background:var(--hover)}
 .hak-catalog-tabs button[aria-current="page"]{background:var(--card);color:var(--brand);border-color:var(--line);box-shadow:var(--shadow);font-weight:700}
+.hak-catalog-tabs.sub{margin:-6px 0 14px;padding:3px;background:transparent;border-style:dashed}
+.hak-catalog-tabs.sub button{padding:5px 12px;font-size:.93em}
 .hak-pick-wrap{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:var(--rs);margin:8px 0}
 .hak-sf-bar{background:var(--paper);border:1px solid var(--line);border-radius:var(--rs);padding:5px 8px;margin:4px 0}
 .hak-sf-bar input:not([type=checkbox]),.hak-sf-bar select{min-height:28px;padding:3px 8px;font-size:12.5px}
@@ -279,6 +334,8 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 .hak-sf-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:99px;font-size:12px;background:var(--accSoft);color:var(--ink);border:1px solid var(--line)}
 .hak-sf-chip button{border:0;background:none;color:var(--mut-aa);cursor:pointer;padding:0 2px;font-size:12px;line-height:1}.hak-sf-chip button:hover{color:var(--err)}
 @media print{header.top,#ctxBar,aside,.btn,.tabs,.mucNav,.hak-steps,.hak-inspector-tabs,.hak-step-footer{display:none!important}.layout,.mucLayout,.hak-master-detail{display:block}main{padding:0}.card{box-shadow:none;break-inside:avoid}}
+.hbtn.pulse-bk{background:var(--ok,#1e7a3c)!important;color:#fff!important;animation:pulseBkAnim 2s infinite}
+@keyframes pulseBkAnim{0%{box-shadow:0 0 0 0 rgba(30,122,60,.7)}70%{box-shadow:0 0 0 8px rgba(30,122,60,0)}100%{box-shadow:0 0 0 0 rgba(30,122,60,0)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -290,29 +347,33 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
   </button>
   <nav class="nav">
     <button class="nb" data-act="goHome" id="navHome">Tổng quan</button>
+    <button class="nb" data-act="openBld" id="navBld">Bàn làm việc</button>
     <button class="nb" data-act="openDm" id="navDm">Danh mục</button>
     <button class="nb deskOnly" data-act="lkOpen" title="Dữ liệu Google Sheets" hidden>Dữ liệu Google Sheets</button>
     <button class="nb" data-act="rpOpen">Báo cáo</button>
     <button class="nb" data-act="openNorm" id="navNorm">Định mức</button>
     <button class="nb" data-act="openSettings" id="navSet">Cài đặt</button>
   </nav>
+  <button class="hbtn" data-act="theme" id="themeBtn" title="Đổi nhanh giao diện Sáng / Tối" aria-label="Đổi giao diện Sáng hoặc Tối">🌙 Tối</button>
+  <select class="hbtn" id="skinQuick" title="Chọn nhanh bảng màu" aria-label="Bảng màu"></select>
+  <button class="hbtn" data-act="quickBackup" id="quickBackupBtn" title="Sao lưu nhanh toàn bộ dữ liệu (Ctrl+B)">💾 Sao lưu</button>
   <button class="hbtn" data-act="tkOpen" id="tkBtn" title="Tìm kiếm toàn cục (Ctrl+K)">🔍 Tìm</button>
 </header>
 <div id="ctxBar"><span id="ctxOwner"></span><span id="ctxForest"></span><span class="sp"></span><button type="button" class="pill" id="bkChip" data-act="openSetBk" hidden></button><span class="pill" id="saveSt"></span></div>
 <div class="layout">
-  <aside id="side"><input class="sideq" id="sideQ" type="search" placeholder="Lọc chủ rừng…" aria-label="Lọc chủ rừng"><div id="sideList"></div></aside>
+  <aside id="side"><input class="sideq" id="sideQ" type="search" placeholder="Lọc chủ rừng…" aria-label="Lọc chủ rừng"><div class="sideSf" id="sideSf" role="group" aria-label="Bộ lọc chủ rừng"><select data-sbsf="tinhTrang" aria-label="Tình trạng hồ sơ"><option value="">Mọi tình trạng hồ sơ</option><option value="du">Đủ điều kiện</option><option value="doi">Cần đối chiếu</option><option value="chan">Bị chặn xuất</option></select><select data-sbsf="hopDong" aria-label="Tình trạng hợp đồng"><option value="">Mọi tình trạng hợp đồng</option><option value="ky">Đã ký HĐ</option><option value="chua">Chưa ký HĐ</option></select><select data-sbsf="soRung" aria-label="Số lượng rừng"><option value="">Mọi số lượng rừng</option><option value="nhieu">Nhiều rừng (từ 2)</option><option value="don">Lô đơn (1 rừng)</option></select><button type="button" class="btn ghost sm" id="sideSfXoa" hidden>Xóa lọc</button></div><div id="sideList"></div></aside>
   <main id="main"></main>
 </div>
 
 <div id="lkBox" role="dialog" aria-modal="true" aria-label="Dữ liệu Google Sheets"><div class="gd" id="lkBody"></div></div>
 <div id="hdBox" role="dialog" aria-modal="true" aria-labelledby="hdTitle"><div class="gd gsGd" id="hdBody"></div></div>
 <div id="hdAsk" role="dialog" aria-modal="true" aria-labelledby="hdAskT"><div class="gd" id="hdAskBody"></div></div>
-<div id="rpBox" role="dialog" aria-modal="true"><div class="gd" id="rpBody"></div></div>
-<div id="impBox" role="dialog" aria-modal="true"><div class="gd" id="impBody"></div></div>
-<div id="dlgBox" role="dialog" aria-modal="true"><div class="gd" id="dlgBody"></div></div>
-<div id="stBox" role="dialog" aria-modal="true"><div class="gd" id="stBody"></div></div>
-<div id="guideBox" role="dialog" aria-modal="true" data-act="guideBg"><div class="gd">
-<div class="gh"><h2>Hướng dẫn sử dụng</h2><button class="btn ghost sm" data-act="guideClose">✕ Đóng</button></div>
+<div id="rpBox" role="dialog" aria-modal="true" aria-labelledby="rpBoxTitle"><div class="gd" id="rpBody"></div></div>
+<div id="impBox" role="dialog" aria-modal="true" aria-labelledby="impBoxTitle"><div class="gd" id="impBody"></div></div>
+<div id="dlgBox" role="dialog" aria-modal="true" aria-labelledby="dlgBoxTitle"><div class="gd" id="dlgBody"></div></div>
+<div id="stBox" role="dialog" aria-modal="true" aria-labelledby="stBoxTitle"><div class="gd" id="stBody"></div></div>
+<div id="guideBox" role="dialog" aria-modal="true" aria-labelledby="guideBoxTitle" data-act="guideBg"><div class="gd">
+<div class="gh"><h2 id="guideBoxTitle">Hướng dẫn sử dụng</h2><button class="btn ghost sm" data-act="guideClose">✕ Đóng</button></div>
 <p>HAKQN Desktop lập hồ sơ khai thác và vận chuyển gỗ keo theo chuẩn FSC. Dữ liệu lưu ngay trên máy (SQLite); nhập liệu, kiểm tra, xuất hồ sơ, sao lưu và khôi phục <b>không cần mạng</b>. Chỉ đồng bộ Google Sheets mới cần mạng. Bản đầy đủ có hình thức trình bày chi tiết hơn: tệp <code>docs/HUONG_DAN.md</code>.</p>
 <h3>0. Màn hình Tổng quan</h3>
 <ul>
@@ -350,10 +411,10 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <h3>3. Tab Nhân công</h3>
 <ul>
 <li><b>Giao khoán</b>: tổ trưởng ký hợp đồng khoán (BM-01), công nhân ký <b>một Giấy ủy quyền (BM-20)</b> cho tổ trưởng; tính theo <b>tấn, ha hoặc ngày công</b> (khoán trả theo ngày công: Tổ trưởng nhận thay cả tổ rồi chi trả từng người). <b>Trực tiếp</b>: mỗi người ký hợp đồng lao động (BM-03); tính theo <b>tấn hoặc ngày công</b>.</li>
-<li><b>Đơn giá theo từng chức danh</b> (Tổ trưởng, Công nhân khai thác, Công nhân cưa). Sản lượng chia đều cho mọi người trong tổ, kể cả tổ trưởng; tiền mỗi người = phần chia × đơn giá chức danh.</li>
+<li><b>Đơn giá theo từng vị trí</b> (Tổ trưởng, Công nhân khai thác, Công nhân cưa). Sản lượng chia đều cho mọi người trong tổ, kể cả tổ trưởng; tiền mỗi người = phần chia × đơn giá vị trí.</li>
 <li><b>Ngày bắt đầu</b> dùng cho hợp đồng, chấm công và kiểm tra đủ 18 tuổi (dưới 18 tuổi không xuất được Giấy ủy quyền). Mỗi <b>đội</b> có một tổ trưởng; lô có từ 2 tổ trưởng là lô <b>nhiều đội</b> (xem dòng dưới).</li>
 <li><b>Nhiều đội</b>: mỗi tổ trưởng là một đội và ký hợp đồng giao khoán riêng. Ghi tên đội ở cột <b>Đội</b> cho mọi dòng (tổ trưởng và công nhân); lô chỉ có 1 tổ trưởng thì để trống. Sản lượng của lô chia cho các đội theo số người; mỗi đội có hợp đồng giao khoán, giấy ủy quyền, chấm công, danh sách đội, xác nhận đào tạo, bảng thanh toán tiền công và nghiệm thu riêng (thư mục con theo tên đội). Thiếu tên đội, trùng tên đội hoặc công nhân thuộc đội không có tổ trưởng thì báo lỗi. Mỗi đội có <b>số hợp đồng riêng</b>: số bạn nhập ở tab Xuất hồ sơ được thêm .1, .2… theo thứ tự đội (015/2026-KT thành 015.1/2026-KT, 015.2/2026-KT) cho hợp đồng giao khoán, giấy ủy quyền và biên bản nghiệm thu; hợp đồng ghi rõ phạm vi (ha, tấn) giao cho đội. Biên bản nghiệm thu mỗi đội ghi khối lượng phiếu cân cả lô và phần của đội chia theo số người. Nút <b>In bảng chấm công đã nhập</b> tải mỗi đội một file. Hình thức <b>trực tiếp</b> không chia đội.</li>
-<li><b>Định mức</b> (nút trên menu ngang): định mức BHLĐ theo chức danh để in sổ cấp phát, định mức gỗ keo (tấn/ha) và định mức thời gian khai thác (1 ha = ? ngày), đều có hiệu lực từ ngày, và định mức nhân công (một đội 8 người, nhiệm vụ từng vị trí). <b>Hai định mức ha, ngày/ha đều tính cho MỘT đội.</b> Thông tin rừng tính thời gian khai thác dự kiến = diện tích × ngày/ha (không tính Chủ nhật); các đội làm song song nên chia thêm cho <b>số đội</b>: khai ở ô <b>Số đội khai thác (làm song song)</b> trong Thông tin rừng, để trống thì lấy theo số Tổ trưởng ở tab Nhân công (khai khác số Tổ trưởng thì có nhắc ở màn hình và mục <b>Số đội</b> ở Kiểm tra trước khi xuất, không chặn). Ví dụ 2 ha × 5 ngày/ha: 1 đội 10 ngày, 2 đội 5 ngày. Khai thác thực tế lệch quá 20% (tối thiểu 3 ngày) so với dự kiến thì có cảnh báo, không chặn xuất.</li>
+<li><b>Định mức</b> (nút trên menu ngang): định mức BHLĐ theo vị trí để in sổ cấp phát, định mức gỗ keo (tấn/ha) và định mức thời gian khai thác (1 ha = ? ngày), đều có hiệu lực từ ngày, và định mức nhân công (một đội 8 người, nhiệm vụ từng vị trí). <b>Hai định mức ha, ngày/ha đều tính cho MỘT đội.</b> Thông tin rừng tính thời gian khai thác dự kiến = diện tích × ngày/ha (không tính Chủ nhật); các đội làm song song nên chia thêm cho <b>số đội</b>: khai ở ô <b>Số đội khai thác (làm song song)</b> trong Thông tin rừng, để trống thì lấy theo số Tổ trưởng ở tab Nhân công (khai khác số Tổ trưởng thì có nhắc ở màn hình và mục <b>Số đội</b> ở Kiểm tra trước khi xuất, không chặn). Ví dụ 2 ha × 5 ngày/ha: 1 đội 10 ngày, 2 đội 5 ngày. Khai thác thực tế lệch quá 20% (tối thiểu 3 ngày) so với dự kiến thì có cảnh báo, không chặn xuất.</li>
 <li><b>Chấm công thực tế</b> (khi cơ sở tính là <b>ngày công</b>, cả giao khoán lẫn trực tiếp): thẻ ngay dưới thông số. Chọn tháng, nhập số công mỗi ngày cho từng người (<b>1</b> đủ công, <b>0,5</b> nửa công, <b>0</b> hoặc trống là nghỉ; tối đa 3), hoặc bấm <b>Điền đủ công (trừ Chủ nhật)</b>. Đã chấm thì <b>BM-08 dùng tổng công từng người</b>; chưa chấm thì mọi người bằng số công theo thời gian khai thác. Hợp đồng (BM-01, BM-03, BM-20) luôn dùng số công dự tính. Nút <b>In bảng chấm công đã nhập</b> tải BM-05 có sẵn số công của tháng; BM-05 trong các gói hồ sơ vẫn là mẫu trống để chấm tay.</li>
 </ul>
 <h3>4. Tab Vận chuyển</h3>
@@ -452,7 +513,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <tr><td>Nút tải bị khóa</td><td>Mở tab Kiểm tra trước khi xuất và xử lý mục chặn.</td></tr>
 <tr><td>Phiếu cân báo biển không có trong xe</td><td>Thêm xe vào Excel xe, nạp lại xe rồi nạp phiếu cân.</td></tr>
 <tr><td>Phiếu cân báo sai ngày</td><td>Sửa ở ô “Sửa ngày” trong bảng phiếu cân hoặc sửa file Excel (ngày phải có thật, ví dụ 28/02/2026).</td></tr>
-<tr><td>Báo thiếu đơn giá</td><td>Nhập đơn giá cho từng chức danh, kể cả tổ trưởng.</td></tr>
+<tr><td>Báo thiếu đơn giá</td><td>Nhập đơn giá cho từng vị trí, kể cả tổ trưởng.</td></tr>
 <tr><td>Đổi mã lô bị từ chối</td><td>Mã đã có ở lô khác; thông báo nêu lô đang dùng mã đó.</td></tr>
 <tr><td>Word hiện dòng chấm</td><td>Ô thông số hoặc địa chỉ giao đang trống; điền ở màn hình hoặc điền tay.</td></tr>
 <tr><td>Nghi ngờ mất dữ liệu</td><td>Mở thư mục <code>backups</code> (menu Tệp → Mở thư mục dữ liệu) hoặc khôi phục từ file sao lưu gần nhất.</td></tr></table>
@@ -491,8 +552,10 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@VIECCANLAM@@*/</script>
 <script>/*@@SOVB@@*/</script>
 <script>/*@@TIENICH@@*/</script>
+<script>/*@@SRC:nhatkytruyxuat@@*/</script>
 <script>/*@@SRC:bks@@*/</script>
 <script>/*@@SRC:vitri@@*/</script>
+<script>/*@@SRC:nganh@@*/</script>
 <script>/*@@SRC:doituong@@*/</script>
 <script>/*@@SRC:xedm@@*/</script>
 <script>/*@@SRC:phanbo@@*/</script>
@@ -504,6 +567,7 @@ tr.lkg{cursor:pointer}tr.lkg.on td{background:var(--accSoft)}tr.lkg:focus-visibl
 <script>/*@@SRC:noidunghopdong@@*/</script>
 <script>/*@@SRC:doiso@@*/</script>
 <script>/*@@SRC:phanbophieu@@*/</script>
+<script>/*@@SRC:nhap@@*/</script>
 <script>/*@@MODEL@@*/</script>
 <script>/*@@DINHMUC@@*/</script>
 <script>/*@@QUYTRINH@@*/</script>

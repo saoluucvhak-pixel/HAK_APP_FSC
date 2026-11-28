@@ -64,8 +64,6 @@ function gsOwnerCheck(eff) {
     err = 'Chủ rừng “' + (o.info.ten || o.info.ma || '') + '” trong ứng dụng có CCCD ' + gsMask(o.info.cccd) + ' khác CCCD của hợp đồng ' + d.hd + ' (' + d.cccdList.map(gsMask).join(', ') + '): không ghi, không tự đổi chủ rừng.';
   return {o, err};
 }
-const gsOwnStr = (o, k) => (o && typeof o === 'object' && Object.hasOwn(o, k) && typeof o[k] === 'string') ? o[k] : '';   // 'constructor', 'toString'… không được coi là đã ghép
-const gsAliasOf = raw => { const k = foldVi(raw); return gsOwnStr(db.bienAlias, k) || gsOwnStr(gs.m && gs.m.alias, k); };
 
 /* ----- Phiếu cân của hợp đồng: trạng thái từng dòng Sheet so với lô đã có (mới / đổi / trùng / nghi đổi số / lệch CCCD / lỗi / cần ghép xe) ----- */
 function gsLots(eff) {
@@ -77,7 +75,7 @@ function gsRows() {
   const m = gs.m, d = m.d, eff = gsEff(), lots = gsLots(eff), B = HAKBks, byId = new Map(lots.map(x => [x.loId + ':' + x.p._id, x]));   // _id của bản nháp chỉ duy nhất trong từng lô: ghép thêm mã lô
   const seen = new Set();
   const rows = d.phieu.map((p, idx) => {
-    const kp = B.khoaPhieu({soPhieu: p.soPhieu, ngay: p.ngay}), raw = String(p.bienRaw || ''), bien = p.isPlate ? raw.toUpperCase() : gsAliasOf(raw);
+    const kp = B.khoaPhieu({soPhieu: p.soPhieu, ngay: p.ngay}), raw = String(p.bienRaw || ''), bien = B.bienTuSheet(p, db.bienAlias, m.alias);
     const r = {key: String(p.row), idx, p, kp, bien, st: 'new', note: '', ex: null, ung: null};
     if (p.lechCccd) { r.st = 'lech'; r.note = 'CCCD của dòng này khác CCCD hợp đồng: không phân bổ, không ghi'; }
     else if (p.issue) { r.st = 'issue'; r.note = p.issue; }
@@ -338,7 +336,7 @@ function gsRenderIn() {
   const blocked = d.canhBaoNang.length && !m.ack;
   body.innerHTML = '<div class="gsHead"><div><h2 id="hdTitle">' + esc(d.hd) + ' · ' + esc(own.ten || '(chưa rõ chủ rừng)') + '</h2><div class="mut">CCCD ' + esc(d.cccd ? gsMask(d.cccd) : '—') + ' · ký ' + esc(own.ngayKyHopDong || '—') + ' · ' + eff.length + ' rừng · ' + d.phieu.length + ' phiếu cân</div></div><div class="row"><span class="pill ' + st[1] + '">' + st[0] + '</span><button type="button" class="btn ghost sm" data-act="gsClose"' + (m.busy ? ' disabled' : '') + '>Đóng ✕</button></div></div>' +
     '<div class="gsMb">' + gsChaHtml(eff, rows) + con + '</div>' +
-    '<div class="gsFoot"><span class="mut gsTot" id="gsTot">' + esc(tot || 'Chưa chọn gì') + '</span><span class="row"><button type="button" class="btn ghost" data-act="gsAll">Chọn phần mới</button><button type="button" class="btn ghost" data-act="gsClose"' + (m.busy ? ' disabled' : '') + '>Đóng</button><button type="button" class="btn" data-act="gsApply"' + (blocked || m.busy || !eff.length ? ' disabled' : '') + ' title="' + (blocked ? 'Cần xác nhận cảnh báo nhiều CCCD (2 bước) trước. ' : '') + 'Mọi thứ (chủ rừng, rừng, tọa độ, giấy tờ, phiếu cân, xe) vào bản nháp, chưa lưu: bấm Lưu dữ liệu vào lô để lưu">Cập nhật vào hồ sơ</button></span></div>';
+    '<div class="gsFoot"><span class="mut gsTot" id="gsTot">' + esc(tot || 'Chưa chọn gì') + '</span><span class="row"><button type="button" class="btn ghost" data-act="gsAll">Chọn phần mới</button><button type="button" class="btn ghost" data-act="gsClose"' + (m.busy ? ' disabled' : '') + '>Đóng</button>' + (lkCtx === 'info' ? '<button type="button" class="btn" data-act="gsFillInfo" id="gsFillInfo" title="Điền họ tên, CCCD, số hợp đồng… từ Google Sheets vào form Thông tin chủ rừng (chưa lưu)">📥 Chọn hợp đồng này &amp; Điền vào hồ sơ</button>' : '') + '<button type="button" class="btn" data-act="gsApply"' + (blocked || m.busy || !eff.length ? ' disabled' : '') + ' title="' + (blocked ? 'Cần xác nhận cảnh báo nhiều CCCD (2 bước) trước. ' : '') + 'Mọi thứ (chủ rừng, rừng, tọa độ, giấy tờ, phiếu cân, xe) vào bản nháp, chưa lưu: bấm Lưu dữ liệu vào lô để lưu">Cập nhật vào hồ sơ</button></span></div>';
   const nsc = body.querySelector('.gsDtB'); if (nsc) nsc.scrollTop = scT; const nmb = body.querySelector('.gsMb'); if (nmb) nmb.scrollTop = scM;
   if (fk) { let n = null; if (fk[0] === 'id') n = document.getElementById(fk[1]); else if (fk[0] === 'data-act') n = [...body.querySelectorAll('[data-act]')].find(x => x.dataset.act === fk[1] && x.dataset.k === fk[2] && x.dataset.d === fk[3]); else n = [...body.querySelectorAll('[' + fk[0] + ']')].find(x => x.getAttribute(fk[0]) === fk[1]);
     if (n && n.focus) n.focus(); }

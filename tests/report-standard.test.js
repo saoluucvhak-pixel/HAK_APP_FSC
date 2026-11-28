@@ -71,3 +71,17 @@ test('cha–con: chủ rừng = tổng rừng = tổng phiếu cân; tổng cộ
   const dup = R.chaCon([mk('A', 'K1', 'R1', 1, [P('01/02/2026', 'X', 1)]), mk('A', 'K1', 'R2', 1, [P('02/02/2026', 'X', 2)])], {today: 'x'});
   assert.ok(dup.notes.some(n => /vẫn được cộng vào tổng/.test(n)) && dup.sections[0].foot[6] === 3);   // phiếu trùng vẫn tính, có ghi chú
 });
+
+test('định dạng báo cáo theo cài đặt và giữ kiểu ô Excel', () => {
+  const xlsx = require('xlsx');
+  const opts = {numStyle: 'en', dateStyle: 'iso'};
+  assert.equal(R.fmtCell(1234.5, 'n2', opts), '1,234.50');
+  assert.equal(R.fmtCell('05/10/2026', 'date', opts), '2026-10-05');
+  const m = {title: 'Mẫu', period: '', notes: [], kpis: [], sections: [{
+    heading: 'Chi tiết', cols: [{h: 'Ngày', f: 'date'}, {h: 'Khối lượng', f: 'n2'}], rows: [['05/10/2026', 1234.5]]
+  }]};
+  const w = R.toSheet(m, opts, xlsx);
+  assert.equal(w.A9.t, 'd'); assert.equal(w.A9.z, 'yyyy-mm-dd');
+  assert.equal(w.B9.t, 'n'); assert.equal(w.B9.v, 1234.5);
+  assert.match(R.toPrintHtml(m, opts), /2026-10-05[\s\S]*1,234\.50/);
+});

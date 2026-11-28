@@ -347,6 +347,18 @@
     f.hdvc.forEach(h => { const cu = khoaInCuVC(f, h); if (!cu) return; ['09', '10'].forEach(code => { const a = code + ':' + cu, b = code + ':' + khoaInVC(h); if (has(it, a) && !has(it, b)) { it[b] = it[a]; delete it[a]; n++; } }); });
     return n;
   }
-  const api = {tenKey, tenDoiLoi, tenHdLoi, khoaInVC, khoaInCuVC, doiKhoaInVC, hdTenKhop, xoaTruongCu, coTruongCu, nguoiDanhMuc, cccdSo, assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
+  // Chỉ dọn chủ rừng tạo dở khi mọi trường dữ liệu đều trống.
+  function chuRongTrong(owner) {
+    if (!owner || typeof owner !== 'object' || Array.isArray(owner)) return false;
+    const {id, info, ...records} = owner;
+    const blank = value => value == null || (typeof value === 'string' && !value.trim()) ||
+      (Array.isArray(value) && !value.length) ||
+      (typeof value === 'object' && !Array.isArray(value) && !Object.keys(value).length);
+    if (info != null && (typeof info !== 'object' || Array.isArray(info))) return false;
+    return Object.values(records).every(blank) && Object.entries(info || {}).every(([key, value]) =>
+      blank(value) || (key === 'danhXung' && value === 'Ông'));
+  }
+
+  const api = {chuRongTrong, tenKey, tenDoiLoi, tenHdLoi, khoaInVC, khoaInCuVC, doiKhoaInVC, hdTenKhop, xoaTruongCu, coTruongCu, nguoiDanhMuc, cccdSo, assignPc, HD_EXP, vcKey, signerOf, signersOf, hdOf, xeOf, hdOrder, addHd, addHdDonVi, updateHd, moveXe, removeHd, DOI_INFO, DOI_EXP, splitTeams, needsEnsure, ensureForest, legacyForest, ensureDb, legacyDb, teamOf, membersOf, infoOf, teamErrors, addTeam, removeTeam, updateTeam, moveMembers, isTT};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKModel = api;
 })(typeof window !== 'undefined' ? window : globalThis);

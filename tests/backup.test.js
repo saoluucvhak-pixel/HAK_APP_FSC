@@ -69,18 +69,38 @@ test('ghi dở JSON rồi mất kết nối: file tạm bị xóa, không để 
   } finally { s.close(); }
 });
 
-test('thiếu dung lượng trước khi ghi: dừng sớm, không ghi file nào', async () => {
+test('không đủ chỗ cho SQLite: JSON vẫn được tạo và kiểm tra', async () => {
   const s = store(), out = tmp();
   try {
     const r = await B.backupAll({db: s.db, data: s.load(), outDir: out, dbBytes: 50 * 1048576, now: () => NOW, hooks: {freeBytes: 10 * 1048576}});
-    assert.strictEqual(r.ok, false); assert.ok(/không đủ chỗ trống/.test(r.message)); assert.deepStrictEqual(files(out), []);
+    assert.strictEqual(r.ok, false); assert.match(r.sqlite.error, /không đủ chỗ trống/);
+    assert.ok(r.json.ok);
+    assert.deepStrictEqual(files(out).map(f => path.extname(f)), ['.json']);
   } finally { s.close(); }
 });
 
-test('thư mục sao lưu không tồn tại: báo lỗi rõ, không ghi gì', async () => {
+test('lỗi một thư mục sao lưu: định dạng còn lại vẫn được ghi', async () => {
+  const s = store(), out = tmp(), blocked = path.join(out, 'tep-chan');
+  fs.writeFileSync(blocked, '');
+  try {
+    for (const kind of ['json', 'sqlite']) {
+      const r = await B.backupAll({db: s.db, data: s.load(), createDirs: true,
+        outDir: kind === 'sqlite' ? blocked : out, outDirJson: kind === 'json' ? blocked : out});
+      assert.equal(r.ok, false);
+      assert.equal(r[kind].ok, false);
+      assert.match(r[kind].error, /không dùng được/);
+      assert.ok(r[kind === 'json' ? 'sqlite' : 'json'].ok, r.message);
+    }
+  } finally { s.close(); }
+});
+
+test('không đọc được dữ liệu để xuất JSON: SQLite vẫn được sao lưu', async () => {
   const s = store();
-  try { const r = await B.backupAll({db: s.db, data: s.load(), outDir: path.join(tmp(), 'khong-co'), now: () => NOW}); assert.strictEqual(r.ok, false); assert.ok(/không dùng được/.test(r.message)); }
-  finally { s.close(); }
+  try {
+    const r = await B.backupAll({db: s.db, outDir: tmp(), data: () => { throw new Error('Lỗi đọc dữ liệu JSON'); }});
+    assert.match(r.json.error, /Lỗi đọc dữ liệu JSON/);
+    assert.ok(r.sqlite.ok, r.message);
+  } finally { s.close(); }
 });
 
 test('ghi file sao lưu lô: qua tên tạm, đọc lại kiểm tra; tên tự chọn không ghi đè bản có sẵn', () => {
@@ -117,4 +137,20 @@ test('Lô 6 (T-08): dữ liệu thay đổi giữa chừng khi đang sao lưu �
     const jsonData = JSON.parse(fs.readFileSync(r.json.file, 'utf8'));
     assert.strictEqual(Object.keys(jsonData.rs || {}).length, sqlCounts.owners);
   } finally { s.close(); }
+});
+
+test('đích sao lưu chặn SQLite đang mở sau khi thêm đuôi và qua đường dẫn khác', () => {
+  const dir = tmp(), live = path.join(dir, 'active.sqlite'), alias = path.join(dir, 'alias.sqlite');
+  try {
+    fs.writeFileSync(live, 'giả lập');
+    let hasLink = false;
+    try { fs.linkSync(live, alias); hasLink = true; } catch {}
+    const targets = [live, path.join(dir, 'active')];
+    if (hasLink) targets.push(alias);
+    for (const target of targets) {
+      assert.throws(() => B.backupDestination(target, live), /cơ sở dữ liệu đang mở/);
+    }
+    assert.equal(B.backupDestination(path.join(dir, 'backup'), live), path.join(dir, 'backup.sqlite'));
+    assert.equal(B.backupDestination(path.join(dir, 'backup.json'), live), path.join(dir, 'backup.json'));
+  } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 });

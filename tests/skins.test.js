@@ -34,7 +34,8 @@ const BAR_INK = '#f1ede2';                                       // chữ thanh 
 const PAIRS = [['ink', 'card'], ['ink', 'bg'], ['mut-aa', 'card'], ['mut-aa', 'bg'], ['mut-aa', 'th'], ['brand', 'card'], ['brand', 'bg'], ['onBrand', 'brand'], ['onBrand', 'brandH'],
   ['warnFg', 'warnBg'], ['okFg', 'okBg'], ['red', 'card']];
 
-for (const skin of ['classic', 'luxe', 'neutral', 'champagne']) {
+const GLASS = ['glass-fog', 'glass-sage', 'glass-night'];
+for (const skin of ['classic', 'luxe', 'neutral', 'champagne', 'ocean', ...GLASS]) {
   for (const [name, isDark] of [['sáng', false], ['tối', true]]) {
     test(`${skin} ${name}: chữ đạt AA ≥ 4,5:1, thanh trên cùng đọc được`, () => {
       const T = theme(skin, isDark);
@@ -44,11 +45,20 @@ for (const skin of ['classic', 'luxe', 'neutral', 'champagne']) {
         assert.ok(ratio(f, b) >= 4.5, `${skin}/${name}: ${fg} trên ${bg} (${f} / ${b}) = ${ratio(f, b).toFixed(2)}:1`);
       }
       assert.ok(isHex(T.deep) && ratio(BAR_INK, T.deep) >= 4.5, `${skin}/${name}: chữ thanh trên cùng trên --deep ${T.deep}`);
+      if (GLASS.includes(skin)) {
+        const panel = /^rgb\((\d+) (\d+) (\d+) \/ (\.[\d]+)\)$/.exec(T['glass-panel']);
+        assert.ok(panel && isHex(T['glass-ink']));
+        const channels = panel.slice(1, 4).map(Number), alpha = Number(panel[4]);
+        for (const backdrop of [0, 255]) {
+          const bg = '#' + channels.map(c => Math.round(c * alpha + backdrop * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+          assert.ok(ratio(T['glass-ink'], bg) >= 4.5, `${skin}/${name}: chữ trên kính ${bg}`);
+        }
+      }
     });
   }
 }
 
-test('bốn bảng màu khác nhau thật (màu chủ đạo và nền không trùng)', () => {
-  const keys = ['classic', 'luxe', 'neutral', 'champagne'].map(s => { const t = theme(s, false); return t.brand + '|' + t.bg; });
-  assert.strictEqual(new Set(keys).size, 4, keys.join(' ; '));
+test('sáu bảng màu trong bộ chọn có màu chủ đạo và nền khác nhau', () => {
+  const keys = ['classic', 'luxe', 'ocean', ...GLASS].map(s => { const t = theme(s, false); return t.brand + '|' + t.bg; });
+  assert.strictEqual(new Set(keys).size, keys.length);
 });

@@ -23,10 +23,10 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   // 1. nhân công: chọn từ danh mục
   await open('nc'); await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
   const opts = await w.$$eval('#ncDm option', o => o.map(x => x.textContent.trim()));
-  ok('ô chọn người lấy từ Danh mục lao động', opts.some(x => /LÊ THỢ CƯA/.test(x)) && !opts.some(x => /TỔ TRƯỞNG B/.test(x)), opts.join('|'));
+  ok('ô chọn người lấy từ Danh mục đối tượng', opts.some(x => /LÊ THỢ CƯA/.test(x)) && !opts.some(x => /TỔ TRƯỞNG B/.test(x)), opts.join('|'));
   await w.selectOption('#ncDm', '049085007002'); await w.waitForTimeout(300);
   const v = await w.$eval('#stForm', f => ({ten: f.ten.value, cccd: f.cccd.value, diaChi: f.diaChi.value, noiCap: f.noiCap.value, vaiTro: f.vaiTro.value, chucDanh: f.chucDanh.value, danhXung: f.danhXung.value}));
-  ok('chọn người: điền sẵn thông tin, chức vụ → vai trò, vị trí → chức danh, giới tính → danh xưng', v.ten === 'LÊ THỢ CƯA' && v.diaChi === 'Quế Sơn' && v.noiCap === 'CA QN' && v.vaiTro === 'Công nhân' && v.chucDanh === 'Công nhân khai thác' && v.danhXung === 'Ông', JSON.stringify(v));
+  ok('chọn người: điền sẵn thông tin, chức vụ → vaiTro, vị trí → chucDanh, giới tính → danh xưng', v.ten === 'LÊ THỢ CƯA' && v.diaChi === 'Quế Sơn' && v.noiCap === 'CA QN' && v.vaiTro === 'Công nhân' && v.chucDanh === 'Công nhân khai thác' && v.danhXung === 'Ông', JSON.stringify(v));
   await w.click('#stForm button[type=submit]'); await w.waitForTimeout(400); await w.click('button[data-act=stSave]'); await w.waitForTimeout(500);
   let F = await forests(); let p = F.fb.nc.find(r => r.cccd === '049085007002');
   ok('lưu: người được chụp vào lô', !!p && p.diaChi === 'Quế Sơn' && p.chucDanh === 'Công nhân khai thác', JSON.stringify(p));
@@ -40,7 +40,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await w.click('[data-act=dmCapNhatLo][data-kind=nc]'); await w.waitForTimeout(300);
   F = await forests(); ok('bấm Cập nhật chỉ đổi bản nháp: SQLite chưa đổi, hiện thanh Chưa lưu', F.fb.nc.find(r => r.cccd === '049085007002').diaChi === 'Quế Sơn' && !!(await w.$('#stDirty')));
   await w.click('button[data-act=stSave]'); await w.waitForTimeout(500); F = await forests();
-  ok('lưu: lô nhận thường trú mới, các trường khác (vai trò, chức danh) giữ nguyên', F.fb.nc.find(r => r.cccd === '049085007002').diaChi === 'Đại Lộc' && F.fb.nc.find(r => r.cccd === '049085007002').chucDanh === 'Công nhân khai thác');
+  ok('lưu: lô nhận thường trú mới, các trường khác (chức vụ, vị trí) giữ nguyên', F.fb.nc.find(r => r.cccd === '049085007002').diaChi === 'Đại Lộc' && F.fb.nc.find(r => r.cccd === '049085007002').chucDanh === 'Công nhân khai thác');
   ok('hết thanh báo lệch', !(await w.$('#dmLechnc')));
   // 3. người mới nhập tại lô tự vào danh mục
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');

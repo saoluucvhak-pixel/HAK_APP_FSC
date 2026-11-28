@@ -44,7 +44,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('nhãn mục bên trái không xuống dòng', m.nav.every(x => x.h <= m.nav[0].h + 1 && x.h < 44), JSON.stringify(m.nav));
   ok('trang không cuộn ngang', !m.cuonNgang);
   await moHd('nc'); await w.evaluate(() => window.__hak.mucLo('nc', 'thanhvien')); await w.waitForTimeout(300);
-  const tv = await w.evaluate(() => { const r = document.querySelector('#stTbl_nc tbody tr'); return r ? [...r.querySelectorAll('.stAct .btn')].map(b => Math.round(b.getBoundingClientRect().top)) : []; });
+  const tv = await w.evaluate(() => { const r = document.querySelector('#stTbl_nc tbody tr'); return r ? [...r.querySelectorAll('.stAct [data-act="stEdit"], .stAct [data-act="stDel"]')].map(b => Math.round(b.getBoundingClientRect().top)) : []; });
   ok('bảng thành viên: Sửa / Xóa đã lưu cùng một hàng', tv.length === 2 && Math.abs(tv[0] - tv[1]) <= 1, JSON.stringify(tv));
   ok('không có lỗi script trên màn hình', errs.length === 0, errs.join(' | '));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);

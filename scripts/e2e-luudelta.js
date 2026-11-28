@@ -23,7 +23,7 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
     if (!(await w.$eval('#side', e => getComputedStyle(e).display !== 'none').catch(() => true))) await w.click('#navHome'); /* phiếu #06b (D-05): Cài đặt ẩn cột chủ rừng; về Tổng quan như người dùng */
     await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name="ma"]', ma); await w.fill('#infoForm [name="ten"]', ten);
     for (const [k, v] of Object.entries({cccd: '049067005' + ma.slice(-3), ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'})) await w.fill(`#infoForm [name="${k}"]`, v);
-    await w.selectOption('#infoForm [name="danhXung"]', 'Ông'); await w.click('#infoForm button[type=submit]');
+    await w.check('#infoForm [name="danhXung"][value="Ông"]'); await w.click('#infoForm button[type=submit]');
   };
   // 1. lần lưu đầu sau khi mở: toàn bộ (chưa có ảnh chụp)
   await addOwner('CR-901', 'NGUYỄN LƯU MỘT'); let s = await waitSaved(1);
@@ -34,17 +34,25 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   let d = await db(), names = Object.values(d.rs).map(o => o.info.ten);
   ok('dữ liệu trong SQLite có đủ 2 chủ mới và 50 chủ cũ, 20.000 phiếu còn nguyên', names.includes('NGUYỄN LƯU MỘT') && names.includes('NGUYỄN LƯU HAI') && Object.keys(d.rs).length === 52 &&
     Object.values(d.rs).reduce((a, o) => a + Object.values(o.forests).reduce((b, f) => b + f.pc.length, 0), 0) === 20000);
-  // 3. xóa một chủ rừng qua giao diện: delta có xóa, có bản sao lưu trước khi xóa
-  await w.click('text=NGUYỄN LƯU HAI'); await w.waitForSelector('[data-act=delRs]'); await w.click('[data-act=delRs]'); s = await waitSaved(3);
+  // 3. Xóa có IPC riêng và bản sao trước khi xóa. Bản ghi khác không đi kèm lần xóa.
+  await w.click('text=NGUYỄN LƯU HAI'); await w.waitForSelector('[data-act=delRs]'); await w.click('[data-act=delRs]');
+  await w.waitForFunction(() => !Object.values(window.hak.loadSync().db.rs).some(o => o.info.ten === 'NGUYỄN LƯU HAI'));
   d = await db();
-  ok('xóa chủ rừng qua giao diện: lưu theo phần thay đổi, chủ đó không còn trong SQLite', s.delta === 2 && !Object.values(d.rs).some(o => o.info.ten === 'NGUYỄN LƯU HAI') && Object.keys(d.rs).length === 51, JSON.stringify(s));
-  // 4. ghi từ nơi khác: Khôi phục toàn bộ qua giao diện (tiến trình chính ghi rồi trả dữ liệu mới) → ảnh chụp cũ hết hiệu lực
+  const bk = await w.evaluate(() => window.hak.saoLuu.list());
+  const baseline = await stats();
+  ok('xóa riêng chủ rừng, có bản sao lưu trước khi xóa và không gửi lần lưu chung', baseline.delta === 1 && baseline.full === 1 &&
+    Object.keys(d.rs).length === 51 && bk.items.some(it => /^truoc-xoa-/.test(it.name)), JSON.stringify(baseline));
+
+  // Làm mới ảnh chụp sau IPC xóa để lần khôi phục bên dưới thực sự kiểm tra đường STALE.
+  await addOwner('CR-904', 'NGUYỄN LÀM MỚI ẢNH'); s = await waitSaved(3);
+  ok('lần ghi sau xóa khởi tạo lại ảnh chụp từ SQLite', s.full === 2 && s.last === 'full', JSON.stringify(s));
+  // 4. Khôi phục ghi từ tiến trình chính và làm ảnh chụp vừa tạo hết hiệu lực.
   const backup = {v: 2, rs: {ext1: {id: 'ext1', info: {ma: 'CR-EXT', ten: 'CHỦ TỪ BẢN SAO LƯU', cccd: '049000000555', danhXung: 'Ông'}, forests: {}}}};
   const jf = path.join(dir, 'saoluu.json'); fs.writeFileSync(jf, JSON.stringify(backup));
   await w.click('#navSet'); await w.click('#setTab_setbk'); await w.setInputFiles('input[data-file="restore"]', jf); await w.waitForSelector('#impBox.on'); await w.click('[data-act=impGo]'); await w.waitForTimeout(800);
   ok('khôi phục qua giao diện (ghi từ tiến trình chính) thành công', (await w.innerText('#side')).includes('CHỦ TỪ BẢN SAO LƯU'));
   await addOwner('CR-903', 'NGUYỄN LƯU BA'); s = await waitSaved(4);
-  ok('sau khi ghi từ nơi khác: lưu theo phần thay đổi bị từ chối (STALE) và tự lưu toàn bộ', s.fallback === 1 && s.full === 2 && s.last === 'full', JSON.stringify(s));
+  ok('sau khi ghi từ nơi khác: lưu theo phần thay đổi bị từ chối (STALE) và tự lưu toàn bộ', s.fallback === 1 && s.full === 3 && s.last === 'full', JSON.stringify(s));
   d = await db(); names = Object.values(d.rs).map(o => o.info.ten);
   ok('không mất thay đổi: có chủ mới (CR-903) và chủ từ bản sao lưu', names.includes('NGUYỄN LƯU BA') && names.includes('CHỦ TỪ BẢN SAO LƯU'), names.slice(-4).join(','));
   // 5. đo: lưu toàn bộ vs lưu theo phần thay đổi với 20.000 phiếu (gửi trực tiếp như giao diện)

@@ -17,7 +17,12 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const A = lot('fa', 'R-A', {exp: {soKT: '015', ngayKy: '02/10/2026'}, kl: null, nc, dx: [xe('92C-12345', '049000000077', 'LÊ VĂN MỘT'), xe('92C-67890', '049000000078', 'TRẦN VĂN HAI')],
     pc: [P(1, '05/10/2026', '92C-12345', 'PA1', 12.5, 'Đội 1'), P(2, '06/10/2026', '92C-67890', 'PA2', 9.25, 'Đội 2'), P(3, '07/10/2026', '92C-12345', 'PA3', 8, 'Đội 1'), P(4, '08/10/2026', '92C-67890', 'PA4', 6, '')]});
   await w.evaluate(d => window.hak.save(d), seed([A])); await w.reload(); await w.waitForSelector('#side');
-  await w.click('[data-act=rpOpen]'); await w.waitForSelector('#rpBody');
+  await w.click('[data-act=rpOpen]'); await w.waitForSelector('#rpBody'); await w.evaluate(() => {
+    document.getElementById('rpFrom').value = '';
+    const end = document.getElementById('rpTo');
+    end.value = '';
+    end.dispatchEvent(new Event('change', {bubbles: true}));
+  });
   ok('hộp Báo cáo có hai mẫu mới: Sản lượng theo đội khai thác và Vận chuyển theo đội xe', !!(await w.$('[data-rpsel=sanluongdoi]')) && !!(await w.$('[data-rpsel=vanchuyendoi]')));
   await w.click('[data-rpsel=sanluongdoi]'); await w.waitForTimeout(400); let t = await w.innerText('#rpBody');
   ok('sản lượng theo đội: Đội 1 = 2 phiếu, 20,5 tấn; Đội 2 = 1 phiếu, 9,25 tấn', /Đội 1[\s\S]*TRẦN MỘT[\s\S]*20,5/.test(t) && /Đội 2[\s\S]*NGUYỄN HAI[\s\S]*9,25/.test(t), t.slice(0, 900));

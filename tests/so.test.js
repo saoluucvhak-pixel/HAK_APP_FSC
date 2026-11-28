@@ -64,3 +64,21 @@ test('N-04: không còn const toDec = hoặc const toNum = tự định nghĩa t
   }
   assert.deepEqual(viPham, []);
 });
+
+test('ô nhập số định dạng theo Cài đặt và chuyển về đúng giá trị nghiệp vụ', () => {
+  assert.equal(So.groupInput('1250000,75', 'vi'), '1.250.000,75');
+  assert.equal(So.groupInput('1250000.75', 'en'), '1,250,000.75');
+  assert.equal(So.groupInput('1250000,', 'vi'), '1.250.000,');
+  assert.equal(So.groupInput('12.5', 'vi'), '12.5');
+  assert.equal(So.groupInput('1234', 'en', true), '1,234');
+  assert.equal(So.readInput('1.250.000,75', 'vi'), 1250000.75);
+  assert.equal(So.readInput('1,250,000.75', 'en'), 1250000.75);
+  assert.equal(So.readInput('1,234', 'en', true), 1234);
+  const groupedRate = So.groupInput('340000', 'vi', true);
+  assert.equal(groupedRate, '340.000');
+  assert.deepEqual(So.docBangDonGia([['Tổ trưởng', So.readInput(groupedRate, 'vi', true)]], {}), {
+    ok: true, map: {'Tổ trưởng': 340000}, errs: []
+  });
+  assert.equal(So.readInput('1,2', 'en'), 'x');
+  assert.equal(So.readInput('', 'en', true), null);
+});

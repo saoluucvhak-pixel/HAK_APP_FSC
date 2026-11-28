@@ -48,6 +48,46 @@ test('chỉ ghi dòng đã đổi; xóa rừng thì xóa dòng', () => {
   delete d.rs.r1; s.save(d); assert.strictEqual(s.isEmpty(), true);
 });
 
+test('lỗi sao lưu trước khi xóa lô không chặn lần lưu lô khác', () => {
+  const dir = tmp(), backupDir = path.join(dir, 'backups');
+  const s = new Store(path.join(dir, 'a.sqlite'), {backupDir});
+  try {
+    s.save(sample());
+    fs.writeFileSync(backupDir, '');
+    assert.throws(() => s.xoaLoRung('r1', 'f1'), {code: 'BACKUP_DELETE'});
+    const next = s.load();
+    next.rs.r1.forests.f2.info.tenRung = 'Lô vẫn lưu được';
+    s.save(next, {preserveMissingOwners: true});
+    assert.equal(s.load().rs.r1.forests.f2.info.tenRung, 'Lô vẫn lưu được');
+    assert.ok(s.load().rs.r1.forests.f1);
+    fs.unlinkSync(backupDir);
+    s.xoaLoRung('r1', 'f1');
+    assert.equal(s.load().rs.r1.forests.f1, undefined);
+    assert.match(fs.readdirSync(backupDir)[0], /^truoc-xoa-/);
+  } finally { s.close(); }
+});
+
+test('lưu toàn bộ qua giao diện giữ lô lỗi cũ và ghi được lô đã sửa', () => {
+  const s = new Store(':memory:');
+  try {
+    s.save(sample());
+    const f = s.load().rs.r1.forests.f1;
+    f.doi.push({...f.doi[0]});
+    const data = JSON.stringify(f);
+    const hash = require('crypto').createHash('sha256').update(data).digest('hex');
+    s.db.prepare('UPDATE forests SET data=?, hash=? WHERE id=?').run(data, hash, f.id);
+
+    const next = s.load();
+    next.rs.r1.forests.f2.info.tenRung = 'Lô sửa';
+    s.save(next, {preserveMissingOwners: true});
+    assert.equal(s.load().rs.r1.forests.f2.info.tenRung, 'Lô sửa');
+    assert.equal(s.db.prepare('SELECT data FROM forests WHERE id=?').get(f.id).data, data);
+
+    next.rs.r1.forests.f1.info.tenRung = 'Sửa lô đang lỗi';
+    assert.throws(() => s.save(next, {preserveMissingOwners: true}), {code: 'QUAN_HE'});
+  } finally { s.close(); }
+});
+
 test('lỗi giữa chừng thì giao dịch hoàn tác, dữ liệu cũ còn nguyên', () => {
   const s = new Store(':memory:'); const d = sample(); s.save(d);
   const bad = sample(); bad.rs.r1.info.ten = 'ĐỔI'; bad.rs.r9 = {id: 'r9', info: {}, forests: {f9: {id: 'f9', info: {}, circular: null}}};
@@ -209,12 +249,56 @@ test('hồi quy: lưu đối tượng không có danh sách chủ rừng ({} / n
 test('hồi quy: xóa từ 2 chủ rừng trở lên trong một lần lưu bị chặn; xóa 1 chủ vẫn được; allowBulkDelete cho phép', () => {
   const s = new Store(':memory:'), o = (id) => ({id, info: {ten: 'CHỦ ' + id}, forests: {}});
   s.save({v: 2, rs: {a: o('a'), b: o('b'), c: o('c')}});
-  assert.throws(() => s.save({v: 2, rs: {a: o('a')}}), e => e.code === 'BULK_DELETE');
+  assert.throws(() => s.save({v: 2, rs: {a: o('a')}}), e => {
+    assert.deepStrictEqual(e.blockedOwners, [{name: 'CHỦ b', forests: 0}, {name: 'CHỦ c', forests: 0}]);
+    return e.code === 'BULK_DELETE';
+  });
   assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['a', 'b', 'c']);
   s.save({v: 2, rs: {a: o('a'), b: o('b')}});
   assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['a', 'b']);
   s.save({v: 2, rs: {}}, {allowBulkDelete: true});
   assert.strictEqual(Object.keys(s.load().rs).length, 0);
+});
+
+test('hồi quy 3.7.2: tự dọn 6 chủ rừng trống hoàn toàn (0 lô, chưa nhập thông tin) không bị chặn BULK_DELETE và không sinh truoc-xoa thừa; có 2 chủ thật vẫn chặn', () => {
+  const d = tmp(), bk = path.join(d, 'bk'), s = new Store(path.join(d, 'r.sqlite'), {backupDir: bk});
+  const that = (id, ten) => ({id, info: {ma: 'CR-' + id, ten, cccd: '', danhXung: 'Ông'}, forests: {}});
+  const rong = id => ({id, info: {ma: '', danhXung: 'Ông', ten: '', ngaySinh: '', cccd: '', ngayCap: '', noiCap: '', diaChi: ''}, forests: {}});
+  s.save({v: 2, rs: {o1: that('o1', 'LÊ QUỐC Ý'), o2: that('o2', 'LÊ VĂN QUẢNG'), e1: rong('e1'), e2: rong('e2'), e3: rong('e3'), e4: rong('e4'), e5: rong('e5'), e6: rong('e6')}});
+  // Dọn cả 6 chủ rừng rỗng cùng lúc (như renderSide lúc mở app): được phép, không tạo bản sao lưu truoc-xoa
+  s.save({v: 2, rs: {o1: that('o1', 'LÊ QUỐC Ý'), o2: that('o2', 'LÊ VĂN QUẢNG')}});
+  assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['o1', 'o2']);
+  assert.strictEqual((fs.existsSync(bk) ? fs.readdirSync(bk) : []).filter(n => n.startsWith('truoc-xoa-')).length, 0);
+  // Nhưng xóa cùng lúc cả 2 chủ rừng thật (o1, o2) vẫn bị chặn BULK_DELETE
+  assert.throws(() => s.save({v: 2, rs: {}}), e => e.code === 'BULK_DELETE');
+  assert.deepStrictEqual(Object.keys(s.load().rs).sort(), ['o1', 'o2']);
+  s.close();
+});
+
+test('lưu lô vẫn giữ chủ rừng chỉ có số hợp đồng hoặc địa chỉ', () => {
+  const s = new Store(':memory:');
+  const owner = (id, info, forests = {}) => ({id, info, forests});
+  const lot = {id: 'f1', info: {maRung: 'R1'}, nc: [], dx: [], pc: []};
+  s.save({v: 2, rs: {
+    active: owner('active', {ten: 'Chủ đang nhập'}, {f1: lot}),
+    contract: owner('contract', {soHopDong: 'HD-001'}),
+    address: owner('address', {diaChi: 'Địa chỉ thử'}),
+    blank: owner('blank', {danhXung: 'Ông'})
+  }});
+  const db = s.load();
+  const {chuRongTrong} = require('../src/model');
+  for (const [id, record] of Object.entries(db.rs)) {
+    if (id !== 'active' && chuRongTrong(record)) delete db.rs[id];
+  }
+  db.rs.active.forests.f1.info.dinhMucTanHa = 110;
+  s.save(db);
+  const saved = s.load().rs;
+  assert.deepStrictEqual(Object.keys(saved).sort(), ['active', 'address', 'contract']);
+  assert.strictEqual(saved.active.forests.f1.info.dinhMucTanHa, 110);
+  assert.strictEqual(saved.contract.info.soHopDong, 'HD-001');
+  assert.strictEqual(saved.address.info.diaChi, 'Địa chỉ thử');
+  assert.throws(() => s.save({v: 2, rs: {active: saved.active}}), e => e.code === 'BULK_DELETE');
+  s.close();
 });
 
 test('hồi quy: khôi phục "replace" vẫn thay được toàn bộ dữ liệu nhiều chủ rừng', () => {
@@ -385,5 +469,52 @@ test('Lô 6 (T-10): nâng cấp lỗi lặp lại không nhân bản truoc-nang-
   s.db.prepare('INSERT OR REPLACE INTO chot_goi(forest_id,phien_ban,hash,at,data) VALUES(?,?,?,?,?)').run('f_mo_coi', 1, 'h', '2026-11-01', '{}');
   s.save({v: 2, rs: {}}, {allowBulkDelete: true});
   assert.strictEqual(s.db.prepare('SELECT COUNT(*) c FROM chot_goi').get().c, 0, 'xóa hết chủ rừng phải dọn sạch chot_goi mồ côi');
+  s.close();
+});
+
+test('tính năng 3.7.2: preserveMissingOwners không xóa chủ rừng ngoài danh sách và trả về preservedOwners; không bị chặn BULK_DELETE', () => {
+  const s = new Store(':memory:');
+  const o = (id, ten) => ({id, info: {ma: 'CR-' + id, ten, cccd: '04900000000' + id, danhXung: 'Ông'}, forests: {['f_' + id]: {id: 'f_' + id, info: {maRung: 'R-' + id}, nc: [], dx: [], pc: []}}});
+  // Khởi tạo 8 chủ rừng trong CSDL (như môi trường thực tế của người dùng: 2 chủ cũ + 6 chủ mới)
+  const full = {o1: o('o1', 'LÊ QUỐC Ý'), o2: o('o2', 'LÊ VĂN QUẢNG'), o3: o('o3', 'LƯƠNG THỊ TÂM'), o4: o('o4', 'NGUYỄN THỊ CHÂU'), o5: o('o5', 'NGUYỄN VĂN HIẾN'), o6: o('o6', 'PHẠM PHONG'), o7: o('o7', 'PHÙNG VĂN HẢI'), o8: o('o8', 'TRẦN ĐÌNH TIẾN')};
+  s.save({v: 2, rs: full});
+  assert.strictEqual(Object.keys(s.load().rs).length, 8);
+
+  // Người dùng chỉ mở 6 chủ rừng (o3..o8) và bấm "Lưu dữ liệu vào lô":
+  const subset = {o3: o('o3', 'LƯƠNG THỊ TÂM'), o4: o('o4', 'NGUYỄN THỊ CHÂU'), o5: o('o5', 'NGUYỄN VĂN HIẾN'), o6: o('o6', 'PHẠM PHONG'), o7: o('o7', 'PHÙNG VĂN HẢI'), o8: o('o8', 'TRẦN ĐÌNH TIẾN')};
+  subset.o8.forests['f_o8'].info.dinhMucTanHa = 120; // Sửa dữ liệu lô
+
+  // Nếu không có preserveMissingOwners: bị chặn BULK_DELETE
+  assert.throws(() => s.save({v: 2, rs: subset}), e => e.code === 'BULK_DELETE');
+
+  // Với preserveMissingOwners: lưu thành công, lô được cập nhật, 2 chủ cũ vẫn giữ nguyên trong CSDL
+  const res = s.save({v: 2, rs: subset}, {preserveMissingOwners: true});
+  assert.strictEqual(res.mode, 'full');
+  assert.strictEqual(res.preservedOwners.length, 2);
+  assert.deepStrictEqual(res.preservedOwners.map(x => x.name).sort(), ['LÊ QUỐC Ý', 'LÊ VĂN QUẢNG']);
+
+  // Kiểm tra CSDL vẫn giữ đủ 8 chủ rừng
+  const cur = s.load().rs;
+  assert.strictEqual(Object.keys(cur).length, 8);
+  assert.strictEqual(cur.o8.forests['f_o8'].info.dinhMucTanHa, 120);
+  assert.strictEqual(cur.o1.info.ten, 'LÊ QUỐC Ý');
+  assert.strictEqual(cur.o2.info.ten, 'LÊ VĂN QUẢNG');
+
+  // Kiểm tra các hàm quản lý dọn dẹp hồ sơ
+  const list = s.danhSachChuRong();
+  assert.strictEqual(list.length, 8);
+  assert.strictEqual(list.find(x => x.id === 'o1').soLo, 1);
+
+  // Đọc 1 chủ rừng
+  const doc = s.docChuRong('o1');
+  assert.strictEqual(doc.info.ten, 'LÊ QUỐC Ý');
+  assert.strictEqual(Object.keys(doc.forests).length, 1);
+
+  // Dọn dẹp 2 chủ rừng (o1, o2)
+  const don = s.donDepChuRong(['o1', 'o2']);
+  assert.strictEqual(don.deleted, 2);
+  assert.strictEqual(s.danhSachChuRong().length, 6);
+  assert.strictEqual(s.docChuRong('o1'), null);
+
   s.close();
 });

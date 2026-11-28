@@ -17,7 +17,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('menu ngang có “Cài đặt”, không còn “Công ty mua hàng”', !!(await w.$('header.top .nav #navSet')) && !(await w.$('header.top .nav [data-act=openCty]')) && !/Công ty mua hàng/.test(await w.innerText('header.top .nav')));
   await w.click('#navSet'); await w.waitForSelector('#setBox');
   const muc = await w.$$eval('[id^=setTab_]', b => b.map(x => x.textContent));   // 3.0: thêm Danh mục đối tượng, Danh mục xe, Vị trí, Giao diện, Hướng dẫn, Cần đối chiếu
-  ok('Cài đặt có các mục: Hệ thống, Sao lưu và khôi phục, Google Sheets, Hiển thị số (và các mục 3.0)', ['Hệ thống', 'Sao lưu và khôi phục', 'Google Sheets', 'Hiển thị số'].every(x => muc.includes(x)), muc.join('|'));
+  ok('Cài đặt có các mục (tab ngang, PR C): Dữ liệu, Sao lưu và khôi phục, Google Sheets, Hiển thị (và các mục 3.0)', ['Dữ liệu', 'Sao lưu và khôi phục', 'Google Sheets', 'Hiển thị'].every(x => muc.includes(x)), muc.join('|'));
   // 2. Google Sheets: địa chỉ nằm trong Cài đặt
   await w.click('#setTab_setgs'); await w.waitForSelector('#setGsLink');
   const url = 'https://docs.google.com/spreadsheets/d/ABCDEFG1234567890/edit?usp=sharing';
@@ -35,7 +35,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('thông tin công ty nằm trong Danh mục (mục Công ty)', !!(await w.$('#ctyForm')) && (await w.$$eval('[id^=setTab_][aria-current]', b => b.map(x => x.textContent))).includes('Công ty mua hàng'), (await w.$$eval('.tabs button.on', b => b.map(x => x.textContent))).join('/'));
   // 5. Hiển thị số
   await w.click('#navSet'); await w.waitForSelector('#setTab_setfmt'); await w.click('#setTab_setfmt'); await w.waitForSelector('[name=numStyle]');
-  ok('mục Hiển thị số: nêu ngày luôn dd/mm/yyyy và hai kiểu số', /dd\/mm\/yyyy/.test(await w.innerText('#main')) && (await w.$$('[name=numStyle]')).length === 2);
+  const dateStyle = '[data-act=setReportDateStyle]';
+  ok('mục Hiển thị có hai kiểu ngày và hai kiểu số', (await w.$$eval(dateStyle + ' option', options => options.map(o => o.value))).join(',') === 'vi,iso' && (await w.$$('[name=numStyle]')).length === 2);
+  await w.selectOption(dateStyle, 'iso');
+  await w.waitForFunction(() => window.hak.loadSync().db.dinhDangNgayBaoCao === 'iso');
+  ok('chọn kiểu ngày ISO và lưu vào cơ sở dữ liệu', await w.inputValue(dateStyle) === 'iso');
+  await w.selectOption(dateStyle, 'vi');
+  await w.waitForFunction(() => window.hak.loadSync().db.dinhDangNgayBaoCao === 'vi');
   await w.click('[name=numStyle][value=en]'); await w.waitForTimeout(400);
   ok('chọn kiểu quốc tế: lưu vào cơ sở dữ liệu', (await w.evaluate(() => window.hak.loadSync().db.dinhDangSo)) === 'en');
   await w.click('[data-open=own1]').catch(() => {}); await w.evaluate(() => document.querySelector('[data-act=goHome]').click()); await w.waitForTimeout(300);

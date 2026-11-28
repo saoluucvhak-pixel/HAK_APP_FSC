@@ -27,7 +27,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   const open = async () => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300); };
   await open();
   let t = (await (async () => { if (await w.$('#hdQuayLai')) await w.click('#hdQuayLai'); return w.innerText('#dsHdNc'); })());   // 3.0: danh sách hợp đồng nhân công của rừng
-  ok('tab Nhân công: danh sách 1 hợp đồng (đội) với Tổ trưởng, 3 người, hình thức giao khoán', /(của rừng: 1|Đội \/ Hợp đồng \(1\))/.test(t) && /TRẦN MỘT/.test(t) && /\b3\b/.test(t) && /Giao khoán/.test(t), t);
+  ok('tab Nhân công: danh sách 1 hợp đồng (đội) với Tổ trưởng, 3 người, hình thức giao khoán', /(của rừng: 1|(Đội \/ Hợp đồng|Hợp đồng nhân công) \(1\))/.test(t) && /TRẦN MỘT/.test(t) && /\b3\b/.test(t) && /Giao khoán/.test(t), t);
   let f = await dbNow();
   ok('SQLite: lô có 1 đội, mọi nhân công mang doiId của đội; hình thức và số HĐ nằm ở đội, không còn ở lô', f.doi.length === 1 && f.nc.every(r => r.doiId === f.doi[0].id) && f.doi[0].hinhThuc.moHinhKy === 'giaokhoan' && f.doi[0].exp.soKT === '021' && !('moHinhKy' in f.info) && !('soKT' in f.exp), JSON.stringify({doi: f.doi, info: f.info, exp: f.exp}));
 
@@ -36,7 +36,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('thêm đội vào BẢN NHÁP của lô: hiện thanh “Chưa lưu”, SQLite chưa đổi', !!(await w.$('#loDirtyBar')) && (await dbNow()).doi.length === 1);
   await w.click('#loDirtyBar [data-act=stSave]'); await w.waitForTimeout(400); 
   const dauMoi = await w.innerText('.hak-detail-pane .hak-pane-head, #hdDauTen').catch(() => ''); t = (await (async () => { if (await w.$('#hdQuayLai')) await w.click('#hdQuayLai'); return w.innerText('#dsHdNc'); })()); f = await dbNow();
-  ok('thêm đội: 2 đội, đội đầu tự đặt tên “Đội 1”, mở ngay đội mới và chép hình thức của đội 1', /(của rừng: 2|Đội \/ Hợp đồng \(2\))/.test(t) && f.doi.length === 2 && f.doi[0].ten === 'Đội 1' && f.doi[1].ten === 'Đội Hai' && f.doi[1].hinhThuc.moHinhKy === 'giaokhoan' && /Đội Hai/.test(dauMoi), dauMoi + ' | ' + t);
+  ok('thêm đội: 2 đội, đội đầu tự đặt tên “Đội 1”, mở ngay đội mới và chép hình thức của đội 1', /(của rừng: 2|(Đội \/ Hợp đồng|Hợp đồng nhân công) \(2\))/.test(t) && f.doi.length === 2 && f.doi[0].ten === 'Đội 1' && f.doi[1].ten === 'Đội Hai' && f.doi[1].hinhThuc.moHinhKy === 'giaokhoan' && /Đội Hai/.test(dauMoi), dauMoi + ' | ' + t);
   await w.click('#dsHdNcTbl tr[data-doi="doi2"]'); await w.waitForTimeout(200);   // tiếp tục ở hợp đồng của đội mới
   // đội 2: trực tiếp, ngày công
   await w.selectOption('#luongForm select[name=moHinhKy]', 'tructiep'); await w.selectOption('#luongForm select[name=hinhThucLuong]', 'ngaycong');
@@ -50,7 +50,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   ok('lưu diện tích của đội 2: 1,2 ha', f.doi[1].dienTich === 1.2, JSON.stringify(f.doi[1]));
   // Tổ trưởng cho đội 2 qua bản nháp (không ghi cột Đội → vào đội đang chọn)
   await w.click('[data-act=stAdd][data-kind=nc]'); await w.waitForSelector('#stForm');
-  const set = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); };
+  const set = async (k, v) => { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else if (await w.$('#stForm input[type=radio][name=' + k + ']')) await w.check('#stForm input[type=radio][name=' + k + '][value="' + v + '"]'); else await w.fill('#stForm input[name=' + k + ']', v); };
   for (const [k, v] of Object.entries({vaiTro: 'Tổ trưởng', danhXung: 'Ông', ten: 'NGUYỄN BỐN', ngaySinh: '01/01/1984', cccd: '049085003004', ngayCap: '01/01/2021', noiCap: 'Cục CS QLHC về TTXH', diaChi: 'Quảng Nam', chucDanh: 'Tổ trưởng'})) await set(k, v);
   await w.click('#stForm [type=submit]'); await w.waitForTimeout(300);
   const r = await saveStage(w); f = await dbNow();
@@ -100,7 +100,7 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   await app.close();
   app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env}); w = require('./_hd30').boc(await app.firstWindow()); hook(); await w.waitForSelector('#side');
   await open(); t = (await (async () => { if (await w.$('#hdQuayLai')) await w.click('#hdQuayLai'); return w.innerText('#dsHdNc'); })()); f = await dbNow();
-  ok('mở lại app: 2 đội, hình thức, diện tích, nhân công từng đội giữ nguyên', /(của rừng: 2|Đội \/ Hợp đồng \(2\))/.test(t) && f.doi[1].hinhThuc.moHinhKy === 'tructiep' && f.doi[1].dienTich === 1.2 && f.nc.filter(x => x.doiId === 'doi2').length === 2, t);
+  ok('mở lại app: 2 đội, hình thức, diện tích, nhân công từng đội giữ nguyên', /(của rừng: 2|(Đội \/ Hợp đồng|Hợp đồng nhân công) \(2\))/.test(t) && f.doi[1].hinhThuc.moHinhKy === 'tructiep' && f.doi[1].dienTich === 1.2 && f.nc.filter(x => x.doiId === 'doi2').length === 2, t);
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

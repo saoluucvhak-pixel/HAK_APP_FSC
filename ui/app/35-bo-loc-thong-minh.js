@@ -112,7 +112,13 @@ function hakSfRenderDrawer(focusInfo) {
     return '<label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-sfdrbool="' + esc(f.key) + '"' + (SF.getField(s, f) ? ' checked' : '') + '> ' + esc(f.label) + '</label>';
   }).join('');
   const ps = hakSfPresets(), presetNames = ps.list(hakSfDraft.screenId);
-  const presetHtml = '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">' +
+  /* kho bộ lọc đã lưu bị hỏng/khác phiên bản: không ghi đè được → báo và cho "Tạo kho mới" (hỏi xác nhận trong hộp, bản cũ được sao lưu) */
+  const khoHong = ps.isCorrupt() ? (hakSfDraft.xacNhanKho ?
+    '<div class="msg warn" role="alertdialog" aria-label="Xác nhận tạo kho bộ lọc mới" style="margin-bottom:8px"><b>Tạo kho bộ lọc mới?</b> Kho cũ được sao lưu nguyên văn sang khóa <code>hak.sf.presets.bak</code> (không mất dữ liệu); các bộ lọc đã lưu hiện không dùng được nữa.' +
+    '<div class="row" style="gap:8px;margin-top:6px"><button type="button" class="btn ghost sm" data-sfpreset="kho-huy">Không tạo</button><button type="button" class="btn sm" data-sfpreset="kho-dongy">Tạo kho mới</button></div></div>' :
+    '<div class="msg warn" id="sfKhoHong" style="margin-bottom:8px">Kho bộ lọc đã lưu bị lỗi hoặc thuộc phiên bản khác nên chưa lưu được bộ lọc mới. ' +
+    '<button type="button" class="btn ghost sm" data-sfpreset="kho-moi">Tạo kho mới</button></div>') : '';
+  const presetHtml = '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">' + khoHong +
     '<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">' +
       '<b style="font-size:12.5px">Bộ lọc đã lưu:</b>' +
       (presetNames.length ? '<select id="sfPresetSel" style="min-width:150px"><option value="">— chọn bộ lọc —</option>' + presetNames.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('') + '</select>' +
@@ -135,16 +141,45 @@ function hakSfRenderDrawer(focusInfo) {
     if (focusInfo.sel) { const fel = document.querySelector(focusInfo.sel); if (fel) fel.focus(); }
   }
 }
+/* Ô tìm nhanh: gõ liên tiếp chỉ cập nhật bộ lọc + vẽ lại bảng MỘT lần sau HAK_SF_DEBOUNCE ms (FLT-02).
+ * Enter / rời ô: cập nhật trạng thái ngay (nút bấm kế tiếp thấy đúng bộ lọc) nhưng việc vẽ vẫn do hẹn giờ lo. */
+const HAK_SF_DEBOUNCE = 250;
+const hakSfTimers = {};
+function hakSfQSync(sid) { // đẩy giá trị ô tìm vào trạng thái bộ lọc (không vẽ)
+  const inst = hakSfInstances[sid], q = document.querySelector('[data-sfq="' + sid + '"]'); if (!inst || !q) return false;
+  const cur = inst.filter.getState(); if (cur.q === q.value) return false;
+  inst.filter.setState(HAKCore.sf.normalize(Object.assign({}, cur, {q: q.value}), inst.cfg));
+  return true;
+}
+function hakSfQFlush(sid) { // vẽ ngay nếu đang chờ
+  if (hakSfTimers[sid] == null) return;
+  clearTimeout(hakSfTimers[sid]); delete hakSfTimers[sid];
+  const q = document.querySelector('[data-sfq="' + sid + '"]'); if (!q) return;   // ô đã mất (đổi màn hình): không vẽ vô ích
+  const had = document.activeElement === q, pos = had ? q.selectionStart : null, raw = q.value;
+  hakSfQSync(sid);
+  render();
+  const el = document.querySelector('[data-sfq="' + sid + '"]');
+  if (el && had) {
+    /* trạng thái lọc cắt khoảng trắng đầu/cuối; giữ nguyên chữ người dùng đang gõ (dấu cách sau từ) để gõ tiếp "nguyen van" không dính liền */
+    if (el.value !== raw && el.value.trim() === raw.trim()) el.value = raw;
+    el.focus(); if (pos != null) el.setSelectionRange(pos, pos);
+  }
+}
+function hakSfQCancel(sid) { if (hakSfTimers[sid] != null) { clearTimeout(hakSfTimers[sid]); delete hakSfTimers[sid]; } }
 document.addEventListener('input', e => {
   const q = e.target && e.target.closest && e.target.closest('[data-sfq]');
   if (!q) return;
-  const sid = q.dataset.sfq, inst = hakSfInstances[sid]; if (!inst) return;
-  const pos = q.selectionStart;
-  const next = HAKCore.sf.normalize(Object.assign({}, inst.filter.getState(), {q: q.value}), inst.cfg);
-  inst.filter.setState(next);
-  render();
-  const el = document.querySelector('[data-sfq="' + sid + '"]');
-  if (el) { el.focus(); if (pos != null) el.setSelectionRange(pos, pos); }
+  const sid = q.dataset.sfq; if (!hakSfInstances[sid]) return;
+  hakSfQCancel(sid);
+  hakSfTimers[sid] = setTimeout(() => hakSfQFlush(sid), HAK_SF_DEBOUNCE);
+});
+document.addEventListener('keydown', e => {
+  const q = e.key === 'Enter' && e.target && e.target.closest && e.target.closest('[data-sfq]');
+  if (q) hakSfQFlush(q.dataset.sfq);
+});
+document.addEventListener('focusout', e => {
+  const q = e.target && e.target.closest && e.target.closest('[data-sfq]');
+  if (q && hakSfTimers[q.dataset.sfq] != null) hakSfQSync(q.dataset.sfq);
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!t) return;
@@ -186,12 +221,13 @@ document.addEventListener('click', e => {
   const rm = t.closest('[data-sfrm]');
   if (rm) {
     const inst = hakSfInstances[rm.dataset.sfrm]; if (!inst) return;
+    hakSfQCancel(rm.dataset.sfrm);
     const conds = HAKCore.sf.conditions(inst.cfg, inst.filter.getState()), c = conds[+rm.dataset.sfidx];
     if (c) { inst.filter.setState(HAKCore.sf.remove(inst.filter.getState(), c)); render(); }
     return;
   }
   const rs = t.closest('[data-sfreset]');
-  if (rs) { const inst = hakSfInstances[rs.dataset.sfreset]; if (inst) { inst.filter.reset(); render(); } return; }
+  if (rs) { hakSfQCancel(rs.dataset.sfreset); const inst = hakSfInstances[rs.dataset.sfreset]; if (inst) { inst.filter.reset(); render(); } return; }
   if (!hakSfDraft || !t.closest('#dlgBox')) return;
   const inst = hakSfInstances[hakSfDraft.screenId]; if (!inst) return;
   const SF = HAKCore.sf;
@@ -221,6 +257,12 @@ document.addEventListener('click', e => {
   const pr = t.closest('[data-sfpreset]');
   if (pr) {
     const ps = hakSfPresets(), act = pr.dataset.sfpreset;
+    if (act === 'kho-moi') { syncText(); hakSfDraft.xacNhanKho = true; hakSfRenderDrawer(); return; }
+    if (act === 'kho-huy') { syncText(); hakSfDraft.xacNhanKho = false; hakSfRenderDrawer(); return; }
+    if (act === 'kho-dongy') {
+      syncText(); const r = ps.discardCorrupt(); hakSfDraft.xacNhanKho = false;
+      hakSfDraft.err = r.ok ? '' : (r.msg || 'Không tạo được kho mới.'); hakSfRenderDrawer(); return;
+    }
     if (act === 'save') {
       if (!syncText()) { hakSfRenderDrawer(); return; }
       const name = (document.getElementById('sfPresetName') || {}).value;

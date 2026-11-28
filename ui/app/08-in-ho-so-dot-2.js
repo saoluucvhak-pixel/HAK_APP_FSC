@@ -222,6 +222,7 @@ async function exportKind(kind, idx, opt) {
     if (pick.length === 1) {
       const f = pick[0];
       download(await makeDocx(f.blocks, docOpts(f, rec)), f.path.split('/').pop());
+      if (typeof notifyWorkDone === 'function') notifyWorkDone(10);
       if (f.draft) note('Đã tải BẢN NHÁP (tên file và đầu tài liệu có nhãn “BẢN NHÁP”): ' + f.draft.map(x => x.text + ' → ' + x.where).join('; ') + '. Bổ sung rồi tải lại để có bản chính thức.', 'warn');
       return;
     }
@@ -230,6 +231,7 @@ async function exportKind(kind, idx, opt) {
     if (['all', 'dau', 'cuoi'].includes(kind)) z.file('00_Muc_luc.docx', await mucLucDocx(rec, pick, {all: 'Toàn bộ hồ sơ', dau: 'Hồ sơ đợt 1', cuoi: 'Hồ sơ đợt 2'}[kind]));   // tờ mục lục đứng đầu gói: thứ tự, mẫu, lập cho ai, số bản
     const blob = await z.generateAsync({type: 'blob'});
     download(blob, 'HoSo_' + slug(rec.info.ten) + '_' + ({dau: 'dot1_truoc_khi_xong_rung', cuoi: 'dot2_sau_khi_xong_rung'}[kind] || kind) + (pick.some(f => f.draft) ? '_BAN_NHAP' : '') + '.zip');
+    if (typeof notifyWorkDone === 'function') notifyWorkDone(20);
     if (['all', 'dau', 'cuoi'].includes(kind)) { const nt = exportNotes(rec, g, kind); const dr = pick.filter(f => f.draft);
     if (dr.length) nt.unshift('Các biểu mẫu mang nhãn BẢN NHÁP (tên file, đầu tài liệu và tên gói): ' + dr.map(f => (HAKBanNhap.label((f.path.match(/(?:^|\/)(\d\d)_/) || [])[1]) || f.path).replace(/ .*/, '') + ' (' + f.draft.map(x => x.text).join('; ') + ')').join(' · ') + '.');
     if (nt.length) note('Đã tải file nhưng còn ' + nt.length + ' lưu ý:\n• ' + nt.join('\n• '), 'warn'); else note('Đã tải file: dữ liệu đủ, không có lưu ý.', 'ok'); }

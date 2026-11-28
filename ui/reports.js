@@ -18,12 +18,13 @@ const HAKReports = (function () {
     const isZero = Number(i) === 0 && (!f || Number(f) === 0);
     return (v < 0 && !isZero ? '-' : '') + group(i) + (f ? ',' + f : '');
   }
-  function fmtCell(v, f) {
+  const displayDate = (v, style) => style === 'iso' ? D.toIso(v) || v : v;
+  function fmtCell(v, f, opts = {}) {
     if (v == null || v === '') return '';
-    if (typeof v !== 'number') return String(v);
-    if (f === 'pct') return fmtNum(v, 1) + '%';
+    if (typeof v !== 'number') return String(f === 'date' ? displayDate(v, opts.dateStyle) : v);
     const d = {n0: 0, n1: 1, n2: 2, n3: 3}[f];
-    return fmtNum(v, d == null ? (Number.isInteger(v) ? 0 : 3) : d);
+    const s = f === 'pct' ? fmtNum(v, 1) + '%' : fmtNum(v, d == null ? (Number.isInteger(v) ? 0 : 3) : d);
+    return opts.numStyle === 'en' ? s.replace(/[.,]/g, c => c === '.' ? ',' : '.') : s;
   }
 
   /* ---- Bộ lọc dữ liệu đầu vào ---- */
@@ -256,7 +257,7 @@ const HAKReports = (function () {
     const det = [], sum = [], minors = [], bad = [];
     sorted.forEach(r => {
       const L = (r.ncList || []).slice().sort((a, b) => (/^tổ trưởng/i.test(b.vaiTro || '') ? 1 : 0) - (/^tổ trưởng/i.test(a.vaiTro || '') ? 1 : 0) || String(a.stt).localeCompare(String(b.stt), 'vi', {numeric: true}));
-      const cnt = {}; L.forEach(x => { const k = x.chucDanh || '(chưa có chức danh)'; cnt[k] = (cnt[k] || 0) + 1; });
+      const cnt = {}; L.forEach(x => { const k = x.chucDanh || '(chưa có vị trí)'; cnt[k] = (cnt[k] || 0) + 1; });
       const nMin = L.filter(x => { const y = ageOn(x.ngaySinh, r.tuNgay && dateKey(r.tuNgay) ? r.tuNgay : ref); return y != null && y < 18; }).length;
       sum.push([sum.length + 1, r.maRung, r.chuRung, L.length, cnt['Tổ trưởng'] || 0, cnt['Công nhân khai thác'] || 0, cnt['Công nhân cưa'] || 0, L.length - POS.reduce((n, k) => n + (cnt[k] || 0), 0), nMin]);
       L.forEach(x => {
@@ -275,7 +276,7 @@ const HAKReports = (function () {
       sections: [
         {heading: 'I. Tổng hợp theo lô rừng', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 14}, {h: 'Chủ rừng', w: 24}, {h: 'Số lao động', w: 10, f: 'n0'}, {h: 'Tổ trưởng', w: 9, f: 'n0'}, {h: 'Công nhân khai thác', w: 12, f: 'n0'}, {h: 'Công nhân cưa', w: 11, f: 'n0'}, {h: 'Vị trí khác', w: 9, f: 'n0'}, {h: 'Dưới 18 tuổi', w: 9, f: 'n0'}],
           rows: sum, foot: ['', 'TỔNG CỘNG', '', total, tt, sum.reduce((n, r) => n + r[5], 0), sum.reduce((n, r) => n + r[6], 0), sum.reduce((n, r) => n + r[7], 0), minors.length]},
-        {heading: 'II. Danh sách lao động theo lô', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 8}, {h: 'Chủ rừng', w: 11}, {h: 'Họ và tên', w: 14}, {h: 'Vai trò', w: 8}, {h: 'Chức danh', w: 10}, {h: 'Ngày sinh', w: 10, f: 'date'}, {h: 'Tuổi', w: 5, f: 'n0'}, {h: 'CCCD', w: 13}, {h: 'Địa chỉ thường trú', w: 11}, {h: 'Ngày cấp CCCD', w: 10, f: 'date'}, {h: 'Nơi cấp CCCD', w: 8}, {h: 'Đơn giá', w: 8, f: 'n0'}, {h: 'Đơn vị giá', w: 6}, {h: 'Đội', w: 10}],
+        {heading: 'II. Danh sách lao động theo lô', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 8}, {h: 'Chủ rừng', w: 11}, {h: 'Họ và tên', w: 14}, {h: 'Chức vụ', w: 8}, {h: 'Vị trí', w: 10}, {h: 'Ngày sinh', w: 10, f: 'date'}, {h: 'Tuổi', w: 5, f: 'n0'}, {h: 'CCCD', w: 13}, {h: 'Địa chỉ thường trú', w: 11}, {h: 'Ngày cấp CCCD', w: 10, f: 'date'}, {h: 'Nơi cấp CCCD', w: 8}, {h: 'Đơn giá', w: 8, f: 'n0'}, {h: 'Đơn vị giá', w: 6}, {h: 'Đội', w: 10}],
           rows: det, foot: ['', 'TỔNG CỘNG', '', total, '', '', '', '', '', '', '', '', '', '', '']},
         ...(bad.length ? [{heading: 'III. Hồ sơ lao động cần bổ sung', note: 'Ngày sinh thiếu hoặc không có thật, hoặc CCCD không đủ 12 chữ số: sửa ở tab Nhân công rồi nạp lại.', cols: [{h: 'STT', w: 6, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 16}, {h: 'Họ và tên', w: 24}, {h: 'Vấn đề', w: 40}], rows: bad, foot: ['', 'Cộng', '', bad.length + ' mục']}] : [])],
       notes};
@@ -400,7 +401,7 @@ const HAKReports = (function () {
     return {id: 'vanchuyendoi', title: 'BÁO CÁO VẬN CHUYỂN THEO ĐỘI XE', orient: 'landscape', period: periodText(o.from, o.to),
       kpis: [{label: 'Số đội xe', value: det.length, f: 'n0'}, {label: 'Số xe', value: tXe, f: 'n0'}, {label: 'Số chuyến', value: tChuyen, f: 'n0'}, {label: 'Khối lượng (tấn)', value: tTan, f: 'n3'}, {label: 'Cước (đồng)', value: tTien, f: 'n0'}],
       sections: [
-        {heading: 'I. Vận chuyển theo đội xe', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 9}, {h: 'Chủ rừng', w: 16}, {h: 'Đội xe', w: 13}, {h: 'Người ký hợp đồng', w: 16}, {h: 'Vai trò', w: 11}, {h: 'Số xe', w: 6, f: 'n0'}, {h: 'Số chuyến', w: 8, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 10, f: 'n3'}, {h: 'Cước (đ/tấn)', w: 10, f: 'n0'}, {h: 'Thành tiền (đồng)', w: 12, f: 'n0'}],
+        {heading: 'I. Vận chuyển theo đội xe', cols: [{h: 'STT', w: 5, al: 'center', f: 'n0'}, {h: 'Mã rừng', w: 9}, {h: 'Chủ rừng', w: 16}, {h: 'Đội xe', w: 13}, {h: 'Người ký hợp đồng', w: 16}, {h: 'Chức vụ', w: 11}, {h: 'Số xe', w: 6, f: 'n0'}, {h: 'Số chuyến', w: 8, f: 'n0'}, {h: 'Khối lượng (tấn)', w: 10, f: 'n3'}, {h: 'Cước (đ/tấn)', w: 10, f: 'n0'}, {h: 'Thành tiền (đồng)', w: 12, f: 'n0'}],
           rows: det, foot: ['', 'TỔNG CỘNG', '', '', '', '', tXe, tChuyen, tTan, '', tTien]}],
       notes};
   }
@@ -457,7 +458,7 @@ const HAKReports = (function () {
       kpis: [{label: 'Số lô', value: sorted.length, f: 'n0'}, {label: 'Diện tích (ha)', value: round(T.dt, 3), f: 'n2'}, {label: 'Sản lượng dự kiến (tấn)', value: round(T.dk, 3), f: 'n3'}, {label: 'Thực tế theo phiếu cân (tấn)', value: round(T.tt, 3), f: 'n3'},
         {label: 'Tiền nhân công (đồng)', value: T.cong, f: 'n0'}, {label: 'Tiền vận chuyển (đồng)', value: T.vc, f: 'n0'}, ...Object.entries(dem).map(([k, v]) => ({label: 'Lô ' + k.toLowerCase(), value: v, f: 'n0'}))],
       sections: [{heading: 'Sổ hồ sơ theo lô', cols: [{h: 'STT', w: 4, al: 'center', f: 'n0'}, {h: 'Mã lô', w: 10}, {h: 'Chủ rừng', w: 15}, {h: 'Địa điểm', w: 14}, {h: 'Công ty mua', w: 14}, {h: 'Diện tích (ha)', w: 8, f: 'n2'}, {h: 'Số đội', w: 5, f: 'n0'}, {h: 'Số người', w: 6, f: 'n0'}, {h: 'Số đội xe', w: 5, f: 'n0'}, {h: 'Số xe', w: 5, f: 'n0'},
-        {h: 'Bắt đầu', w: 9, al: 'center'}, {h: 'Kết thúc', w: 9, al: 'center'}, {h: 'Ngày chốt', w: 9, al: 'center'}, {h: 'Dự kiến (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế / dự kiến (%)', w: 8, f: 'n1'}, {h: 'Số phiếu', w: 6, f: 'n0'}, {h: 'Tiền nhân công', w: 11, f: 'n0'}, {h: 'Tiền vận chuyển', w: 11, f: 'n0'}, {h: 'Trạng thái', w: 12}, {h: 'Mẫu nợ in', w: 6, f: 'n0'}, {h: 'Mẫu chưa ký', w: 6, f: 'n0'}],
+        {h: 'Bắt đầu', w: 9, al: 'center', f: 'date'}, {h: 'Kết thúc', w: 9, al: 'center', f: 'date'}, {h: 'Ngày chốt', w: 9, al: 'center', f: 'date'}, {h: 'Dự kiến (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế (tấn)', w: 9, f: 'n3'}, {h: 'Thực tế / dự kiến (%)', w: 8, f: 'n1'}, {h: 'Số phiếu', w: 6, f: 'n0'}, {h: 'Tiền nhân công', w: 11, f: 'n0'}, {h: 'Tiền vận chuyển', w: 11, f: 'n0'}, {h: 'Trạng thái', w: 12}, {h: 'Mẫu nợ in', w: 6, f: 'n0'}, {h: 'Mẫu chưa ký', w: 6, f: 'n0'}],
         rows, foot: ['', 'TỔNG CỘNG', '', '', '', round(T.dt, 3), T.doi, T.nc, T.dx, T.xe, '', '', '', round(T.dk, 3), round(T.tt, 3), T.dk ? round(T.tt / T.dk * 100, 1) : '', T.pc, T.cong, T.vc, '', T.noIn, T.chuaKy]}], notes};
   }
 
@@ -468,7 +469,7 @@ const HAKReports = (function () {
     {id: 'phieucan', name: 'Sổ theo dõi phiếu cân – vận chuyển', desc: 'Danh sách phiếu cân theo kỳ, tổng hợp theo rừng, biển số, ngày; phát hiện trùng phiếu.', build: withUnit(soPhieuCan, 'Đơn vị tính: khối lượng tấn (làm tròn 3 chữ số, theo phiếu cân ghi kg)')},
     {id: 'chacon', name: 'Bảng cha–con: chủ rừng – rừng – phiếu cân', desc: 'Chủ rừng (cha) là tổng các rừng (con), rừng là tổng các phiếu cân; có thể kèm từng phiếu.', build: withUnit(chaCon, 'Đơn vị tính: diện tích ha; khối lượng tấn')},
     {id: 'bienso', name: 'Phiếu cân đã cập nhật biển số xe', desc: 'Theo từng lô rừng: phiếu cân nào đã được cập nhật biển số xe mới (biển cũ, biển mới, thời điểm, nguồn).', build: withUnit(bienSoDoi, 'Đơn vị tính: khối lượng tấn; tỷ lệ %')},
-    {id: 'laodong', name: 'Danh sách lao động theo lô', desc: 'Lao động của từng lô: vai trò, chức danh, ngày sinh, tuổi, CCCD, đơn giá; cảnh báo dưới 18 tuổi và thiếu thông tin.', build: withUnit(laoDong, 'Đơn vị tính: người; đơn giá theo cơ sở tính của lô (đồng/tấn, đồng/ha, đồng/công)')},
+    {id: 'laodong', name: 'Danh sách lao động theo lô', desc: 'Lao động của từng lô: chức vụ, vị trí, ngày sinh, tuổi, CCCD, đơn giá; cảnh báo dưới 18 tuổi và thiếu thông tin.', build: withUnit(laoDong, 'Đơn vị tính: người; đơn giá theo cơ sở tính của lô (đồng/tấn, đồng/ha, đồng/công)')},
     {id: 'danhsachxe', name: 'Danh sách xe vận chuyển theo lô', desc: 'Xe của từng lô: biển số, loại xe, chủ xe, người ký, liên hệ, số chuyến và khối lượng theo phiếu cân.', build: withUnit(danhSachXe, 'Đơn vị tính: khối lượng tấn (theo phiếu cân)')},
     {id: 'sanluongdoi', name: 'Sản lượng theo đội khai thác', desc: 'Từng đội: số phiếu cân, khối lượng, đơn giá và thành tiền công; phiếu cân chưa gán đội.', build: withUnit(sanLuongDoi, 'Đơn vị tính: khối lượng tấn; tiền đồng')},
     {id: 'vanchuyendoi', name: 'Vận chuyển theo đội xe', desc: 'Từng đội xe: người ký hợp đồng, số xe, số chuyến, khối lượng, cước và thành tiền.', build: withUnit(vanChuyenDoiXe, 'Đơn vị tính: khối lượng tấn; tiền đồng')},
@@ -479,7 +480,7 @@ const HAKReports = (function () {
   /* Mô hình -> bảng dữ liệu phẳng (dùng cho Excel) */
   /* Chuỗi bắt đầu bằng = + - @ (hoặc tab/CR) sẽ bị Excel hiểu là công thức: thêm dấu ' để luôn là văn bản (chống chèn công thức). */
   const safeText = v => (typeof v === 'string' && /^[=+\-@\t\r]/.test(v) && !/^-?\d+([.,]\d+)?%?$/.test(v)) ? "'" + v : v;
-  const toDate = v => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); return m ? new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])) : v; };
+  const toDate = v => { const p = D.parse(v); return p ? new Date(Date.UTC(p.y, p.m - 1, p.d)) : safeText(v); };
   /* Mô hình -> bảng phẳng cho Excel. Trả về mảng dòng; thuộc tính phụ (meta) mô tả vị trí các bảng để áp bộ lọc tự động và nhóm dòng. */
   function toAoa(m, meta) {
     meta = meta || {};
@@ -512,7 +513,7 @@ const HAKReports = (function () {
       return {wch: Math.max(12, Math.min(48, Math.round((c.w || 12) * 1.4)))};
     });
     ws['!merges'] = [0, 1, 2, 3, 4].map(r => ({s: {r, c: 0}, e: {r, c: Math.max(widest - 1, 1)}}));
-    Object.keys(ws).forEach(k => { if (k[0] !== '!' && ws[k].t === 'd') ws[k].z = 'dd/mm/yyyy'; });
+    Object.keys(ws).forEach(k => { if (k[0] !== '!' && ws[k].t === 'd') ws[k].z = meta?.dateStyle === 'iso' ? 'yyyy-mm-dd' : 'dd/mm/yyyy'; });
     if (m.kpis && m.kpis.length) {
       m.kpis.forEach((k, i) => {
         const cell = ws[XLSX.utils.encode_cell({r: 7 + i, c: 1})];
@@ -540,15 +541,15 @@ const HAKReports = (function () {
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const secs = (m.sections || []).map(s => '<h4 style="margin:12px 0 4px">' + esc(s.heading) + ' <span class="mut">(' + s.rows.length + ' dòng)</span></h4>' +
       '<table><thead><tr>' + s.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr></thead><tbody>' +
-      s.rows.map((r, ri) => '<tr' + (s.levels && s.levels[ri] === 0 ? ' style="font-weight:700"' : '') + '>' + r.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '">' + esc(fmtCell(v, s.cols[i].f)) + '</td>').join('') + '</tr>').join('') +
-      (s.foot ? '<tr>' + s.foot.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '"><b>' + esc(fmtCell(v, s.cols[i].f)) + '</b></td>').join('') + '</tr>' : '') +
+      s.rows.map((r, ri) => '<tr' + (s.levels && s.levels[ri] === 0 ? ' style="font-weight:700"' : '') + '>' + r.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '">' + esc(fmtCell(v, s.cols[i].f, meta)) + '</td>').join('') + '</tr>').join('') +
+      (s.foot ? '<tr>' + s.foot.map((v, i) => '<td style="text-align:' + (s.cols[i].al || 'left') + '"><b>' + esc(fmtCell(v, s.cols[i].f, meta)) + '</b></td>').join('') + '</tr>' : '') +
       '</tbody></table>').join('');
     return '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo</title><style>body{font:13px/1.45 "Segoe UI",Arial,sans-serif;color:#111;margin:18px}h3{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:3px 5px;text-align:left}thead{display:table-header-group}thead th{background:#eee}.kpi{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}.kpi div{font-size:12px}.kpi b{display:block;font-size:15px}.mut{color:#555}tr{break-inside:avoid}</style></head><body>' +
       '<h3>' + esc(m.title) + '</h3><p class="mut">' + esc(m.period + (meta.scope ? ' · ' + meta.scope : '')) + (m.unit ? '<br>' + esc(m.unit) : '') + '</p>' +
-      '<div class="kpi">' + (m.kpis || []).map(k => '<div><b>' + esc(fmtCell(k.value, k.f)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' +
+      '<div class="kpi">' + (m.kpis || []).map(k => '<div><b>' + esc(fmtCell(k.value, k.f, meta)) + '</b>' + esc(k.label) + '</div>').join('') + '</div>' +
       secs + ((m.notes || []).length ? '<p class="mut">' + m.notes.map(esc).join('<br>') + '</p>' : '') + '</body></html>';
   }
 
-  return {REPORTS, sanLuongDoi, vanChuyenDoiXe, chaCon, safeText, finalize, dateKey, fmtNum, fmtCell, toAoa, toSheet, toPrintHtml, sanLuong, soPhieuCan, tienDo, dieuHanh, inRange, periodText};
+  return {REPORTS, sanLuongDoi, vanChuyenDoiXe, chaCon, safeText, finalize, dateKey, fmtNum, fmtCell, displayDate, toAoa, toSheet, toPrintHtml, sanLuong, soPhieuCan, tienDo, dieuHanh, inRange, periodText};
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = HAKReports;

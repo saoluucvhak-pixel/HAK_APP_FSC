@@ -23,7 +23,7 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const forest = async id => Object.values((await db()).rs.own1.forests).find(f => f.id === id);
   const openLot = async (fid, tab) => { await w.reload(); await w.waitForSelector('#side'); await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=' + tab + ']'); };
-  const fillForm = async o => { for (const [k, v] of Object.entries(o)) { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else await w.fill('#stForm input[name=' + k + ']', v); } };
+  const fillForm = async o => { for (const [k, v] of Object.entries(o)) { const sel = await w.$('#stForm select[name=' + k + ']'); if (sel) await w.selectOption('#stForm select[name=' + k + ']', v); else if (await w.$('#stForm input[type=radio][name=' + k + ']')) await w.check('#stForm input[type=radio][name=' + k + '][value="' + v + '"]'); else await w.fill('#stForm input[name=' + k + ']', v); } };
   const body = () => w.innerText('#main');
 
   // ===== 1. thêm tay một nhân công vào lô A =====
@@ -66,7 +66,9 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   ok('trạng thái từng dòng: PA2 “Sửa” (đổi khách hàng), PE1/PE2 “Thêm mới”; PE2 trùng số phiếu trong file bị báo lỗi', (await w.$$eval('tr', rs => rs.filter(r => /PA2/.test(r.innerText) && r.querySelector('[data-act=stEdit]'))[0].innerText)).includes('Sửa') && /Số phiếu cân PE2 trùng/.test(t));
   // lưu bị chặn vì còn lỗi (PE2 trùng)
   await w.click('#stDirty [data-act=stSave]'); await w.waitForTimeout(500); t = await body();
-  ok('bấm Lưu khi còn lỗi: không ghi, liệt kê lỗi cần sửa; bản nháp còn nguyên', /Chưa lưu được vì còn lỗi/.test(t) && (await forest('fa')).pc.length === 3 && !!(await w.$('#stDirty')));
+  ok('bấm Lưu khi còn lỗi: không ghi, liệt kê lỗi cần sửa; bản nháp còn nguyên', /Chưa lưu được.*PE2/.test(await w.innerText('#loSaveIssue')) && (await forest('fa')).pc.length === 3 && !!(await w.$('#stDirty')));
+  await w.click('#loSaveIssue [data-act=saveHelpField]');
+  ok('nút mở mục cần sửa đưa tới Phiếu cân', !!(await w.$('[data-muc-lo=phieu][aria-current=page]')));
   // bỏ dòng PE2 thứ hai (Bỏ dòng = chỉ bỏ khỏi lượt nhập)
   const idxPE2 = await w.$$eval('tr[class]', rs => rs.filter(r => /PE2/.test(r.innerText)).map(r => r.querySelector('[data-act=stDel]').dataset.i));
   await w.click('[data-act=stDel][data-kind=pc][data-i="' + idxPE2[1] + '"]'); await w.waitForTimeout(300);
@@ -97,7 +99,9 @@ const klTong = f => Math.round((f.pc || []).reduce((a, p) => a + (+p.kl || 0), 0
   const flag = path.join(dir, 'fail-save.flag'); fs.writeFileSync(flag, '1');
   const savedBefore = JSON.stringify(await forest('fa'));
   await w.click('[data-ftab=dx]'); await w.click('#stDirty [data-act=stSave]'); await w.waitForTimeout(700); t = await body();
-  ok('lưu thất bại: báo lỗi, KHÔNG báo “Đã lưu”, dữ liệu đã lưu nguyên vẹn (cả nhân công, xe, phiếu cân), bản nháp còn để thử lại', /Không lưu được, dữ liệu đã lưu giữ nguyên/.test(t) && !/Đã lưu dữ liệu vào lô/.test(t) && JSON.stringify(await forest('fa')) === savedBefore && !!(await w.$('#stDirty')) && /PX1/.test(t));
+  ok('lưu thất bại: báo lỗi, KHÔNG báo “Đã lưu”, dữ liệu đã lưu nguyên vẹn (cả nhân công, xe, phiếu cân), bản nháp còn để thử lại', /Chưa lưu được.*giả lập lỗi ghi/.test(t) && !/Đã lưu dữ liệu vào lô/.test(t) && JSON.stringify(await forest('fa')) === savedBefore && !!(await w.$('#stDirty')) && /PX1/.test(t));
+  ok('thanh Chưa lưu hiện lý do ghi thất bại ngay cạnh nút Lưu', /giả lập lỗi ghi/.test(await w.innerText('#loDirtyBar #loSaveIssue')));
+
   ok('sau khi lưu hỏng, nút xuất vẫn bị khóa vì bản nháp còn', !!(await w.$('#stDirty')) && await (async () => { await w.click('[data-ftab=xuat]'); return !!(await w.$('#stGate')); })());
   fs.unlinkSync(flag); await w.click('[data-ftab=dx]');
 

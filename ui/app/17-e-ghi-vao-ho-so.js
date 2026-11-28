@@ -19,6 +19,11 @@ async function lkApply() {
   if (errs.length) { lk.msg = {kind: 'err', text: 'Chưa lưu: ' + errs.join('; ')}; return lkRender(); }
   const T = lkTarget(), at = new Date().toISOString(), set = lk.st && lk.st.active ? lk.st.active.loadedAt : '';
   if (lk.mode === 'fill' && T.gone) { lk.msg = {kind: 'err', text: 'Chưa ghi: lô đích không còn tồn tại (đã xóa hoặc dữ liệu vừa được khôi phục). Hồ sơ giữ nguyên.'}; return lkRender(); }
+  if (T.f && loCanSaoLuuSheets.has(T.f.id)) {
+    const issue = await saoLuuTruocKhiLuuLo(T.f.id);
+    if (issue) { lk.msg = {kind: 'err', text: issue.error}; return lkRender(); }
+    if (lkTarget().f !== T.f) { lk.msg = {kind: 'warn', text: 'Lô đích đã đổi. Hãy kiểm tra lại trước khi ghi.'}; return lkRender(); }
+  }
   const mark = (obj, key, src) => { obj.src = obj.src || {}; obj.src[key] = {...src, at, set}; };
   const snapshot = JSON.stringify(db), sNhap = nhapChup(), coNhap = !!(loDirty.size || loMoi.size || chuNhap.size || aliasNhap.size); const lkNewStages = []; let lkRep = null;
   try {
@@ -52,7 +57,7 @@ async function lkApply() {
     if (s.ref && (c.owner.ref.length || F.ref.length)) f.ref = {at, set, hd: c.hd, cccd: c.cccd, fields: c.owner.ref.concat(F.ref)};
     chuChot(o.id); const hadLo = loDirty.delete(f.id);   // áp bản tra cứu vào lô = lưu lô đó (kể cả thay đổi chưa lưu trước đó)
     const r = await persistNow();
-    if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } nhapTamGhi();
+    if (!r.ok) { if (hadLo) loDirty.add(f.id); throw new Error('lưu vào cơ sở dữ liệu thất bại: ' + r.error); } loCanSaoLuuSheets.delete(f.id); nhapTamGhi();
     const veHd = NAV.curF === f.id && NAV.ftab === 'dx' && hdMo('dx');   // 3.0: tra cứu từ hợp đồng vận chuyển: lưu xong ở lại đúng hợp đồng
     NAV.cur = o.id; NAV.curF = f.id; NAV.tab = 'rung'; NAV.ftab = veHd ? 'dx' : 'finfo'; NAV.view = 'owner';
     lkClose(); lk.view = 'search';
@@ -68,13 +73,22 @@ async function lkApply() {
     lk.msg = {kind: 'err', text: 'Không lưu, hồ sơ giữ nguyên: ' + e.message}; lkRender();
   }
 }
+/* Chỉ lô nhận thay đổi từ Google Sheets cần bản sao dự phòng trước khi ghi. */
+async function saoLuuTruocKhiLuuLo(fid) {
+  if (!HB || !loCanSaoLuuSheets.has(fid)) return null;
+  const r = await HB.saoLuu.truocSheets().catch(e => ({ok: false, error: e.message}));
+  if (r?.ok) return null;
+  return {ok: false, code: 'BACKUP_SHEETS', error: 'Không sao lưu được trước khi lưu dữ liệu từ Google Sheets. ' +
+    (r?.error || '') + ' Bản nháp còn nguyên. Chọn thư mục sao lưu SQLite có quyền ghi và đủ chỗ, rồi bấm “Thử lưu lại”.'};
+}
 async function persistNow() {
   doiDuLieu();
   if (!HB) { persist(); return {ok: storeOk}; }
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   showSave('… Đang lưu');
   const r = await storeSave();
-  if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); } else { storeOk = false; showSave('Lỗi lưu: ' + ((r && r.error) || ''), true); }
+  trackBulkSave(r);
+  if (r && r.ok) { storeOk = true; showSave('Đã lưu vào máy lúc ' + hhmm()); } else { storeOk = false; showSave(r?.code === 'BULK_DELETE' ? 'Chưa lưu · xem hướng dẫn xử lý' : 'Lỗi lưu: ' + ((r && r.error) || ''), true); }
   return r || {ok: false, error: 'không rõ'};
 }
 
@@ -164,6 +178,22 @@ document.addEventListener('change', e => {
 });
 function lkPhieuDefaultsKeep() { lkPhieuRows().forEach(p => { if (!(p._lkKey in lk.sel.phieu) || (p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn) && lk.sel.phieu[p._lkKey] === false && p.bien)) lk.sel.phieu[p._lkKey] = p.st === 'new' && p.assignable && !/danh sách xe/.test(p.warn);
 }); }
+/* UI-05: nhớ phần tử đang giữ tiêu điểm TRƯỚC khi một hộp thoại mở, đóng hộp thì trả tiêu điểm về đó (hộp hợp đồng tự trả bằng gs.opener) */
+const HOP_TRA_FOCUS = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'hdAsk', 'tkBox', 'thBox'];
+(() => {
+  const trongHop = el => !!(el && el.closest && el.closest(HOP_TRA_FOCUS.map(i => '#' + i).join(',')));
+  let ngoai = null; const nho = new Map();
+  document.addEventListener('focusin', e => { if (!trongHop(e.target) && !(e.target.closest && e.target.closest('#hdBox'))) ngoai = e.target; });
+  new MutationObserver(ms => ms.forEach(m => {
+    const b = m.target; if (!b.id || !HOP_TRA_FOCUS.includes(b.id) || b.id === 'tkBox' || b.id === 'thBox') return;
+    const on = b.classList.contains('on'), was = nho.has(b.id);
+    if (on && !was) nho.set(b.id, ngoai);
+    else if (!on && was) {
+      const el = nho.get(b.id); nho.delete(b.id);
+      if (el && el.isConnected && (!document.activeElement || document.activeElement === document.body || b.contains(document.activeElement))) { try { el.focus(); } catch (er) { /* phần tử không nhận tiêu điểm */ } }
+    }
+  })).observe(document.body, {attributes: true, attributeFilter: ['class'], subtree: true});
+})();
 document.addEventListener('keydown', async e => {
   if (e.key === 'Enter' && e.target.id === 'lkPcFilter') { e.preventDefault(); lk.pcFilter = e.target.value.trim(); lkRender(); const n = document.getElementById('lkPcFilter'); if (n) { n.focus(); try { const L = n.value.length; n.setSelectionRange(L, L);
   } catch (er) { /* ô không có vùng chọn */ } } return; }
@@ -176,7 +206,7 @@ document.addEventListener('keydown', async e => {
   if (e.key === 'Tab') {
     const hop = ['guideBox', 'lkBox', 'rpBox', 'impBox', 'stBox', 'dlgBox', 'hdBox', 'hdAsk', 'tkBox', 'thBox'].map(id => document.getElementById(id)).filter(b => b && (b.classList.contains('on') || b.id === 'tkBox' || b.id === 'thBox')).pop();
     if (hop) {
-      const ds = [...hop.querySelectorAll('button, input:not([type=hidden]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent);
+      const ds = [...hop.querySelectorAll('button, input:not([type=hidden]), select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && (x.checkVisibility ? x.checkVisibility() : x.offsetWidth > 0));
       if (ds.length) { const i = ds.indexOf(document.activeElement), j = i < 0 ? 0 : (i + (e.shiftKey ? -1 : 1) + ds.length) % ds.length; if (i < 0 || (e.shiftKey ? i === 0 : i === ds.length - 1)) { ds[j].focus(); e.preventDefault(); return; } }
     }
   }

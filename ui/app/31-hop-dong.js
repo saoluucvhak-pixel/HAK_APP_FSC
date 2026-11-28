@@ -46,9 +46,10 @@ function panelDsNC(rec, opt = {}) {
       '<td style="text-align:center">' + cnt + '</td>' +
       '<td style="text-align:right;white-space:nowrap">' + kl(d) + '</td></tr>';
   };
-  return '<div id="dsHdNc"><div class="hak-pane-head"><h3>Đội / Hợp đồng (' + ds.length + ')</h3></div>' +
+  return '<div id="dsHdNc"><div class="hak-pane-head"><h3>Hợp đồng nhân công (' + ds.length + ')</h3></div>' +
+    '<p class="mut">Chọn đội, điền thông tin hợp đồng và thêm thành viên. Sau đó bấm “Lưu dữ liệu vào lô”.</p>' +
     '<div class="hak-pane-body" style="padding:10px 12px"><div class="row" style="gap:6px;margin-bottom:8px"><input id="doiMoiTen" placeholder="Tên đội mới…" style="flex:1;min-width:110px"><button class="btn sm" data-act="themDoi">+ Thêm đội</button></div>' +
-    '<div class="hak-master-list"><table id="dsHdNcTbl"><thead><tr><th>#</th><th>Đội · Hợp đồng</th><th>Người</th><th style="text-align:right">KL</th></tr></thead><tbody>' +
+    '<div class="hak-master-list"><table id="dsHdNcTbl"><thead><tr><th>#</th><th>Hợp đồng nhân công</th><th>Người</th><th style="text-align:right">KL</th></tr></thead><tbody>' +
     (ds.length ? ds.map(row).join('') : '<tr><td colspan="4" class="mut">Chưa có đội nào: nhập tên rồi bấm “+ Thêm đội”.</td></tr>') + '</tbody></table></div>' +
     (chua ? '<div class="msg warn" style="margin-top:8px" id="dsHdNcChua">' + chua + ' người chưa thuộc đội nào.</div>' : '') + '</div></div>' +
     (ds.length ? '<div style="padding:0 12px 12px">' + panelPhanBo(rec) + '</div>' : '');
@@ -88,7 +89,7 @@ document.addEventListener('keydown', e => {
  * Trả dạng “đối tác” mà hợp đồng vận chuyển đã dùng (hdvc.donViId + bản chụp hdvc.ben, in đúng như trước): pháp nhân = doanh nghiệp (id cũ 'dn:…' nếu chuyển
  * từ danh mục cũ, không thì 'dt:<mã đối tượng>'); người của thể nhân = người ký cá nhân (id 'ct:<CCCD>' như cũ, không có CCCD thì 'ng:<mã người>'). */
 function doiTacKyVC() {
-  return HAKDoiTuong.benKy(dmDT(), 'vanChuyen').map(({dt, ng}) => ng
+  return HAKDoiTuong.benKy(dmDT(), 'vanChuyen').filter(({dt, ng}) => HAKNganh.hopNganh(db, dt, ng, HAKNganh.VC)).map(({dt, ng}) => ng
     ? {id: ng.cccd ? 'ct:' + ng.cccd : 'ng:' + ng.id, loai: 'nguoiKyVC', ten: ng.hoTen, cccd: ng.cccd, ngaySinh: ng.ngaySinh, ngayCap: ng.ngayCap, noiCap: ng.noiCap, diaChi: ng.diaChi, sdt: ng.sdt,
       vaiTro: ng.vaiTro && ng.vaiTro.chuXe ? 'Chủ xe' : ng.vaiTro && ng.vaiTro.taiXe ? 'Tài xế' : '', chucVu: ng.chucDanhKy || '', doiTuongId: dt.id, doiTuongTen: dt.ten, nguoiId: ng.id}
     : {id: dt.nguonCu || 'dt:' + dt.id, loai: 'doanhnghiep', ten: dt.ten, mst: dt.mst, daiDien: dt.daiDien, chucVu: dt.chucVuDaiDien, diaChi: dt.diaChi, sdt: dt.sdt, doiTuongId: dt.id});
@@ -135,28 +136,28 @@ function benTuGiaTri(v) {
 }
 /* ô “Bên nhận khoán” của hợp đồng nhân công (giao khoán): đối tượng có quyền ký Nhân công */
 function benNhanKhoanHtml(t) {
-  const L = HAKDoiTuong.benKy(dmDT(), 'nhanCong'), cur = benGiaTri(t.benNhanKhoan);
-  return '<label><span>Bên nhận khoán (đối tượng có quyền ký Nhân công)</span><select name="benNK"><option value="">— Tổ trưởng của đội (như trước) —</option>' +
+  const L = HAKDoiTuong.benKy(dmDT(), 'nhanCong').filter(({dt, ng}) => HAKNganh.hopNganh(db, dt, ng, HAKNganh.KT)), cur = benGiaTri(t.benNhanKhoan);
+  return '<label><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px">' +
+    '<span>Bên nhận khoán (đối tượng có quyền ký Nhân công)</span>' +
+    '<span class="row" style="gap:6px"><button type="button" class="btn sm" data-act="bnkMo" id="bnkMoBtn" title="Mở danh mục để chọn bên nhận khoán">📋 Chọn từ danh mục</button>' +
+    '<button type="button" class="btn sm" data-act="kyThemNhanhNC" title="Thêm nhanh vào Danh mục đối tượng với quyền ký Nhân công và chọn ngay">+ Thêm bên nhận khoán mới</button></span>' +
+    '</div>' +
+    '<input type="search" class="locNhanh" data-locsel="benNK" placeholder="🔍 Gõ tên hoặc CCCD để lọc nhanh…" autocomplete="off" aria-label="Lọc bên nhận khoán" style="margin-bottom:4px">' +
+    '<select name="benNK" id="benNK"><option value="">— Tổ trưởng của đội (như trước) —</option>' +
     L.map(({dt, ng, nhan}) => { const v = ng ? 'ng:' + ng.id : 'dt:' + dt.id; return '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(nhan) + '</option>'; }).join('') +
     (cur && !L.some(({dt, ng}) => (ng ? 'ng:' + ng.id : 'dt:' + dt.id) === cur) ? '<option value="' + esc(cur) + '" selected>' + esc(benTen(t.benNhanKhoan) || '(đã ngừng / không còn quyền ký)') + '</option>' : '') +
-    '</select><small class="mut">Chưa có? <button type="button" class="btn ghost sm" data-act="openSetDt" data-quaylai="nc">Mở Danh mục đối tượng</button></small></label>';
+    '</select></label>';
 }
 /* bên nhận khoán: danh mục đã đổi sau khi chụp (cập nhật có chủ ý); thông tin còn thiếu để in */
 function benNhanKhoanCanhBao(rec, t) {
   const c = t.benNhanKhoanBan, thieu = benNhanKhoanThieu(c);
   return (benNhanKhoanLech(t) ? '<div class="msg warn" id="benNKDoi" style="grid-column:1/-1">Danh mục đã sửa thông tin bên nhận khoán sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button type="button" class="btn ghost sm" data-act="benNKCapNhat">Cập nhật theo danh mục</button></div>' : '') +
     (c && thieu.length ? '<div class="msg err" id="benNKThieu" style="grid-column:1/-1">Bên nhận khoán còn thiếu ' + esc(thieu.join(', ')) + ': bổ sung ở Danh mục đối tượng rồi “Cập nhật theo danh mục” trước khi xuất bản chính thức.</div>' : '') +
-    (c ? '<div class="mut" id="benNKIn" style="grid-column:1/-1">Bản in: <b>' + esc(c.ten) + '</b>' + (c.loai === 'phapnhan' ? ' · MST ' + esc(c.mst || '…') + ' · đại diện ' + esc(c.daiDien || '…') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '') : (c.cccd ? ' · CCCD ' + esc(c.cccd) : '')) +
+    (c ? '<div class="mut" id="benNKIn" style="grid-column:1/-1">Bản in: <b>' + esc(c.ten) + '</b>' + (c.loai === 'phapnhan' ? ' · MST ' + esc(c.mst || '…') + ' · đại diện ' + esc(c.daiDien || '…') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '') : (c.cccd ? ' · CCCD ' + esc(c.cccd) : '') + (c.chucVu ? ' (' + esc(c.chucVu) + ')' : '')) +
     '. Tổ trưởng vẫn đứng tên ở các mục của đội (danh sách, ủy quyền, chấm công).</div>' : '');
 }
-/* (bản cũ) bên nhận khoán là người chưa là Tổ trưởng của đội */
-function benNhanKhoanTT(rec, t) {
-  const x = benTim(t.benNhanKhoan); if (!x || !x.ng) return '';
-  const tt = (rec.nc || []).filter(r => r.doiId === t.id && isTT(r));
-  const k = HAKModel.cccdSo(x.ng.cccd || '');
-  if (tt.some(r => r.nguoiId === x.ng.id || (k && HAKModel.cccdSo(r.cccd) === k))) return '';
-  return '<div class="msg warn" id="benNKLech" style="grid-column:1/-1">Bên nhận khoán <b>' + esc(x.ng.hoTen) + '</b> chưa là Tổ trưởng của đội: biểu mẫu giao khoán in theo Tổ trưởng. Thêm người này vào đội với vai trò Tổ trưởng (chọn từ danh mục khi thêm nhân công).</div>';
-}
+/* Bên nhận khoán không nhất thiết là Tổ trưởng: ký hợp đồng khoán nhân công AI ký cũng được (quyết định của chủ). Không còn cảnh báo vàng “chưa là Tổ trưởng”;
+ * dòng trung tính #benNKIn ở trên nêu tên, chức vụ (nếu có) và nhắc Tổ trưởng vẫn đứng tên ở các mục của đội. */
 
 /* ---------- BẢN CHỤP BÊN NHẬN KHOÁN (in biểu mẫu giao khoán) ----------
  * pháp nhân: {loai:'phapnhan', ten, mst, diaChi, sdt, daiDien, chucVu}; thể nhân: {loai:'canhan', ten (họ tên), danhXung, ngaySinh, cccd, ngayCap, noiCap, diaChi, sdt, chucVu (chức danh khi ký), doiTuongTen} */

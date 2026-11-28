@@ -1,23 +1,66 @@
 /* ----- lưu bản nháp vào lô: kiểm tra lại rồi ghi trong MỘT lần lưu SQLite; lỗi thì giữ nguyên cả dữ liệu đã lưu lẫn bản nháp ----- */
-/* lỗi do CẤU HÌNH chứ không phải do dòng dữ liệu (chưa khai đơn giá của chức danh): không chặn lưu, vẫn chặn xuất hồ sơ cho đến khi khai đủ */
+/* lỗi do CẤU HÌNH chứ không phải do dòng dữ liệu (chưa khai đơn giá của vị trí): không chặn lưu, vẫn chặn xuất hồ sơ cho đến khi khai đủ */
 const CONFIG_ERR = /chưa có đơn giá/;
 let stSaving = false;
 async function stSave(opt) {
+  const key = stKey(), epoch = dbEpoch;
+  if (stSaving || deletingRecord) return {ok: false, error: 'Đợi thao tác lưu hoặc xóa hoàn tất rồi thử lại.'};
+  stSaving = true;
+  let result;
+  try { result = await stSaveDraft(opt); }
+  finally { stSaving = false; }
+  if (epoch !== dbEpoch) return result;
+  const details = result?.errs?.length ? result.errs.slice(0, 3).join(' • ') : result?.error;
+  const text = result?.ok ? '' : 'Chưa lưu được. ' + (result?.code === 'BULK_DELETE'
+    ? 'Lần ghi bị chặn để bảo vệ hồ sơ chủ rừng. Bản nháp vẫn còn.'
+    : (details || 'Ứng dụng chưa trả về lý do.') + (result?.errs?.length ? ' Sửa các dòng được báo rồi bấm Lưu lại.' : ''));
+  loSaveIssue = text ? {key, epoch, text, field: result?.field, backup: result?.code === 'BACKUP_SHEETS', bulk: result?.code === 'BULK_DELETE'} : null;
+  if (key === stKey()) {
+    const el = document.getElementById('loSaveIssue');
+    if (el) {
+      el.innerHTML = loSaveHelpHtml();
+      el.hidden = !text;
+      if (text && !opt?.tuKhung) el.focus();
+    }
+  }
+  return result;
+}
+async function stSaveDraft(opt) {
   { const f0 = curForest(); if (f0 && loKhoa(f0)) return loKhoaNote(f0); }
   const k = stKey(), st = stages[k]; if (!st || !HAKStage.dirty(st)) { if (loDirty.has(NAV.curF)) return luuLoTT(opt); if (!(opt && opt.tuKhung)) note('Không có thay đổi nào cần lưu.', 'warn'); return {ok: true, none: true}; }
-  if (stSaving) return {ok: false, error: 'đang lưu'};
   const o = db.rs[NAV.cur], f = o && o.forests && o.forests[NAV.curF]; if (!f) { note('Không lưu được: lô đích không còn tồn tại.', 'err'); return {ok: false, error: 'lô đích'}; }
   const pend = HAKStage.pendingOf(st);   // cùng quy tắc với bước xem trước: dòng cần đối chiếu chưa xử lý thì chưa lưu
-  if (pend.length) { const msg = 'Chưa lưu: còn ' + pend.length + ' dòng CẦN ĐỐI CHIẾU (cùng số phiếu nhưng khác ngày, biển số, nơi cân hoặc khối lượng): ' + pend.slice(0,
-  10).map(q => q.key).join(', ') + (pend.length > 10 ? '…' : '') + '. Chọn giữ bản hiện có, cập nhật cùng chuyến, chuyến khác hoặc bỏ dòng nguồn. Dữ liệu đã lưu và bản nháp giữ nguyên.'; pushNote(msg, 'err'); NAV.ftab = 'dx'; render(); return {ok: false, error: 'cần đối chiếu', pend}; }
+  if (pend.length) {
+    const soPhieu = [...new Set(pend.map(p => p.incoming?.soPhieu).filter(Boolean))];
+    const chiTiet = soPhieu.length ? ' Phiếu ' + soPhieu.slice(0, 5).join(', ') + (soPhieu.length > 5 ? '…' : '') + '.' : '';
+    return {
+      ok: false,
+      error: 'CẦN ĐỐI CHIẾU ' + pend.length + ' dòng phiếu cân.' + chiTiet +
+        ' Giữ bản hiện có, xác nhận cùng chuyến, chọn chuyến khác hoặc bỏ dòng nguồn, rồi lưu lại.',
+      field: {tab: 'dx', muc: 'phieu', label: 'Vận chuyển → Phiếu cân', pending: true}
+    };
+  }
   const idc = HAKStage.idConflicts(st);   // _id nội bộ phải duy nhất trước khi ghi SQLite; xung đột thì chặn, giữ dữ liệu đã lưu và bản nháp
-  if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: 'trùng _id', idc}; }
+  if (idc.length) { const msg = 'Chưa lưu: mã nội bộ của dòng bị trùng hoặc thiếu — ' + idc.map(c => c.group + ': ' + c.rows.join(', ')).join('; ') + '. Dữ liệu đã lưu và bản nháp được giữ nguyên.'; pushNote(msg, 'err'); render(); return {ok: false, error: msg, idc}; }
   const rec0 = jobView(o, f), g0 = ganDoi(rec0.doi, st.cur.nc), v0 = ganVC(rec0.hdvc, st.cur.dx), p0 = ganPC(g0.doi, st.cur.pc), rec = Object.assign(rec0, {nc: g0.nc, doi: g0.doi, dx: v0.dx, hdvc: v0.hdvc, pc: p0, info: Object.assign({}, rec0.info, {_klPC: klPhieu(p0)})}), errs = [];
-  let errTab = null, cfgWarn = 0;
-  const dkv = HAKStage.dirtyKinds(st);   // chỉ kiểm phần có thay đổi; phiếu cân luôn kiểm cùng xe (quan hệ biển số)
-  [['Nhân công', checkNC, 'nc', ['nc']], ['Vận chuyển (xe)', checkDX, 'dx', ['dx']], ['Phiếu cân', checkPC, 'dx', ['pc', 'dx']]].filter(x => x[3].some(k => dkv.includes(k))).forEach(([n, fn, tb]) => { const c = fn(rec); if (c.errs.length && !errTab) errTab = tb;
-  c.errs.filter(e => !CONFIG_ERR.test(e)).forEach(e => errs.push(n + ' — ' + e)); if (c.errs.some(e => CONFIG_ERR.test(e))) cfgWarn++; });
-  if (errs.length) { stErrList = errs; pushNote('Chưa lưu: còn ' + errs.length + ' lỗi trong bản nháp. Sửa hoặc bỏ các dòng lỗi rồi lưu lại.', 'err'); NAV.ftab = errTab || NAV.ftab; render(); return {ok: false, error: 'lỗi dữ liệu', errs}; }
+  let field = null;
+  const dkv = HAKStage.dirtyKinds(st);
+  const checks = [
+    ['nc', 'thanhvien', 'Nhân công → Thành viên', checkNC, ['nc']],
+    ['dx', 'xe', 'Vận chuyển → Xe và tài xế', checkDX, ['dx']],
+    ['dx', 'phieu', 'Vận chuyển → Phiếu cân', checkPC, ['pc', 'dx']]
+  ];
+  for (const [tab, muc, label, check, kinds] of checks) {
+    if (!kinds.some(k => dkv.includes(k))) continue;
+    const errors = check(rec).errs;
+    const invalid = errors.filter(e => !CONFIG_ERR.test(e));
+    if (invalid.length && !field) field = {tab, muc, label};
+    invalid.forEach(e => errs.push(label + ' — ' + e));
+  }
+  if (errs.length) {
+    stErrList = errs;
+    return {ok: false, error: 'lỗi dữ liệu', errs, field};
+  }
   // phiếu có cùng số ở lô khác: chưa đủ căn cứ xác định cùng chuyến → phải đối chiếu, không tự gộp
   /* chỉ hỏi cho phiếu MỚI hoặc vừa ĐỔI số phiếu / ngày cân trong lần lưu này (phiếu đã lưu từ trước thì đã đối chiếu rồi, không hỏi lại mỗi lần bấm Lưu);
    * so cùng khóa với trong lô: số phiếu + ngày cân (HAKBks.khoaPhieu). Cùng số mà khác ngày là hai chuyến khác nhau, không hỏi. Phiếu thiếu ngày thì so theo số phiếu. */
@@ -26,7 +69,10 @@ async function stSave(opt) {
   if (mine.size) Object.values(db.rs).forEach(ow => forestList(ow).forEach(ff => { if (ow.id === NAV.cur && ff.id === NAV.curF) return; (ff.pc || []).forEach(p => { const k = khoaSo(p); if (mine.has(k) || (!HAKBks.khoaPhieu(p) && [...mine].some(m => m.split('|')[0] === k))) dups.push(p.soPhieu + (p.ngay ? ' ngày ' + p.ngay : '') + ' (lô ' + (ff.info.maRung || '?') + ', ' + (ow.info.ten || '') + ')'); }); }));
   if (dups.length && !opt?.confirmedDup && !confirm('Có ' + dups.length + ' phiếu cân cùng số phiếu và ngày cân đang có ở lô khác:\n' + dups.slice(0,
   10).map(x => '• ' + x).join('\n') + (dups.length > 10 ? '\n• …' : '') + '\n\nHai nơi cân hoặc hai lô có thể dùng trùng số phiếu. Đối chiếu kỹ (ngày, biển số, khối lượng) rồi bấm OK để vẫn lưu vào lô này, hoặc Hủy để quay lại.')) return {ok: false, error: 'chờ đối chiếu'};
-  stSaving = true; const sNhap = nhapChup(), chuU = chuChot(o.id); const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, soLog: f.soLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt};
+  const backupIssue = await saoLuuTruocKhiLuuLo(f.id);
+  if (backupIssue) return backupIssue;
+  if (curForest() !== f || stages[k] !== st) return {ok: false, error: 'Lô đã đổi trong lúc chuẩn bị lưu. Mở lại lô rồi thử lại.'};
+  const sNhap = nhapChup(), chuU = chuChot(o.id); const snap = {doi: f.doi, hdvc: f.hdvc, nc: f.nc, dx: f.dx, pc: f.pc, bienLog: f.bienLog, soLog: f.soLog, ncFile: f.ncFile, ncAt: f.ncAt, dxFile: f.dxFile, dxAt: f.dxAt, pcFile: f.pcFile, pcAt: f.pcAt, nhatKyNap: f.nhatKyNap};
   try {
     const cm = HAKStage.commit(st, r => HAKPhieuCan.chuanHoaNgay2(r, null)), at = stamp(), dk = HAKStage.dirtyKinds(st);   // mọi phiếu có cột ngày cân 2 khi lưu vào hồ sơ rừng (nhập thật thì giữ, trống thì suy ra)
     const oldNcIds = (f.nc || []).map(r => r && r.id).filter(Boolean), oldDxIds = (f.dx || []).map(r => r && r.id).filter(Boolean);
@@ -41,49 +87,59 @@ async function stSave(opt) {
     if (dk.includes('nc')) { f.ncAt = at; if (st.src.nc && /^Excel: /.test(st.src.nc)) f.ncFile = st.src.nc.slice(7); }
     if (dk.includes('dx')) { f.dxAt = at; if (st.src.dx && /^Excel: /.test(st.src.dx)) f.dxFile = st.src.dx.slice(7); }
     if (dk.includes('pc')) { f.pcAt = at; if (st.src.pc && /^Excel: /.test(st.src.pc)) f.pcFile = st.src.pc.slice(7); else if (st.src.pc && /Google/.test(st.src.pc) && !f.pcFile) f.pcFile = 'Tra cứu Google Sheets'; }
-    f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).slice(-50);   // ghi vào lô cùng lần lưu (không kèm ảnh chụp hoàn tác)
+    f.nhatKyNap = (f.nhatKyNap || []).concat((st.nhatKy || []).map(x => ({at: x.at, kind: x.kind, nguon: x.nguon, them: x.them, capNhat: x.capNhat, giu: x.giu, loi: x.loi}))).concat((st.sk || []).map(x => ({at: new Date().toISOString(), kind: x.kind, nguon: x.nguon, them: x.them, capNhat: 0, giu: 0, loi: 0}))).slice(-200);
     var hadLo = loDirty.delete(f.id);   // lưu cả lô: thông tin lô cùng các bảng nháp
-    const r = await persistNow(); if (!r || !r.ok) throw new Error((r && r.error) || 'không rõ');
+    const r = await persistNow(); if (!r || !r.ok) throw Object.assign(new Error(r?.error || 'không rõ'), {code: r?.code});
+    loCanSaoLuuSheets.delete(f.id);
     const nDm = dmGhiTuLo(st); delete stages[k]; nhapTamGhi(); stErrList = null; if (nDm) pushNote(nDm[0], nDm[1]);
-    pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + ')' + (chuU.chot ? ', kèm thông tin chủ rừng đang ở bản nháp (kể cả phần đến từ lô khác của chủ rừng này)' : '') + '. Có thể tạo, xuất, in hồ sơ.', 'ok'); render(); return {ok: true};
+    if (typeof notifyWorkDone === 'function') notifyWorkDone((f.pc || []).length || 5);
+    pushNote('Đã lưu dữ liệu vào lô ' + (f.info.maRung || '') + ' (' + dk.map(x => ST_LABEL[x]).join(', ') + ')' + (chuU.chot ? ', kèm thông tin chủ rừng đang ở bản nháp (kể cả phần đến từ lô khác của chủ rừng này)' : '') + '. Có thể tạo, xuất, in hồ sơ.', 'ok'); if (typeof dmHopCho !== 'undefined' && dmHopCho) dmHopCho.daLuu = notes[notes.length - 1].text; render(); return {ok: true};
   } catch (e) {
     if (typeof hadLo !== 'undefined' && hadLo) loDirty.add(f.id);
     nhapKhoiPhuc(sNhap);
-    Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog; if (!snap.soLog) delete f.soLog;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
-    pushNote('Không lưu được, dữ liệu đã lưu giữ nguyên và bản nháp vẫn còn để thử lại: ' + e.message, 'err'); render(); return {ok: false, error: e.message};
-  } finally { stSaving = false; }
+    Object.assign(f, snap); if (!snap.bienLog) delete f.bienLog; if (!snap.soLog) delete f.soLog; if (!snap.nhatKyNap) delete f.nhatKyNap;   // giữ nguyên dữ liệu đã lưu; bản nháp còn nguyên để sửa hoặc thử lại
+    render(); return {ok: false, error: e.message, code: e.code};
+  }
 }
 let stErrList = null;
-function stDiscard(silent) { const k = stKey(), cn0 = chuNhap.get(NAV.cur); if (!stages[k] && !loDirty.has(NAV.curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loHoan(NAV.curF); if (NAV.cur && !db.rs[NAV.cur]) { NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; } else if (NAV.curF && !curForest()) NAV.curF = null;   // lô / chủ rừng tạo từ bản nháp (Google Sheets) bị bỏ hẳn: rời khỏi màn của chúng
-nhapTamGhi(); stErrList = null;
+function stDiscard(silent) { const k = stKey(), cn0 = chuNhap.get(NAV.cur); if (!stages[k] && !loDirty.has(NAV.curF)) return; if (!silent && !confirm('Bỏ toàn bộ thay đổi chưa lưu của lô này? Dữ liệu đã lưu không bị ảnh hưởng.')) return; delete stages[k]; loCanSaoLuuSheets.delete(NAV.curF); loHoan(NAV.curF); if (NAV.cur && !db.rs[NAV.cur]) { NAV.cur = null; NAV.curF = null; NAV.view = 'owner'; } else if (NAV.curF && !curForest()) NAV.curF = null;   // lô / chủ rừng tạo từ bản nháp (Google Sheets) bị bỏ hẳn: rời khỏi màn của chúng
+nhapTamGhi(); stErrList = null; if (loSaveIssue?.key === k) loSaveIssue = null;
 if (!silent) pushNote('Đã bỏ thay đổi chưa lưu.' + (cn0 && !chuNhap.has(NAV.cur || '') && !cn0.moi ? ' Lô nháp cuối của chủ rừng đã được bỏ nên thông tin chủ rừng đang nháp (từ Google Sheets) cũng được hoàn lại.' : ''), 'warn'); render(); }
 /* hỏi khi rời lô còn thay đổi chưa lưu: Lưu và tiếp tục / Bỏ thay đổi / Quay lại chỉnh sửa */
 let stBypass = false;
 function stGuard(proceed) {
-  $('#stBody').innerHTML = '<div class="gh"><h2>Còn thay đổi chưa lưu</h2></div><p>' + esc(stBlockText().replace(/ Bấm .*$/, '')) + ' Chọn cách xử lý trước khi chuyển đi:</p><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" id="stGSave">Lưu và tiếp tục</button><button class="btn ghost" id="stGDrop">Bỏ thay đổi</button><button class="btn ghost" id="stGBack">Quay lại chỉnh sửa</button></div>';
+  $('#stBody').innerHTML = '<div class="gh"><h2>Còn thay đổi chưa lưu</h2></div><p>' + esc(stBlockText().replace(/ Bấm .*$/, '')) + ' Chọn cách xử lý trước khi chuyển đi:</p><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" id="stGSave">Lưu và tiếp tục</button><button class="btn ghost" id="stGKeep">Giữ bản nháp và tiếp tục</button><button class="btn ghost" id="stGDrop">Bỏ thay đổi</button><button class="btn ghost" id="stGBack">Quay lại chỉnh sửa</button></div>';
   $('#stBox').classList.add('on'); $('#stGSave').focus();   // phiếu #10: tiêu điểm vào hộp; Esc = Quay lại chỉnh sửa (17-e)
   $('#stGBack').onclick = () => $('#stBox').classList.remove('on');
+  $('#stGKeep').onclick = () => { $('#stBox').classList.remove('on'); nhapTamGhi(); proceed(); };
   $('#stGDrop').onclick = () => { $('#stBox').classList.remove('on'); stDiscard(true); proceed(); };
   $('#stGSave').onclick = async () => { const r = await stSave(); $('#stBox').classList.remove('on'); if (r && r.ok) proceed(); };
 }
 window.__stDirty = () => stDirtyList();
 window.__stSaveCurrent = () => stSave();
-/* Lưu và đóng (main.js): lưu MỌI lô còn nháp (không chỉ lô đang mở); lô nào lưu không được thì dừng, trả ok:false để cửa sổ KHÔNG đóng và bản tạm không bị xóa */
+/* Lưu các lô độc lập. Giữ cửa sổ mở và đưa người dùng về lô đầu tiên còn lỗi. */
 async function stSaveAll() {
-  const keys = stDirtyList(), truoc = {cur: NAV.cur, curF: NAV.curF}; let dat = null, loi = false;
-  try {
-    for (const k of keys) {
-      const [oid, fid] = k.split('|'); if (!db.rs[oid] || !db.rs[oid].forests[fid]) continue;
-      NAV.cur = oid; NAV.curF = fid; dat = {cur: oid, curF: fid};
-      const r = await stSave({tuKhung: true});
-      if (!r || r.ok === false) { loi = true; NAV.tab = 'rung'; NAV.view = 'owner'; render(); return {ok: false, error: (r && r.error) || 'lô ' + ((db.rs[oid].forests[fid].info || {}).maRung || fid) + ' chưa lưu được'}; }
-    }
-    return {ok: true, none: !keys.length};
-  } finally {
-    // lỗi: ở lại lô lỗi để người dùng thấy; thành công: về chỗ cũ, trừ khi người dùng đã tự chuyển trang trong lúc lưu
-    if (!loi && (!dat || (NAV.cur === dat.cur && NAV.curF === dat.curF))) { if (db.rs[truoc.cur]) { NAV.cur = truoc.cur; NAV.curF = truoc.curF; } else { NAV.cur = null; NAV.curF = null; } }
-    render();
+  const keys = stDirtyList(), truoc = {cur: NAV.cur, curF: NAV.curF};
+  const issues = [];
+  for (const k of keys) {
+    const [oid, fid] = k.split('|');
+    const f = db.rs[oid]?.forests?.[fid];
+    if (!f) continue;
+    NAV.cur = oid; NAV.curF = fid;
+    const r = await stSave({tuKhung: true});
+    if (!r?.ok) issues.push({cur: oid, curF: fid, issue: loSaveIssue, error: loSaveIssue?.text || r?.error || 'Lô ' + (f.info.maRung || fid) + ' chưa lưu được'});
   }
+  if (issues.length) {
+    const firstIssue = issues[0];
+    NAV.cur = firstIssue.cur; NAV.curF = firstIssue.curF; NAV.tab = 'rung'; NAV.view = 'owner';
+    loSaveIssue = firstIssue.issue;
+    render();
+    return {ok: false, error: firstIssue.error, issues: issues.map(({curF, error}) => ({curF, error}))};
+  }
+  NAV.cur = db.rs[truoc.cur] ? truoc.cur : null;
+  NAV.curF = NAV.cur ? truoc.curF : null;
+  render();
+  return {ok: true, none: !keys.length};
 }
 window.__stSaveAll = stSaveAll;
 CONG_KT.checkDX = () => { const rec = curRec(); return rec ? checkDX(rec) : null; };
@@ -92,7 +148,7 @@ CONG_KT.doiKT = () => { const rec = curRec(); if (!rec) return null; const B = d
 /* Chặn rời lô khi còn bản nháp: bắt sự kiện bấm ở pha bắt (trước mọi xử lý khác) với các nút đổi lô, đổi chủ rừng, sang màn hình khác */
 document.addEventListener('click', e => {
   if (stBypass || !stDirtyCur()) return; const t = e.target; if (!t.closest || t.closest('#stBox')) return;
-  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],[data-muc-lo],[data-act=hdQuayLai],[data-act=chonDoi],[data-act=chonHd],#navHome,[data-act=openDm],[data-act=openNorm],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
+  const nav = t.closest('[data-open],[data-sforest],[data-forest],[data-dash],[data-muc-lo],[data-act=hdQuayLai],[data-act=chonDoi],[data-act=chonHd],#navHome,[data-act=openDm],[data-act=openNorm],[data-act=openBld],[data-act=openSettings],[data-act=openSetBk],[data-act=newRs]'); if (!nav) return;
   if (nav.matches('[data-muc-lo][aria-current]')) return;
   if ((nav.dataset.sforest && nav.dataset.sforest === NAV.curF) || (nav.dataset.forest && nav.dataset.forest === NAV.curF)) return;   // bấm lại đúng lô đang mở
   e.preventDefault(); e.stopPropagation();
@@ -153,7 +209,7 @@ function panelDoiKT(rec, phan) {   // phan: 'tt' = chọn đội và thông tin 
   const t = curTeam(f), n = d => (rec.nc || []).filter(r => r.doiId === d.id).length, multi = rec.doi.length > 1, chua = (rec.nc || []).filter(r => !rec.doi.some(d => d.id === r.doiId)).length;
   const tt = d => { const x = (rec.nc || []).find(r => r.doiId === d.id && isTT(r)); return x ? x.ten : '—'; };
   const row = (d,
-  k) => '<tr class="' + (d.id === t.id ? 'sel' : '') + '" data-act="chonDoi" data-doi="' + esc(d.id) + '" style="cursor:pointer' + (d.id === t.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(d.ten || ('Đội ' + (k + 1))) + '</b>' + (d.id === t.id ?
+  k) => '<tr class="' + (d.id === t.id ? 'sel' : '') + '" data-act="chonDoi" data-doi="' + esc(d.id) + '" style="cursor:pointer"><td><b>' + esc(d.ten || ('Đội ' + (k + 1))) + '</b>' + (d.id === t.id ?
   ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + esc(tt(d)) + '</td><td style="text-align:center">' + n(d) + '</td><td>' + esc(hinhThucNgan(infoTeam(rec,
   d))) + '</td><td style="text-align:right">' + (typeof d.dienTich === 'number' ? formatNumber(d.dienTich, 3) : multi ? '<span class="mut">theo số người</span>' : '<span class="mut">cả lô</span>') + '</td></tr>';
   if (hdMo('nc')) return '<div class="card" id="doiKT"><h3 class="sro">Thông tin hợp đồng</h3>' + (chua ? '<div class="msg warn" style="margin-top:6px">' + chua + ' người chưa thuộc đội nào: chọn đội ở cột Đội của bảng nhân công.</div>' : '') +   // 3.0 trang chi tiết: danh sách đội ở trang danh sách
@@ -203,12 +259,12 @@ function panelThanhVien(rec) {
   const SF = HAKCore.sf, cdOpts = [...new Set(baseNc.map(r => trim(r.chucDanh)).filter(Boolean))].sort();
   const sfCfg = {
     screenId: 'lo_nhan_cong', title: 'Thành viên đội khai thác',
-    searchPlaceholder: 'Tìm họ tên, CCCD, chức danh…',
+    searchPlaceholder: 'Tìm họ tên, CCCD, vị trí…',
     quickFields: ['q', 'coLoi'],
     advancedFields: ['q', 'chucDanh', 'coLoi'],
     matchQ: (r, q) => SF.hay([r.ten, r.cccd, r.chucDanh, r.vaiTro]).includes(q),
     fields: [
-      {key: 'chucDanh', label: 'Chức danh', type: 'multi', withNone: true, options: cdOpts, match: (r, vals) => SF.inSet(vals, r.chucDanh)},
+      {key: 'chucDanh', label: 'Vị trí', type: 'multi', withNone: true, options: cdOpts, match: (r, vals) => SF.inSet(vals, r.chucDanh)},
       {key: 'coLoi', label: 'Chỉ dòng có lỗi / cảnh báo', type: 'bool', match: r => c.state[r._row] === 'err' || c.state[r._row] === 'warn'}
     ]
   };
@@ -218,8 +274,9 @@ function panelThanhVien(rec) {
   const loc = rec.doi && rec.doi.length > 1 ? '<div class="row" style="margin:6px 0">' + (t ? '<span class="mut">Đang xem nhân công của đội “' + esc(t.ten || '') + '”.</span> <button class="btn ghost sm" data-act="ncTatCa">Xem tất cả nhân công của lô</button>' :
   '<span class="mut">Đang xem tất cả nhân công của lô.</span> <button class="btn ghost sm" data-act="ncTheoDoi">Chỉ xem đội đang chọn</button>') + '</div>' : '';
   const hienDoi = rec.doi?.length > 1;
-  return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Vai trò', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Chức danh', ...(hienDoi ? ['Đội'] : []), 'Đơn giá'],
+  return head + issuesBox(c.errs, c.warns) + loc + stTable('nc', rec, ['Chức vụ', 'Danh xưng', 'Họ và tên', 'Ngày sinh', 'CCCD', 'Vị trí', ...(hienDoi ? ['Đội'] : []), 'Đơn giá'],
     r => '<td>' + esc(r.vaiTro) + '</td><td>' + esc(r.danhXung) + '</td><td>' + esc(r.ten) + '</td><td>' + esc(r.ngaySinh) + '</td><td>' + esc(r.cccd) + '</td><td>' + esc(r.chucDanh) + '</td>' + (hienDoi ? '<td>' + doiCell(rec, r) + '</td>' : '') + '<td>' + fmt(rateOf(infoRow(rec, r), r)) + '</td>',
     c, null, only);
 }
-
+/* 3.5.1: ghi nhận (trong bản nháp) việc thêm nhân công / xe / phiếu cân ngoài đường nạp file; lưu vào nhật ký của lô cùng lần bấm “Lưu dữ liệu vào lô” */
+function skGhi(st, kind, nguon, them) { if (!st || !them) return; (st.sk = st.sk || []).push({kind, nguon, them}); }

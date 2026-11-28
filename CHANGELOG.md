@@ -1,5 +1,112 @@
 # Nhật ký thay đổi
 
+## 3.7.5 — Sao lưu riêng từng lô và ổn định đối soát sản lượng
+
+- Khôi phục từ gói lô chỉ thay lô đã chọn, giữ bản nháp các lô khác và dữ liệu dùng chung đang có.
+- Thông báo khi chưa lưu nêu số phiếu cân cần đối chiếu. Kiểm tra mã trùng trước khi tạo lô từ hồ sơ cũ.
+- Sửa màn Đối soát sản lượng và dự báo ngày hoàn thành. Hiển thị “Chưa kiểm tra được” khi tiền kiểm FSC gặp lỗi.
+
+## 3.7.4 — Lưu và khôi phục theo từng lô
+
+- Yêu cầu sao lưu trước khi lưu bản nháp Google Sheets áp dụng cho lô nhận dữ liệu. Có thể giữ bản nháp gặp lỗi và tiếp tục lưu các lô khác.
+- Sao lưu JSON và SQLite kiểm tra và ghi từng định dạng riêng. Thông báo nêu bản dùng được và bước đổi thư mục hoặc thử lại.
+- Khôi phục riêng cập nhật theo ID lô đích trên máy, giữ bản nháp của các lô khác và chỉ nhập lịch sử chốt của các lô được khôi phục.
+
+## 3.7.3 — Phân tách độc lập lưu lô, Sao lưu nhanh 1-chạm, Khôi phục từng phần và tự nhận diện USB/Cloud
+
+- **Phân tách độc lập lưu lô và dọn dẹp hồ sơ cũ**: Lưu lô mới hoặc sửa dữ liệu rừng không bao giờ bị chặn bởi các hồ sơ cũ chờ xóa hoặc chưa nạp. Khi phát hiện yêu cầu xóa nhiều chủ rừng, ứng dụng ưu tiên lưu thành công dữ liệu lô hiện tại và cung cấp nút hành động trực tiếp (“Hủy lệnh xóa cũ & Lưu lô ngay”, “Mở Dọn dẹp hồ sơ”, “Xác nhận xóa vĩnh viễn”) thay vì các thông báo bế tắc.
+- **Sao lưu nhanh 1-chạm (Quick Backup `Ctrl+B`)**: Nút sao lưu nhanh đặt ngay trên thanh tiêu đề trên cùng (Header) kèm phím tắt `Ctrl+B`, tự động lưu dữ liệu đệm trước khi tạo bản sao lưu, loại bỏ cảnh báo thừa và phản hồi trạng thái tức thời.
+- **Tự động nhận diện USB và Cloud Drive**: Nút quét 1-chạm tự động tìm và gợi ý ổ USB gắn ngoài hoặc thư mục Google Drive, OneDrive, Dropbox để thiết lập thư mục sao lưu thứ hai.
+- **Xem chi tiết & Khôi phục từng phần từ bản sao lưu**: Cho phép mở xem chi tiết cơ cấu bên trong bất kỳ bản sao lưu nào (danh sách chủ rừng, số lô, số phiếu cân) và bấm khôi phục riêng lẻ một chủ rừng hoặc một lô rừng mà không làm thay đổi các hồ sơ khác trên máy.
+- **Nhắc nhở sao lưu thông minh theo khối lượng việc**: Hiển thị nhắc nhở và hiệu ứng nhịp thở dịu nhẹ sau khi hoàn thành đợt nạp phiếu cân hoặc xuất biểu mẫu.
+
+## 3.7.2 — Khắc phục kẹt lưu do chủ rừng rỗng và hoàn thiện Sao lưu / Khôi phục
+
+- **Tự gỡ kẹt lưu (`BULK_DELETE`) do dòng chủ rừng rỗng**: Tầng lưu SQLite (`src/store.js`) phân biệt rõ chủ rừng thật và dòng chủ rừng rỗng hoàn toàn (0 lô rừng, chưa nhập tên/mã/CCCD/hợp đồng), cho phép ứng dụng tự động dọn sạch các chủ rừng tạo dở từ phiên trước mà không chặn lưu hàng loạt và không tạo thừa tệp sao lưu `truoc-xoa`.
+- **Lưu bản sao lưu trực tiếp ra tệp / USB**: Bổ sung nút “Lưu bản sao lưu ra tệp / USB…” mở hộp thoại Lưu chuẩn của Windows để xuất tệp `.sqlite` hoặc `.json` có kiểm tra toàn vẹn ra bất kỳ thư mục ngoài nào.
+- **Sao lưu lô rừng khi còn bản nháp**: Khi bấm “Sao lưu lô rừng” lúc lô đang có thay đổi chưa lưu, ứng dụng cho phép lưu lô ngay trước khi xuất gói sao lưu và luôn xuất từ dữ liệu đã lưu nhất quán, kèm báo lỗi chi tiết nếu thiếu thông tin gói.
+- **Khôi phục tệp `.sqlite` ngoài máy khi đang bật bộ lọc kho**: Tự động đặt lại bộ lọc danh sách kho sao lưu để luôn mở ngay màn xem trước khôi phục.
+
+## 3.7.1 — Định mức và danh mục dạng hộp thoại, cải thiện kiểm soát chéo lô
+
+- Gồm các tính năng của 3.7.0, phiên bản chưa từng được công bố trên GitHub Releases.
+- Định mức Gỗ keo, Nhân công và Thời gian khai thác hiển thị dạng bảng. Thêm và sửa bằng hộp thoại, giữ nội dung đang nhập khi cần sửa lỗi.
+- Danh mục Ngành nghề / Chức vụ dùng hộp thoại thêm, sửa. Hợp đồng nhân công có hộp thoại chọn bên nhận khoán từ danh mục.
+- Tăng tốc kiểm soát chéo lô khi mở hồ sơ có nhiều phiếu cân.
+- Ô Mã chủ rừng cho phép gõ ngay cả khi đang chọn dùng CCCD. Khi gõ mã riêng, ứng dụng tự bỏ tích dùng CCCD.
+- Có năm bảng màu, gồm Ocean. Tọa độ trên Mini GIS hiển thị năm chữ số thập phân.
+
+## 3.7.0 — Kiểm soát chéo lô nâng cao, niêm phong tại Tiền kiểm soát, in bìa & mục lục A4, sơ đồ vị trí lô rừng (Mini GIS), bộ lọc danh mục & Theme Ocean
+
+- **Khóa ô Mã chủ rừng khi dùng CCCD**: Ô nhập mã chủ rừng tự động khóa (`readonly`) ngay khi tích chọn "Dùng số CCCD làm Mã chủ rừng", tránh nhầm lẫn hoặc sửa lệch mã định danh.
+- **Bàn làm việc bước 5**: Bấm vào bước 5 ("Cập nhật phiếu cân") chuyển thẳng đến tab con "Phiếu cân" thay vì mở trang chung.
+- **Kiểm soát chéo lô nâng cao (Kiểm toán FSC)**: Cảnh báo xe có phiếu cân cùng ngày ở hai lô khai thác khác nhau khi thiếu giờ cân (`Chéo lô: xe cùng ngày ở hai lô`), bổ sung cho kiểm tra trùng giờ cân và người ở hai lô.
+- **Niêm phong / Mở khóa hồ sơ tại Tiền kiểm soát**: Bổ sung nút thao tác trực tiếp "Niêm phong chốt lô" và "Mở khóa niêm phong" ngay tại thẻ Tiền kiểm soát xuất hồ sơ (tự động ẩn khi lô đang tạm dừng khai thác).
+- **In bìa hồ sơ & mục lục 20 biểu mẫu FSC khổ A4**: Bổ sung mô-đun in chuẩn A4 gồm trang bìa hồ sơ khai thác FSC và bảng mục lục chi tiết 20 biểu mẫu (BM-01 đến BM-20) kèm thông tin nơi lập và ngày lập.
+- **Sơ đồ minh họa vị trí lô rừng (Mini GIS)**: Tích hợp khung hiển thị vị trí lô rừng trực quan bằng vector SVG (tọa độ GPS trung tâm, la bàn hướng Bắc, thước tỷ lệ) kèm tính năng chép nhanh liên kết Google Maps vệ tinh vào bộ nhớ tạm (clipboard).
+- **Thêm nhanh Bên nhận khoán tại chỗ**: Xóa nút "Mở Danh mục đối tượng" gây văng trang ở hợp đồng nhân công; bổ sung nút "+ Thêm bên nhận khoán mới" (Quick Modal tại chỗ, tự động gán quyền ký Nhân công và chọn ngay) kèm ô tìm kiếm nhanh Typeahead.
+- **Bộ lọc Dropdown cho modal Chọn từ Danh mục**: Bổ sung các dropdown lọc theo Loại xe, Tình trạng tài xế (chọn xe) và Vị trí chức vụ, Tình trạng CCCD, Giới tính (chọn nhân công), lọc kết hợp tức thời và đồng bộ số lượng.
+- **Bảng màu Ocean (Executive Blue)**: Bổ sung bảng màu Ocean xanh dương hiện đại đạt chuẩn tương phản WCAG AA (≥ 4.5:1) cho cả chế độ Sáng và Tối, chọn nhanh tại thanh tiêu đề trên cùng.
+- **Kế thừa & bảo toàn nghiệp vụ**: Không thay đổi công thức kế toán, nội dung 20 biểu mẫu BM-01 đến BM-20, và giữ nguyên cấu trúc cơ sở dữ liệu SQLite v3.5.1 (không can thiệp migration).
+
+## 3.6.0 — Giao diện điều hành: Tổng quan, Bàn làm việc, Danh mục dạng hộp thoại, nhật ký truy xuất
+
+- Màn Danh mục: Thêm/Sửa đối tượng, xe, ngành nghề và chức vụ mở trong hộp thoại riêng (có Lưu thông tin / Hủy bỏ, Esc để hủy); Chức vụ, Ngành nghề, Quyền ký hợp đồng chọn bằng nút phân đoạn (quyền ký loại trừ nhau); bảng Ngành nghề / Chức vụ là danh sách sạch với nút Sửa, Ngừng / Xóa.
+- Thông tin chủ rừng: Số hợp đồng, Họ tên, CCCD đứng đầu form kèm nút “Tra cứu Google Sheet”; chọn hợp đồng ở bảng Cha - Con rồi “Chọn hợp đồng này & Điền vào hồ sơ” để điền sẵn form (chưa lưu). Bỏ thẻ Google Sheets bị khóa ở cuối form.
+- Vận chuyển: form Thêm xe chia khối Phương tiện / Chủ xe / Tài xế / Người ký (chọn chủ xe, tài xế từ Danh mục đối tượng, giấy tờ tự điền); bỏ các nút “Mở Danh mục …” gây văng màn hình, thêm hướng dẫn thêm xe ở tab “Xe và tài xế”.
+- Hợp đồng vận chuyển: ô lọc nhanh và nút “+ Thêm người ký” (hộp nhỏ tại chỗ, tự chọn người vừa thêm); form Thêm xe có thẻ tóm tắt chủ xe / tài xế và nút “+ Thêm chủ xe / tài xế mới”.
+- Danh sách chủ rừng (cột trái) dùng bộ lọc thông minh: tình trạng hồ sơ, tình trạng hợp đồng, số lượng rừng.
+- Thanh tiêu đề: nút đổi nhanh Sáng / Tối và chọn nhanh bảng màu.
+- Bàn làm việc (menu mới): sơ đồ quy trình 6 bước (Đã xong / Đang làm / Chờ xử lý / Bị khóa), các trạm công việc và hàng đợi việc cần xử lý của lô đang chọn với nút “Xử lý ngay”; khối Hướng dẫn bắt đầu được gỡ khỏi Tổng quan.
+- Bảng hợp đồng Google Sheets: lọc theo khoảng tổng tấn và khoảng ngày ký (cùng chip trạng thái). Báo cáo Sổ theo dõi phiếu cân: lọc theo Đội xe và Nhà máy tiếp nhận (Word, Excel, in đều theo phần đã lọc). Các bộ chọn xe, chủ xe, tài xế có ô gõ lọc nhanh.
+- Thông tin chủ rừng: bốn ô tra cứu (số hợp đồng, CCCD, họ tên, mã chủ rừng; Enter để tra cứu), ô tích “Dùng số CCCD làm Mã chủ rừng”, danh xưng chọn bằng nút và tự gợi ý theo tên (Thị → Bà, Văn → Ông); chọn hợp đồng từ Google Sheets thì tự lưu thông tin và tạo Rừng 1; chủ rừng còn trống không để lại dòng “(chưa đặt tên)”.
+- Vận chuyển: nút “Tự động gán & thêm nhanh toàn bộ xe vào đội”; thẻ Đối soát sản lượng (dự kiến so với thực tế từ phiếu cân) ở mục Phiếu cân.
+- Xuất hồ sơ: bảng Tiền kiểm soát (mục chặn xuất, mục cần đối chiếu, nút “Đi đến sửa”) và nút “Xuất trọn bộ hồ sơ FSC” dùng gói Toàn bộ hồ sơ có sẵn.
+- Phiếu cân: thanh cảnh báo biển số chưa có trong đội xe có nút “Tự động gán & thêm nhanh toàn bộ xe vào đội” (xe có trong Danh mục được gán đủ thông tin, xe chưa có được tạo nhanh trong Danh mục xe); thẻ Đối soát sản lượng cảnh báo khi chênh lệch trên 15%. Thông tin chủ rừng: ô tích “Dùng số CCCD làm Mã chủ rừng” mặc định bật, bấm đúp dòng hợp đồng để điền. Tra cứu Google Sheets hiện huy hiệu “Ngoại tuyến - Dùng bản đệm gần nhất” khi mất mạng hoặc đồng bộ lỗi.
+- Xuất hồ sơ: Nhật ký truy xuất nguồn gốc của lô (dòng thời gian từ các nhật ký đã lưu: tạo lô, nạp, đổi số phiếu, đổi biển số, in, ký, chốt lô); tải phụ lục .docx kẹp BM-18 hoặc in. Thêm xe, nhân công, phiếu cân bằng tay, từ Danh mục hoặc từ phiếu cân cũng được ghi vào nhật ký lô khi lưu.
+- Thông tin rừng: thẻ Đối soát 3 nguồn diện tích đất rừng (Sổ đỏ, khảo sát / hợp đồng, đo GPS từ ToaDoRung), cảnh báo xung đột khi chênh trên 0,01 ha; hai ô diện tích mới chỉ tạo khóa dữ liệu khi có giá trị; cập nhật từ Google Sheets điền diện tích đo GPS. Form Thêm xe: nút “+ Thêm xe mới vào danh mục”.
+- Gói lô rừng di động: hộp lưu lô mặc định đuôi .fscpkg (cùng nội dung niêm phong như .json); hộp mở lô nhận cả .fscpkg và .json. Form Thêm xe: mục “Chỉ định người khác…” chọn người ký của cả đội xe (có ô gõ lọc và thêm nhanh người ký).
+- Tổng quan thành bảng điều hành: 4 chỉ số chính (sản lượng đã cân, diện tích quản lý, lực lượng tác nghiệp, tỷ lệ hồ sơ FSC hợp lệ), sản lượng 6 tháng, radar cảnh báo tuân thủ FSC, 5 lô khai thác tích cực nhất (30 ngày), 5 phiếu cân mới nhất và thao tác nhanh.
+- Menu dọc các mục lô canh trái thẳng hàng; “Đội / Hợp đồng” đổi thành “Hợp đồng nhân công”.
+
+## 3.5.1 — Kiểm soát phát hành và đối chiếu báo cáo
+
+- Chỉ công bố bộ cài sau khi cả ba job kiểm thử đạt và mã băm bộ cài khớp thông tin bản dựng.
+- Báo cáo chất lượng Google Sheets dùng ánh xạ biển số đã lưu.
+- Báo cáo mặc định từ đầu tháng đến hôm nay. Các kênh IPC yêu cầu nguồn gọi là frame chính của cửa sổ hồ sơ.
+
+## 3.5.0 — Ngành nghề và Chức vụ, Cài đặt chia tab, an toàn bản nháp, báo cáo chất lượng Google Sheet
+
+### Điểm mới
+
+- **Ngành nghề và Chức vụ:** hai danh mục mới (Danh mục → "Ngành nghề và chức vụ"), thêm / đổi tên / Ngừng sử dụng được. Người chọn nhiều chức vụ, chọn "Khác" thì phải chọn ngành; doanh nghiệp được chọn cả hai ngành. Danh sách Bên nhận khoán, nhân công, bên vận chuyển, tài xế lọc theo ngành khi đã khai (dữ liệu cũ chưa khai vẫn hiện như trước).
+- **Chức vụ / Vị trí thống nhất; Danh mục Vị trí chi tiết** (nhiệm vụ, ghi chú); màn **Định mức chia 4 tab**.
+- **Cài đặt dùng tab ngang** cùng kiểu Danh mục: Dữ liệu · Sao lưu và khôi phục · Google Sheets · Hiển thị · Hướng dẫn · Cần đối chiếu; **Sao lưu và khôi phục chia ba tab con** (Thao tác · Thư mục và lịch · Các bản sao lưu).
+- **Hộp thoại trong ứng dụng thay `confirm()`** khi lưu lô có người / xe mới: liệt kê từng dòng kèm ô tích, "Thêm vào danh mục" hoặc "Chỉ lưu trong lô".
+- **Lưới an toàn bản nháp:** lần lưu đầu tiên sau khi áp dữ liệu từ Google Sheets tự sao lưu file trước ("Trước khi lưu dữ liệu từ Google Sheets", giữ 10 bản; sao lưu lỗi thì không lưu); thanh "Chưa lưu" nêu "Gồm N lô, X chủ rừng mới, Y ánh xạ biển số"; hộp khi đóng còn nháp liệt kê cụ thể.
+- **Báo cáo chất lượng Google Sheet** (Cài đặt → Google Sheets): bảng số đếm, chỉ đọc, không chứa thông tin cá nhân (CCCD, tên, địa chỉ, mã hợp đồng, số phiếu, biển số, mã rừng); có test bảo mật bắt buộc.
+
+### Sửa lỗi
+
+- **Bản nháp:** tách lõi thuần `src/nhap.js` kèm test mô hình ngẫu nhiên; sửa 4 lỗi mà test mô hình tìm ra ở ánh xạ biển số trong nháp, khôi phục bản nháp và hoàn tác về bản đã lưu (có test đỏ trước khi sửa).
+- **Thông báo:** "Đã lưu dữ liệu vào lô…" vẫn hiện cùng kết quả chọn thêm danh mục.
+- **Bảo toàn bản in:** 206/206 tài liệu biểu mẫu `.docx` giống từng byte so với v3.3.0. Không đổi cấu trúc cơ sở dữ liệu (không migration); các trường mới đều tùy chọn và chỉ ghi khi có dữ liệu.
+
+## 3.4.0 — Tài xế theo xe, làm rõ Danh mục đối tượng, sửa khối lượng phiếu và giao diện
+
+### Điểm mới
+
+- **Tài xế thường chạy theo xe:** Danh mục xe có ô chọn tài xế (người có vai trò Tài xế trong Danh mục đối tượng) và cột Tài xế; thêm xe vào lô thì tên, CCCD, giấy phép lái xe của tài xế được điền sẵn (không ghi đè dữ liệu đã có); gói danh mục chuyển giữa các máy mang theo tài xế. Xe chưa gắn tài xế giữ dữ liệu y hệt cũ.
+- **Danh mục đối tượng rõ hơn (chỉ đổi chữ):** thống nhất tên "Danh mục đối tượng"; "Đối tác (người)" thành "Thông tin cá nhân"; ô lọc "Có quyền ký hợp đồng"; có giải thích thông tin được chụp vào lô khi chọn.
+
+### Sửa lỗi
+
+- **Khối lượng phiếu cân:** chuỗi nhiều dấu phẩy như `1,250,000` không còn bị đọc thành 1,25 tấn (nay tính 0 kg, không đoán); `1.250,5` đọc đúng 1250,5 tấn; `1,250` vẫn là 1,25 tấn như cũ.
+- **Mã dòng đã xóa:** ID dòng nhân công/xe đã xóa được lưu bền (`idDaCap`), phiên sau không cấp lại; lô chưa xóa dòng nào giữ dữ liệu y hệt cũ.
+- **Sao lưu:** dọn thêm tệp tạm mồ côi dạng `.tmp-<pid>-<thời gian>` trong thư mục sao lưu.
+- **Giao diện:** biến `--sel` cho hàng được chọn (sáng/tối); chữ phụ đạt tương phản AA; bảng nhân công và xe gọn như bảng phiếu cân (dòng thấp hơn gần một nửa ở khung nhỏ); 5 hộp thoại có nhãn truy cập (`aria-labelledby`).
+- **Bảo toàn bản in:** 206/206 tài liệu biểu mẫu `.docx` giống từng byte so với v3.3.0.
+
 ## 3.3.0 — Dữ liệu Google Sheets theo hợp đồng, phân bổ phiếu cân vào rừng, đổi số phiếu, bản nháp đầy đủ
 
 ### Điểm mới

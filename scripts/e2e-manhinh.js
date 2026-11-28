@@ -22,7 +22,7 @@ const SEED = {v: 2, congTy: {c1: {id: 'c1', ten: 'CÔNG TY TNHH CHẾ BIẾN G�
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(db => window.hak.save(db), SEED); await w.reload(); await w.waitForSelector('#side');
   const size = async (W, H) => { await app.evaluate(({BrowserWindow}, [a, b]) => BrowserWindow.getAllWindows()[0].setContentSize(a, b), [W, H]); await w.waitForTimeout(250); };
-  const setTheme = async t => { const cur = await w.evaluate(() => document.documentElement.dataset.theme || 'light'); if (cur !== t) { await w.click('#navSet'); await w.click('#setTab_setgd'); await w.click('#themeBtn2'); await w.waitForTimeout(350); } };   // 3.0: chế độ sáng / tối ở Cài đặt → Giao diện
+  const setTheme = async t => { const cur = await w.evaluate(() => document.documentElement.dataset.theme || 'light'); if (cur !== t) { await w.click('#navSet'); await w.click('#setTab_setfmt'); await w.click('#setTab_setgd'); await w.click('#themeBtn2'); await w.waitForTimeout(350); } };   // 3.0: chế độ sáng / tối ở Cài đặt → Giao diện
   const over = () => w.evaluate(() => ({page: document.documentElement.scrollWidth - innerWidth, boxes: [...document.querySelectorAll('.card, .box, #lkBox.on .wrap, .modal.on, .dlg')].filter(e => e.scrollWidth - e.clientWidth > 1 && getComputedStyle(e).overflowX === 'visible').length}));
   const shot = (name, W, th) => w.screenshot({path: path.join(shots, `${name}_${th}_${W}.png`)});
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]');

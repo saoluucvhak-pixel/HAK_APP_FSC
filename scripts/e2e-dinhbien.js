@@ -23,24 +23,27 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
   const db = () => w.evaluate(() => window.hak.loadSync().db);
   const openNc = async fid => { await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=' + fid + ']'); await w.click('[data-ftab=nc]'); await w.waitForTimeout(300); };
   // 1. màn Định mức: mặc định 8 người, nhiệm vụ rõ từng vị trí
-  await w.click('#navNorm'); await w.waitForSelector('#dbForm'); let t = await w.innerText('#dbForm');
-  ok('màn Định mức có mục “Định mức nhân công: 1 đội = 8 người”, nói rõ đang là mặc định chưa lưu', /Đang hiển thị định mức mặc định, bấm Lưu/.test(t) && /Định mức nhân công: 1 đội = 8 người/.test(await w.innerText('#main')));
-  const vals = await w.$$eval('#dbForm tr[data-db]', trs => trs.map(tr => [tr.querySelector('[name=b_cd]').value, tr.querySelector('[name=b_so]').value, tr.querySelector('[name=b_km]').value, tr.querySelector('[name=b_nv]').value]));
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm'); let t = await w.innerText('#dbForm');
+  ok('màn Định mức có mục “Định mức nhân công: 1 đội = 8 người”, nói rõ đang là mặc định chưa lưu', /Đang hiển thị định mức mặc định, bấm “Dùng định mức này”/.test(t) && /Định mức nhân công: 1 đội = 8 người/.test(await w.innerText('#main')));
+  const vals = await w.$$eval('#dbBang tbody tr', trs => trs.map(tr => { const c = tr.cells, km = c[2].innerText.trim(); return [c[0].innerText.trim(), (c[1].innerText.match(/\d+/) || ['0'])[0], km === '—' ? '' : km, c[3].getAttribute('title') || '']; }));   // 3.7.1: bảng sạch, nhiệm vụ đầy đủ nằm ở thuộc tính title
   const vt = n => vals.find(v => v[0] === n) || [];   // cấu trúc 2.0 giai đoạn 2: danh mục vị trí = định mức nhân công, có cả vị trí đang dùng (0 người)
   ok('4 vị trí định biên mặc định: Tổ trưởng 1 (kiêm bốc xếp), Công nhân cưa 2, bóc vỏ 3, bốc xếp 2, mỗi vị trí có nhiệm vụ; vị trí đang dùng “Công nhân khai thác” có trong danh mục với 0 người', vals.filter(v => v[1] !== '0' && v[0]).map(v => v[0] + ':' + v[1]).join('|') === 'Tổ trưởng:1|Công nhân cưa:2|Công nhân bóc vỏ:3|Công nhân bốc xếp:2' && vt('Tổ trưởng')[2] === 'Công nhân bốc xếp' && /Hạ toàn bộ cây/.test(vt('Công nhân cưa')[3]) && /Bóc vỏ và xếp gỗ/.test(vt('Công nhân bóc vỏ')[3]) && /15–20 t/.test(vt('Công nhân bốc xếp')[3]) && vt('Công nhân khai thác')[1] === '0', JSON.stringify(vals));
-  ok('ô Tổ trưởng cố định (chỉ đọc): không đổi được tên và số người', (await w.getAttribute('#dbForm tr[data-db="0"] [name=b_so]', 'readonly')) !== null);
+  await w.click('#dbBang tr[data-db="0"] [data-act=normMoSua]');
+  ok('hộp thoại Sửa Tổ trưởng cố định (chỉ đọc): không đổi được tên và số người; hàng Tổ trưởng không có nút Xóa', (await w.getAttribute('#dbMoForm [name=b_so]', 'readonly')) !== null && (await w.getAttribute('#dbMoForm [name=b_cd]', 'readonly')) !== null && !(await w.$('#dbBang tr[data-db="0"] [data-act=normXoa]')));
+  await w.click('#normMoHuy');
   // 2. kiểm tra đầu vào
-  const rowOf = async n => { for (const tr of await w.$$('#dbForm tr[data-db]')) if ((await (await tr.$('[name=b_cd]')).inputValue()) === n) return tr; return null; };
-  await (await (await rowOf('Công nhân cưa')).$('[name=b_so]')).fill('-1'); await w.click('#dbForm button[type=submit]'); await w.waitForTimeout(300);
+  const suaHang = async n => { if (await w.$('#dmModal')) await w.click('#normMoHuy'); const i = await w.$$eval('#dbBang tbody tr', (trs, n) => trs.findIndex(tr => tr.cells[0].innerText.trim() === n), n); await w.click('#dbBang tr[data-db="' + i + '"] [data-act=normMoSua]'); };
+  await suaHang('Công nhân cưa'); await w.fill('#dbMoForm [name=b_so]', '-1'); await w.click('#normMoLuu'); await w.waitForTimeout(300);
   ok('số người âm: bị từ chối, nêu dòng và lý do (0 đến 50), không ghi', /Dòng \d+: số người của “Công nhân cưa” phải là số nguyên từ 0 đến 50/.test(await w.innerText('#main')) && !(await db()).dinhBien, (await w.innerText('#main')).slice(0, 300));
-  await (await (await rowOf('Công nhân cưa')).$('[name=b_so]')).fill('2'); await (await (await rowOf('Công nhân bóc vỏ')).$('[name=b_nv]')).fill(''); await w.click('#dbForm button[type=submit]'); await w.waitForTimeout(300);
+  await suaHang('Công nhân bóc vỏ'); await w.fill('#dbMoForm [name=b_nv]', ''); await w.click('#normMoLuu'); await w.waitForTimeout(300);
   ok('vị trí có người mà thiếu nhiệm vụ: bị từ chối, nêu tên vị trí', /chưa ghi nhiệm vụ của “Công nhân bóc vỏ”/.test(await w.innerText('#main')) && !(await db()).dinhBien);
+  await w.keyboard.press('Escape'); await w.waitForTimeout(150);   // lỗi nhập thì hộp thoại vẫn mở (giữ chữ đang gõ): đóng trước khi đi tiếp
   // 3. lưu: vị trí mới tự vào danh sách chức danh
-  await w.click('#navNorm'); await w.waitForSelector('#dbForm'); await w.click('#dbForm button[type=submit]'); await w.waitForTimeout(400); let d = await db();
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm'); await w.click('#dbLuuMd'); await w.waitForTimeout(400); let d = await db();
   ok('lưu định mức mặc định: danh mục 5 vị trí vào SQLite (4 vị trí định biên + Công nhân khai thác 0 người), không ghi riêng danh sách chức danh; có nhắc khai BHLĐ và đơn giá cho vị trí mới', d.dinhBien.length === 5 && d.dinhBien.filter(r => r.soNguoi > 0).length === 4 && !d.chucDanhThem && /Khai định mức BHLĐ và đơn giá/.test(await w.innerText('body')), JSON.stringify([d.dinhBien && d.dinhBien.map(r => r.chucDanh + ':' + r.soNguoi), d.chucDanhThem]));
   // vị trí mới chưa có định mức BHLĐ: bổ sung để xuất được hồ sơ (người dùng khai ở màn Định mức BHLĐ)
   { const d1 = await db(), ct = {qa: '1 bộ'}; d1.dinhMuc = {...(d1.dinhMuc || {}), 'Tổ trưởng': ct, 'Công nhân khai thác': ct, 'Công nhân cưa': ct, 'Công nhân bóc vỏ': ct, 'Công nhân bốc xếp': ct}; await w.evaluate(x => window.hak.save(x), d1); await w.reload(); await w.waitForSelector('#side'); }
-  await w.click('#navNorm'); await w.waitForSelector('#dbForm'); ok('mở lại: không còn dòng “đang hiển thị mặc định”', !/Đang hiển thị định mức mặc định/.test(await w.innerText('#dbForm')));
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm'); ok('mở lại: không còn dòng “đang hiển thị mặc định”', !/Đang hiển thị định mức mặc định/.test(await w.innerText('#dbForm')));
   // 4. tab Nhân công: so sánh với định mức
   await openNc('fa'); ok('rừng A đủ 8 người đúng định mức: báo “Đúng định mức nhân công: 8 người”, không cảnh báo', /Đúng định mức nhân công: 8 người/.test(await w.innerText('#dbLech')));
   await w.click('#dbPanel summary'); const panel = await w.innerText('#dbPanel');
@@ -59,7 +62,7 @@ const plain = xml => (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.r
   const xml = await (await JSZip.loadAsync(fs.readFileSync(path.join(out, f)))).file('word/document.xml').async('string'), txt = plain(xml);
   ok('BM-06 Danh sách đội khai thác có thêm “PHÂN CÔNG NHIỆM VỤ THEO VỊ TRÍ”: định biên, thực tế, nhiệm vụ từng vị trí', /PHÂN CÔNG NHIỆM VỤ THEO VỊ TRÍ/.test(txt) && /Tổ trưởng \(kiêm công nhân bốc xếp\)/.test(txt) && /Hạ toàn bộ cây ở khu vực đất bằng/.test(txt) && /Bóc vỏ và xếp gỗ gọn/.test(txt) && /15–20 tấn/.test(txt), txt.slice(-600));
   // 6. dùng mặc định: xóa định mức riêng
-  await w.click('#navNorm'); await w.waitForSelector('#dbForm'); await w.click('[data-act=dbReset]'); await w.waitForTimeout(400);
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbForm'); await w.click('[data-act=dbReset]'); await w.waitForTimeout(400);
   ok('“Dùng định mức mặc định”: xóa bản đã lưu, màn hình lại ghi “mặc định”', !(await db()).dinhBien && /Đang hiển thị định mức mặc định/.test(await w.innerText('#dbForm')));
   ok('không có lỗi JavaScript', errs.length === 0, errs.join('|'));
   await app.close(); console.log(fail ? 'CÓ ' + fail + ' LỖI' : 'TẤT CẢ ĐẠT'); process.exit(fail ? 1 : 0);

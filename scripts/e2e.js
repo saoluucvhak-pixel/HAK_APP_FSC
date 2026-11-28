@@ -5,9 +5,12 @@ const {saveStage: stSave} = require('./lib-stage');
 const path = require('path'), fs = require('fs'), os = require('os');
 const root = path.join(__dirname, '..');
 const FIX = process.env.FIXTURES || path.join(root, 'tests', 'fixtures');
-const dbFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-e2e-')), 'e2e.sqlite');
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hakqn-e2e-'));
+const dbFile = path.join(tmpDir, 'e2e.sqlite');
+const userDir = path.join(tmpDir, 'userData');
+fs.mkdirSync(userDir, {recursive: true});
 let fail = 0; const ok = (name, cond) => { console.log((cond ? 'ĐẠT  ' : 'LỖI  ') + name); if (!cond) fail++; };
-const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_TEST_LEGACY_IMPORT: '1', HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+const launch = () => electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--user-data-dir=' + userDir], env: {...process.env, HAKQN_TEST_LEGACY_IMPORT: '1', HAKQN_CLOSE: 'discard', HAKQN_DB: dbFile, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
 
 (async () => {
   let app = await launch(), win = require('./_hd30').boc(await app.firstWindow()); const errs = []; win.on('pageerror', e => errs.push(e.message)); win.on('dialog', d => d.accept());
@@ -17,8 +20,9 @@ const launch = () => electron.launch({executablePath: require('electron'), args:
   // Tạo chủ rừng + 2 rừng
   await win.click('text=+ Chủ rừng mới');
   const owner = {ma: 'CR-001', ten: 'NGUYỄN PHƯỚC TÁM', soHopDong: 'HD-001', ngayKyHopDong: '01/10/2026', cccd: '049067005459', ngayCap: '15/08/2021', noiCap: 'CA', diaChi: 'Đà Nẵng'};
+  if (await win.isChecked('#maTheoCccd').catch(() => false)) await win.uncheck('#maTheoCccd');
   for (const [k, v] of Object.entries(owner)) await win.fill(`#infoForm [name="${k}"]`, v);
-  await win.selectOption('#infoForm [name="danhXung"]', 'Ông'); await win.click('#infoForm button[type=submit]');
+  await win.check('#infoForm [name="danhXung"][value="Ông"]'); await win.click('#infoForm button[type=submit]');
   for (const dia of ['Thôn Hòa Phú', 'Thôn Phước Xuân']) {
     await win.click('[data-tab=rung]'); await win.click('text=+ Rừng mới');
     await win.fill('#forestForm [name=diaDiem]', dia); await win.$eval('#forestForm', f => f.requestSubmit());

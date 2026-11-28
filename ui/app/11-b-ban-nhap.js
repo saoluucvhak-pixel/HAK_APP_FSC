@@ -21,15 +21,58 @@ function stBlockText() {
   return 'Lô này còn thay đổi chưa lưu ở ' + [...(lo ? ['thông tin lô (đội, đội xe, số văn bản, chấm công…)'] : []), ...ks.map(k => ST_LABEL[k])].join(', ') + '. Bấm “Lưu dữ liệu vào lô” (hoặc “Bỏ thay đổi”) rồi mới tạo, xuất, in hồ sơ.';
 }
 function stBlockNote() { const t = stBlockText(); if (t) { pushNote(t, 'err'); const st = stCur(), k = st && HAKStage.dirty(st) ? HAKStage.dirtyKinds(st)[0] : null; if (k) NAV.ftab = ST_TAB[k]; render(); } return !!t; }
+/* PR D bước 2: mô tả cụ thể phần chưa lưu (lô, chủ rừng mới, ánh xạ biển số, phiếu mới) — dùng cho thanh “Chưa lưu” và hộp thoại khi đóng */
+function nhapTomTatUI() {
+  const lo = stDirtyList().map(k => { const [oid, fid] = k.split('|'), o = db.rs && db.rs[oid], f = o && o.forests && o.forests[fid]; if (!f) return null;
+    const st = stages[k], bs = new Set(((st && st.base && st.base.pc) || []).map(r => r._id)), pm = st && st.cur && st.cur.pc ? st.cur.pc.filter(r => !bs.has(r._id)).length : 0;
+    return {ten: (f.info && f.info.maRung) || f.id, moi: loMoi.has(fid), phieuMoi: pm}; }).filter(Boolean);
+  const chu = [...chuNhap].map(([oid, v]) => ({ten: ((db.rs && db.rs[oid] && db.rs[oid].info) || {}).ten || '', moi: !!(v && v.moi)}));
+  return HAKNhap.tomTat({lo, chu, alias: aliasNhap.size});
+}
+window.__stTomTat = () => { try { return nhapTomTatUI(); } catch (e) { return null; } };
+let loSaveIssue = null;
+function currentLoSaveIssue() {
+  return loSaveIssue?.key === stKey() && loSaveIssue.epoch === dbEpoch ? loSaveIssue : null;
+}
+function loSaveHelpHtml() {
+  const issue = currentLoSaveIssue();
+  if (!issue) return '';
+  return esc(issue.text) + (issue.bulk
+    ? ' <button type="button" class="btn sm" data-act="cancelBulkDel">Hủy lệnh xóa cũ &amp; Lưu lô ngay</button> <button type="button" class="btn sm ghost" data-act="openSetDon">Dọn dẹp hồ sơ</button> <button type="button" class="btn sm ghost" data-act="saveHelpBulk">Xem hồ sơ bị chặn</button>'
+    : issue.backup ? ' <button type="button" class="btn sm" data-act="saveHelpBackupDir">Chọn thư mục sao lưu SQLite…</button> <button type="button" class="btn sm ghost" data-act="stRetrySave">Thử lưu lại</button>'
+    : issue.field ? ' <button type="button" class="btn sm" data-act="saveHelpField">Mở ' + esc(issue.field.label) + '</button>' : ' <button type="button" class="btn sm" data-act="stRetrySave">Thử lưu lại</button>');
+}
+function openLoSaveField() {
+  const field = currentLoSaveIssue()?.field;
+  if (!field) return;
+  NAV.ftab = field.tab;
+  if (field.muc === 'thanhvien') NAV.ncTatCa = true;
+  if (field.muc === 'xe') xeTatCa = true;
+  if (field.muc === 'phieu') pcTatCa = true;
+  mucLoDaMo.set(mucLoKey(field.tab), field.muc);
+  render();
+  // Màn hình có thể tự chọn hợp đồng đầu tiên khi mở lần đầu.
+  if (mucLoDangMo(field.tab) !== field.muc) {
+    mucLoDaMo.set(mucLoKey(field.tab), field.muc);
+    render();
+  }
+  const target = document.querySelector(field.pending ? '#stPend button' : '.mucNav [aria-current="page"]');
+  target?.focus();
+}
 /* thanh “Chưa lưu” của cả lô (mọi tab của lô) */
 function loBar() { const t = stBlockText(); return t ? '<div class="msg warn" id="loDirtyBar"><b>Chưa lưu</b> — ' + esc(t.replace(/ Bấm .*$/,
-'')) + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : ''; }
+'')) + (() => { const s = nhapTomTatUI(); return s.dong ? ' <span class="mut" id="loTomTat">(' + esc(s.dong.replace(/^Chưa lưu: /, 'Gồm ')) + ')</span>' : ''; })() + ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span>' +
+  '<div id="loSaveIssue" class="msg err" role="alert" tabindex="-1"' + (currentLoSaveIssue() ? '' : ' hidden') + '>' + loSaveHelpHtml() + '</div></div>' : ''; }
 /* lưu phần thông tin lô (khi không có bảng nháp) */
 async function luuLoTT(opt) {
   const f = curForest(); if (!f) return {ok: false};
+  const backupIssue = await saoLuuTruocKhiLuuLo(f.id);
+  if (backupIssue) return backupIssue;
+  if (curForest() !== f) return {ok: false, error: 'Lô đã đổi trong lúc chuẩn bị lưu. Mở lại lô rồi thử lại.'};
   const sNhap = nhapChup(), o0 = curOwner(); if (o0) chuChot(o0.id);
   const had = loDirty.delete(f.id), r = await persistNow();
-  if (!r || !r.ok) { if (had) loDirty.add(f.id); nhapKhoiPhuc(sNhap); pushNote('Không lưu được: ' + ((r && r.error) || 'không rõ'), 'err'); render(); return r || {ok: false}; }
+  if (!r || !r.ok) { if (had) loDirty.add(f.id); nhapKhoiPhuc(sNhap); render(); return r || {ok: false}; }
+  loCanSaoLuuSheets.delete(f.id);
   if (had && !(opt && opt.tuKhung)) pushNote('Đã lưu dữ liệu vào lô ' + ((f.info || {}).maRung || '') + '.', 'ok');
   nhapTamGhi(); render(); return {ok: true};
 }
@@ -45,13 +88,14 @@ function stBar(kind, rec) {
   const add = kind === 'pc' ? '' :
     '<button class="btn sm" data-act="dmChonNhieu" data-kind="' + kind + '">+ Chọn từ Danh mục' + (kind === 'dx' ? ' xe' : '') + '</button>' +
     '<button class="btn ghost sm" data-act="stAdd" data-kind="' + kind + '">+ Thêm ' + ST_LABEL[kind] + ' mới</button>' +
-    (window.hak?.testLegacyImport ? '' : '<button class="btn ghost sm" data-act="' + (kind === 'nc' ? 'openSetDt' : 'openSetXe') + '" data-quaylai="' + kind + '">Mở ' + (kind === 'nc' ? 'Danh mục đối tượng' : 'Danh mục xe') + ' (Excel)</button>');
+    (kind === 'dx' ? '<button class="btn sm" data-act="dmThemTatCaXe" id="dmThemTatCaXe" title="Thêm một lần mọi xe trong Danh mục xe chưa có trong đội xe đang mở, kèm chủ xe và tài xế thường chạy">⚡ Thêm toàn bộ xe trong Danh mục vào đội</button>' : '') +
+    (kind === 'dx' ? '<span class="mut" id="stHuongDanXe">Thêm xe ở tab “Xe và tài xế”: hệ thống tự đưa Chủ xe / Tài xế vào danh sách chọn người ký.</span>' : '');
   const sum = c ? ('Thêm mới <b>' + c.new + '</b> · Sửa <b>' + c.changed + '</b> · Xóa <b>' + c.removed + '</b> · Giữ nguyên <b>' + c.same + '</b>') : '';
   const bar = dk.length ? '<div class="msg warn stDirty" id="stDirty"><b>Chưa lưu</b> ' + (dk.length > 1 || dk[0] !== kind ? '(còn thay đổi ở ' + dk.map(k => ST_LABEL[k]).join(', ') + ') ' : '') + '— ' + (c && (c.new + c.changed + c.removed) ? sum + '. ' : '') + 'Hồ sơ chỉ dùng dữ liệu đã lưu.' +
     ' <span class="row" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn sm" data-act="stSave">Lưu dữ liệu vào lô</button><button class="btn ghost sm" data-act="stDiscard">Bỏ thay đổi</button></span></div>' : '';
   const miss = st && (kind === 'pc' || kind === 'dx') ? [...new Set(st.cur.pc.map(p => p.bienSo).filter(b => b && !st.cur.dx.some(x => HAKStage.bienKey(x.bienSo) === HAKStage.bienKey(b))))] : [];
-  const missBar = miss.length ? '<div class="msg warn" id="stMissXe">Biển số có trong phiếu cân nhưng <b>chưa có trong danh sách xe của lô</b>: ' + miss.slice(0, 12).map(b => '<button class="btn ghost sm" data-act="stAddXe" data-bien="' + esc(b) + '">+ Thêm xe ' + esc(b) + '</button>').join(' ') +
-  (miss.length > 12 ? ' … và ' + (miss.length - 12) + ' biển khác' : '') + '</div>' : '';
+  const missBar = miss.length ? '<div class="msg warn" id="stMissXe">Biển số có trong phiếu cân nhưng <b>chưa có trong danh sách xe của lô</b>: ' + miss.slice(0, 12).map(b => '<b>' + esc(b) + '</b>').join(', ') +
+  (miss.length > 12 ? ' … và ' + (miss.length - 12) + ' biển khác' : '') + '. <button class="btn sm" data-act="stThemXeTuPhieu" id="stThemXeTuPhieu">⚡ Tự động gán &amp; thêm nhanh toàn bộ xe vào đội</button> <span class="mut">Xe đã có trong Danh mục xe được gán đủ thông tin; xe chưa có được tạo nhanh trong Danh mục để hoàn thiện sau.</span></div>' : '';
   const lech = kind === 'nc' || kind === 'dx' ? dmThanhLech(kind) : '', thanh = add || info ? '<div class="row stToolbar">' + add + info + '</div>' : '';
   return (thanh || lech || missBar || bar ? '<div class="card stBarCard">' + thanh + lech + missBar + bar + '</div>' : '') + stPendBox(kind) + stReportBox(kind) + nhatKyNapBox(kind);
 }
@@ -91,15 +135,41 @@ function stPendAct(el) {
   const r = HAKStage.resolve(st, pid, d, opt); if (!r.ok) { pushNote(r.error, 'err'); return render(); }
   stErrList = null; pushNote({keep: 'Giữ nguyên bản hiện có; dòng nguồn không được áp dụng.', drop: 'Đã bỏ dòng nguồn.', update: 'Đã cập nhật phiếu theo dòng nguồn (cùng chuyến).', other: 'Đã thêm dòng nguồn thành chuyến riêng với số phiếu mới.'}[d], 'ok'); render();
 }
+function chuanHoaTenVN(s) {
+  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase().split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+}
 const ST_STATUS = {new: ['ok', 'Thêm mới'], changed: ['warn', 'Sửa'], same: ['', ''], removed: ['err', 'Sẽ xóa']};
 /* ô trạng thái + thao tác của một dòng; diffMap: id → {status, old} */
-function stCells(kind, r, i, dm) {
+function stCells(kind, r, i, dm, c) {
   const d = dm && r._id ? dm.get(r._id) : null, s = d ? d.status : 'same', L = ST_STATUS[s];
   let tip = ''; if (s === 'changed' && d.old) tip = Object.keys(r).filter(k => k[0] !== '_' && JSON.stringify(r[k]) !== JSON.stringify(d.old[k])).map(k => k + ': ' + (d.old[k] == null || d.old[k] === '' ? '(trống)' : d.old[k]) + ' → ' + (r[k] == null || r[k] === '' ? '(trống)' : r[k])).join('\n');
   const stat = (L[1] ? '<span class="pill ' + L[0] + '" title="' + esc(tip) + '">' + L[1] + '</span>' : '<span class="mut">Đã lưu</span>') + (r._nguon ? '<br><small class="mut">' + esc(r._nguon) + '</small>' : '');
   const del = s === 'new' ? '<button class="btn ghost sm" data-act="stDel" data-kind="' + kind + '" data-i="' + i + '" title="Bỏ dòng này khỏi lượt nhập (chưa lưu nên không ảnh hưởng dữ liệu đã lưu)">Bỏ dòng</button>' : '<button class="btn ghost sm" data-act="stDel" data-kind="' + kind +
   '" data-i="' + i + '" title="Xóa bản ghi đã lưu khỏi lô (có hiệu lực khi bấm Lưu)">Xóa đã lưu</button>';
-  return {stat: '<td>' + stat + '</td>', act: '<td class="stAct"><button class="btn ghost sm" data-act="stEdit" data-kind="' + kind + '" data-i="' + i + '">Sửa</button> ' + (kind === 'pc' && s !== 'new' ? '<button class="btn ghost sm" data-act="pcDoiSo" data-i="' + i + '" title="Đổi số phiếu của chuyến đã lưu: bắt lý do, ghi nhật ký, giữ nguyên khối lượng">Đổi số</button> ' : '') + del + '</td>'};
+  let qf = '';
+  if (kind === 'nc') {
+    const cVal = normCccd(r.cccd || '');
+    if (cVal.length === 12 && !trim(r.noiCap)) {
+      qf += '<button class="btn ghost sm" type="button" data-act="qfNoiCap" data-i="' + i + '" style="color:var(--warnFg,#9a6700);border-color:var(--warnFg,#9a6700);font-weight:600" title="Tự động điền nơi cấp: Cục Cảnh sát QLHC về TTXH">⚡ Nơi cấp</button> ';
+    }
+    const ten = trim(r.ten || '');
+    if (ten && chuanHoaTenVN(ten) !== ten) {
+      qf += '<button class="btn ghost sm" type="button" data-act="qfHoaTen" data-i="' + i + '" style="color:var(--brand);border-color:var(--brand);font-weight:600" title="Tự động viết hoa chuẩn tên người: ' + esc(chuanHoaTenVN(ten)) + '">⚡ Viết hoa tên</button> ';
+    }
+  } else if (kind === 'dx') {
+    const c1 = normCccd(r.cccd || ''), c2 = normCccd(r.cccdTx || '');
+    if ((c1.length === 12 && !trim(r.noiCap)) || (c2.length === 12 && !trim(r.noiCapTx))) {
+      qf += '<button class="btn ghost sm" type="button" data-act="qfNoiCapXe" data-i="' + i + '" style="color:var(--warnFg,#9a6700);border-color:var(--warnFg,#9a6700);font-weight:600" title="Tự động điền nơi cấp CCCD 12 số: Cục Cảnh sát QLHC về TTXH">⚡ Nơi cấp</button> ';
+    }
+  } else if (kind === 'pc' && c) {
+    const rowMsgs = (c.warns || []).concat(c.errs || []).filter(m => m.startsWith('Dòng ' + r._row + ':') || (r.soPhieu && (m.includes('phiếu ' + r.soPhieu) || m.includes('Phiếu ' + r.soPhieu))));
+    const bt = rowMsgs.find(m => m.includes('quay đầu') || m.includes('tải trọng') || m.includes('bì') || m.includes('cao bất thường') || m.includes('nghi vấn'));
+    if (bt) {
+      const cleanMsg = bt.replace(/^Dòng \d+: /, '');
+      qf += '<span class="pill warn" style="font-size:11px;font-weight:600;margin-right:4px;cursor:help" title="' + esc(cleanMsg) + '">⚠️ Bất thường</span> ';
+    }
+  }
+  return {stat: '<td>' + stat + '</td>', act: '<td class="stAct">' + qf + '<button class="btn ghost sm" data-act="stEdit" data-kind="' + kind + '" data-i="' + i + '">Sửa</button> ' + (kind === 'pc' && s !== 'new' ? '<button class="btn ghost sm" data-act="pcDoiSo" data-i="' + i + '" title="Đổi số phiếu của chuyến đã lưu: bắt lý do, ghi nhật ký, giữ nguyên khối lượng">Đổi số</button> ' : '') + del + '</td>'};
 }
 /* bảng có dữ liệu nhưng không dòng nào hiện (bộ lọc, hoặc chỉ xem đội / hợp đồng đang mở): nói rõ, KHÔNG mời nhập lại (tránh nhập trùng) */
 const ST_SF = {nc: 'lo_nhan_cong', dx: 'lo_xe', pc: 'lo_phieu_can'};
@@ -111,7 +181,7 @@ function stTrongDoLoc(kind, n) {
 /* bảng dữ liệu có cột trạng thái, thao tác; dòng sẽ xóa hiện gạch ngang kèm “Hoàn tác” */
 function stTable(kind, rec, heads, cells, c, align, only) {
   const st = stCur(), dm = st ? new Map(HAKStage.diff(st, kind).map(d => [d.row._id, d])) : null;
-  const rows = rec[kind].map((r, i) => only && !only(r) ? '' : '<tr class="' + (c.state[r._row] === 'err' ? 'rerr' : c.state[r._row] === 'warn' ? 'rwarn' : '') + '">' + (x => '<td>' + r._row + '</td>' + x.act + cells(r) + x.stat)(stCells(kind, r, i, dm)) + '</tr>');
+  const rows = rec[kind].map((r, i) => only && !only(r) ? '' : '<tr class="' + (c.state[r._row] === 'err' ? 'rerr' : c.state[r._row] === 'warn' ? 'rwarn' : '') + '">' + (x => '<td>' + r._row + '</td>' + x.act + cells(r) + x.stat)(stCells(kind, r, i, dm, c)) + '</tr>');
   const gone = st ? HAKStage.diff(st, kind).filter(d => d.status === 'removed') : [];
   const gtr = gone.map(d => '<tr class="stGone"><td>' + d.row._row + '</td><td class="stAct"><button class="btn ghost sm" data-act="stRestore" data-kind="' + kind + '" data-id="' + esc(d.row._id) + '">Hoàn tác</button></td>' + cells(d.row) + '<td><span class="pill err">Sẽ xóa</span></td></tr>');
   return '<div class="wrap"><table id="stTbl_' + kind + '"><thead><tr><th>Dòng</th><th>Thao tác</th>' + heads.map(h => '<th>' + h + '</th>').join('') + '<th>Trạng thái</th></tr></thead><tbody>' +
@@ -119,3 +189,20 @@ function stTable(kind, rec, heads, cells, c, align, only) {
       'Chưa có dữ liệu. Bấm <b>+ Chọn từ Danh mục</b> hoặc <b>+ Thêm ' + ST_LABEL[kind] + ' mới</b> ở thanh công cụ phía trên.') + '</td></tr>') +
     '</tbody></table></div>';
 }
+/* UI-04: nhãn đọc cho các hộp thoại do JS đổ nội dung (stBox, dlgBox, impBox, rpBox): tiêu đề đầu tiên trong thân hộp (h2/h3) nhận id cố định
+   (stBoxTitle…; giữ id sẵn có nếu có) và aria-labelledby của hộp trỏ tới đó mỗi lần nội dung đổi. Không có tiêu đề thì dùng aria-label dự phòng. */
+(function hopThoaiNhanDe() {
+  if (typeof MutationObserver === 'undefined') return;
+  const ds = [['stBox', 'stBody', 'stBoxTitle', 'Hộp thoại'], ['dlgBox', 'dlgBody', 'dlgBoxTitle', 'Hộp thoại'], ['impBox', 'impBody', 'impBoxTitle', 'Nhập dữ liệu'], ['rpBox', 'rpBody', 'rpBoxTitle', 'Báo cáo']];
+  for (const [boxId, bodyId, titleId, du] of ds) {
+    const box = document.getElementById(boxId), body = document.getElementById(bodyId);
+    if (!box || !body) continue;
+    const gan = () => {
+      const h = body.querySelector('h2,h3');
+      if (h) { if (!h.id) h.id = titleId; box.setAttribute('aria-labelledby', h.id); box.removeAttribute('aria-label'); }
+      else { box.removeAttribute('aria-labelledby'); box.setAttribute('aria-label', du); }
+    };
+    new MutationObserver(gan).observe(body, {childList: true});
+    gan();
+  }
+})();

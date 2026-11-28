@@ -26,21 +26,24 @@ async function issueAct(kind) {
 }
 
 /* ===== Danh mục dùng chung (tách riêng khỏi Cài đặt theo chuẩn V10.4) & Cài đặt hệ thống ===== */
-const DM_TABS = [['setdt', 'Đối tượng (Nhân công / Đối tác)', 'openSetDt'], ['setxe', 'Xe vận chuyển', 'openSetXe'], ['setvt', 'Vị trí công việc', 'openSetVt'], ['cty', 'Công ty mua hàng', 'openCty']];
-const DM_VIEWS = ['setdt', 'setxe', 'setvt', 'cty'];
-const SET_TABS = [['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['settings', 'Hệ thống', 'openSettings'], ['setgs', 'Google Sheets',
-'openSetGs'], ['setfmt', 'Hiển thị số', 'openSetFmt'], ['setgd', 'Giao diện', 'openSetGd'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
-const SET_VIEWS = ['settings', 'setbk', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
+const DM_TABS = [['setdt', 'Đối tượng (người và pháp nhân)', 'openSetDt'], ['setxe', 'Xe vận chuyển', 'openSetXe'], ['setvt', 'Vị trí công việc', 'openSetVt'], ['setnv', 'Ngành nghề và chức vụ', 'openSetNv'], ['cty', 'Công ty mua hàng', 'openCty']];
+const DM_VIEWS = ['setdt', 'setxe', 'setvt', 'setnv', 'cty'];
+/* Cài đặt: tab NGANG cùng kiểu Danh mục (hak-catalog-tabs). “Hiển thị” gộp Hiển thị số và Giao diện (hai màn giữ nguyên, chuyển bằng tab con); “Hệ thống” đổi tên “Dữ liệu”. Giữ nguyên mã màn (NAV.view) và id nút setTab_<màn>. */
+const SET_TABS = [['settings', 'Dữ liệu', 'openSettings'], ['setbk', 'Sao lưu và khôi phục', 'openSetBk'], ['setdon', 'Dọn dẹp hồ sơ', 'openSetDon'], ['setgs', 'Google Sheets', 'openSetGs'], ['setfmt', 'Hiển thị', 'openSetFmt'], ['sethd', 'Hướng dẫn', 'openSetHd'], ['setcan', 'Cần đối chiếu', 'openSetCan']];
+const SET_HIEN_THI = [['setfmt', 'Hiển thị số', 'openSetFmt', 'setSub_setfmt'], ['setgd', 'Giao diện', 'openSetGd', 'setTab_setgd']];
+const SET_VIEWS = ['settings', 'setbk', 'setdon', 'setgs', 'setfmt', 'setgd', 'sethd', 'setcan'];
 function danhMucFrame(active, inner) {
   return '<div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><div><h2 style="margin:0">Danh mục dùng chung</h2><div class="mut" style="font-size:12.5px">Khai báo một lần cho đối tượng, xe vận chuyển, vị trí công việc và công ty mua hàng để dùng lại cho mọi lô rừng.</div></div></div>' +
     veLaiThanh() + '<nav class="hak-catalog-tabs" aria-label="Các danh mục dữ liệu gốc">' + DM_TABS.map(([v, l, a]) => '<button type="button"' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') +
     '</nav><section class="mucNoiDung" aria-label="' + esc((DM_TABS.find(t => t[0] === active) || [, 'Danh mục'])[1]) + '">' + inner + '</section>';
 }
 function settingsFrame(active, inner) {
-  return '<h2>Cài đặt</h2>' + veLaiThanh() + '<div class="mucLayout"><nav class="mucNav" aria-label="Các mục cài đặt">' + SET_TABS.map(([v, l, a]) => '<button' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') +
-  '</nav><section class="mucNoiDung">' + inner + '</section></div>';
+  const nhomHT = SET_HIEN_THI.some(t => t[0] === active), top = nhomHT ? 'setfmt' : active;
+  return '<h2>Cài đặt</h2>' + veLaiThanh() + '<nav class="hak-catalog-tabs" aria-label="Các mục cài đặt">' + SET_TABS.map(([v, l, a]) => '<button type="button"' + (top === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="setTab_' + v + '">' + l + '</button>').join('') + '</nav>' +
+    (nhomHT ? '<nav class="hak-catalog-tabs sub" id="setSubTabs" aria-label="Nhóm hiển thị">' + SET_HIEN_THI.map(([v, l, a, id]) => '<button type="button"' + (active === v ? ' aria-current="page"' : '') + ' data-act="' + a + '" id="' + id + '">' + l + '</button>').join('') + '</nav>' : '') +
+    '<section class="mucNoiDung">' + inner + '</section>';
 }
-const setgs = {st: null, msg: null};
+const setgs = {st: null, msg: null, cl: null};
 function panelSetGs() {
   if (!HB) return '<div class="card"><div class="msg warn">Địa chỉ Google Sheets chỉ có ở bản cài trên Windows.</div></div>';
   const st = setgs.st || {};
@@ -48,21 +51,32 @@ function panelSetGs() {
     '<p class="mut" style="margin-top:0">Bảng tính (chỉ đọc) dùng cho màn <b>Dữ liệu Google Sheets</b>: tab HoSoKeo (phiếu cân), HoSoRung, ToaDoRung. Bảng tính để chế độ “Ai có liên kết đều xem được”; nếu bị giới hạn quyền, đăng nhập Google ở màn Tra cứu.</p>' +
     (setgs.msg ? '<div class="msg ' + setgs.msg.kind + '" id="setGsMsg">' + esc(setgs.msg.text) + '</div>' : '') +
     '<div class="row"><input id="setGsLink" style="flex:1" value="' + esc(st.sheetUrl || '') + '" placeholder="https://docs.google.com/spreadsheets/d/…"><button class="btn" data-act="setGsSave">Lưu địa chỉ</button></div>' +
-    '<p class="mut" style="margin-bottom:0">Việc đồng bộ dữ liệu làm ở màn Dữ liệu Google Sheets.</p></div>';
+    '<p class="mut" style="margin-bottom:0">Việc đồng bộ dữ liệu làm ở màn Dữ liệu Google Sheets.</p></div>' +
+    '<div class="card"><h3 style="margin-top:0">Báo cáo chất lượng dữ liệu Google Sheets</h3>' +
+    '<p class="mut" style="margin-top:0">Chỉ đọc. Bấm một nút để có <b>bảng số đếm</b> (số hợp đồng theo trạng thái, số rừng thiếu mã, số phiếu lỗi ngày, thiếu biển số, nghi đổi số, cặp trùng khóa, thời gian tổng hợp…). <b>Không có</b> CCCD, họ tên, địa chỉ, số hợp đồng, số phiếu, biển số hay mã rừng: có thể gửi lại để kiểm tra dữ liệu thật mà không lộ thông tin cá nhân.</p>' +
+    '<div class="row"><button class="btn" data-act="setGsChatLuong" id="setGsChatLuong">Tạo báo cáo chất lượng</button>' + (setgs.cl && setgs.cl.ok ? '<button class="btn ghost" data-act="setGsCLCopy" id="setGsCLCopy">Sao chép bảng</button>' : '') + '</div>' +
+    (setgs.cl ? (setgs.cl.ok ? '<pre id="setGsCLBang" style="white-space:pre-wrap;margin:8px 0 0">' + esc(setgs.cl.bang) + '</pre>' : '<div class="msg warn" id="setGsCLLoi">' + esc(setgs.cl.error || 'Chưa có dữ liệu Google Sheets: đồng bộ ở màn Dữ liệu Google Sheets trước.') + '</div>') : '') + '</div>';
 }
 function panelSetFmt() {
   const row = (v, label, ex) => '<label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink)"><input type="radio" name="numStyle" value="' + v + '"' + ((db.dinhDangSo === 'en' ? 'en' : 'vi') === v ? ' checked' : '') + ' data-act="setNumStyle"> <span><b>' + label + '</b> · ví dụ ' +
   ex + '</span></label>';
   const sample = n => { const t = n.toLocaleString('vi-VN', {maximumFractionDigits: 3}); return t; };
   return '<div class="card"><h3 style="margin-top:0">Hiển thị số</h3>' +
-    '<p class="mut" style="margin-top:0">Chọn cách hiển thị số trên màn hình (tiền, khối lượng, diện tích). Ngày luôn là <b>dd/mm/yyyy</b> (ví dụ 05/10/2026) cho nhập liệu, kiểm tra và biểu mẫu. Biểu mẫu Word và file in luôn dùng kiểu Việt Nam.</p>' +
-    row('vi', 'Kiểu Việt Nam', sample(1234567.5)) + row('en', 'Kiểu quốc tế', sample(1234567.5).replace(/[.,]/g, c => (c === '.' ? ',' : '.'))) + '</div>';
+    '<p class="mut" style="margin-top:0">Chọn cách hiển thị số trên màn hình (tiền, khối lượng, diện tích). Báo cáo dùng kiểu số đã chọn. Excel hiển thị dấu phân cách số theo cài đặt của Excel. Biểu mẫu hồ sơ dùng kiểu Việt Nam.</p>' +
+    row('vi', 'Kiểu Việt Nam', sample(1234567.5)) + row('en', 'Kiểu quốc tế', sample(1234567.5).replace(/[.,]/g, c => (c === '.' ? ',' : '.'))) +
+    '<label>Định dạng ngày khai thác, lương và báo cáo <select data-act="setReportDateStyle"><option value="vi">Ngày/tháng/năm (05/10/2026)</option><option value="iso"' +
+    (db.dinhDangNgayBaoCao === 'iso' ? ' selected' : '') + '>Năm-tháng-ngày (2026-10-05)</option></select></label></div>';
 }
 const setg = {s: null, msg: null};
 function panelSettings() {
   if (!HB) return '<div class="card"><h2>Cài đặt hệ thống</h2><div class="msg warn">Cài đặt thư mục dữ liệu và sao lưu chỉ có ở bản cài trên Windows.</div></div>';
   return '<div class="card"><h2 style="margin-top:0">Cài đặt hệ thống</h2>' + (setg.msg ? '<div class="msg ' + setg.msg[1] + '" id="setMsg">' + esc(setg.msg[0]) + '</div>' : '') +
     '<div id="setBox" class="mut">Đang đọc cài đặt…</div></div>';
+}
+/* BK-04: dải cảnh báo vàng khi ổ chứa dữ liệu / thư mục sao lưu còn dưới 500 MB trống (số liệu s.dungLuong do tiến trình chính tính khi đọc cài đặt; không chặn thao tác). Tab khác dùng lại được. */
+function dungLuongHtml(s) {
+  const ds = s && s.dungLuong; if (!ds || !ds.length) return '';
+  return '<div class="msg warn" data-dung-luong>Dung lượng trống sắp hết (dưới 500 MB): ' + ds.map(d => esc(d.nhan.join(', ')) + ' (<code>' + esc(d.dir) + '</code>): còn ' + d.freeMB + ' MB').join('; ') + '. Giải phóng dung lượng hoặc chọn ổ khác để tránh sao lưu thất bại.</div>';
 }
 function settingsPaint() {
   const s = setg.s, box = document.getElementById('setBox'); if (!s || !box) return;
@@ -73,7 +87,7 @@ function settingsPaint() {
     '<div class="mut" style="margin-top:6px;font-size:12px">Mặc định: ' + esc(def) + '</div></div>';
   const di = s.dbInfo || {}, nowCard = '<div class="card" style="margin:10px 0" id="dbNow"><h3 style="margin:0 0 4px">Cơ sở dữ liệu đang dùng</h3><div style="word-break:break-all"><code data-db-now>' + esc(s.dbFile) + '</code></div><div class="mut" style="margin-top:4px">' + (di.size != null ?
   'Dung lượng ' + (di.size / 1048576 >= 1 ? (di.size / 1048576).toFixed(1) + ' MB' : Math.ceil(di.size / 1024) + ' KB') : '') + (di.mtime ? ' · sửa lần cuối ' + esc(new Date(di.mtime).toLocaleString('vi-VN')) : '') + (di.version ? ' · cấu trúc v' + di.version : '') + '</div></div>';
-  box.className = ''; box.innerHTML = nowCard +
+  box.className = ''; box.innerHTML = dungLuongHtml(s) + nowCard +
     (s.missing.length ? '<div class="msg warn">Thư mục đã chọn trước đây không còn: ' + s.missing.map(esc).join('; ') + '. Ứng dụng đang dùng vị trí mặc định.</div>' : '') +
     (s.lockedByEnv ? '<div class="msg warn">Vị trí dữ liệu đang được cố định bởi biến môi trường HAKQN_DB nên không đổi được ở đây.</div>' : '') +
     row('Thư mục dữ liệu', 'Nơi lưu cơ sở dữ liệu hồ sơ (hakqn.sqlite). Khi đổi, ứng dụng <b>sao chép</b> dữ liệu sang thư mục mới và dùng từ đó; bản cũ được giữ nguyên, không xóa. Nên chọn thư mục trên ổ cứng của máy này (không chọn ổ mạng hoặc thư mục đang đồng bộ đám mây, dễ làm hỏng file).',
@@ -112,9 +126,10 @@ async function settingsBackup2(reset) {
   setg.msg = ksl.msg = r.ok ? [reset ? 'Đã tắt thư mục sao lưu thứ hai.' : 'Đã chọn thư mục sao lưu thứ hai: mỗi bản tự sao lưu hằng ngày được chép thêm sang đó.', 'ok'] : ['Không đổi được thư mục sao lưu thứ hai: ' + r.error, 'err'];
   setg.s = r.ok ? r.settings : setg.s; render();
 }
-async function settingsBackup(reset) {
+async function settingsBackup(reset, fromSaveHelp) {
   const r = await HB.settings.setBackup(reset);
   if (r.canceled) return;
+  if (fromSaveHelp) return note(r.ok ? 'Đã đổi thư mục sao lưu SQLite. Bấm “Thử lưu lại” để ghi lô.' : 'Không đổi được thư mục sao lưu SQLite. ' + r.error, r.ok ? 'ok' : 'err');
   setg.msg = ksl.msg = r.ok ? ['Đã ' + (reset ? 'về thư mục sao lưu mặc định' : 'đổi thư mục sao lưu') + ': ' + r.settings.backupDir, 'ok'] : ['Không đổi được thư mục sao lưu: ' + r.error, 'err'];
   setg.s = r.ok ? r.settings : setg.s; render();
 }
@@ -129,8 +144,13 @@ async function settingsBackupJson(reset) {
 async function lotBackup() {
   const f = curForest(), o = curOwner(); if (!f || !o) return note('Hãy mở một lô rừng trước khi sao lưu.', 'err');
   if (!HB) return note('Sao lưu lô rừng cần bản cài trên Windows.', 'err');
-  if (stDirtyCur() && !confirm('Lô này còn thay đổi chưa lưu. File sao lưu chỉ gồm dữ liệu ĐÃ LƯU (không gồm phần chưa lưu).\n\nTiếp tục sao lưu?')) return;
-  let pkg; try { pkg = HAKLoRung.exportLot(db, o.id, f.id, {version: (dbInfo && dbInfo.version) || ''}); } catch (e) { return note('Không sao lưu được lô: ' + e.message, 'err'); }
+  if (stDirtyCur()) {
+    if (!confirm('Lô này còn thay đổi chưa lưu.\n\nBấm OK để lưu dữ liệu vào lô trước rồi sao lưu ngay bản mới nhất (hoặc Hủy để quay lại).')) return;
+    const sv = await stSave({tuKhung: true});
+    if (!sv || !sv.ok) return;
+  }
+  const W = dbGhi();
+  let pkg; try { pkg = HAKLoRung.exportLot(W, o.id, f.id, {version: (dbInfo && dbInfo.version) || ''}); } catch (e) { return note('Không sao lưu được lô: ' + e.message, 'err'); }
   const r = await HB.lotSave(pkg);
   if (r.canceled) return;
   if (r.ok && r.canhBao) pushNote('Cảnh báo: ' + r.canhBao, 'err');
@@ -179,10 +199,20 @@ async function lotRestoreOpen(filePath) {
 async function lotGo() {
   const act = (document.querySelector('input[name=lotAct]:checked') || {}).value || 'giu';
   if (act === 'thay' && !confirm('Thay lô này trên máy bằng bản trong file? Chỉ lô này bị thay; phần đang có trên máy vẫn còn trong bản sao lưu tự động.')) return;
-  const r = await HB.lotApply(window.__lot, act);
+  const pkg = window.__lot;
+  if (!pkg) return;
+  const r = await storeSave(async () => {
+    const cu = HB.loadSync();
+    if (!cu?.ok) return cu;
+    const result = await HB.lotApply(pkg, act);
+    if (result?.ok && result.doi) {
+      dbCapNhatKhoiPhucRieng({dich: {ownerId: result.ownerId, forestIds: [result.forestId]},
+        dbMoi: result.db, dbCu: cu.db, rev: result.rev});
+    }
+    return result;
+  });
   $('#impBox').classList.remove('on'); window.__lot = null;
-  if (!r.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + r.error, 'err');
-  dbThayToanBo(r.db);   // kể cả dấu “chưa lưu” và bản đã lưu cũ: lô vừa khôi phục không bị ghi lại bằng bản trước khi khôi phục
+  if (!r?.ok) return note('Không khôi phục được lô, dữ liệu cũ giữ nguyên: ' + (r?.error || 'Hãy thử lại.'), 'err');
   if (!r.doi) return note('Giữ bản hiện có của lô ' + r.plan.maLo + ': không có gì thay đổi.');
   NAV.cur = r.ownerId; NAV.curF = r.forestId; NAV.view = 'owner'; NAV.tab = 'rung'; NAV.ftab = 'finfo'; render();
   note('Đã khôi phục lô ' + r.plan.maLo + ' (' + lotCnt(r.plan.incoming) + '). Bản sao lưu trước khi ghi: ' + r.backup, 'ok');
@@ -196,8 +226,181 @@ async function restoreAll(file) {
     const o2 = k.v1 ? migrateV1(o) : Object.assign({}, o, {v: 2});
     if (HB) return importWithPreview(withDefaults(o2));
     if (!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện có trên trình duyệt này. Tiếp tục?')) return;
-    db = withDefaults(o2); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
+    db = withDefaults(o2); dbEpoch++; Object.keys(stages).forEach(k => delete stages[k]); loDirty.clear(); loMoi.clear(); chuNhap.clear(); aliasNhap.clear(); loCanSaoLuuSheets.clear(); savedSnap = null; persist(); NAV.cur = null; NAV.curF = null;
     note('Đã khôi phục ' + Object.keys(db.rs).length + ' hồ sơ chủ rừng.');
   } catch (e) { note('Không khôi phục được: ' + e.message, 'err'); }
+}
+
+/* ===== Quản lý và dọn dẹp hồ sơ chủ rừng (Cài đặt → Dọn dẹp hồ sơ) ===== */
+const setdon = {owners: null, loading: false, msg: null, filter: ''};
+
+function panelSetDon() {
+  if (!HB || !HB.owners) {
+    return '<div class="card"><div class="msg warn">Quản lý dọn dẹp cơ sở dữ liệu chỉ hoạt động trên phiên bản máy tính (SQLite).</div></div>';
+  }
+  const curIds = new Set(Object.keys(db.rs || {}));
+  const list = setdon.owners || [];
+  const q = trim(setdon.filter).toLowerCase();
+  const filtered = list.filter(o => {
+    if (!q) return true;
+    return (o.ten || '').toLowerCase().includes(q) ||
+           (o.ma || '').toLowerCase().includes(q) ||
+           (o.cccd || '').toLowerCase().includes(q);
+  });
+  const unlisted = list.filter(o => !curIds.has(o.id));
+
+  return '<div class="card" style="margin-bottom:12px">' +
+    '<h3 style="margin:0 0 6px">Quản lý &amp; Dọn dẹp hồ sơ chủ rừng trong cơ sở dữ liệu</h3>' +
+    '<p class="mut" style="margin:0 0 10px">Hồ sơ chủ rừng lưu trong cơ sở dữ liệu trên máy tính. Dọn dẹp các hồ sơ không còn sử dụng hoặc đưa các hồ sơ đã lưu vào danh sách làm việc chính. Việc dọn hồ sơ được tách biệt độc lập với việc lưu và cập nhật lô rừng.</p>' +
+    (setdon.msg ? '<div class="msg ' + setdon.msg[1] + '" style="margin-bottom:10px">' + esc(setdon.msg[0]) + '</div>' : '') +
+    '<div class="grid3" style="gap:10px;margin-bottom:12px">' +
+      '<div class="card" style="margin:0;padding:10px;background:var(--bg-sub, #f8f9fa)">' +
+        '<div class="mut" style="font-size:12px">Tổng hồ sơ trong CSDL</div>' +
+        '<div style="font-size:20px;font-weight:700">' + list.length + '</div>' +
+      '</div>' +
+      '<div class="card" style="margin:0;padding:10px;background:var(--bg-sub, #f8f9fa)">' +
+        '<div class="mut" style="font-size:12px">Đang mở trong phiên làm việc</div>' +
+        '<div style="font-size:20px;font-weight:700;color:var(--ok, #107c41)">' + (list.length - unlisted.length) + '</div>' +
+      '</div>' +
+      '<div class="card" style="margin:0;padding:10px;background:var(--bg-sub, #f8f9fa)">' +
+        '<div class="mut" style="font-size:12px">Lưu trên máy (chưa nạp ra màn hình)</div>' +
+        '<div style="font-size:20px;font-weight:700;color:' + (unlisted.length ? 'var(--warn, #d83b01)' : 'var(--mut)') + '">' + unlisted.length + '</div>' +
+      '</div>' +
+    '</div>' +
+    (unlisted.length ? (
+      '<div class="msg warn" style="margin-bottom:12px">' +
+        '<b>Có ' + unlisted.length + ' hồ sơ đang lưu trong CSDL nhưng chưa hiển thị trên danh sách làm việc.</b><br>' +
+        'Các hồ sơ này được giữ an toàn trong máy và không ảnh hưởng đến việc lưu lô hiện tại. Bạn có thể:' +
+        '<div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">' +
+          '<button type="button" class="btn sm" data-act="donHsLoadAll">📥 Đưa tất cả vào danh sách làm việc</button>' +
+          '<button type="button" class="btn danger sm" data-act="donHsPurgeUnlisted">🗑️ Dọn dẹp tất cả hồ sơ này khỏi CSDL</button>' +
+        '</div>' +
+      '</div>'
+    ) : '') +
+    '<div class="row" style="gap:8px;align-items:center;margin-bottom:10px">' +
+      '<input type="text" id="setDonSearch" placeholder="Lọc theo tên, mã, CCCD…" value="' + esc(setdon.filter) + '" style="max-width:280px">' +
+      '<button type="button" class="btn ghost sm" data-act="setDonRefresh">Làm mới danh sách</button>' +
+    '</div>' +
+    '<div class="wrap" style="max-height:480px">' +
+      '<table>' +
+        '<thead><tr>' +
+          '<th>Tên chủ rừng</th>' +
+          '<th>Mã</th>' +
+          '<th>CCCD</th>' +
+          '<th style="text-align:center">Số lô</th>' +
+          '<th>Trạng thái</th>' +
+          '<th style="text-align:right">Thao tác</th>' +
+        '</tr></thead>' +
+        '<tbody>' +
+          (filtered.length ? filtered.map(o => {
+            const inMem = curIds.has(o.id);
+            return '<tr>' +
+              '<td><b>' + esc(o.ten || '(chưa đặt tên)') + '</b> ' + (o.danhXung ? '<span class="mut">(' + esc(o.danhXung) + ')</span>' : '') + '</td>' +
+              '<td><code>' + esc(o.ma || '—') + '</code></td>' +
+              '<td>' + esc(o.cccd || '—') + '</td>' +
+              '<td style="text-align:center"><span class="pill ok">' + (o.soLo || 0) + ' lô</span></td>' +
+              '<td>' + (inMem ? '<span class="pill ok">Đang trong danh sách</span>' : '<span class="pill warn">Lưu trên máy (chưa nạp)</span>') + '</td>' +
+              '<td style="text-align:right;white-space:nowrap">' +
+                (!inMem ? '<button type="button" class="btn sm" data-act="donHsLoad" data-id="' + esc(o.id) + '" style="margin-right:6px">Đưa vào danh sách</button>' : '') +
+                '<button type="button" class="btn danger sm" data-act="donHsDel" data-id="' + esc(o.id) + '" data-ten="' + esc(o.ten || o.ma || o.id) + '">Xóa</button>' +
+              '</td>' +
+            '</tr>';
+          }).join('') : '<tr><td colspan="6" class="mut" style="text-align:center">Không có hồ sơ nào khớp.</td></tr>') +
+        '</tbody>' +
+      '</table>' +
+    '</div>' +
+  '</div>';
+}
+
+async function setDonLoad() {
+  if (!HB || !HB.owners || setdon.loading) return;
+  setdon.loading = true;
+  try {
+    const r = await HB.owners.list();
+    if (r && r.ok) {
+      setdon.owners = r.owners || [];
+      const curIds = new Set(Object.keys(db.rs || {}));
+      const unlisted = (setdon.owners || []).filter(o => !curIds.has(o.id));
+      if (!unlisted.length) window.__hakPreservedOwners = null;
+      render();
+    }
+  } catch (e) {
+    setdon.msg = ['Lỗi tải danh sách hồ sơ: ' + e.message, 'err'];
+    render();
+  } finally {
+    setdon.loading = false;
+  }
+}
+
+async function donHsLoad(id) {
+  if (!HB || !HB.owners) return;
+  try {
+    const r = await HB.owners.get(id);
+    if (!r || !r.ok || !r.owner) return note('Không tải được hồ sơ: ' + (r?.error || 'lỗi không rõ'), 'err');
+    db.rs[id] = r.owner;
+    doiDuLieu();
+    setdon.msg = ['Đã đưa hồ sơ "' + (r.owner.info?.ten || r.owner.info?.ma || id) + '" vào danh sách làm việc.', 'ok'];
+    renderSide();
+    setDonLoad();
+  } catch (e) {
+    note('Lỗi: ' + e.message, 'err');
+  }
+}
+
+async function donHsLoadAll() {
+  if (!HB || !HB.owners) return;
+  const curIds = new Set(Object.keys(db.rs || {}));
+  const unlisted = (setdon.owners || []).filter(o => !curIds.has(o.id));
+  if (!unlisted.length) return;
+  let count = 0;
+  for (const item of unlisted) {
+    const r = await HB.owners.get(item.id);
+    if (r && r.ok && r.owner) {
+      db.rs[item.id] = r.owner;
+      count++;
+    }
+  }
+  doiDuLieu();
+  window.__hakPreservedOwners = null;
+  setdon.msg = ['Đã đưa ' + count + ' hồ sơ vào danh sách làm việc.', 'ok'];
+  renderSide();
+  setDonLoad();
+}
+
+async function donHsDel(id, ten) {
+  if (!HB || !HB.owners) return;
+  if (!confirm('Dọn dẹp hồ sơ "' + (ten || id) + '" khỏi cơ sở dữ liệu trên máy?\n\nPhần mềm sẽ tự động sao lưu CSDL trước khi xóa. Bạn có thể khôi phục lại khi cần.')) return;
+  try {
+    const r = await HB.owners.remove(id);
+    if (!r || !r.ok) return note('Không xóa được: ' + (r?.error || 'lỗi không rõ'), 'err');
+    if (db.rs[id]) {
+      delete db.rs[id];
+      if (NAV.cur === id) { NAV.cur = null; NAV.curF = null; }
+      doiDuLieu();
+      renderSide();
+    }
+    setdon.msg = ['Đã dọn dẹp hồ sơ "' + (ten || id) + '" khỏi cơ sở dữ liệu.', 'ok'];
+    setDonLoad();
+  } catch (e) {
+    note('Lỗi: ' + e.message, 'err');
+  }
+}
+
+async function donHsPurgeUnlisted() {
+  if (!HB || !HB.owners) return;
+  const curIds = new Set(Object.keys(db.rs || {}));
+  const unlisted = (setdon.owners || []).filter(o => !curIds.has(o.id));
+  if (!unlisted.length) return;
+  if (!confirm('Xác nhận dọn dẹp vĩnh viễn ' + unlisted.length + ' hồ sơ đang lưu trên máy nhưng không dùng trong danh sách làm việc?\n\nPhần mềm sẽ sao lưu toàn bộ cơ sở dữ liệu trước khi dọn dẹp.')) return;
+  try {
+    const ids = unlisted.map(o => o.id);
+    const r = await HB.owners.purgeUnlisted(ids);
+    if (!r || !r.ok) return note('Không dọn dẹp được: ' + (r?.error || 'lỗi không rõ'), 'err');
+    window.__hakPreservedOwners = null;
+    setdon.msg = ['Đã dọn dẹp sạch sẽ ' + (r.deleted || ids.length) + ' hồ sơ khỏi cơ sở dữ liệu.', 'ok'];
+    setDonLoad();
+  } catch (e) {
+    note('Lỗi: ' + e.message, 'err');
+  }
 }
 

@@ -15,13 +15,13 @@ let fail = 0; const ok = (name, cond, extra) => { console.log((cond ? 'ĐẠT  '
   B.nc = B.nc.map(r => ({...r, maRung: 'R-B'})); B.dx = B.dx.map(r => ({...r, maRung: 'R-B'})); B.info.tuNgay = '01/12/2026'; B.info.denNgay = '';
   const D = seed([A, B]);   // định mức nhân công mặc định: 1 đội 8 người
   await w.evaluate(d => window.hak.save(d), D); await w.reload(); await w.waitForSelector('#side');
-  await w.click('#navNorm'); await w.waitForSelector('#dbVerBar');
+  await w.click('#navNorm'); await w.click('#normTab_nhancong'); await w.waitForSelector('#dbVerBar');
   ok('có thanh phiên bản: chỉ bản gốc, áp dụng cho 2 lô', /Bản gốc/.test(await w.innerText('#dbVerBar')) && /2<\/b> lô|áp dụng cho 2 lô/.test(await w.innerText('#main')));
   await w.fill('#dbVerNew', '31/02/2026'); await w.click('[data-act=dbVerAdd]'); await w.waitForTimeout(300);
   ok('ngày không có thật: báo lỗi, chưa thêm', (await w.$$eval('#dbVerSel option', o => o.length)) === 1);
   await w.fill('#dbVerNew', '01/11/2026'); await w.click('[data-act=dbVerAdd]'); await w.waitForTimeout(400);
   ok('thêm phiên bản từ 01/11/2026 và chọn sẵn phiên bản đó', (await w.$$eval('#dbVerSel option', o => o.map(x => x.textContent))).length === 2 && /01\/11\/2026/.test(await w.$eval('#dbVerSel', s => s.selectedOptions[0].textContent)));
-  await w.evaluate(() => { const tr = [...document.querySelectorAll('#dbForm tr[data-db]')].find(t => t.querySelector('[name=b_cd]').value === 'Công nhân cưa'); tr.querySelector('[name=b_so]').value = '5'; document.getElementById('dbForm').requestSubmit(); });
+  { const i = await w.$$eval('#dbBang tbody tr', trs => trs.findIndex(tr => tr.cells[0].innerText.trim() === 'Công nhân cưa')); await w.click('#dbBang tr[data-db="' + i + '"] [data-act=normMoSua]'); await w.fill('#dbMoForm [name=b_so]', '5'); await w.click('#normMoLuu'); }
   await w.waitForTimeout(500);
   const D2 = await w.evaluate(() => window.hak.loadSync().db);
   ok('lưu vào phiên bản mới; bản gốc không đổi', !D2.dinhBien || (D2.dinhBien.find(r => r.chucDanh === 'Công nhân cưa') || {}).soNguoi === 2 && ((D2.dinhBienVer || [])[0] || {}).rows.find(r => r.chucDanh === 'Công nhân cưa').soNguoi === 5, JSON.stringify([D2.dinhBien, D2.dinhBienVer]));

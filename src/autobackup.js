@@ -51,7 +51,7 @@ function prune(dir, keep, chuKy) {
 function cleanStaleTmp(dir, nowMs) {
   let names = []; try { names = fs.readdirSync(dir); } catch (e) { return 0; }
   let n = 0; const cut = (nowMs || Date.now()) - 86400000;
-  names.filter(x => /\.tmp-\d+(-wal|-shm|-journal)?$/.test(x)).forEach(x => {
+  names.filter(x => /\.tmp-\d+(-\d+)?(-wal|-shm|-journal)?$/.test(x)).forEach(x => {
     const p = path.join(dir, x);
     try { if (fs.statSync(p).mtimeMs < cut) { fs.unlinkSync(p); n++; } } catch (e) { /* bỏ qua */ }
   });
@@ -92,6 +92,7 @@ function copyTo(file, dir2, keep, opts = {}) {
   try {
     if (!file || !dir2) return {ok: true, skipped: true};
     const out = path.join(dir2, path.basename(file)), tmp = out + '.tmp-' + process.pid;
+    if (path.resolve(out) === path.resolve(file)) return {ok: true, file: out, skipped: true, removed: []};
     fs.mkdirSync(dir2, {recursive: true});
     /* overwrite: bản của hôm nay vừa được làm mới thì bản ở thư mục thứ hai cũng thay theo */
     if (opts.overwrite || !fs.existsSync(out)) { try { fs.copyFileSync(file, tmp); fs.renameSync(tmp, out); } catch (e) { try { fs.unlinkSync(tmp); } catch (e2) { /* không có file tạm */ } throw e; } }

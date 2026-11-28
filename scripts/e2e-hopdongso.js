@@ -13,7 +13,7 @@ const SEED = {v: 2, rs: {own1: {id: 'own1', info: {ma: 'CR-01', ten: 'NGUYỄN V
     nc: [nv(1, 'Tổ trưởng', 'TRẦN TỔ TRƯỞNG', 'Tổ trưởng', '049085000001'), nv(2, 'Công nhân', 'LÊ CÔNG NHÂN', 'Công nhân khai thác', '049085000002'), nv(3, 'Công nhân', 'PHẠM CƯA', 'Công nhân cưa', '049085000003')], dx: [], pc: [], exp: {}}}}}};
 async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(file)); let all = ''; const docs = file.endsWith('.zip') ? await Promise.all(Object.keys(z.files).filter(n => n.endsWith('.docx')).map(async n => JSZip.loadAsync(await z.file(n).async('nodebuffer')))) : [z]; for (const d of docs) { const x = await d.file('word/document.xml').async('string'); all += (x.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || []).map(a => a.replace(/<[^>]+>/g, '')).join('') + '\n'; } return all.replace(/&amp;/g, '&'); }
 (async () => {
-  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox'], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'h.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
+  const app = await electron.launch({executablePath: require('electron'), args: [root, '--no-sandbox', '--user-data-dir=' + path.join(dir, 'ud')], env: {...process.env, HAKQN_CLOSE: 'discard', HAKQN_DB: path.join(dir, 'h.sqlite'), HAKQN_USERDATA: path.join(dir, 'ud'), HAKQN_DOWNLOAD_DIR: out, ELECTRON_DISABLE_SECURITY_WARNINGS: '1'}});
   const w = require('./_hd30').boc(await app.firstWindow()); const errs = []; w.on('pageerror', e => errs.push(e.message)); w.on('dialog', d => d.accept()); await w.waitForSelector('#side');
   await w.evaluate(d => window.hak.save(d), SEED); await w.reload(); await w.waitForSelector('#side');
   const dbOf = () => w.evaluate(() => window.hak.loadSync().db.rs.own1);
@@ -30,7 +30,9 @@ async function docText(file) { const z = await JSZip.loadAsync(fs.readFileSync(f
   const o = await dbOf(); ok('lưu số hợp đồng và ngày ký; chủ rừng không cần ngày sinh để hợp lệ', o.info.soHopDong === 'HD-2026/015' && o.info.ngayKyHopDong === '02/10/2026' && o.info.sdt === '0905 123 456');
   ok('hồ sơ cũ: ngày sinh đã lưu không bị xóa khỏi dữ liệu', o.info.ngaySinh === '06/10/1967');
   // chủ rừng mới: lưu được mà không có ngày sinh
-  await w.click('text=+ Chủ rừng mới'); await w.fill('#infoForm [name=ma]', 'CR-02'); await w.selectOption('#infoForm [name=danhXung]', 'Bà'); await w.fill('#infoForm [name=ten]', 'TRẦN THỊ HAI'); await w.fill('#infoForm [name=cccd]', '049067005460'); await w.fill('#infoForm [name=ngayCap]', '01/01/2021'); await w.fill('#infoForm [name=noiCap]', 'CA'); await w.fill('#infoForm [name=diaChi]', 'Đà Nẵng'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(500);
+  await w.click('text=+ Chủ rừng mới');
+  if (await w.isChecked('#maTheoCccd').catch(() => false)) await w.uncheck('#maTheoCccd');
+  await w.fill('#infoForm [name=ma]', 'CR-02'); await w.check('#infoForm [name="danhXung"][value="Bà"]'); await w.fill('#infoForm [name=ten]', 'TRẦN THỊ HAI'); await w.fill('#infoForm [name=cccd]', '049067005460'); await w.fill('#infoForm [name=ngayCap]', '01/01/2021'); await w.fill('#infoForm [name=noiCap]', 'CA'); await w.fill('#infoForm [name=diaChi]', 'Đà Nẵng'); await w.click('#infoForm button[type=submit]'); await w.waitForTimeout(500);
   ok('chủ rừng mới lưu được khi không có ngày sinh, số hợp đồng và ngày ký (tùy chọn)', !/Chưa lưu/.test(await w.innerText('#infoForm')) && Object.keys((await w.evaluate(() => window.hak.loadSync().db.rs))).length === 2);
   // biểu mẫu
   await w.click('[data-open=own1]'); await w.click('[data-tab=rung]'); await w.click('[data-forest=fa]'); await w.click('[data-ftab=xuat]'); await w.click('[data-xtab=all]');

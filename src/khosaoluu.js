@@ -8,6 +8,7 @@
  *   truoc-khoi-phuc-*.sqlite             trước khi khôi phục toàn bộ
  *   truoc-khoi-phuc-lo-*.sqlite          trước khi khôi phục một lô
  *   truoc-xoa-*.sqlite                   trước lần lưu có xóa chủ rừng / lô
+ *   truoc-cap-nhat-sheets-*.sqlite       trước lần lưu đầu tiên sau khi áp dữ liệu từ Google Sheets (PR D bước 2)
  *
  * KHÔI PHỤC TỪ BẢN .sqlite (khoiPhuc): KHÔNG chép đè file cơ sở dữ liệu đang dùng. Bản sao lưu được chép ra thư mục tạm, mở bằng Store (bản cấu trúc cũ được nâng cấp
  * TRÊN BẢN CHÉP, file sao lưu gốc không bị đụng), đọc thành dữ liệu hồ sơ rồi đi qua đúng đường "Khôi phục toàn bộ → thay toàn bộ" (Store.applyImport 'replace'):
@@ -25,7 +26,8 @@ const LOAI = [
   {ma: 'nangcap', ten: 'Trước khi nâng cấp', re: /^truoc-nang-cap-[\w-]+\.sqlite$/},
   {ma: 'khoiphuclo', ten: 'Trước khi khôi phục lô', re: /^truoc-khoi-phuc-lo-[\w-]+\.sqlite$/},
   {ma: 'khoiphuc', ten: 'Trước khi khôi phục', re: /^truoc-khoi-phuc-[\w-]+\.sqlite$/},
-  {ma: 'xoa', ten: 'Trước khi xóa', re: /^truoc-xoa-[\w-]+\.sqlite$/}
+  {ma: 'xoa', ten: 'Trước khi xóa', re: /^truoc-xoa-[\w-]+\.sqlite$/},
+  {ma: 'sheets', ten: 'Trước khi lưu dữ liệu từ Google Sheets', re: /^truoc-cap-nhat-sheets-[\w-]+\.sqlite$/}
 ];
 const loaiCua = name => LOAI.find(l => l.re.test(name)) || null;
 const cungFile = (a, b) => process.platform === 'win32' ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase() : path.resolve(a) === path.resolve(b);
@@ -119,4 +121,116 @@ function xoa(dirs, file, dbFile) {
   return {name: it.name, size: it.size};
 }
 
-module.exports = {LOAI, loaiCua, lietKe, timTrongKho, kiemTra, xemTruoc, khoiPhuc, xoa, docBanSqlite};
+/* Đọc dữ liệu hồ sơ từ bản sao lưu (.sqlite hoặc .json) */
+function docDuLieuBanSao(file, supportedVersion) {
+  if (/\.json$/i.test(file)) {
+    const kt = kiemTra(file, supportedVersion);
+    if (!kt.ok) throw Object.assign(new Error('Bản sao lưu không dùng được: ' + kt.error), {code: 'BAN_HONG'});
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return {data, goi: Array.isArray(data.goiLichSu) ? data.goiLichSu : []};
+  }
+  const kt = kiemTra(file, supportedVersion);
+  if (!kt.ok) throw Object.assign(new Error('Bản sao lưu không dùng được: ' + kt.error), {code: 'BAN_HONG'});
+  return docBanSqlite(file);
+}
+
+/* Xem trước chi tiết nội dung danh sách chủ rừng & lô rừng trong bản sao lưu */
+function docChiTiet(file, supportedVersion) {
+  const {data} = docDuLieuBanSao(file, supportedVersion);
+  const owners = Object.entries(data.rs || {}).map(([oid, o]) => {
+    const info = o.info || {};
+    const forests = Object.entries(o.forests || {}).map(([fid, f]) => {
+      const fi = f.info || {};
+      const pc = Array.isArray(f.pc) ? f.pc : [];
+      const tongKg = pc.reduce((s, p) => s + (Number(p.klKg) || Math.round((Number(p.kl) || 0) * 1000) || 0), 0);
+      return {
+        id: f.id || fid,
+        maRung: fi.maRung || '',
+        tenRung: fi.tenRung || '',
+        dienTich: fi.dienTich || 0,
+        soDoi: (f.doi || []).length,
+        soXe: (f.dx || []).length,
+        soPhieu: pc.length,
+        tongKg,
+        trangThai: f.chot ? 'Đã chốt' : f.dung ? 'Đã dừng' : 'Đang làm'
+      };
+    });
+    return {
+      id: o.id || oid,
+      ma: info.ma || '',
+      ten: info.ten || '',
+      cccd: info.cccd || '',
+      danhXung: info.danhXung || '',
+      soRung: forests.length,
+      forests
+    };
+  });
+  return {
+    file: path.basename(file),
+    dinhDang: /\.json$/i.test(file) ? 'json' : 'sqlite',
+    soChuRong: owners.length,
+    soLoRung: owners.reduce((s, o) => s + o.soRung, 0),
+    owners
+  };
+}
+
+/* Khôi phục trích xuất RIÊNG MỘT chủ rừng từ bản sao lưu (không ảnh hưởng chủ rừng khác) */
+function khoiPhucChuRong(store, file, ownerId, strategy = 'overwrite', supportedVersion) {
+  const b = docDuLieuBanSao(file, supportedVersion);
+  const srcO = b.data.rs && b.data.rs[ownerId];
+  if (!srcO) throw Object.assign(new Error('Không tìm thấy chủ rừng "' + ownerId + '" trong bản sao lưu.'), {code: 'KHONG_CO'});
+  const usedCtyIds = new Set(Object.values(srcO.forests || {}).map(f => f.info?.muaHang?.congTyId).filter(Boolean));
+  const incomingCongTy = {};
+  if (b.data.congTy) {
+    usedCtyIds.forEach(id => {
+      if (b.data.congTy[id]) incomingCongTy[id] = b.data.congTy[id];
+    });
+  }
+  const incoming = {
+    v: 2,
+    rs: {[ownerId]: srcO},
+    goiLichSu: b.goi.filter(g => g && Object.hasOwn(srcO.forests || {}, String(g.forest_id))),
+    congTy: incomingCongTy,
+    ...(b.data.dmDoiTuong != null && {dmDoiTuong: b.data.dmDoiTuong}),
+    ...(b.data.dmXe != null && {dmXe: b.data.dmXe}),
+    ...(b.data.dmViTri != null && {dmViTri: b.data.dmViTri})
+  };
+  const r = store.applyImport(incoming, strategy, {khoiPhucRieng: true, preserveExistingCongTy: true});
+  return {...r, ten: srcO.info?.ten || ownerId};
+}
+
+/* Khôi phục trích xuất RIÊNG MỘT lô rừng từ bản sao lưu (không ảnh hưởng lô khác) */
+function khoiPhucLoRungTuBanSao(store, file, ownerId, forestId, strategy = 'overwrite', supportedVersion) {
+  const b = docDuLieuBanSao(file, supportedVersion);
+  const srcO = b.data.rs && b.data.rs[ownerId];
+  if (!srcO) throw Object.assign(new Error('Không tìm thấy chủ rừng "' + ownerId + '" trong bản sao lưu.'), {code: 'KHONG_CO'});
+  const srcF = srcO.forests && srcO.forests[forestId];
+  if (!srcF) throw Object.assign(new Error('Không tìm thấy lô rừng "' + forestId + '" trong bản sao lưu.'), {code: 'KHONG_CO'});
+  const {forests: _, ...ownerInfoOnly} = srcO;
+  const usedCtyId = srcF.info?.muaHang?.congTyId;
+  const incomingCongTy = {};
+  if (usedCtyId && b.data.congTy && b.data.congTy[usedCtyId]) {
+    incomingCongTy[usedCtyId] = b.data.congTy[usedCtyId];
+  }
+  const incoming = {
+    v: 2,
+    rs: {
+      [ownerId]: {
+        ...ownerInfoOnly,
+        forests: {[forestId]: srcF}
+      }
+    },
+    goiLichSu: b.goi.filter(g => g && String(g.forest_id) === String(forestId)),
+    congTy: incomingCongTy,
+    ...(b.data.dmDoiTuong != null && {dmDoiTuong: b.data.dmDoiTuong}),
+    ...(b.data.dmXe != null && {dmXe: b.data.dmXe}),
+    ...(b.data.dmViTri != null && {dmViTri: b.data.dmViTri})
+  };
+  const r = store.applyImport(incoming, strategy, {khoiPhucRieng: true, preserveExistingCongTy: true});
+  return {...r, maRung: srcF.info?.maRung || forestId};
+}
+
+module.exports = {
+  LOAI, loaiCua, lietKe, timTrongKho, kiemTra, xemTruoc, khoiPhuc, xoa,
+  docBanSqlite, docDuLieuBanSao, docChiTiet, khoiPhucChuRong, khoiPhucLoRungTuBanSao
+};

@@ -10,10 +10,22 @@ contextBridge.exposeInMainWorld('hak', {
   kiemGoiSync: fid => ipcRenderer.sendSync('db:kiemGoi', fid),
   lichSuGoiSync: fid => ipcRenderer.sendSync('db:lichSuGoi', fid),
   inHtml: (html, ten) => ipcRenderer.invoke('print:html', html, ten),
-  save: (db, opts) => ipcRenderer.invoke('db:save', db, opts && typeof opts === 'object' ? {allowBulkDelete: !!opts.allowBulkDelete} : undefined),
+  save: (db, opts) => ipcRenderer.invoke('db:save', db, opts && typeof opts === 'object' ? {
+    allowBulkDelete: !!opts.allowBulkDelete,
+    preserveMissingOwners: opts.preserveMissingOwners != null ? !!opts.preserveMissingOwners : undefined,
+    delO: Array.isArray(opts.delO) ? opts.delO : undefined
+  } : undefined),
+  owners: {
+    list: () => ipcRenderer.invoke('owners:list'),
+    get: id => ipcRenderer.invoke('owners:get', id),
+    remove: id => ipcRenderer.invoke('owners:remove', id),
+    purgeUnlisted: ids => ipcRenderer.invoke('owners:purgeUnlisted', ids)
+  },
   importPreview: (db, opts) => ipcRenderer.invoke('import:preview', db, opts),
   importApply: (db, strategy, opts) => ipcRenderer.invoke('import:apply', db, strategy, opts),
   backupTo: () => ipcRenderer.invoke('backup:to'),
+  backupSaveAs: () => ipcRenderer.invoke('backup:saveAs'),
+  lotRemove: (oid, fid) => ipcRenderer.invoke('lot:remove', oid, fid),
   lotSave: pkg => ipcRenderer.invoke('lot:save', pkg),
   lotOpen: p => ipcRenderer.invoke('lot:open', p),
   lotApply: (pkg, action) => ipcRenderer.invoke('lot:apply', pkg, action),
@@ -27,7 +39,9 @@ contextBridge.exposeInMainWorld('hak', {
     setAutoChuKy: c => ipcRenderer.invoke('settings:setAutoChuKy', c),   // phiếu #13a
     setBackupJson: reset => ipcRenderer.invoke('settings:setBackupJson', !!reset),
     openBackupJson: () => ipcRenderer.invoke('settings:openBackupJson'),
-    openBackup: () => ipcRenderer.invoke('settings:openBackup')
+    openBackup: () => ipcRenderer.invoke('settings:openBackup'),
+    detectTargets: () => ipcRenderer.invoke('settings:detectTargets'),
+    setBackup2Dir: dir => ipcRenderer.invoke('settings:setBackup2Dir', dir)
   },
   data: {
     status: () => ipcRenderer.invoke('data:status'),
@@ -43,7 +57,11 @@ contextBridge.exposeInMainWorld('hak', {
     restore: f => ipcRenderer.invoke('bk:restore', f),
     readJson: f => ipcRenderer.invoke('bk:readJson', f),
     remove: f => ipcRenderer.invoke('bk:delete', f),
-    autoNow: () => ipcRenderer.invoke('bk:autoNow')
+    autoNow: () => ipcRenderer.invoke('bk:autoNow'),
+    truocSheets: () => ipcRenderer.invoke('bk:truocSheets'),   // PR D bước 2: sao lưu file hiện tại trước lần lưu đầu sau khi áp dữ liệu từ Google Sheets
+    inspectDetail: f => ipcRenderer.invoke('bk:inspectDetail', f),
+    restoreOwner: (f, oid, s) => ipcRenderer.invoke('bk:restoreOwner', f, oid, s),
+    restoreForest: (f, oid, fid, s) => ipcRenderer.invoke('bk:restoreForest', f, oid, fid, s)
   },
   openDataFolder: () => ipcRenderer.invoke('app:openData'),
   phieuCan: (rows, company) => ipcRenderer.invoke('phieucan:open', rows, company),
@@ -66,6 +84,7 @@ contextBridge.exposeInMainWorld('hak', {
     candidates: (tab, row) => ipcRenderer.invoke('lookup:candidates', tab, row),
     build: (cccd, hd) => ipcRenderer.invoke('lookup:build', cccd, hd),
     buildHd: hd => ipcRenderer.invoke('lookup:buildHd', hd),
-    summaryHd: list => ipcRenderer.invoke('lookup:summaryHd', list)
+    summaryHd: list => ipcRenderer.invoke('lookup:summaryHd', list),
+    chatLuong: () => ipcRenderer.invoke('lookup:chatLuong')   // PR D bước 3: báo cáo chất lượng (chỉ số đếm), không tham số
   }
 });

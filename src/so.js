@@ -13,6 +13,7 @@
     if (v === null || v === undefined) return {ok: true, blank: true, moHo: false, value: null, reason: '', error: '', raw: v};
     if (typeof v === 'number') {
       if (!isFinite(v)) return fail(v, 'không phải số hữu hạn');
+      if (Object.is(v, -0)) v = 0;   // -0 dạng số: chuẩn hóa về 0
       if (v < 0) return fail(v, 'khối lượng không được là số âm');
       return {ok: true, blank: false, moHo: false, value: v, reason: '', error: '', raw: v};
     }
@@ -44,15 +45,15 @@
       return r.blank ? null : r.ok ? r.value : 'x';
     }
     if (v === null || v === undefined) return null;
-    if (typeof v === 'number') return isFinite(v) ? v : 'x';
+    if (typeof v === 'number') return isFinite(v) ? (Object.is(v, -0) ? 0 : v) : 'x';
     const t = trim(v);
     if (t === '') return null;
     if (/^0[xXobOB]/.test(t) || /[eE]/.test(t)) return 'x';
-    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) { const n = Number(t.replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 'x'; }
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) { const n = Number(t.replace(/\./g, '').replace(',', '.')); return isFinite(n) ? (Object.is(n, -0) ? 0 : n) : 'x'; }
     const s = t.replace(',', '.');
     if (!/^-?\d+(\.\d+)?$/.test(s)) return 'x';
     const n = Number(s);
-    return isFinite(n) ? n : 'x';
+    return isFinite(n) ? (Object.is(n, -0) ? 0 : n) : 'x';
   }
 
   function parseDonGia(v) {
@@ -76,6 +77,25 @@
   }
 
   const MAX_TAN_CHUYEN = 60;
-  const api = {parseKl, toDec, parseDonGia, docBangDonGia, MAX_TAN_CHUYEN};
+  function groupInput(value, style, integer = false) {
+    const group = style === 'en' ? ',' : '.', decimal = style === 'en' ? '.' : ',';
+    const [whole, fraction, extra] = value.split(decimal);
+    if (extra !== undefined || (fraction !== undefined && (integer || !/^\d*$/.test(fraction)))) return value;
+    if (!/^-?\d+$/.test(whole)) return value;
+    return whole.replace(/\B(?=(\d{3})+(?!\d))/g, group) + (fraction === undefined ? '' : decimal + fraction);
+  }
+  function readInput(value, style, integer = false) {
+    if (style !== 'en') {
+      const s = trim(value);
+      if (integer && /^\d{1,3}(?:\.\d{3})+$/.test(s)) return toDec(s);
+      return integer ? value : toDec(value);
+    }
+    const s = trim(value);
+    if (!s) return null;
+    if (!/^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(s) || (integer && s.includes('.'))) return 'x';
+    const n = Number(s.replace(/,/g, ''));
+    return Number.isFinite(n) ? n : 'x';
+  }
+  const api = {groupInput, readInput, parseKl, toDec, parseDonGia, docBangDonGia, MAX_TAN_CHUYEN};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HAKSo = api;
 })(typeof self !== 'undefined' ? self : this);

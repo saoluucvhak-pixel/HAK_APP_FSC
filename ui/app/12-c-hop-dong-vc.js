@@ -12,7 +12,7 @@ function panelHdvc(rec) {
   const sel = list.find(h => h.id === NAV.curHd) || null;
   const tenDoi = (h, k) => trim(h.ten) || 'Đội xe ' + (k + 1);
   const ky = h => { if (h.donViId) return esc((h.ben || {}).ten || '(đơn vị)') + ' <span class="mut">(' + esc(vaiTroDV(h.ben)) + ')</span>'; const g = gOf(h); return g ? esc(g.ten || '') + ' <span class="mut">(' + esc(g.vaiTro) + ')</span>' : '<span class="mut">chưa có xe</span>'; };
-  const row = (h, k) => '<tr data-act="chonHd" data-hd="' + esc(h.id) + '" style="cursor:pointer' + (sel && sel.id === h.id ? ';background:var(--sel,#eef5ee)' : '') + '"><td><b>' + esc(tenDoi(h,
+  const row = (h, k) => '<tr class="' + (sel && sel.id === h.id ? 'sel' : '') + '" data-act="chonHd" data-hd="' + esc(h.id) + '" style="cursor:pointer"><td><b>' + esc(tenDoi(h,
   k)) + '</b>' + (sel && sel.id === h.id ? ' <span class="pill">đang chọn</span>' : '') + '</td><td>' + ky(h) + '</td><td style="text-align:center">' + HAKModel.xeOf(F, h).length + '</td><td>' + cuocText(rec, h) + '</td><td>' + esc((h.exp || {}).soVC || '') + (h.exp && h.exp.soVC ? '' :
   ' <span class="mut">(số chung)</span>') + '</td></tr>';
   const dv = dmVC();
@@ -30,9 +30,9 @@ function panelHdvc(rec) {
     esc(d.ten + (d.daiDien ? ' (đại diện: ' + d.daiDien + ')' : '') + ' · pháp nhân (Danh mục đối tượng)') + '</option>').join('') + dmCaNhan().map(d => '<option value="d:' + esc(d.id) + '"' + ('d:' + d.id === cur ? ' selected' : '') + '>' + esc((d.doiTuongTen && d.doiTuongTen !== d.ten ?
     d.doiTuongTen + ' — ' : '') + d.ten + (d.cccd ? ' · CCCD ' + d.cccd : '') + ' · người ký (Danh mục đối tượng)') + '</option>').join('');
     html += '<form id="hdForm" class="grid" style="margin-top:10px;border-top:1px solid var(--line,#ddd);padding-top:10px"><h4 class="sro">' + esc(tenDoi(sel, k)) + ': hợp đồng vận chuyển</h4>' +
-      (doi ? '<div class="msg warn" style="grid-column:1/-1">Danh mục Đối tác đã sửa thông tin đối tác này sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button class="btn ghost sm" type="button" data-act="hdCapNhatDv">Cập nhật theo danh mục</button></div>' : '') +
+      (doi ? '<div class="msg warn" style="grid-column:1/-1">Danh mục đối tượng đã sửa thông tin của bên này sau khi chọn: hợp đồng vẫn in thông tin lúc chọn. <button class="btn ghost sm" type="button" data-act="hdCapNhatDv">Cập nhật theo danh mục</button></div>' : '') +
       '<label><span>Tên đội xe</span><input name="ten" value="' + esc(sel.ten || '') + '"></label>' +
-      '<label><span>Người ký hợp đồng của đội</span><select name="ky">' + (opts || '<option value="">— đội chưa có xe, chưa có đơn vị trong danh mục —</option>') + '</select><small class="mut">Chưa có người ký? <button type="button" class="btn ghost sm" data-act="openSetDt" data-quaylai="dx">Mở Danh mục đối tượng</button> (khai quyền ký Vận chuyển; bản đang nhập được giữ để quay lại)</small></label>' +
+      '<label><span>Người ký hợp đồng của đội</span><input type="search" id="kyLoc" placeholder="Gõ tên, CCCD hoặc biển số để lọc…" autocomplete="off" aria-label="Lọc người ký"><span class="row" style="gap:6px;flex-wrap:nowrap"><select name="ky" style="flex:1">' + (opts || '<option value="">— đội chưa có xe, chưa có đơn vị trong danh mục —</option>') + '</select><button type="button" class="btn ghost sm" data-act="kyThemNhanh" id="kyThemNhanh">+ Thêm người ký</button></span><small class="mut" id="hdKyHuongDan">Thêm xe ở tab “Xe và tài xế”, hệ thống sẽ tự động đưa Chủ xe / Tài xế vào danh sách chọn người ký.</small></label>' +
       '<label style="grid-column:1/-1"><span><input type="checkbox" name="rieng"' + (sel.cuoc ? ' checked' : '') + '> Cước riêng cho đội xe này (bỏ chọn = dùng cước chung của lô)</span></label>' +
       '<label><span>Cách tính</span><select name="vcMode">' + vcOptions(mode) + '</select></label>' +
       '<label><span>Đơn giá cố định (đồng/tấn)</span><input name="vcCoDinh" value="' + esc(c.coDinh ?? '') + '"></label>' +

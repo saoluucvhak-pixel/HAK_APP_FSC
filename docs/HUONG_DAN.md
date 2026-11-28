@@ -55,10 +55,10 @@ Luồng thống nhất cho ba cách nhập (thêm tay, nạp Excel, đưa từ T
 2. **Xem trước (Chưa lưu)**: mọi nguồn chỉ đổi **bản nháp**, không đổi dữ liệu đã lưu và không đổi lô khác. Mỗi dòng có trạng thái **Thêm mới**, **Sửa** (rê chuột để xem giá trị cũ → mới), **Sẽ xóa**, **Đã lưu**. Nạp Excel theo khóa nghiệp vụ (nhân công: CCCD hoặc họ tên; xe: biển số đã chuẩn hóa; phiếu: số phiếu); bản ghi đã lưu mà file không có vẫn được giữ; nạp lại cùng file không tính trùng. File mang mã lô khác lô đang mở báo lỗi, không tự chuyển lô.
 3. **Sửa, xóa**: **Sửa** mở hộp thoại; **Bỏ dòng** chỉ bỏ dòng mới khỏi lượt nhập; **Xóa đã lưu** xóa bản ghi đã lưu khi bấm Lưu (có hỏi, có **Hoàn tác**).
 4. **Phiếu cân và xe**: ô **Xe** chỉ chọn xe của lô; chưa có xe thì chọn **+ Thêm xe mới…** ngay trong phiếu (thông tin đã nhập được giữ) hoặc bấm nút **+ Thêm xe …** ở thanh nhắc biển còn thiếu. Sửa biển số xe có phiếu liên kết: hộp xác nhận liệt kê các phiếu; số chuyến, khối lượng, tiền không đổi. Xóa xe còn phiếu liên kết bị chặn (nêu số phiếu).
-5. **Lưu dữ liệu vào lô**: kiểm tra lại lô đích, quan hệ xe–phiếu và lỗi dữ liệu rồi ghi một lần vào SQLite. Còn lỗi thì không ghi và nêu từng lỗi; lưu thất bại thì dữ liệu đã lưu và bản nháp đều giữ nguyên để thử lại. Phiếu trùng số với lô khác cần xác nhận đối chiếu. Chưa khai đơn giá chức danh không chặn lưu nhưng vẫn chặn xuất hồ sơ.
+5. **Lưu dữ liệu vào lô**: kiểm tra lại lô đích, quan hệ xe–phiếu và lỗi dữ liệu rồi ghi một lần vào SQLite. Còn lỗi thì không ghi và nêu từng lỗi; lưu thất bại thì dữ liệu đã lưu và bản nháp đều giữ nguyên để thử lại. Phiếu trùng số với lô khác cần xác nhận đối chiếu. Chưa khai đơn giá vị trí không chặn lưu nhưng vẫn chặn xuất hồ sơ.
 6. **Tạo, xuất, in hồ sơ** chỉ dùng dữ liệu đã lưu: còn bản nháp thì mọi nút tải, xuất, in (kể cả Tải toàn bộ, in đợt 2, in phiếu cân) bị khóa, nêu lý do và có nút quay lại mục đang chỉnh. Sau khi lưu, số chuyến, tổng tấn, tiền công và cước được tính lại từ dữ liệu đã lưu.
 7. **Ctrl+S** lưu lô đang mở (như bấm “Lưu dữ liệu vào lô”); ô đang gõ được ghi nhận trước khi lưu. **Ctrl+K** mở tìm kiếm.
-8. **Chuyển lô, đổi chủ rừng, đóng ứng dụng** khi còn bản nháp: hỏi **Lưu và tiếp tục**, **Bỏ thay đổi** hoặc **Quay lại chỉnh sửa**. Sao lưu lô rừng chỉ gồm dữ liệu đã lưu (có nhắc nếu còn bản nháp). Mọi bước hoạt động khi không có mạng.
+8. **Chuyển lô, đổi chủ rừng, đóng ứng dụng** khi còn bản nháp: hỏi **Lưu và tiếp tục**, **Bỏ thay đổi** hoặc **Quay lại chỉnh sửa**. Khi chuyển lô, có thể chọn **Giữ bản nháp và tiếp tục** để làm việc ở lô khác. Sao lưu lô rừng chỉ gồm dữ liệu đã lưu (có nhắc nếu còn bản nháp). Mọi bước hoạt động khi không có mạng.
 
 **Gộp dữ liệu khi nạp Excel hoặc Google Sheets vào bản nháp** (cùng một quy tắc cho hai nguồn, áp dụng cho nhân công, xe, phiếu cân):
 - **Ô nguồn trống hoặc cột vắng mặt thì giữ giá trị đang có**, không bao giờ xóa trường qua nhập file. Muốn xóa một trường được phép để trống, bấm **Sửa** và xóa trong hộp thoại rồi lưu.
@@ -125,11 +125,11 @@ Vào lô → tab **Nhân công** → mục **Thông số hợp đồng và đơn
 1. **Hình thức hợp đồng**
    - **Giao khoán**: chủ rừng ký hợp đồng khoán (BM-01) với **Tổ trưởng**; các công nhân ký **một Giấy ủy quyền (BM-20)** cho Tổ trưởng. Tính theo **tấn, ha hoặc ngày công**. Khi chọn **ngày công**, Tổ trưởng nhận thay cả tổ tổng tiền rồi chi trả lại từng người theo cột “Thực nhận” của BM-08.
    - **Trực tiếp**: chủ rừng ký hợp đồng lao động (BM-03) với **mọi nhân công**. Tính theo **tấn hoặc ngày công**.
-2. **Đơn giá theo từng chức danh** (Tổ trưởng, Công nhân khai thác, Công nhân cưa): ô đơn giá hiện theo cơ sở tính đã chọn (đồng/tấn, đồng/ha, đồng/công). Thiếu đơn giá của chức danh nào thì dòng nhân công đó báo lỗi.
-3. **Sản lượng chia đều**: tấn (hoặc ha, hoặc số công) chia đều cho **mọi người trong tổ (đội), kể cả Tổ trưởng**; lô nhiều đội thì sản lượng chia cho các đội theo số người rồi chia đều trong từng đội (xem mục Nhiều đội); tiền mỗi người = phần chia × đơn giá chức danh của người đó.
+2. **Đơn giá theo từng vị trí** (Tổ trưởng, Công nhân khai thác, Công nhân cưa): ô đơn giá hiện theo cơ sở tính đã chọn (đồng/tấn, đồng/ha, đồng/công). Thiếu đơn giá của vị trí nào thì dòng nhân công đó báo lỗi.
+3. **Sản lượng chia đều**: tấn (hoặc ha, hoặc số công) chia đều cho **mọi người trong tổ (đội), kể cả Tổ trưởng**; lô nhiều đội thì sản lượng chia cho các đội theo số người rồi chia đều trong từng đội (xem mục Nhiều đội); tiền mỗi người = phần chia × đơn giá vị trí của người đó.
 4. **Ngày bắt đầu** dùng cho hợp đồng, chấm công và kiểm tra **đủ 18 tuổi**. Người dưới 18 tuổi bị cảnh báo và **không xuất được Giấy ủy quyền**.
 5. **Chấm công thực tế** (chỉ khi cơ sở tính là **ngày công**, cả giao khoán lẫn trực tiếp): thẻ **Chấm công thực tế** ngay dưới thông số ở tab Nhân công. Chọn tháng, nhập số công từng ngày cho từng người (**1** đủ công, **0,5** nửa công, **0** hoặc trống là nghỉ; tối đa 3 mỗi ngày), hoặc bấm **Điền đủ công (trừ Chủ nhật)** rồi sửa các ngày nghỉ. Tổng tháng và cả đợt hiện ngay. Quy tắc: **chưa chấm công** thì BM-08 tính mọi người bằng số công theo thời gian khai thác (trừ Chủ nhật); **đã chấm công** thì BM-08 dùng tổng công của từng người (người chưa chấm là 0 công). Hợp đồng (BM-01, BM-03, BM-20) luôn dùng số công dự tính nên không đổi khi chấm công. Nút **In bảng chấm công đã nhập** tải BM-05 của tháng đang chọn có sẵn số công; BM-05 trong các gói hồ sơ vẫn là mẫu trống để chấm tay.
-6. **Định mức BHLĐ** theo chức danh (nút **Định mức** ở menu ngang trên cùng) dùng cho sổ cấp phát.
+6. **Định mức BHLĐ** theo vị trí (nút **Định mức** ở menu ngang trên cùng) dùng cho sổ cấp phát.
 6. Nạp danh sách người bằng file Excel mẫu (xem mục 6). Mỗi lô cần **đúng một Tổ trưởng**.
 
 ## 5. Vận chuyển: xe, phiếu cân, cước, địa chỉ giao
@@ -161,7 +161,7 @@ Tiền vận chuyển tính theo **tấn giao tại nhà máy** (theo phiếu c�
 | **NHAN_CONG / DOI_XE / PHIEU_CAN** | **Trang cần điền.** Dòng 1 là tiêu đề, điền từ dòng 2. Phần mềm chỉ đọc trang này |
 | **VI_DU** | Dữ liệu giả để tham khảo cách điền; phần mềm không đọc trang này |
 
-Trong trang dữ liệu: tiêu đề **màu đỏ sẫm = cột bắt buộc**, màu xanh = tùy chọn hoặc có điều kiện; dòng tiêu đề cố định khi cuộn và có bộ lọc; các cột có **mũi tên chọn** (Vai trò, Danh xưng, Chức danh, Người ký) chỉ nhận giá trị trong danh sách; **bấm vào một ô sẽ hiện gợi ý** cho cột đó; cột đã định dạng văn bản nên **CCCD giữ nguyên số 0 đầu**.
+Trong trang dữ liệu: tiêu đề **màu đỏ sẫm = cột bắt buộc**, màu xanh = tùy chọn hoặc có điều kiện; dòng tiêu đề cố định khi cuộn và có bộ lọc; các cột có **mũi tên chọn** (Chức vụ, Danh xưng, Vị trí, Người ký) chỉ nhận giá trị trong danh sách; **bấm vào một ô sẽ hiện gợi ý** cho cột đó; cột đã định dạng văn bản nên **CCCD giữ nguyên số 0 đầu**. File nhân công cũ còn tiêu đề “Vai trò”, “Chức danh” (nay là “Chức vụ”, “Vị trí”) vẫn nạp được bình thường.
 
 **Quy tắc chung khi điền**
 - Không sửa, xóa, đổi tên hoặc đổi thứ tự **dòng tiêu đề**; không đổi tên trang tính dữ liệu, không thêm cột, không gộp ô, không để dòng trống giữa dữ liệu.
@@ -177,7 +177,7 @@ Trong trang dữ liệu: tiêu đề **màu đỏ sẫm = cột bắt buộc**, 
 | File thiếu cột … | Dùng đúng file mẫu, không sửa dòng tiêu đề |
 | Mã rừng "…" khác lô đang mở | Chỉ gặp ở file cũ còn cột Mã rừng: xóa cột đó hoặc để trống ô Mã rừng |
 | CCCD phải đủ 12 chữ số | Nhập lại đủ 12 số, giữ số 0 đầu |
-| Cần ít nhất 1 tổ trưởng | Có ít nhất một dòng Vai trò “Tổ trưởng”. Lô có từ 2 tổ trưởng là lô nhiều đội: ghi tên đội ở cột **Đội** cho mọi dòng (xem mục Nhiều đội) |
+| Cần ít nhất 1 tổ trưởng | Có ít nhất một dòng Chức vụ “Tổ trưởng”. Lô có từ 2 tổ trưởng là lô nhiều đội: ghi tên đội ở cột **Đội** cho mọi dòng (xem mục Nhiều đội) |
 | Biển … chưa có trong danh sách xe | Thêm xe vào file đội xe, nạp lại xe rồi nạp phiếu cân |
 | Ngày … không có thật | Sửa ngày đúng dd/mm/yyyy (ví dụ 28/02/2026) |
 | Số phiếu cân … trùng | Kiểm tra phiếu nhập hai lần |
@@ -263,10 +263,10 @@ Tải từng file `.docx` hoặc cả nhóm (`.zip`).
 
 **Giao khoán: đơn giá khoán của tổ.** Nếu **Thông tin rừng không có đơn giá Tổ trưởng**, phần mềm suy ra đơn giá khoán của tổ từ định biên nhân sự: tổng (số người từng vị trí ở sheet nhân công × đơn giá vị trí) ÷ tổng số người. Hợp đồng khoán (BM-01) ghi rõ cơ sở tính giá trung bình, chi tiết giá từng vị trí và **tổng giá trị khoán = tổng thanh toán cho tất cả mọi người, kể cả Tổ trưởng**; Giấy ủy quyền (BM-20) ghi đơn giá ký tương ứng; BM-08 ghi đơn giá khoán và tổng. Nếu **có nhập “Đơn giá giao khoán Tổ trưởng (đồng/tấn)” ở Thông tin rừng** thì làm như cũ (không có phần suy ra). Ô này **tùy chọn**: để trống thì app tự suy từ định biên.
 
-**Định mức BHLĐ có hiệu lực từ ngày, và thêm vị trí mới.** Nút **Định mức** ở menu ngang trên cùng mở màn hình định mức: định mức BHLĐ theo vị trí (chức danh) và định mức gỗ keo.
+**Định mức BHLĐ có hiệu lực từ ngày, và thêm vị trí mới.** Nút **Định mức** ở menu ngang trên cùng mở màn hình định mức: định mức BHLĐ theo vị trí và định mức gỗ keo.
 - **Hiệu lực từ ngày**: mỗi bản định mức có ngày hiệu lực. Bản gốc (dữ liệu cũ) để trống ngày thì áp dụng từ trước đến nay; nên điền ngày cho rõ. **Thêm bản mới** (ô “Thêm bản mới, hiệu lực từ ngày”) sao chép bản đang chọn để sửa tiếp; ngày phải có thật (dd/mm/yyyy) và không trùng bản khác. Chọn bản ở ô “Bản định mức”, sửa rồi **Lưu bản định mức này**; bản không phải gốc có thể xóa.
 - **Biểu mẫu dùng bản nào**: bản có ngày hiệu lực lớn nhất không vượt quá ngày của biểu mẫu. Danh sách cấp phát BHLĐ (BM-02) theo **ngày cấp phát** (không nhập thì theo ngày bắt đầu khai thác của rừng) và ghi rõ “Định mức theo bản có hiệu lực từ ngày …”; hợp đồng lao động theo ngày bắt đầu hợp đồng, ngày ký hoặc ngày bắt đầu khai thác. Ngày cấp phát **trước mọi bản** thì chặn xuất BM-02 và báo chưa có bản định mức hiệu lực.
-- **Thêm vị trí mới** (ô “Thêm vị trí mới”, ví dụ “Công nhân phụ”): vị trí hiện thêm một dòng trong mọi bản định mức, thêm ô đơn giá ở tab Nhân công (mục Thông số hợp đồng và đơn giá), được chọn trong cột **Chức danh** khi nạp nhân công và có trong file Excel mẫu nhân công tải sau đó. Vị trí có người giữ trong giao khoán nằm trong chi tiết đơn giá và công thức đơn giá bình quân. Chỉ **Tổ trưởng** có vai trò riêng; tên vị trí mới không được bắt đầu bằng “Tổ trưởng”. Xóa vị trí chỉ khi chưa còn nhân công nào giữ.
+- **Thêm vị trí mới** (ô “Thêm vị trí mới”, ví dụ “Công nhân phụ”): vị trí hiện thêm một dòng trong mọi bản định mức, thêm ô đơn giá ở tab Nhân công (mục Thông số hợp đồng và đơn giá), được chọn trong cột **Vị trí** khi nạp nhân công và có trong file Excel mẫu nhân công tải sau đó. Vị trí có người giữ trong giao khoán nằm trong chi tiết đơn giá và công thức đơn giá bình quân. Chỉ **Tổ trưởng** có vai trò riêng; tên vị trí mới không được bắt đầu bằng “Tổ trưởng”. Xóa vị trí chỉ khi chưa còn nhân công nào giữ.
 
 **Số hợp đồng và năm trên biểu mẫu** (BM-01, BM-04, BM-09, BM-10, BM-14, BM-20): số in có dạng `<phần số>/<năm>-<hậu tố>`, ví dụ `015/2027-KT`.
 - Nhập số **đầy đủ** (có dấu “/” hoặc đã có hậu tố, ví dụ `015/2025-KT`): phần mềm **giữ nguyên**.
@@ -291,7 +291,9 @@ Phần mềm **tự sao lưu file cơ sở dữ liệu** vào thư mục `backup
 - **Khôi phục…** từ bản `.sqlite`: màn xem trước so số liệu đang có trên máy với số liệu trong bản sao lưu → **Thay toàn bộ bằng bản này**. Phần mềm sao lưu dữ liệu hiện tại trước khi ghi (bản “Trước khi khôi phục”, cũng nằm trong kho nên **hoàn tác được** bằng cách khôi phục lại từ bản đó), kiểm tra hồ sơ đã chốt còn toàn vẹn, rồi ghi trong một giao dịch. Bản sao lưu của phiên bản phần mềm cũ được nâng cấp trên một bản chép tạm; file sao lưu gốc không bị sửa. Bản chụp của các lần chốt trước có trong bản sao lưu được khôi phục theo. Bản tra cứu Google Sheets của máy giữ nguyên. Bản `.json` mở màn xem trước của **Khôi phục toàn bộ** (chọn giữ / ghi đè / giữ cả hai / thay toàn bộ).
 - **Xóa**: xóa một bản sao lưu để giải phóng ổ đĩa (có hỏi lại; không hoàn tác được). Các bản “Trước khi khôi phục”, “Trước khi khôi phục lô”, “Trước khi xóa” tự giữ 20 bản gần nhất mỗi loại.
 
-**Sao lưu toàn bộ**: **Cài đặt → Sao lưu và khôi phục → Sao lưu toàn bộ dữ liệu (.json)** → chọn thư mục → tạo 2 file cùng tên `.json` và `.sqlite`.
+**Sao lưu toàn bộ** tạo và kiểm tra từng tệp `.json` và `.sqlite` trong các thư mục đã chọn ở **Cài đặt → Sao lưu và khôi phục → Thư mục và lịch**. Nếu một tệp gặp lỗi, phần mềm vẫn thử tạo tệp còn lại và báo tệp nào dùng được. Kiểm tra kết nối ổ, quyền ghi và dung lượng, hoặc đổi thư mục của định dạng bị lỗi rồi thử sao lưu lại.
+
+Khi lưu bản nháp đã nhận dữ liệu theo hợp đồng Google Sheets, phần mềm tạo bản dự phòng trước khi ghi lô đó. Nếu sao lưu lỗi, bản nháp được giữ lại. Bấm **Chọn thư mục sao lưu SQLite…** ngay trong thông báo, rồi bấm **Thử lưu lại**. Bạn có thể giữ bản nháp này và tiếp tục nhập, lưu lô khác. Khi bấm **Lưu và đóng**, phần mềm vẫn lưu các lô xử lý được và giữ cửa sổ mở nếu còn lô gặp lỗi.
 
 **Khôi phục toàn bộ**: **Cài đặt → Sao lưu và khôi phục → Khôi phục toàn bộ dữ liệu (.json)** (cũng dùng để nhập bản sao lưu từ bản HTML cũ). Màn hình xem trước cho biết số liệu trong file và trên máy, và với từng chủ/lô: **THÊM** (chưa có), **TRÙNG** (đã có), **GIỮ** (có trên máy, không có trong file). Chọn cách xử lý:
 - **Giữ bản trên máy, chỉ thêm mới**.
@@ -341,20 +343,20 @@ Nếu ID nội bộ, mã lô và chủ rừng chỉ về các hồ sơ **khác n
 | Phiếu cân sai ngày | Không nhập được; phiếu cũ đã lưu được giữ, loại khỏi tổng kỳ |
 | Điểm đến vận chuyển | Địa chỉ giao hàng đã xác nhận theo từng lô; “Nơi giao” trên phiếu giữ nguyên dữ liệu nguồn |
 | Cước | Chỉ hai cách: cố định (đồng/tấn) hoặc tấn/km; tính theo tấn giao tại nhà máy |
-| Tiền công | Tổng theo từng chức danh (phần chia đều × đơn giá chức danh), gồm cả Tổ trưởng |
+| Tiền công | Tổng theo từng vị trí (phần chia đều × đơn giá vị trí), gồm cả Tổ trưởng |
 
-## Cài đặt: Hệ thống, Google Sheets, Công ty, Hiển thị số
-Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
-- **Hệ thống**: thư mục dữ liệu.
-- **Sao lưu và khôi phục**: bốn thao tác (Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô), thư mục và tự sao lưu SQLite (gộp thư mục thứ hai, chu kỳ, số bản giữ, nút Sao lưu ngay), thư mục sao lưu JSON, nhắc sao lưu và kho sao lưu (mục 10).
+## Cài đặt: Dữ liệu, Sao lưu và khôi phục, Google Sheets, Hiển thị, Hướng dẫn, Cần đối chiếu
+Nút **Cài đặt** ở menu ngang trên cùng mở một hàng **tab ngang** (cùng kiểu Danh mục dùng chung):
+- **Dữ liệu** (trước đây tên “Hệ thống”): thư mục dữ liệu.
+- **Sao lưu và khôi phục**, chia ba tab con: **Thao tác** (bốn nút Sao lưu toàn bộ, Khôi phục toàn bộ, Sao lưu lô, Khôi phục lô; tình trạng sao lưu; nhắc sao lưu; cảnh báo ổ đĩa sắp hết), **Thư mục và lịch** (thư mục và tự sao lưu SQLite gồm thư mục thứ hai, chu kỳ, số bản giữ, nút Sao lưu ngay; thư mục sao lưu JSON) và **Các bản sao lưu** (danh sách các bản trên máy: kiểm tra, khôi phục; mục 10). Tab con đang mở được nhớ trong lần làm việc.
 - **Google Sheets**: **địa chỉ bảng tính** dùng cho màn Tra cứu (chỉ đọc). Màn Tra cứu không còn ô nhập địa chỉ; chỉ ghi địa chỉ đang dùng và nút “Đổi trong Cài đặt”.
 - **Công ty**: thông tin **Công ty mua hàng** (một hồ sơ cho cả phần mềm, các địa chỉ giao hàng). Nút Công ty mua hàng không còn ở menu ngang.
-- **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
+- **Hiển thị**: gộp hai tab con **Hiển thị số** và **Giao diện** (chế độ sáng / tối, bảng màu). **Hiển thị số**: chọn kiểu Việt Nam (1.234.567,5) hoặc kiểu quốc tế (1,234,567.5) cho số **trên màn hình**. **Ngày luôn là dd/mm/yyyy.** Biểu mẫu Word và file in luôn dùng số kiểu Việt Nam.
 
 ## Định mức gỗ keo (1 ha = ? tấn) và nút điền nhanh ở Thông tin rừng
 - **Định mức gỗ keo**: ở màn **Định mức**, mục “Định mức gỗ keo: 1 ha = ? tấn”, mỗi dòng có **hiệu lực từ ngày**. Dòng cuối để thêm định mức mới; ngày phải có thật và không trùng.
 - **Định mức thời gian khai thác (1 ha = ? ngày)**: cũng ở màn **Định mức**, mỗi dòng có **hiệu lực từ ngày** như định mức gỗ keo; cột cuối cho **năng suất 1 ngày = ? tấn** (= tấn/ha ÷ ngày/ha). Ở **Thông tin rừng**, phần mềm tính **thời gian khai thác dự kiến = diện tích × ngày/ha** (làm tròn lên, không tính Chủ nhật). **Số ngày/ha là của MỘT đội đủ định biên**; các đội làm song song nên thời gian dự kiến = diện tích × ngày/ha ÷ số đội, và phần mềm ghi rõ “÷ n đội làm song song”. **Số đội khai ngay ở ô “Số đội khai thác (làm song song)” trong Thông tin rừng**; để trống thì lấy theo số Tổ trưởng ở tab Nhân công. Khai số đội khác số Tổ trưởng của tab Nhân công thì có nhắc kiểm tra lại (chỉ nhắc, không chặn). Số đội phải là số nguyên từ 1 đến 20. Năng suất 1 ngày (tấn) cũng là của mỗi đội. Nhập **từ ngày** thì hiện ngay **ngày kết thúc dự kiến**; bấm **Điền ngày kết thúc dự kiến** để điền vào ô **đến ngày** (không tự ghi đè; ô đến ngày khác ngày dự kiến thì được nêu rõ). Rừng có số khác thì tự điền ô **Định mức thời gian khai thác (ngày/ha)**; **Dùng mặc định** để quay lại số chung.
-- **Định mức nhân công (định biên một đội khai thác)**: ở màn **Định mức**, mục “Định mức nhân công: 1 đội = ? người”. Định mức này tính cho **MỘT đội** (một Tổ trưởng); lô nhiều đội thì so sánh từng đội. Mặc định **8 người**: **1 Tổ trưởng (kiêm bốc xếp)**, **2 Công nhân cưa** (hạ cây, mở đường, cắt khúc), **3 Công nhân bóc vỏ** (bóc vỏ, xếp gỗ gọn dọc lối xe vào), **2 Công nhân bốc xếp** (bốc đầy chuyến xe 15–20 tấn); tổ bốc xếp thực tế gồm cả Tổ trưởng nên có 3 người. Mỗi vị trí ghi rõ **số người**, **kiêm nhiệm** và **nhiệm vụ**; thêm hay xóa vị trí ở dòng cuối và nút Xóa, **Dùng định mức mặc định** để quay lại. Lưu thì vị trí mới tự vào danh sách chức danh ở tab Nhân công; **định mức BHLĐ và đơn giá lương của vị trí mới cần khai** (nếu chưa, hồ sơ báo thiếu như mọi chức danh khác). Tab **Nhân công** so sánh số người thực tế với định mức, lô nhiều đội thì mỗi đội một dòng (thiếu, thừa, vị trí ngoài định mức: **chỉ cảnh báo, không chặn**), có bảng nhiệm vụ từng vị trí; **Kiểm tra trước khi xuất** có mục **Định mức nhân công**; **BM-06 Danh sách đội khai thác** có thêm bảng **Phân công nhiệm vụ theo vị trí** khi đã lưu định mức (chưa lưu thì BM-06 giữ nguyên như cũ).
+- **Định mức nhân công (định biên một đội khai thác)**: ở màn **Định mức**, mục “Định mức nhân công: 1 đội = ? người”. Định mức này tính cho **MỘT đội** (một Tổ trưởng); lô nhiều đội thì so sánh từng đội. Mặc định **8 người**: **1 Tổ trưởng (kiêm bốc xếp)**, **2 Công nhân cưa** (hạ cây, mở đường, cắt khúc), **3 Công nhân bóc vỏ** (bóc vỏ, xếp gỗ gọn dọc lối xe vào), **2 Công nhân bốc xếp** (bốc đầy chuyến xe 15–20 tấn); tổ bốc xếp thực tế gồm cả Tổ trưởng nên có 3 người. Mỗi vị trí ghi rõ **số người**, **kiêm nhiệm** và **nhiệm vụ**; thêm hay xóa vị trí ở dòng cuối và nút Xóa, **Dùng định mức mặc định** để quay lại. Lưu thì vị trí mới tự vào danh sách vị trí ở tab Nhân công; **định mức BHLĐ và đơn giá lương của vị trí mới cần khai** (nếu chưa, hồ sơ báo thiếu như mọi vị trí khác). Tab **Nhân công** so sánh số người thực tế với định mức, lô nhiều đội thì mỗi đội một dòng (thiếu, thừa, vị trí ngoài định mức: **chỉ cảnh báo, không chặn**), có bảng nhiệm vụ từng vị trí; **Kiểm tra trước khi xuất** có mục **Định mức nhân công**; **BM-06 Danh sách đội khai thác** có thêm bảng **Phân công nhiệm vụ theo vị trí** khi đã lưu định mức (chưa lưu thì BM-06 giữ nguyên như cũ).
 - **Cảnh báo lệch thời gian khai thác**: so ngày kết thúc **thực tế** (ô **đến ngày**; chưa có thì lấy **ngày cân cuối cùng** của phiếu cân) với dự kiến, tính số ngày khai thác không kể Chủ nhật. Lệch quá **20% thời gian dự kiến (tối thiểu 3 ngày)**, dài hơn hay ngắn hơn, thì hiện cảnh báo đỏ ngay dưới ô ở Thông tin rừng, thêm mục **Thời gian khai thác** ở **Kiểm tra trước khi xuất** (cần đối chiếu, không chặn xuất hồ sơ) và mục cảnh báo ở **Tổng quan**. Khi cảnh báo, kiểm tra lại diện tích, định mức ngày/ha, số đội hoặc ngày kết thúc. Lô nhiều đội: nếu chỉ có một đội đang làm thì thời gian thực tế sẽ dài hơn dự kiến và bị cảnh báo; đó là đúng, hãy bổ sung đội hoặc bỏ qua cảnh báo.
 - **Mặc định cho rừng**: rừng lấy định mức có hiệu lực theo **ngày bắt đầu khai thác** của rừng (chưa có ngày thì dùng bản mới nhất). Ô “Định mức (tấn/ha)” ở Thông tin rừng để trống là dùng mặc định (gợi ý ngay trong ô); **tự điền số** thì rừng dùng số riêng; nút **Dùng mặc định** xóa số riêng. Sản lượng dự kiến tự tính theo định mức đang dùng.
 - **Từ ngày / đến ngày**: nút **Lấy ngày cân nhỏ nhất** và **Lấy ngày cân lớn nhất** (từ phiếu cân của rừng) điền vào ô; vẫn tự điền hoặc sửa được.
@@ -369,11 +371,11 @@ Nút **Cài đặt** ở menu ngang trên cùng gồm bốn mục:
 
 ## Báo cáo danh sách lao động và danh sách xe
 Hai mẫu trong nút **Báo cáo**, xuất **Word** hoặc **Excel**:
-- **Danh sách lao động theo lô**: tổng hợp từng lô (số lao động, tổ trưởng, công nhân khai thác, công nhân cưa, vị trí khác, số người dưới 18 tuổi) và danh sách chi tiết (họ tên, vai trò, chức danh, ngày sinh, tuổi, CCCD, địa chỉ, ngày và nơi cấp CCCD, đơn giá theo cơ sở tính của lô). Tuổi tính tại ngày bắt đầu khai thác của lô (không có thì ngày lập báo cáo). Có ghi chú dưới 18 tuổi, lô chưa có tổ trưởng, và mục “Hồ sơ lao động cần bổ sung” khi thiếu ngày sinh hoặc CCCD không đủ 12 số.
+- **Danh sách lao động theo lô**: tổng hợp từng lô (số lao động, tổ trưởng, công nhân khai thác, công nhân cưa, vị trí khác, số người dưới 18 tuổi) và danh sách chi tiết (họ tên, chức vụ, vị trí, ngày sinh, tuổi, CCCD, địa chỉ, ngày và nơi cấp CCCD, đơn giá theo cơ sở tính của lô). Tuổi tính tại ngày bắt đầu khai thác của lô (không có thì ngày lập báo cáo). Có ghi chú dưới 18 tuổi, lô chưa có tổ trưởng, và mục “Hồ sơ lao động cần bổ sung” khi thiếu ngày sinh hoặc CCCD không đủ 12 số.
 - **Danh sách xe vận chuyển theo lô**: tổng hợp từng lô (số xe, số chuyến, khối lượng) và danh sách xe (biển số, loại xe, chủ xe, người ký hợp đồng vận chuyển, tên tài xế, CCCD người ký, SĐT, hạn bảo hiểm, hạn GPLX, số chuyến và khối lượng theo phiếu cân; lọc kỳ theo ngày cân). Biển số có trong phiếu cân nhưng chưa có trong danh sách xe được liệt kê ở mục III.
 
 **Bộ lọc thông minh cho mẫu báo cáo.** Trong nút **Báo cáo**, mọi mẫu có thanh lọc: **Tìm nhanh** (gõ rồi Enter; không phân biệt dấu và hoa thường, nhiều từ = phải có đủ), **Lô rừng**, **Chủ rừng**, khoảng ngày cân, và điều kiện riêng của từng mẫu:
-- **Danh sách lao động**: chức danh, vai trò, chỉ người dưới 18 tuổi, chỉ hồ sơ cần bổ sung (thiếu ngày sinh hoặc CCCD).
+- **Danh sách lao động**: vị trí, chức vụ, chỉ người dưới 18 tuổi, chỉ hồ sơ cần bổ sung (thiếu ngày sinh hoặc CCCD).
 - **Danh sách xe**: người ký hợp đồng vận chuyển, chỉ xe chưa có số điện thoại, chỉ xe có chuyến hoặc chưa có chuyến trong kỳ.
 - **Sổ phiếu cân**: tìm theo số phiếu, biển số, khách hàng, nơi giao.
 Mỗi điều kiện hiện thành **chip** (bấm × để bỏ, “Xóa hết” để bỏ tất cả). Có thể **lưu bộ lọc** theo tên cho từng mẫu và mở lại sau. Bộ lọc áp dụng **trước khi lập báo cáo** nên KPI, tổng cộng, file Word và Excel đều khớp phần đã lọc; dòng “phạm vi lọc” dưới tiêu đề ghi rõ các điều kiện đã dùng.
@@ -385,7 +387,7 @@ Tab **Xuất hồ sơ** có bảng **Quy trình hồ sơ theo đợt** ở đầ
 | Hiện tượng | Cách xử lý |
 | --- | --- |
 | Nút tải biểu mẫu bị khóa | Mở tab **Kiểm tra trước khi xuất**, xử lý các mục chặn |
-| Báo thiếu đơn giá | Nhập đơn giá cho từng chức danh ở tab Nhân công (kể cả Tổ trưởng) |
+| Báo thiếu đơn giá | Nhập đơn giá cho từng vị trí ở tab Nhân công (kể cả Tổ trưởng) |
 | Phiếu cân báo biển không có trong xe | Thêm xe vào file đội xe, nạp lại xe rồi nạp phiếu cân |
 | Phiếu cân báo sai ngày | Sửa ngay trong bảng phiếu cân (ô “Sửa ngày”) hoặc sửa file Excel rồi nạp lại |
 | Đổi mã lô bị từ chối | Mã đã có ở lô khác; thông báo nêu lô đang dùng mã đó |
@@ -400,11 +402,11 @@ Tab **Xuất hồ sơ** có bảng **Quy trình hồ sơ theo đợt** ở đầ
 - Biểu mẫu mới kiểm tra hiển thị bằng LibreOffice, **chưa thử trên Microsoft Word thật**: nên in thử một bộ.
 - Nội dung biểu mẫu FSC (BM-11 đến BM-19) do phần mềm soạn, cần đối chiếu với yêu cầu của tổ chức chứng nhận.
 - Định mức BHLĐ là giá trị tạm; viện dẫn “Thông tư 84/2025/TT-BNNMT” giữ từ mẫu đã duyệt, chưa xác minh. BM-10 chưa tính khấu trừ thuế.
-- Cách tính tiền khoán theo từng chức danh (chia đều) cần người phụ trách xác nhận.
+- Cách tính tiền khoán theo từng vị trí (chia đều) cần người phụ trách xác nhận.
 
 
 ## Cài đặt hệ thống: thư mục dữ liệu và thư mục sao lưu
-Mở **Cài đặt → Hệ thống**.
+Mở **Cài đặt → Dữ liệu**.
 - **Thư mục dữ liệu**: nơi lưu cơ sở dữ liệu (`hakqn.sqlite`). Bấm *Chọn thư mục…* để đổi: phần mềm sao chép toàn bộ dữ liệu sang thư mục mới rồi dùng từ đó; **bản cũ không bị xóa** (xóa tay khi chắc chắn không cần). Nếu thư mục mới đã có dữ liệu HAKQN, phần mềm hỏi: dùng dữ liệu có sẵn đó, ghi đè bằng dữ liệu đang dùng (bản có sẵn được lưu lại trước), hoặc hủy. *Về mặc định* đưa dữ liệu về thư mục của ứng dụng.
 - **Thư mục sao lưu**: bản sao lưu tự động trước khi nâng cấp dữ liệu, bản tự sao lưu hằng ngày, **Sao lưu toàn bộ dữ liệu** (lưu thẳng vào đây, không hỏi lại) và thư mục gợi ý khi sao lưu lô rừng. Nên chọn ổ khác hoặc USB.
 - Thư mục phải có sẵn và ghi được, nếu không phần mềm báo lỗi và giữ cài đặt cũ. Nếu thư mục đã chọn bị xóa hoặc ổ không còn, phần mềm dùng vị trí mặc định và nêu rõ trong màn Cài đặt.
@@ -416,7 +418,7 @@ Mở **Cài đặt → Hệ thống**.
 
 
 ## Đổi thư mục dữ liệu an toàn, ổ dữ liệu không truy cập được, sao lưu đáng tin cậy
-**Đổi thư mục dữ liệu** (Cài đặt → Hệ thống). Phần mềm làm theo thứ tự và chỉ chuyển khi mọi bước đã qua kiểm tra:
+**Đổi thư mục dữ liệu** (Cài đặt → Dữ liệu). Phần mềm làm theo thứ tự và chỉ chuyển khi mọi bước đã qua kiểm tra:
 1. Tạo bản sao dữ liệu đang dùng thành **file tạm** ở thư mục đích, kiểm tra toàn vẹn, phiên bản cấu trúc và số bản ghi từng bảng.
 2. Mở thử cơ sở dữ liệu mới và đọc thử; **chỉ sau đó mới lưu đường dẫn mới**. Lỗi ở bất kỳ bước nào: hoàn tác, vẫn làm việc ở vị trí cũ, dữ liệu cũ không bị đổi.
 3. Thư mục đích đã có dữ liệu: hộp thoại nêu số chủ rừng, số lô, ngày sửa của cả hai bên và cho chọn **Dùng dữ liệu có sẵn**, **Ghi đè bằng dữ liệu đang dùng** hoặc **Hủy**. *Dùng dữ liệu có sẵn* kiểm tra đúng cơ sở dữ liệu HAKQN, không hỏng, phiên bản cấu trúc được hỗ trợ. *Ghi đè* trước hết tạo **bản dự phòng nhất quán của đích** (gồm cả giao dịch đã commit còn trong nhật ký WAL) vào thư mục sao lưu và **kiểm tra mở được** rồi mới thay; đích đang được chương trình khác dùng thì dừng và báo; đích hỏng hoặc không phải HAKQN thì không ghi đè.
@@ -467,11 +469,19 @@ Một lô có thể giao khoán cho **nhiều đội**, mỗi tổ trưởng là
 - **BM-01 điều khoản thanh toán** ghi đúng hình thức trả công: theo tấn “căn cứ theo số lượng bán cho nhà máy” (như cũ); theo ha “căn cứ diện tích đã khai thác xong và được hai bên nghiệm thu”; theo ngày công “căn cứ số công thực tế của từng người ghi trong Bảng chấm công”.
 - **Đối chiếu khối lượng**: khi đã nhập khối lượng thực tế, Kiểm tra trước khi xuất báo nếu lệch tổng phiếu cân quá **1%** (ngưỡng mặc định; đổi ở Xuất hồ sơ → Cảnh báo lệch khối lượng). Chưa nhập khối lượng thực tế thì không so (lô đang khai thác dở).
 - **Ô “Đơn giá giao khoán Tổ trưởng”** ở Thông tin rừng đã bỏ với lô mới: đơn giá Tổ trưởng nhập ở bảng đơn giá theo vị trí (tab Nhân công), đơn giá khoán của tổ luôn suy ra từ định biên. Hồ sơ cũ đã có giá trị vẫn hiện ô (ghi “của hồ sơ cũ”) và hợp đồng in như cũ; xóa trống ô để chuyển sang cách tính mới.
-- **Danh mục vị trí**: các vị trí của Định mức nhân công (kể cả mặc định: Công nhân bóc vỏ, Công nhân bốc xếp) có sẵn trong danh sách chức danh, bảng đơn giá và định mức BHLĐ.
+- **Danh mục vị trí**: các vị trí của Định mức nhân công (kể cả mặc định: Công nhân bóc vỏ, Công nhân bốc xếp) có sẵn trong danh sách vị trí, bảng đơn giá và định mức BHLĐ.
 - **Cự ly tấn/km**: cự ly tự tính là đường chim bay, thường ngắn hơn quãng đường xe chạy nên BM-04, BM-09, BM-10 là bản nháp cho đến khi nhập quãng đường thực tế ở Thông tin rừng → Cự ly vận chuyển (km).
 
+## Ngành nghề và chức vụ (Danh mục → tab “Ngành nghề và chức vụ”)
+- **Ngành nghề** gieo sẵn: Khai thác gỗ keo, Vận chuyển. Thêm, đổi tên được; mục đang dùng không xóa hẳn mà chuyển **Ngừng sử dụng** (bấm “Dùng lại” để bật lại).
+- **Chức vụ** gieo sẵn: Chủ xe, Tổ trưởng, Công nhân, Tài xế, Khác; mỗi chức vụ có ngành mặc định (Khác thì không có). Thêm chức vụ mới được kèm ngành mặc định.
+- **Người** (cá nhân hoặc người trong đối tượng): chọn một hay nhiều chức vụ ở hàng **Chức vụ chi tiết**; chọn “Khác” thì **phải chọn ngành nghề** ngay bên dưới. Ba ô vai trò cũ (Nhân công, Tài xế, Chủ xe) vẫn giữ và tự bật theo chức vụ đã chọn.
+- **Doanh nghiệp**: tích ngành nghề (được tích cả hai).
+- Danh sách chọn **Bên nhận khoán**, **nhân công**, **bên vận chuyển**, **tài xế** lọc theo ngành khi người/doanh nghiệp đã khai ngành; dữ liệu cũ chưa khai thì vẫn hiện như trước (ngành suy từ vai trò, không bắt nhập lại).
+- “Tổ trưởng” trong lô vẫn là chữ ở cột Chức vụ của dòng nhân công, không đổi.
+
 ## Danh mục vị trí (từ bản 2.0 giai đoạn 2)
-- **Định mức → Định mức nhân công** là danh mục vị trí duy nhất: chức danh nhân công, định mức BHLĐ, bảng đơn giá theo vị trí và hợp đồng đều lấy vị trí từ đây.
+- **Định mức → Định mức nhân công** là danh mục vị trí duy nhất: vị trí nhân công, định mức BHLĐ, bảng đơn giá theo vị trí và hợp đồng đều lấy vị trí từ đây.
 - Thêm vị trí: ghi ở dòng cuối của Định mức nhân công. **Số người 0** nghĩa là vị trí ngoài định biên chuẩn của một đội (ví dụ Công nhân khai thác của hồ sơ cũ, lái máy): vẫn chọn được, có định mức BHLĐ và đơn giá, không tính vào “1 đội = N người”.
 - Vị trí đang có người giữ tự có trong danh mục; không xóa được vị trí còn nhân công giữ.
 - Màn Định mức BHLĐ không còn ô thêm/xóa vị trí riêng.
