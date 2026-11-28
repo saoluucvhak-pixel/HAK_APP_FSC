@@ -130,7 +130,7 @@
       pc.forEach(r => {
         if (ctx.trim(r.doi) && rec.doi && rec.doi.length > 1 && !rec.doi.some(d => d.id === r.doiId) && !rec.doi.some(d => keyName(d.ten) === keyName(r.doi))) mark(r, 'err', 'Đội “' + ctx.trim(r.doi) + '” không có trong lô (tên đội ở tab Nhân công): sửa tên đội hoặc để trống ô Đội');
         { const d = thieuKy.size ? doiXeOfPc(rec, r) : null; if (d && d.hd && thieuKy.has(d.hd.id)) mark(r, 'err', 'Biển ' + r.bienSo + ' thuộc đội xe chưa có người ký (chủ xe hoặc tài xế): vào tab Vận chuyển chọn người ký cho đội xe này'); }
-        if (r.maRung && r.maRung !== rec.info.maRung) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
+        if (r.maRung && (String(r.maRung == null ? '' : r.maRung).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase()) !== (String(rec.info.maRung == null ? '' : rec.info.maRung).normalize('NFC').replace(/[\s\u00a0\u200b\ufeff]+/g, '').toUpperCase())) mark(r, 'err', 'Mã rừng "' + r.maRung + '" khác lô đang mở (' + rec.info.maRung + '): để trống ô Mã rừng hoặc sửa cho đúng lô');
         if (!ctx.HAKDates.isValid(r.ngay)) mark(r, 'err', 'Phiếu ' + (r.soPhieu || '(không số)') + ': ' + ctx.HAKDates.why(r.ngay).replace(/^thiếu ngày$/, 'thiếu ngày cân'));
         const coXe = r.xeRowId && rec.dx.some(x => x.id === r.xeRowId);   // 3.0: phiếu đã chọn xe (ID dòng xe) — BKS ghi trên phiếu giữ nguyên dù khác
         if (!r.bienSo && !coXe) mark(r, 'err', 'Thiếu biển kiểm soát');
