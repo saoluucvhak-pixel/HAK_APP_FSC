@@ -170,7 +170,7 @@
 <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
 </cellXfs>
-<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles><dxfs count="2"><dxf><fill><patternFill patternType="solid"><fgColor rgb="FFF0FDFA"/><bgColor rgb="FFF0FDFA"/></patternFill></fill><border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom></border></dxf><dxf><border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom></border></dxf></dxfs>
 </styleSheet>`;
 
   /* Trang tính dựng từ danh sách hàng: row = {h: chiều cao, cells: [{c, v, s, t}]} ; merges, cols, validations... */
@@ -191,10 +191,11 @@
     const mc = (o.merges || []).length ? '<mergeCells count="' + o.merges.length + '">' + o.merges.map(m => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>' : '';
     const dv = (o.validations || []).length ? '<dataValidations count="' + o.validations.length + '">' + o.validations.join('') + '</dataValidations>' : '';
     const pg = '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="' + (o.landscape ? 'landscape' : 'portrait') + '" fitToHeight="0"/>';
-    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:' + lastCol + o.rows.length + '"/>' + view + '<sheetFormatPr defaultRowHeight="15"/>' + colsXml + '<sheetData>' + rows + '</sheetData>' + af + mc + dv + pg + '</worksheet>';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr>' + (o.tab ? '<tabColor rgb="' + o.tab + '"/>' : '') + '<pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:' + lastCol + o.rows.length + '"/>' + view + '<sheetFormatPr defaultRowHeight="' + (o.rowH || 15) + '"' + (o.rowH ? ' customHeight="1"' : '') + '/>' + colsXml + '<sheetData>' + rows + '</sheetData>' + af + mc + (o.cf || '') + dv + pg + (o.hf ? '<headerFooter><oddHeader>' + esc(o.hf[0]) + '</oddHeader><oddFooter>' + esc(o.hf[1]) + '</oddFooter></headerFooter>' : '') + '</worksheet>';
   }
   const dvPrompt = (ref, title, prompt, list) => '<dataValidation' + (list ? ' type="list" allowBlank="1" showErrorMessage="1" errorTitle="Giá trị không hợp lệ" error="Chọn một giá trị trong danh sách."' : ' allowBlank="1"') + ' showInputMessage="1" promptTitle="' + esc(String(title).slice(0, 32)) + '" prompt="' + esc(String(prompt).slice(0, 250)) + '" sqref="' + ref + '">' + (list ? '<formula1>"' + esc(list.join(',')) + '"</formula1>' : '') + '</dataValidation>';
 
+  const HF_HEAD = '&L&"Calibri,Bold"HAKQN Desktop&R&"Calibri,Regular"&A', HF_FOOT = '&L&"Calibri,Italic"Hồ sơ khai thác và vận chuyển gỗ keo · chuẩn FSC&RTrang &P / &N';
   function guideSheet(spec, meta) {
     const W = [6, 30, 16, 28, 26, 64], rows = [], merges = [], n = W.length - 1;
     const add = (cells, h) => { rows.push({h, cells}); return rows.length; };
@@ -220,20 +221,20 @@
     add([]);
     mergeRow('6. Lưu ý', S.sec, 22);
     ['File thật chứa thông tin cá nhân (họ tên, CCCD, địa chỉ): chỉ lưu và gửi trong nội bộ, không đăng công khai.', 'Không đổi tên trang tính ' + spec.sheet + ', không thêm cột, không gộp ô, không để dòng trống ở giữa dữ liệu.', 'Dùng đúng mẫu của bản phần mềm đang cài: tải lại mẫu từ nút “Tải file mẫu” khi cập nhật phần mềm.'].forEach((t, i) => { const r = add([{c: 0, v: i + 1, s: S.mid}, {c: 1, v: t, s: S.body}].concat(Array.from({length: n - 1}, (_, k) => ({c: k + 2, s: S.body}))), 28); merges.push('B' + r + ':' + colL(n) + r); });
-    return sheetXml({rows, cols: W.map(w => ({w})), merges, active: true, landscape: true});
+    return sheetXml({rows, cols: W.map(w => ({w})), merges, active: true, landscape: true, tab: 'FF0F766E', hf: [HF_HEAD, HF_FOOT]});
   }
   function dataSheet(spec) {
     const cols = spec.cols, nCol = cols.length, last = colL(nCol - 1), head = cols.map((c, i) => ({c: i, v: c.n, s: c.req === A ? S.dHeadReq : S.dHeadOpt}));
     const widths = cols.map(c => Math.min(34, Math.max(13, c.n.length + 4, c.ex ? String(c.ex).length + 3 : 0)));
     const vals = cols.map((c, i) => dvPrompt(colL(i) + '2:' + colL(i) + '1000', c.n + (c.req === A ? ' (bắt buộc)' : ''), c.fmt + '. ' + c.note, c.list || null));
-    return sheetXml({rows: [{h: 38, cells: head}], cols: widths.map(w => ({w, s: S.text})), freeze: 1, filter: 'A1:' + last + '1', validations: vals, grid: true, landscape: true});
+    return sheetXml({rows: [{h: 38, cells: head}], cols: widths.map(w => ({w, s: S.text})), freeze: 1, filter: 'A1:' + last + '1', validations: vals, grid: true, landscape: true, tab: 'FF16A34A', rowH: 22, cf: '<conditionalFormatting sqref="A2:' + last + '500"><cfRule type="expression" dxfId="0" priority="1"><formula>MOD(ROW(),2)=0</formula></cfRule><cfRule type="expression" dxfId="1" priority="2"><formula>MOD(ROW(),2)=1</formula></cfRule></conditionalFormatting>', hf: [HF_HEAD, HF_FOOT]});
   }
   function exampleSheet(spec) {
     const cols = spec.cols, n = cols.length, rows = [], merges = [];
     rows.push({h: 28, cells: [{c: 0, v: 'DỮ LIỆU GIẢ ĐỂ THAM KHẢO CÁCH ĐIỀN – phần mềm KHÔNG đọc trang này. Sao chép dòng cần dùng sang trang ' + spec.sheet + ' rồi sửa cho đúng.', s: S.note}].concat(Array.from({length: n - 1}, (_, i) => ({c: i + 1, s: S.note})))}); merges.push('A1:' + colL(n - 1) + '1');
     rows.push({h: 38, cells: cols.map((c, i) => ({c: i, v: c.n, s: c.req === A ? S.dHeadReq : S.dHeadOpt}))});
     spec.example.forEach(r => rows.push({h: 30, cells: r.map((v, i) => ({c: i, v, s: S.ex}))}));
-    return sheetXml({rows, cols: cols.map(c => ({w: Math.min(34, Math.max(13, c.n.length + 4, c.ex ? String(c.ex).length + 3 : 0))})), merges, freeze: 2, grid: true, landscape: true});
+    return sheetXml({rows, cols: cols.map(c => ({w: Math.min(34, Math.max(13, c.n.length + 4, c.ex ? String(c.ex).length + 3 : 0))})), merges, freeze: 2, grid: true, landscape: true, tab: 'FF94A3B8', hf: [HF_HEAD, HF_FOOT]});
   }
 
   async function build(kind, JSZip, meta) {
@@ -247,7 +248,7 @@
       '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
     z.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
     z.file('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets>' +
-      names.map((n, i) => '<sheet name="' + n + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">' + spec.sheet + '!$A$1:$' + colL(spec.cols.length - 1) + '$1</definedName></definedNames></workbook>');
+      names.map((n, i) => '<sheet name="' + n + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">' + spec.sheet + '!$A$1:$' + colL(spec.cols.length - 1) + '$1</definedName><definedName name="_xlnm.Print_Titles" localSheetId="1">' + spec.sheet + '!$1:$1</definedName></definedNames></workbook>');
     z.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
       names.map((_, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (names.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
     z.file('xl/styles.xml', STYLES);
