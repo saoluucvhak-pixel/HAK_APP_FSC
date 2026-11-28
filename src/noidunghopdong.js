@@ -248,7 +248,7 @@
         ctx.P('Ngày thẩm định: ' + dot(ex.tdNgay, 6) + ' · Người thẩm định: ' + dot(ex.tdNguoi, 8), {al: 'center', after: 160}),
         ctx.P('**A. Chủ rừng:** ' + ctx.upper(rsName) + ' · Hợp đồng số: ' + dot(rs.soHopDong, 6) + ' · ký ngày: ' + dot(rs.ngayKyHopDong, 6), {al: 'left', after: 40}),
         ctx.P('CCCD số: ' + (rs.cccd || '…………') + ', cấp ngày ' + (rs.ngayCap || '…………') + ', nơi cấp ' + (rs.noiCap || '…………') + '. Địa chỉ: ' + (rs.diaChi || '…………'), {al: 'left', ind: 360, after: 80}),
-        ctx.P('**B. Rừng thẩm định:** ' + (rs.tenRung ? rs.tenRung + ' · ' : '') + 'tại ' + dot(rs.diaDiem, 8), {al: 'left', after: 40}),
+        ctx.P('**B. Rừng thẩm định:** tại ' + dot(rs.diaDiem, 8), {al: 'left', after: 40}),
         ctx.P('Thời gian dự kiến khai thác: ' + (rs.tuNgay || '…/…/……') + ' – ' + (rs.denNgay || '…/…/……') + '.', {al: 'left', ind: 360, after: 100}),
         ctx.P('**C. Nội dung thẩm định**', {al: 'left', after: 60, keep: true}),
         ctx.T([650, 4500, 1750, 2455],
@@ -268,7 +268,7 @@
       const rows = Array.from({length: n}, (_, i) => [String(i + 1), days[i] || '', '', '', '', '', '', '']);
       return [
         ctx.P('**NHẬT KÝ KHAI THÁC HẰNG NGÀY**', {al: 'center', sz: 28, before: 60, after: 40}),
-        ctx.P((rs.tenRung ? 'Rừng ' + rs.tenRung + ' · ' : '') + 'Chủ rừng: **' + ctx.upper(rsName) + '** · Tổ trưởng: ' + ttName, {al: 'center', after: 40}),
+        ctx.P('Chủ rừng: **' + ctx.upper(rsName) + '** · Tổ trưởng: ' + ttName, {al: 'center', after: 40}),
         ctx.P('Địa điểm: ' + dot(rs.diaDiem, 8) + (rs.lat != null && rs.lng != null ? ' · Tọa độ: ' + rs.lat + ', ' + rs.lng : '') + ' · Thời gian khai thác: ' + (rs.tuNgay || '…/…/……') + ' – ' + (rs.denNgay || '…/…/……'), {al: 'center', after: 100}),
         ctx.P('Hướng dẫn: tổ trưởng ghi cuối mỗi ngày làm việc (không ghi dồn); khối lượng ghi theo ước tính tại bãi hoặc theo bảng kê lâm sản; chủ rừng, người giám sát đối chiếu khi kiểm tra. Ngày Chủ nhật đã được loại khỏi bảng.', {al: 'left', i: true, sz: 20, after: 80}),
         ctx.T([650, 1500, 1300, 2300, 2000, 2400, 3000, 1987],
@@ -329,7 +329,7 @@
       const blank = Array.from({length: 8}, (_, i) => [String(i + 1), '', '', '', '', '', '', '']);
       return [
         ctx.P('**SỔ THEO DÕI TAI NẠN LAO ĐỘNG VÀ SỰ CỐ**', {al: 'center', sz: 28, before: 60, after: 40}),
-        ctx.P('Khai thác rừng ' + (rs.tenRung ? rs.tenRung + ' · ' : '') + 'Chủ rừng: **' + ctx.upper(rsName) + '**', {al: 'center', after: 40}),
+        ctx.P('Chủ rừng: **' + ctx.upper(rsName) + '**', {al: 'center', after: 40}),
         ctx.P('Địa điểm: ' + dot(rs.diaDiem, 8) + ' · Thời gian khai thác: ' + (rs.tuNgay || '…/…/……') + ' – ' + (rs.denNgay || '…/…/……') + ' · Tổ trưởng: ' + ttName, {al: 'center', after: 100}),
         ctx.P('Hướng dẫn: ghi ngay khi xảy ra tai nạn lao động hoặc sự cố (cháy, đổ dầu, hư hỏng thiết bị, sạt lở...). Tổ trưởng xác nhận trong ngày; chủ rừng xác nhận khi kiểm tra. Nếu không phát sinh thì ghi xác nhận ở phần cuối.', {al: 'left', i: true, sz: 22, after: 100}),
         ctx.T([600, 1700, 2300, 1500, 3300, 2000, 2337, 1400],
@@ -431,7 +431,6 @@
         ctx.P('Tôi tên là:', {after: 60, before: 80}),
         ...partyBlock('CHỦ RỪNG (NGƯỜI CAM KẾT)', rs, rsName, {noSinh: true}),
         ctx.P('Là chủ sử dụng diện tích rừng trồng có thông tin như sau:', {after: 60}),
-        ctx.bl('Rừng: ' + dot(rs.tenRung, 4)),
         ctx.bl('Địa điểm: ' + dot(rs.diaDiem, 8)),
         ctx.bl('Tọa độ (WGS84): ' + (rs.lat != null && rs.lng != null ? rs.lat + ', ' + rs.lng : '……………………')),
         ctx.bl('Diện tích: ' + (rs.dienTich ? rs.dienTich + ' ha' : '……… ha') + ' · Khối lượng dự kiến khai thác: ' + (vol ? ctx.fmtT(Math.round(vol.v * 1000)) + ' tấn' : '……… tấn')),
@@ -457,7 +456,7 @@
       return [
         ...TITLE_HEAD(),
         ctx.P('**BẢN CAM KẾT SỬ DỤNG LAO ĐỘNG**', {al: 'center', sz: 28, before: 120, after: 40}),
-        ctx.P('Khai thác rừng ' + dot(rs.tenRung, 4), {al: 'center', after: 40}),
+        ctx.P('Khai thác rừng', {al: 'center', after: 40}),
         ctx.P('(' + rs.diaDiem + ')', {al: 'center', i: true, after: 200}),
         ...LAW_LD.slice(0, 2).map(t => ctx.P('- ' + t, {after: 60})),
         ctx.P('Chúng tôi gồm: **' + ctx.upper(rsName) + '** (chủ rừng) và **' + ctx.upper(ttName) + '** (tổ trưởng, đại diện tổ khai thác), cùng cam kết đối với toàn bộ người lao động tham gia khai thác rừng nêu trên như sau:', {before: 80}),
